@@ -51,20 +51,19 @@
 
 namespace filament {
 
-class FMaterial;
 class FTexture;
 
 class FMaterialInstance : public MaterialInstance {
 public:
-    FMaterialInstance(FEngine& engine, FMaterial const* material,
-                      const char* name, bool useUboBatching) noexcept;
+    FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name,
+            FEngine::UboBatchingMode batchingMode) noexcept;
     FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name,
-            bool useUboBatching);
+            FEngine::UboBatchingMode batchingMode);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
 
     static FMaterialInstance* duplicate(FMaterialInstance const* other, const char* name,
-            std::optional<bool> useUboBatching = std::nullopt) noexcept;
+            FEngine::UboBatchingMode batchingMode = FEngine::UboBatchingMode::DEFAULT) noexcept;
 
     ~FMaterialInstance() noexcept;
 
@@ -74,7 +73,7 @@ public:
     
     void commit(FEngine& engine) const;
 
-    void commit(FEngine::DriverApi& driver, const std::optional<UboManager>& uboManager) const;
+    void commit(FEngine::DriverApi& driver, UboManager* uboManager) const;
 
     void use(FEngine::DriverApi& driver, Variant variant = {}) const;
 

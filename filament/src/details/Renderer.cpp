@@ -453,9 +453,7 @@ void FRenderer::endFrame() {
     mFrameSkipper.submitFrame(driver);
 
     if (engine.isUboBatchingEnabled()) {
-        std::optional<UboManager>& uboManager = engine.getUboManager();
-        assert_invariant(uboManager.has_value());
-        uboManager->endFrame(driver, engine.getMaterialInstanceResourceList());
+        engine.getUboManager()->endFrame(driver, engine.getMaterialInstanceResourceList());
     }
 
     driver.endFrame(mFrameId);

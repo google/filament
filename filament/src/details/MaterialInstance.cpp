@@ -58,9 +58,19 @@ using namespace utils;
 namespace filament {
 
 using namespace backend;
+using UboBatchingMode = FEngine::UboBatchingMode;
 
-FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
-                      const char* name, bool useUboBatching) noexcept : mMaterial(material),
+bool shouldEnableBatching(FEngine& engine, UboBatchingMode batchingMode, MaterialDomain domain) {
+    if (batchingMode != UboBatchingMode::DEFAULT) {
+        return batchingMode == UboBatchingMode::UBO_BATCHING;
+    }
+
+    return engine.isUboBatchingEnabled() && domain == MaterialDomain::SURFACE;
+}
+
+FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name,
+        UboBatchingMode batchingMode) noexcept
+        : mMaterial(material),
           mDescriptorSet("MaterialInstance", material->getDescriptorSetLayout()),
           mCulling(CullingMode::BACK),
           mShadowCulling(CullingMode::BACK),
@@ -70,10 +80,12 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
           mHasScissor(false),
           mIsDoubleSided(false),
           mIsDefaultInstance(false),
-          mUseUboBatching(useUboBatching),
+          mUseUboBatching(
+                  shouldEnableBatching(engine, batchingMode, material->getMaterialDomain())),
           mTransparencyMode(TransparencyMode::DEFAULT),
           mName(name ? CString(name) : material->getName()) {
-
+    FILAMENT_CHECK_PRECONDITION(!mUseUboBatching || engine.isUboBatchingEnabled())
+            << "UBO batching is not enabled.";
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     // even if the material doesn't have any parameters, we allocate a small UBO because it's
@@ -126,7 +138,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
 }
 
 FMaterialInstance::FMaterialInstance(FEngine& engine,
-        FMaterialInstance const* other, const char* name, bool useUboBatching)
+        FMaterialInstance const* other, const char* name, UboBatchingMode batchingMode)
         : mMaterial(other->mMaterial),
           mTextureParameters(other->mTextureParameters),
           mDescriptorSet(other->mDescriptorSet.duplicate(
@@ -144,10 +156,12 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mHasScissor(false),
           mIsDoubleSided(other->mIsDoubleSided),
           mIsDefaultInstance(false),
-          mUseUboBatching(useUboBatching),
+          mUseUboBatching(shouldEnableBatching(engine, batchingMode,
+                  other->getMaterial()->getMaterialDomain())),
           mScissorRect(other->mScissorRect),
           mName(name ? CString(name) : other->mName) {
-
+    FILAMENT_CHECK_PRECONDITION(!mUseUboBatching || engine.isUboBatchingEnabled())
+            << "UBO batching is not enabled.";
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
 
@@ -188,16 +202,13 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 }
 
 FMaterialInstance* FMaterialInstance::duplicate(FMaterialInstance const* other, const char* name,
-        std::optional<bool> useUboBatching) noexcept {
+        UboBatchingMode batchingMode) noexcept {
     FMaterial const* const material = other->getMaterial();
     FEngine& engine = material->getEngine();
-    bool useUboBatchingValue = useUboBatching.has_value() ? useUboBatching.value()
-                                                          : engine.isUboBatchingEnabled() &&
-                                                                    material->getMaterialDomain() ==
-                                                                            MaterialDomain::SURFACE;
-    FILAMENT_CHECK_PRECONDITION(!useUboBatchingValue || engine.isUboBatchingEnabled())
+    FILAMENT_CHECK_PRECONDITION(
+            batchingMode != UboBatchingMode::UBO_BATCHING || engine.isUboBatchingEnabled())
             << "UBO batching is not enabled.";
-    return engine.createMaterialInstance(material, other, name, useUboBatchingValue);
+    return engine.createMaterialInstance(material, other, name, batchingMode);
 }
 
 FMaterialInstance::~FMaterialInstance() noexcept = default;
@@ -242,11 +253,11 @@ void FMaterialInstance::commit(FEngine& engine) const {
     }
 }
 
-void FMaterialInstance::commit(FEngine::DriverApi& driver, const std::optional<UboManager>& uboManager) const {
+void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManager) const {
     if (mUniforms.isDirty() || mHasStreamUniformAssociations) {
         mUniforms.clean();
         if (mUseUboBatching) {
-            assert_invariant(uboManager.has_value());
+            assert_invariant(uboManager != nullptr);
             if (!BufferAllocator::isValid(getAllocationId())) {
                 // The allocation hasn't happened yet, return.
                 return;
@@ -277,8 +288,9 @@ void FMaterialInstance::commit(FEngine::DriverApi& driver, const std::optional<U
     // TODO: eventually we should remove this in RELEASE builds
     fixMissingSamplers();
 
-    if (mUseUboBatching && !BufferAllocator::isValid(getAllocationId()))
+    if (mUseUboBatching && !BufferAllocator::isValid(getAllocationId())) {
         return;
+    }
 
     // Commit descriptors if needed (e.g. when textures are updated,or the first time)
     mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);

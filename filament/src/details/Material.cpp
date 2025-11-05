@@ -73,6 +73,7 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 using namespace utils;
+using UboBatchingMode = FEngine::UboBatchingMode;
 
 struct Material::BuilderDetails {
     const void* mPayload = nullptr;
@@ -274,26 +275,20 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     }
 }
 
-FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
-    bool useUboBatching =
-            mEngine.isUboBatchingEnabled() && getMaterialDomain() == MaterialDomain::SURFACE;
-    return createInstance(name, useUboBatching);
-}
-
-FMaterialInstance* FMaterial::createInstance(const char* name, bool useUboBatching) const noexcept {
+FMaterialInstance* FMaterial::createInstance(const char* name, UboBatchingMode batchingMode) const noexcept {
     if (mDefaultMaterialInstance) {
         // if we have a default instance, use it to create a new one
-        return FMaterialInstance::duplicate(mDefaultMaterialInstance, name, useUboBatching);
+        return FMaterialInstance::duplicate(mDefaultMaterialInstance, name, batchingMode);
     } else {
         // but if we don't, just create an instance with all the default parameters
-        return mEngine.createMaterialInstance(this, name, useUboBatching);
+        return mEngine.createMaterialInstance(this, name, batchingMode);
     }
 }
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance =
-                mEngine.createMaterialInstance(this, mDefinition.name.c_str(), false);
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, mDefinition.name.c_str(),
+                UboBatchingMode::NO_UBO_BATCHING);
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;

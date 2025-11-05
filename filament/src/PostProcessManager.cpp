@@ -258,6 +258,10 @@ void PostProcessManager::bindPerRenderableDescriptorSet(DriverApi& driver) const
             { { 0, 0 }, driver });
 }
 
+UboManager* PostProcessManager::getUboManager() const noexcept {
+    return mEngine.getUboManager();
+}
+
 UTILS_NOINLINE
 void PostProcessManager::registerPostProcessMaterial(std::string_view const name,
         StaticMaterialInfo const& info) {
@@ -513,7 +517,7 @@ UTILS_NOINLINE
 void PostProcessManager::commitAndRenderFullScreenQuad(DriverApi& driver,
         FrameGraphResources::RenderPassInfo const& out, FMaterialInstance const* mi,
         PostProcessVariant const variant) const noexcept {
-    mi->commit(driver, mEngine.getUboManager());
+    mi->commit(driver, getUboManager());
     mi->use(driver);
     FMaterial const* const ma = mi->getMaterial();
     PipelineState const pipeline = getPipelineState(ma, variant);
@@ -645,7 +649,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                     auto th = driver.createTextureView(in, level, 1);
                     mi->setParameter("depth", th, SamplerParams{
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                    mi->commit(driver, mEngine.getUboManager());
+                    mi->commit(driver, getUboManager());
                     mi->use(driver);
                     renderFullScreenQuad(out, pipeline, driver);
                     DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
@@ -1079,7 +1083,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("ssctRayCount",
                         float2{ options.ssct.rayCount, 1.0f / float(options.ssct.rayCount) });
 
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 auto pipeline = getPipelineState(ma);
@@ -1200,7 +1204,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 mi->setParameter("sampleCount", kGaussianCount);
                 mi->setParameter("farPlaneOverEdgeDistance", -zf / config.bilateralThreshold);
 
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 auto pipeline = getPipelineState(ma);
@@ -1895,7 +1899,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                             .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     mi->setParameter("weightScale", 0.5f / float(1u << level));   // FIXME: halfres?
                     mi->setParameter("texelSize", float2{ 1.0f / w, 1.0f / h });
-                    mi->commit(driver, mEngine.getUboManager());
+                    mi->commit(driver, getUboManager());
                     mi->use(driver);
 
                     renderFullScreenQuad(out, pipeline, driver);
@@ -2425,7 +2429,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                     mi->setParameter("source", hwOutView, SamplerParams{
                             .filterMag = SamplerMagFilter::LINEAR,
                             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST});
-                    mi->commit(driver, mEngine.getUboManager());
+                    mi->commit(driver, getUboManager());
                     mi->use(driver);
                     renderFullScreenQuad(hwDstRT, pipeline, driver);
                     DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
@@ -2533,7 +2537,7 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
     FMaterialInstance* const mi =
             configureColorGradingMaterial(material, colorGrading, colorGradingConfig,
                     vignetteOptions, width, height);
-    mi->commit(driver, mEngine.getUboManager());
+    mi->commit(driver, getUboManager());
 }
 
 void PostProcessManager::colorGradingSubpass(DriverApi& driver,
@@ -2566,7 +2570,7 @@ void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomRe
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.customResolve = fixedIndex;
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
-    mi->commit(driver, mEngine.getUboManager());
+    mi->commit(driver, getUboManager());
     material.getMaterial(mEngine);
 }
 
@@ -2619,7 +2623,7 @@ void PostProcessManager::clearAncillaryBuffersPrepare(DriverApi& driver) noexcep
     auto ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.clearDepth = fixedIndex;
-    mi->commit(driver, mEngine.getUboManager());
+    mi->commit(driver, getUboManager());
     material.getMaterial(mEngine);
 }
 
@@ -3111,7 +3115,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         mat4f{ historyProjection * inverse(current.projection) } *
                         normalizedToClip);
 
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 if (colorGradingConfig.asSubpass) {
@@ -3196,7 +3200,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
                 mi->setParameter("resolution", float4{
                         outputDesc.width, outputDesc.height,
                         1.0f / outputDesc.width, 1.0f / outputDesc.height });
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 auto pipeline = getPipelineState(material.getMaterial(mEngine), variant);
@@ -3287,7 +3291,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                         float(vp.width)  / inputDesc.width,
                         float(vp.height) / inputDesc.height
                 });
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 auto out = resources.getRenderPassInfo();
@@ -3374,7 +3378,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleSGSR1(FrameGraph& fg,
                         float(inputDesc.height)
                 });
 
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 auto const out = resources.getRenderPassInfo();
@@ -3469,7 +3473,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
                     mi->setParameter("resolution",
                             float4{ outputDesc.width, outputDesc.height,
                                     1.0f / outputDesc.width, 1.0f / outputDesc.height });
-                    mi->commit(driver, mEngine.getUboManager());
+                    mi->commit(driver, getUboManager());
                     mi->use(driver);
                 }
 
@@ -3496,7 +3500,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
                             float(vp.width)  / inputDesc.width,
                             float(vp.height) / inputDesc.height
                     });
-                    mi->commit(driver, mEngine.getUboManager());
+                    mi->commit(driver, getUboManager());
                     mi->use(driver);
                 }
 
@@ -3582,7 +3586,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool co
                 if (layer) {
                     mi->setParameter("layerIndex", layer);
                 }
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 auto pipeline = getPipelineState(ma);
@@ -3840,7 +3844,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 });
                 mi->setParameter("layer", uint32_t(layer));
                 mi->setParameter("uvscale", 1.0f / float(dim));
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 renderFullScreenQuadWithScissor(out, pipeline, scissor, driver);
@@ -3942,7 +3946,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                         float(vp.width) / inputDesc.width,
                         float(vp.height) / inputDesc.height
                     });
-                mi->commit(driver, mEngine.getUboManager());
+                mi->commit(driver, getUboManager());
                 mi->use(driver);
 
                 auto pipeline = getPipelineState(ma);
@@ -3959,7 +3963,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                 // Render all layers of the texture to the screen side-by-side.
                 for (uint32_t i = 0; i < inputTextureDesc.depth; ++i) {
                     mi->setParameter("layerIndex", i);
-                    mi->commit(driver, mEngine.getUboManager());
+                    mi->commit(driver, getUboManager());
                     renderFullScreenQuad(out, pipeline, driver);
                     DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
                     // From the second draw, don't clear the targetbuffer.
