@@ -1165,6 +1165,10 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
 }
 
 FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout) {
+    if (!fh) {
+        return FenceStatus::ERROR;
+    }
+
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
 
     // we have to take into account that the STL's wait_for() actually works with
