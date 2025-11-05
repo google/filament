@@ -39,6 +39,7 @@ public:
     enum class OutputFormat {
         BLOB,
         C_HEADER,
+        MAT,
     };
 
     using Platform = filamat::MaterialBuilder::Platform;

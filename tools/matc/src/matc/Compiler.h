@@ -52,6 +52,10 @@ protected:
     // Write package as a C++ array content. Use this to include material
     // in your executable/library.
     bool writeBlobAsHeader(const filamat::Package& pkg, const matp::Config& config) const noexcept;
+
+    // Write a .mat file.
+    bool writeMat(
+            std::unique_ptr<const char[]>& buffer, ssize_t size, const matp::Config& config) const noexcept;
 };
 
 } // namespace matc
