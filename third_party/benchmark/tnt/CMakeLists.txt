@@ -1,3 +1,10 @@
+option(FILAMENT_USE_EXTERNAL_BENCHMARK "Use find_package to locate an external benchmark dependency" OFF)
+
+if (FILAMENT_USE_EXTERNAL_BENCHMARK)
+  find_package(benchmark CONFIG QUIET)
+  return()
+endif()
+
 cmake_minimum_required(VERSION 3.19)
 project(benchmark)
 

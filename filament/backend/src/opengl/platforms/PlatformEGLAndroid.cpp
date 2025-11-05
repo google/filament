@@ -34,6 +34,8 @@
 #include <android/api-level.h>
 #include <android/native_window.h>
 #include <android/hardware_buffer.h>
+#include <android/choreographer.h>
+#include <android/looper.h>
 
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
@@ -120,6 +122,7 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
 PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
 
 void PlatformEGLAndroid::terminate() noexcept {
+    mAndroidFrameCallback.terminate();
     ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
     PlatformEGL::terminate();
 }
@@ -237,6 +240,8 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
 
+    mAndroidFrameCallback.init();
+
     return driver;
 }
 
@@ -258,8 +263,14 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
         return false;
     }
 
+    AndroidFrameCallback::Timeline const preferredTimeline{
+            mAndroidFrameCallback.getPreferredTimeline() };
+    outCompositorTiming->frameTime = preferredTimeline.frameTime;
+    outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
+    outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+
     if (UTILS_LIKELY(ext.egl.ANDROID_get_frame_timestamps)) {
-        EGLSurface sur = static_cast<SwapChainEGL const *>(swapchain)->sur;
+        EGLSurface const sur = static_cast<SwapChainEGL const *>(swapchain)->sur;
         if (sur == EGL_NO_SURFACE) {
             return false;
         }
@@ -545,7 +556,15 @@ void PlatformEGLAndroid::destroyStream(Stream* stream) noexcept {
 }
 
 Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
-    auto const sync = eglCreateSyncKHR(getEglDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+    EGLSyncKHR sync = EGL_NO_SYNC_KHR;
+    if (UTILS_LIKELY(ext.egl.ANDROID_native_fence_sync)) {
+        sync = eglCreateSyncKHR(getEglDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+        if (sync == EGL_NO_SYNC_KHR) {
+            LOG(ERROR) << "Failed to create sync: " << eglGetError();
+        }
+    } else {
+        LOG(WARNING) << "Native fences not supported on this device.";
+    }
     return new(std::nothrow) SyncEGLAndroid{ .sync = sync };
 }
 
@@ -553,10 +572,16 @@ bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {
     assert_invariant(sync && fd);
 
     if (UTILS_UNLIKELY(!ext.egl.ANDROID_native_fence_sync)) {
+        LOG(WARNING) << "Native fences not supported, cannot convert to fd.";
         return false;
     }
 
     SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+    if (eglSync.sync == EGL_NO_SYNC_KHR) {
+        LOG(ERROR) << "Invalid fence, cannot convert to fd.";
+        return false;
+    }
+
     *fd = eglDupNativeFenceFDANDROID(getEglDisplay(), eglSync.sync);
     // In the case where there was no native FD, -1 is returned. Return false
     // to indicate there was an error in this case.
@@ -569,8 +594,12 @@ bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {
 
 void PlatformEGLAndroid::destroySync(Sync* sync) noexcept {
     assert_invariant(sync);
-    SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
-    eglDestroySyncKHR(getEglDisplay(), eglSync.sync);
+    if (UTILS_LIKELY(ext.egl.ANDROID_native_fence_sync)) {
+        SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+        if (eglSync.sync != EGL_NO_SYNC_KHR) {
+            eglDestroySyncKHR(getEglDisplay(), eglSync.sync);
+        }
+    }
     delete sync;
 }
 

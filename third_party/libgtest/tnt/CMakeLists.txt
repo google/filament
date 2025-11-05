@@ -1,3 +1,10 @@
+option(FILAMENT_USE_EXTERNAL_GTEST "Use find_package to locate an external gtest dependency" OFF)
+
+if (FILAMENT_USE_EXTERNAL_GTEST)
+  find_package(gtest CONFIG QUIET)
+  return()
+endif()
+
 cmake_minimum_required(VERSION 3.19)
 project(gtest)
 

@@ -408,6 +408,7 @@ VkResult VulkanPlatformSurfaceSwapChain::recreate() {
 }
 
 void VulkanPlatformSurfaceSwapChain::destroy() {
+    VulkanPlatformSwapChainBase::destroy();
     // The next part is not ideal. We don't have a good signal on when it's ok to destroy
     // a swapchain. This is a spec oversight and mentioned as much:
     // https://github.com/KhronosGroup/Vulkan-Docs/issues/1678
@@ -474,6 +475,7 @@ VkResult VulkanPlatformHeadlessSwapChain::acquire(VulkanPlatform::ImageSyncData*
 }
 
 void VulkanPlatformHeadlessSwapChain::destroy() {
+    VulkanPlatformSwapChainBase::destroy();
     // This is only ever called from the destructor since headless does not recreate.
     for (auto image: mSwapChainBundle.colors) {
         vkDestroyImage(mDevice, image, VKALLOC);
