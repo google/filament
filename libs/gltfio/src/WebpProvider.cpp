@@ -243,7 +243,7 @@ void WebpProvider::cancelDecoding() {
         // completion above. We also expect the TextureProvider API calls to be made only from one
         // thread.
         if (intptr_t data = info->decodedTexelsBaseMipmap.load()) {
-            delete [] (uint8_t*) data;
+            WebPFree(data);
         }
         info->state = TextureState::POPPED;
     }
