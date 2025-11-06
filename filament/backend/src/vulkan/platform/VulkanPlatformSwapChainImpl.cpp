@@ -408,7 +408,6 @@ VkResult VulkanPlatformSurfaceSwapChain::recreate() {
 }
 
 void VulkanPlatformSurfaceSwapChain::destroy() {
-    VulkanPlatformSwapChainBase::destroy();
     // The next part is not ideal. We don't have a good signal on when it's ok to destroy
     // a swapchain. This is a spec oversight and mentioned as much:
     // https://github.com/KhronosGroup/Vulkan-Docs/issues/1678
@@ -424,6 +423,8 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
     // degradation is less obvious (until, of course, people complain about lag when rotating their
     // phone). If necessary, we can revisit and implement the workaround [1].
     vkQueueWaitIdle(mQueue);
+
+    VulkanPlatformSwapChainBase::destroy();
 
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
         if (mImageReady[i] != VK_NULL_HANDLE) {
@@ -475,7 +476,6 @@ VkResult VulkanPlatformHeadlessSwapChain::acquire(VulkanPlatform::ImageSyncData*
 }
 
 void VulkanPlatformHeadlessSwapChain::destroy() {
-    VulkanPlatformSwapChainBase::destroy();
     // This is only ever called from the destructor since headless does not recreate.
     for (auto image: mSwapChainBundle.colors) {
         vkDestroyImage(mDevice, image, VKALLOC);
@@ -485,7 +485,10 @@ void VulkanPlatformHeadlessSwapChain::destroy() {
         }
     }
     mSwapChainBundle.colors.clear();
-    // No need to manually call through to the super because the super's destructor will be called
+
+    // Still need to call through to free the depth image.  But must do it after releasing the color
+    // images.
+    VulkanPlatformSwapChainBase::destroy();
 }
 
 }// namespace filament::backend
