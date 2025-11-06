@@ -77,6 +77,42 @@ using namespace filagui;
 using namespace filament::math;
 using namespace utils;
 
+namespace {
+
+using namespace filament::backend;
+
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+class FilamentAppWebGPUPlatform : public WebGPUPlatform {
+public:
+    FilamentAppWebGPUPlatform(Config::WebGPUBackend backend)
+        : mBackend(backend) {}
+
+    virtual WebGPUPlatform::Configuration getConfiguration() const noexcept override {
+        WebGPUPlatform::Configuration config = {};
+        switch (mBackend) {
+            case Config::WebGPUBackend::VULKAN:
+                config.forceBackendType = wgpu::BackendType::Vulkan;
+                break;
+            case Config::WebGPUBackend::METAL:
+                config.forceBackendType = wgpu::BackendType::Metal;
+                break;
+            case Config::WebGPUBackend::DEFAULT:
+                break;
+            default:
+                LOG(ERROR) << "FilamentApp: Unsupported webgpu backend was selected(="
+                           << (int) mBackend << "). Selection is ignored.";
+                break;
+        }
+        return config;
+    }
+
+private:
+    Config::WebGPUBackend const mBackend;
+};
+#endif
+
+}
+
 FilamentApp& FilamentApp::get() {
     static FilamentApp filamentApp;
     return filamentApp;
