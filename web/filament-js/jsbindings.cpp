@@ -2055,7 +2055,7 @@ class_<Ktx2Provider>("gltfio$Ktx2Provider")
         return Ktx2Provider { createKtx2Provider(engine) };
     }));
 
-class_<OptionalWebpProvider>("gltfio$WebpProvider")
+class_<OptionalWebpProvider>("gltfio$OptionalWebpProvider")
     .constructor(EMBIND_LAMBDA(WebpProvider, (Engine* engine), {
         return OptionalWebpProvider { createOptionalWebpProvider(engine) };
     }));
