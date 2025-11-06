@@ -74,6 +74,16 @@ void FrameInfoManager::terminate(FEngine& engine) noexcept {
         // side effect.
         mJobQueue.cancelAll();
 
+        // request cancel for all the fences, which may speed up drainAndExit() below
+        for (auto& info : mFrameTimeHistory) {
+            if (info.fence) {
+                driver.fenceCancel(info.fence);
+            }
+        }
+
+        // wait for all pending callbacks to be called & terminate the thread
+        mJobQueue.drainAndExit();
+
         // Destroy the fences that are still alive, they will error out.
         for (size_t i = 0, c = mFrameTimeHistory.size(); i < c; i++) {
             auto& info = mFrameTimeHistory[i];
@@ -82,17 +92,6 @@ void FrameInfoManager::terminate(FEngine& engine) noexcept {
             }
         }
     }
-
-    // for extra safety submit the current command buffer (because nothing else will while we
-    // wait in drainAndExit()), this is in case the backend is already waiting on a h/w fence
-    // e.g. vkWaitForFences().
-    driver.flush();
-
-    // make sure the driver commands above will be processed
-    engine.flush();
-
-    // wait for all pending callbacks to be called & terminate the thread
-    mJobQueue.drainAndExit();
 }
 
 void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
