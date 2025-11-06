@@ -93,7 +93,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(),
         mRenderTargetHandle(engine.getDefaultRenderTarget()),
-        mFrameInfoManager(engine.getDriverApi()),
+        mFrameInfoManager(engine, engine.getDriverApi()),
         mHdrTranslucent(TextureFormat::RGBA16F),
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),

@@ -26,6 +26,8 @@
 
 #include <dlfcn.h>
 
+#include <mutex>
+
 #define LIBRARY_GLX "libGL.so.1"
 #define LIBRARY_X11 "libX11.so.6"
 

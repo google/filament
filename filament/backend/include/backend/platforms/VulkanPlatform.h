@@ -437,22 +437,14 @@ protected:
         std::shared_ptr<VulkanCmdFence> fenceStatus;
     };
 
-    virtual ExtensionSet getSwapchainInstanceExtensions() const;
-
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
+    virtual ExtensionSet getSwapchainInstanceExtensions() const = 0;
     virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
-            uint64_t flags) const noexcept;
+            uint64_t flags) const noexcept = 0;
 
     virtual VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept;
 
 private:
-    // Platform dependent helper methods
-    static ExtensionSet getSwapchainInstanceExtensionsImpl();
-
-    // Platform dependent helper methods
-    static SurfaceBundle createVkSurfaceKHRImpl(void* nativeWindow, VkInstance instance,
-            uint64_t flags) noexcept;
-
     friend struct VulkanPlatformPrivate;
 };
 

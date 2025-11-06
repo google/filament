@@ -157,7 +157,8 @@ static void usage(char* name) {
             "   --raw, -w\n"
             "       Compile a raw GLSL shader into a SPIRV binary chunk\n\n"
             "   --output-format, -f\n"
-            "       Specify output format: blob (default) or header\n\n"
+            "       Specify output format: blob (default), header or mat. When specifying the "
+            "       output as mat, it will return a mat with #include directives resolved.\n\n"
             "   --debug, -d\n"
             "       Generate extra data for debugging\n\n"
             "   --no-sampler-validation, -F\n"
@@ -275,8 +276,10 @@ bool CommandlineConfig::parse() {
                     mOutputFormat = OutputFormat::BLOB;
                 } else if (arg == "header") {
                     mOutputFormat = OutputFormat::C_HEADER;
+                } else if (arg == "mat") {
+                    mOutputFormat = OutputFormat::MAT;
                 } else {
-                    std::cerr << "Unrecognized output format flag. Must be 'blob'|'header'."
+                    std::cerr << "Unrecognized output format flag. Must be 'blob'|'header'|'mat'."
                             << std::endl;
                    return false;
                 }
