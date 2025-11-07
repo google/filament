@@ -396,7 +396,8 @@ utils::Status MaterialParser::processMaterialParameters(filamat::MaterialBuilder
 }
 
 std::pair<utils::Status, utils::CString> MaterialParser::resolveIncludes(
-        std::unique_ptr<const char[]>& buffer, ssize_t size, const utils::Path& materialFilePath,
+        const std::unique_ptr<const char[]>& buffer, ssize_t size,
+        const utils::Path& materialFilePath,
         bool insertLineDirectives, bool insertLineDirectiveCheck) {
 
     ResolveOptions const options {

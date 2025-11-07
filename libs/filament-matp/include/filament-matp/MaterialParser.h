@@ -42,7 +42,7 @@ public:
     // Returns the string of resolved material with the state that indicates whether the include
     // resolution was successful.
     std::pair<utils::Status, utils::CString> resolveIncludes(
-            std::unique_ptr<const char[]>& buffer, ssize_t size,
+            const std::unique_ptr<const char[]>& buffer, ssize_t size,
             const utils::Path& materialFilePath,
             bool insertLineDirectives, bool insertLineDirectiveCheck);
     // Parses a string material so that it can be used in MaterialBuilder.
