@@ -1168,9 +1168,19 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 }
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
+    if (fh) {
+        auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
+        // note: it's invalid to call this during a fenceWait(fh) on another thread. For this
+        // reason there is no point signaling the waiters. There should be no waiters.
+        fence.dec();
+    }
+}
+
+void VulkanDriver::fenceCancel(FenceHandle const fh) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
     fence->cancel();
-    fence.dec();
 }
 
 FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
@@ -1178,6 +1188,9 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
 }
 
 FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
+
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
 
     // we have to take into account that the STL's wait_for() actually works with
