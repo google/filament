@@ -124,6 +124,7 @@ set(SRCS
         src/details/DebugRegistry.cpp
         src/details/Engine.cpp
         src/details/Fence.cpp
+        src/details/FenceManager.cpp
         src/details/IndexBuffer.cpp
         src/details/IndirectLight.cpp
         src/details/InstanceBuffer.cpp
@@ -205,6 +206,7 @@ set(PRIVATE_HDRS
         src/details/DebugRegistry.h
         src/details/Engine.h
         src/details/Fence.h
+        src/details/FenceManager.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
         src/details/InstanceBuffer.h
