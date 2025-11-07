@@ -591,6 +591,10 @@ void FRenderer::renderStandaloneView(FView const* view) {
         // happen with Renderer::beginFrame/endFrame.
         renderInternal(view, true);
 
+        if (engine.isUboBatchingEnabled()) {
+            engine.getUboManager()->endFrame(driver, engine.getMaterialInstanceResourceList());
+        }
+
         driver.endFrame(mFrameId);
 
         // engine.flush() has already been called by renderInternal(), but we need an extra one
