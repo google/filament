@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <matc/IncludeCallback.h>
+#include "IncludeCallback.h"
 
 #include <utils/CString.h>
 
@@ -37,7 +37,7 @@ public:
         return *this;
     }
 
-    bool operator()(const utils::CString& includedBy, matc::IncludeResult& result) {
+    bool operator()(const utils::CString& includedBy, matp::IncludeResult& result) {
         auto key = result.includeName.c_str();
         auto found = mIncludeMap.find(key);
 

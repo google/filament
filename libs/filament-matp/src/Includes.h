@@ -20,10 +20,11 @@
 #include "IncludeCallback.h"
 
 #include <utils/CString.h>
+#include <utils/Status.h>
 
 #include <vector>
 
-namespace matc {
+namespace matp {
 
 struct ResolveOptions {
     // If true, insert #line directives before / after each include.
@@ -39,9 +40,10 @@ struct ResolveOptions {
 };
 
 // Recursively handle all the includes inside of root.
-// Returns true if all includes were handled successfully, false otherwise.
-// callback may be null, in which case any #include directives found will result in a failure.
-bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
+// Returns utils::Status::StatusCode::OK if all includes were handled successfully, otherwise an
+// error status with a failure message.
+// Callback may be null, in which case any #include directives found will result in a failure.
+utils::Status resolveIncludesRecursively(IncludeResult& root, IncludeCallback callback,
         const ResolveOptions& options, size_t depth = 0);
 
 struct FoundInclude {
@@ -53,6 +55,6 @@ struct FoundInclude {
 
 std::vector<FoundInclude> parseForIncludes(const utils::CString& source);
 
-} // namespace matc
+} // namespace matp
 
 #endif
