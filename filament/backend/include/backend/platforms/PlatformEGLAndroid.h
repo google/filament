@@ -19,6 +19,7 @@
 
 #include "AndroidSwapChainHelper.h"
 #include "AndroidFrameCallback.h"
+#include "AndroidNdk.h"
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
@@ -46,7 +47,7 @@ class ExternalStreamManagerAndroid;
  * A concrete implementation of OpenGLPlatform and subclass of PlatformEGL that supports
  * EGL on Android. It adds Android streaming functionality to PlatformEGL.
  */
-class PlatformEGLAndroid : public PlatformEGL {
+class PlatformEGLAndroid : public PlatformEGL, public AndroidNdk {
 public:
 
     PlatformEGLAndroid() noexcept;

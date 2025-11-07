@@ -166,6 +166,9 @@ void NoopDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
 void NoopDriver::destroyFence(Handle<HwFence> fh) {
 }
 
+void NoopDriver::fenceCancel(FenceHandle fh) {
+}
+
 FenceStatus NoopDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::CONDITION_SATISFIED;
 }

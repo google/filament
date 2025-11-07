@@ -42,6 +42,9 @@ public:
     // drainAndExit()  must be called first
     ~AsyncJobQueue() noexcept;
 
+    // cancel all pending jobs, but doesn't exist the thread
+    void cancelAll() noexcept;
+
     // blocks until all jobs are executed and quits the thread
     void drainAndExit();
 
