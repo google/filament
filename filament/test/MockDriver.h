@@ -91,6 +91,7 @@ public:
     MOCK_METHOD(bool, isCompositorTimingSupported, (), (override));
     MOCK_METHOD(bool, queryFrameTimestamps, (SwapChainHandle, uint64_t, FrameTimestamps*), (override));
     MOCK_METHOD(bool, queryCompositorTiming, (SwapChainHandle, CompositorTiming*), (override));
+    MOCK_METHOD(void, fenceCancel, (backend::FenceHandle), (override));
 
 
     ShaderModel getShaderModel() const noexcept final { return ShaderModel::DESKTOP; }

@@ -46,8 +46,8 @@ void FenceManager::reclaimCompletedResources(DriverApi& driver,
             signaledCount++;
 #ifndef NDEBUG
             if (UTILS_UNLIKELY(status != FenceStatus::CONDITION_SATISFIED)) {
-                utils::slog.w << "A fence is either in an error state or hasn't signaled, but a newer "
-                                 "fence has. Will release the resource anyway." << utils::io::endl;
+                LOG(WARNING) << "A fence is either in an error state or hasn't signaled, but a newer "
+                                 "fence has. Will release the resource anyway.";
             }
 #endif
             continue;
