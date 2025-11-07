@@ -25,7 +25,6 @@ import java.util.EnumSet;
 
 import static com.google.android.filament.Asserts.assertFloat3In;
 import static com.google.android.filament.Asserts.assertFloat4In;
-import static com.google.android.filament.Colors.LinearColor;
 
 import com.google.android.filament.proguard.UsedByNative;
 
@@ -675,6 +674,21 @@ public class View {
     }
 
     /**
+     * Returns the last dynamic resolution scale factor used by this view. This value is updated
+     * when Renderer::render(View*) is called
+     * @param out A 2-float array where the value will be stored, or null in which case the array is
+     *            allocated.
+     * @return A 2-float array containing the horizontal and the vertical scale factors
+     * @see Renderer#render(View)
+     */
+    @NonNull @Size(min = 2)
+    public float[] getLastDynamicResolutionScale(@Nullable @Size(min = 4) float[] out) {
+        out = Asserts.assertFloat4(out);
+        nGetLastDynamicResolutionScale(getNativeObject(), out);
+        return out;
+    }
+
+    /**
      * Sets the rendering quality for this view (e.g. color precision).
      *
      * @param renderQuality The render quality to use on this view
@@ -1317,6 +1331,7 @@ public class View {
     private static native void nSetDithering(long nativeView, int dithering);
     private static native int nGetDithering(long nativeView);
     private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, float sharpness, int quality);
+    private static native void nGetLastDynamicResolutionScale(long nativeView, float[] out);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
