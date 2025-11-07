@@ -337,6 +337,7 @@ DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle
 DECL_DRIVER_API_SYNCHRONOUS_N(void, updateStreams, backend::DriverApi*, driver)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, getFenceStatus, backend::FenceHandle, fh)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, fenceWait, backend::FenceHandle, fh, uint64_t, timeout)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, fenceCancel, backend::FenceHandle, fh)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, getPlatformSync, backend::SyncHandle, sh,
         backend::CallbackHandler*, handler, backend::Platform::SyncCallback, cb, void*, userData)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatSupported, backend::TextureFormat, format)

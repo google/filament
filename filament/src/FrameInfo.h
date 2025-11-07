@@ -35,6 +35,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <iterator>
 #include <ratio>
 #include <type_traits>
 
@@ -130,6 +131,41 @@ public:
     using reference = value_type&;
     using const_reference = value_type const&;
 
+private:
+    template<typename U>
+    class Iterator {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = typename std::remove_const<T>::type;
+        using difference_type = std::ptrdiff_t;
+        using pointer = U*;
+        using reference = U&;
+        using QueuePtr = typename std::conditional<std::is_const<U>::value,
+                const CircularQueue*, CircularQueue*>::type;
+
+        Iterator() = default;
+        Iterator(QueuePtr queue, size_t pos) noexcept : mQueue(queue), mPos(pos) {}
+
+        // allow conversion from iterator to const_iterator
+        operator Iterator<const T>() const { return { mQueue, mPos }; }
+
+        reference operator*() const { return (*mQueue)[mPos]; }
+        pointer operator->() const { return &(*mQueue)[mPos]; }
+        Iterator& operator++() { ++mPos; return *this; }
+        Iterator operator++(int) { Iterator temp = *this; ++(*this); return temp; }
+
+        friend bool operator==(const Iterator& a, const Iterator& b) { return a.mQueue == b.mQueue && a.mPos == b.mPos; }
+        friend bool operator!=(const Iterator& a, const Iterator& b) { return !(a == b); }
+
+    private:
+        QueuePtr mQueue = nullptr;
+        size_t mPos = 0;
+    };
+
+public:
+    using iterator = Iterator<T>;
+    using const_iterator = Iterator<const T>;
+
     CircularQueue() = default;
 
     ~CircularQueue() {
@@ -161,6 +197,13 @@ public:
         }
         return *this;
     }
+
+    iterator begin() noexcept { return iterator(this, 0); }
+    iterator end() noexcept { return iterator(this, size()); }
+    const_iterator begin() const noexcept { return const_iterator(this, 0); }
+    const_iterator end() const noexcept { return const_iterator(this, size()); }
+    const_iterator cbegin() const noexcept { return const_iterator(this, 0); }
+    const_iterator cend() const noexcept { return const_iterator(this, size()); }
 
     size_t capacity() const noexcept {
         return CAPACITY;
@@ -211,7 +254,9 @@ public:
     }
 
     T const& operator[](size_t pos) const noexcept {
-        return const_cast<CircularQueue&>(*this)[pos];
+        assert_invariant(pos < size());
+        size_t const index = (mFront + CAPACITY - pos) % CAPACITY;
+        return *std::launder(reinterpret_cast<T const*>(&mStorage[index]));
     }
 
     T const& front() const noexcept {

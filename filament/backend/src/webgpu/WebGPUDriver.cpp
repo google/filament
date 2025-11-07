@@ -675,6 +675,10 @@ void WebGPUDriver::destroyFence(Handle<HwFence> fenceHandle) {
     }
 }
 
+void WebGPUDriver::fenceCancel(FenceHandle fh) {
+    // it's okay to implement cancel as a no-op, because not all API support truly canceling.
+}
+
 FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
     const auto fence = handleCast<WebGPUFence>(fenceHandle);
     if (!fence) {
