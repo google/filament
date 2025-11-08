@@ -452,9 +452,7 @@ void FRenderer::endFrame() {
     mFrameInfoManager.endFrame(driver);
     mFrameSkipper.submitFrame(driver);
 
-    if (engine.isUboBatchingEnabled()) {
-        engine.getUboManager()->endFrame(driver, engine.getMaterialInstanceResourceList());
-    }
+    engine.endFrame();
 
     driver.endFrame(mFrameId);
 
@@ -591,9 +589,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
         // happen with Renderer::beginFrame/endFrame.
         renderInternal(view, true);
 
-        if (engine.isUboBatchingEnabled()) {
-            engine.getUboManager()->endFrame(driver, engine.getMaterialInstanceResourceList());
-        }
+        engine.endFrame();
 
         driver.endFrame(mFrameId);
 

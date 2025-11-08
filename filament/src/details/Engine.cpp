@@ -750,6 +750,13 @@ void FEngine::gc() {
     mCameraManager.gc(*this, em);
 }
 
+void FEngine::endFrame() {
+    if (isUboBatchingEnabled()) {
+        DriverApi& driver = getDriverApi();
+        getUboManager()->endFrame(driver, getMaterialInstanceResourceList());
+    }
+}
+
 void FEngine::flush() {
     // flush the command buffer
     flushCommandBuffer(mCommandBufferQueue);
