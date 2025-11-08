@@ -682,8 +682,8 @@ public class View {
      * @see Renderer#render(View)
      */
     @NonNull @Size(min = 2)
-    public float[] getLastDynamicResolutionScale(@Nullable @Size(min = 4) float[] out) {
-        out = Asserts.assertFloat4(out);
+    public float[] getLastDynamicResolutionScale(@Nullable @Size(min = 2) float[] out) {
+        out = Asserts.assertFloat2(out);
         nGetLastDynamicResolutionScale(getNativeObject(), out);
         return out;
     }
