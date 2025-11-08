@@ -31,6 +31,12 @@ using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
 
+// A mock implementation of the backend::Driver for unit testing.
+//
+// This mock is primarily designed for testing synchronous APIs and functions that
+// return a value immediately (those with the "S" suffix, like `createBufferObjectS`).
+// It does not fully support asynchronous command stream behavior, so its use for
+// testing complex rendering logic is limited.
 class MockDriver : public Driver {
 public:
     MockDriver() = default;
@@ -128,6 +134,8 @@ public:
 
     Dispatcher getDispatcher() const noexcept override {
         Dispatcher dispatcher;
+        // Currently we don't have a good way to mock the functions for asynchronous backend API.
+        // We set all API to nullptr to let the users know it doesn't work.
 #define DECL_DRIVER_API(methodName, paramsDecl, params) dispatcher.methodName##_ = nullptr;
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                            \
     dispatcher.methodName##_ = nullptr;
