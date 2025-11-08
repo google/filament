@@ -396,10 +396,10 @@ bool Froxelizer::update() noexcept {
         if (zLightFar < zLightNear) {
             std::swap(zLightFar, zLightNear);
         }
-        if (zLightNear < mNear || zLightNear > mFar) {
+        if (zLightNear < mNear || zLightNear >= mFar) {
             zLightNear = mNear;
         }
-        if (zLightFar > mFar || zLightFar < mNear) {
+        if (zLightFar > mFar || zLightFar <= mNear) {
             zLightFar = mFar;
         }
 
