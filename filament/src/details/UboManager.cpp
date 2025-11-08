@@ -18,10 +18,10 @@
 
 #include "MaterialInstance.h"
 #include "details/BufferAllocator.h"
-#include "details/FenceManager.h"
 
 #include <backend/DriverEnums.h>
 #include <private/utils/Tracing.h>
+#include <utils/Logger.h>
 
 #include <vector>
 
@@ -34,6 +34,80 @@ using namespace backend;
 using AllocationId = BufferAllocator::AllocationId;
 using allocation_size_t = BufferAllocator::allocation_size_t;
 } // anonymous namespace
+
+// ------------------------------------------------------------------------------------------------
+// FenceManager
+// ------------------------------------------------------------------------------------------------
+
+void UboManager::FenceManager::track(DriverApi& driver, std::unordered_set<AllocationId>&& allocationIds) {
+    if (allocationIds.empty()) {
+        return;
+    }
+    mFenceAllocationList.emplace_back(driver.createFence(), std::move(allocationIds));
+}
+
+void UboManager::FenceManager::reclaimCompletedResources(DriverApi& driver,
+        std::function<void(AllocationId)> const& onReclaimed) {
+    uint32_t signaledCount = 0;
+    bool seenSignaledFence = false;
+
+    // Iterate from the newest fence to the oldest.
+    for (auto it = mFenceAllocationList.rbegin(); it != mFenceAllocationList.rend(); ++it) {
+        const Handle<HwFence>& fence = it->first;
+        const FenceStatus status = driver.getFenceStatus(fence);
+
+        // If we have already seen a signaled fence, we can assume all older fences
+        // are also complete, regardless of their reported status (e.g., TIMEOUT_EXPIRED).
+        // This is guaranteed by the in-order execution of GPU command queues.
+        if (seenSignaledFence) {
+            signaledCount++;
+#ifndef NDEBUG
+            if (UTILS_UNLIKELY(status != FenceStatus::CONDITION_SATISFIED)) {
+                LOG(WARNING) << "A fence is either in an error state or hasn't signaled, but a newer "
+                                 "fence has. Will release the resource anyway.";
+            }
+#endif
+            continue;
+        }
+
+        if (status == FenceStatus::CONDITION_SATISFIED) {
+            seenSignaledFence = true;
+            signaledCount++;
+        }
+    }
+
+    if (signaledCount == 0) {
+        // No fences have completed, nothing to do.
+        return;
+    }
+
+    auto firstToKeep = mFenceAllocationList.begin() + signaledCount;
+
+    // Invoke the callback for all resources protected by completed fences.
+    for (auto it = mFenceAllocationList.begin(); it != firstToKeep; ++it) {
+        for (const AllocationId& id : it->second) {
+            onReclaimed(id);
+        }
+        // Destroy the fence handle as it's no longer needed.
+        driver.destroyFence(std::move(it->first));
+    }
+
+    mFenceAllocationList.erase(mFenceAllocationList.begin(), firstToKeep);
+}
+
+void UboManager::FenceManager::reset(DriverApi& driver) {
+    for (auto& [fence, _] : mFenceAllocationList) {
+        if (fence) {
+            driver.destroyFence(std::move(fence));
+        }
+    }
+    mFenceAllocationList.clear();
+}
+
+
+// ------------------------------------------------------------------------------------------------
+// UboManager
+// ------------------------------------------------------------------------------------------------
 
 UboManager::UboManager(DriverApi& driver, allocation_size_t defaultSlotSizeInBytes,
         allocation_size_t defaultTotalSizeInBytes)

@@ -19,15 +19,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "details/FenceManager.h"
+#include "details/UboManager.h"
 #include "private/backend/CommandBufferQueue.h"
 
 #include "private/backend/CommandStream.h"
 #include "private/backend/Driver.h"
 
 namespace {
+
 using namespace filament;
-using namespace filament::backend;
+using namespace backend;
 
 using ::testing::_;
 using ::testing::Return;
@@ -47,7 +48,7 @@ protected:
     CommandBufferQueue mCommandBufferQueue;
     CommandStream mCommandStream;
     DriverApi& mDriverApi;
-    FenceManager mFenceManager;
+    UboManager::FenceManager mFenceManager;
 };
 
 TEST_F(FenceManagerTest, TrackEmptySet) {
@@ -61,7 +62,7 @@ TEST_F(FenceManagerTest, TrackNonEmptySet) {
 }
 
 TEST_F(FenceManagerTest, ReclaimWithNoFences) {
-    std::vector<FenceManager::AllocationId> reclaimedIds;
+    std::vector<UboManager::FenceManager::AllocationId> reclaimedIds;
     mFenceManager.reclaimCompletedResources(mDriverApi,
             [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.push_back(id); });
 
@@ -74,7 +75,7 @@ TEST_F(FenceManagerTest, ReclaimWhenFenceNotSignaled) {
     EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(1)))
             .WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
 
-    std::unordered_set<FenceManager::AllocationId> reclaimedIds;
+    std::unordered_set<UboManager::FenceManager::AllocationId> reclaimedIds;
     mFenceManager.reclaimCompletedResources(mDriverApi,
             [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.insert(id); });
 
@@ -88,7 +89,7 @@ TEST_F(FenceManagerTest, ReclaimWhenFenceSignaled) {
     EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(1)))
             .WillOnce(Return(FenceStatus::CONDITION_SATISFIED));
 
-    std::unordered_set<FenceManager::AllocationId> reclaimedIds;
+    std::unordered_set<UboManager::FenceManager::AllocationId> reclaimedIds;
     mFenceManager.reclaimCompletedResources(mDriverApi,
             [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.insert(id); });
 
@@ -127,7 +128,7 @@ TEST_F(FenceManagerTest, ReclaimMultipleFencesPartial) {
     EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(1)))
             .WillOnce(Return(FenceStatus::CONDITION_SATISFIED));
 
-    std::vector<FenceManager::AllocationId> reclaimedIds;
+    std::vector<UboManager::FenceManager::AllocationId> reclaimedIds;
     mFenceManager.reclaimCompletedResources(mDriverApi,
             [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.push_back(id); });
 
@@ -147,7 +148,7 @@ TEST_F(FenceManagerTest, Reset) {
     mFenceManager.reset(mDriverApi);
 
     // After reset, reclaiming should do nothing.
-    std::vector<FenceManager::AllocationId> reclaimedIds;
+    std::vector<UboManager::FenceManager::AllocationId> reclaimedIds;
     EXPECT_CALL(mMockDriver, getFenceStatus(_)).Times(0);
     mFenceManager.reclaimCompletedResources(mDriverApi,
             [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.push_back(id); });
