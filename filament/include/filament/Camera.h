@@ -243,10 +243,10 @@ public:
     /** Utility to set the projection matrix from the field-of-view.
      *
      * @param fovInDegrees full field-of-view in degrees. 0 < \p fov < 180.
-     * @param aspect       aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
-     * @param near         distance in world units from the camera to the near plane. \p near > 0.
-     * @param far          distance in world units from the camera to the far plane. \p far > \p near.
-     * @param direction    direction of the \p fovInDegrees parameter.
+     * @param aspect    aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
+     * @param near      distance in world units from the camera to the near plane. \p near > 0.
+     * @param far       distance in world units from the camera to the far plane. \p far > \p near.
+     * @param direction direction of the \p fovInDegrees parameter.
      *
      * @see Fov.
      */
@@ -256,9 +256,9 @@ public:
     /** Utility to set the projection matrix from the focal length.
      *
      * @param focalLengthInMillimeters lens's focal length in millimeters. \p focalLength > 0.
-     * @param aspect      aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
-     * @param near        distance in world units from the camera to the near plane. \p near > 0.
-     * @param far         distance in world units from the camera to the far plane. \p far > \p near.
+     * @param aspect    aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
+     * @param near      distance in world units from the camera to the near plane. \p near > 0.
+     * @param far       distance in world units from the camera to the far plane. \p far > \p near.
      */
     void setLensProjection(double focalLengthInMillimeters,
             double aspect, double near, double far);
@@ -270,8 +270,8 @@ public:
      * that is all 3 axis are mapped to [-1, 1].
      *
      * @param projection  custom projection matrix used for rendering and culling
-     * @param near        distance in world units from the camera to the near plane. \p near > 0.
-     * @param far         distance in world units from the camera to the far plane. \p far > \p near.
+     * @param near      distance in world units from the camera to the near plane.
+     * @param far       distance in world units from the camera to the far plane. \p far != \p near.
      */
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
 
@@ -282,8 +282,8 @@ public:
      *
      * @param projection  custom projection matrix used for rendering
      * @param projectionForCulling  custom projection matrix used for culling
-     * @param near        distance in world units from the camera to the near plane. \p near > 0.
-     * @param far         distance in world units from the camera to the far plane. \p far > \p near.
+     * @param near      distance in world units from the camera to the near plane.
+     * @param far       distance in world units from the camera to the far plane. \p far != \p near.
      */
     void setCustomProjection(math::mat4 const& projection, math::mat4 const& projectionForCulling,
             double near, double far) noexcept;
