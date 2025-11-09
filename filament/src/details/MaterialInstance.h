@@ -51,6 +51,7 @@
 
 namespace filament {
 
+class FMaterial;
 class FTexture;
 
 class FMaterialInstance : public MaterialInstance {
