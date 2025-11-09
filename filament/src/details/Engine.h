@@ -356,8 +356,7 @@ public:
     };
 
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
-            const FMaterialInstance* other, const char* name,
-            UboBatchingMode batchingMode) noexcept;
+            const FMaterialInstance* other, const char* name) noexcept;
 
     FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name,
             UboBatchingMode batchingMode) noexcept;

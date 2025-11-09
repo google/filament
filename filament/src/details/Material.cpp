@@ -275,20 +275,20 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     }
 }
 
-FMaterialInstance* FMaterial::createInstance(const char* name, UboBatchingMode batchingMode) const noexcept {
+FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
     if (mDefaultMaterialInstance) {
         // if we have a default instance, use it to create a new one
-        return FMaterialInstance::duplicate(mDefaultMaterialInstance, name, batchingMode);
+        return FMaterialInstance::duplicate(mDefaultMaterialInstance, name);
     } else {
         // but if we don't, just create an instance with all the default parameters
-        return mEngine.createMaterialInstance(this, name, batchingMode);
+        return mEngine.createMaterialInstance(this, name, UboBatchingMode::DEFAULT);
     }
 }
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, mDefinition.name.c_str(),
-                UboBatchingMode::NO_UBO_BATCHING);
+        mDefaultMaterialInstance =
+                mEngine.createMaterialInstance(this, mDefinition.name.c_str(), UboBatchingMode::DEFAULT);
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;

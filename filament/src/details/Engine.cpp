@@ -468,8 +468,13 @@ void FEngine::init() {
         }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
     }
+
     // We must commit the default material instance here. It may not be used in a scene, but its
     // descriptor set may still be used for shared variants.
+    //
+    // Note that this material instance is instantiated before the creation of UboManager, so at
+    // this point `isUboBatchingEnabled` is `false`, and it will fall back to individual UBO
+    // automatically.
     mDefaultMaterial->getDefaultInstance()->commit(driverApi, mUboManager);
 
     if (UTILS_UNLIKELY(getSupportedFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
@@ -978,9 +983,8 @@ FRenderer* FEngine::createRenderer() noexcept {
 }
 
 FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
-        const FMaterialInstance* other, const char* name,
-        UboBatchingMode batchingMode) noexcept {
-    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, other, name, batchingMode);
+        const FMaterialInstance* other, const char* name) noexcept {
+    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, other, name);
     if (UTILS_LIKELY(p)) {
         auto const pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);

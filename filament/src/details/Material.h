@@ -109,9 +109,7 @@ public:
             utils::Invocable<void(Material*)>&& callback) noexcept;
 
     // Creates an instance of this material, specifying the batching mode.
-    FMaterialInstance* createInstance(const char* name,
-            FEngine::UboBatchingMode batchingMode =
-                    FEngine::UboBatchingMode::DEFAULT) const noexcept;
+    FMaterialInstance* createInstance(const char* name) const noexcept;
 
     bool hasParameter(const char* name) const noexcept;
 

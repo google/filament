@@ -57,13 +57,11 @@ class FMaterialInstance : public MaterialInstance {
 public:
     FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name,
             FEngine::UboBatchingMode batchingMode) noexcept;
-    FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name,
-            FEngine::UboBatchingMode batchingMode);
+    FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
 
-    static FMaterialInstance* duplicate(FMaterialInstance const* other, const char* name,
-            FEngine::UboBatchingMode batchingMode = FEngine::UboBatchingMode::DEFAULT) noexcept;
+    static FMaterialInstance* duplicate(FMaterialInstance const* other, const char* name) noexcept;
 
     ~FMaterialInstance() noexcept;
 

@@ -138,7 +138,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
 }
 
 FMaterialInstance::FMaterialInstance(FEngine& engine,
-        FMaterialInstance const* other, const char* name, UboBatchingMode batchingMode)
+        FMaterialInstance const* other, const char* name)
         : mMaterial(other->mMaterial),
           mTextureParameters(other->mTextureParameters),
           mDescriptorSet(other->mDescriptorSet.duplicate(
@@ -156,12 +156,10 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mHasScissor(false),
           mIsDoubleSided(other->mIsDoubleSided),
           mIsDefaultInstance(false),
-          mUseUboBatching(shouldEnableBatching(engine, batchingMode,
-                  other->getMaterial()->getMaterialDomain())),
+          mUseUboBatching(other->mUseUboBatching),
           mScissorRect(other->mScissorRect),
           mName(name ? CString(name) : other->mName) {
-    FILAMENT_CHECK_PRECONDITION(!mUseUboBatching || engine.isUboBatchingEnabled())
-            << "UBO batching is not enabled.";
+    assert_invariant(!mUseUboBatching || engine.isUboBatchingEnabled());
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
 
@@ -201,14 +199,11 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     }
 }
 
-FMaterialInstance* FMaterialInstance::duplicate(FMaterialInstance const* other, const char* name,
-        UboBatchingMode batchingMode) noexcept {
+FMaterialInstance* FMaterialInstance::duplicate(FMaterialInstance const* other,
+        const char* name) noexcept {
     FMaterial const* const material = other->getMaterial();
     FEngine& engine = material->getEngine();
-    FILAMENT_CHECK_PRECONDITION(
-            batchingMode != UboBatchingMode::UBO_BATCHING || engine.isUboBatchingEnabled())
-            << "UBO batching is not enabled.";
-    return engine.createMaterialInstance(material, other, name, batchingMode);
+    return engine.createMaterialInstance(material, other, name);
 }
 
 FMaterialInstance::~FMaterialInstance() noexcept = default;
