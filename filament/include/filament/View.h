@@ -542,6 +542,14 @@ public:
     DynamicResolutionOptions getDynamicResolutionOptions() const noexcept;
 
     /**
+     * Returns the last dynamic resolution scale factor used by this view. This value is updated
+     * when Renderer::render(View*) is called
+     * @return a float2 where x is the horizontal and y the vertical scale factor.
+     * @see Renderer::render
+     */
+    math::float2 getLastDynamicResolutionScale() const noexcept;
+
+    /**
      * Sets the rendering quality for this view. Refer to RenderQuality for more
      * information about the different settings available.
      *
