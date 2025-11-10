@@ -228,6 +228,10 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
+
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+        VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
+#endif
     };
     ExtensionSet exts;
     // Identify supported physical device extensions
@@ -865,6 +869,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     if (!mImpl->mSharedContext) {
         context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context.mPipelineCreationFeedbackSupported =
+                setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
     } else {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsSupported = scontext->debugUtilsSupported;

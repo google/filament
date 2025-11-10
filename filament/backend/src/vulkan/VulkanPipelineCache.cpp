@@ -34,8 +34,39 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanPipelineCache::VulkanPipelineCache(VkDevice device)
-    : mDevice(device) {
+namespace {
+
+void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedbackInfo) {
+    VkPipelineCreationFeedback const& pipelineInfo = *feedbackInfo.pPipelineCreationFeedback;
+    if (!(pipelineInfo.flags & VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT)) {
+        return;
+    }
+
+    bool const isCacheHit =
+            (pipelineInfo.flags & VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT);
+    FVK_LOGD << "Pipeline build stats - Cache hit: " << isCacheHit
+             << ", Time: " << pipelineInfo.duration / 1000000.0 << "ms";
+
+    for (uint32_t i = 0; i < feedbackInfo.pipelineStageCreationFeedbackCount; ++i) {
+        VkPipelineCreationFeedback const& stageInfo = feedbackInfo.pPipelineStageCreationFeedbacks[i];
+        if (!(stageInfo.flags & VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT)) {
+            continue;
+        }
+
+        bool const isVertexShader = (i == 0);
+        bool const isCacheHit = (stageInfo.flags &
+                                 VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT);
+        FVK_LOGD << (isVertexShader ? "Vertex" : "Fragment")
+                 << " shader build stats - Cache hit: " << isCacheHit
+                 << ", Time: " << stageInfo.duration / 1000000.0 << "ms";
+    }
+}
+
+} // namespace
+
+VulkanPipelineCache::VulkanPipelineCache(VkDevice device, VulkanContext const& context)
+        : mDevice(device),
+          mContext(context) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
     };
@@ -216,15 +247,40 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         }
     }
 
-    #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-        FVK_LOGD << "vkCreateGraphicsPipelines with shaders = ("
-                 << shaderStages[0].module << ", " << shaderStages[1].module << ")";
-    #endif
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+    FVK_LOGD << "vkCreateGraphicsPipelines with shaders = (" << shaderStages[0].module << ", "
+             << shaderStages[1].module << ")";
+
+    VkPipelineCreationFeedback stageFeedbacks[SHADER_MODULE_COUNT] = {};
+    VkPipelineCreationFeedback pipelineFeedback = {};
+    VkPipelineCreationFeedbackCreateInfo feedbackInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_CREATION_FEEDBACK_CREATE_INFO_EXT,
+        .pNext = nullptr,
+        .pPipelineCreationFeedback = &pipelineFeedback,
+        .pipelineStageCreationFeedbackCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1,
+        .pPipelineStageCreationFeedbacks = stageFeedbacks,
+    };
+
+    if (mContext.pipelineCreationFeedbackSupported()) {
+        feedbackInfo.pNext = pipelineCreateInfo.pNext;
+        pipelineCreateInfo.pNext = &feedbackInfo;
+    }
+#endif
     PipelineCacheEntry cacheEntry = {
         .lastUsed = mCurrentTime,
     };
     VkResult error = vkCreateGraphicsPipelines(mDevice, mPipelineCache, 1, &pipelineCreateInfo,
             VKALLOC, &cacheEntry.handle);
+
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+    FVK_LOGD << "vkCreateGraphicsPipelines with shaders = (" << shaderStages[0].module << ", "
+             << shaderStages[1].module << ")";
+
+    if (mContext.pipelineCreationFeedbackSupported()) {
+        printPipelineFeedbackInfo(feedbackInfo);
+    }
+#endif
+
     assert_invariant(error == VK_SUCCESS);
     if (error != VK_SUCCESS) {
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;

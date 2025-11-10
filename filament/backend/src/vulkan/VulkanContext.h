@@ -154,6 +154,10 @@ public:
         return mStagingBufferBypassEnabled;
     }
 
+    inline bool pipelineCreationFeedbackSupported() const noexcept {
+        return mPipelineCreationFeedbackSupported;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
@@ -181,6 +185,7 @@ private:
     bool mProtectedMemorySupported = false;
     bool mIsUnifiedMemoryArchitecture = false;
     bool mStagingBufferBypassEnabled = false;
+    bool mPipelineCreationFeedbackSupported = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;
