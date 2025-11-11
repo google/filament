@@ -452,7 +452,7 @@ void FRenderer::endFrame() {
     mFrameInfoManager.endFrame(driver);
     mFrameSkipper.submitFrame(driver);
 
-    engine.endFrame();
+    engine.submitFrame();
 
     driver.endFrame(mFrameId);
 
@@ -589,7 +589,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
         // happen with Renderer::beginFrame/endFrame.
         renderInternal(view, true);
 
-        engine.endFrame();
+        engine.submitFrame();
 
         driver.endFrame(mFrameId);
 

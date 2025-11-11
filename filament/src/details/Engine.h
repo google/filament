@@ -465,7 +465,7 @@ public:
 
     void prepare();
     void gc();
-    void endFrame();
+    void submitFrame();
 
     using ShaderContent = utils::FixedCapacityVector<uint8_t>;
 

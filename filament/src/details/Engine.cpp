@@ -755,7 +755,7 @@ void FEngine::gc() {
     mCameraManager.gc(*this, em);
 }
 
-void FEngine::endFrame() {
+void FEngine::submitFrame() {
     if (isUboBatchingEnabled()) {
         DriverApi& driver = getDriverApi();
         getUboManager()->endFrame(driver, getMaterialInstanceResourceList());
