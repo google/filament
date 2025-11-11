@@ -29,9 +29,8 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
-    std::chrono::steady_clock::time_point const until) {
-
+FenceStatus VulkanCmdBufferState::waitOnFence(VkDevice device, uint64_t const timeout,
+        std::chrono::steady_clock::time_point const until) {
     // this lock MUST be held for READ when calling vkWaitForFences()
     std::shared_lock rl(mLock);
 
@@ -81,13 +80,44 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     return FenceStatus::ERROR; // not supported
 }
 
-void VulkanCmdFence::resetFence(VkDevice device) {
+void VulkanCmdBufferState::resetFence(VkDevice device) {
     // This lock prevents vkResetFences() from being called simultaneously with vkWaitForFences(),
     // but by construction, when we're here, we know that the fence has signaled and
     // vkWaitForFences() will return shortly.
     std::lock_guard const l(mLock);
     assert_invariant(mStatus == VK_SUCCESS);
     vkResetFences(device, 1, &mFence);
+}
+
+uint64_t VulkanTimerQuery::getResult() {
+    {
+        std::lock_guard<std::mutex> lock(mDurationLock);
+        if (mDuration != UNKNOWN_QUERY_RESULT) {
+            return mDuration;
+        }
+    }
+
+    VulkanCmdBufferState* startState = nullptr;
+    VulkanCmdBufferState* endState = nullptr;
+    {
+        std::shared_lock const l(mMutex);
+        startState = mBeginState.get();
+        endState = mEndState.get();
+    }
+    // Here we sum up the time taken by each command buffer that were marked by this timer query.
+    uint64_t duration = 0;
+    do {
+        uint64_t const stDuration = startState->getBufferDuration();
+        assert_invariant(stDuration != VulkanCmdBufferState::UNKNOWN_BUFFER_DURATION);
+        duration += stDuration;
+        startState = startState->getNextState().get();
+    } while (startState != endState);
+
+    {
+        std::lock_guard<std::mutex> lock(mDurationLock);
+        mDuration = duration;
+    }
+    return duration;
 }
 
 } // namespace filament::backend

@@ -42,6 +42,7 @@
 namespace filament::backend {
 
 using namespace fvkmemory;
+struct CommandBufferPool;
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 class VulkanGroupMarkers {
@@ -65,7 +66,8 @@ private:
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
     VulkanCommandBuffer(VulkanContext const& mContext, VkDevice device, VkQueue queue,
-            VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager, bool isProtected);
+            VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager, bool isProtected,
+            uint32_t timerQueryIndex, VkQueryPool queryPool);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
@@ -90,20 +92,14 @@ struct VulkanCommandBuffer {
     void begin() noexcept;
     fvkmemory::resource_ptr<VulkanSemaphore> submit();
 
-    inline void setComplete() {
-        mFenceStatus->setStatus(VK_SUCCESS);
-    }
+    void setComplete();
 
     VkResult getStatus() {
-        return mFenceStatus->getStatus();
+        return mCmdbufState->getFenceStatus();
     }
 
-    std::shared_ptr<VulkanCmdFence> getFenceStatus() const {
-        return mFenceStatus;
-    }
-
-    VkFence getVkFence() const {
-        return mFence;
+    std::shared_ptr<VulkanCmdBufferState> getState() const {
+        return mCmdbufState;
     }
 
     VkCommandBuffer buffer() const {
@@ -115,22 +111,31 @@ struct VulkanCommandBuffer {
     }
 
 private:
+    VkFence getVkFence() const {
+        return mFence;
+    }
+
     static uint32_t sAgeCounter;
 
     VulkanContext const& mContext;
     uint8_t mMarkerCount;
     bool const isProtected;
-    VkDevice mDevice;
-    VkQueue mQueue;
+    VkDevice const mDevice;
+    VkQueue const mQueue;
     VulkanSemaphoreManager* mSemaphoreManager;
     fvkutils::StaticVector<VkSemaphore, 2> mWaitSemaphores;
     fvkutils::StaticVector<VkPipelineStageFlags, 2> mWaitSemaphoreStages;
-    VkCommandBuffer mBuffer;
+    VkCommandBuffer const mBuffer;
     fvkmemory::resource_ptr<VulkanSemaphore> mSubmission;
-    VkFence mFence;
-    std::shared_ptr<VulkanCmdFence> mFenceStatus;
+    VkFence const mFence;
+    std::shared_ptr<VulkanCmdBufferState> mCmdbufState;
     std::vector<fvkmemory::resource_ptr<Resource>> mResources;
     uint32_t mAge;
+    uint32_t const mQueryBeginIndex;
+    uint32_t const mQueryEndIndex;
+    VkQueryPool const mQueryPool;
+
+    friend struct CommandBufferPool;
 };
 
 struct CommandBufferPool {
@@ -174,6 +179,8 @@ private:
     std::vector<std::unique_ptr<VulkanCommandBuffer>> mBuffers;
     int8_t mRecording;
 
+    VkQueryPool mQueryPool;
+
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
 #endif
@@ -199,7 +206,7 @@ private:
 //
 // - Allows off-thread queries of command buffer status.
 //    - Exposes an "updateFences" method that transfers current fence status into atomics.
-//    - Users can examine these atomic variables (see VulkanCmdFence) to determine status.
+//    - Users can examine these atomic variables (see VulkanCmdBufferState) to determine status.
 //    - We do this because vkGetFenceStatus must be called from the rendering thread.
 //
 class VulkanCommands {
@@ -230,12 +237,8 @@ public:
         return sem;
     }
 
-    VkFence getMostRecentFence() {
-        return mLastFence;
-    }
-
-    std::shared_ptr<VulkanCmdFence> getMostRecentFenceStatus() {
-        return mLastFenceStatus;
+    std::shared_ptr<VulkanCmdBufferState> getMostRecentBufferState() {
+        return mLastBufferState;
     }
 
     // Takes a semaphore that signals when the next flush can occur. Only one injected
@@ -276,8 +279,7 @@ private:
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     fvkmemory::resource_ptr<VulkanSemaphore> mLastSubmit;
 
-    VkFence mLastFence = VK_NULL_HANDLE;
-    std::shared_ptr<VulkanCmdFence> mLastFenceStatus;
+    std::shared_ptr<VulkanCmdBufferState> mLastBufferState;
 
     VkPipelineStageFlags mInjectedDependencyWaitStage = 0;
 };

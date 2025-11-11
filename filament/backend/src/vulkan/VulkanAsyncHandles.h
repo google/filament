@@ -27,6 +27,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -35,31 +36,54 @@
 
 namespace filament::backend {
 
-// Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
-struct VulkanCmdFence {
-    explicit VulkanCmdFence(VkFence fence) : mFence(fence) { }
-    ~VulkanCmdFence() = default;
+// Wrapper to enable use of shared_ptr for implementing shared ownership of Vulkan fences
+// and timer query results.
+struct VulkanCmdBufferState {
+    static uint64_t const UNKNOWN_BUFFER_DURATION = std::numeric_limits<uint64_t>::max();
 
-    void setStatus(VkResult const value) {
+    explicit VulkanCmdBufferState(VkFence fence)
+            : mFence(fence) {
+    }
+    ~VulkanCmdBufferState() = default;
+
+    void setStatus(VkResult const value, uint64_t duration) {
         std::lock_guard const l(mLock);
         mStatus = value;
+        mDuration = duration;
         mCond.notify_all();
     }
 
-    VkResult getStatus() {
+    uint64_t getBufferDuration() {
+        std::shared_lock const l(mLock);
+        return mDuration;
+    }
+
+    VkResult getFenceStatus() {
         std::shared_lock const l(mLock);
         return mStatus;
     }
 
     void resetFence(VkDevice device);
 
-    FenceStatus wait(VkDevice device, uint64_t timeout,
+    FenceStatus waitOnFence(VkDevice device, uint64_t timeout,
         std::chrono::steady_clock::time_point until);
 
     void cancel() {
         std::lock_guard const l(mLock);
         mCanceled = true;
         mCond.notify_all();
+    }
+
+    void setNextState(std::shared_ptr<VulkanCmdBufferState> next) {
+        mNextState = std::move(next);
+    }
+
+    std::shared_ptr<VulkanCmdBufferState>& getNextState() {
+        return mNextState;
+    }
+
+    VkFence getVkFence() const {
+        return mFence;
     }
 
 private:
@@ -70,38 +94,42 @@ private:
     // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
     VkResult mStatus{ VK_INCOMPLETE };
-    VkFence mFence;
+    VkFence const mFence;
+
+    uint64_t mDuration = UNKNOWN_BUFFER_DURATION;
+
+    // We assume that command buffers are serialized.  This will point to the state of the next
+    // buffer. This is necessary so that we can return total duration of multiple command buffers
+    // when a TimerQuery is requested by the front-end.
+    std::shared_ptr<VulkanCmdBufferState> mNextState;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     VulkanFence() {}
 
-    void setFence(std::shared_ptr<VulkanCmdFence> fence) {
-        std::lock_guard const l(lock);
-        sharedFence = std::move(fence);
+    void setCmdBufferState(std::shared_ptr<VulkanCmdBufferState> state) {
+        std::lock_guard l(lock);
+        cmdbufState = std::move(state);
         cond.notify_all();
     }
 
-    std::shared_ptr<VulkanCmdFence>& getSharedFence() {
-        std::lock_guard const l(lock);
-        return sharedFence;
+    std::shared_ptr<VulkanCmdBufferState>& getCmdBufferState() {
+        std::lock_guard l(lock);
+        return cmdbufState;
     }
 
-    std::pair<std::shared_ptr<VulkanCmdFence>, bool>
-            wait(std::chrono::steady_clock::time_point const until) {
-        // hold a reference so that our state doesn't disappear while we wait
+    std::pair<std::shared_ptr<VulkanCmdBufferState>, bool> wait(
+            std::chrono::steady_clock::time_point const until) {
         std::unique_lock l(lock);
-        cond.wait_until(l, until, [this] {
-            return bool(sharedFence) || canceled;
-        });
-        // here mSharedFence will be null if we timed out
-        return { sharedFence, canceled };
+        cond.wait_until(l, until, [&] { return bool(cmdbufState) || canceled; });
+        // here cmdbufState will be null if we timed out
+        return { cmdbufState, canceled };
     }
 
     void cancel() const {
         std::lock_guard const l(lock);
-        if (sharedFence) {
-            sharedFence->cancel();
+        if (cmdbufState) {
+            cmdbufState->cancel();
         }
         canceled = true;
         cond.notify_all();
@@ -111,10 +139,10 @@ private:
     mutable std::mutex lock;
     mutable std::condition_variable cond;
     mutable bool canceled = false;
-    std::shared_ptr<VulkanCmdFence> sharedFence;
+    std::shared_ptr<VulkanCmdBufferState> cmdbufState;
 };
 
-struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
+struct VulkanSync : public HwSync, fvkmemory::ThreadSafeResource {
     struct CallbackData {
         CallbackHandler* handler;
         Platform::SyncCallback cb;
@@ -128,38 +156,50 @@ struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
 };
 
 struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
-    VulkanTimerQuery(uint32_t startingIndex, uint32_t stoppingIndex)
-        : mStartingQueryIndex(startingIndex),
-          mStoppingQueryIndex(stoppingIndex) {}
 
-    void setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {
-        std::lock_guard const lock(mFenceMutex);
-        mFence = std::move(fence);
+    static decltype(VulkanCmdBufferState::UNKNOWN_BUFFER_DURATION) const
+            UNKNOWN_QUERY_RESULT = VulkanCmdBufferState::UNKNOWN_BUFFER_DURATION;
+
+    VulkanTimerQuery() {}
+
+    void setBeginState(std::shared_ptr<VulkanCmdBufferState> state) {
+        {
+            std::lock_guard const lock(mMutex);
+            mBeginState = std::move(state);
+        }
+        {
+            std::lock_guard<std::mutex> lock(mDurationLock);
+            mDuration = UNKNOWN_QUERY_RESULT;
+        }
+
     }
 
-    bool isCompleted() noexcept {
-        std::lock_guard const lock(mFenceMutex);
-        // QueryValue is a synchronous call and might occur before beginTimerQuery has written
-        // anything into the command buffer, which is an error according to the validation layer
-        // that ships in the Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to
-        // require that the timestamp has at least been written into a processed command buffer.
-
-        // This fence indicates that the corresponding buffer has been completed.
-        return mFence && mFence->getStatus() == VK_SUCCESS;
+    void setEndState(std::shared_ptr<VulkanCmdBufferState> state) {
+        {
+            std::lock_guard const lock(mMutex);
+            mEndState = std::move(state);
+        }
+        {
+            std::lock_guard<std::mutex> lock(mDurationLock);
+            mDuration = UNKNOWN_QUERY_RESULT;
+        }
     }
 
-    uint32_t getStartingQueryIndex() const { return mStartingQueryIndex; }
-
-    uint32_t getStoppingQueryIndex() const {
-        return mStoppingQueryIndex;
+    bool isComplete() {
+        std::shared_lock const lock(mMutex);
+        return mBeginState && mEndState &&
+                mBeginState->getBufferDuration() != UNKNOWN_QUERY_RESULT &&
+                mEndState->getBufferDuration() != UNKNOWN_QUERY_RESULT;
     }
+
+    uint64_t getResult();
 
 private:
-    uint32_t mStartingQueryIndex;
-    uint32_t mStoppingQueryIndex;
-
-    std::shared_ptr<VulkanCmdFence> mFence;
-    utils::Mutex mFenceMutex;
+    std::shared_mutex mMutex; // NOLINT(*-include-cleaner)
+    std::mutex mDurationLock;
+    std::shared_ptr<VulkanCmdBufferState> mBeginState;
+    std::shared_ptr<VulkanCmdBufferState> mEndState;
+    uint64_t mDuration = UNKNOWN_QUERY_RESULT;
 };
 
 } // namespace filament::backend

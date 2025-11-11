@@ -241,7 +241,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mReadPixels(mPlatform->getDevice()),
       mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
       mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
-      mQueryManager(mPlatform->getDevice()),
       mExternalImageManager(platform, &mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
               &mDescriptorSetLayoutCache),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
@@ -337,8 +336,6 @@ void VulkanDriver::terminate() {
     mCurrentSwapChain = {};
     mDefaultRenderTarget = {};
     mPipelineState = {};
-
-    mQueryManager.terminate();
 
     mBlitter.terminate();
     mReadPixels.terminate();
@@ -860,32 +857,33 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::ImmutableCString&& ta
         cmdbuf = &mCommands.get();
     }
     // Note at this point, the fence has already been constructed via createFenceS, so we just tag
-    // it with appropriate VulkanCmdFence, which is associated with the current, recording command
+    // it with appropriate VulkanCmdBufferState, which is associated with the current, recording command
     // buffer.
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
-    fence->setFence(cmdbuf->getFenceStatus());
+    fence->setCmdBufferState(cmdbuf->getState());
     mResourceManager.associateHandle(fh.getId(), std::move(tag));
 }
 
 void VulkanDriver::createSyncR(Handle<HwSync> sh, utils::ImmutableCString&& tag) {
     auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
     VkFence fence = VK_NULL_HANDLE;
-    std::shared_ptr<VulkanCmdFence> fenceStatus;
+    std::shared_ptr<VulkanCmdBufferState> cmdbufState;
     if (mCurrentRenderPass.commandBuffer) {
         VulkanCommandBuffer* cmdBuff = mCurrentRenderPass.commandBuffer;
-        fence = cmdBuff->getVkFence();
-        fenceStatus = cmdBuff->getFenceStatus();
+        cmdbufState = cmdBuff->getState();
+        fence = cmdbufState->getVkFence();
+
         // If we're currently recording, flush so that the fence only applies
         // to commands already issued.
         mCommands.flush();
     } else {
-        fence = mCommands.getMostRecentFence();
-        fenceStatus = mCommands.getMostRecentFenceStatus();
+        cmdbufState = mCommands.getMostRecentBufferState();
+        fence = cmdbufState->getVkFence();
     }
 
     {
         std::lock_guard<std::mutex> guard(sync->lock);
-        sync->sync = mPlatform->createSync(fence, fenceStatus);
+        sync->sync = mPlatform->createSync(fence, cmdbufState);
     }
 
     for (auto& cbData : sync->conversionCallbacks) {
@@ -1075,9 +1073,10 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
-    auto query = mQueryManager.getNextQuery(&mResourceManager);
+    auto handle = mResourceManager.allocHandle<VulkanTimerQuery>();
+    auto query = resource_ptr<VulkanTimerQuery>::make(&mResourceManager, handle);
     query.inc();
-    return Handle<VulkanTimerQuery>(query.id());
+    return handle;
 }
 
 Handle<HwDescriptorSetLayout> VulkanDriver::createDescriptorSetLayoutS() noexcept {
@@ -1134,7 +1133,6 @@ void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
         return;
     }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    mQueryManager.clearQuery(vtq);
     vtq.dec();
 }
 
@@ -1197,7 +1195,6 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
 FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout) {
     // Even though this is a synchronous call, the fence handle must be (and stay) valid
     assert_invariant(fh);
-
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
 
     // we have to take into account that the STL's wait_for() actually works with
@@ -1214,14 +1211,14 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         until = now + nanoseconds(timeout);
     }
 
-    auto const [cmdfence, canceled] = fence->wait(until);
-    if (!cmdfence || canceled) {
+    auto const [cmdbufState, canceled] = fence->wait(until);
+    if (!cmdbufState || canceled) {
         return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
     }
 
-    // now we are holding a reference to our VulkanCmdFence, so we know it can't
+    // now we are holding a reference to our VulkanCmdBufferState, so we know it can't
     // disappear while we wait
-    return cmdfence->wait(mPlatform->getDevice(), timeout, until);
+    return cmdbufState->waitOnFence(mPlatform->getDevice(), timeout, until);
 }
 
 void VulkanDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
@@ -1518,29 +1515,17 @@ void VulkanDriver::setupExternalImage(void* image) {
 
 TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    if (!vtq->isCompleted()) {
+    if (!vtq->isComplete()) {
         return TimerQueryResult::NOT_READY;
     }
-
-    auto results = mQueryManager.getResult(vtq);
-    if (results.beginAvailable == 0 || results.endAvailable == 0) {
-        return TimerQueryResult::NOT_READY;
-    }
-
-    uint64_t const begin = results.beginTime;
-    uint64_t const end = results.endTime;
-    if (begin >= end) {
-        // TODO: queries might have ran on different command buffers.
-        FVK_LOGW << "Timestamps are not monotonically increasing. ";
-        *elapsedTime = 0;
-        return TimerQueryResult::ERROR;
-    }
+    uint64_t result = vtq->getResult();
+    assert_invariant(result != VulkanTimerQuery::UNKNOWN_QUERY_RESULT);
 
     // NOTE: MoltenVK currently writes system time so the following delta will always be zero.
     // However there are plans for implementing this properly. See the following GitHub ticket.
     // https://github.com/KhronosGroup/MoltenVK/issues/773
     float const period = mContext.getPhysicalDeviceLimits().timestampPeriod;
-    *elapsedTime = uint64_t(float(end - begin) * period);
+    *elapsedTime = uint64_t(float(result) * period);
     return TimerQueryResult::AVAILABLE;
 }
 
@@ -2299,12 +2284,14 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    mQueryManager.beginQuery(&(mCommands.get()), vtq);
+    auto cmdbuf = &mCommands.get();
+    vtq->setBeginState(cmdbuf->getState());
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    mQueryManager.endQuery(&(mCommands.get()), vtq);
+    auto cmdbuf = &mCommands.get();
+    vtq->setEndState(cmdbuf->getState());
 }
 
 void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {

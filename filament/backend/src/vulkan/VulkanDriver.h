@@ -25,7 +25,6 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanPipelineCache.h"
-#include "VulkanQueryManager.h"
 #include "VulkanReadPixels.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanSemaphoreManager.h"
@@ -159,7 +158,6 @@ private:
     VulkanReadPixels mReadPixels;
     VulkanDescriptorSetLayoutCache mDescriptorSetLayoutCache;
     VulkanDescriptorSetCache mDescriptorSetCache;
-    VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;
 
     // This maps a VulkanSwapchain to a native swapchain. VulkanSwapchain should have a copy of the

@@ -216,8 +216,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanPipelineCache.h
             src/vulkan/VulkanPipelineLayoutCache.cpp
             src/vulkan/VulkanPipelineLayoutCache.h
-            src/vulkan/VulkanQueryManager.cpp
-            src/vulkan/VulkanQueryManager.h
             src/vulkan/VulkanReadPixels.cpp
             src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanSamplerCache.cpp

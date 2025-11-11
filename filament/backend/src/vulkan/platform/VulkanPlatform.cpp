@@ -971,7 +971,7 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
 }
 
 Platform::Sync* VulkanPlatform::createSync(VkFence fence,
-        std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
+        std::shared_ptr<VulkanCmdBufferState> fenceStatus) noexcept {
     return new VulkanSync{.fence = fence, .fenceStatus = fenceStatus};
 }
 

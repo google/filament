@@ -48,7 +48,7 @@ struct VulkanPlatformPrivate;
 
 // Forward declare the fence status that will be maintained by the command
 // buffer manager.
-struct VulkanCmdFence;
+struct VulkanCmdBufferState;
 
 /**
  * A Platform interface that creates a Vulkan backend.
@@ -242,7 +242,7 @@ public:
      * @return              A Platform::Sync object tracking the provided fence.
      */
     virtual Platform::Sync* createSync(VkFence fence,
-            std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept;
+            std::shared_ptr<VulkanCmdBufferState> fenceStatus) noexcept;
 
     /**
      * Destroys a sync. If called with a sync not created by this platform
@@ -434,7 +434,7 @@ public:
 protected:
     struct VulkanSync : public Platform::Sync {
         VkFence fence;
-        std::shared_ptr<VulkanCmdFence> fenceStatus;
+        std::shared_ptr<VulkanCmdBufferState> fenceStatus;
     };
 
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

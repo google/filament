@@ -55,6 +55,22 @@ VkCommandBuffer createCommandBuffer(VkDevice device, VkCommandPool pool) {
     return cmdbuffer;
 }
 
+VkFence createFence(VkDevice device, VulkanContext const& context, VkCommandPool pool) {
+    VkFenceCreateInfo fenceCreateInfo{ .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkExportFenceCreateInfo exportFenceCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
+    };
+
+    // Necessary to guard this. Otherwise, swiftshader would throw an error.
+    if (context.getFenceExportFlags()) {
+        exportFenceCreateInfo.handleTypes = context.getFenceExportFlags(),
+        fenceCreateInfo.pNext = &exportFenceCreateInfo;
+    }
+    VkFence fence;
+    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &fence);
+    return fence;
+}
+
 } // anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
@@ -91,30 +107,21 @@ uint32_t VulkanCommandBuffer::sAgeCounter = 0;
 
 VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice device,
         VkQueue queue, VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager,
-        bool isProtected)
-    : mContext(context),
-      mMarkerCount(0),
-      isProtected(isProtected),
-      mDevice(device),
-      mQueue(queue),
-      mSemaphoreManager(semaphoreManager),
-      mBuffer(createCommandBuffer(device, pool)),
-      mSubmission(semaphoreManager->acquire()),
-      mAge(++sAgeCounter) {
-    VkFenceCreateInfo fenceCreateInfo{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-    VkExportFenceCreateInfo exportFenceCreateInfo{
-        .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
-        .handleTypes = context.getFenceExportFlags()
-    };
-
-    // Necessary to guard this. Otherwise, swiftshader would throw an error.
-    if (context.getFenceExportFlags()) {
-        fenceCreateInfo.pNext = &exportFenceCreateInfo;
-    }
-    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFence);
-
-    mFenceStatus = std::make_shared<VulkanCmdFence>(mFence);
-}
+        bool isProtected, uint32_t timerQueryIndex, VkQueryPool queryPool)
+        : mContext(context),
+          mMarkerCount(0),
+          isProtected(isProtected),
+          mDevice(device),
+          mQueue(queue),
+          mSemaphoreManager(semaphoreManager),
+          mBuffer(createCommandBuffer(device, pool)),
+          mSubmission(semaphoreManager->acquire()),
+          mFence(createFence(device, context, pool)),
+          mCmdbufState(std::make_shared<VulkanCmdBufferState>(mFence)),
+          mAge(++sAgeCounter),
+          mQueryBeginIndex(timerQueryIndex),
+          mQueryEndIndex(timerQueryIndex + 1),
+          mQueryPool(queryPool) {}
 
 VulkanCommandBuffer::~VulkanCommandBuffer() {
     vkDestroyFence(mDevice, mFence, VKALLOC);
@@ -129,12 +136,12 @@ void VulkanCommandBuffer::reset() noexcept {
     mSubmission = mSemaphoreManager->acquire();
 
     // reset the fence with proper host synchronization
-    mFenceStatus->resetFence(mDevice);
+    mCmdbufState->resetFence(mDevice);
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
     // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
-    mFenceStatus = std::make_shared<VulkanCmdFence>(mFence);
+    mCmdbufState = std::make_shared<VulkanCmdBufferState>(mFence);
 }
 
 void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
@@ -191,12 +198,21 @@ void VulkanCommandBuffer::begin() noexcept {
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
     vkBeginCommandBuffer(mBuffer, &binfo);
+
+    // We need to reset the queries before writing to it. (This must happen within a command buffer,
+    // but not before the queries have occurred).
+    vkCmdResetQueryPool(mBuffer, mQueryPool, mQueryBeginIndex, 2);
+    vkCmdWriteTimestamp(mBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, mQueryPool,
+            mQueryBeginIndex);
 }
 
 fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
     while (mMarkerCount > 0) {
         popMarker();
     }
+
+    vkCmdWriteTimestamp(mBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, mQueryPool,
+            mQueryEndIndex);
 
     vkEndCommandBuffer(mBuffer);
 
@@ -236,7 +252,7 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
 
     UTILS_UNUSED_IN_RELEASE VkResult result =
         vkQueueSubmit(mQueue, 1, &submitInfo, mFence);
-    mFenceStatus->setStatus(VK_NOT_READY);
+    mCmdbufState->setStatus(VK_NOT_READY, VulkanCmdBufferState::UNKNOWN_BUFFER_DURATION);
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
@@ -246,6 +262,45 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
     assert_invariant(result == VK_SUCCESS);
     mWaitSemaphores.clear();
     return mSubmission;
+}
+
+void VulkanCommandBuffer::setComplete() {
+    if (mCmdbufState->getBufferDuration() != VulkanCmdBufferState::UNKNOWN_BUFFER_DURATION) {
+        return;
+    }
+    // We always query the duration of this buffer on the GPU.  This is then used to inform timer
+    // queries from the Filament-side.  The reason for doing it this way is because the timestamp is
+    // consistent within a command buffer, but not guarranteed to be consistent outside of a command
+    // buffer. So we can only infer duration by looking at execution duration with respect to a
+    // buffer.
+    struct QueryResult {
+        uint64_t beginTime = 0;
+        uint64_t beginAvailable = 0;
+        uint64_t endTime = 0;
+        uint64_t endAvailable = 0;
+    } result;
+
+    constexpr size_t dataSize = sizeof(result);
+    constexpr VkDeviceSize stride = sizeof(uint64_t) * 2;
+    VkResult const vkresult =
+            vkGetQueryPoolResults(mDevice, mQueryPool, mQueryBeginIndex, 2, dataSize,
+                    (void*) &result, stride,
+                    VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+    FILAMENT_CHECK_POSTCONDITION(vkresult == VK_SUCCESS || vkresult == VK_NOT_READY)
+            << "vkGetQueryPoolResults error=" << static_cast<int32_t>(vkresult);
+
+    uint64_t const begin = result.beginTime;
+    uint64_t const end = result.endTime;
+    uint64_t duration = end - begin;
+
+    assert_invariant(result.beginAvailable != 0 && result.endAvailable != 0);
+    if (begin > end) {
+        FVK_LOGW << "Timestamps are not monotonically increasing. begin=" << begin <<
+                " end=" << end;
+        duration = begin - end;
+    }
+
+    mCmdbufState->setStatus(VK_SUCCESS, duration);
 }
 
 CommandBufferPool::CommandBufferPool(VulkanContext const& context, VkDevice device, VkQueue queue,
@@ -259,11 +314,24 @@ CommandBufferPool::CommandBufferPool(VulkanContext const& context, VkDevice devi
                 (isProtected ? VK_COMMAND_POOL_CREATE_PROTECTED_BIT : 0u),
         .queueFamilyIndex = queueFamilyIndex,
     };
-    vkCreateCommandPool(device, &createInfo, VKALLOC, &mPool);
+    VkResult result = vkCreateCommandPool(device, &createInfo, VKALLOC, &mPool);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateCommandPool failed."
+                                                       << " error=" << static_cast<int32_t>(result);
+
+    // Create a timestamp pool large enough to hold a pair of queries for each command buffer.
+    VkQueryPoolCreateInfo tqpCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+        .queryType = VK_QUERY_TYPE_TIMESTAMP,
+        .queryCount = CAPACITY *2,
+    };
+    result = vkCreateQueryPool(mDevice, &tqpCreateInfo, VKALLOC, &mQueryPool);
+
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateQueryPool failed."
+                                                       << " error=" << static_cast<int32_t>(result);
 
     for (size_t i = 0; i < CAPACITY; ++i) {
-        mBuffers.emplace_back(std::make_unique<VulkanCommandBuffer>(
-                context, device, queue, mPool, semaphoreManager, isProtected));
+        mBuffers.emplace_back(std::make_unique<VulkanCommandBuffer>(context, device, queue, mPool,
+                semaphoreManager, isProtected, i * 2, mQueryPool));
     }
 }
 
@@ -271,6 +339,7 @@ CommandBufferPool::~CommandBufferPool() {
     wait();
     gc();
     vkDestroyCommandPool(mDevice, mPool, VKALLOC);
+    vkDestroyQueryPool(mDevice, mQueryPool, VKALLOC);
 }
 
 VulkanCommandBuffer& CommandBufferPool::getRecording() {
@@ -414,7 +483,7 @@ void VulkanCommands::terminate() {
     mPool.reset();
     mProtectedPool.reset();
     mLastSubmit = {};
-    mLastFenceStatus = {};
+    mLastBufferState = {};
 }
 
 VulkanCommandBuffer& VulkanCommands::get() {
@@ -443,8 +512,7 @@ bool VulkanCommands::flush() {
     fvkmemory::resource_ptr<VulkanSemaphore> dependency;
     bool hasFlushed = false;
 
-    VkFence flushedFence = VK_NULL_HANDLE;
-    std::shared_ptr<VulkanCmdFence> flushedFenceStatus;
+    std::shared_ptr<VulkanCmdBufferState> flushedBufferState;
 
     // Note that we've ordered it so that the non-protected commands are followed by the protected
     // commands.  This assumes that the protected commands will be that one doing the rendering into
@@ -467,8 +535,7 @@ bool VulkanCommands::flush() {
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
             mLastSubmit = {};
         }
-        flushedFence = pool->getRecording().getVkFence();
-        flushedFenceStatus = pool->getRecording().getFenceStatus();
+        flushedBufferState = pool->getRecording().getState();
         dependency = pool->flush();
         hasFlushed = true;
     }
@@ -476,8 +543,11 @@ bool VulkanCommands::flush() {
     if (hasFlushed) {
         mInjectedDependency = VK_NULL_HANDLE;
         mLastSubmit = dependency;
-        mLastFence = flushedFence;
-        mLastFenceStatus = flushedFenceStatus;
+
+        if (mLastBufferState) {
+            mLastBufferState->setNextState(flushedBufferState);
+        }
+        mLastBufferState = flushedBufferState;
     }
 
     return true;

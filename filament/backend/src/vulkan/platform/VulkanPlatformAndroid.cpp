@@ -407,7 +407,7 @@ bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) const
     VulkanSync& vulkanSync = static_cast<VulkanSync&>(*sync);
     assert_invariant(vulkanSync.fenceStatus);
 
-    if (vulkanSync.fenceStatus->getStatus() == VK_SUCCESS) {
+    if (vulkanSync.fenceStatus->getFenceStatus() == VK_SUCCESS) {
         // We've already signaled; return -1 so that operations will proceed
         // immediately. Also, signal that fence conversion was successful.
         *fd = -1;
