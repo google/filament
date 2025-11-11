@@ -16,6 +16,7 @@
 
 #include "AndroidNativeWindow.h"
 
+#include <android/api-level.h>
 #include <android/native_window.h>
 
 #include <utils/compiler.h>
@@ -30,11 +31,16 @@
 namespace filament::backend {
 
 std::pair<int, bool> NativeWindow::isValid(ANativeWindow* const anw) noexcept {
+#if __ANDROID_API__ >= 26
+    // libnativewindow.so is not available before API level 26, this means we can't call
+    // any method above 25 (even protected by __builtin_available()).
     if (__builtin_available(android 28, *)) {
         // this a proxy for is_valid()
         auto const result = ANativeWindow_getBuffersDataSpace(anw);
         return { result, result >= 0 };
     }
+#endif
+
     // fallback on using private APIs
     NativeWindow const* pWindow = reinterpret_cast<NativeWindow const*>(anw);
     if (UTILS_LIKELY(pWindow->query)) {
@@ -82,6 +88,10 @@ AndroidProducerThrottling::AndroidProducerThrottling() {
     // note: we don't need to dlclose() mNativeWindowLib here, because the library will be cleaned
     // when the process ends and dlopen() are ref-counted. dlclose() NDK documentation documents
     // not to call dlclose().
+
+    // libnativewindow.so is not available before API level 26, this means we can't call
+    // any method above 25 (even protected by __builtin_available()).
+
     void* nativeWindowLibHandle = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
     if (nativeWindowLibHandle) {
         mSetProducerThrottlingEnabled =

@@ -99,6 +99,15 @@ final class Asserts {
         }
     }
 
+    @NonNull @Size(min = 2)
+    static float[] assertFloat2(@Nullable float[] out) {
+        if (out == null) out = new float[2];
+        else if (out.length < 2) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
+        }
+        return out;
+    }
+
     @NonNull @Size(min = 4)
     static float[] assertFloat4(@Nullable float[] out) {
         if (out == null) out = new float[4];

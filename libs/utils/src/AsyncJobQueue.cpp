@@ -60,6 +60,13 @@ AsyncJobQueue::~AsyncJobQueue() noexcept {
 #endif
 }
 
+void AsyncJobQueue::cancelAll() noexcept {
+#if !defined(__EMSCRIPTEN__)
+    std::unique_lock const lock(mLock);
+    mQueue.clear();
+#endif
+}
+
 void AsyncJobQueue::push(Job&& job) {
 #if !defined(__EMSCRIPTEN__)
     std::unique_lock lock(mLock);

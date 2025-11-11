@@ -62,7 +62,7 @@ struct VulkanPlatformSwapChainBase : public Platform::SwapChain {
     virtual bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const;
 
 protected:
-    virtual void destroy() = 0;
+    virtual void destroy();
 
     VkImage createImage(VkExtent2D extent, VkFormat format, bool isProtected);
 

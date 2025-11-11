@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H
 
 #include "AndroidFrameCallback.h"
+#include "AndroidNdk.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
@@ -26,7 +27,7 @@
 
 namespace filament::backend {
 
-class VulkanPlatformAndroid : public VulkanPlatform {
+class VulkanPlatformAndroid : public VulkanPlatform, public AndroidNdk {
 public:
     ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
             bool sRGB) noexcept;

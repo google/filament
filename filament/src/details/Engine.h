@@ -780,7 +780,7 @@ public:
                 bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
             struct {
-                bool disable_gpu_frame_complete_metric = true;
+                bool disable_gpu_frame_complete_metric = false;
             } frame_info;
         } engine;
         struct {

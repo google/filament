@@ -16,14 +16,30 @@
 
 #include "details/Camera.h"
 
+#include <filament/Camera.h>
+
 #include <math/mat4.h>
+
+#include <utils/Panic.h>
+
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
+#include <cstddef>
+#include <cstdint>
 
 namespace filament {
 
 using namespace math;
 
-void Camera::setProjection(double const fovInDegrees, double const aspect, double const near, double const far,
-        Fov const direction) {
+void Camera::setProjection(double const fovInDegrees, double const aspect,
+        double const near, double const far, Fov const direction) {
+
+    FILAMENT_CHECK_PRECONDITION(near > 0 && far > near)
+            << "Camera preconditions not met in setProjection(): near <= 0 or far <= near, near="
+            << near << ", far=" << far;
+
     setCustomProjection(
             projection(direction, fovInDegrees, aspect, near),
             projection(direction, fovInDegrees, aspect, near, far),
@@ -32,6 +48,11 @@ void Camera::setProjection(double const fovInDegrees, double const aspect, doubl
 
 void Camera::setLensProjection(double const focalLengthInMillimeters,
         double const aspect, double const near, double const far) {
+
+    FILAMENT_CHECK_PRECONDITION(near > 0 && far > near)
+        << "Camera preconditions not met in setLensProjection(): near <= 0 or far <= near, near="
+        << near << ", far=" << far;
+
     setCustomProjection(
             projection(focalLengthInMillimeters, aspect, near),
             projection(focalLengthInMillimeters, aspect, near, far),
@@ -149,8 +170,9 @@ utils::Entity Camera::getEntity() const noexcept {
     return downcast(this)->getEntity();
 }
 
-void Camera::setExposure(float const aperture, float const shutterSpeed, float const ISO) noexcept {
-    downcast(this)->setExposure(aperture, shutterSpeed, ISO);
+void Camera::setExposure(
+        float const aperture, float const shutterSpeed, float const sensitivity) noexcept {
+    downcast(this)->setExposure(aperture, shutterSpeed, sensitivity);
 }
 
 float Camera::getAperture() const noexcept {
@@ -177,7 +199,8 @@ double Camera::getFocalLength() const noexcept {
     return downcast(this)->getFocalLength();
 }
 
-double Camera::computeEffectiveFocalLength(double const focalLength, double const focusDistance) noexcept {
+double Camera::computeEffectiveFocalLength(
+        double const focalLength, double const focusDistance) noexcept {
     return FCamera::computeEffectiveFocalLength(focalLength, focusDistance);
 }
 
