@@ -16,9 +16,9 @@
 
 #include <gtest/gtest.h>
 
+#include "Includes.h"
 #include "MockIncluder.h"
 
-#include <matc/Includes.h>
 #include <filamat/MaterialBuilder.h>
 
 #include <utils/CString.h>
@@ -27,7 +27,7 @@
 #include <memory>
 
 using namespace utils;
-using namespace matc;
+using namespace matp;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -211,8 +211,8 @@ TEST(IncludeResolver, NoIncludes) {
     IncludeResult source {
         .text = code
     };
-    bool result = resolveIncludes(source, includer, {});
-    EXPECT_TRUE(result);
+    utils::Status resolved = resolveIncludesRecursively(source, includer, {});
+    EXPECT_TRUE(resolved.isOk());
     EXPECT_STREQ("no includes", source.text.c_str());
 }
 
@@ -224,8 +224,8 @@ TEST(IncludeResolver, SingleInclude) {
     IncludeResult source {
         .text = code
     };
-    bool result = resolveIncludes(source, includer, {});
-    EXPECT_TRUE(result);
+    utils::Status resolved = resolveIncludesRecursively(source, includer, {});
+    EXPECT_TRUE(resolved.isOk());
     EXPECT_STREQ("include", source.text.c_str());
 }
 
@@ -245,8 +245,8 @@ TEST(IncludeResolver, MultipleIncludes) {
     IncludeResult source {
         .text = code
     };
-    bool result = resolveIncludes(source, includer, {});
-    EXPECT_TRUE(result);
+    utils::Status resolved = resolveIncludesRecursively(source, includer, {});
+    EXPECT_TRUE(resolved.isOk());
     EXPECT_STREQ(utils::CString(R"(
         1
         2
@@ -270,8 +270,8 @@ TEST(IncludeResolver, IncludeWithinInclude) {
     IncludeResult source {
         .text = code
     };
-    bool result = resolveIncludes(source, includer, {});
-    EXPECT_TRUE(result);
+    utils::Status resolved = resolveIncludesRecursively(source, includer, {});
+    EXPECT_TRUE(resolved.isOk());
     EXPECT_STREQ(utils::CString(R"(
         1
         3
@@ -293,8 +293,8 @@ TEST(IncludeResolver, Includers) {
     IncludeResult source {
         .text = code
     };
-    bool result = resolveIncludes(source, includer, {});
-    EXPECT_TRUE(result);
+    utils::Status resolved = resolveIncludesRecursively(source, includer, {});
+    EXPECT_TRUE(resolved.isOk());
     EXPECT_STREQ(utils::CString(R"(
         3
     )").c_str(), source.text.c_str());
@@ -313,8 +313,8 @@ TEST(IncludeResolver, IncludeFailure) {
         IncludeResult source {
             .text = code
         };
-        bool result = resolveIncludes(source, includer, {});
-        EXPECT_FALSE(result);
+        utils::Status resolved = resolveIncludesRecursively(source, includer, {});
+        EXPECT_FALSE(resolved.isOk());
     }
     {
         utils::CString code(R"(
@@ -326,8 +326,8 @@ TEST(IncludeResolver, IncludeFailure) {
         IncludeResult source {
             .text = code
         };
-        bool result = resolveIncludes(source, includer, {});
-        EXPECT_FALSE(result);
+        utils::Status resolved = resolveIncludesRecursively(source, includer, {});
+        EXPECT_FALSE(resolved.isOk());
     }
 }
 
@@ -344,9 +344,9 @@ TEST(IncludeResolver, Cycle) {
     IncludeResult source {
         .text = code
     };
-    bool result = resolveIncludes(source, includer, {});
+    utils::Status resolved = resolveIncludesRecursively(source, includer, {});
     // Include cycles are disallowed. We should still terminate in finite time and report false.
-    EXPECT_FALSE(result);
+    EXPECT_FALSE(resolved.isOk());
 }
 
 // Helper function that lets us write comparison cases with line breaks.
@@ -395,8 +395,8 @@ TEST(IncludeResolver, SingleIncludeLineDirective) {
         .includeName = utils::CString("root.h"),
         .text = code
     };
-    bool result = resolveIncludes(source, includer, options);
-    EXPECT_TRUE(result);
+    utils::Status resolved = resolveIncludesRecursively(source, includer, options);
+    EXPECT_TRUE(resolved.isOk());
     EXPECT_STREQ_TRIMMARGIN(R"(
         | #line 1 "root.h"
         | #line 1 "test.h"
@@ -421,8 +421,8 @@ TEST(IncludeResolver, MultipleIncludesLineDirective) {
         .includeName = utils::CString("root.h"),
         .text = code,
     };
-    bool result = resolveIncludes(source, includer, options);
-    EXPECT_TRUE(result);
+    utils::Status resolved = resolveIncludesRecursively(source, includer, options);
+    EXPECT_TRUE(resolved.isOk());
 
     EXPECT_STREQ_TRIMMARGIN(R"(
         | #line 1 "root.h"
@@ -453,8 +453,8 @@ TEST(IncludeResolver, MultipleIncludesSameLineLineDirective) {
         .includeName = utils::CString("root.h"),
         .text = code
     };
-    bool result = resolveIncludes(source, includer, options);
-    EXPECT_TRUE(result);
+    utils::Status resolved = resolveIncludesRecursively(source, includer, options);
+    EXPECT_TRUE(resolved.isOk());
 
     EXPECT_STREQ_TRIMMARGIN(R"(
         | #line 1 "root.h"
@@ -518,7 +518,8 @@ TEST_F(MaterialBuilder, Include) {
         .text = utils::CString(shaderCode.c_str(), shaderCode.size()),
     };
 
-    EXPECT_TRUE(resolveIncludes(source, std::move(includer), options));
+    utils::Status resolved = resolveIncludesRecursively(source, std::move(includer), options);
+    EXPECT_TRUE(resolved.isOk());
 
     // Set the material with the resolved material.
     mBuilder.material(source.text.c_str());
@@ -545,8 +546,8 @@ TEST_F(MaterialBuilder, IncludeVertex) {
     IncludeResult source {
         .text = utils::CString(shaderCode.c_str(), shaderCode.size()),
     };
-
-    EXPECT_TRUE(resolveIncludes(source, std::move(includer), options));
+    utils::Status resolved = resolveIncludesRecursively(source, std::move(includer), options);
+    EXPECT_TRUE(resolved.isOk());
 
     // Set the materialVertex with the resolved material.
     mBuilder.materialVertex(source.text.c_str());
@@ -572,7 +573,8 @@ TEST_F(MaterialBuilder, IncludeWithinFunction) {
         .text = utils::CString(shaderCode.c_str(), shaderCode.size()),
     };
 
-    EXPECT_TRUE(resolveIncludes(source, std::move(includer), options));
+    utils::Status resolved = resolveIncludesRecursively(source, std::move(includer), options);
+    EXPECT_TRUE(resolved.isOk());
 
     // Set the material with the resolved material.
     mBuilder.material(source.text.c_str());
@@ -592,7 +594,8 @@ TEST_F(MaterialBuilder, IncludeFailure) {
         .text = utils::CString(shaderCode.c_str(), shaderCode.size()),
     };
 
-    EXPECT_FALSE(resolveIncludes(source, std::move(includer), options));
+    utils::Status resolved = resolveIncludesRecursively(source, std::move(includer), options);
+    EXPECT_FALSE(resolved.isOk());
 
     mBuilder.material(source.text.c_str());
 

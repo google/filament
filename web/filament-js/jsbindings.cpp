@@ -694,6 +694,7 @@ class_<View>("View")
     .function("isStencilBufferEnabled", &View::isStencilBufferEnabled)
     .function("setMaterialGlobal", &View::setMaterialGlobal)
     .function("getMaterialGlobal", &View::getMaterialGlobal)
+    .function("getLastDynamicResolutionScale", &View::getLastDynamicResolutionScale)
     .function("getFogEntity", &View::getFogEntity)
     .function("clearFrameHistory", &View::clearFrameHistory);
 
