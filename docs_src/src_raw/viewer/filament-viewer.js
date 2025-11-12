@@ -336,12 +336,12 @@ class FilamentViewer extends LitElement {
 
                 const stbProvider = new Filament.gltfio$StbProvider(this.engine);
                 const ktx2Provider = new Filament.gltfio$Ktx2Provider(this.engine);
-                const webpProvider = new Filament.gltfio$OptionalWebpProvider(this.engine);
+                const webpProvider = new Filament.gltfio$WebpProvider(this.engine);
 
                 resourceLoader.addStbProvider("image/jpeg", stbProvider);
                 resourceLoader.addStbProvider("image/png", stbProvider);
                 resourceLoader.addKtx2Provider("image/ktx2", ktx2Provider);
-                resourceLoader.addOptionalWebpProvider("image/webp", webpProvider);
+                resourceLoader.addWebpProvider("image/webp", webpProvider);
 
                 let remaining = Object.keys(this.srcBlobResources).length;
                 for (const name in this.srcBlobResources) {

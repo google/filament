@@ -129,10 +129,10 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nCreateKtx2Provider(JNIEn
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_ResourceLoader_nCreateOptionalWebpProvider(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_ResourceLoader_nCreateWebpProvider(JNIEnv*, jclass,
         jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) createOptionalWebpProvider(engine);
+    return (jlong) createWebpProvider(engine);
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -146,7 +146,7 @@ void App::setupMesh() {
     });
     auto stbDecoder = filament::gltfio::createStbProvider(engine);
     auto ktxDecoder = filament::gltfio::createKtx2Provider(engine);
-    auto webpDecoder = filament::gltfio::createOptionalWebpProvider(engine);
+    auto webpDecoder = filament::gltfio::createWebpProvider(engine);
 
     resourceLoader->addTextureProvider("image/png", stbDecoder);
     resourceLoader->addTextureProvider("image/jpeg", stbDecoder);

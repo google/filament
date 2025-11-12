@@ -51,7 +51,7 @@ public class ResourceLoader {
         mNativeObject = nCreateResourceLoader(nativeEngine, false);
         mNativeStbProvider = nCreateStbProvider(nativeEngine);
         mNativeKtx2Provider = nCreateKtx2Provider(nativeEngine);
-        mNativeWebpProvider = nCreateOptionalWebpProvider(nativeEngine);
+        mNativeWebpProvider = nCreateWebpProvider(nativeEngine);
 
         nAddTextureProvider(mNativeObject, "image/jpeg", mNativeStbProvider);
         nAddTextureProvider(mNativeObject, "image/png", mNativeStbProvider);
@@ -74,7 +74,7 @@ public class ResourceLoader {
         mNativeObject = nCreateResourceLoader(nativeEngine, normalizeSkinningWeights);
         mNativeStbProvider = nCreateStbProvider(nativeEngine);
         mNativeKtx2Provider = nCreateKtx2Provider(nativeEngine);
-        mNativeWebpProvider = nCreateOptionalWebpProvider(nativeEngine);
+        mNativeWebpProvider = nCreateWebpProvider(nativeEngine);
 
         nAddTextureProvider(mNativeObject, "image/jpeg", mNativeStbProvider);
         nAddTextureProvider(mNativeObject, "image/png", mNativeStbProvider);
@@ -203,7 +203,7 @@ public class ResourceLoader {
 
     private static native long nCreateStbProvider(long nativeEngine);
     private static native long nCreateKtx2Provider(long nativeEngine);
-    private static native long nCreateOptionalWebpProvider(long nativeEngine);    
+    private static native long nCreateWebpProvider(long nativeEngine);    
     private static native void nAddTextureProvider(long nativeLoader, String url, long nativeProvider);
     private static native void nDestroyTextureProvider(long nativeProvider);
 }

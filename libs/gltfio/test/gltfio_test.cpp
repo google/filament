@@ -60,7 +60,7 @@ public:
                   engine, filename.getAbsolutePath().c_str(), false, /* normalizeSkinningWeights */
           })),
           mStbDecoder(createStbProvider(engine)), mKtxDecoder(createKtx2Provider(engine)),
-          mWebpDecoder(createOptionalWebpProvider(engine)) {
+          mWebpDecoder(createWebpProvider(engine)) {
         mResourceLoader->addTextureProvider("image/png", mStbDecoder);
         mResourceLoader->addTextureProvider("image/ktx2", mKtxDecoder);
         if (mWebpDecoder) {

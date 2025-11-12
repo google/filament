@@ -19,7 +19,7 @@
 #if !defined(FILAMENT_SUPPORTS_WEBP_TEXTURES)
 
 namespace filament::gltfio {
-    TextureProvider* createOptionalWebpProvider(Engine* engine) {
+    TextureProvider* createWebpProvider(Engine* engine) {
         return nullptr;
     }
 }
@@ -286,7 +286,7 @@ WebpProvider::~WebpProvider() {
     mEngine->getJobSystem().release(mDecoderRootJob);
 }
 
-TextureProvider* createOptionalWebpProvider(Engine* engine) {
+TextureProvider* createWebpProvider(Engine* engine) {
     return new WebpProvider(engine);
 }
 

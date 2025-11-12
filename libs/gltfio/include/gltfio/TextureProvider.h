@@ -184,7 +184,7 @@ TextureProvider* createKtx2Provider(filament::Engine* engine);
  * lossless and lossy content.
  * If webp support is not enabled at build time, returns nullptr.
  */
-TextureProvider* createOptionalWebpProvider(filament::Engine* engine);
+TextureProvider* createWebpProvider(filament::Engine* engine);
 
 } // namespace filament::gltfio
 
