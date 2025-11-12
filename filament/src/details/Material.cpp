@@ -189,8 +189,8 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
     }
     mCachedPrograms = FixedCapacityVector<backend::Handle<backend::HwProgram>>(cachedProgramsSize);
 
-    mDefinition.acquirePrograms(engine, mCachedPrograms.as_slice(), mSpecializationConstants,
-            mIsDefaultMaterial);
+    mDefinition.acquirePrograms(engine, mCachedPrograms.as_slice(), getMaterialParser(),
+            mSpecializationConstants, mIsDefaultMaterial);
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.
@@ -230,8 +230,8 @@ void FMaterial::terminate(FEngine& engine) {
     }
 #endif
 
-    mDefinition.releasePrograms(engine, mCachedPrograms.as_slice(), mSpecializationConstants,
-            mIsDefaultMaterial);
+    mDefinition.releasePrograms(engine, mCachedPrograms.as_slice(),
+            getMaterialParser(), mSpecializationConstants, mIsDefaultMaterial);
     engine.getMaterialCache().releaseMaterial(engine, mDefinition);
     engine.getMaterialCache().getSpecializationConstantsInternPool().release(
             mSpecializationConstants);
@@ -300,8 +300,8 @@ Handle<HwProgram> FMaterial::prepareProgramSlow(Variant const variant,
         return mCachedPrograms[variant.key] =
                 defaultMaterial->prepareProgram(variant, priorityQueue);
     }
-    return mCachedPrograms[variant.key] = mEngine.getMaterialCache().prepareProgram(mEngine,
-                   mDefinition, getProgramSpecialization(variant), priorityQueue);
+    return mCachedPrograms[variant.key] = mDefinition.prepareProgram(mEngine,
+            getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
 }
 
 [[nodiscard]]
@@ -311,25 +311,14 @@ Handle<HwProgram> FMaterial::getProgramSlow(Variant const variant) const noexcep
         FILAMENT_CHECK_PRECONDITION(defaultMaterial);
         return mCachedPrograms[variant.key] = defaultMaterial->getProgram(variant);
     }
-    return mCachedPrograms[variant.key] =
-                   mEngine.getMaterialCache().getProgram(getProgramSpecialization(variant));
-}
-
 #if FILAMENT_ENABLE_MATDBG
-void FMaterial::updateActiveProgramsForMatdbg(Variant const variant) const noexcept {
-    assert_invariant((size_t)variant.key < VARIANT_COUNT);
-    std::unique_lock lock(mActiveProgramsLock);
-    if (getMaterialDomain() == MaterialDomain::SURFACE) {
-        auto vert = Variant::filterVariantVertex(variant);
-        auto frag = Variant::filterVariantFragment(variant);
-        mActivePrograms.set(vert.key);
-        mActivePrograms.set(frag.key);
-    } else {
-        mActivePrograms.set(variant.key);
+    if (mEditedMaterialParser) {
+        PANIC_PRECONDITION("Program for edited material was not prepared with prepareProgram()");
     }
-    lock.unlock();
-}
 #endif
+    return mCachedPrograms[variant.key] =
+            mEngine.getMaterialCache().getProgramCache().get(getProgramSpecialization(variant));
+}
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
     if (mDefaultMaterialInstance) {
@@ -363,15 +352,6 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 BufferInterfaceBlock::FieldInfo const* FMaterial::reflect(
         std::string_view const name) const noexcept {
     return mDefinition.uniformInterfaceBlock.getFieldInfo(name);
-}
-
-MaterialParser const& FMaterial::getMaterialParser() const noexcept {
-#if FILAMENT_ENABLE_MATDBG
-    if (mEditedMaterialParser) {
-        return *mEditedMaterialParser;
-    }
-#endif
-    return mDefinition.getMaterialParser();
 }
 
 ProgramSpecialization FMaterial::getProgramSpecialization(Variant const variant) const noexcept {
@@ -427,6 +407,20 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 
 #if FILAMENT_ENABLE_MATDBG
 
+void FMaterial::updateActiveProgramsForMatdbg(Variant const variant) const noexcept {
+    assert_invariant((size_t)variant.key < VARIANT_COUNT);
+    std::unique_lock lock(mActiveProgramsLock);
+    if (getMaterialDomain() == MaterialDomain::SURFACE) {
+        auto vert = Variant::filterVariantVertex(variant);
+        auto frag = Variant::filterVariantFragment(variant);
+        mActivePrograms.set(vert.key);
+        mActivePrograms.set(frag.key);
+    } else {
+        mActivePrograms.set(variant.key);
+    }
+    lock.unlock();
+}
+
 // Swaps in an edited version of the original package that was used to create the material. The
 // edited package was stashed in response to a debugger event. This is invoked only when the
 // Material Debugger is attached. The only editable features of a material package are the shader
@@ -434,7 +428,8 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 void FMaterial::applyPendingEdits() noexcept {
     const char* name = mDefinition.name.c_str();
     DLOG(INFO) << "Applying edits to " << (name ? name : "(untitled)");
-    destroyPrograms(mEngine); // FIXME: this will not destroy the shared variants
+    mDefinition.releasePrograms(mEngine, mCachedPrograms.as_slice(), getMaterialParser(),
+            mSpecializationConstants, mIsDefaultMaterial);
     latchPendingEdits();
 }
 
@@ -490,16 +485,17 @@ void FMaterial::setSpecializationConstants(SpecializationConstantsBuilder&& buil
     }
 
     auto& internPool = mEngine.getMaterialCache().getSpecializationConstantsInternPool();
+    MaterialParser const& materialParser = getMaterialParser();
 
     // Release old resources...
-    mDefinition.releasePrograms(mEngine, mCachedPrograms.as_slice(), mSpecializationConstants,
-            mIsDefaultMaterial);
+    mDefinition.releasePrograms(mEngine, mCachedPrograms.as_slice(), materialParser,
+            mSpecializationConstants, mIsDefaultMaterial);
     internPool.release(mSpecializationConstants);
 
-    // Then acquire new ones
+    // Then acquire new ones.
     mSpecializationConstants = internPool.acquire(std::move(builder.mConstants));
-    mDefinition.acquirePrograms(mEngine, mCachedPrograms.as_slice(), mSpecializationConstants,
-            mIsDefaultMaterial);
+    mDefinition.acquirePrograms(mEngine, mCachedPrograms.as_slice(), materialParser,
+            mSpecializationConstants, mIsDefaultMaterial);
 }
 
 FixedCapacityVector<Program::SpecializationConstant> FMaterial::processSpecializationConstants(

@@ -51,10 +51,17 @@ public:
     using SpecializationConstantInternPool =
             utils::InternPool<backend::Program::SpecializationConstant>;
 
+    using ProgramCache =
+            utils::RefCountedMap<ProgramSpecialization, backend::Handle<backend::HwProgram>>;
+
     ~MaterialCache();
 
     SpecializationConstantInternPool& getSpecializationConstantsInternPool() {
         return mSpecializationConstantsInternPool;
+    }
+
+    ProgramCache& getProgramCache() {
+        return mPrograms;
     }
 
     // Acquire or create a new entry in the cache for the given material data.
@@ -63,28 +70,6 @@ public:
 
     // Release an entry in the cache, potentially freeing its GPU resources.
     void releaseMaterial(FEngine& engine, MaterialDefinition const& definition) noexcept;
-
-    // Acquire a program, but don't compile it.
-    //
-    // If the program is not yet compiled, returns an invalid handle.
-    backend::Handle<backend::HwProgram> acquireProgram(
-            ProgramSpecialization const& specialization) noexcept;
-
-    // Acquire a program, compiling it if necessary.
-    backend::Handle<backend::HwProgram> acquireAndPrepareProgram(FEngine& engine,
-            MaterialDefinition const& material, ProgramSpecialization const& specialization,
-            backend::CompilerPriorityQueue const priorityQueue);
-
-    // If necessary, compiles a program and returns it.
-    backend::Handle<backend::HwProgram> prepareProgram(FEngine& engine,
-            MaterialDefinition const& material, ProgramSpecialization const& specialization,
-            backend::CompilerPriorityQueue const priorityQueue);
-
-    // Get an already compiled program.
-    backend::Handle<backend::HwProgram> getProgram(ProgramSpecialization const& specialization);
-
-    // Release a program, potentially freeing its GPU resources.
-    void releaseProgram(FEngine& engine, ProgramSpecialization const& specialization);
 
 private:
     // TODO: investigate using custom allocators for the below data structures?

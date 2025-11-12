@@ -324,7 +324,14 @@ public:
 #endif
 
 private:
-    MaterialParser const& getMaterialParser() const noexcept;
+    MaterialParser const& getMaterialParser() const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+        if (mEditedMaterialParser) {
+            return *mEditedMaterialParser;
+        }
+#endif
+        return mDefinition.getMaterialParser();
+    }
 
     ProgramSpecialization getProgramSpecialization(Variant const variant) const noexcept;
 
@@ -333,11 +340,6 @@ private:
 
     [[nodiscard]]
     backend::Handle<backend::HwProgram> getProgramSlow(Variant const variant) const noexcept;
-
-#if FILAMENT_ENABLE_MATDBG
-    // Called by getProgram() to update active program list for matdbg UI.
-    void updateActiveProgramsForMatdbg(Variant const variant) noexcept;
-#endif
 
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>
             processSpecializationConstants(Builder const& builder);
@@ -367,6 +369,8 @@ private:
     mutable utils::Mutex mPendingEditsLock;
     std::unique_ptr<MaterialParser> mPendingEdits;
     std::unique_ptr<MaterialParser> mEditedMaterialParser;
+    // Called by getProgram() to update active program list for matdbg UI.
+    void updateActiveProgramsForMatdbg(Variant const variant) const noexcept;
     void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept;
     bool hasPendingEdits() const noexcept;
     void latchPendingEdits() noexcept;
