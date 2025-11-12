@@ -36,6 +36,7 @@ namespace filament::backend {
 
 namespace {
 
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
 void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedbackInfo) {
     VkPipelineCreationFeedback const& pipelineInfo = *feedbackInfo.pPipelineCreationFeedback;
     if (!(pipelineInfo.flags & VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT)) {
@@ -61,6 +62,7 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
                  << ", Time: " << stageInfo.duration / 1000000.0 << "ms";
     }
 }
+#endif
 
 } // namespace
 

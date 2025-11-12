@@ -211,7 +211,7 @@ private:
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
 
-    VulkanContext const& mContext;
+    [[maybe_unused]] VulkanContext const& mContext;
 };
 
 } // namespace filament::backend
