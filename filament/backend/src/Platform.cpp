@@ -172,9 +172,15 @@ bool Platform::hasDebugUpdateStatFunc() const noexcept {
     return bool(mDebugUpdateStat);
 }
 
-void Platform::debugUpdateStat(const char* key, uint64_t value) {
+void Platform::debugUpdateStat(const char* key, uint64_t intValue) {
     if (mDebugUpdateStat) {
-        mDebugUpdateStat(key, value);
+        mDebugUpdateStat(key, intValue, "");
+    }
+}
+
+void Platform::debugUpdateStat(const char* key, utils::CString stringValue) {
+    if (mDebugUpdateStat) {
+        mDebugUpdateStat(key, 0, stringValue);
     }
 }
 

@@ -254,6 +254,16 @@ MetalDriver::~MetalDriver() noexcept {
 void MetalDriver::tick(int) {
     executeTickOps();
     executeDeferredOps();
+
+    // Notify platform of GPU errors.
+    auto& platform = mPlatform;
+    mContext->commandBufferErrors.flush([&platform](NSError* error) {
+        if (UTILS_VERY_UNLIKELY(!error)) {
+            return;
+        }
+        const utils::CString errorString(error.localizedDescription.UTF8String);
+        platform.debugUpdateStat("filament.metal.command_buffer_error", errorString);
+    });
 }
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,

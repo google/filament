@@ -19,6 +19,7 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORM_H
 
+#include <utils/CString.h>
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
 
@@ -508,7 +509,8 @@ public:
     // --------------------------------------------------------------------------------------------
     // Debugging APIs
 
-    using DebugUpdateStatFunc = utils::Invocable<void(const char* UTILS_NONNULL key, uint64_t value)>;
+    using DebugUpdateStatFunc = utils::Invocable<void(const char* UTILS_NONNULL key,
+            uint64_t intValue, utils::CString stringValue)>;
 
     /**
      * Sets the callback function that the backend can use to update backend-specific statistics
@@ -536,7 +538,9 @@ public:
      * @param key          a null-terminated C-string with the key of the debug statistic
      * @param value        the updated value of key
      */
-    void debugUpdateStat(const char* UTILS_NONNULL key, uint64_t value);
+    void debugUpdateStat(const char* UTILS_NONNULL key, uint64_t intValue);
+
+    void debugUpdateStat(const char* UTILS_NONNULL key, utils::CString stringValue);
 
 private:
     InsertBlobFunc mInsertBlob;
