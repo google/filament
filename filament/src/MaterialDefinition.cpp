@@ -37,6 +37,134 @@ namespace filament {
 using namespace backend;
 using namespace utils;
 
+namespace {
+
+template<bool useCache>
+void acquireProgramsImpl(FEngine& engine, utils::Slice<Handle<HwProgram>> programCache,
+        MaterialDefinition const& definition, MaterialParser const& parser,
+        utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
+        bool isDefaultMaterial) {
+    MaterialCache::ProgramCache& globalProgramCache = engine.getMaterialCache().getProgramCache();
+    ShaderModel const shaderModel = engine.getShaderModel();
+    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
+
+    ProgramSpecialization specialization = {
+        .programCacheId = definition.cacheId,
+        .specializationConstants = specializationConstants,
+    };
+
+    // We acquire an entry for all variants in the program cache, but we don't compile them.
+    // Programs that are acquired but aren't compiled simply hold onto an empty entry in the program
+    // cache which is initialized later.
+    if constexpr (useCache) {
+        for (auto variant: definition.getVariants()) {
+            if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
+                specialization.variant = variant;
+                Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
+                if (program) {
+                    programCache[variant.key] = *program;
+                }
+            }
+        }
+    }
+
+    // Do depth variants. We only do these if this is a default material or if the material has
+    // custom depth variants.
+    if (UTILS_LIKELY(!isDefaultMaterial && !definition.hasCustomDepthShader)) {
+        return;
+    }
+
+    if (UTILS_UNLIKELY(isDefaultMaterial && !engine.getDriverApi().isWorkaroundNeeded(
+                Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL))) {
+        // Precache depth programs.
+        for (auto variant: definition.getDepthVariants()) {
+            if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
+                specialization.variant = variant;
+                if constexpr (useCache) {
+                    slog.i << "Acquiring " << definition.name << " with variant " << (int)variant.key << io::endl;
+                    Handle<HwProgram> const* program = globalProgramCache.acquire(specialization,
+                            [&engine, &definition, &parser, &specialization]() {
+                                return definition.compileProgram(engine, parser, specialization,
+                                        CompilerPriorityQueue::HIGH);
+                            });
+                    if (program) {
+                        programCache[variant.key] = *program;
+                    }
+                } else {
+                    programCache[variant.key] = definition.compileProgram(engine, parser,
+                            specialization, CompilerPriorityQueue::HIGH);
+                }
+            } else {
+                slog.i << "The material " << definition.name << " doesnt have variant " << (int)variant.key << io::endl;
+            }
+        }
+    } else if constexpr (useCache) {
+        // Don't precache depth programs, but acquire them.
+        for (auto variant: definition.getDepthVariants()) {
+            if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
+                specialization.variant = variant;
+                Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
+                if (program) {
+                    programCache[variant.key] = *program;
+                }
+            }
+        }
+    }
+}
+
+template<bool useCache>
+void releaseProgramsImpl(FEngine& engine, utils::Slice<Handle<HwProgram>> programCache,
+        MaterialDefinition const& definition,
+        utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
+        bool isDefaultMaterial) {
+    MaterialCache::ProgramCache& globalProgramCache = engine.getMaterialCache().getProgramCache();
+    ShaderModel const shaderModel = engine.getShaderModel();
+    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
+
+    ProgramSpecialization specialization = {
+        .programCacheId = definition.cacheId,
+        .specializationConstants = specializationConstants,
+    };
+
+    for (auto variant : definition.getVariants()) {
+        if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
+            Handle<HwProgram>& program =  programCache[variant.key];
+            if constexpr (useCache) {
+                specialization.variant = variant;
+                globalProgramCache.release(specialization, [&engine](Handle<HwProgram> p) {
+                    engine.getDriverApi().destroyProgram(p);
+                });
+            } else {
+                engine.getDriverApi().destroyProgram(program);
+            }
+            program.clear();
+        }
+    }
+
+    // Only release depth variants if this is a default material or if the material has custom depth
+    // variants.
+    if (UTILS_LIKELY(!isDefaultMaterial && !definition.hasCustomDepthShader)) {
+        return;
+    }
+
+    for (auto variant: definition.getDepthVariants()) {
+        if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
+            Handle<HwProgram>& program =  programCache[variant.key];
+            if constexpr (useCache) {
+                specialization.variant = variant;
+                globalProgramCache.release(specialization, [&engine](Handle<HwProgram> p) {
+                    engine.getDriverApi().destroyProgram(p);
+                });
+            } else {
+                engine.getDriverApi().destroyProgram(program);
+            }
+            program.clear();
+        }
+    }
+}
+
+} // namespace
+
 std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const backend,
         FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
     // unique_ptr so we don't leak MaterialParser on failures below
@@ -516,16 +644,17 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
 
 
 Handle<HwProgram> MaterialDefinition::compileProgram(FEngine& engine,
+        MaterialParser const& parser,
         ProgramSpecialization const& specialization,
         backend::CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(engine.hasFeatureLevel(featureLevel));
     Program pb;
     switch (materialDomain) {
         case MaterialDomain::SURFACE:
-            pb = getSurfaceProgram(engine, specialization);
+            pb = getSurfaceProgram(engine, parser, specialization);
             break;
         case MaterialDomain::POST_PROCESS:
-            pb = getProgramWithVariants(engine, specialization, specialization.variant,
+            pb = getProgramWithVariants(engine, parser, specialization, specialization.variant,
                     specialization.variant);
             break;
         case MaterialDomain::COMPUTE:
@@ -540,7 +669,7 @@ Handle<HwProgram> MaterialDefinition::compileProgram(FEngine& engine,
     return program;
 }
 
-Program MaterialDefinition::getSurfaceProgram(FEngine& engine,
+Program MaterialDefinition::getSurfaceProgram(FEngine& engine, MaterialParser const& parser,
         ProgramSpecialization const& specialization) const noexcept {
     // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
     // if we're unlit, we don't have any bits that correspond to lit materials
@@ -552,7 +681,7 @@ Program MaterialDefinition::getSurfaceProgram(FEngine& engine,
     Variant const vertexVariant   = Variant::filterVariantVertex(specialization.variant);
     Variant const fragmentVariant = Variant::filterVariantFragment(specialization.variant);
 
-    Program pb = getProgramWithVariants(engine, specialization, vertexVariant, fragmentVariant);
+    Program pb = getProgramWithVariants(engine, parser, specialization, vertexVariant, fragmentVariant);
     pb.multiview(
             engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
             Variant::isStereoVariant(specialization.variant));
@@ -560,6 +689,7 @@ Program MaterialDefinition::getSurfaceProgram(FEngine& engine,
 }
 
 Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
+        MaterialParser const& parser,
         ProgramSpecialization const& specialization,
         Variant vertexVariant,
         Variant fragmentVariant) const {
@@ -570,8 +700,6 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
     /*
      * Vertex shader
      */
-
-    MaterialParser const& parser = getMaterialParser();
 
     filaflat::ShaderContent& vsBuilder = engine.getVertexShaderContent();
 
@@ -640,84 +768,59 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
     return program;
 }
 
+Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, MaterialParser const& parser,
+        ProgramSpecialization const& specialization,
+        backend::CompilerPriorityQueue priorityQueue) const {
+    if (parser == *mMaterialParser) {
+        slog.i << "Preparing " << name << " with variant " << (int)specialization.variant.key << io::endl;
+        Handle<HwProgram>* program = engine.getMaterialCache().getProgramCache().get(specialization,
+                [this, &engine, &parser, &specialization, priorityQueue]() {
+                    return compileProgram(engine, parser, specialization, priorityQueue);
+                });
+        assert_invariant(*program);
+        return *program;
+    } else {
+#if FILAMENT_ENABLE_MATDBG
+        return compileProgram(engine, parser, specialization, priorityQueue);
+#else
+        PANIC_PRECONDITION("Attempted to prepare programs with an invalid MaterialParser");
+#endif
+    }
+}
 
 void MaterialDefinition::acquirePrograms(FEngine& engine,
         utils::Slice<Handle<HwProgram>> programCache,
+        MaterialParser const& parser,
         utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
         bool isDefaultMaterial) const {
-    MaterialCache& materialCache = engine.getMaterialCache();
-    ShaderModel const shaderModel = engine.getShaderModel();
-    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
-
-    ProgramSpecialization specialization = {
-        .programCacheId = cacheId,
-        .specializationConstants = specializationConstants,
-    };
-
-    // We acquire an entry for all variants in the program cache, but we don't compile them.
-    // Programs that are acquired but aren't compiled simply hold onto an empty entry in the program
-    // cache which is initialized later.
-    for (auto variant: getVariants()) {
-        if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
-            specialization.variant = variant;
-            programCache[variant.key] = materialCache.acquireProgram(specialization);
-        }
-    }
-
-    if (UTILS_UNLIKELY(isDefaultMaterial || hasCustomDepthShader)) {
-        // Do depth variants. We only do these if this is a default material or if the material has
-        // custom depth variants.
-        if (UTILS_UNLIKELY(isDefaultMaterial && !engine.getDriverApi().isWorkaroundNeeded(
-                    Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL))) {
-            // Precache depth programs.
-            for (auto variant: getDepthVariants()) {
-                if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
-                    specialization.variant = variant;
-                    programCache[variant.key] = materialCache.acquireAndPrepareProgram(engine,
-                            *this, specialization, CompilerPriorityQueue::HIGH);
-                }
-            }
-        } else {
-            // Don't precache depth programs.
-            for (auto variant: getDepthVariants()) {
-                if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
-                    specialization.variant = variant;
-                    programCache[variant.key] = materialCache.acquireProgram(specialization);
-                }
-            }
-        }
+    if (parser == *mMaterialParser) {
+        acquireProgramsImpl<true>(engine, programCache, *this, parser, specializationConstants,
+                isDefaultMaterial);
+    } else {
+#if FILAMENT_ENABLE_MATDBG
+        acquireProgramsImpl<false>(engine, programCache, *this, parser, specializationConstants,
+                isDefaultMaterial);
+#else
+        PANIC_PRECONDITION("Attempted to prepare programs with an invalid MaterialParser");
+#endif
     }
 }
 
 void MaterialDefinition::releasePrograms(FEngine& engine,
         utils::Slice<Handle<HwProgram>> programCache,
+        MaterialParser const& parser,
         utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
         bool isDefaultMaterial) const {
-    MaterialCache& materialCache = engine.getMaterialCache();
-    ShaderModel const shaderModel = engine.getShaderModel();
-    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
-
-    ProgramSpecialization specialization = {
-            .programCacheId = cacheId,
-            .specializationConstants = specializationConstants,
-    };
-
-    for (auto variant : getVariants()) {
-        if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
-            specialization.variant = variant;
-            materialCache.releaseProgram(engine, specialization);
-            programCache[variant.key].clear();
-        }
-    }
-
-    if (UTILS_UNLIKELY(isDefaultMaterial || hasCustomDepthShader)) {
-        for (auto variant: getDepthVariants()) {
-            if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
-                specialization.variant = variant;
-                materialCache.releaseProgram(engine, specialization);
-                programCache[variant.key].clear();
-            }
-        }
+    if (parser == *mMaterialParser) {
+        releaseProgramsImpl<true>(engine, programCache, *this, specializationConstants,
+                isDefaultMaterial);
+    } else {
+#if FILAMENT_ENABLE_MATDBG
+        releaseProgramsImpl<false>(engine, programCache, *this, specializationConstants,
+                isDefaultMaterial);
+#else
+        PANIC_PRECONDITION("Attempted to release programs with an invalid MaterialParser");
+#endif
     }
 }
 
@@ -741,9 +844,11 @@ bool MaterialDefinition::hasVariant(Variant const variant,
             return false;
     }
     if (!mMaterialParser->hasShader(sm, vertexVariant, ShaderStage::VERTEX)) {
+        slog.i << "because it doesn't have the vertex variant " << (int)vertexVariant.key << io::endl;
         return false;
     }
     if (!mMaterialParser->hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)) {
+        slog.i << "because it doesn't have the fragment variant " << (int)fragmentVariant.key << io::endl;
         return false;
     }
     return true;
