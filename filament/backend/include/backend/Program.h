@@ -142,7 +142,7 @@ public:
 
     CompilerPriorityQueue getPriorityQueue() const noexcept { return mPriorityQueue; }
 
-    SpecializationConstantsInfo getSpecializationConstants() const noexcept {
+    SpecializationConstantsInfo const& getSpecializationConstants() const noexcept {
         return mSpecializationConstants;
     }
 
