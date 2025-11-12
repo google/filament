@@ -18,10 +18,11 @@
 #define TNT_INCLUDER_H
 
 #include <utils/CString.h>
+#include <utils/Status.h>
 
 #include <functional>
 
-namespace matc {
+namespace matp {
 
 struct IncludeResult {
     // The include name of the root file, as if it were being included.
@@ -30,7 +31,7 @@ struct IncludeResult {
     const utils::CString includeName;
 
     // The following fields should be filled out by the IncludeCallback when processing an include,
-    // or when calling resolveIncludes for the root file.
+    // or when calling resolveIncludesRecursively for the root file.
 
     // The full contents of the include file. This may contain additional, recursive include
     // directives.
@@ -58,12 +59,12 @@ struct IncludeResult {
  * @param result is the IncludeResult that the callback should fill out.
  * @return true, if the include was resolved successfully, false otherwise.
  *
- * For an example of implementing this callback, see tools/matc/src/matc/DirIncluder.h.
+ * For an example of implementing this callback, see DirIncluder.h.
  */
 using IncludeCallback = std::function<bool(
         const utils::CString& includedBy,
         IncludeResult& result)>;
 
-} // namespace matc
+} // namespace matp
 
 #endif

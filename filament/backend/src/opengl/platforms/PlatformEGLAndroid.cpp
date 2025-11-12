@@ -719,6 +719,10 @@ void PlatformEGLAndroid::SwapChainEGLAndroid::terminate(PlatformEGLAndroid& plat
 }
 
 bool PlatformEGLAndroid::SwapChainEGLAndroid::setPresentFrameId(uint64_t frameId) const noexcept {
+    if (!nativeWindow) {
+        // nativeWindow is null in the headless case
+        return false;
+    }
     return mImpl.setPresentFrameId(nativeWindow, frameId);
 }
 

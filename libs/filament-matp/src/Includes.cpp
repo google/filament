@@ -19,10 +19,11 @@
 #include <utils/Log.h>
 #include <utils/compiler.h>
 #include <utils/sstream.h>
+#include <utils/Status.h>
 
 #include <string>
 
-namespace matc {
+namespace matp {
 
 static bool isWhitespace(char c) {
     return (c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v');
@@ -75,12 +76,11 @@ static void findCommentRanges(const char (&beginToken)[BTSize], const char (&end
 }
 
 
-bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
+utils::Status resolveIncludesRecursively(IncludeResult& root, IncludeCallback callback,
         const ResolveOptions& options, size_t depth) {
     if (depth > 30) {
         // This is probably an include cycle. Stop here and report an error so we don't overflow.
-        utils::slog.e << "Include depth > 30. Include cycle?" << utils::io::endl;
-        return false;
+        return utils::Status::invalidArgument("Include depth > 30. Include cycle?");
     }
 
     utils::CString& text = root.text;
@@ -88,7 +88,7 @@ bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
     std::vector<FoundInclude> includes = parseForIncludes(text);
     if (includes.empty()) {
         // No more to resolve.
-        return true;
+        return utils::Status::ok();
     }
 
     const size_t lineNumberOffset = includes[0].line;
@@ -196,28 +196,30 @@ bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
         const auto include = includes[0];
         // Ask the includer to resolve this include.
         if (!callback) {
-            return false;
+            return utils::Status::invalidArgument("No callback is provided");
         }
-        IncludeResult resolved {
+        IncludeResult includeResult{
             .includeName = include.name
         };
-        if (!callback(root.name, resolved)) {
-            utils::slog.e << "The included file \"" << include.name.c_str()
+        if (!callback(root.name, includeResult)) {
+            utils::io::sstream errorMessage;
+            errorMessage << "The included file \"" << include.name.c_str()
                           << "\" could not be found." << utils::io::endl;
-            return false;
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         // Recursively resolve all of its includes.
-        if (!resolveIncludes(resolved, callback, options, depth + 1)) {
-            return false;
+        if (utils::Status resolveStatus =
+                        resolveIncludesRecursively(includeResult, callback, options, depth + 1);
+                        !resolveStatus.isOk()) {
+            return resolveStatus;
         }
 
-        text.replace(include.startPosition, include.length, resolved.text);
+        text.replace(include.startPosition, include.length, includeResult.text);
 
         includes = parseForIncludes(text);
     }
-
-    return true;
+    return utils::Status::ok();
 }
 
 std::vector<FoundInclude> parseForIncludes(const utils::CString& source) {
@@ -308,4 +310,4 @@ std::vector<FoundInclude> parseForIncludes(const utils::CString& source) {
     return results;
 }
 
-} // namespace matc
+} // namespace matp

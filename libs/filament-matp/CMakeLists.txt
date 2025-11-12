@@ -13,6 +13,11 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/DirIncluder.h
+        src/DirIncluder.cpp
+        src/IncludeCallback.h
+        src/Includes.h
+        src/Includes.cpp
         src/JsonishLexeme.h
         src/JsonishLexer.h
         src/JsonishParser.h
@@ -53,6 +58,8 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/ DESTINATION include)
 project(test_matp)
 set(TARGET test_matp)
 set(SRCS
+    tests/test_includes.cpp
+    tests/test_includer.cpp
     tests/test_matp.cpp
     tests/TestMaterialParser.h
     tests/test_compute_material.cpp
