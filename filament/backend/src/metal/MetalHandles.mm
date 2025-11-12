@@ -1069,7 +1069,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         // a multisampled sidecar texture and do a resolve automatically.
         if (samples > 1 && texture->samples == 1) {
             auto& sidecar = texture->msaaSidecar;
-            if (!sidecar) {
+            if (!sidecar || sidecar.sampleCount != samples) {
                 sidecar = createMultisampledTexture(mtlTexture.pixelFormat, texture->width,
                         texture->height, samples);
             }
@@ -1100,7 +1100,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         // a multisampled sidecar texture and do a resolve automatically.
         if (samples > 1 && texture->samples == 1) {
             auto& sidecar = texture->msaaSidecar;
-            if (!sidecar) {
+            if (!sidecar || sidecar.sampleCount != samples) {
                 sidecar = createMultisampledTexture(mtlTexture.pixelFormat, texture->width,
                         texture->height, samples);
             }
@@ -1132,7 +1132,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         // a multisampled sidecar texture and do a resolve automatically.
         if (samples > 1 && texture->samples == 1) {
             auto& sidecar = texture->msaaSidecar;
-            if (!sidecar) {
+            if (!sidecar || sidecar.sampleCount != samples) {
                 sidecar = createMultisampledTexture(mtlTexture.pixelFormat, texture->width,
                         texture->height, samples);
             }
