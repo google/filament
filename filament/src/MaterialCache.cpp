@@ -70,53 +70,12 @@ MaterialDefinition* UTILS_NULLABLE MaterialCache::acquireMaterial(FEngine& engin
     });
 }
 
-void MaterialCache::releaseMaterial(FEngine& engine, MaterialDefinition const& definition) noexcept {
+void MaterialCache::releaseMaterial(FEngine& engine,
+        MaterialDefinition const& definition) noexcept {
     mDefinitions.release(MaterialKey{ &definition.getMaterialParser() },
             [&engine](MaterialDefinition& definition) {
                 definition.terminate(engine);
             });
-}
-
-backend::Handle<backend::HwProgram> MaterialCache::acquireProgram(
-        ProgramSpecialization const& specialization) noexcept {
-    backend::Handle<backend::HwProgram> const* program = mPrograms.acquire(specialization);
-    if (program) {
-        return *program;
-    }
-    return backend::Handle<backend::HwProgram>();
-}
-
-backend::Handle<backend::HwProgram> MaterialCache::acquireAndPrepareProgram(FEngine& engine,
-        MaterialDefinition const& material, ProgramSpecialization const& specialization,
-        backend::CompilerPriorityQueue const priorityQueue) {
-    backend::Handle<backend::HwProgram>* program = mPrograms.acquire(specialization,
-            [&engine, &material, &specialization, priorityQueue]() {
-                return material.compileProgram(engine, specialization, priorityQueue);
-            });
-    assert_invariant(program);
-    return *program;
-}
-
-backend::Handle<backend::HwProgram> MaterialCache::prepareProgram(FEngine& engine,
-        MaterialDefinition const& material, ProgramSpecialization const& specialization,
-        backend::CompilerPriorityQueue const priorityQueue) {
-    backend::Handle<backend::HwProgram>* program = mPrograms.get(specialization,
-            [&engine, &material, &specialization, priorityQueue]() {
-                return material.compileProgram(engine, specialization, priorityQueue);
-            });
-    assert_invariant(program);
-    return *program;
-}
-
-backend::Handle<backend::HwProgram> MaterialCache::getProgram(
-        ProgramSpecialization const& specialization) {
-    return mPrograms.get(specialization);
-}
-
-void MaterialCache::releaseProgram(FEngine& engine, ProgramSpecialization const& specialization) {
-    mPrograms.release(specialization, [&engine](backend::Handle<backend::HwProgram> program) {
-        engine.getDriverApi().destroyProgram(program);
-    });
 }
 
 } // namespace filament
