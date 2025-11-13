@@ -158,7 +158,47 @@ std::pair<TextureFormat, TextureUsage> getFilamentFormatAndUsage(const AHardware
     };
 }
 
-}// namespace
+uint32_t selectMemoryTypeForExternalImage(VkPhysicalDevice physicalDevice, VkDevice device,
+        VkImage image, uint32_t types, VkFlags requiredMemoryFlags) {
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+    uint32_t const memoryTypeIndex =
+            VulkanContext::selectMemoryType(memoryProperties, types, requiredMemoryFlags);
+
+    if constexpr (FVK_RENDERDOC_CAPTURE_MODE) {
+        // RenderDoc will replay external resources as non-external.
+        // Adjust properties that will trip it up when replaying, even though these are not valid.
+        // Update memory type index if necessary so that we can replay the capture.
+
+        VkMemoryRequirements imageMemoryRequirements;
+        vkGetImageMemoryRequirements(device, image, &imageMemoryRequirements);
+
+        uint32_t const imageMemoryTypeBits = imageMemoryRequirements.memoryTypeBits;
+        bool const isMemoryTypeSupported = ((1 << memoryTypeIndex) & imageMemoryTypeBits) != 0;
+        if (isMemoryTypeSupported) {
+            return memoryTypeIndex;
+        }
+
+        // Current memory type will not be replayable by RenderDoc.
+        // Attempt to change the memory type index
+        VkMemoryPropertyFlags const kRenderDocFallBackReqs = 0;
+        uint32_t commonMemoryTypeBits = types & imageMemoryTypeBits;
+        uint32_t commonTypeIndex = VulkanContext::selectMemoryType(memoryProperties,
+                commonMemoryTypeBits, kRenderDocFallBackReqs);
+        if (commonMemoryTypeBits && commonTypeIndex != VK_MAX_MEMORY_TYPES) {
+            return commonTypeIndex;
+        }
+        uint32_t imageTypeIndex = VulkanContext::selectMemoryType(memoryProperties,
+                imageMemoryTypeBits, kRenderDocFallBackReqs);
+        if (imageTypeIndex != VK_MAX_MEMORY_TYPES) {
+            return imageTypeIndex;
+        }
+    }
+
+    return memoryTypeIndex;
+}
+
+} // namespace
 
 VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid() {
     if (__builtin_available(android 26, *)) {
@@ -354,8 +394,6 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
             .image = image,
             .buffer = VK_NULL_HANDLE,
         };
-        VkPhysicalDeviceMemoryProperties memoryProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
         VkMemoryPropertyFlags requiredMemoryFlags =
                 !isExternal && any(metadata.filamentUsage & TextureUsage::UPLOADABLE)
                         ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -365,8 +403,8 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
             requiredMemoryFlags |= VK_MEMORY_PROPERTY_PROTECTED_BIT;
         }
 
-        uint32_t const memoryTypeIndex = VulkanContext::selectMemoryType(memoryProperties,
-                metadata.memoryTypeBits, requiredMemoryFlags);
+        uint32_t const memoryTypeIndex = selectMemoryTypeForExternalImage(physicalDevice, device,
+                image, metadata.memoryTypeBits, requiredMemoryFlags);
 
         VkMemoryAllocateInfo const allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,

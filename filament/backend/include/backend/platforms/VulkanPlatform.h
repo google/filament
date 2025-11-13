@@ -444,6 +444,11 @@ protected:
 
     virtual VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept;
 
+    /**
+     * Query if transient attachments are supported by the backend.
+     */
+    bool isTransientAttachmentSupported() const noexcept;
+
 private:
     friend struct VulkanPlatformPrivate;
 };
