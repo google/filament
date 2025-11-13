@@ -517,6 +517,10 @@ public:
      * to aid with debugging. This callback is guaranteed to be called on the Filament driver
      * thread.
      *
+     * The callback signature is (key, intValue, stringValue). Note that for any given call,
+     * only one of the value parameters (intValue or stringValue) will be meaningful, depending on
+     * the specific key.
+     *
      * @param debugUpdateStat   an Invocable that updates debug statistics
      */
     void setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept;
@@ -535,11 +539,25 @@ public:
      * This function is guaranteed to be called only on a single thread, the Filament driver
      * thread.
      *
-     * @param key          a null-terminated C-string with the key of the debug statistic
-     * @param value        the updated value of key
+     * @param key           a null-terminated C-string with the key of the debug statistic
+     * @param intValue      the updated integer value of key (the string value passed to the
+     *                      callback will be empty)
      */
     void debugUpdateStat(const char* UTILS_NONNULL key, uint64_t intValue);
 
+    /**
+     * To track backend-specific statistics, the backend implementation can call the
+     * application-provided callback function debugUpdateStatFunc to associate or update a value
+     * with a given key. It is possible for this function to be called multiple times with the
+     * same key, in which case newer values should overwrite older values.
+     *
+     * This function is guaranteed to be called only on a single thread, the Filament driver
+     * thread.
+     *
+     * @param key           a null-terminated C-string with the key of the debug statistic
+     * @param stringValue   the updated string value of key (the integer value passed to the
+     *                      callback will be 0)
+     */
     void debugUpdateStat(const char* UTILS_NONNULL key, utils::CString stringValue);
 
 private:
