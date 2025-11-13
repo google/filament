@@ -163,6 +163,11 @@ id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
     const auto& count = textureTypes.size();
     assert_invariant(count > 0);
 
+    const auto maxArgumentBufferSamplerCount = device.maxArgumentBufferSamplerCount;
+    if (count > maxArgumentBufferSamplerCount) {
+        utils::slog.e << "Error: max sampler per argument buffer supported by this GPU (" << maxArgumentBufferSamplerCount << ") exceeded (" << count << ")" << utils::io::endl;
+    }
+
     // Metal has separate data types for textures versus samplers, so the argument buffer layout
     // alternates between texture and sampler, i.e.:
     // textureA
