@@ -86,7 +86,7 @@ public:
 
     static_assert(sizeof(RasterState) == 16, "RasterState must not have implicit padding.");
 
-    VulkanPipelineCache(VkDevice device);
+    VulkanPipelineCache(VkDevice device, VulkanContext const& context);
 
     void bindLayout(VkPipelineLayout layout) noexcept;
 
@@ -210,6 +210,8 @@ private:
 
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
+
+    [[maybe_unused]] VulkanContext const& mContext;
 };
 
 } // namespace filament::backend
