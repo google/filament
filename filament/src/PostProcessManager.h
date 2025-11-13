@@ -65,6 +65,7 @@ class FMaterialInstance;
 class FrameGraph;
 class RenderPass;
 class RenderPassBuilder;
+class UboManager;
 struct CameraInfo;
 
 class PostProcessManager {
@@ -421,6 +422,8 @@ private:
         FMaterial const* ma = material.getMaterial(engine, variant);
         return getMaterialInstance(ma);
     }
+
+    UboManager* getUboManager() const noexcept;
 
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
     backend::VertexBufferInfoHandle mFullScreenQuadVbih;
