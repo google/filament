@@ -214,4 +214,10 @@ constexpr static const int FVK_MAX_PIPELINE_AGE = FVK_MAX_COMMAND_BUFFERS;
 // destroying any unused pipeline object.
 static_assert(FVK_MAX_PIPELINE_AGE >= FVK_MAX_COMMAND_BUFFERS);
 
+// Indicates if the backend must be setup to allow doing a RenderDoc capture.
+//
+// If this is true, the features not supported by RenderDoc must be disabled, otherwise
+// when using RenderDoc the application will crash or will fail to do a capture.
+constexpr static const int FVK_RENDERDOC_CAPTURE_MODE = false;
+
 #endif

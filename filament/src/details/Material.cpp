@@ -73,6 +73,7 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 using namespace utils;
+using UboBatchingMode = FEngine::UboBatchingMode;
 
 struct Material::BuilderDetails {
     const void* mPayload = nullptr;
@@ -280,14 +281,14 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
         return FMaterialInstance::duplicate(mDefaultMaterialInstance, name);
     } else {
         // but if we don't, just create an instance with all the default parameters
-        return mEngine.createMaterialInstance(this, name);
+        return mEngine.createMaterialInstance(this, name, UboBatchingMode::DEFAULT);
     }
 }
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance = mEngine.createMaterialInstance(this,
-                mDefinition.name.c_str());
+        mDefaultMaterialInstance =
+                mEngine.createMaterialInstance(this, mDefinition.name.c_str(), UboBatchingMode::DEFAULT);
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;

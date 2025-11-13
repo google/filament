@@ -281,7 +281,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         }
 
         text << "    "
-                  << setw(alignment) << fieldName.c_str()
+                  << setw(alignment) << fieldName.c_str_safe()
                   << setw(shortAlignment) << toString(UniformType(fieldType))
                   << arraySizeToString(fieldSize)
                   << setw(shortAlignment) << toString(Precision(fieldPrecision))
@@ -325,7 +325,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         }
 
         text << "    "
-                << setw(alignment) << fieldName.c_str()
+                << setw(alignment) << fieldName.c_str_safe()
                 << setw(shortAlignment) << +fieldBinding
                 << setw(shortAlignment) << toString(SamplerType(fieldType))
                 << setw(shortAlignment) << toString(Precision(fieldPrecision))
@@ -364,7 +364,7 @@ static bool printConstantInfo(ostream& text, const ChunkContainer& container) {
         }
 
          text << "    "
-         << setw(alignment) << fieldName.c_str()
+         << setw(alignment) << fieldName.c_str_safe()
          << setw(shortAlignment) << toString(ConstantType(fieldType))
          << endl;
     }
