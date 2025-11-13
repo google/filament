@@ -521,6 +521,10 @@ public:
      * only one of the value parameters (intValue or stringValue) will be meaningful, depending on
      * the specific key.
      *
+     * IMPORTANT_NOTE: because the callback is called on the driver thread, only quick, non-blocking
+     * work should be done inside it. Furthermore, no graphics API calls (such as GL calls) should
+     * be made, which could interfere with Filament's driver state.
+     *
      * @param debugUpdateStat   an Invocable that updates debug statistics
      */
     void setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept;

@@ -31,19 +31,18 @@ public:
     void push(NSError* error) {
         std::lock_guard<std::mutex> lock(mMutex);
         mErrors.push_back(error);
-        mHasErrors.store(true);
+        mHasErrors.store(true, std::memory_order_relaxed);
     }
 
     void flush(const std::function<void(NSError*)>& callback) {
-        if (UTILS_LIKELY(!mHasErrors.load())) {
+        if (UTILS_LIKELY(!mHasErrors.load(std::memory_order_relaxed))) {
             return;
         }
-
         std::vector<NSError*> errors;
         {
             std::lock_guard<std::mutex> lock(mMutex);
             std::swap(mErrors, errors);
-            mHasErrors.store(false);
+            mHasErrors.store(false, std::memory_order_relaxed);
         }
 
         for (const auto& error: errors) {
