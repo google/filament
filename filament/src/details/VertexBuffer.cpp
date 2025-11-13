@@ -302,7 +302,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
     if (!mBufferObjectsEnabled) {
         // If buffer objects are not enabled at the API level, then we create them internally.
         #pragma nounroll
-        for (size_t index = 0; index < MAX_VERTEX_BUFFER_COUNT; ++index) {
+        for (size_t index = 0; index < MAX_VERTEX_ATTRIBUTE_COUNT; ++index) {
             size_t const i = mAttributes[index].buffer;
             if (i != Attribute::BUFFER_UNUSED) {
                 assert_invariant(bufferSizes[i] > 0);

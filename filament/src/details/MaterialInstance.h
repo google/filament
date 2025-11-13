@@ -56,11 +56,8 @@ class FTexture;
 
 class FMaterialInstance : public MaterialInstance {
 public:
-    FMaterialInstance(FEngine& engine, FMaterial const* material,
-                      const char* name) noexcept;
-    // Use this constructor when you need to override the ubo batching flag for an individual MI.
-    FMaterialInstance(FEngine& engine, FMaterial const* material,
-                      const char* name, bool useUboBatching) noexcept;
+    FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name,
+            FEngine::UboBatchingMode batchingMode) noexcept;
     FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
@@ -75,7 +72,7 @@ public:
     
     void commit(FEngine& engine) const;
 
-    void commit(FEngine::DriverApi& driver) const;
+    void commit(FEngine::DriverApi& driver, UboManager* uboManager) const;
 
     void use(FEngine::DriverApi& driver, Variant variant = {}) const;
 
@@ -287,6 +284,7 @@ private:
     };
 
     std::variant<BufferAllocator::AllocationId, backend::Handle<backend::HwBufferObject>> mUboData;
+    BufferAllocator::allocation_size_t mUboOffset = 0;
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
@@ -308,7 +306,7 @@ private:
     bool mHasScissor : 1;
     bool mIsDoubleSided : 1;
     bool mIsDefaultInstance : 1;
-    bool mUseUboBatching : 1;
+    const bool mUseUboBatching : 1;
     TransparencyMode mTransparencyMode : 2;
 
     uint64_t mMaterialSortingKey = 0;

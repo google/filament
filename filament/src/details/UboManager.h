@@ -25,7 +25,9 @@
 #include <backend/Handle.h>
 #include <private/backend/DriverApi.h>
 
+#include <functional>
 #include <unordered_set>
+#include <vector>
 
 namespace filament {
 
@@ -40,6 +42,47 @@ class FMaterialInstance;
 // undefined behavior.
 class UboManager {
 public:
+    // This utility tracks resources that are in-use by the GPU across multiple frames.
+    // It uses backend fences to determine when the GPU has finished with a set of resources,
+    // allowing them to be safely reclaimed or reused.
+    //
+    // The typical usage is to `track()` a set of resources at the end of a frame and
+    // call `reclaimCompletedResources()` at the beginning of a future frame to free up
+    // resources from completed GPU work.
+    //
+    // This class is designed for single-threaded access.
+    class FenceManager {
+    public:
+        using AllocationId = BufferAllocator::AllocationId;
+
+        FenceManager() = default;
+        ~FenceManager() = default;
+
+        FenceManager(FenceManager const&) = delete;
+        FenceManager(FenceManager&&) = delete;
+
+
+        // Creates a new fence to track a set of allocation IDs for the current frame.
+        // This marks the beginning of GPU's usage of these resources.
+        void track(backend::DriverApi& driver, std::unordered_set<AllocationId>&& allocationIds);
+
+
+        // Checks all tracked fences and invokes a callback for resources associated with
+        // completed fences. This should be called once per frame.
+        void reclaimCompletedResources(backend::DriverApi& driver,
+                std::function<void(AllocationId)> const& onReclaimed);
+
+        // Destroys all tracked fences and clears the tracking list.
+        // This is used for cleanup during termination or major reallocations.
+        void reset(backend::DriverApi& driver);
+
+    private:
+        // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
+        using FenceAndAllocations =
+                std::pair<backend::Handle<backend::HwFence>, std::unordered_set<AllocationId>>;
+        std::vector<FenceAndAllocations> mFenceAllocationList;
+    };
+
     explicit UboManager(backend::DriverApi& driver,
             BufferAllocator::allocation_size_t defaultSlotSizeInBytes,
             BufferAllocator::allocation_size_t defaultTotalSizeInBytes);
@@ -82,30 +125,25 @@ public:
 private:
     constexpr static float BUFFER_SIZE_GROWTH_MULTIPLIER = 1.5f;
 
-    // Query the offset by the allocation id.
-    [[nodiscard]] BufferAllocator::allocation_size_t getAllocationOffset(
-            BufferAllocator::AllocationId id) const;
-
-    void checkFenceAndUnlockSlots(backend::DriverApi& driver);
-
     enum AllocationResult {
         SUCCESS,
         REALLOCATION_REQUIRED
     };
 
-    enum AllocationMode {
-        ON_DEMAND,
-        ALWAYS
-    };
+    // Query the offset by the allocation id.
+    [[nodiscard]] BufferAllocator::allocation_size_t getAllocationOffset(
+            BufferAllocator::AllocationId id) const;
 
-    AllocationResult updateMaterialInstanceAllocations(
+    AllocationResult allocateOnDemand(
             const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
-                    materialInstances,
-            AllocationMode allocationMode);
-    static AllocationResult tryAllocateMaterialInstanceSlot(FMaterialInstance* mi,
-            BufferAllocator& allocator, const backend::Handle<backend::HwBufferObject>& ubHandle,
-            AllocationMode allocationMode);
+                    materialInstances);
+
+    void allocateAllInstances(
+            const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
+                    materialInstances);
+
     void reallocate(backend::DriverApi& driver, BufferAllocator::allocation_size_t requiredSize);
+
     BufferAllocator::allocation_size_t calculateRequiredSize(
             const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
                     materialInstances);
@@ -114,11 +152,7 @@ private:
     backend::MemoryMappedBufferHandle mMemoryMappedBufferHandle;
     BufferAllocator::allocation_size_t mUboSize{};
 
-    // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
-    using FenceAllocationList = std::vector<std::pair<backend::Handle<backend::HwFence>,
-            std::unordered_set<BufferAllocator::AllocationId>>>;
-    FenceAllocationList mFenceAllocationList;
-
+    FenceManager mFenceManager;
     BufferAllocator mAllocator;
 };
 
