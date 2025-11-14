@@ -31,7 +31,7 @@ class VulkanSamplerCache;
 class VulkanDescriptorSetLayoutCache;
 class VulkanDescriptorSetCache;
 
-// Manages the logic of external images and their quirks wrt Vulikan.
+// Manages the logic of external images and their quirks wrt Vulkan.
 class VulkanExternalImageManager {
 public:
 
