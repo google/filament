@@ -285,13 +285,12 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
 
     auto shouldCreateBuffer = [this](size_t attributeIndex) {
         if (mBufferObjectsEnabled) {
-            if (mAdvancedSkinningEnabled) {
-                // For advanced skinning mode, only relevant buffers (BONE_INDICES & BONE_WEIGHTS) are
-                // created. We already manually handled the data for those specific buffers above.
-                if (attributeIndex != BONE_INDICES && attributeIndex != BONE_WEIGHTS) {
-                    return false;
-                }
-            } else {
+            if (!mAdvancedSkinningEnabled) {
+                return false;
+            }
+            // For advanced skinning mode, only relevant buffers (BONE_INDICES & BONE_WEIGHTS) are
+            // created. We already manually handled the data for those specific buffers above.
+            if (attributeIndex != BONE_INDICES && attributeIndex != BONE_WEIGHTS) {
                 return false;
             }
         }
