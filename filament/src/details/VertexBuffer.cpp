@@ -319,10 +319,9 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
 
     // create buffers
     for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
-        if (bufferSizes[i] == 0) {
+        if (bufferSizes[i] == 0 || mBufferObjects[i]) {
             continue;
         }
-        assert_invariant(!mBufferObjects[i]);
         BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
                 BufferObjectBinding::VERTEX, BufferUsage::STATIC,
                 utils::ImmutableCString{ builder.getName() });
