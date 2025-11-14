@@ -28,6 +28,10 @@
 
 class MetalErrorQueue {
 public:
+    bool isEmpty() const {
+        return !mHasErrors.load(std::memory_order_relaxed);
+    }
+
     void push(NSError* error) {
         std::lock_guard<std::mutex> lock(mMutex);
         mErrors.push_back(error);
@@ -35,7 +39,7 @@ public:
     }
 
     void flush(const std::function<void(NSError*)>& callback) {
-        if (UTILS_LIKELY(!mHasErrors.load(std::memory_order_relaxed))) {
+        if (UTILS_LIKELY(isEmpty())) {
             return;
         }
         std::vector<NSError*> errors;
