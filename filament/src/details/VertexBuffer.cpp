@@ -284,21 +284,18 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
             utils::ImmutableCString{ builder.getName() });
 
     auto shouldCreateBuffer = [this](size_t attributeIndex) {
-        if (mBufferObjectsEnabled) {
-            if (!mAdvancedSkinningEnabled) {
-                return false;
-            }
+        if (mAdvancedSkinningEnabled) {
             // For advanced skinning mode, only relevant buffers (BONE_INDICES & BONE_WEIGHTS) are
             // created. We already manually handled the data for those specific buffers above.
-            if (attributeIndex != BONE_INDICES && attributeIndex != BONE_WEIGHTS) {
-                return false;
+            if (attributeIndex == BONE_INDICES || attributeIndex == BONE_WEIGHTS) {
+                return true;
             }
         }
-        if (!mDeclaredAttributes[attributeIndex] ||
-            mAttributes[attributeIndex].buffer == Attribute::BUFFER_UNUSED) {
-            return false;
+        if (!mBufferObjectsEnabled) {
+            return mDeclaredAttributes[attributeIndex] &&
+                    mAttributes[attributeIndex].buffer != Attribute::BUFFER_UNUSED;
         }
-        return true;
+        return false;
     };
 
     // calculate buffer sizes
