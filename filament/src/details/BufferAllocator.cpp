@@ -142,7 +142,11 @@ void BufferAllocator::retire(AllocationId id) {
     InternalSlotNode* targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
-    targetNode->slot.isAllocated = false;
+    Slot& slot = targetNode->slot;
+    slot.isAllocated = false;
+    if (slot.gpuUseCount == 0) {
+        mHasPendingFrees = true;
+    }
 }
 
 void BufferAllocator::acquireGpu(AllocationId id) {
@@ -157,10 +161,18 @@ void BufferAllocator::releaseGpu(AllocationId id) {
     assert_invariant(targetNode != nullptr);
     assert_invariant(targetNode->slot.gpuUseCount > 0);
 
-    targetNode->slot.gpuUseCount--;
+    Slot& slot = targetNode->slot;
+    slot.gpuUseCount--;
+    if (slot.gpuUseCount == 0 && !slot.isAllocated) {
+        mHasPendingFrees = true;
+    }
 }
 
 void BufferAllocator::releaseFreeSlots() {
+    if (!mHasPendingFrees) {
+        return;
+    }
+
     auto curr = mSlotPool.begin();
     while (curr != mSlotPool.end()) {
         if (!curr->slot.isFree()) {
@@ -199,6 +211,7 @@ void BufferAllocator::releaseFreeSlots() {
 
         curr = next;
     }
+    mHasPendingFrees = false;
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::getTotalSize() const noexcept {
