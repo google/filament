@@ -95,6 +95,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
 
     if (mUseUboBatching) {
         mUboData = BufferAllocator::UNALLOCATED;
+        engine.getUboManager()->initializeMaterialInstance(this);
     } else {
         mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
                 BufferUsage::STATIC, ImmutableCString{ material->getName().c_str_safe() });
@@ -167,6 +168,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     if (mUseUboBatching) {
         mUboData = BufferAllocator::UNALLOCATED;
+        engine.getUboManager()->initializeMaterialInstance(this);
     } else {
         mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
                 BufferUsage::DYNAMIC, ImmutableCString{ material->getName().c_str_safe() });
