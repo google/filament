@@ -139,25 +139,30 @@ bool Platform::queryFrameTimestamps(SwapChain const*, uint64_t, FrameTimestamps*
 }
 
 void Platform::setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retrieveBlob) noexcept {
+    std::lock_guard<std::mutex> lock(mBlobFuncsMutex);
     mInsertBlob = std::move(insertBlob);
     mRetrieveBlob = std::move(retrieveBlob);
 }
 
 bool Platform::hasInsertBlobFunc() const noexcept {
+    std::lock_guard<decltype(mBlobFuncsMutex)> lock(mBlobFuncsMutex);
     return bool(mInsertBlob);
 }
 
 bool Platform::hasRetrieveBlobFunc() const noexcept {
+    std::lock_guard<decltype(mBlobFuncsMutex)> lock(mBlobFuncsMutex);
     return bool(mRetrieveBlob);
 }
 
 void Platform::insertBlob(void const* key, size_t keySize, void const* value, size_t valueSize) {
+    std::lock_guard<decltype(mBlobFuncsMutex)> lock(mBlobFuncsMutex);
     if (mInsertBlob) {
         mInsertBlob(key, keySize, value, valueSize);
     }
 }
 
 size_t Platform::retrieveBlob(void const* key, size_t keySize, void* value, size_t valueSize) {
+    std::lock_guard<decltype(mBlobFuncsMutex)> lock(mBlobFuncsMutex);
     if (mRetrieveBlob) {
         return mRetrieveBlob(key, keySize, value, valueSize);
     }
@@ -165,20 +170,24 @@ size_t Platform::retrieveBlob(void const* key, size_t keySize, void* value, size
 }
 
 void Platform::setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept {
+    std::lock_guard<decltype(mDebugUpdateStatFuncMutex)> lock(mDebugUpdateStatFuncMutex);
     mDebugUpdateStat = std::move(debugUpdateStat);
 }
 
 bool Platform::hasDebugUpdateStatFunc() const noexcept {
+    std::lock_guard<decltype(mDebugUpdateStatFuncMutex)> lock(mDebugUpdateStatFuncMutex);
     return bool(mDebugUpdateStat);
 }
 
 void Platform::debugUpdateStat(const char* key, uint64_t intValue) {
+    std::lock_guard<decltype(mDebugUpdateStatFuncMutex)> lock(mDebugUpdateStatFuncMutex);
     if (mDebugUpdateStat) {
         mDebugUpdateStat(key, intValue, "");
     }
 }
 
 void Platform::debugUpdateStat(const char* key, utils::CString stringValue) {
+    std::lock_guard<decltype(mDebugUpdateStatFuncMutex)> lock(mDebugUpdateStatFuncMutex);
     if (mDebugUpdateStat) {
         mDebugUpdateStat(key, 0, stringValue);
     }

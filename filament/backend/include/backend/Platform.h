@@ -22,11 +22,13 @@
 #include <utils/CString.h>
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+#include <utils/Mutex.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include <atomic>
+#include <mutex>
 
 namespace filament::backend {
 
@@ -568,6 +570,8 @@ private:
     InsertBlobFunc mInsertBlob;
     RetrieveBlobFunc mRetrieveBlob;
     DebugUpdateStatFunc mDebugUpdateStat;
+    mutable utils::Mutex mBlobFuncsMutex;
+    mutable utils::Mutex mDebugUpdateStatFuncMutex;
 };
 
 } // namespace filament
