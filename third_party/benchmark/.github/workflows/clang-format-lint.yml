@@ -1,0 +1,19 @@
+name: clang-format-lint
+on:
+  push: {}
+  pull_request: {}
+
+env:
+  CMAKE_GENERATOR: Ninja
+
+jobs:
+  job:
+    name: check-clang-format
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: DoozyX/clang-format-lint-action@v0.18.2
+      with:
+        source: './include/benchmark ./src ./test'
+        clangFormatVersion: 18
