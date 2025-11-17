@@ -111,14 +111,15 @@ public:
     void updateSlot(backend::DriverApi& driver, BufferAllocator::AllocationId id,
             backend::BufferDescriptor bufferDescriptor) const;
 
+    // Call this to register a new material instance to UboManager.
+    void manageMaterialInstance(FMaterialInstance* instance);
+
     // Call this when a material instance is destroyed.
-    void destroyInstance(const FMaterialInstance* materialInstance);
+    void unmanageMaterialInstance(const FMaterialInstance* materialInstance);
 
     // Returns the size of the actual UBO. Note that when there's allocation failed, it will be
     // reallocated to a bigger size at the next frame.
     [[nodiscard]] BufferAllocator::allocation_size_t getTotalSize() const noexcept;
-
-    void initializeMaterialInstance(FMaterialInstance* instance);
 
 private:
     constexpr static float BUFFER_SIZE_GROWTH_MULTIPLIER = 1.5f;

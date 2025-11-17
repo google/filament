@@ -187,20 +187,26 @@ void UboManager::updateSlot(DriverApi& driver, AllocationId id,
     driver.copyToMemoryMappedBuffer(mMemoryMappedBufferHandle, offset, std::move(bufferDescriptor));
 }
 
-void UboManager::destroyInstance(const FMaterialInstance* materialInstance) {
+void UboManager::manageMaterialInstance(FMaterialInstance* instance) {
+    mPendingInstances.insert(instance);
+}
+
+void UboManager::unmanageMaterialInstance(const FMaterialInstance* materialInstance) {
     AllocationId id = materialInstance->getAllocationId();
     if (!BufferAllocator::isValid(id))
         return;
 
     // const_cast should be safe here since this cast is just to match the container type.
-    mManagedInstances.erase(const_cast<FMaterialInstance*>(materialInstance));
+    auto mi = const_cast<FMaterialInstance*>(materialInstance);
+    if (UTILS_UNLIKELY(mPendingInstances.contains(mi))) {
+        mPendingInstances.erase(mi);
+    }
+
+    if (UTILS_LIKELY(mManagedInstances.contains(mi))) {
+        mManagedInstances.erase(mi);
+    }
     mAllocator.retire(id);
 }
-
-void UboManager::initializeMaterialInstance(FMaterialInstance* instance) {
-    mPendingInstances.insert(instance);
-}
-
 
 UboManager::AllocationResult UboManager::allocateOnDemand() {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);

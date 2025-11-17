@@ -1286,7 +1286,7 @@ bool FEngine::destroy(const FMaterialInstance* p) {
 
     if (p->isUsingUboBatching()) {
         assert_invariant(isUboBatchingEnabled());
-        mUboManager->destroyInstance(p);
+        mUboManager->unmanageMaterialInstance(p);
     }
 
     // Check that the material instance we're destroying is not in use in the RenderableManager
