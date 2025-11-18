@@ -40,12 +40,7 @@ namespace filament::descriptor_sets {
 
 using namespace backend;
 
-// used for post-processing passes
-static constexpr std::initializer_list<DescriptorSetLayoutBinding> postProcessDescriptorSetLayoutList = {
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
-};
-
-// used to generate shadow-maps
+// used to generate shadow-maps, structure and postfx passes
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> depthVariantDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 };
@@ -142,10 +137,6 @@ static const std::unordered_map<
         {{ SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT }, DescriptorType::SAMPLER_EXTERNAL }
 };
 
-// used for post-processing passes
-static DescriptorSetLayout const postProcessDescriptorSetLayout{ utils::StaticString("postProcess"),
-    postProcessDescriptorSetLayoutList };
-
 // used to generate shadow-maps
 static DescriptorSetLayout const depthVariantDescriptorSetLayout{
     utils::StaticString("depthVariant"), depthVariantDescriptorSetLayoutList
@@ -162,10 +153,6 @@ static DescriptorSetLayout perViewDescriptorSetLayout = { utils::StaticString("p
 static DescriptorSetLayout perRenderableDescriptorSetLayout = {
     utils::StaticString("perRenderable"), perRenderableDescriptorSetLayoutList
 };
-
-DescriptorSetLayout const& getPostProcessLayout() noexcept {
-    return postProcessDescriptorSetLayout;
-}
 
 DescriptorSetLayout const& getDepthVariantLayout() noexcept {
     return depthVariantDescriptorSetLayout;
@@ -280,10 +267,10 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
             return layout;
         }
         case MaterialDomain::POST_PROCESS:
-            return postProcessDescriptorSetLayout;
+            return depthVariantDescriptorSetLayout;
         case MaterialDomain::COMPUTE:
             // TODO: what's the layout for compute?
-            return postProcessDescriptorSetLayout;
+            return depthVariantDescriptorSetLayout;
     }
 }
 

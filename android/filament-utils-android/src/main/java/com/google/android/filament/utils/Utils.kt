@@ -22,6 +22,7 @@ object Utils {
     /**
      * Initializes the utils JNI layer. Must be called before using any utils functionality.
      */
+    @JvmStatic
     fun init() {
         // Load Filament first to ensure that the NioUtils Java class is available in the JNIEnv.
         Filament.init()
