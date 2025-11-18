@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_VULKANPIPELINELAYOUTCACHE_H
 
 #include "VulkanHandles.h"
+#include "VulkanDescriptorSetLayoutCache.h"
 
 #include <bluevk/BlueVK.h>
 
@@ -30,10 +31,11 @@ namespace filament::backend {
 class VulkanPipelineLayoutCache {
 public:
     using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
+    using DescriptorSetLayoutHashArray = VulkanDescriptorSetLayout::DescriptorSetLayoutHashArray;
     
-    VulkanPipelineLayoutCache(VkDevice device)
+    VulkanPipelineLayoutCache(VkDevice device, VulkanDescriptorSetLayoutCache* cache)
         : mDevice(device),
-          mTimestamp(0) {}
+          mTimestamp(0), mDescriptorSetCache(cache) {}
 
     void terminate() noexcept;
 
@@ -45,7 +47,7 @@ public:
     };
 
     struct PipelineLayoutKey {
-        DescriptorSetLayoutArray descSetLayouts = {};                                     // 8 * 4
+        DescriptorSetLayoutHashArray descSetLayouts = {};              // 8 * 4
         PushConstantKey pushConstant[Program::SHADER_TYPE_COUNT] = {};                    // 2 * 3
         uint16_t padding = 0;
     };
@@ -58,6 +60,14 @@ public:
     // are described in the program.
     VkPipelineLayout getLayout(DescriptorSetLayoutArray const& descriptorSetLayouts,
             fvkmemory::resource_ptr<VulkanProgram> program);
+    uint32_t getKey(VkPipelineLayout layout) {
+        uint32_t key = 0;
+        auto iter = mPipelineToKey.find(layout);
+        if (iter != mPipelineToKey.end()) {
+            key = iter->second;
+        }
+        return key;
+    }
 
 private:
     using Timestamp = uint64_t;
@@ -79,6 +89,8 @@ private:
     VkDevice mDevice;
     Timestamp mTimestamp;
     PipelineLayoutMap mPipelineLayouts;
+    std::map<VkPipelineLayout, uint32_t> mPipelineToKey;
+    VulkanDescriptorSetLayoutCache* mDescriptorSetCache;
 };
 
 } // filament::backend

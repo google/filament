@@ -17,9 +17,11 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
 #define TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
 
+#include "VulkanYcbcrConversionCache.h"
 #include <backend/DriverEnums.h>
 
 #include <utils/Hash.h>
+#include <map>
 
 #include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
@@ -37,11 +39,20 @@ public:
 
     static_assert(sizeof(Params) == 16);
 
-    explicit VulkanSamplerCache(VkDevice device);
+    explicit VulkanSamplerCache(VkDevice device, VulkanYcbcrConversionCache* conversionCache);
     VkSampler getSampler(Params params);
+    uint32_t getKey(VkSampler sampler) {
+        uint32_t key = 0;
+        auto iter = mSamplerToKey.find(sampler);
+        if (iter != mSamplerToKey.end()) {
+            key = iter->second;
+        }
+        return key;
+    }
     void terminate() noexcept;
 private:
     VkDevice mDevice;
+    VulkanYcbcrConversionCache* mConversionCache;
 
     struct SamplerEqualTo {
         bool operator()(Params lhs, Params rhs) const noexcept {
@@ -51,6 +62,7 @@ private:
     };
     using SamplerHashFn = utils::hash::MurmurHashFn<Params>;
     tsl::robin_map<Params, VkSampler, SamplerHashFn, SamplerEqualTo> mCache;
+    std::map<VkSampler, uint32_t> mSamplerToKey;
 };
 
 } // namespace filament::backend

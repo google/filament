@@ -230,16 +230,16 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
-      mPipelineLayoutCache(mPlatform->getDevice()),
       mPipelineCache(mPlatform->getDevice()),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
       mBufferCache(mContext, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
       mYcbcrConversionCache(mPlatform->getDevice()),
-      mSamplerCache(mPlatform->getDevice()),
+      mSamplerCache(mPlatform->getDevice(), &mYcbcrConversionCache),
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
-      mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
+      mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager, &mSamplerCache),
+      mPipelineLayoutCache(mPlatform->getDevice(), &mDescriptorSetLayoutCache),
       mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
       mQueryManager(mPlatform->getDevice()),
       mExternalImageManager(platform, &mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
@@ -2160,7 +2160,8 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& pipelineState,
     mPipelineState.pipelineLayout = pipelineLayout;
     mPipelineState.descriptorSetMask = descriptorSetMask;
 
-    mPipelineCache.bindLayout(pipelineLayout);
+    auto key = mPipelineLayoutCache.getKey(pipelineLayout);
+    mPipelineCache.bindLayout(pipelineLayout, key);
     mPipelineCache.bindPipeline(mCurrentRenderPass.commandBuffer);
 }
 

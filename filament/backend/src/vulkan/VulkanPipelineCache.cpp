@@ -15,6 +15,7 @@
  */
 
 #include "VulkanPipelineCache.h"
+#include "VulkanPipelineStateSerializer.h"
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
@@ -42,8 +43,9 @@ VulkanPipelineCache::VulkanPipelineCache(VkDevice device)
     bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
 }
 
-void VulkanPipelineCache::bindLayout(VkPipelineLayout layout) noexcept {
+void VulkanPipelineCache::bindLayout(VkPipelineLayout layout, uint32_t key) noexcept {
     mPipelineRequirements.layout = layout;
+    mPipelineLayoutKey = key;
 }
 
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipeline() noexcept {
@@ -77,6 +79,7 @@ void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() noexcept {
     assert_invariant(mPipelineRequirements.shaders[0] && "Vertex shader is not bound.");
     assert_invariant(mPipelineRequirements.layout && "No pipeline layout specified");
+    VulkanPipelineStateSerializer serializer(mProgramName);
 
     VkPipelineShaderStageCreateInfo shaderStages[SHADER_MODULE_COUNT];
     shaderStages[0] = {
@@ -88,6 +91,12 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     shaderStages[1] = shaderStages[0];
     shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     shaderStages[1].module = mPipelineRequirements.shaders[1];
+
+    VulkanPipelineStateSerializer::ShaderStageInfo vtx = { shaderStages[0].stage, mVertexShaderHash,
+        shaderStages[0].pName };
+    VulkanPipelineStateSerializer::ShaderStageInfo frg = { shaderStages[1].stage, mFragmentShaderHash,
+        shaderStages[1].pName };
+    serializer << vtx << frg;
 
     bool const hasFragmentShader = shaderStages[1].module != VK_NULL_HANDLE;
 
@@ -107,9 +116,11 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     for (uint32_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
         if (mPipelineRequirements.vertexAttributes[i].format > 0) {
             vertexAttributes[numVertexAttribs++] = mPipelineRequirements.vertexAttributes[i];
+            serializer << mPipelineRequirements.vertexAttributes[i];
         }
         if (mPipelineRequirements.vertexBuffers[i].stride > 0) {
             vertexBuffers[numVertexBuffers++] = mPipelineRequirements.vertexBuffers[i];
+            serializer << mPipelineRequirements.vertexBuffers[i];
         }
     }
     VkPipelineVertexInputStateCreateInfo vertexInputState = {
@@ -123,11 +134,15 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         .topology = (VkPrimitiveTopology) mPipelineRequirements.topology,
     };
+    serializer << inputAssemblyState;
+
     VkPipelineViewportStateCreateInfo viewportState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         .viewportCount = 1,
         .scissorCount = 1,
     };
+    serializer << viewportState;
+
     VkDynamicState dynamicStateEnables[] = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR,
@@ -137,6 +152,8 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .dynamicStateCount = 2,
         .pDynamicStates = dynamicStateEnables,
     };
+    serializer << dynamicState;
+
     auto const& raster = mPipelineRequirements.rasterState;
     VkPipelineRasterizationStateCreateInfo vkRaster = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -150,6 +167,8 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .depthBiasSlopeFactor = raster.depthBiasSlopeFactor,
         .lineWidth = 1.0f,
     };
+    serializer << vkRaster;
+
     VkPipelineMultisampleStateCreateInfo vkMs = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .rasterizationSamples = (VkSampleCountFlagBits) raster.rasterizationSamples,
@@ -158,6 +177,8 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .alphaToCoverageEnable = raster.alphaToCoverageEnable,
         .alphaToOneEnable = VK_FALSE,
     };
+    serializer << vkMs;
+
     VkPipelineDepthStencilStateCreateInfo vkDs = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = VK_TRUE,
@@ -177,6 +198,10 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .writeMask = 0u,
         .reference = 0u,
     };
+    serializer << vkDs;
+
+    //layout
+    serializer.setPipelineLayoutKey(mPipelineLayoutKey);
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -215,6 +240,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
             colorBlendAttachments[i] = colorBlendAttachments[0];
         }
     }
+    serializer << colorBlendState;
 
     #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         FVK_LOGD << "vkCreateGraphicsPipelines with shaders = ("
@@ -230,12 +256,17 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
         return nullptr;
     }
+    serializer.setID(cacheEntry.handle);
     return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
 void VulkanPipelineCache::bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept {
     mPipelineRequirements.shaders[0] = program->getVertexShader();
     mPipelineRequirements.shaders[1] = program->getFragmentShader();
+    mProgramName = program->name;
+    mVertexShaderHash = program->getVertexShaderHash();
+    mFragmentShaderHash= program->getFragmentShaderHash();
+    
 
     // If this is a debug build, validate the current shader.
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)

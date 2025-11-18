@@ -15,6 +15,7 @@
  */
 
 #include "VulkanPipelineLayoutCache.h"
+#include "VulkanDescriptorSetLayoutSerializer.h"
 
 namespace filament::backend {
 
@@ -23,7 +24,11 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
         fvkmemory::resource_ptr<VulkanProgram> program) {
     PipelineLayoutKey key = {};
     uint8_t descSetLayoutCount = 0;
-    key.descSetLayouts = descriptorSetLayouts;
+    DescriptorSetLayoutHashArray hashArray;
+    for (uint32_t i = 0; i < descriptorSetLayouts.size(); ++i) {
+        hashArray[i] = mDescriptorSetCache->getKey(descriptorSetLayouts[i]);
+    }
+    key.descSetLayouts = hashArray;
     for (auto layoutHandle: descriptorSetLayouts) {
         if (layoutHandle == VK_NULL_HANDLE) {
             break;
@@ -62,11 +67,14 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .pNext = nullptr,
         .setLayoutCount = (uint32_t) descSetLayoutCount,
-        .pSetLayouts = key.descSetLayouts.data(),
+        .pSetLayouts = descriptorSetLayouts.data(),
         .pushConstantRangeCount = pushConstantRangeCount,
         .pPushConstantRanges = pushConstantRanges,
     };
 
+    PipelineLayoutKeyHashFn hashFunc;
+    uint32_t hashedKey = hashFunc(key);
+    VulkanPipelineLayoutSerializer pipelineSer(info, mDescriptorSetCache, hashedKey);
     VkPipelineLayout layout;
     vkCreatePipelineLayout(mDevice, &info, VKALLOC, &layout);
 
@@ -74,6 +82,8 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
         .handle = layout,
         .lastUsed = mTimestamp++,
     };
+
+    mPipelineToKey[layout] = hashedKey;
     return layout;
 }
 

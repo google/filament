@@ -15,6 +15,7 @@
  */
 
 #include "VulkanDescriptorSetLayoutCache.h"
+#include "VulkanDescriptorSetLayoutSerializer.h"
 
 #include "VulkanHandles.h"
 
@@ -100,22 +101,32 @@ uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
     return count;
 }
 
-uint64_t computeImmutableSamplerHash(utils::FixedCapacityVector<VkSampler> const& samplers) {
+uint64_t computeImmutableSamplerHash(utils::FixedCapacityVector<VkSampler> const& samplers, VulkanSamplerCache* cache) {
     size_t const size = samplers.size();
     if (size == 0) {
         return 0;
-    } else if (size == 1) {
-        return (uint64_t) samplers[0];
     }
-    return utils::hash::murmur3((uint32_t*) samplers.data(), samplers.size() * 2, 0);
+
+    utils::FixedCapacityVector<uint32_t> samplerHash;
+    if (size > 0) {
+        samplerHash.reserve(MAX_SAMPLER_COUNT);
+        for (auto sampler : samplers) {
+            samplerHash.push_back(cache->getKey(sampler));
+        }
+    }
+
+    if (size == 1) {
+        return (uint64_t) samplerHash[0];
+    }
+    return utils::hash::murmur3((uint32_t*) samplerHash.data(), samplerHash.size() * 2, 0);
 }
 
 } // anonymous namespace
 
 VulkanDescriptorSetLayoutCache::VulkanDescriptorSetLayoutCache(VkDevice device,
-        fvkmemory::ResourceManager* resourceManager)
+        fvkmemory::ResourceManager* resourceManager, VulkanSamplerCache* cache)
     : mDevice(device),
-      mResourceManager(resourceManager) {}
+      mResourceManager(resourceManager), mSamplerCache(cache) {}
 
 VulkanDescriptorSetLayoutCache::~VulkanDescriptorSetLayoutCache() = default;
 
@@ -131,7 +142,7 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
         utils::FixedCapacityVector<VkSampler> immutableSamplers) {
     LayoutKey key = {
         .bitmask = bitmasks,
-        .immutableSamplerHash = computeImmutableSamplerHash(immutableSamplers),
+        .immutableSamplerHash = computeImmutableSamplerHash(immutableSamplers, mSamplerCache),
     };
     if (auto itr = mVkLayouts.find(key); itr != mVkLayouts.end()) {
         return itr->second;
@@ -153,9 +164,20 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
         .bindingCount = count,
         .pBindings = toBind,
     };
+    LayoutKeyHashFn hashFunc;
+    uint32_t hashedKey = hashFunc(key);
+    utils::FixedCapacityVector<uint32_t> immutableSamplersHashes;
+    immutableSamplersHashes.reserve(MAX_SAMPLER_COUNT);
+    for (auto sampler: immutableSamplers) {
+        immutableSamplersHashes.push_back(mSamplerCache->getKey(sampler));
+    }
+    VulkanDescriptorSetLayoutSerializer setSer(dlinfo, immutableSamplersHashes, hashedKey);
+
     VkDescriptorSetLayout vklayout;
     vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &vklayout);
     mVkLayouts[key] = vklayout;
+
+    mLayoutToKey[vklayout] = hashedKey;
     return vklayout;
 }
 

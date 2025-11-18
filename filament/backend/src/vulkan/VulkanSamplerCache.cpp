@@ -21,12 +21,14 @@
 
 #include <utils/Panic.h>
 
+#include "VulkanSamplerStateSerializer.h"
+
 using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanSamplerCache::VulkanSamplerCache(VkDevice device)
-    : mDevice(device) {}
+VulkanSamplerCache::VulkanSamplerCache(VkDevice device, VulkanYcbcrConversionCache* conversionCache)
+    : mDevice(device), mConversionCache(conversionCache) {}
 
 VkSampler VulkanSamplerCache::getSampler(Params params) {
     auto iter = mCache.find(params);
@@ -57,11 +59,16 @@ VkSampler VulkanSamplerCache::getSampler(Params params) {
         .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
         .unnormalizedCoordinates = VK_FALSE,
     };
+    VulkanSamplerStateSerializer samplerSer(params,
+            params.conversion != VK_NULL_HANDLE ? mConversionCache->getKey(params.conversion) : 0);
+
     VkSampler sampler;
     VkResult result = vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &sampler);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to create sampler."
                                                        << " error=" << static_cast<int32_t>(result);
     mCache.insert({ params, sampler });
+    SamplerHashFn hashFn;
+    mSamplerToKey[sampler] = hashFn(params);
     return sampler;
 }
 

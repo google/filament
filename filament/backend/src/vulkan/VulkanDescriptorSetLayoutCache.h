@@ -19,6 +19,8 @@
 
 #include "VulkanHandles.h"
 
+#include "VulkanSamplerCache.h"
+
 #include "vulkan/memory/ResourcePointer.h"
 
 #include <backend/DriverEnums.h>
@@ -35,7 +37,8 @@ namespace filament::backend {
 
 class VulkanDescriptorSetLayoutCache {
 public:
-    VulkanDescriptorSetLayoutCache(VkDevice device, fvkmemory::ResourceManager* resourceManager);
+    VulkanDescriptorSetLayoutCache(VkDevice device, fvkmemory::ResourceManager* resourceManager,
+            VulkanSamplerCache* cache);
     ~VulkanDescriptorSetLayoutCache();
 
     void terminate() noexcept;
@@ -48,10 +51,19 @@ public:
     VkDescriptorSetLayout getVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks,
             fvkutils::SamplerBitmask externalSamplers,
             utils::FixedCapacityVector<VkSampler> immutableSamplers = {});
+    uint32_t getKey(VkDescriptorSetLayout layout) {
+        uint32_t key = 0;
+        auto iter = mLayoutToKey.find(layout);
+        if (iter != mLayoutToKey.end()) {
+            key = iter->second;
+        }
+        return key;
+    }
 
 private:
     VkDevice mDevice;
     fvkmemory::ResourceManager* mResourceManager;
+    VulkanSamplerCache* mSamplerCache;
 
     struct LayoutKey {
         // this describes the layout using bitset.
@@ -69,6 +81,7 @@ private:
     };
 
     tsl::robin_map<LayoutKey, VkDescriptorSetLayout, LayoutKeyHashFn, LayoutKeyEqual> mVkLayouts;
+    std::map<VkDescriptorSetLayout, uint32_t> mLayoutToKey;
 };
 
 } // namespace filament::backend

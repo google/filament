@@ -65,6 +65,8 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
 
     using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout,
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
+    using DescriptorSetLayoutHashArray = std::array<uint64_t,
+            VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
     // The bitmask representation of a set layout.
     struct Bitmask {
@@ -280,6 +282,10 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
         mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
     }
 
+    inline uint64_t getVertexShaderHash() { return mVertexShaderHash;
+    }
+    inline uint64_t getFragmentShaderHash() { return mFragmentShaderHash; }
+
     // TODO: handle compute shaders.
     // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.
     static constexpr uint8_t const MAX_SHADER_MODULES = 2;
@@ -295,6 +301,8 @@ private:
     };
 
     PipelineInfo* mInfo;
+    uint64_t mVertexShaderHash;
+    uint64_t mFragmentShaderHash;
     VkDevice mDevice = VK_NULL_HANDLE;
 };
 

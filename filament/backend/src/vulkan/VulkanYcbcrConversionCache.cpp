@@ -15,6 +15,7 @@
  */
 
 #include "VulkanYcbcrConversionCache.h"
+#include "VulkanSamplerStateSerializer.h"
 
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/utils/Conversion.h"
@@ -53,6 +54,7 @@ VkSamplerYcbcrConversion VulkanYcbcrConversionCache::getConversion(
         .yChromaOffset = fvkutils::getChromaLocation(chroma.yChromaOffset),
         .chromaFilter = fvkutils::getFilter(chroma.chromaFilter),
     };
+    VulkanYcbcrConversionSerializer ycbcr_ser(params);
 
     // We could put this in the platform class, but that seems like a bit of an overkill
 #if defined(__ANDROID__)
@@ -73,6 +75,8 @@ VkSamplerYcbcrConversion VulkanYcbcrConversionCache::getConversion(
                                                        << " error=" << static_cast<int32_t>(result);
 
     mCache.insert({ params, conversion });
+    ConversionHashFn hashFn;
+    mConversionToKey[conversion] = hashFn(params);
     return conversion;
 }
 

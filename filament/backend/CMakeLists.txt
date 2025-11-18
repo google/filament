@@ -214,6 +214,12 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanMemory.h
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
+            src/vulkan/VulkanPipelineStateSerializer.cpp
+            src/vulkan/VulkanPipelineStateSerializer.h
+            src/vulkan/VulkanSamplerStateSerializer.h
+            src/vulkan/VulkanSamplerStateSerializer.cpp
+            src/vulkan/VulkanDescriptorSetLayoutSerializer.h
+            src/vulkan/VulkanDescriptorSetLayoutSerializer.cpp
             src/vulkan/VulkanPipelineLayoutCache.cpp
             src/vulkan/VulkanPipelineLayoutCache.h
             src/vulkan/VulkanQueryManager.cpp

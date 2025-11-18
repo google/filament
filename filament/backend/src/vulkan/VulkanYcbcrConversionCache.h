@@ -25,6 +25,7 @@
 
 #include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
+#include <map>
 
 namespace filament::backend {
 
@@ -40,6 +41,14 @@ public:
 
     explicit VulkanYcbcrConversionCache(VkDevice device);
     VkSamplerYcbcrConversion getConversion(Params params);
+    uint32_t getKey(VkSamplerYcbcrConversion conv) { 
+        uint32_t key = 0;
+        auto iter = mConversionToKey.find(conv);
+        if (iter != mConversionToKey.end()) {
+            key = iter->second;
+        }
+        return key;
+    }
     void terminate() noexcept;
 
 private:
@@ -54,6 +63,7 @@ private:
     };
     using ConversionHashFn = utils::hash::MurmurHashFn<Params>;
     tsl::robin_map<Params, VkSamplerYcbcrConversion, ConversionHashFn, ConversionEqualTo> mCache;
+    std::map<VkSamplerYcbcrConversion, uint32_t> mConversionToKey;
 };
 
 } // namespace filament::backend

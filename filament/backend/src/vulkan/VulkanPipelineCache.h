@@ -88,7 +88,7 @@ public:
 
     VulkanPipelineCache(VkDevice device);
 
-    void bindLayout(VkPipelineLayout layout) noexcept;
+    void bindLayout(VkPipelineLayout layout, uint32_t key) noexcept;
 
     // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
     void bindPipeline(VulkanCommandBuffer* commands);
@@ -207,6 +207,10 @@ private:
 
     // Current requirements for the pipeline layout, pipeline, and descriptor sets.
     PipelineKey mPipelineRequirements = {};
+    utils::CString mProgramName;
+    uint64_t mVertexShaderHash;
+    uint64_t mFragmentShaderHash;
+    uint32_t mPipelineLayoutKey;
 
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
