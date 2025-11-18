@@ -921,14 +921,6 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
         }
     }
 
-#if defined(__ANDROID__)
-    // on Android, disable producer throttling
-    if (mProducerThrottling.isSupported()) {
-        mProducerThrottling.setProducerThrottlingEnabled(
-                static_cast<ANativeWindow*>(nativeWindow), false);
-    }
-#endif
-
     auto swapChain = resource_ptr<VulkanSwapChain>::make(&mResourceManager, sch, mPlatform,
             mContext, &mResourceManager, mAllocator, &mCommands, mStagePool, nativeWindow, flags);
     swapChain.inc();

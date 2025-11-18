@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <backend/platforms/VulkanPlatformAndroid.h>
 
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanContext.h"
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/utils/Image.h"
+
+#include "AndroidFrameCallback.h"
 
 #include <private/backend/BackendUtilsAndroid.h>
 
@@ -32,6 +35,7 @@
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 
+#include <new>
 #include <utility>
 
 using namespace bluevk;
@@ -200,6 +204,14 @@ uint32_t selectMemoryTypeForExternalImage(VkPhysicalDevice physicalDevice, VkDev
 
 } // namespace
 
+// ---------------------------------------------------------------------------------------------
+
+struct VulkanPlatformAndroid::AndroidDetails {
+    AndroidFrameCallback androidFrameCallback;
+};
+
+// ---------------------------------------------------------------------------------------------
+
 VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid() {
     if (__builtin_available(android 26, *)) {
         if (aHardwareBuffer) {
@@ -208,14 +220,19 @@ VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid()
     }
 }
 
-VulkanPlatformAndroid::VulkanPlatformAndroid() {
+// ---------------------------------------------------------------------------------------------
+
+VulkanPlatformAndroid::VulkanPlatformAndroid() :
+        mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
     mOSVersion = android_get_device_api_level();
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
     }
 }
 
-VulkanPlatformAndroid::~VulkanPlatformAndroid() noexcept = default;
+VulkanPlatformAndroid::~VulkanPlatformAndroid() noexcept {
+    delete &mAndroidDetails;
+}
 
 Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
         AHardwareBuffer const* buffer, bool sRGB) noexcept {
@@ -497,14 +514,14 @@ int VulkanPlatformAndroid::getOSVersion() const noexcept {
 }
 
 void VulkanPlatformAndroid::terminate() {
-    mAndroidFrameCallback.terminate();
+    mAndroidDetails.androidFrameCallback.terminate();
     VulkanPlatform::terminate();
 }
 
 Driver* VulkanPlatformAndroid::createDriver(void* sharedContext, DriverConfig const& driverConfig) {
     Driver* driver = VulkanPlatform::createDriver(sharedContext, driverConfig);
     if (driver) {
-        mAndroidFrameCallback.init();
+        mAndroidDetails.androidFrameCallback.init();
     }
     return driver;
 }
@@ -520,7 +537,7 @@ bool VulkanPlatformAndroid::queryCompositorTiming(SwapChain const* swapchain,
     }
 
     AndroidFrameCallback::Timeline const preferredTimeline{
-        mAndroidFrameCallback.getPreferredTimeline() };
+        mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
     outCompositorTiming->frameTime = preferredTimeline.frameTime;
     outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
     outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
