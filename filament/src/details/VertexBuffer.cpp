@@ -283,34 +283,35 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
     mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle,
             utils::ImmutableCString{ builder.getName() });
 
-    auto shouldCreateBuffer = [this](size_t attributeIndex) {
-        if (mAdvancedSkinningEnabled) {
-            // For advanced skinning mode, only relevant buffers (BONE_INDICES & BONE_WEIGHTS) are
-            // created. We already manually handled the data for those specific buffers above.
-            if (attributeIndex == BONE_INDICES || attributeIndex == BONE_WEIGHTS) {
-                return true;
-            }
-        }
-        if (!mBufferObjectsEnabled) {
-            return mDeclaredAttributes[attributeIndex] &&
-                    mAttributes[attributeIndex].buffer != Attribute::BUFFER_UNUSED;
-        }
-        return false;
-    };
-
     // calculate buffer sizes
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
-    #pragma nounroll
-    for (size_t i = 0, n = mAttributes.size(); i < n; ++i) {
-        if (!shouldCreateBuffer(i)) {
-            continue;
-        }
-        const uint32_t offset = mAttributes[i].offset;
-        const uint8_t stride = mAttributes[i].stride;
-        const uint8_t slot = mAttributes[i].buffer;
+
+    auto shouldCreateBuffer = [this](size_t attributeIndex) {
+        uint8_t slot = mAttributes[attributeIndex].buffer;
+        return mDeclaredAttributes[attributeIndex] && slot != Attribute::BUFFER_UNUSED &&
+                !mBufferObjects[slot];
+    };
+    auto updateBufferSize = [&bufferSizes, this](size_t attributeIndex) {
+        const uint32_t offset = mAttributes[attributeIndex].offset;
+        const uint8_t stride = mAttributes[attributeIndex].stride;
+        const uint8_t slot = mAttributes[attributeIndex].buffer;
         const size_t end = offset + mVertexCount * stride;
         assert_invariant(slot < MAX_VERTEX_BUFFER_COUNT);
         bufferSizes[slot] = std::max(bufferSizes[slot], end);
+    };
+
+    if (!mBufferObjectsEnabled) {
+        #pragma nounroll
+        for (size_t i = 0, n = mAttributes.size(); i < n; ++i) {
+            if (shouldCreateBuffer(i)) {
+                updateBufferSize(i);
+            }
+        }
+    } else if (mAdvancedSkinningEnabled) {
+        // For advanced skinning mode, only relevant buffers (BONE_INDICES & BONE_WEIGHTS) are
+        // created. We manually populated the relevant attributes for those buffers above.
+        updateBufferSize(BONE_INDICES);
+        updateBufferSize(BONE_WEIGHTS);
     }
 
     // create buffers
