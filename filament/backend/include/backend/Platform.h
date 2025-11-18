@@ -28,6 +28,7 @@
 #include <stdint.h>
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 
 namespace filament::backend {
@@ -567,11 +568,10 @@ public:
     void debugUpdateStat(const char* UTILS_NONNULL key, utils::CString stringValue);
 
 private:
-    InsertBlobFunc mInsertBlob;
-    RetrieveBlobFunc mRetrieveBlob;
-    DebugUpdateStatFunc mDebugUpdateStat;
-    mutable utils::Mutex mBlobFuncsMutex;
-    mutable utils::Mutex mDebugUpdateStatFuncMutex;
+    std::shared_ptr<InsertBlobFunc> mInsertBlob;
+    std::shared_ptr<RetrieveBlobFunc> mRetrieveBlob;
+    std::shared_ptr<DebugUpdateStatFunc> mDebugUpdateStat;
+    mutable utils::Mutex mMutex;
 };
 
 } // namespace filament
