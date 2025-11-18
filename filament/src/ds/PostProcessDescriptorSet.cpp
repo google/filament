@@ -39,7 +39,7 @@ void PostProcessDescriptorSet::init(FEngine& engine) noexcept {
     // create the descriptor-set layout
     mDescriptorSetLayout = filament::DescriptorSetLayout{
             engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), descriptor_sets::getPostProcessLayout() };
+            engine.getDriverApi(), descriptor_sets::getDepthVariantLayout() };
 
     // create the descriptor-set from the layout
     mDescriptorSet = DescriptorSet{ "PostProcessDescriptorSet", mDescriptorSetLayout };
