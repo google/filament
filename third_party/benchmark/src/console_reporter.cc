@@ -12,27 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "benchmark/benchmark.h"
-#include "complexity.h"
-#include "counter.h"
-
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <tuple>
 #include <vector>
 
+#include "benchmark/benchmark.h"
 #include "check.h"
 #include "colorprint.h"
 #include "commandlineflags.h"
+#include "complexity.h"
+#include "counter.h"
 #include "internal_macros.h"
 #include "string_util.h"
 #include "timers.h"
 
 namespace benchmark {
 
+BENCHMARK_EXPORT
 bool ConsoleReporter::ReportContext(const Context& context) {
   name_field_width_ = context.name_field_width;
   printed_header_ = false;
@@ -41,34 +42,40 @@ bool ConsoleReporter::ReportContext(const Context& context) {
   PrintBasicContext(&GetErrorStream(), context);
 
 #ifdef BENCHMARK_OS_WINDOWS
-  if ((output_options_ & OO_Color) && &std::cout != &GetOutputStream()) {
-    GetErrorStream()
-        << "Color printing is only supported for stdout on windows."
-           " Disabling color printing\n";
-    output_options_ = static_cast< OutputOptions >(output_options_ & ~OO_Color);
+  if ((output_options_ & OO_Color)) {
+    auto stdOutBuf = std::cout.rdbuf();
+    auto outStreamBuf = GetOutputStream().rdbuf();
+    if (stdOutBuf != outStreamBuf) {
+      GetErrorStream()
+          << "Color printing is only supported for stdout on windows."
+             " Disabling color printing\n";
+      output_options_ = static_cast<OutputOptions>(output_options_ & ~OO_Color);
+    }
   }
 #endif
 
   return true;
 }
 
+BENCHMARK_EXPORT
 void ConsoleReporter::PrintHeader(const Run& run) {
-  std::string str = FormatString("%-*s %13s %13s %10s", static_cast<int>(name_field_width_),
-                                 "Benchmark", "Time", "CPU", "Iterations");
-  if(!run.counters.empty()) {
-    if(output_options_ & OO_Tabular) {
-      for(auto const& c : run.counters) {
+  std::string str =
+      FormatString("%-*s %13s %15s %12s", static_cast<int>(name_field_width_),
+                   "Benchmark", "Time", "CPU", "Iterations");
+  if (!run.counters.empty()) {
+    if ((output_options_ & OO_Tabular) != 0) {
+      for (auto const& c : run.counters) {
         str += FormatString(" %10s", c.first.c_str());
       }
     } else {
       str += " UserCounters...";
     }
   }
-  str += "\n";
   std::string line = std::string(str.length(), '-');
-  GetOutputStream() << line << "\n" << str << line << "\n";
+  GetOutputStream() << line << "\n" << str << "\n" << line << "\n";
 }
 
+BENCHMARK_EXPORT
 void ConsoleReporter::ReportRuns(const std::vector<Run>& reports) {
   for (const auto& run : reports) {
     // print the header:
@@ -76,7 +83,7 @@ void ConsoleReporter::ReportRuns(const std::vector<Run>& reports) {
     bool print_header = !printed_header_;
     // --- or if the format is tabular and this run
     //     has different fields from the prev header
-    print_header |= (output_options_ & OO_Tabular) &&
+    print_header |= ((output_options_ & OO_Tabular) != 0) &&
                     (!internal::SameNames(run.counters, prev_counters_));
     if (print_header) {
       printed_header_ = true;
@@ -90,65 +97,108 @@ void ConsoleReporter::ReportRuns(const std::vector<Run>& reports) {
   }
 }
 
-static void IgnoreColorPrint(std::ostream& out, LogColor, const char* fmt,
-                             ...) {
+static void IgnoreColorPrint(std::ostream& out, LogColor /*unused*/,
+                             const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   out << FormatString(fmt, args);
   va_end(args);
 }
 
+static std::string FormatTime(double time) {
+  // For the time columns of the console printer 13 digits are reserved. One of
+  // them is a space and max two of them are the time unit (e.g ns). That puts
+  // us at 10 digits usable for the number.
+  // Align decimal places...
+  if (time < 1.0) {
+    return FormatString("%10.3f", time);
+  }
+  if (time < 10.0) {
+    return FormatString("%10.2f", time);
+  }
+  if (time < 100.0) {
+    return FormatString("%10.1f", time);
+  }
+  // Assuming the time is at max 9.9999e+99 and we have 10 digits for the
+  // number, we get 10-1(.)-1(e)-1(sign)-2(exponent) = 5 digits to print.
+  if (time > 9999999999 /*max 10 digit number*/) {
+    return FormatString("%1.4e", time);
+  }
+  return FormatString("%10.0f", time);
+}
+
+BENCHMARK_EXPORT
 void ConsoleReporter::PrintRunData(const Run& result) {
   typedef void(PrinterFn)(std::ostream&, LogColor, const char*, ...);
   auto& Out = GetOutputStream();
-  PrinterFn* printer = (output_options_ & OO_Color) ?
-                         (PrinterFn*)ColorPrintf : IgnoreColorPrint;
+  PrinterFn* printer = (output_options_ & OO_Color) != 0
+                           ? static_cast<PrinterFn*>(ColorPrintf)
+                           : IgnoreColorPrint;
   auto name_color =
       (result.report_big_o || result.report_rms) ? COLOR_BLUE : COLOR_GREEN;
   printer(Out, name_color, "%-*s ", name_field_width_,
           result.benchmark_name().c_str());
 
-  if (result.error_occurred) {
+  if (internal::SkippedWithError == result.skipped) {
     printer(Out, COLOR_RED, "ERROR OCCURRED: \'%s\'",
-            result.error_message.c_str());
+            result.skip_message.c_str());
+    printer(Out, COLOR_DEFAULT, "\n");
+    return;
+  }
+  if (internal::SkippedWithMessage == result.skipped) {
+    printer(Out, COLOR_WHITE, "SKIPPED: \'%s\'", result.skip_message.c_str());
     printer(Out, COLOR_DEFAULT, "\n");
     return;
   }
 
   const double real_time = result.GetAdjustedRealTime();
   const double cpu_time = result.GetAdjustedCPUTime();
+  const std::string real_time_str = FormatTime(real_time);
+  const std::string cpu_time_str = FormatTime(cpu_time);
 
   if (result.report_big_o) {
     std::string big_o = GetBigOString(result.complexity);
-    printer(Out, COLOR_YELLOW, "%10.2f %s %10.2f %s ", real_time, big_o.c_str(),
-            cpu_time, big_o.c_str());
+    printer(Out, COLOR_YELLOW, "%10.2f %-4s %10.2f %-4s ", real_time,
+            big_o.c_str(), cpu_time, big_o.c_str());
   } else if (result.report_rms) {
-    printer(Out, COLOR_YELLOW, "%10.0f %% %10.0f %% ", real_time * 100,
-            cpu_time * 100);
-  } else {
+    printer(Out, COLOR_YELLOW, "%10.0f %-4s %10.0f %-4s ", real_time * 100, "%",
+            cpu_time * 100, "%");
+  } else if (result.run_type != Run::RT_Aggregate ||
+             result.aggregate_unit == StatisticUnit::kTime) {
     const char* timeLabel = GetTimeUnitString(result.time_unit);
-    printer(Out, COLOR_YELLOW, "%10.0f %s %10.0f %s ", real_time, timeLabel,
-            cpu_time, timeLabel);
+    printer(Out, COLOR_YELLOW, "%s %-4s %s %-4s ", real_time_str.c_str(),
+            timeLabel, cpu_time_str.c_str(), timeLabel);
+  } else {
+    assert(result.aggregate_unit == StatisticUnit::kPercentage);
+    printer(Out, COLOR_YELLOW, "%10.2f %-4s %10.2f %-4s ",
+            (100. * result.real_accumulated_time), "%",
+            (100. * result.cpu_accumulated_time), "%");
   }
 
   if (!result.report_big_o && !result.report_rms) {
     printer(Out, COLOR_CYAN, "%10lld", result.iterations);
   }
 
-  for (auto& c : result.counters) {
-    const std::size_t cNameLen = std::max(std::string::size_type(10),
-                                          c.first.length());
-    auto const& s = HumanReadableNumber(c.second.value, c.second.oneK);
-    if (output_options_ & OO_Tabular) {
-      if (c.second.flags & Counter::kIsRate) {
-        printer(Out, COLOR_DEFAULT, " %*s/s", cNameLen - 2, s.c_str());
-      } else {
-        printer(Out, COLOR_DEFAULT, " %*s", cNameLen, s.c_str());
-      }
+  for (const auto& c : result.counters) {
+    const std::size_t cNameLen =
+        std::max(static_cast<std::size_t>(10), c.first.length());
+    std::string s;
+    const char* unit = "";
+    if (result.run_type == Run::RT_Aggregate &&
+        result.aggregate_unit == StatisticUnit::kPercentage) {
+      s = StrFormat("%.2f", 100. * c.second.value);
+      unit = "%";
     } else {
-      const char* unit = (c.second.flags & Counter::kIsRate) ? "/s" : "";
-      printer(Out, COLOR_DEFAULT, " %s=%s%s", c.first.c_str(), s.c_str(),
+      s = HumanReadableNumber(c.second.value, c.second.oneK);
+      if ((c.second.flags & Counter::kIsRate) != 0) {
+        unit = (c.second.flags & Counter::kInvert) != 0 ? "s" : "/s";
+      }
+    }
+    if ((output_options_ & OO_Tabular) != 0) {
+      printer(Out, COLOR_DEFAULT, " %*s%s", cNameLen - strlen(unit), s.c_str(),
               unit);
+    } else {
+      printer(Out, COLOR_DEFAULT, " %s=%s%s", c.first.c_str(), s.c_str(), unit);
     }
   }
 

@@ -3,13 +3,13 @@
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wreturn-type"
 #endif
+BENCHMARK_DISABLE_DEPRECATED_WARNING
 
 extern "C" {
 
 extern int ExternInt;
 extern int ExternInt2;
 extern int ExternInt3;
-
 }
 
 // CHECK-LABEL: test_basic:
