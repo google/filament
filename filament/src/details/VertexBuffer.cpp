@@ -287,7 +287,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
 
     auto shouldCreateBuffer = [this](size_t attributeIndex) {
-        uint8_t slot = mAttributes[attributeIndex].buffer;
+        const uint8_t slot = mAttributes[attributeIndex].buffer;
         return mDeclaredAttributes[attributeIndex] && slot != Attribute::BUFFER_UNUSED &&
                 !mBufferObjects[slot];
     };
