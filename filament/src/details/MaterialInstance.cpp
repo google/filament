@@ -213,6 +213,10 @@ FMaterialInstance::~FMaterialInstance() noexcept = default;
 void FMaterialInstance::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mDescriptorSet.terminate(driver);
+    if (mUseUboBatching) {
+        engine.getUboManager()->unmanageMaterialInstance(this);
+    }
+
     auto* ubHandle = std::get_if<Handle<HwBufferObject>>(&mUboData);
     if (ubHandle){
         driver.destroyBufferObject(*ubHandle);

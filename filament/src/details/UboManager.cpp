@@ -146,7 +146,7 @@ void UboManager::beginFrame(DriverApi& driver) {
             driver.mapBuffer(mUbHandle, 0, mUboSize, MapBufferAccessFlags::WRITE_BIT, "UboManager");
 
     // Invalidate the migrated MIs, so that next commit() call must be triggered.
-    for (const auto& mi : mManagedInstances) {
+    for (const auto* mi : mManagedInstances) {
         mi->getUniformBuffer().invalidate();
     }
 }
@@ -160,7 +160,7 @@ void UboManager::finishBeginFrame(DriverApi& driver) {
 
 void UboManager::endFrame(DriverApi& driver) {
     std::unordered_set<AllocationId> allocationIds;
-    for (const auto& mi : mManagedInstances) {
+    for (const auto* mi : mManagedInstances) {
         const AllocationId id = mi->getAllocationId();
         if (!BufferAllocator::isValid(id)) {
             return;
@@ -193,18 +193,14 @@ void UboManager::manageMaterialInstance(FMaterialInstance* instance) {
 
 void UboManager::unmanageMaterialInstance(const FMaterialInstance* materialInstance) {
     AllocationId id = materialInstance->getAllocationId();
+    // const_cast should be safe here since this cast is just to match the container type.
+    auto mi = const_cast<FMaterialInstance*>(materialInstance);
+    mPendingInstances.erase(mi);
+    mManagedInstances.erase(mi);
+
     if (!BufferAllocator::isValid(id))
         return;
 
-    // const_cast should be safe here since this cast is just to match the container type.
-    auto mi = const_cast<FMaterialInstance*>(materialInstance);
-    if (UTILS_UNLIKELY(mPendingInstances.contains(mi))) {
-        mPendingInstances.erase(mi);
-    }
-
-    if (UTILS_LIKELY(mManagedInstances.contains(mi))) {
-        mManagedInstances.erase(mi);
-    }
     mAllocator.retire(id);
 }
 
@@ -213,10 +209,15 @@ UboManager::AllocationResult UboManager::allocateOnDemand() {
     bool reallocationNeeded = false;
 
     // Pass 1: Allocate slots for new material instances (that don't have a slot yet).
-    for (FMaterialInstance* mi : mPendingInstances) {
+    for (auto* mi : mPendingInstances) {
         mManagedInstances.insert(mi);
         auto [newId, newOffset] = mAllocator.allocate(mi->getUniformBuffer().getSize());
+
+        // Even if the newId is not valid, we assign it to the MI so that the following process knows
+        // this material instance was not allocated successfully. Then we can calculate the new
+        // required UBO size properly.
         mi->assignUboAllocation(mUbHandle, newId, newOffset);
+
         if (!BufferAllocator::isValid(newId)) {
             reallocationNeeded = true;
         }
@@ -224,7 +225,7 @@ UboManager::AllocationResult UboManager::allocateOnDemand() {
     mPendingInstances.clear();
 
     // Pass 2: Allocate slots for existing material instances that need to be orphaned.
-    for (auto& mi: mManagedInstances) {
+    for (auto* mi: mManagedInstances) {
         if (!BufferAllocator::isValid(mi->getAllocationId())) {
             continue;
         }
@@ -243,7 +244,12 @@ UboManager::AllocationResult UboManager::allocateOnDemand() {
         }
 
         auto [newId, newOffset] = mAllocator.allocate(mi->getUniformBuffer().getSize());
+
+        // Even if the newId is not valid, we assign it to the MI so that the following process knows
+        // this material instance was not allocated successfully. Then we can calculate the new
+        // required UBO size properly.
         mi->assignUboAllocation(mUbHandle, newId, newOffset);
+
         if (!BufferAllocator::isValid(newId)) {
             reallocationNeeded = true;
         }
@@ -253,7 +259,7 @@ UboManager::AllocationResult UboManager::allocateOnDemand() {
 }
 
 void UboManager::allocateAllInstances() {
-    for (const auto& mi: mManagedInstances) {
+    for (auto* mi: mManagedInstances) {
         auto [newId, newOffset] = mAllocator.allocate(mi->getUniformBuffer().getSize());
         assert_invariant(BufferAllocator::isValid(newId));
         mi->assignUboAllocation(mUbHandle, newId, newOffset);
@@ -283,7 +289,7 @@ void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
 
 allocation_size_t UboManager::calculateRequiredSize() {
     allocation_size_t newBufferSize = 0;
-    for (const auto& mi: mManagedInstances) {
+    for (const auto* mi: mManagedInstances) {
         const AllocationId allocationId = mi->getAllocationId();
         if (allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
             // For MIs whose parameters have been updated, aside from the slot it is being
