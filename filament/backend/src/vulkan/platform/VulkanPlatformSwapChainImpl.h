@@ -25,7 +25,8 @@
 #include <bluevk/BlueVK.h>
 
 #ifdef __ANDROID__
-#include <AndroidSwapChainHelper.h>
+#include "AndroidSwapChainHelper.h"
+#include "AndroidNativeWindow.h"
 #endif
 
 #include <unordered_map>
@@ -122,6 +123,7 @@ private:
 
 #ifdef __ANDROID__
     AndroidSwapChainHelper mImpl{};
+    AndroidProducerThrottling mProducerThrottling;
 #endif
 };
 

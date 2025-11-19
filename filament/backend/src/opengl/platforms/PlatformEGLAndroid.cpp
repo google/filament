@@ -28,14 +28,13 @@
 #include <private/backend/VirtualMachineEnv.h>
 
 #include "AndroidNativeWindow.h"
+#include "AndroidFrameCallback.h"
 #include "AndroidSwapChainHelper.h"
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
 #include <android/native_window.h>
 #include <android/hardware_buffer.h>
-#include <android/choreographer.h>
-#include <android/looper.h>
 
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
@@ -99,6 +98,25 @@ using namespace glext;
 
 // ---------------------------------------------------------------------------------------------
 
+struct PlatformEGLAndroid::SwapChainEGLAndroid : public SwapChainEGL {
+    SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
+            void* nativeWindow, uint64_t flags);
+    SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
+            uint32_t width, uint32_t height, uint64_t flags);
+    void terminate(PlatformEGLAndroid& platform);
+    bool setPresentFrameId(uint64_t frameId) const noexcept;
+    uint64_t getFrameId(uint64_t frameId) const noexcept;
+private:
+    AndroidSwapChainHelper mImpl{};
+};
+
+struct PlatformEGLAndroid::AndroidDetails {
+    AndroidProducerThrottling producerThrottling;
+    AndroidFrameCallback androidFrameCallback;
+};
+
+// ---------------------------------------------------------------------------------------------
+
 PlatformEGLAndroid::InitializeJvmForPerformanceManagerIfNeeded::InitializeJvmForPerformanceManagerIfNeeded() {
     // PerformanceHintManager() needs the calling thread to be a Java thread; so we need
     // to attach this thread to the JVM before we initialize PerformanceHintManager.
@@ -112,17 +130,20 @@ PlatformEGLAndroid::InitializeJvmForPerformanceManagerIfNeeded::InitializeJvmFor
 // ---------------------------------------------------------------------------------------------
 
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
-        : mExternalStreamManager(ExternalStreamManagerAndroid::create()) {
+        : mExternalStreamManager(ExternalStreamManagerAndroid::create()),
+          mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
     mOSVersion = android_get_device_api_level();
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
     }
 }
 
-PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
+PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
+    delete &mAndroidDetails;
+}
 
 void PlatformEGLAndroid::terminate() noexcept {
-    mAndroidFrameCallback.terminate();
+    mAndroidDetails.androidFrameCallback.terminate();
     ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
     PlatformEGL::terminate();
 }
@@ -240,7 +261,7 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
 
-    mAndroidFrameCallback.init();
+    mAndroidDetails.androidFrameCallback.init();
 
     return driver;
 }
@@ -264,7 +285,7 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
     }
 
     AndroidFrameCallback::Timeline const preferredTimeline{
-            mAndroidFrameCallback.getPreferredTimeline() };
+            mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
     outCompositorTiming->frameTime = preferredTimeline.frameTime;
     outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
     outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
@@ -675,12 +696,12 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage const sou
 
 
 bool PlatformEGLAndroid::isProducerThrottlingControlSupported() const {
-    return mProducerThrottling.isSupported();
+    return mAndroidDetails.producerThrottling.isSupported();
 }
 
 int32_t PlatformEGLAndroid::setProducerThrottlingEnabled(
     EGLNativeWindowType const nativeWindow, bool const enabled) const {
-    return mProducerThrottling.setProducerThrottlingEnabled(nativeWindow, enabled);
+    return mAndroidDetails.producerThrottling.setProducerThrottlingEnabled(nativeWindow, enabled);
 }
 
 // ---------------------------------------------------------------------------------------------
