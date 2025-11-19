@@ -15,6 +15,7 @@
  */
 
 #include "VulkanFboCache.h"
+#include "VulkanRenderPassStateSerializer.h"
 
 #include "VulkanConstants.h"
 #include "vulkan/utils/Image.h"
@@ -69,6 +70,15 @@ VulkanFboCache::~VulkanFboCache() {
             << "Please explicitly call terminate() while the VkDevice is still alive.";
 }
 
+uint32_t VulkanFboCache::getRenderPassKey(VkRenderPass pass) noexcept {
+    uint32_t key = 0;
+    auto iter = mRenderPassToKey.find(pass);
+    if (iter != mRenderPassToKey.end()) {
+        key = iter->second;
+    }
+    return key;
+}
+
 VkFramebuffer VulkanFboCache::getFramebuffer(FboKey const& config) noexcept {
     FboMap::iterator iter = mFramebufferCache.find(config);
     if (UTILS_LIKELY(iter != mFramebufferCache.end() && iter->second.handle != VK_NULL_HANDLE)) {
@@ -117,6 +127,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey const& config) noexcept {
     VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
                                                      << " error=" << static_cast<int32_t>(error);
+
     mFramebufferCache[config] = {framebuffer, mCurrentTime};
     return framebuffer;
 }
@@ -326,6 +337,12 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept
     VkResult error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create render pass."
                                                       << " error=" << error;
+
+    RenderPassHash hashFunc;
+    uint32_t key = hashFunc(config);
+    VulkanRenderPassStateSerializer passSer(renderPassInfo, key); 
+    mRenderPassToKey[renderPass] = key;
+
     mRenderPassCache[config] = {renderPass, mCurrentTime};
 
 #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)

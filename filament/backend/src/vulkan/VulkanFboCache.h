@@ -24,6 +24,7 @@
 #include <backend/TargetBufferInfo.h>
 
 #include <tsl/robin_map.h>
+#include <map>
 
 namespace filament::backend {
 
@@ -97,6 +98,8 @@ public:
     explicit VulkanFboCache(VkDevice device);
     ~VulkanFboCache();
 
+    uint32_t getRenderPassKey(VkRenderPass pass) noexcept;
+
     // Retrieves or creates a VkFramebuffer handle.
     VkFramebuffer getFramebuffer(FboKey const& config) noexcept;
 
@@ -118,6 +121,7 @@ private:
     FboMap mFramebufferCache;
 
     tsl::robin_map<RenderPassKey, RenderPassVal, RenderPassHash, RenderPassEq> mRenderPassCache;
+    std::map<VkRenderPass, uint32_t> mRenderPassToKey;
     tsl::robin_map<VkRenderPass, uint32_t> mRenderPassRefCount;
     uint32_t mCurrentTime = 0;
 };
