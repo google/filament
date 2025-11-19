@@ -17,6 +17,7 @@
 #ifndef TNT_METALCONTEXT_H
 #define TNT_METALCONTEXT_H
 
+#include "MetalErrorQueue.h"
 #include "MetalResourceTracker.h"
 #include "MetalShaderCompiler.h"
 #include "MetalState.h"
@@ -129,6 +130,7 @@ struct MetalContext {
     id<MTLCommandBuffer> pendingCommandBuffer = nil;
     id<MTLRenderCommandEncoder> currentRenderPassEncoder = nil;
     uint32_t currentFrame = 0;
+    MetalErrorQueue commandBufferErrors;
 
     std::atomic<bool> memorylessLimitsReached = false;
 
