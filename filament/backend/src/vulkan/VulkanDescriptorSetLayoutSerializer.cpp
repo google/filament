@@ -18,15 +18,19 @@ VulkanDescriptorSetLayoutSerializer::VulkanDescriptorSetLayoutSerializer(
             buffer << "{" << std::endl;
             buffer << "\"binding\":" << info.pBindings[i].binding << "," << std::endl;
             buffer << "\"descriptor_type\":" << info.pBindings[i].descriptorType << "," << std::endl;
-            buffer << "\"stage_flags\":" << info.pBindings[i].stageFlags << "," << std::endl;
-            buffer << "\"immutable_samplers\":[" << std::endl;
-            for (uint32_t i = 0; i < immutableSamplers.size(); ++i) {
-                buffer << immutableSamplers[i];
-                if (i < immutableSamplers.size() - 1) {
-                    buffer << ",";
+            buffer << "\"stage_flags\":" << info.pBindings[i].stageFlags;
+            if (immutableSamplers.size()) {
+                buffer << "," << std::endl;
+                buffer << "\"immutable_samplers\":[" << std::endl;
+                for (uint32_t i = 0; i < immutableSamplers.size(); ++i) {
+                    buffer << immutableSamplers[i];
+                    if (i < immutableSamplers.size() - 1) {
+                        buffer << ",";
+                    }
                 }
+                buffer << "]";
             }
-            buffer << "]" << std::endl;
+            buffer << std::endl;
             buffer << "}";
             if (i < info.bindingCount - 1) {
                 buffer << ",";

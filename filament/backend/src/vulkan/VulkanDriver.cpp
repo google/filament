@@ -1666,7 +1666,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     rpkey.subpassMask = uint8_t(params.subpassMask);
 
     VkRenderPass renderPass = mFramebufferCache.getRenderPass(rpkey);
-    mPipelineCache.bindRenderPass(renderPass, 0);
+    mPipelineCache.bindRenderPass(renderPass, mFramebufferCache.getRenderPassKey(renderPass), 0);
 
     // Create the VkFramebuffer or fetch it from cache.
     VulkanFboCache::FboKey fbkey = rt->getFboKey();
@@ -1785,6 +1785,7 @@ void VulkanDriver::nextSubpass(int) {
             VK_SUBPASS_CONTENTS_INLINE);
 
     mPipelineCache.bindRenderPass(mCurrentRenderPass.renderPass,
+            mFramebufferCache.getRenderPassKey(mCurrentRenderPass.renderPass),
             ++mCurrentRenderPass.currentSubpass);
 
     if (mCurrentRenderPass.params.subpassMask & 0x1) {

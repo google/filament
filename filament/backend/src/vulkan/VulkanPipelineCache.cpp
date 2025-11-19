@@ -202,6 +202,8 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 
     //layout
     serializer.setPipelineLayoutKey(mPipelineLayoutKey);
+    // renderPass
+    serializer.setRenderPassKey(mRenderPassKey);
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -256,7 +258,10 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
         return nullptr;
     }
-    serializer.setID(cacheEntry.handle);
+
+    PipelineHashFn hashFunc;
+
+    serializer.setID(hashFunc(mPipelineRequirements));
     return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
@@ -281,9 +286,10 @@ void VulkanPipelineCache::bindRasterState(RasterState const& rasterState) noexce
     mPipelineRequirements.rasterState = rasterState;
 }
 
-void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept {
+void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, uint32_t passKey, int subpassIndex) noexcept {
     mPipelineRequirements.renderPass = renderPass;
     mPipelineRequirements.subpassIndex = subpassIndex;
+    mRenderPassKey = passKey;
 }
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {

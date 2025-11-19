@@ -98,9 +98,13 @@ void VulkanPipelineStateSerializer::setPipelineLayoutKey(uint32_t pipelineLayout
     mBuffer << "\"layout\":" << pipelineLayoutKey << "," << std::endl;
 }
 
-void VulkanPipelineStateSerializer::setID(VkPipeline cache) {
+void VulkanPipelineStateSerializer::setRenderPassKey(uint32_t renderPassKey) {
+    mBuffer << "\"render_pass\":" << renderPassKey << "," << std::endl;
+}
+
+void VulkanPipelineStateSerializer::setID(uint32_t key) {
     std::stringstream temp;
-    temp << "pipeline_"  << cache << ".json";
+    temp << "pipeline_" << key << ".json";
     temp >> mFileName;
 }
 

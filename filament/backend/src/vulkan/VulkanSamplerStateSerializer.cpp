@@ -54,7 +54,6 @@ VulkanSamplerStateSerializer::VulkanSamplerStateSerializer(const VulkanSamplerCa
         buffer << "\"anisotropy_log2\":" << uint32_t(samplerParams.anisotropyLog2) << "," << std::endl;
         buffer << "\"compare_mode\":" << uint32_t(samplerParams.compareMode) << "," << std::endl;
         buffer << "\"compare_func\":" << uint32_t(samplerParams.compareFunc) << "," << std::endl;
-        buffer << "\"filter_min\":" << uint32_t(samplerParams.filterMin) << "," << std::endl;
         buffer << "\"ycbcr_conv_key\":" << ycbcr_conv_key << std::endl;
         buffer << "}" << std::endl;
 

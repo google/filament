@@ -96,7 +96,7 @@ public:
     // Each of the following methods are fast and do not make Vulkan calls.
     void bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept;
     void bindRasterState(RasterState const& rasterState) noexcept;
-    void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
+    void bindRenderPass(VkRenderPass renderPass, uint32_t passKey, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
     void bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
             VkVertexInputBindingDescription const* bufferDesc, uint8_t count);
@@ -211,6 +211,7 @@ private:
     uint64_t mVertexShaderHash;
     uint64_t mFragmentShaderHash;
     uint32_t mPipelineLayoutKey;
+    uint32_t mRenderPassKey;
 
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};

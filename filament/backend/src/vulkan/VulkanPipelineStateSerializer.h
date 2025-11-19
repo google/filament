@@ -39,8 +39,9 @@ public:
     VulkanPipelineStateSerializer(const utils::CString& name);
     ~VulkanPipelineStateSerializer();
 
-    void setID(VkPipeline cache);
+    void setID(uint32_t key);
     void setPipelineLayoutKey(uint32_t pipelineLayoutKey);
+    void setRenderPassKey(uint32_t renderPassKey); 
     VulkanPipelineStateSerializer& operator<<(
             const VkPipelineInputAssemblyStateCreateInfo& inputAsm);
     VulkanPipelineStateSerializer& operator<<(const VkPipelineViewportStateCreateInfo& viewport);
