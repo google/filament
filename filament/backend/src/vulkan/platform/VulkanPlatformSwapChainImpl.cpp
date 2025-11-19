@@ -165,6 +165,11 @@ VulkanPlatformSurfaceSwapChain::~VulkanPlatformSurfaceSwapChain() {
 VkResult VulkanPlatformSurfaceSwapChain::create() {
 #ifdef __ANDROID__
     NativeWindow::enableFrameTimestamps(static_cast<ANativeWindow*>(mNativeWindow), true);
+    // on Android, disable producer throttling
+    if (mProducerThrottling.isSupported()) {
+        mProducerThrottling.setProducerThrottlingEnabled(
+                static_cast<ANativeWindow*>(mNativeWindow), false);
+    }
 #endif
 
     VkSurfaceFormatKHR surfaceFormat = {};
