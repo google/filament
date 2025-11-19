@@ -162,8 +162,8 @@ void UboManager::endFrame(DriverApi& driver) {
     std::unordered_set<AllocationId> allocationIds;
     for (const auto* mi : mManagedInstances) {
         const AllocationId id = mi->getAllocationId();
-        if (!BufferAllocator::isValid(id)) {
-            return;
+        if (UTILS_UNLIKELY(!BufferAllocator::isValid(id))) {
+            continue;
         }
 
         mAllocator.acquireGpu(id);
@@ -198,8 +198,9 @@ void UboManager::unmanageMaterialInstance(const FMaterialInstance* materialInsta
     mPendingInstances.erase(mi);
     mManagedInstances.erase(mi);
 
-    if (!BufferAllocator::isValid(id))
+    if (!BufferAllocator::isValid(id)) {
         return;
+    }
 
     mAllocator.retire(id);
 }
