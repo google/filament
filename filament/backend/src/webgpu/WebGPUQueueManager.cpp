@@ -21,6 +21,7 @@
 #include <chrono>
 #include <cstdint>
 #include <thread>
+#include <iostream>
 
 namespace filament::backend {
 
@@ -58,6 +59,7 @@ WebGPUQueueManager::WebGPUQueueManager(wgpu::Device const& device)
 WebGPUQueueManager::~WebGPUQueueManager() = default;
 
 wgpu::CommandEncoder WebGPUQueueManager::getCommandEncoder() {
+    // std::unique_lock<std::mutex> lock(mLock);
     if (!mCommandEncoder) {
         wgpu::CommandEncoderDescriptor commandEncoderDescriptor = {
             .label = "Filament Command Encoder",
@@ -90,7 +92,9 @@ std::shared_ptr<WebGPUSubmissionState> WebGPUQueueManager::getLatestSubmissionSt
 }
 
 void WebGPUQueueManager::submit() {
+    // std::unique_lock<std::mutex> lock(mLock);
     if (!mCommandEncoder) {
+        std::cout << "Run Yu: no mCommandEncoder found!\n";
         return;
     }
 

@@ -63,7 +63,7 @@ WebGPUBufferBase::WebGPUBufferBase(wgpu::Device const& device, const wgpu::Buffe
 // WebGPU requires that the size of the data copied from the staging buffer to the GPU buffer is a
 // multiple of 4. This function handles cases where the buffer descriptor's size is not a multiple
 // of 4 by padding with zeros.
-void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
+void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor&& bufferDescriptor,
         const uint32_t byteOffset, wgpu::Device const& device,
         WebGPUQueueManager* const webGPUQueueManager) {
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
@@ -89,24 +89,49 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     wgpu::BufferDescriptor descriptor{
         .label = "Filament WebGPU Staging Buffer",
         .usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc,
-        .size = stagingBufferSize,
-        .mappedAtCreation = true };
+        .size = stagingBufferSize};
     wgpu::Buffer stagingBuffer = device.CreateBuffer(&descriptor);
 
-    void* mappedRange = stagingBuffer.GetMappedRange();
-    memcpy(mappedRange, bufferDescriptor.buffer, bufferDescriptor.size);
-
-    // Make sure the padded memory is set to 0 to have deterministic behaviors
-    if (remainder != 0) {
-        uint8_t* paddingStart = static_cast<uint8_t*>(mappedRange) + bufferDescriptor.size;
-        memset(paddingStart, 0, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS - remainder);
-    }
-
-    stagingBuffer.Unmap();
-
-    // Copy the staging buffer contents to the destination buffer.
-    webGPUQueueManager->getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
-            byteOffset, stagingBufferSize);
+    struct UserData final {
+        uint32_t byteOffset;
+        size_t stagingBufferSize;
+        size_t remainder;
+        BufferDescriptor srcBufferDescriptor;
+        wgpu::Buffer stagingBuffer;
+        WebGPUQueueManager* const webGPUQueueManager;
+        wgpu::Buffer dstBuffer;
+    };
+    auto userData = std::make_unique<UserData>(UserData{
+        .byteOffset = byteOffset,
+        .stagingBufferSize = stagingBufferSize,
+        .remainder = remainder,
+        .srcBufferDescriptor = std::move(bufferDescriptor),
+        .stagingBuffer = stagingBuffer,
+        .webGPUQueueManager = webGPUQueueManager,
+        .dstBuffer = mBuffer});
+    stagingBuffer.MapAsync(
+            wgpu::MapMode::Write, 0, stagingBufferSize, wgpu::CallbackMode::AllowProcessEvents,
+            [](wgpu::MapAsyncStatus status, const char* message, UserData* userdata) {
+                std::unique_ptr<UserData> data(static_cast<UserData*>(userdata));
+                if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
+                    void* mappedRange = data->stagingBuffer.GetMappedRange();
+                    memcpy(mappedRange, data->srcBufferDescriptor.buffer,
+                            data->srcBufferDescriptor.size);
+                    if (data->remainder != 0) {
+                        uint8_t* paddingStart =
+                                static_cast<uint8_t*>(mappedRange) + data->srcBufferDescriptor.size;
+                        memset(paddingStart, 0,
+                                FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS - data->remainder);
+                    }
+                    data->stagingBuffer.Unmap();
+                    data->webGPUQueueManager->getCommandEncoder().CopyBufferToBuffer(
+                            data->stagingBuffer, 0, data->dstBuffer, data->byteOffset,
+                            data->stagingBufferSize);
+                } else {
+                    FWGPU_LOGE << "Failed to map staging buffer for readPixels: " << message;
+                }
+            },
+            userData.release());
 }
 
 } // namespace filament::backend

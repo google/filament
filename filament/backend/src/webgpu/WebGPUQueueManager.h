@@ -74,6 +74,7 @@ private:
     wgpu::Queue mQueue;
     wgpu::CommandEncoder mCommandEncoder;
     std::shared_ptr<WebGPUSubmissionState> mLatestSubmissionState;
+    std::mutex mLock;
 };
 
 } // namespace filament::backend
