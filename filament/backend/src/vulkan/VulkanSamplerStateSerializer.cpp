@@ -16,7 +16,6 @@ VulkanYcbcrConversionSerializer::VulkanYcbcrConversionSerializer(
     if (file.is_open()) {
         std::stringstream buffer;
         auto const& chroma = params.conversion;
-        TextureSwizzle const swizzleArray[] = { chroma.r, chroma.g, chroma.b, chroma.a };
         buffer << "{" << std::endl;
         buffer << "\"format\":" << params.format << "," << std::endl;
         buffer << "\"external_format\":" << params.externalFormat << "," << std::endl;

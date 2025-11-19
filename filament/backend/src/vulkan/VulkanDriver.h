@@ -148,7 +148,6 @@ private:
 
     VulkanSemaphoreManager mSemaphoreManager;
     VulkanCommands mCommands;
-    VulkanPipelineLayoutCache mPipelineLayoutCache;
     VulkanPipelineCache mPipelineCache;
     VulkanStagePool mStagePool;
     VulkanBufferCache mBufferCache;
@@ -158,6 +157,7 @@ private:
     VulkanBlitter mBlitter;
     VulkanReadPixels mReadPixels;
     VulkanDescriptorSetLayoutCache mDescriptorSetLayoutCache;
+    VulkanPipelineLayoutCache mPipelineLayoutCache;
     VulkanDescriptorSetCache mDescriptorSetCache;
     VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;

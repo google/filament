@@ -184,11 +184,7 @@ static inline uint64_t serializeShaderModule(utils::CString progName, VkShaderMo
         VkShaderStageFlagBits stage) {
     std::stringstream filename;
     filename << progName.c_str() << "_" << stage << "_";
-    constexpr uint32_t chunkCount = sizeof(uint64_t);
     constexpr uint32_t wordReadCount = 8;
-    const uint32_t programWordCount = info.codeSize / sizeof(uint32_t);
-    assert_invariant(programWordCount > 16);
-    const uint32_t programSegments = (info.codeSize*sizeof(uint32_t)) / chunkCount;
     uint64_t key = utils::hash::murmur3(info.pCode, wordReadCount, 0);
     key |= uint64_t(utils::hash::murmur3(info.pCode + (wordReadCount / 2), wordReadCount, 0)) << 32;
     filename << key << ".bin";

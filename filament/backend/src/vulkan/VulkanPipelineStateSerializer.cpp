@@ -162,7 +162,7 @@ VulkanPipelineStateSerializer& VulkanPipelineStateSerializer::operator<<(
     mBuffer << "\"pass_op\":" << depthStencil.back.passOp << "," << std::endl;
     mBuffer << "\"depth_fail_op\":" << depthStencil.back.depthFailOp << "," << std::endl;
     mBuffer << "\"compare_op\":" << depthStencil.back.compareOp << "," << std::endl;
-    mBuffer << "\"compare\_mask\":" << depthStencil.back.compareMask << "," << std::endl;
+    mBuffer << "\"compare_mask\":" << depthStencil.back.compareMask << "," << std::endl;
     mBuffer << "\"write_mask\":" << depthStencil.back.writeMask << "," << std::endl;
     mBuffer << "\"reference\":" << depthStencil.back.reference << std::endl;
     mBuffer << "}" << std::endl;
