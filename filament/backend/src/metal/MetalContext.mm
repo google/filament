@@ -153,6 +153,7 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
 
         if (UTILS_UNLIKELY(errorCode != MTLCommandBufferErrorNone)) {
             logMTLCommandBufferError(errorCode);
+            context->commandBufferErrors.push(buffer.error);
         }
     }];
     FILAMENT_CHECK_POSTCONDITION(context->pendingCommandBuffer)
