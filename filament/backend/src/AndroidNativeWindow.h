@@ -37,7 +37,12 @@ struct NativeWindow {
         GET_COMPOSITOR_TIMING   = 26,
         GET_FRAME_TIMESTAMPS    = 27,
     };
+
+#if defined(__LP64__)
     uint64_t pad[18];
+#else
+    uint32_t pad[21];
+#endif
     int (*query)(ANativeWindow const*, int, int*);
     int (*perform)(ANativeWindow*, int, ...);
 
@@ -57,6 +62,17 @@ struct NativeWindow {
             int64_t* outDisplayPresentTime, int64_t* outDequeueReadyTime,
             int64_t* outReleaseTime);
 };
+
+struct AndroidProducerThrottling {
+    AndroidProducerThrottling();
+    int32_t setProducerThrottlingEnabled(ANativeWindow* window, bool enabled) const;
+    int32_t isProducerThrottlingEnabled(ANativeWindow* window, bool* outEnabled) const;
+    bool isSupported() const noexcept;
+private:
+    int32_t (*mSetProducerThrottlingEnabled)(ANativeWindow* window, bool enabled) = nullptr;
+    int32_t (*mIsProducerThrottlingEnabled)(ANativeWindow* window, bool* outEnabled) = nullptr;
+};
+
 
 } // namespace filament::backend
 

@@ -96,6 +96,7 @@ public:
         using time_point_ns = int64_t;
         /** duration in nanosecond on the std::steady_clock */
         using duration_ns = int64_t;
+        static constexpr time_point_ns INVALID = -1;    //!< value not supported
         /**
          * The timestamp [ns] since epoch of the next time the compositor will begin composition.
          * This is effectively the deadline for when the compositor must receive a newly queued
@@ -110,9 +111,27 @@ public:
 
         /**
          * The time delta [ns] between the start of composition and the expected present time of
-         *  that composition. This can be used to estimate the latency of the actual present time.
+         * that composition. This can be used to estimate the latency of the actual present time.
          */
         duration_ns compositeToPresentLatency;
+
+        /**
+         * The timestamp [ns] since epoch of the system's expected presentation time.
+         * INVALID if not supported.
+         */
+        time_point_ns expectedPresentTime;
+
+        /**
+         * The timestamp [ns] since epoch of the current frame's start (i.e. vsync)
+         * INVALID if not supported.
+         */
+        time_point_ns frameTime;
+
+        /**
+         * The timestamp [ns] since epoch of the current frame's deadline
+         * INVALID if not supported.
+         */
+        time_point_ns frameTimelineDeadline;
     };
 
     struct FrameTimestamps {
@@ -120,14 +139,62 @@ public:
         using time_point_ns = int64_t;
         static constexpr time_point_ns INVALID = -1;    //!< value not supported
         static constexpr time_point_ns PENDING = -2;    //!< value not yet available
+
+        /**
+         * The time the application requested this frame be presented.
+         * If the application does not request a presentation time explicitly,
+         * this will correspond to buffer's queue time.
+         */
         time_point_ns requestedPresentTime;
+
+        /**
+         * The time when all the application's rendering to the surface was completed.
+         */
         time_point_ns acquireTime;
+
+        /**
+         * The time when the compositor selected this frame as the one to use for the next
+         * composition. This is the earliest indication that the frame was submitted in time.
+         */
         time_point_ns latchTime;
-        time_point_ns firstRefreshStartTime;
-        time_point_ns lastRefreshStartTime;
+
+        /**
+         * The first time at which the compositor began preparing composition for this frame.
+         * Zero if composition was handled by the display and the compositor didn't do any
+         * rendering.
+         */
+        time_point_ns firstCompositionStartTime;
+
+        /**
+         * The last time at which the compositor began preparing composition for this frame, for
+         * frames composited more than once. Zero if composition was handled by the display and the
+         * compositor didn't do any rendering.
+         */
+        time_point_ns lastCompositionStartTime;
+
+        /**
+         * The time at which the compositor's rendering work for this frame finished. This will be
+         * INVALID if composition was handled by the display and the compositor didn't do any
+         * rendering.
+         */
         time_point_ns gpuCompositionDoneTime;
+
+        /**
+         * The time at which this frame started to scan out to the physical display.
+         */
         time_point_ns displayPresentTime;
+
+        /**
+         * The time when the buffer became available for reuse as a buffer the client can target
+         * without blocking. This is generally the point when all read commands of the buffer have
+         * been submitted, but not necessarily completed.
+         */
         time_point_ns dequeueReadyTime;
+
+        /**
+         * The time at which all reads for the purpose of display/composition were completed for
+         * this frame.
+         */
         time_point_ns releaseTime;
     };
 

@@ -32,6 +32,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/MonotonicRingMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
         ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/ostream.h
@@ -179,6 +180,7 @@ set(TEST_SRCS
         test/test_Hash.cpp
         test/test_InternPool.cpp
         test/test_JobSystem.cpp
+        test/test_MonotonicRingMap.cpp
         test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp
         test/test_RefCountedMap.cpp

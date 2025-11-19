@@ -17,16 +17,14 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H
 #define TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H
 
-#include "WebGPUConstants.h"
-
 #include <webgpu/webgpu_cpp.h>
 
-#include <array>
 #include <cstdint>
 
 namespace filament::backend {
 
 class BufferDescriptor;
+class WebGPUQueueManager;
 
 /**
   * A base class for WebGPU buffer objects, providing common functionality for creating and
@@ -41,7 +39,8 @@ public:
      * happen after draw commands encoded in the encoder. Submitting any commands up to this point
      * ensures the calls happen in the expected sequence.
      */
-    void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Queue const&);
+    void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Device const& device,
+            WebGPUQueueManager* const webGPUQueueManager);
 
     [[nodiscard]] wgpu::Buffer const& getBuffer() const { return mBuffer; }
 
@@ -50,9 +49,6 @@ protected:
 
 private:
     const wgpu::Buffer mBuffer;
-    // WebGPU requires that the source buffer of a writeBuffer call has a size that is a multiple
-    // of 4. This member is used to pad the data if the source size is not a multiple of 4.
-    std::array<uint8_t, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS> mRemainderChunk{};
 };
 
 } // namespace filament::backend

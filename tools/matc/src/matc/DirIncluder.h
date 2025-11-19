@@ -17,7 +17,7 @@
 #ifndef TNT_DIRINCLUDER_H_
 #define TNT_DIRINCLUDER_H_
 
-#include <filamat/IncludeCallback.h>
+#include "IncludeCallback.h"
 
 #include <utils/Path.h>
 
@@ -31,7 +31,7 @@ public:
         mIncludeDirectory = dir;
     }
 
-    bool operator()(const utils::CString& includedBy, filamat::IncludeResult& result);
+    bool operator()(const utils::CString& includedBy, IncludeResult& result);
 
 private:
     utils::Path mIncludeDirectory;

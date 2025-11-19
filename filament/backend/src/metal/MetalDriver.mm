@@ -1039,10 +1039,17 @@ void MetalDriver::updateStreams(DriverApi* driver) {
 
 void MetalDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
-        auto* fence = handle_cast<MetalFence>(fh);
-        fence->cancel();
+        // note: it's invalid to call this during a fenceWait(fh) on another thread. For this
+        // reason there is no point signaling the waiters. There should be no waiters.
         destruct_handle<MetalFence>(fh);
     }
+}
+
+void MetalDriver::fenceCancel(FenceHandle const fh) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
+    auto* fence = handle_cast<MetalFence>(fh);
+    fence->cancel();
 }
 
 FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
@@ -1050,10 +1057,9 @@ FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
 }
 
 FenceStatus MetalDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
     auto* fence = handle_cast<MetalFence>(fh);
-    if (!fence) {
-        return FenceStatus::ERROR;
-    }
     return fence->wait(timeout);
 }
 
@@ -1474,6 +1480,20 @@ void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, Primit
     primitive->vertexBuffer = vertexBuffer;
     primitive->indexBuffer = indexBuffer;
     primitive->type = pt;
+}
+
+bool MetalDriver::isCompositorTimingSupported() {
+    return false;
+}
+
+bool MetalDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
+bool MetalDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    return false;
 }
 
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {

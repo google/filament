@@ -35,8 +35,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-struct VulkanHeadlessSwapChain;
-struct VulkanSurfaceSwapChain;
 class VulkanCommands;
 
 // A wrapper around the platform implementation of swapchain.

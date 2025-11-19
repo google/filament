@@ -218,9 +218,11 @@ void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driv
         for (auto const& [binding, p]: mTextureParameters) {
             ssize_t offset = mMaterial->getUniformInterfaceBlock().getTransformFieldOffset(binding);
             if (offset >= 0) {
-                mHasStreamUniformAssociations = true;
-                auto stream = p.texture->getStream()->getHandle();
-                descriptor.mStreams.push_back({uint32_t(offset), stream, BufferObjectStreamAssociationType::TRANSFORM_MATRIX});
+                if (auto stream = p.texture->getStream()) {
+                    mHasStreamUniformAssociations = true;
+                    descriptor.mStreams.push_back({ uint32_t(offset), stream->getHandle(),
+                        BufferObjectStreamAssociationType::TRANSFORM_MATRIX });
+                }
             }
         }
         if (descriptor.mStreams.size() > 0) {
@@ -445,9 +447,12 @@ void FMaterialInstance::assignUboAllocation(
         BufferAllocator::AllocationId id,
         BufferAllocator::allocation_size_t offset) {
     assert_invariant(mUseUboBatching);
+
     mUboData = id;
-    mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(), 0, ubHandle, offset,
-            mUniforms.getSize());
+    if (BufferAllocator::isValid(id)) {
+        mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(), 0, ubHandle, offset,
+                mUniforms.getSize());
+    }
 }
 
 BufferAllocator::AllocationId FMaterialInstance::getAllocationId() const noexcept {

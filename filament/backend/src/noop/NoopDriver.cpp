@@ -166,6 +166,9 @@ void NoopDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
 void NoopDriver::destroyFence(Handle<HwFence> fh) {
 }
 
+void NoopDriver::fenceCancel(FenceHandle fh) {
+}
+
 FenceStatus NoopDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::CONDITION_SATISFIED;
 }
@@ -448,6 +451,20 @@ void NoopDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
 
 void NoopDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
         BufferDescriptor&& data) {
+}
+
+bool NoopDriver::isCompositorTimingSupported() {
+    return false;
+}
+
+bool NoopDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
+        backend::CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
+bool NoopDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    return false;
 }
 
 } // namespace filament

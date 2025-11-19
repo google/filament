@@ -169,10 +169,11 @@ public:
      * Destroy the object D at Handle<B> and frees Handle<B>
      * e.g.:
      *      Handle<HwTexture> h = ...;
-     *      deallocate(h);
+     *      deallocate<GLTexture>(h);
      */
-    template<typename D>
-    void deallocate(Handle<D>& handle) noexcept {
+    template<typename D, typename B,
+            typename = std::enable_if_t<std::is_base_of_v<B, D>, D>>
+    void deallocate(Handle<B>& handle) noexcept {
         D const* d = handle_cast<const D*>(handle);
         deallocate(handle, d);
     }
@@ -208,7 +209,7 @@ public:
                 HandleBase::HandleId const index = (handle.getId() & HANDLE_INDEX_MASK);
                 // if we've already handed out this handle index before, it's definitely a
                 // use-after-free, otherwise it's probably just a corrupted handle
-                if (index < mId) {
+                if (index < mId.load(std::memory_order_relaxed)) {
                     FILAMENT_CHECK_POSTCONDITION(p != nullptr)
                             << "use-after-free of heap Handle with id=" << handle.getId()
                             << ", tag=" << getHandleTag(handle.getId()).c_str_safe();

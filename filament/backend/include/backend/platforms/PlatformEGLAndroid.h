@@ -18,6 +18,8 @@
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 
 #include "AndroidSwapChainHelper.h"
+#include "AndroidFrameCallback.h"
+#include "AndroidNdk.h"
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
@@ -29,6 +31,8 @@
 #include <utils/compiler.h>
 
 #include <math/mat3.h>
+
+#include "AndroidNativeWindow.h"
 
 #include <chrono>
 
@@ -43,7 +47,7 @@ class ExternalStreamManagerAndroid;
  * A concrete implementation of OpenGLPlatform and subclass of PlatformEGL that supports
  * EGL on Android. It adds Android streaming functionality to PlatformEGL.
  */
-class PlatformEGLAndroid : public PlatformEGL {
+class PlatformEGLAndroid : public PlatformEGL, public AndroidNdk {
 public:
 
     PlatformEGLAndroid() noexcept;
@@ -185,6 +189,10 @@ private:
     [[nodiscard]] SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
 
+    bool isProducerThrottlingControlSupported() const;
+
+    int32_t setProducerThrottlingEnabled(EGLNativeWindowType nativeWindow, bool enabled) const;
+
     struct InitializeJvmForPerformanceManagerIfNeeded {
         InitializeJvmForPerformanceManagerIfNeeded();
     };
@@ -202,11 +210,10 @@ private:
 
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
-
-    int32_t (*ANativeWindow_setProducerThrottlingEnabled)(ANativeWindow* window, bool enabled) = nullptr;
-    int32_t (*ANativeWindow_isProducerThrottlingEnabled)(ANativeWindow* window, bool* outEnabled) = nullptr;
+    AndroidProducerThrottling mProducerThrottling;
     bool mAssertNativeWindowIsValid = false;
-    bool mHasProducerThrottlingControl = false;
+
+    AndroidFrameCallback mAndroidFrameCallback;
 };
 
 } // namespace filament::backend

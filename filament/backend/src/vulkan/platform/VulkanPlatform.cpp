@@ -966,7 +966,7 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     // The VulkanPlatformSurfaceSwapChain now `owns` the surface.
     VulkanPlatformSurfaceSwapChain* swapchain = new VulkanPlatformSurfaceSwapChain(mImpl->mContext,
             mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueue, mImpl->mInstance,
-            surface, fallbackExtent, flags);
+            surface, fallbackExtent, nativeWindow, flags);
     return swapchain;
 }
 

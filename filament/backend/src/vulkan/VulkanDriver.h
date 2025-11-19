@@ -48,6 +48,10 @@
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 
+#if defined(__ANDROID__)
+#include "AndroidNativeWindow.h"
+#endif
+
 namespace filament::backend {
 
 class VulkanPlatform;
@@ -158,6 +162,15 @@ private:
     VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;
 
+    // This maps a VulkanSwapchain to a native swapchain. VulkanSwapchain should have a copy of the
+    // Platform::Swapchain pointer, but queryFrameTimestamps() and queryCompositorTiming() are
+    // synchronous calls, making access to VulkanSwapchain unsafe (this difference vs other backends
+    // is due to the ref-counting of vulkan resources).
+    struct {
+        std::mutex lock;
+        std::unordered_map<HandleId, Platform::SwapChain*> nativeSwapchains;
+    } mTiming;
+
     // This is necessary for us to write to push constants after binding a pipeline.
     using DescriptorSetLayoutHandleList = std::array<resource_ptr<VulkanDescriptorSetLayout>,
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
@@ -193,6 +206,9 @@ private:
     bool const mIsSRGBSwapChainSupported;
     bool const mIsMSAASwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
+#if defined(__ANDROID__)
+    AndroidProducerThrottling mProducerThrottling;
+#endif
 };
 
 } // namespace filament::backend

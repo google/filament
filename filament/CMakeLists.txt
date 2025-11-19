@@ -139,6 +139,7 @@ set(SRCS
         src/details/SwapChain.cpp
         src/details/Sync.cpp
         src/details/Texture.cpp
+        src/details/UboManager.cpp
         src/details/VertexBuffer.cpp
         src/details/View.cpp
         src/ds/PerViewDescriptorSetUtils.cpp
@@ -218,6 +219,7 @@ set(PRIVATE_HDRS
         src/details/Stream.h
         src/details/SwapChain.h
         src/details/Texture.h
+        src/details/UboManager.h
         src/details/VertexBuffer.h
         src/details/View.h
         src/downcast.h
@@ -363,7 +365,7 @@ add_definitions(
 # Generate all .filamat: default material, skyboxes, and post-process
 # ==================================================================================================
 
-if (CMAKE_CROSSCOMPILING)
+if (CMAKE_CROSSCOMPILING OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
     include(${IMPORT_EXECUTABLES})
 endif()
 

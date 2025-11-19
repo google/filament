@@ -807,8 +807,9 @@ void OpenGLDriver::textureStorage(GLTexture* t,
                         for (GLint face = 0 ; face < 6 ; face++) {
                             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
                                     level, GLint(t->gl.internalFormat),
-                                    GLsizei(width), GLsizei(height), 0,
-                                    format, type, nullptr);
+                                    std::max(GLsizei(1), GLsizei(width >> level)),
+                                    std::max(GLsizei(1), GLsizei(height >> level)),
+                                    0, format, type, nullptr);
                         }
                     } else {
                         glTexImage2D(t->gl.target, level, GLint(t->gl.internalFormat),
@@ -1787,7 +1788,7 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, ImmutableCString&& tag) {
 
     mHandleAllocator.associateTagToHandle(fh.getId(), std::move(tag));
 
-    GLFence* f = handle_cast<GLFence*>(fh);
+    GLFence* const f = handle_cast<GLFence*>(fh);
     assert_invariant(f->state);
 
     bool const platformCanCreateFence = mPlatform.canCreateFence();
@@ -1803,8 +1804,9 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, ImmutableCString&& tag) {
         return;
     }
 
-    // This is the case where we need to use OpenGL fences
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    // This is the case where we need to use OpenGL fences, as soon as we return, the user
+    // is allowed to destroy the fence, so we need to keep a reference to the internal state.
     std::weak_ptr<GLFence::State> const weak = f->state;
     whenGpuCommandsComplete([weak] {
         if (auto const state = weak.lock()) {
@@ -2290,14 +2292,22 @@ void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
         GLFence const* const f = handle_cast<GLFence*>(fh);
         if (mPlatform.canCreateFence() || mContext.isES2()) {
             mPlatform.destroyFence(f->fence);
-        } else {
-            // signal waiters it's time to give-up
-            std::unique_lock const lock(f->state->lock);
-            f->state->status = FenceStatus::ERROR;
-            f->state->cond.notify_all();
         }
+        // note: it's invalid to call this during a fenceWait(fh) on another thread. For this
+        // reason there is no point signaling the waiters. There should be no waiters.
         destruct(fh, f);
     }
+}
+
+void OpenGLDriver::fenceCancel(FenceHandle fh) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
+    GLFence const* const f = handle_cast<GLFence*>(fh);
+    assert_invariant(f->state);
+
+    std::lock_guard const lock(f->state->lock);
+    f->state->status = FenceStatus::ERROR;
+    f->state->cond.notify_all();
 }
 
 FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
@@ -2305,61 +2315,58 @@ FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
 }
 
 FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
-    if (fh) {
-        // we have to take into account that the STL's wait_for() actually works with
-        // time_points relative to steady_clock::now() internally.
-        using namespace std::chrono;
-        auto const now = steady_clock::now();
-        steady_clock::time_point until = steady_clock::time_point::max();
-        if (now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
-            until = now + nanoseconds(timeout);
-        }
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
+    GLFence const* const f = handle_cast<GLFence*>(fh);
+    assert_invariant(f->state);
 
-        GLFence const* f = handle_cast<GLFence*>(fh);
-        assert_invariant(f->state);
-
-        bool const platformCanCreateFence = mPlatform.canCreateFence();
-
-        // immediately acquire a reference on our state, so that things don't go south if
-        // the HwFence gets destroyed (on the main thread) while we wait.
-        std::shared_ptr const state{ f->state };
-
-        if (mContext.isES2() || platformCanCreateFence) {
-            if (platformCanCreateFence) {
-                std::unique_lock lock(state->lock);
-                if (f->fence == nullptr) {
-                    // we've been called before the fence was created asynchronously,
-                    // so we need to wait for that, before using the real fence.
-                    // By construction, "f" can't be destroyed while we wait, because its
-                    // construction call is in the queue and a destroy call will have to come later.
-                    state->cond.wait_until(lock, until, [f] {
-                        return f->fence != nullptr;
-                    });
-                    if (f->fence == nullptr) {
-                        // the only possible choice here is that we timed out
-                        assert_invariant(state->status == FenceStatus::TIMEOUT_EXPIRED);
-                        return FenceStatus::TIMEOUT_EXPIRED;
-                    }
-                }
-                lock.unlock();
-                // here we know that we have the platform fence
-                assert_invariant(f->fence);
-                return mPlatform.waitFence(f->fence, timeout);
-            }
-            // platform doesn't support fences -- nothing we can do.
-            return FenceStatus::ERROR;
-        }
-
-        // This is the case where we need to use OpenGL fences
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        std::unique_lock lock(state->lock);
-        state->cond.wait_until(lock, until, [&state] {
-            return state->status != FenceStatus::TIMEOUT_EXPIRED;
-        });
-        return state->status;
-#endif
+    // we have to take into account that the STL's wait_for() actually works with
+    // time_points relative to steady_clock::now() internally.
+    using namespace std::chrono;
+    auto const now = steady_clock::now();
+    steady_clock::time_point until = steady_clock::time_point::max();
+    if (now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+        until = now + nanoseconds(timeout);
     }
-    return FenceStatus::ERROR;
+
+    // we don't need to acquire a reference to f->state here because `f` already has one, and
+    // `f` is not supposed to become invalid while we wait.
+
+    bool const platformCanCreateFence = mPlatform.canCreateFence();
+    if (mContext.isES2() || platformCanCreateFence) {
+        if (platformCanCreateFence) {
+            std::unique_lock lock(f->state->lock);
+            if (f->fence == nullptr) {
+                // we've been called before the fence was created asynchronously,
+                // so we need to wait for that, before using the real fence.
+                // By construction, "f" can't be destroyed while we wait, because its
+                // construction call is in the queue and a destroy call will have to come later.
+                f->state->cond.wait_until(lock, until, [f] {
+                    return f->fence != nullptr;
+                });
+                if (f->fence == nullptr) {
+                    // the only possible choice here is that we timed out
+                    assert_invariant(f->state->status == FenceStatus::TIMEOUT_EXPIRED);
+                    return FenceStatus::TIMEOUT_EXPIRED;
+                }
+            }
+            lock.unlock();
+            // here we know that we have the platform fence
+            assert_invariant(f->fence);
+            return mPlatform.waitFence(f->fence, timeout);
+        }
+        // platform doesn't support fences -- nothing we can do.
+        return FenceStatus::ERROR;
+    }
+
+    // This is the case where we need to use OpenGL fences
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    std::unique_lock lock(f->state->lock);
+    f->state->cond.wait_until(lock, until, [f] {
+        return f->state->status != FenceStatus::TIMEOUT_EXPIRED;
+    });
+    return f->state->status;
+#endif
 }
 
 void OpenGLDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
@@ -2701,6 +2708,39 @@ void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
         });
     }
 #endif
+}
+
+bool OpenGLDriver::isCompositorTimingSupported() {
+    // this is a synchronous call
+    return mPlatform.isCompositorTimingSupported();
+}
+
+bool OpenGLDriver::queryCompositorTiming(SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    GLSwapChain const* const sc = handle_cast<GLSwapChain*>(swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return mPlatform.queryCompositorTiming(sc->swapChain, outCompositorTiming);
+}
+
+bool OpenGLDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t const frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    GLSwapChain const* const sc = handle_cast<GLSwapChain*>(swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return mPlatform.queryFrameTimestamps(sc->swapChain, frameId, outFrameTimestamps);
 }
 
 void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {

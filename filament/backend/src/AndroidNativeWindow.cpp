@@ -16,22 +16,31 @@
 
 #include "AndroidNativeWindow.h"
 
+#include <android/api-level.h>
 #include <android/native_window.h>
 
 #include <utils/compiler.h>
+#include <utils/Logger.h>
 
 #include <cstdint>
 #include <cerrno>
 #include <utility>
 
+#include <dlfcn.h>
+
 namespace filament::backend {
 
 std::pair<int, bool> NativeWindow::isValid(ANativeWindow* const anw) noexcept {
+#if __ANDROID_API__ >= 26
+    // libnativewindow.so is not available before API level 26, this means we can't call
+    // any method above 25 (even protected by __builtin_available()).
     if (__builtin_available(android 28, *)) {
         // this a proxy for is_valid()
         auto const result = ANativeWindow_getBuffersDataSpace(anw);
         return { result, result >= 0 };
     }
+#endif
+
     // fallback on using private APIs
     NativeWindow const* pWindow = reinterpret_cast<NativeWindow const*>(anw);
     if (UTILS_LIKELY(pWindow->query)) {
@@ -73,6 +82,50 @@ int NativeWindow::getFrameTimestamps(ANativeWindow* anw,
             outFirstRefreshStartTime, outLastRefreshStartTime,
             outGpuCompositionDoneTime, outDisplayPresentTime,
             outDequeueReadyTime, outReleaseTime);
+}
+
+AndroidProducerThrottling::AndroidProducerThrottling() {
+    // note: we don't need to dlclose() mNativeWindowLib here, because the library will be cleaned
+    // when the process ends and dlopen() are ref-counted. dlclose() NDK documentation documents
+    // not to call dlclose().
+
+    // libnativewindow.so is not available before API level 26, this means we can't call
+    // any method above 25 (even protected by __builtin_available()).
+
+    void* nativeWindowLibHandle = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
+    if (nativeWindowLibHandle) {
+        mSetProducerThrottlingEnabled =
+                (int32_t(*)(ANativeWindow*, bool)) dlsym(nativeWindowLibHandle,
+                        "ANativeWindow_setProducerThrottlingEnabled");
+
+        mIsProducerThrottlingEnabled =
+                (int32_t(*)(ANativeWindow*, bool*)) dlsym(nativeWindowLibHandle,
+                        "ANativeWindow_isProducerThrottlingEnabled");
+
+        if (mSetProducerThrottlingEnabled && mIsProducerThrottlingEnabled) {
+            LOG(INFO) << "Producer Throttling API available";
+        }
+    }
+}
+
+int32_t AndroidProducerThrottling::setProducerThrottlingEnabled(
+        ANativeWindow* window, bool enabled) const {
+    if (mSetProducerThrottlingEnabled) {
+        return mSetProducerThrottlingEnabled(window, enabled);
+    }
+    return -1;
+}
+
+int32_t AndroidProducerThrottling::isProducerThrottlingEnabled(
+        ANativeWindow* window, bool* outEnabled) const {
+    if (mIsProducerThrottlingEnabled) {
+        return mIsProducerThrottlingEnabled(window, outEnabled);
+    }
+    return -1;
+}
+
+bool AndroidProducerThrottling::isSupported() const noexcept {
+    return mSetProducerThrottlingEnabled && mIsProducerThrottlingEnabled;
 }
 
 } // namespace filament::backend
