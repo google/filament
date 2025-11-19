@@ -8,8 +8,10 @@
 !/cmake/*.cmake
 !/test/AssemblyTests.cmake
 *~
+*.swp
 *.pyc
 __pycache__
+.DS_Store
 
 # lcov
 *.lcov
@@ -44,6 +46,7 @@ rules.ninja
 
 # bazel output symlinks.
 bazel-*
+MODULE.bazel.lock
 
 # out-of-source build top-level folders.
 build/
@@ -56,3 +59,10 @@ build*/
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 CMakeSettings.json
+
+# Visual Studio Code cache/options directory
+.vscode/
+
+# Python build stuff
+dist/
+*.egg-info*
