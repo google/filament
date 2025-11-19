@@ -180,8 +180,9 @@ void UboManager::terminate(DriverApi& driver) {
 
 void UboManager::updateSlot(DriverApi& driver, AllocationId id,
         BufferDescriptor bufferDescriptor) const {
-    if (!mMemoryMappedBufferHandle)
+    if (!mMemoryMappedBufferHandle) {
         return;
+    }
 
     const allocation_size_t offset = mAllocator.getAllocationOffset(id);
     driver.copyToMemoryMappedBuffer(mMemoryMappedBufferHandle, offset, std::move(bufferDescriptor));
