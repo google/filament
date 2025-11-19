@@ -262,6 +262,15 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
     VulkanProgram(VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();
 
+    inline void flushPushConstants(VkPipelineLayout layout) {
+        // At this point, we really ought to have a VkPipelineLayout.
+        assert_invariant(layout != VK_NULL_HANDLE);
+        for (const auto& c : mQueuedPushConstants) {
+            mInfo->pushConstantDescription.write(c.cmdbuf, layout, c.stage, c.index, c.value);
+        }
+        mQueuedPushConstants.clear();
+    }
+
     inline VkShaderModule getVertexShader() const {
         return mInfo->shaders[0];
     }
@@ -278,7 +287,13 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
 
     inline void writePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
             backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-        mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
+        // It's possible that we don't have the layout yet. But, we don't want to "forget"
+        // about the push constant! We can flush the constants later, once the layout is set.
+        if (layout != VK_NULL_HANDLE) {
+            mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
+        } else {
+            mQueuedPushConstants.push_back({cmdbuf, stage, index, value});
+        }
     }
 
     // TODO: handle compute shaders.
@@ -295,8 +310,16 @@ private:
         PushConstantDescription pushConstantDescription;
     };
 
+    struct PushConstantInfo {
+        VkCommandBuffer cmdbuf;
+        backend::ShaderStage stage;
+        uint8_t index;
+        backend::PushConstantVariant value;
+    };
+
     PipelineInfo* mInfo;
     VkDevice mDevice = VK_NULL_HANDLE;
+    std::vector<PushConstantInfo> mQueuedPushConstants;
 };
 
 // The render target bundles together a set of attachments, each of which can have one of the
