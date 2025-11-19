@@ -28,6 +28,8 @@
 #include <unordered_set>
 #include <vector>
 
+class UboManagerTest;
+
 namespace filament {
 
 class FMaterial;
@@ -115,13 +117,20 @@ public:
     void manageMaterialInstance(FMaterialInstance* instance);
 
     // Call this when a material instance is destroyed.
-    void unmanageMaterialInstance(const FMaterialInstance* materialInstance);
+    void unmanageMaterialInstance(FMaterialInstance* materialInstance);
 
     // Returns the size of the actual UBO. Note that when there's allocation failed, it will be
     // reallocated to a bigger size at the next frame.
     [[nodiscard]] BufferAllocator::allocation_size_t getTotalSize() const noexcept;
 
+    // For testing
+    [[nodiscard]] backend::MemoryMappedBufferHandle getMemoryMappedBufferHandle() const noexcept {
+        return mMemoryMappedBufferHandle;
+    }
+
 private:
+    friend class ::UboManagerTest;
+
     constexpr static float BUFFER_SIZE_GROWTH_MULTIPLIER = 1.5f;
 
     enum AllocationResult {

@@ -192,18 +192,17 @@ void UboManager::manageMaterialInstance(FMaterialInstance* instance) {
     mPendingInstances.insert(instance);
 }
 
-void UboManager::unmanageMaterialInstance(const FMaterialInstance* materialInstance) {
+void UboManager::unmanageMaterialInstance(FMaterialInstance* materialInstance) {
     AllocationId id = materialInstance->getAllocationId();
-    // const_cast should be safe here since this cast is just to match the container type.
-    auto mi = const_cast<FMaterialInstance*>(materialInstance);
-    mPendingInstances.erase(mi);
-    mManagedInstances.erase(mi);
+    mPendingInstances.erase(materialInstance);
+    mManagedInstances.erase(materialInstance);
 
     if (!BufferAllocator::isValid(id)) {
         return;
     }
 
     mAllocator.retire(id);
+    materialInstance->assignUboAllocation(mUbHandle, BufferAllocator::UNALLOCATED, 0);
 }
 
 UboManager::AllocationResult UboManager::allocateOnDemand() {
