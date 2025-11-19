@@ -345,21 +345,10 @@ public:
 
     FRenderer* createRenderer() noexcept;
 
-    // Defines whether a material instance should use UBO batching or not.
-    enum class UboBatchingMode {
-        // For default, it follows the engine settings.
-        // If UBO batching is enabled on the engine and the material domain is not SURFACE, it
-        // turns on the UBO batching. Otherwise, it turns off the UBO batching.
-        DEFAULT,
-        NO_UBO_BATCHING,
-        UBO_BATCHING
-    };
-
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
             const FMaterialInstance* other, const char* name) noexcept;
 
-    FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name,
-            UboBatchingMode batchingMode) noexcept;
+    FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
