@@ -59,6 +59,7 @@ protected:
               mAllocator(mUboManager.mAllocator) {
         mEngine = Engine::Builder()
                           .feature("material.enable_material_instance_uniform_batching", true)
+                          .backend(Backend::NOOP)
                           .build();
 
         mMaterial = Material::Builder()
