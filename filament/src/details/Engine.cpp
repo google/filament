@@ -718,8 +718,7 @@ void FEngine::prepare() {
 
     if (useUboBatching) {
         assert_invariant(mUboManager != nullptr);
-
-        mUboManager->beginFrame(driver, mMaterialInstances);
+        mUboManager->beginFrame(driver);
     }
 
     UboManager* uboManager = mUboManager;
@@ -758,7 +757,7 @@ void FEngine::gc() {
 void FEngine::submitFrame() {
     if (isUboBatchingEnabled()) {
         DriverApi& driver = getDriverApi();
-        getUboManager()->endFrame(driver, getMaterialInstanceResourceList());
+        getUboManager()->endFrame(driver);
     }
 }
 
@@ -1284,11 +1283,6 @@ bool FEngine::destroy(const FMaterial* p) {
 UTILS_NOINLINE
 bool FEngine::destroy(const FMaterialInstance* p) {
     if (p == nullptr) return true;
-
-    if (p->isUsingUboBatching()) {
-        assert_invariant(isUboBatchingEnabled());
-        mUboManager->retireSlot(p->getAllocationId());
-    }
 
     // Check that the material instance we're destroying is not in use in the RenderableManager
     // To do this, we currently need to inspect all render primitives in the RenderableManager

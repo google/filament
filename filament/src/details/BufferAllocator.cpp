@@ -16,6 +16,7 @@
 
 #include "details/BufferAllocator.h"
 
+#include <private/utils/Tracing.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
 
@@ -169,6 +170,7 @@ void BufferAllocator::releaseGpu(AllocationId id) {
 }
 
 void BufferAllocator::releaseFreeSlots() {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     if (!mHasPendingFrees) {
         return;
     }
