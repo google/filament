@@ -19,6 +19,9 @@
 
 #include <android/native_window.h>
 
+#include <utils/compiler.h>
+#include <utils/Logger.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -36,11 +39,23 @@ bool AndroidSwapChainHelper::setPresentFrameId(
     int const status = NativeWindow::getNextFrameId(anw, &sysFrameId);
     if (status == 0) {
         std::lock_guard const lock(mLock);
-        auto const pos = mFrameIdToSystemFrameId.find(frameId);
-        if (pos && *pos != sysFrameId) {
-            // we're trying to associate the same frame id to a different frame!
-            return false;
+        // frameIds must be strictly monotonic, if that's not the case (i.e. the new frameId is
+        // less or equal to the last one in the map), we have to clear the map, because the
+        // map's find() assume sorted keys.
+        // This case can happen if two different filament::Renderer are used with the same
+        // ANativeWindow (the Renderer would have different frameIds). This is expected to
+        // be a rare case.
+        if (UTILS_UNLIKELY(!mFrameIdToSystemFrameId.empty() &&
+                frameId <= mFrameIdToSystemFrameId.back().first)) {
+            // this log is expected to happen very rarely
+            DLOG(INFO) << "clearing frame history anw=" << anw
+                    << ", frameId=" << frameId
+                    << ", previous=" << mFrameIdToSystemFrameId.back().first
+                    << ", sysFrameId=" << sysFrameId;
+            // clear the frame history
+            mFrameIdToSystemFrameId.clear();
         }
+
         // oldest entry is removed
         mFrameIdToSystemFrameId.insert(frameId, sysFrameId);
         return true;
