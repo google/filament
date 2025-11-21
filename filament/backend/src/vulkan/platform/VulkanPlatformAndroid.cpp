@@ -541,9 +541,15 @@ bool VulkanPlatformAndroid::queryCompositorTiming(SwapChain const* swapchain,
     outCompositorTiming->frameTime = preferredTimeline.frameTime;
     outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
     outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+    outCompositorTiming->compositeDeadline = CompositorTiming::INVALID;
+    outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
+    outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;
+
+    // From this point on, we always return "success" because some timings were returned.
 
     auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
+    vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
+    return true;
 }
 
 bool VulkanPlatformAndroid::setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept {
