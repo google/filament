@@ -1,0 +1,41 @@
+name: python + Bazel pre-commit checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CMAKE_GENERATOR: Ninja
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    env:
+      MYPY_CACHE_DIR: "${{ github.workspace }}/.cache/mypy"
+      RUFF_CACHE_DIR: "${{ github.workspace }}/.cache/ruff"
+      PRE_COMMIT_HOME: "${{ github.workspace }}/.cache/pre-commit"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
+        cache: pip
+        cache-dependency-path: pyproject.toml
+    - name: Install dependencies
+      run: python -m pip install ".[dev]"
+    - name: Cache pre-commit tools
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.MYPY_CACHE_DIR }}
+          ${{ env.RUFF_CACHE_DIR }}
+          ${{ env.PRE_COMMIT_HOME }}
+        key: ${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}-linter-cache
+    - name: Run pre-commit checks
+      run: pre-commit run --all-files --verbose --show-diff-on-failure

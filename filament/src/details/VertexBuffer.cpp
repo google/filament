@@ -285,53 +285,45 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
 
     // calculate buffer sizes
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
-    #pragma nounroll
-    for (size_t i = 0, n = mAttributes.size(); i < n; ++i) {
-        if (mDeclaredAttributes[i]) {
-            const uint32_t offset = mAttributes[i].offset;
-            const uint8_t stride = mAttributes[i].stride;
-            const uint8_t slot = mAttributes[i].buffer;
-            const size_t end = offset + mVertexCount * stride;
-            if (slot != Attribute::BUFFER_UNUSED) {
-                assert_invariant(slot < MAX_VERTEX_BUFFER_COUNT);
-                bufferSizes[slot] = std::max(bufferSizes[slot], end);
-            }
-        }
-    }
+
+    auto shouldCreateBuffer = [this](size_t attributeIndex) {
+        const uint8_t slot = mAttributes[attributeIndex].buffer;
+        return mDeclaredAttributes[attributeIndex] && slot != Attribute::BUFFER_UNUSED &&
+                !mBufferObjects[slot];
+    };
+    auto updateBufferSize = [&bufferSizes, this](size_t attributeIndex) {
+        const uint32_t offset = mAttributes[attributeIndex].offset;
+        const uint8_t stride = mAttributes[attributeIndex].stride;
+        const uint8_t slot = mAttributes[attributeIndex].buffer;
+        const size_t end = offset + mVertexCount * stride;
+        assert_invariant(slot < MAX_VERTEX_BUFFER_COUNT);
+        bufferSizes[slot] = std::max(bufferSizes[slot], end);
+    };
 
     if (!mBufferObjectsEnabled) {
-        // If buffer objects are not enabled at the API level, then we create them internally.
         #pragma nounroll
-        for (size_t index = 0; index < MAX_VERTEX_ATTRIBUTE_COUNT; ++index) {
-            size_t const i = mAttributes[index].buffer;
-            if (i != Attribute::BUFFER_UNUSED) {
-                assert_invariant(bufferSizes[i] > 0);
-                if (!mBufferObjects[i]) {
-                    BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
-                            BufferObjectBinding::VERTEX, BufferUsage::STATIC,
-                            utils::ImmutableCString{ builder.getName() });
-                    driver.setVertexBufferObject(mHandle, i, bo);
-                    mBufferObjects[i] = bo;
-                }
+        for (size_t i = 0, n = mAttributes.size(); i < n; ++i) {
+            if (shouldCreateBuffer(i)) {
+                updateBufferSize(i);
             }
         }
-    } else {
-        // in advanced skinning mode, we manage the BONE_INDICES and BONE_WEIGHTS arrays ourselves,
-        // so we have to set the corresponding buffer objects.
-        if (mAdvancedSkinningEnabled) {
-            for (auto const index : { BONE_INDICES, BONE_WEIGHTS }) {
-                size_t const i = mAttributes[index].buffer;
-                assert_invariant(i != Attribute::BUFFER_UNUSED);
-                assert_invariant(bufferSizes[i] > 0);
-                if (!mBufferObjects[i]) {
-                    BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
-                            BufferObjectBinding::VERTEX, BufferUsage::STATIC,
-                            utils::ImmutableCString{ builder.getName() });
-                    driver.setVertexBufferObject(mHandle, i, bo);
-                    mBufferObjects[i] = bo;
-                }
-            }
+    } else if (mAdvancedSkinningEnabled) {
+        // For advanced skinning mode, only relevant buffers (BONE_INDICES & BONE_WEIGHTS) are
+        // created. We manually populated the relevant attributes for those buffers above.
+        updateBufferSize(BONE_INDICES);
+        updateBufferSize(BONE_WEIGHTS);
+    }
+
+    // create buffers
+    for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
+        if (bufferSizes[i] == 0 || mBufferObjects[i]) {
+            continue;
         }
+        BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
+                BufferObjectBinding::VERTEX, BufferUsage::STATIC,
+                utils::ImmutableCString{ builder.getName() });
+        driver.setVertexBufferObject(mHandle, i, bo);
+        mBufferObjects[i] = bo;
     }
 }
 

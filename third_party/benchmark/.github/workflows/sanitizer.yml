@@ -1,0 +1,97 @@
+name: sanitizer
+
+on:
+  push: {}
+  pull_request: {}
+
+env:
+  CMAKE_GENERATOR: Ninja
+  UBSAN_OPTIONS: "print_stacktrace=1"
+
+jobs:
+  job:
+    name: ${{ matrix.sanitizer }}.${{ matrix.build_type }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: ['Debug', 'RelWithDebInfo']
+        sanitizer: ['asan', 'ubsan', 'tsan', 'msan']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: configure msan env
+      if: matrix.sanitizer == 'msan'
+      run: |
+        echo "EXTRA_FLAGS=-g -O2 -fno-omit-frame-pointer -fsanitize=memory -fsanitize-memory-track-origins" >> $GITHUB_ENV
+        echo "LIBCXX_SANITIZER=MemoryWithOrigins" >> $GITHUB_ENV
+
+    - name: configure ubsan env
+      if: matrix.sanitizer == 'ubsan'
+      run: |
+        echo "EXTRA_FLAGS=-g -O2 -fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize-recover=all" >> $GITHUB_ENV
+        echo "LIBCXX_SANITIZER=Undefined" >> $GITHUB_ENV
+
+    - name: configure asan env
+      if: matrix.sanitizer == 'asan'
+      run: |
+        echo "EXTRA_FLAGS=-g -O2 -fno-omit-frame-pointer -fsanitize=address -fno-sanitize-recover=all" >> $GITHUB_ENV
+        echo "LIBCXX_SANITIZER=Address" >> $GITHUB_ENV
+
+    - name: configure tsan env
+      if: matrix.sanitizer == 'tsan'
+      run: |
+        echo "EXTRA_FLAGS=-g -O2 -fno-omit-frame-pointer -fsanitize=thread -fno-sanitize-recover=all" >> $GITHUB_ENV
+        echo "LIBCXX_SANITIZER=Thread" >> $GITHUB_ENV
+
+    - name: fine-tune asan options
+      # in asan we get an error from std::regex. ignore it.
+      if: matrix.sanitizer == 'asan'
+      run: |
+        echo "ASAN_OPTIONS=alloc_dealloc_mismatch=0" >> $GITHUB_ENV
+
+    - name: setup clang
+      uses: egor-tensin/setup-clang@v1
+      with:
+        version: latest
+        platform: x64
+
+    - name: configure clang
+      run: |
+        echo "CC=cc" >> $GITHUB_ENV
+        echo "CXX=c++" >> $GITHUB_ENV
+
+    - name: build libc++ (non-asan)
+      if: matrix.sanitizer != 'asan'
+      run: |
+        "${GITHUB_WORKSPACE}/.github/libcxx-setup.sh"
+        echo "EXTRA_CXX_FLAGS=-stdlib=libc++ -L${GITHUB_WORKSPACE}/llvm-build/lib -lc++abi -I${GITHUB_WORKSPACE}/llvm-build/include/c++/v1 -Isystem${GITHUB_WORKSPACE}/llvm-build/include/c++/v1 -Wl,-rpath,${GITHUB_WORKSPACE}/llvm-build/lib" >> $GITHUB_ENV
+
+    - name: create build environment
+      run: cmake -E make_directory ${{ runner.workspace }}/_build
+
+    - name: configure cmake
+      shell: bash
+      working-directory: ${{ runner.workspace }}/_build
+      run: >
+        VERBOSE=1
+        cmake -GNinja $GITHUB_WORKSPACE
+        -DBENCHMARK_ENABLE_ASSEMBLY_TESTS=OFF
+        -DBENCHMARK_ENABLE_LIBPFM=OFF
+        -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
+        -DCMAKE_C_COMPILER=${{ env.CC }}
+        -DCMAKE_CXX_COMPILER=${{ env.CXX }}
+        -DCMAKE_C_FLAGS="${{ env.EXTRA_FLAGS }}"
+        -DCMAKE_CXX_FLAGS="${{ env.EXTRA_FLAGS }} ${{ env.EXTRA_CXX_FLAGS }}"
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+    - name: build
+      shell: bash
+      working-directory: ${{ runner.workspace }}/_build
+      run: cmake --build . --config ${{ matrix.build_type }}
+
+    - name: test
+      shell: bash
+      working-directory: ${{ runner.workspace }}/_build
+      run: ctest -C ${{ matrix.build_type }} -VV
