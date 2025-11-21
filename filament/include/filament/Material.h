@@ -70,22 +70,6 @@ public:
     using SubpassType = backend::SubpassType;
 
     /**
-     * Defines whether a material instance should use UBO batching or not.
-     */
-    enum class UboBatchingMode {
-        /**
-         * For default, it follows the engine settings.
-         * If UBO batching is enabled on the engine and the material domain is SURFACE, it
-         * turns on the UBO batching. Otherwise, it turns off the UBO batching.
-        */
-        DEFAULT,
-        //! Disable the Ubo Batching for this material
-        NO_UBO_BATCHING,
-        //! Enable the Ubo Batching for this material
-        UBO_BATCHING
-    };
-
-    /**
      * Holds information about a material parameter.
      */
     struct ParameterInfo {
@@ -182,11 +166,11 @@ public:
         Builder& shadowSamplingQuality(ShadowSamplingQuality quality) noexcept;
 
         /**
-         * Set the batching mode of the instances created from this material.
-         * @param uboBatchingMode
+         * Set to true to force exclude the material from using material batching.
+         * @param disabled
          * @return
          */
-        Builder& uboBatchingMode(UboBatchingMode uboBatchingMode) noexcept;
+        Builder& disableUboBatching(bool disabled) noexcept;
 
         /**
          * Creates the Material object and returns a pointer to it.

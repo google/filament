@@ -58,7 +58,6 @@ using namespace utils;
 namespace filament {
 
 using namespace backend;
-using UboBatchingMode = Material::UboBatchingMode;
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name) noexcept
         : mMaterial(material),
