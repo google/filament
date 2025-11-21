@@ -25,6 +25,7 @@ namespace filament::backend {
 
 class BufferDescriptor;
 class WebGPUQueueManager;
+class WebGPUStagePool;
 
 /**
   * A base class for WebGPU buffer objects, providing common functionality for creating and
@@ -40,7 +41,7 @@ public:
      * ensures the calls happen in the expected sequence.
      */
     void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Device const& device,
-            WebGPUQueueManager* const webGPUQueueManager);
+            WebGPUQueueManager* const webGPUQueueManager, WebGPUStagePool* const webGPUStagePool);
 
     [[nodiscard]] wgpu::Buffer const& getBuffer() const { return mBuffer; }
 

@@ -107,6 +107,7 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
       mAdapter{ mPlatform.requestAdapter(nullptr) },
       mDevice{ mPlatform.requestDevice(mAdapter) },
       mQueueManager{ mDevice },
+      mStagePool{ mDevice },
       mPipelineLayoutCache{ mDevice },
       mPipelineCache{ mDevice },
       mRenderPassMipmapGenerator{ mDevice, &mQueueManager },
@@ -856,7 +857,7 @@ void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
     // draw calls are made.
     flush();
     handleCast<WebGPUIndexBuffer>(indexBufferHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager, &mStagePool);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
@@ -867,14 +868,14 @@ void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> bufferObjectHandle,
     // draw calls are made.
     flush();
     handleCast<WebGPUBufferObject>(bufferObjectHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager, &mStagePool);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
 void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> bufferObjectHandle,
         BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset) {
     handleCast<WebGPUBufferObject>(bufferObjectHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager, &mStagePool);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
