@@ -26,24 +26,32 @@ WebGPUStagePool::WebGPUStagePool(wgpu::Device const& device) : mDevice(device) {
 
 WebGPUStagePool::~WebGPUStagePool() = default;
 
-wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize) {
+MappedStage WebGPUStagePool::acquireBuffer(size_t requiredSize) {
     std::cout << "Run Yu: required size in acquireBuffer: " << requiredSize << std::endl;
     std::cout << "Run Yu: the pool size is " << mBuffers.size() << std::endl;
     {
         std::lock_guard<std::mutex> lock(mMutex);
         auto iter = mBuffers.lower_bound(requiredSize);
         if (iter != mBuffers.end()) {
-            wgpu::Buffer bufferFromPool = iter->second;
-            std::cout << "Run Yu: found buffer in the pool with size " << bufferFromPool.GetSize()
+            std::cout << "Run Yu: found buffer in the pool with size " << iter->second.GetSize()
                       << std::endl;
-            mBuffers.erase(iter);
-            if (bufferFromPool.GetMapState() != wgpu::BufferMapState::Mapped) {
-                std::cout << "Run Yu: buffer from pool is not mapped!!" << std::endl;
+            if (iter->second.GetMapState() != wgpu::BufferMapState::Mapped) {
+                std::cout << "Run Yu: before GetMappedRange the buffer state is not mapped!\n";
             }
-            return bufferFromPool;
+            MappedStage mappedStage = { .buffer = iter->second,
+                .mappedRange = iter->second.GetMappedRange() };
+            if (!mappedStage.mappedRange) {
+                std::cout << "Run Yu: mapped range is null in acquireBuffer!\n";
+            }
+            if (mappedStage.buffer.GetMapState() != wgpu::BufferMapState::Mapped) {
+                std::cout << "Run Yu: after GetMappedRange the buffer state is not mapped!\n";
+            }
+            mBuffers.erase(iter);
+            return mappedStage;
         }
     }
-    return createNewBuffer(requiredSize);
+    wgpu::Buffer newBuffer = createNewBuffer(requiredSize);
+    return { .buffer = newBuffer, .mappedRange = newBuffer.GetMappedRange() };
 }
 
 void WebGPUStagePool::addBufferToPool(wgpu::Buffer buffer) {
@@ -64,8 +72,6 @@ void WebGPUStagePool::addBufferToPool(wgpu::Buffer buffer) {
     }
     if (!allMapped) {
         std::cout << "Run Yu: found buffers that are not mapped\n";
-    } else {
-        std::cout << "Run Yu: all buffers are mapped\n";
     }
 }
 
