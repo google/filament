@@ -24,16 +24,21 @@
 
 namespace filament::backend {
 
+struct Stage {
+    wgpu::Buffer buffer;
+    void* mappedRange;
+};
+
 class WebGPUStagePool {
 public:
     WebGPUStagePool(wgpu::Device const& device);
     ~WebGPUStagePool();
 
-    wgpu::Buffer acquireBuffer(size_t requiredSize);
-    void addBufferToPool(wgpu::Buffer buffer);
+    Stage acquireBuffer(size_t requiredSize);
+    void addBufferToPool(wgpu::Buffer buffer, void* mappedRange);
 private:
     wgpu::Buffer createNewBuffer(size_t bufferSize);
-    std::multimap<uint32_t, wgpu::Buffer> mBuffers;
+    std::multimap<uint32_t, Stage> mBuffers;
     mutable std::mutex mMutex;
 
     wgpu::Device mDevice;

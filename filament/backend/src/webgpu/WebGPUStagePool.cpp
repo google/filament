@@ -26,38 +26,42 @@ WebGPUStagePool::WebGPUStagePool(wgpu::Device const& device) : mDevice(device) {
 
 WebGPUStagePool::~WebGPUStagePool() = default;
 
-wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize) {
+Stage WebGPUStagePool::acquireBuffer(size_t requiredSize) {
     std::cout << "Run Yu: required size in acquireBuffer: " << requiredSize << std::endl;
     std::cout << "Run Yu: the pool size is " << mBuffers.size() << std::endl;
     {
         std::lock_guard<std::mutex> lock(mMutex);
         auto iter = mBuffers.lower_bound(requiredSize);
         if (iter != mBuffers.end()) {
-            wgpu::Buffer bufferFromPool = iter->second;
-            std::cout << "Run Yu: found buffer in the pool with size " << bufferFromPool.GetSize()
+            const Stage& fromPool = iter->second;
+            std::cout << "Run Yu: found buffer in the pool with size " << fromPool.buffer.GetSize()
                       << std::endl;
-            mBuffers.erase(iter);
-            if (bufferFromPool.GetMapState() != wgpu::BufferMapState::Mapped) {
+            if (fromPool.buffer.GetMapState() != wgpu::BufferMapState::Mapped) {
                 std::cout << "Run Yu: buffer from pool is not mapped!!" << std::endl;
             }
-            return bufferFromPool;
+
+            Stage result{ .buffer = fromPool.buffer, .mappedRange = fromPool.mappedRange };
+            mBuffers.erase(iter);
+            return result;
         }
     }
-    return createNewBuffer(requiredSize);
+    wgpu::Buffer newBuffer = createNewBuffer(requiredSize);
+    return { .buffer = newBuffer, .mappedRange = newBuffer.GetMappedRange() };
 }
 
-void WebGPUStagePool::addBufferToPool(wgpu::Buffer buffer) {
+void WebGPUStagePool::addBufferToPool(wgpu::Buffer buffer, void* mappedRange) {
     std::lock_guard<std::mutex> lock(mMutex);
     std::cout << "Run Yu: adding buffer to the pool with size " << buffer.GetSize() << std::endl;
-    mBuffers.insert({buffer.GetSize(), buffer});
+    Stage stage {.buffer = buffer, .mappedRange = mappedRange};
+    mBuffers.emplace(buffer.GetSize(), stage);
     std::cout << "Run Yu: added buffer to the pool with size " << buffer.GetSize() << std::endl;
 
     bool allMapped = true;
     for (const auto& pair : mBuffers) {
-        auto state = pair.second.GetMapState();
+        auto state = pair.second.buffer.GetMapState();
         if (state != wgpu::BufferMapState::Mapped) {
             allMapped = false;
-            std::cout << "Run Yu: the buffer with size " << pair.second.GetSize()
+            std::cout << "Run Yu: the buffer with size " << pair.second.buffer.GetSize()
                       << " is not mapped but somehow was added to the pool, its state is "
                       << static_cast<int>(state) << std::endl;
         }
