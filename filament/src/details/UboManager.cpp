@@ -277,7 +277,6 @@ allocation_size_t UboManager::getAllocationOffset(AllocationId id) const {
 
 void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-    LOG(INFO) << "Reallocate from size: "<< mUboSize << " to size: "<<requiredSize;
     if (mUbHandle) {
         driver.destroyBufferObject(mUbHandle);
     }

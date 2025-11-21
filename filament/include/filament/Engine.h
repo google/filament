@@ -427,7 +427,7 @@ public:
          * reallocations, which can cause a minor performance stutter, at the cost of higher
          * initial memory usage.
          */
-        uint32_t sharedUboInitialSizeInBytes = 256 * 64;
+        uint32_t sharedUboInitialSizeInBytes = 16 * 64;
     };
 
 
