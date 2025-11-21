@@ -277,6 +277,7 @@ allocation_size_t UboManager::getAllocationOffset(AllocationId id) const {
 
 void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    LOG(INFO) << "Reallocate from size: "<< mUboSize << " to size: "<<requiredSize;
     if (mUbHandle) {
         driver.destroyBufferObject(mUbHandle);
     }
@@ -289,14 +290,10 @@ void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
 }
 
 allocation_size_t UboManager::calculateRequiredSize() {
-    allocation_size_t newBufferSize = 0;
+    allocation_size_t newBufferSize = mUboSize;
     for (const auto* mi: mManagedInstances) {
         const AllocationId allocationId = mi->getAllocationId();
-        if (allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
-            // For MIs whose parameters have been updated, aside from the slot it is being
-            // occupied by the GPU, we need to preserve an additional slot for it.
-            newBufferSize += 2 * mAllocator.alignUp(mi->getUniformBuffer().getSize());
-        } else {
+        if (!BufferAllocator::isValid(allocationId)) {
             newBufferSize += mAllocator.alignUp(mi->getUniformBuffer().getSize());
         }
     }
