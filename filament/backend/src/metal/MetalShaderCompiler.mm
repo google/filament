@@ -118,7 +118,11 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
                 // not always true: it is possible for the environment to be set
                 // up in a way where an older version is used by default. So we
                 // explicitly set the minimum version we require.
-                options.languageVersion = MTLLanguageVersion2_3;
+                #if defined(FILAMENT_IOS)
+                    options.languageVersion = MTLLanguageVersion2_0;
+                #else
+                    options.languageVersion = MTLLanguageVersion2_3;
+                #endif
 
                 assert_invariant(source[source.size() - 1] == '\0');
                 // the shader string is null terminated and the length includes the null character
