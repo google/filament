@@ -146,12 +146,12 @@ void Platform::setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retri
 
 bool Platform::hasInsertBlobFunc() const noexcept {
     std::lock_guard<decltype(mMutex)> lock(mMutex);
-    return bool(mInsertBlob);
+    return mInsertBlob && bool(*mInsertBlob);
 }
 
 bool Platform::hasRetrieveBlobFunc() const noexcept {
     std::lock_guard<decltype(mMutex)> lock(mMutex);
-    return bool(mRetrieveBlob);
+    return mRetrieveBlob && bool(*mRetrieveBlob);
 }
 
 void Platform::insertBlob(void const* key, size_t keySize, void const* value, size_t valueSize) {
@@ -184,7 +184,7 @@ void Platform::setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noe
 
 bool Platform::hasDebugUpdateStatFunc() const noexcept {
     std::lock_guard<decltype(mMutex)> lock(mMutex);
-    return mDebugUpdateStat != nullptr;
+    return mDebugUpdateStat && bool(*mDebugUpdateStat);
 }
 
 void Platform::debugUpdateStat(const char* key, uint64_t intValue) {
