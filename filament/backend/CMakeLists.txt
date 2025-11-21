@@ -318,6 +318,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPURenderPrimitive.h
             src/webgpu/WebGPURenderTarget.cpp
             src/webgpu/WebGPURenderTarget.h
+            src/webgpu/WebGPUStagePool.cpp
+            src/webgpu/WebGPUStagePool.h
             src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
