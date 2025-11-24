@@ -52,12 +52,25 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
     }
     */
 
-    // Otherwise, we allocate a private GPU buffer.
+    MTLResourceOptions options = MTLResourceStorageModePrivate;
+
+    // The buffer will be memory mapped for write operations.
+    if (any(usage & BufferUsage::SHARED_WRITE_BIT)) {
+#if defined(FILAMENT_IOS) || defined(__arm64__) || defined(__aarch64__)
+        // iOS and Apple Silicon devices use UMA (Unified Memory Architecture), so we use Shared memory.
+        options = MTLResourceStorageModeShared;
+#else
+        // Intel Macs require Managed memory for CPU/GPU synchronization.
+        options = MTLResourceStorageModeManaged;
+#endif
+    }
+
     {
         ScopedAllocationTimer timer("generic");
-        mBuffer = { [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate],
+        mBuffer = { [context.device newBufferWithLength:size options:options],
             TrackedMetalBuffer::Type::GENERIC };
     }
+
     // mBuffer might fail to be allocated. Clients can check for this by calling
     // wasAllocationSuccessful().
 }
