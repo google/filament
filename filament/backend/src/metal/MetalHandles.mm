@@ -1682,11 +1682,10 @@ MetalMemoryMappedBuffer::MetalMemoryMappedBuffer(HandleAllocatorMTL& handleAlloc
 MetalMemoryMappedBuffer::~MetalMemoryMappedBuffer() = default;
 
 void MetalMemoryMappedBuffer::unmap(HandleAllocatorMTL& handleAllocator) {
-    MetalBufferObject* const bo = handleAllocator.handle_cast<MetalBufferObject*>(boh);
-    assert_invariant(bo);
-
 #if !defined(FILAMENT_IOS) && defined(__x86_64__)
     // Managed memory requires didModifyRange to synchronize changes to the GPU. This is specific to Intel Macs.
+    MetalBufferObject* const bo = handleAllocator.handle_cast<MetalBufferObject*>(boh);
+    assert_invariant(bo);
     MetalBuffer* buffer = bo->getBuffer();
     id<MTLBuffer> mtlBuffer = buffer->getGpuBufferForDraw();
     if (mtlBuffer && mtlBuffer.storageMode == MTLStorageModeManaged) {
