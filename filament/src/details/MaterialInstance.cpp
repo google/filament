@@ -223,31 +223,6 @@ void FMaterialInstance::terminate(FEngine& engine) {
     }
 }
 
-void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driver) {
-    mHasStreamUniformAssociations = false;
-    if (!mTextureParameters.empty()) {
-        BufferObjectStreamDescriptor descriptor;
-        for (auto const& [binding, p]: mTextureParameters) {
-            ssize_t offset = mMaterial->getUniformInterfaceBlock().getTransformFieldOffset(binding);
-            if (offset >= 0) {
-                if (auto stream = p.texture->getStream()) {
-                    mHasStreamUniformAssociations = true;
-                    descriptor.mStreams.push_back({ uint32_t(offset), stream->getHandle(),
-                        BufferObjectStreamAssociationType::TRANSFORM_MATRIX });
-                }
-            }
-        }
-        if (descriptor.mStreams.size() > 0) {
-            // UBO batching is incompatible with stream uniform associations because streams require a
-            // dedicated UBO handle, not a sub-allocation. Assert that any instance here uses its own UBO.
-            assert_invariant(!mUseUboBatching);
-            auto const* ubHandle = std::get_if<Handle<HwBufferObject>>(&mUboData);
-            assert_invariant(ubHandle);
-            driver.registerBufferObjectStreams(*ubHandle, std::move(descriptor));
-        }
-    }
-}
-
 void FMaterialInstance::commit(FEngine& engine) const {
     if (UTILS_LIKELY(mMaterial->getMaterialDomain() != MaterialDomain::SURFACE)) {
         commit(engine.getDriverApi(), engine.getUboManager());
@@ -255,7 +230,7 @@ void FMaterialInstance::commit(FEngine& engine) const {
 }
 
 void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManager) const {
-    if (mUniforms.isDirty() || mHasStreamUniformAssociations) {
+    if (mUniforms.isDirty()) {
         mUniforms.clean();
         if (mUseUboBatching) {
             assert_invariant(uboManager != nullptr);
