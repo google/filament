@@ -60,7 +60,6 @@ public:
     void updateSamplerForExternalSamplerSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
             fvkmemory::resource_ptr<VulkanTexture> texture) noexcept;
 
-
     void updateInputAttachment(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             VulkanAttachment const& attachment) noexcept;
 

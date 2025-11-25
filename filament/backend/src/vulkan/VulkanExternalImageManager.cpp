@@ -141,6 +141,9 @@ void VulkanExternalImageManager::updateSetAndLayout(
             continue;
         }
         auto& imageData = findImage(mImages, bindingInfo.image);
+        // For non YUV images (some ext images are NOT ext FMT)
+        // getVkSamplerYcbcrConversion(metadata) will return NULL, and image->conversion will be
+        // null
         updateImage(&imageData);
 
         auto samplerParams = bindingInfo.samplerParams;
@@ -203,7 +206,9 @@ void VulkanExternalImageManager::updateSetAndLayout(
 
     // Update the external samplers in the set
     for (auto& [binding, sampler, image]: samplerAndBindings) {
-        mDescriptorSetCache->updateSamplerForExternalSamplerSet(set, binding, image);
+        // We cannot call updateSamplerForExternalSamplerSet because some samplers are non NULL
+        // (RGB) and we cannot do a combined update with a NULL sampler.
+        mDescriptorSetCache->updateSampler(set, binding, image, sampler);
     }
 }
 
@@ -267,7 +272,8 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
 void VulkanExternalImageManager::addExternallySampledTexture(
        fvkmemory::resource_ptr<VulkanTexture> image,
         Platform::ExternalImageHandleRef platformHandleRef) {
-    mImages.push_back({ image, platformHandleRef, false });
+    // Clearer to pass VK_NULL_HANDLE
+    mImages.push_back({ image, platformHandleRef, false, VK_NULL_HANDLE });
 }
 
 void VulkanExternalImageManager::removeExternallySampledTexture(
