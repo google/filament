@@ -15,8 +15,11 @@
  */
 
 #include "WebGPUQueueManager.h"
+#include "backend/DriverEnums.h"
 
 #include <utils/Panic.h>
+
+#include <utils/Log.h>
 
 #include <chrono>
 #include <cstdint>
@@ -64,6 +67,7 @@ wgpu::CommandEncoder WebGPUQueueManager::getCommandEncoder() {
         };
         mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
         ASSERT_POSTCONDITION(mCommandEncoder, "Failed to create command encoder.");
+        mLatestSubmissionState = std::make_shared<WebGPUSubmissionState>();
     }
     return mCommandEncoder;
 }
@@ -93,8 +97,6 @@ void WebGPUQueueManager::submit() {
     if (!mCommandEncoder) {
         return;
     }
-
-    mLatestSubmissionState = std::make_shared<WebGPUSubmissionState>();
 
     wgpu::CommandBufferDescriptor commandBufferDescriptor{
         .label = "Filament Command Buffer",

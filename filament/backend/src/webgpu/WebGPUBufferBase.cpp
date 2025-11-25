@@ -87,58 +87,28 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     const size_t stagingBufferSize =
             remainder == 0 ? bufferDescriptor.size : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
-    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize);
+    auto commandEncoder = webGPUQueueManager->getCommandEncoder();
 
-    void* mappedRange = stagingBuffer.GetMappedRange();
-    std::string mappedRangeIsNull = mappedRange
-            ? "no"
-            : "yes";
-    std::cout << "Run Yu: got mapped range on the staging buffer with size "
-              << stagingBuffer.GetSize() << " and it is null? " <<  mappedRangeIsNull << std::endl;
+    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(
+            webGPUQueueManager->getLatestSubmissionState(),
+            stagingBufferSize);
+
+    void* mappedRange = stagingBuffer.GetMappedRange(0, stagingBufferSize);
     memcpy(mappedRange, bufferDescriptor.buffer, bufferDescriptor.size);
 
     // Make sure the padded memory is set to 0 to have deterministic behaviors
-    // if (remainder != 0) {
-    //     uint8_t* paddingStart = static_cast<uint8_t*>(mappedRange) + bufferDescriptor.size;
-    //     memset(paddingStart, 0, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS - remainder);
-    // }
-    // size_t stagingBufferSize = stagingBuffer.GetSize();
-    // if (stagingBufferSize != bufferDescriptor.size) {
-    //     assert(stagingBufferSize > bufferDescriptor.size);
-    //     assert(stagingBufferSize % FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS == 0);
-    //     uint8_t* paddingStart = static_cast<uint8_t*>(mappedRange) + bufferDescriptor.size;
-    //     memset(paddingStart, 0, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS - (stagingBuffer.GetSize() - bufferDescriptor.size));
-    // }
-
+    if (remainder != 0) {
+        uint8_t* paddingStart = static_cast<uint8_t*>(mappedRange) + bufferDescriptor.size;
+        memset(paddingStart, 0, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS - remainder);
+    }
     stagingBuffer.Unmap();
 
-    std::cout << "Run Yu: about to issue copy command with actual staging buffer of size "
-              << stagingBuffer.GetSize() << ", and computed size of " << stagingBufferSize
-              << ". The mBuffer size is " << mBuffer.GetSize() << std::endl;
     // Copy the staging buffer contents to the destination buffer.
-    webGPUQueueManager->getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
+    commandEncoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
             byteOffset,
             remainder == 0 ? bufferDescriptor.size
                            : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
-    webGPUQueueManager->flush();
 
-    struct UserData final {
-        wgpu::Buffer stagingBuffer;
-        WebGPUStagePool* webGPUStagePool;
-    };
-    auto userData = std::make_unique<UserData>(
-            UserData{ .stagingBuffer = stagingBuffer, .webGPUStagePool = webGPUStagePool });
-    stagingBuffer.MapAsync(
-            wgpu::MapMode::Write, 0, stagingBufferSize, wgpu::CallbackMode::AllowSpontaneous,
-            [](wgpu::MapAsyncStatus status, const char* message, UserData* userData) {
-                if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
-                    std::unique_ptr<UserData> data(static_cast<UserData*>(userData));
-                    userData->webGPUStagePool->addBufferToPool(userData->stagingBuffer);
-                } else {
-                    std::cout << "Run Yu: MAPPING UNSUCCESSFUL!!\n";
-                }
-            },
-            userData.release());
 }
 
 } // namespace filament::backend

@@ -19,26 +19,36 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <utils/Log.h>
+
 #include <map>
 #include <mutex>
 
 namespace filament::backend {
+
+struct WebGPUSubmissionState;
 
 class WebGPUStagePool {
 public:
     WebGPUStagePool(wgpu::Device const& device);
     ~WebGPUStagePool();
 
-    wgpu::Buffer acquireBuffer(size_t requiredSize);
-    void addBufferToPool(wgpu::Buffer buffer);
+    wgpu::Buffer acquireBuffer(std::shared_ptr<WebGPUSubmissionState> submission,
+            size_t requiredSize);
+
+    void gc();
+
 private:
+    void addBufferToPool(wgpu::Buffer buffer);
+
     wgpu::Buffer createNewBuffer(size_t bufferSize);
     std::multimap<uint32_t, wgpu::Buffer> mBuffers;
+
+    std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> mSubmitted;
     mutable std::mutex mMutex;
 
     wgpu::Device mDevice;
 };
-
 }
 
 #endif // TNT_FILAMENT_BACKEND_WEBGPUSTAGEPOOL_H

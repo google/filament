@@ -17,8 +17,9 @@
 #include "WebGPUStagePool.h"
 
 #include "WebGPUConstants.h"
+#include "WebGPUQueueManager.h"
 
-#include <iostream>
+#include <memory>
 
 namespace filament::backend {
 
@@ -26,57 +27,61 @@ WebGPUStagePool::WebGPUStagePool(wgpu::Device const& device) : mDevice(device) {
 
 WebGPUStagePool::~WebGPUStagePool() = default;
 
-wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize) {
-    std::cout << "Run Yu: required size in acquireBuffer: " << requiredSize << std::endl;
-    std::cout << "Run Yu: the pool size is " << mBuffers.size() << std::endl;
+wgpu::Buffer WebGPUStagePool::acquireBuffer(std::shared_ptr<WebGPUSubmissionState> submission,
+        size_t requiredSize) {
+    wgpu::Buffer buf;
     {
         std::lock_guard<std::mutex> lock(mMutex);
-        auto iter = mBuffers.lower_bound(requiredSize);
-        if (iter != mBuffers.end()) {
-            wgpu::Buffer bufferFromPool = iter->second;
-            std::cout << "Run Yu: found buffer in the pool with size " << bufferFromPool.GetSize()
-                      << std::endl;
+        if (auto iter = mBuffers.lower_bound(requiredSize); iter != mBuffers.end()) {
+            buf = iter->second;
             mBuffers.erase(iter);
-            if (bufferFromPool.GetMapState() != wgpu::BufferMapState::Mapped) {
-                std::cout << "Run Yu: buffer from pool is not mapped!!" << std::endl;
-            }
-            return bufferFromPool;
         }
     }
-    return createNewBuffer(requiredSize);
+    if (!buf.Get()) {
+        buf = createNewBuffer(requiredSize);
+    }
+    mSubmitted.push_back({ submission, buf });
+    return buf;
 }
 
 void WebGPUStagePool::addBufferToPool(wgpu::Buffer buffer) {
-    std::lock_guard<std::mutex> lock(mMutex);
-    std::cout << "Run Yu: adding buffer to the pool with size " << buffer.GetSize() << std::endl;
-    mBuffers.insert({buffer.GetSize(), buffer});
-    std::cout << "Run Yu: added buffer to the pool with size " << buffer.GetSize() << std::endl;
-
-    bool allMapped = true;
-    for (const auto& pair : mBuffers) {
-        auto state = pair.second.GetMapState();
-        if (state != wgpu::BufferMapState::Mapped) {
-            allMapped = false;
-            std::cout << "Run Yu: the buffer with size " << pair.second.GetSize()
-                      << " is not mapped but somehow was added to the pool, its state is "
-                      << static_cast<int>(state) << std::endl;
-        }
-    }
-    if (!allMapped) {
-        std::cout << "Run Yu: found buffers that are not mapped\n";
-    } else {
-        std::cout << "Run Yu: all buffers are mapped\n";
-    }
+    using UserData = std::pair<wgpu::Buffer, WebGPUStagePool*>;
+    auto userData = new UserData{buffer, this};
+    buffer.MapAsync(
+            wgpu::MapMode::Write, 0, buffer.GetSize(), wgpu::CallbackMode::AllowSpontaneous,
+            [](wgpu::MapAsyncStatus status, const char* message, UserData* userData) {
+                if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
+                    std::unique_ptr<UserData> data(static_cast<UserData*>(userData));
+                    auto [buffer, t] = *data;
+                    {
+                        std::lock_guard<std::mutex> lock(t->mMutex);
+                        t->mBuffers.insert({ buffer.GetSize(), buffer });
+                    }
+                }
+            },
+            userData);
 }
 
 wgpu::Buffer WebGPUStagePool::createNewBuffer(size_t bufferSize) {
-    std::cout << "Run Yu: creating new buffer with size " << bufferSize << std::endl;
     wgpu::BufferDescriptor descriptor{
         .label = "Filament WebGPU Staging Buffer",
         .usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc,
         .size = bufferSize,
-        .mappedAtCreation = true };
+        .mappedAtCreation = true,
+    };
     return mDevice.CreateBuffer(&descriptor);
+}
+
+void WebGPUStagePool::gc() {
+    std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> newSubmitted;
+    for (auto& [st, buffer]: mSubmitted) {
+        if (st->getStatus() == FenceStatus::CONDITION_SATISFIED) {
+            addBufferToPool(buffer);
+        } else {
+            newSubmitted.push_back({st, buffer});
+        }
+    }
+    std::swap(mSubmitted, newSubmitted);
 }
 
 } // namespace filament::backend
