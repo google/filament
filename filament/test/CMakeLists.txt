@@ -44,18 +44,23 @@ list(APPEND RESGEN_SOURCE ${DUMMY_SRC})
 # away in Release builds
 if (TNT_DEV)
     add_executable(test_${TARGET}
+            MockDriver.h
             filament_AtlasAllocator_test.cpp
             test_BufferAllocator.cpp
             test_BufferAllocatorStress.cpp
             test_CircularQueue.cpp
+            test_FenceManager.cpp
+            test_UboManager.cpp
             filament_test_exposure.cpp
             filament_rendering_test.cpp
             filament_bimap_test.cpp
             filament_framegraph_test.cpp
-            filament_test.cpp)
+            filament_test.cpp
+            ${RESGEN_SOURCE})
 
     target_link_libraries(test_${TARGET} PRIVATE filament gtest)
     target_compile_options(test_${TARGET} PRIVATE ${COMPILER_FLAGS})
+    target_include_directories(test_${TARGET} PRIVATE ${RESOURCE_DIR})
     set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 
     add_executable(test_depth depth_test.cpp)

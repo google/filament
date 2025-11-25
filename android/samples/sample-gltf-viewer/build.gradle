@@ -17,12 +17,20 @@ filamentTools {
 }
 
 // don't forget to update MainACtivity.kt when/if changing this.
-tasks.register('copyMesh', Copy) {
+tasks.register('copyDamagedHelmetGltf', Copy) {
+    from file("../../../third_party/models/DamagedHelmet/DamagedHelmet.glb")
+    into file("src/main/assets/models")
+    rename {String fileName -> "helmet.glb"}
+}
+
+// don't forget to update MainACtivity.kt when/if changing this.
+tasks.register('copyBusterGltf', Copy) {
     from "../../../third_party/models/BusterDrone"
     into "src/main/assets/models"
 }
 
-preBuild.dependsOn copyMesh
+preBuild.dependsOn copyDamagedHelmetGltf
+preBuild.dependsOn copyBusterGltf
 
 clean.doFirst {
     delete "src/main/assets"

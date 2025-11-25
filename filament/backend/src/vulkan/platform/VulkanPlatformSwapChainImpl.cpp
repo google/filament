@@ -165,6 +165,11 @@ VulkanPlatformSurfaceSwapChain::~VulkanPlatformSurfaceSwapChain() {
 VkResult VulkanPlatformSurfaceSwapChain::create() {
 #ifdef __ANDROID__
     NativeWindow::enableFrameTimestamps(static_cast<ANativeWindow*>(mNativeWindow), true);
+    // on Android, disable producer throttling
+    if (mProducerThrottling.isSupported()) {
+        mProducerThrottling.setProducerThrottlingEnabled(
+                static_cast<ANativeWindow*>(mNativeWindow), false);
+    }
 #endif
 
     VkSurfaceFormatKHR surfaceFormat = {};
@@ -356,13 +361,15 @@ bool VulkanPlatformSurfaceSwapChain::queryCompositorTiming(
         CompositorTiming* outCompositorTiming) const {
 #ifdef __ANDROID__
     // fallback to private APIs
-    int const status = NativeWindow::getCompositorTiming(
-            static_cast<ANativeWindow*>(mNativeWindow),
-            &outCompositorTiming->compositeDeadline,
-            &outCompositorTiming->compositeInterval,
-            &outCompositorTiming->compositeToPresentLatency);
-    if (status == 0) {
-        return true;
+    if (UTILS_VERY_LIKELY(mNativeWindow)) {
+        int const status = NativeWindow::getCompositorTiming(
+                static_cast<ANativeWindow*>(mNativeWindow),
+                &outCompositorTiming->compositeDeadline,
+                &outCompositorTiming->compositeInterval,
+                &outCompositorTiming->compositeToPresentLatency);
+        if (status == 0) {
+            return true;
+        }
     }
 #endif
     return VulkanPlatformSwapChainBase::queryCompositorTiming(outCompositorTiming);
@@ -424,6 +431,8 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
     // phone). If necessary, we can revisit and implement the workaround [1].
     vkQueueWaitIdle(mQueue);
 
+    VulkanPlatformSwapChainBase::destroy();
+
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
         if (mImageReady[i] != VK_NULL_HANDLE) {
             vkDestroySemaphore(mDevice, mImageReady[i], VKALLOC);
@@ -483,7 +492,10 @@ void VulkanPlatformHeadlessSwapChain::destroy() {
         }
     }
     mSwapChainBundle.colors.clear();
-    // No need to manually call through to the super because the super's destructor will be called
+
+    // Still need to call through to free the depth image.  But must do it after releasing the color
+    // images.
+    VulkanPlatformSwapChainBase::destroy();
 }
 
 }// namespace filament::backend

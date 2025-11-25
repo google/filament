@@ -40,12 +40,15 @@
 #include <filament/SwapChain.h>
 #include <filament/View.h>
 
+#include <backend/Platform.h>
+
 #ifndef NDEBUG
 #include <filament/DebugRegistry.h>
 #endif
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 #include <backend/platforms/VulkanPlatform.h>
+#include <filamentapp/VulkanPlatformHelper.h>
 #endif
 
 #if defined(FILAMENT_SUPPORTS_WEBGPU)
@@ -78,36 +81,6 @@ namespace {
 
 using namespace filament::backend;
 
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-class FilamentAppVulkanPlatform : public VulkanPlatform {
-public:
-    FilamentAppVulkanPlatform(char const* gpuHintCstr) {
-        utils::CString gpuHint{ gpuHintCstr };
-        if (gpuHint.empty()) {
-            return;
-        }
-        VulkanPlatform::Customization::GPUPreference pref;
-        // Check to see if it is an integer, if so turn it into an index.
-        if (std::all_of(gpuHint.begin(), gpuHint.end(), ::isdigit)) {
-            char* p_end {};
-            pref.index = static_cast<int8_t>(std::strtol(gpuHint.c_str(), &p_end, 10));
-        } else {
-            pref.deviceName = gpuHint;
-        }
-        mCustomization = {
-            .gpu = pref
-        };
-    }
-
-    virtual VulkanPlatform::Customization getCustomization() const noexcept override {
-        return mCustomization;
-    }
-
-private:
-    VulkanPlatform::Customization mCustomization;
-};
-#endif
-
 #if defined(FILAMENT_SUPPORTS_WEBGPU)
 class FilamentAppWebGPUPlatform : public WebGPUPlatform {
 public:
@@ -138,7 +111,7 @@ private:
 };
 #endif
 
-} // anonymous namespace
+}
 
 FilamentApp& FilamentApp::get() {
     static FilamentApp filamentApp;
@@ -611,7 +584,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     if (mVulkanPlatform) {
-        delete mVulkanPlatform;
+        filamentapp::destroyVulkanPlatform(mVulkanPlatform);
     }
 #endif
 
@@ -775,11 +748,11 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
 #endif
 
-        Platform* platform = nullptr;
+        backend::Platform* platform = nullptr;
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         if (backend == Engine::Backend::VULKAN) {
             platform = mFilamentApp->mVulkanPlatform =
-                    new FilamentAppVulkanPlatform(config.vulkanGPUHint.c_str());
+                    filamentapp::createVulkanPlatform(config.vulkanGPUHint.c_str());
         }
 #endif
 

@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 
-#include "AndroidSwapChainHelper.h"
+#include "AndroidNdk.h"
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
@@ -45,7 +45,7 @@ class ExternalStreamManagerAndroid;
  * A concrete implementation of OpenGLPlatform and subclass of PlatformEGL that supports
  * EGL on Android. It adds Android streaming functionality to PlatformEGL.
  */
-class PlatformEGLAndroid : public PlatformEGL {
+class PlatformEGLAndroid : public PlatformEGL, public AndroidNdk {
 public:
 
     PlatformEGLAndroid() noexcept;
@@ -169,19 +169,10 @@ protected:
             SwapChain* drawSwapChain,
             SwapChain* readSwapChain) override;
 
-    struct SwapChainEGLAndroid : public SwapChainEGL {
-        SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
-                void* nativeWindow, uint64_t flags);
-        SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
-                uint32_t width, uint32_t height, uint64_t flags);
-        void terminate(PlatformEGLAndroid& platform);
-        bool setPresentFrameId(uint64_t frameId) const noexcept;
-        uint64_t getFrameId(uint64_t frameId) const noexcept;
-    private:
-        AndroidSwapChainHelper mImpl{};
-    };
-
 private:
+    struct SwapChainEGLAndroid;
+    struct AndroidDetails;
+
     // prevent derived classes' implementations to call through
     [[nodiscard]] SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) override;
     [[nodiscard]] SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
@@ -201,14 +192,13 @@ private:
 
     int mOSVersion;
     ExternalStreamManagerAndroid& mExternalStreamManager;
+    AndroidDetails& mAndroidDetails;
     InitializeJvmForPerformanceManagerIfNeeded const mInitializeJvmForPerformanceManagerIfNeeded;
     utils::PerformanceHintManager mPerformanceHintManager;
     utils::PerformanceHintManager::Session mPerformanceHintSession;
-    SwapChainEGLAndroid* mCurrentDrawSwapChain{};
-
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
-    AndroidProducerThrottling mProducerThrottling;
+    SwapChainEGLAndroid* mCurrentDrawSwapChain{};
     bool mAssertNativeWindowIsValid = false;
 };
 

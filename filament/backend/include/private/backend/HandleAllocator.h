@@ -169,10 +169,11 @@ public:
      * Destroy the object D at Handle<B> and frees Handle<B>
      * e.g.:
      *      Handle<HwTexture> h = ...;
-     *      deallocate(h);
+     *      deallocate<GLTexture>(h);
      */
-    template<typename D>
-    void deallocate(Handle<D>& handle) noexcept {
+    template<typename D, typename B,
+            typename = std::enable_if_t<std::is_base_of_v<B, D>, D>>
+    void deallocate(Handle<B>& handle) noexcept {
         D const* d = handle_cast<const D*>(handle);
         deallocate(handle, d);
     }

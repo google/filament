@@ -1,5 +1,5 @@
 ---
 Language:        Cpp
 BasedOnStyle:  Google
+PointerAlignment: Left
 ...
-

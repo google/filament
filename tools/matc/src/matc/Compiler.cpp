@@ -73,4 +73,19 @@ bool Compiler::writeBlobAsHeader(const Package &pkg, const matp::Config& config)
     return true;
 }
 
+bool Compiler::writeMat(
+        std::unique_ptr<const char[]>& buffer, ssize_t size, const matp::Config& config) const noexcept {
+    matp::Config::Output* output = config.getOutput();
+    if (!output->open()) {
+        std::cerr << "Unable to create header file." << std::endl;
+        return false;
+    }
+
+    std::ostream& file = output->getOutputStream();
+    file.write(buffer.get(), size);
+    output->close();
+
+    return true;
+}
+
 } // namespace matc

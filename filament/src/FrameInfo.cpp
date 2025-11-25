@@ -47,9 +47,10 @@ namespace filament {
 using namespace utils;
 using namespace backend;
 
-FrameInfoManager::FrameInfoManager(DriverApi& driver) noexcept
+FrameInfoManager::FrameInfoManager(FEngine& engine, DriverApi& driver) noexcept
     : mJobQueue("FrameInfoGpuComplete", JobSystem::Priority::URGENT_DISPLAY),
-      mHasTimerQueries(driver.isFrameTimeSupported()) {
+      mHasTimerQueries(driver.isFrameTimeSupported()),
+      mDisableGpuFrameComplete(engine.features.engine.frame_info.disable_gpu_frame_complete_metric) {
     if (mHasTimerQueries) {
         for (auto& query : mQueries) {
             query.handle = driver.createTimerQuery();
@@ -68,24 +69,29 @@ void FrameInfoManager::terminate(FEngine& engine) noexcept {
         }
     }
 
-    // Destroy the fences that are still alive, they will error out.
-    for (size_t i = 0, c = mFrameTimeHistory.size(); i < c; i++) {
-        auto& info = mFrameTimeHistory[i];
-        if (info.fence) {
-            driver.destroyFence(std::move(info.fence));
+    if (!mDisableGpuFrameComplete) {
+        // remove all pending callbacks. This is okay to do because they have no
+        // side effect.
+        mJobQueue.cancelAll();
+
+        // request cancel for all the fences, which may speed up drainAndExit() below
+        for (auto& info : mFrameTimeHistory) {
+            if (info.fence) {
+                driver.fenceCancel(info.fence);
+            }
+        }
+
+        // wait for all pending callbacks to be called & terminate the thread
+        mJobQueue.drainAndExit();
+
+        // Destroy the fences that are still alive, they will error out.
+        for (size_t i = 0, c = mFrameTimeHistory.size(); i < c; i++) {
+            auto& info = mFrameTimeHistory[i];
+            if (info.fence) {
+                driver.destroyFence(std::move(info.fence));
+            }
         }
     }
-
-    // for extra safety submit the current command buffer (because nothing else will while we
-    // wait in drainAndExit()), this is in case the backend is already waiting on a h/w fence
-    // e.g. vkWaitForFences().
-    driver.flush();
-
-    // make sure the driver commands above will be processed
-    engine.flush();
-
-    // wait for all pending callbacks to be called & terminate the thread
-    mJobQueue.drainAndExit();
 }
 
 void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
@@ -95,8 +101,10 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
     auto& history = mFrameTimeHistory;
     // don't exceed the capacity, drop the oldest entry
     if (UTILS_LIKELY(history.size() == history.capacity())) {
-        assert_invariant(history.back().fence);
-        driver.destroyFence(std::move(history.back().fence));
+        if (!mDisableGpuFrameComplete) {
+            assert_invariant(history.back().fence);
+            driver.destroyFence(std::move(history.back().fence));
+        }
         history.pop_back();
     }
 
@@ -114,6 +122,12 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
         front.presentDeadline = compositorTiming.compositeDeadline;
         front.displayPresentInterval = compositorTiming.compositeInterval;
         front.compositionToPresentLatency = compositorTiming.compositeToPresentLatency;
+        front.expectedPresentTime = compositorTiming.expectedPresentTime;
+        if (compositorTiming.frameTime != CompositorTiming::INVALID) {
+            // of we have a vsync time from the compositor, ignore the one from the user
+            front.vsync = FrameInfoImpl::time_point{
+                std::chrono::nanoseconds(compositorTiming.frameTime) };
+        }
     }
 
     if (mHasTimerQueries) {
@@ -146,7 +160,7 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
                     FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "FrameInfo::elapsed", uint32_t(elapsed));
                     // conversion to our duration happens here
                     pFront = mQueries[mLast].pInfo;
-                    pFront->frameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
+                    pFront->gpuFrameDuration = std::chrono::duration<uint64_t, std::nano>(elapsed);
                     mLast = (mLast + 1) % POOL_COUNT;
                     denoiseFrameTime(history, config);
                     break;
@@ -179,12 +193,14 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
 }
 
 void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
-    // create a Fence to capture the GPU complete time
-    FenceHandle const fence = driver.createFence();
-
     auto& front = mFrameTimeHistory.front();
-    front.fence = fence;
     front.endFrame = std::chrono::steady_clock::now();
+
+    if (!mDisableGpuFrameComplete) {
+        // create a Fence to capture the GPU complete time
+        FenceHandle const fence = driver.createFence();
+        front.fence = fence;
+    }
 
     if (mHasTimerQueries) {
         // close the timer query
@@ -192,33 +208,36 @@ void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
     }
 
     // queue custom backend command to query the current time
-    driver.queueCommand([&jobQueue = mJobQueue, &driver, &front] {
+    driver.queueCommand([&jobQueue = mJobQueue, &driver, &front,
+            disableGpuFrameComplete = mDisableGpuFrameComplete] {
         // backend frame end-time
         front.backendEndFrame = std::chrono::steady_clock::now();
 
-        if (UTILS_UNLIKELY(!jobQueue.isValid())) {
+        if (UTILS_UNLIKELY(disableGpuFrameComplete || !jobQueue.isValid())) {
             front.gpuFrameComplete = {};
             front.ready.store(true, std::memory_order_release);
             return;
         }
 
-        // now launch a job that'll wait for the gpu to complete
-        jobQueue.push([&driver, &front] {
-            FenceStatus const status = driver.fenceWait(front.fence, FENCE_WAIT_FOR_EVER);
-            if (status == FenceStatus::CONDITION_SATISFIED) {
-                front.gpuFrameComplete = std::chrono::steady_clock::now();
-            } else if (status == FenceStatus::TIMEOUT_EXPIRED) {
-                // that should never happen because:
-                // - we wait forever
-                // - made sure that the createFence() command was processed on the backed
-                //   (because we're inside a custom command)
-            } else {
-                // We got an error, fenceWait might not be supported
-                front.gpuFrameComplete = {};
-            }
-            // finally, signal that the data is available
-            front.ready.store(true, std::memory_order_release);
-        });
+        if (!disableGpuFrameComplete) {
+            // now launch a job that'll wait for the gpu to complete
+            jobQueue.push([&driver, &front] {
+                FenceStatus const status = driver.fenceWait(front.fence, FENCE_WAIT_FOR_EVER);
+                if (status == FenceStatus::CONDITION_SATISFIED) {
+                    front.gpuFrameComplete = std::chrono::steady_clock::now();
+                } else if (status == FenceStatus::TIMEOUT_EXPIRED) {
+                    // that should never happen because:
+                    // - we wait forever
+                    // - made sure that the createFence() command was processed on the backed
+                    //   (because we're inside a custom command)
+                } else {
+                    // We got an error, fenceWait might not be supported
+                    front.gpuFrameComplete = {};
+                }
+                // finally, signal that the data is available
+                front.ready.store(true, std::memory_order_release);
+            });
+        }
     });
 
     mIndex = (mIndex + 1) % POOL_COUNT;
@@ -230,7 +249,7 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
     // find the first slot that has a valid frame duration
     size_t first = history.size();
     for (size_t i = 0, c = history.size(); i < c; ++i) {
-        if (history[i].frameTime != duration(0)) {
+        if (history[i].gpuFrameDuration != duration(0)) {
             first = i;
             break;
         }
@@ -248,7 +267,7 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
             size_t(config.historySize) });
 
         for (size_t i = 0; i < size; ++i) {
-            median[i] = history[first + i].frameTime;
+            median[i] = history[first + i].gpuFrameDuration;
         }
         std::sort(median.begin(), median.begin() + size);
         duration const denoisedFrameTime = median[size / 2];
@@ -314,7 +333,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
 
         result.push_back({
                 .frameId                        = entry.frameId,
-                .gpuFrameDuration               = toDuration(entry.frameTime),
+                .gpuFrameDuration               = toDuration(entry.gpuFrameDuration),
                 .denoisedGpuFrameDuration       = toDuration(entry.denoisedFrameTime),
                 .beginFrame                     = toTimepoint(entry.beginFrame),
                 .endFrame                       = toTimepoint(entry.endFrame),
@@ -325,7 +344,9 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                 .displayPresent                 = entry.displayPresent,
                 .presentDeadline                = entry.presentDeadline,
                 .displayPresentInterval         = entry.displayPresentInterval,
-                .compositionToPresentLatency    = entry.compositionToPresentLatency
+                .compositionToPresentLatency    = entry.compositionToPresentLatency,
+                .expectedPresentTime            = entry.expectedPresentTime,
+
         });
     }
     std::swap(mUserFrameHistory, result);
@@ -334,7 +355,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
 FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
         size_t const historySize) const {
     auto result = mUserFrameHistory;
-    if (result.capacity() >= historySize) {
+    if (result.size() >= historySize) {
         result.resize(historySize);
     }
     return result;

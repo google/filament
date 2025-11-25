@@ -90,14 +90,6 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
         mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
     }
 
-    bool queryCompositorTiming(CompositorTiming* outCompositorTiming) const {
-        return mPlatform->queryCompositorTiming(swapChain, outCompositorTiming);
-    }
-
-    bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const {
-        return mPlatform->queryFrameTimestamps(swapChain, frameId, outFrameTimestamps);
-    }
-
 private:
 	static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
 

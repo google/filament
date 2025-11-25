@@ -468,11 +468,26 @@ void FEngine::init() {
         }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
     }
+
     // We must commit the default material instance here. It may not be used in a scene, but its
     // descriptor set may still be used for shared variants.
-    mDefaultMaterial->getDefaultInstance()->commit(driverApi);
+    //
+    // Note that this material instance is instantiated before the creation of UboManager, so at
+    // this point `isUboBatchingEnabled` is `false`, and it will fall back to individual UBO
+    // automatically.
+    mDefaultMaterial->getDefaultInstance()->commit(driverApi, mUboManager);
 
     if (UTILS_UNLIKELY(getSupportedFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
+        // UBO batching is not supported in feature level 0
+        if (features.material.enable_material_instance_uniform_batching) {
+            // Ubo size of each material instance is at least 16 bytes.
+            constexpr BufferAllocator::allocation_size_t minSlotSize = 16;
+            auto const uboOffsetAlignment = static_cast<BufferAllocator::allocation_size_t>(
+                    driverApi.getUniformBufferOffsetAlignment());
+            BufferAllocator::allocation_size_t slotSize = std::max(minSlotSize, uboOffsetAlignment);
+            mUboManager = new UboManager(getDriverApi(), slotSize, mConfig.sharedUboInitialSizeInBytes);
+        }
+
         mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
 
         constexpr float3 dummyPositions[1] = {};
@@ -653,6 +668,12 @@ void FEngine::shutdown() {
 
     driver.destroyRenderTarget(std::move(mDefaultRenderTarget));
 
+    if (isUboBatchingEnabled()) {
+        mUboManager->terminate(driver);
+        delete mUboManager;
+        mUboManager = nullptr;
+    }
+
     /*
      * Shutdown the backend...
      */
@@ -693,16 +714,28 @@ void FEngine::prepare() {
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.
     DriverApi& driver = getDriverApi();
+    const bool useUboBatching = isUboBatchingEnabled();
 
+    if (useUboBatching) {
+        assert_invariant(mUboManager != nullptr);
+        mUboManager->beginFrame(driver);
+    }
+
+    UboManager* uboManager = mUboManager;
     for (auto& materialInstanceList: mMaterialInstances) {
-        materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
+        materialInstanceList.second.forEach([&driver, uboManager](FMaterialInstance* item) {
             // post-process materials instances must be commited explicitly because their
             // parameters are typically not set at this point in time.
             if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
                 item->commitStreamUniformAssociations(driver);
-                item->commit(driver);
+                item->commit(driver, uboManager);
             }
         });
+    }
+
+    if (useUboBatching) {
+        assert_invariant(mUboManager != nullptr);
+        getUboManager()->finishBeginFrame(getDriverApi());
     }
 
     mMaterials.forEach([](FMaterial* material) {
@@ -719,6 +752,13 @@ void FEngine::gc() {
     mLightManager.gc(em);
     mTransformManager.gc(em);
     mCameraManager.gc(*this, em);
+}
+
+void FEngine::submitFrame() {
+    if (isUboBatchingEnabled()) {
+        DriverApi& driver = getDriverApi();
+        getUboManager()->endFrame(driver);
+    }
 }
 
 void FEngine::flush() {
@@ -951,9 +991,10 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
     return p;
 }
 
-FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
-                                                   const char* name) noexcept {
-    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material, name);
+FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material, const char* name,
+        UboBatchingMode batchingMode) noexcept {
+    FMaterialInstance* p =
+            mHeapAllocator.make<FMaterialInstance>(*this, material, name, batchingMode);
     if (UTILS_LIKELY(p)) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);

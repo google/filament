@@ -68,6 +68,8 @@ static const option OPTIONS[] = {
         { "no-sampler-validation",   no_argument, nullptr, 'F' },
         { "save-raw-variants",       no_argument, nullptr, 'R' },
         { "workarounds",       required_argument, nullptr, 'W' },
+        { "no-insert-line-directives",       no_argument, nullptr, 'n' },
+        { "no-insert-line-directive-check",       no_argument, nullptr, 'N' },
         { nullptr, 0, nullptr, 0 }  // termination of the option list
 };
 
@@ -142,13 +144,26 @@ static void usage(char* name) {
             "       Reflect the specified metadata as JSON: parameters\n\n"
             "   --variant-filter=<filter>, -V <filter>\n"
             "       Filter out specified comma-separated variants:\n"
-            "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog,"
+            "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog,\n"
             "           ssr (screen-space reflections), stereo\n"
-            "       This variant filter is merged with the filter from the material, if any\n\n"
+            "       This variant filter is merged with the filter from the material, if any.\n\n"
             "   --workarounds, -W\n"
             "       Workarounds to apply: all or none. (default is none).\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
+            "   --output-format, -f\n"
+            "       Specify output format: blob (default), header or mat.\n"
+            "       When specifying the output as mat, it will return a mat\n"
+            "       with #include directives resolved.\n\n"
+            "   --no-insert-line-directives\n"
+            "       By default insert #line directives before / after each #include.\n"
+            "       Add this to omit line directives.\n\n"
+            "   --no-insert-line-directive-check\n"
+            "       By default it surrounds line directives with\n"
+            "       #if defined(GL_GOOGLE_cpp_style_line_directive)\n"
+            "       Some drivers may complain about the use of cpp style #line directives\n"
+            "       if they don't support it.\n\n"
+
             "Internal use and debugging only:\n"
             "   --optimize-none, -g, -O0\n"
             "       Disable all shader optimizations, for debugging\n\n"
@@ -156,8 +171,6 @@ static void usage(char* name) {
             "       Optimize shaders by running only the preprocessor\n\n"
             "   --raw, -w\n"
             "       Compile a raw GLSL shader into a SPIRV binary chunk\n\n"
-            "   --output-format, -f\n"
-            "       Specify output format: blob (default) or header\n\n"
             "   --debug, -d\n"
             "       Generate extra data for debugging\n\n"
             "   --no-sampler-validation, -F\n"
@@ -275,8 +288,10 @@ bool CommandlineConfig::parse() {
                     mOutputFormat = OutputFormat::BLOB;
                 } else if (arg == "header") {
                     mOutputFormat = OutputFormat::C_HEADER;
+                } else if (arg == "mat") {
+                    mOutputFormat = OutputFormat::MAT;
                 } else {
-                    std::cerr << "Unrecognized output format flag. Must be 'blob'|'header'."
+                    std::cerr << "Unrecognized output format flag. Must be 'blob'|'header'|'mat'."
                             << std::endl;
                    return false;
                 }
@@ -384,6 +399,12 @@ bool CommandlineConfig::parse() {
                 mNoSamplerValidation = true;
             case 'R':
                 mSaveRawVariants = true;
+                break;
+            case 'n':
+                mInsertLineDirectives = false;
+                break;
+            case 'N':
+                mInsertLineDirectiveChecks = false;
                 break;
         }
     }

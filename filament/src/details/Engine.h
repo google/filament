@@ -21,16 +21,17 @@
 
 #include "Allocators.h"
 #include "DFG.h"
-#include "PostProcessManager.h"
-#include "ResourceList.h"
 #include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
 #include "MaterialCache.h"
+#include "PostProcessManager.h"
+#include "ResourceList.h"
+#include "UboManager.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
-#include "components/TransformManager.h"
 #include "components/RenderableManager.h"
+#include "components/TransformManager.h"
 
 #include "ds/DescriptorSetLayout.h"
 
@@ -263,6 +264,14 @@ public:
         return mBackend;
     }
 
+    bool isUboBatchingEnabled() const noexcept {
+        return mUboManager != nullptr;
+    }
+
+    UboManager* getUboManager() noexcept {
+        return mUboManager;
+    }
+
     Platform* getPlatform() const noexcept {
         return mPlatform;
     }
@@ -336,11 +345,21 @@ public:
 
     FRenderer* createRenderer() noexcept;
 
+    // Defines whether a material instance should use UBO batching or not.
+    enum class UboBatchingMode {
+        // For default, it follows the engine settings.
+        // If UBO batching is enabled on the engine and the material domain is not SURFACE, it
+        // turns on the UBO batching. Otherwise, it turns off the UBO batching.
+        DEFAULT,
+        NO_UBO_BATCHING,
+        UBO_BATCHING
+    };
+
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
             const FMaterialInstance* other, const char* name) noexcept;
 
-    FMaterialInstance* createMaterialInstance(const FMaterial* material,
-                                              const char* name) noexcept;
+    FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name,
+            UboBatchingMode batchingMode) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
@@ -446,6 +465,7 @@ public:
 
     void prepare();
     void gc();
+    void submitFrame();
 
     using ShaderContent = utils::FixedCapacityVector<uint8_t>;
 
@@ -650,6 +670,7 @@ private:
 
     uint32_t mFlushCounter = 0;
 
+    UboManager* mUboManager = nullptr;
     RootArenaScope::Arena mPerRenderPassArena;
     HeapAllocatorArena mHeapAllocator;
 
@@ -758,6 +779,9 @@ public:
                         CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
+            struct {
+                bool disable_gpu_frame_complete_metric = false;
+            } frame_info;
         } engine;
         struct {
             struct {
@@ -829,6 +853,9 @@ public:
             { "material.enable_material_instance_uniform_batching",
               "Make all MaterialInstances share a common large uniform buffer and use sub-allocations within it.",
               &features.material.enable_material_instance_uniform_batching, false },
+            { "engine.frame_info.disable_gpu_complete_metric",
+              "Disable Renderer::FrameInfo::gpuFrameComplete reporting",
+              &features.engine.frame_info.disable_gpu_frame_complete_metric, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

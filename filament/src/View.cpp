@@ -178,6 +178,10 @@ View::DynamicResolutionOptions View::getDynamicResolutionOptions() const noexcep
     return downcast(this)->getDynamicResolutionOptions();
 }
 
+math::float2 View::getLastDynamicResolutionScale() const noexcept {
+    return downcast(this)->getLastDynamicResolutionScale();
+}
+
 void View::setRenderQuality(const RenderQuality& renderQuality) noexcept {
     downcast(this)->setRenderQuality(renderQuality);
 }

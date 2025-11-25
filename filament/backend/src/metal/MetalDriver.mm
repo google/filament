@@ -254,6 +254,18 @@ MetalDriver::~MetalDriver() noexcept {
 void MetalDriver::tick(int) {
     executeTickOps();
     executeDeferredOps();
+
+    // Notify platform of GPU errors.
+    auto& platform = mPlatform;
+    if (UTILS_UNLIKELY(!mContext->commandBufferErrors.isEmpty())) {
+        mContext->commandBufferErrors.flush([&platform](NSError* error) {
+            if (UTILS_VERY_UNLIKELY(!error)) {
+                return;
+            }
+            const utils::CString errorString(error.localizedDescription.UTF8String);
+            platform.debugUpdateStat("filament.metal.command_buffer_error", errorString);
+        });
+    }
 }
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -1039,10 +1051,17 @@ void MetalDriver::updateStreams(DriverApi* driver) {
 
 void MetalDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
-        auto* fence = handle_cast<MetalFence>(fh);
-        fence->cancel();
+        // note: it's invalid to call this during a fenceWait(fh) on another thread. For this
+        // reason there is no point signaling the waiters. There should be no waiters.
         destruct_handle<MetalFence>(fh);
     }
+}
+
+void MetalDriver::fenceCancel(FenceHandle const fh) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
+    auto* fence = handle_cast<MetalFence>(fh);
+    fence->cancel();
 }
 
 FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
@@ -1050,10 +1069,9 @@ FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
 }
 
 FenceStatus MetalDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
     auto* fence = handle_cast<MetalFence>(fh);
-    if (!fence) {
-        return FenceStatus::ERROR;
-    }
     return fence->wait(timeout);
 }
 

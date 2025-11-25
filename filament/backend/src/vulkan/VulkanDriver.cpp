@@ -45,6 +45,7 @@
 #endif
 
 #include <chrono>
+#include <mutex>
 
 using namespace bluevk;
 
@@ -230,7 +231,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
       mPipelineLayoutCache(mPlatform->getDevice()),
-      mPipelineCache(mPlatform->getDevice()),
+      mPipelineCache(mPlatform->getDevice(), mContext),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
       mBufferCache(mContext, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
@@ -920,18 +921,13 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
         }
     }
 
-#if defined(__ANDROID__)
-    // on Android, disable producer throttling
-    if (mProducerThrottling.isSupported()) {
-        mProducerThrottling.setProducerThrottlingEnabled(
-                static_cast<ANativeWindow*>(nativeWindow), false);
-    }
-#endif
-
     auto swapChain = resource_ptr<VulkanSwapChain>::make(&mResourceManager, sch, mPlatform,
             mContext, &mResourceManager, mAllocator, &mCommands, mStagePool, nativeWindow, flags);
     swapChain.inc();
     mResourceManager.associateHandle(sch.getId(), std::move(tag));
+
+    std::unique_lock<std::mutex> lock(mTiming.lock);
+    mTiming.nativeSwapchains.emplace(sch.getId(), swapChain->swapChain);
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
@@ -1106,6 +1102,9 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
         mCurrentSwapChain = {};
     }
     swapChain.dec();
+
+    std::unique_lock<std::mutex> lock(mTiming.lock);
+    mTiming.nativeSwapchains.erase(sch.getId());
 }
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
@@ -1168,9 +1167,19 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 }
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
+    if (fh) {
+        auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
+        // note: it's invalid to call this during a fenceWait(fh) on another thread. For this
+        // reason there is no point signaling the waiters. There should be no waiters.
+        fence.dec();
+    }
+}
+
+void VulkanDriver::fenceCancel(FenceHandle const fh) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
     fence->cancel();
-    fence.dec();
 }
 
 FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
@@ -1178,6 +1187,9 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
 }
 
 FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
+
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
 
     // we have to take into account that the STL's wait_for() actually works with
@@ -1783,12 +1795,15 @@ bool VulkanDriver::queryCompositorTiming(Handle<HwSwapChain> const swapChain,
     if (!swapChain) {
         return false;
     }
-    auto sc = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, swapChain);
-    if (!sc) {
-        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
-        return false;
+
+    HandleId const id = swapChain.getId();
+    std::unique_lock<std::mutex> lock(mTiming.lock);
+    auto& swapchains = mTiming.nativeSwapchains;
+    if (auto itr = swapchains.find(id); itr != swapchains.end()) {
+        lock.unlock();
+        return mPlatform->queryCompositorTiming(itr->second, outCompositorTiming);
     }
-    return sc->queryCompositorTiming(outCompositorTiming);
+    return false;
 }
 
 bool VulkanDriver::queryFrameTimestamps(Handle<HwSwapChain> const swapChain, uint64_t const frameId,
@@ -1797,12 +1812,14 @@ bool VulkanDriver::queryFrameTimestamps(Handle<HwSwapChain> const swapChain, uin
     if (!swapChain) {
         return false;
     }
-    auto sc = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, swapChain);
-    if (!sc) {
-        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
-        return false;
+    HandleId const id = swapChain.getId();
+    std::unique_lock<std::mutex> lock(mTiming.lock);
+    auto& swapchains = mTiming.nativeSwapchains;
+    if (auto itr = swapchains.find(id); itr != swapchains.end()) {
+        lock.unlock();
+        return mPlatform->queryFrameTimestamps(itr->second, frameId, outFrameTimestamps);
     }
-    return sc->queryFrameTimestamps(frameId, outFrameTimestamps);
+    return false;
 }
 
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {

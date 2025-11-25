@@ -1012,6 +1012,8 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     uint32_t const index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
                     assert_invariant(index < mCustomCommands.size());
                     pCustomCommands[index]();
+                    currentPipeline = {};
+                    currentPrimitiveHandle ={};
                     continue;
                 }
 
@@ -1069,26 +1071,34 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_MATERIAL] =
                             ma->getDescriptorSetLayout(info.materialVariant).getHandle();
 
-
-                    if (UTILS_UNLIKELY(ma->getMaterialDomain() == MaterialDomain::POST_PROCESS)) {
-                        // It is possible to get a post-process material here (even though it's
-                        // not technically a public API yet, it is used by the IBLPrefilterLibrary.
-                        // Ideally we would have a more formal compute API). In this case, we need
-                        // to set the post-process descriptor-set.
-                        engine.getPostProcessManager().bindPostProcessDescriptorSet(driver);
-                    } else {
-                        // If we have a ColorPassDescriptorSet we use it to bind the per-view
-                        // descriptor-set (ideally only if it changed). If we don't, it means
-                        // the descriptor-set is already bound and the layout we got from the
-                        // material above should match. This is the case for situations where we
-                        // have a known per-view descriptor-set layout, e.g.: shadow-maps, ssr and
-                        // structure passes.
-                        if (mColorPassDescriptorSet) {
+                    // If we have a ColorPassDescriptorSet we use it to bind the per-view
+                    // descriptor-set (ideally only if it changed).
+                    // If we don't, it means the descriptor-set is already bound and the layout we
+                    // got from the material above should match. This is the case for situations
+                    // where we have a known per-view descriptor-set layout,
+                    // e.g.: postfx, shadow-maps, ssr and structure passes.
+                    if (mColorPassDescriptorSet) {
+                        if (UTILS_UNLIKELY(ma->getMaterialDomain() == MaterialDomain::POST_PROCESS)) {
+                            // It is possible to get a post-process material here (even though it's
+                            // not technically a public API yet, it is used by the IBLPrefilterLibrary.
+                            // Ideally we would have a more formal compute API). In this case, we need
+                            // to set the post-process descriptor-set.
+                            engine.getPostProcessManager().bindPostProcessDescriptorSet(driver);
+                        } else {
                             // We have a ColorPassDescriptorSet, we need to go through it for binding
                             // the per-view descriptor-set because its layout can change based on the
                             // material.
                             mColorPassDescriptorSet->bind(driver, ma->getPerViewLayoutIndex());
                         }
+                    } else {
+                        // if we're here it means the per-view descriptor set is constant and
+                        // already set. This will be the case for postfx, ssr, structure and
+                        // shadow passes. All these passes use a static descriptor set layout
+                        // (albeit potentially different for each pass). In particular the
+                        // per-view UBO must be compatible for all material domains.
+                        // This is the case by construction for postfx, ssr. However, shadows
+                        // and structure have their own UBO, but it's content is (must be)
+                        // compatible with POST_PROCESS and COMPUTE materials.
                     }
 
                     // Each MaterialInstance has its own descriptor set. This binds it.

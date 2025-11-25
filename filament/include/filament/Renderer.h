@@ -107,13 +107,16 @@ public:
         time_point_ns presentDeadline;      //!< deadline for queuing a frame [ns]
         duration_ns displayPresentInterval; //!< display refresh rate [ns]
         duration_ns compositionToPresentLatency; //!< time between the start of composition and the expected present time [ns]
+        time_point_ns expectedPresentTime;  //!< system's expected presentation time since epoch [ns]
     };
 
     /**
      * Retrieve a history of frame timing information. The maximum frame history size is
      * given by getMaxFrameHistorySize().
+     * All or part of the history can be lost when using a different SwapChain in beginFrame().
      * @param historySize requested history size. The returned vector could be smaller.
      * @return A vector of FrameInfo.
+     * @see beginFrame()
      */
     utils::FixedCapacityVector<FrameInfo> getFrameInfoHistory(
             size_t historySize = 1) const noexcept;
@@ -325,6 +328,8 @@ public:
      *                                 or 0 if unknown. This value should be the timestamp of
      *                                 the last h/w vsync. It is expressed in the
      *                                 std::chrono::steady_clock time base.
+     *                                 On Android this should be the frame time received from
+     *                                 a Choreographer.
      * @param swapChain A pointer to the SwapChain instance to use.
      *
      * @return
@@ -336,6 +341,8 @@ public:
      *
      * @note
      * All calls to render() must happen *after* beginFrame().
+     * It is recommended to use the same swapChain for every call to beginFrame, failing to do
+     * so can result is losing all or part of the FrameInfo history.
      *
      * @see
      * endFrame()
