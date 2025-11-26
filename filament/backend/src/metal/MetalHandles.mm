@@ -1664,16 +1664,16 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
     return buffer.get();
 }
 
-MetalMemoryMappedBuffer::MetalMemoryMappedBuffer(HandleAllocatorMTL& handleAllocator, BufferObjectHandle boh, size_t offset, size_t size,
-    MapBufferAccessFlags access) noexcept : boh(boh), access(access) {
-    MetalBufferObject* bo = handleAllocator.handle_cast<MetalBufferObject*>(boh);
+MetalMemoryMappedBuffer::MetalMemoryMappedBuffer(MetalBufferObject* bo, size_t offset, size_t size,
+    MapBufferAccessFlags access) noexcept : access(access) {
     MetalBuffer* buffer = bo->getBuffer();
+    assert_invariant(buffer);
     id<MTLBuffer> mtlBuffer = buffer->getGpuBufferForDraw();
 
-    assert_invariant(bo);
     assert_invariant(offset + size <= bo->byteCount);
     assert_invariant(mtlBuffer.storageMode != MTLStorageModePrivate);
 
+    mtl.bo = bo;
     mtl.vaddr = static_cast<char*>(mtlBuffer.contents) + offset;
     mtl.size = size;
     mtl.offset = offset;
@@ -1681,11 +1681,9 @@ MetalMemoryMappedBuffer::MetalMemoryMappedBuffer(HandleAllocatorMTL& handleAlloc
 
 MetalMemoryMappedBuffer::~MetalMemoryMappedBuffer() = default;
 
-void MetalMemoryMappedBuffer::unmap(HandleAllocatorMTL& handleAllocator) {
+void MetalMemoryMappedBuffer::unmap() {
 #if !defined(FILAMENT_IOS) && defined(__x86_64__)
     // Managed memory requires didModifyRange to synchronize changes to the GPU. This is specific to Intel Macs.
-    MetalBufferObject* const bo = handleAllocator.handle_cast<MetalBufferObject*>(boh);
-    assert_invariant(bo);
     MetalBuffer* buffer = bo->getBuffer();
     id<MTLBuffer> mtlBuffer = buffer->getGpuBufferForDraw();
     if (mtlBuffer && mtlBuffer.storageMode == MTLStorageModeManaged) {

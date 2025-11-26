@@ -569,20 +569,20 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
 
 struct MetalMemoryMappedBuffer : public HwMemoryMappedBuffer {
-    BufferObjectHandle boh{};
     MapBufferAccessFlags access{};
     struct {
+        MetalBufferObject* bo;
         void* vaddr = nullptr;
         uint32_t size = 0;
         uint32_t offset = 0;
     } mtl;
 
-    MetalMemoryMappedBuffer(HandleAllocatorMTL& handleAllocator, BufferObjectHandle boh, size_t offset, size_t size,
+    MetalMemoryMappedBuffer(MetalBufferObject* bo, size_t offset, size_t size,
             MapBufferAccessFlags access) noexcept;
 
     ~MetalMemoryMappedBuffer();
 
-    void unmap(HandleAllocatorMTL& handleAllocator);
+    void unmap();
 
     void copy(MetalDriver& mtld, size_t offset, BufferDescriptor&& data) const;
 };

@@ -2275,7 +2275,10 @@ MemoryMappedBufferHandle MetalDriver::mapBufferS() noexcept {
 void MetalDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
         BufferObjectHandle boh, size_t offset,
         size_t size, MapBufferAccessFlags access, utils::ImmutableCString&& tag) {
-    construct_handle<MetalMemoryMappedBuffer>(mmbh, mHandleAllocator, boh, offset, size, access);
+    assert_invariant(boh);
+    MetalBufferObject* bo = mHandleAllocator.handle_cast<MetalBufferObject*>(boh);
+    assert_invariant(bo);
+    construct_handle<MetalMemoryMappedBuffer>(mmbh, bo, offset, size, access);
     mHandleAllocator.associateTagToHandle(mmbh.getId(), std::move(tag));
 }
 
@@ -2285,7 +2288,7 @@ void MetalDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
     }
 
     auto* mmb = handle_cast<MetalMemoryMappedBuffer>(mmbh);
-    mmb->unmap(mHandleAllocator);
+    mmb->unmap();
     destruct_handle<MetalMemoryMappedBuffer>(mmbh);
 }
 
