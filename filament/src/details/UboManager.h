@@ -65,7 +65,7 @@ public:
 
         // Creates a new fence to track a set of allocation IDs for the current frame.
         // This marks the beginning of GPU's usage of these resources.
-        void track(backend::DriverApi& driver, std::unordered_set<AllocationId>&& allocationIds);
+        void track(backend::DriverApi& driver, std::vector<AllocationId>&& allocationIds);
 
 
         // Checks all tracked fences and invokes a callback for resources associated with
@@ -80,7 +80,7 @@ public:
     private:
         // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
         using FenceAndAllocations =
-                std::pair<backend::Handle<backend::HwFence>, std::unordered_set<AllocationId>>;
+                std::pair<backend::Handle<backend::HwFence>, std::vector<AllocationId>>;
         std::vector<FenceAndAllocations> mFenceAllocationList;
     };
 
