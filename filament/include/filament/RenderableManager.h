@@ -166,6 +166,16 @@ public:
         };
 
         /**
+         * Type of morphing for a Renderable
+         */
+        enum class MorphType : uint8_t {
+            NONE = 0,
+            POSITION = 1,
+            TANGENT = 2,
+            CUSTOM = 4
+        };
+
+        /**
          * Creates a builder for renderable components.
          *
          * @param count the number of primitives that will be supplied to the builder

@@ -1,0 +1,37 @@
+material {
+    name : UvMorph,
+    requires : [uv0],
+    shadingModel : unlit,
+    culling: none,
+    parameters : [
+        {
+            type : sampler2d,
+            name : baseColor
+        },
+        {
+            type : sampler2dArray,
+            name : uv0_morph,
+            shader: vertex
+        }
+    ]
+}
+
+
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
+            if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_MORPHING_CUSTOM_BIT) != 0) {
+                // Call morphData2 with the sampler that we declared and bound manually.
+                morphData2(material.uv0, materialParams_uv0_morph);
+            }
+        #endif
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_baseColor, getUV0());
+    }
+}
