@@ -63,6 +63,7 @@ class FRenderableManager : public RenderableManager {
 public:
     using Instance = Instance;
     using GeometryType = Builder::GeometryType;
+    using MorphType = Builder::MorphType;
 
     // TODO: consider renaming, this pertains to material variants, not strictly visibility.
     struct Visibility {
@@ -73,14 +74,14 @@ public:
 
         bool culling                    : 1;
         bool skinning                   : 1;
-        bool morphing                   : 1;
+        MorphType morphType             : 3;
         bool screenSpaceContactShadows  : 1;
         bool reversedWindingOrder       : 1;
         bool fog                        : 1;
         GeometryType geometryType       : 2;
     };
 
-    static_assert(sizeof(Visibility) == sizeof(uint16_t), "Visibility should be 16 bits");
+    static_assert(sizeof(Visibility) * 8 == 24, "Visibility should be 24 bits");
 
     explicit FRenderableManager(FEngine& engine) noexcept;
     ~FRenderableManager();
@@ -150,7 +151,7 @@ public:
     void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset);
 
-    inline void setMorphing(Instance instance, bool enable);
+    inline void setMorphing(Instance instance, MorphType type);
     void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
     void setMorphTargetBufferOffsetAt(Instance instance, uint8_t level, size_t primitiveIndex,
             size_t offset);
@@ -403,14 +404,15 @@ void FRenderableManager::setSkinning(Instance const instance, bool const enable)
     }
 }
 
-void FRenderableManager::setMorphing(Instance const instance, bool const enable) {
+void FRenderableManager::setMorphing(Instance const instance, Builder::MorphType const type) {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
 
-        FILAMENT_CHECK_PRECONDITION(visibility.geometryType != GeometryType::STATIC || !enable)
+        FILAMENT_CHECK_PRECONDITION(
+                visibility.geometryType != GeometryType::STATIC || type != MorphType::NONE)
                 << "Morphing can't be used with STATIC geometry";
 
-        visibility.morphing = enable;
+        visibility.morphType = type;
     }
 }
 

@@ -390,7 +390,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
 
         uboData.flagsChannels = PerRenderableData::packFlagsChannels(
                 visibility.skinning,
-                visibility.morphing,
+                static_cast<uint8_t>(visibility.morphType),
                 visibility.screenSpaceContactShadows,
                 sceneData.elementAt<INSTANCES>(i).buffer != nullptr,
                 sceneData.elementAt<CHANNELS>(i));
