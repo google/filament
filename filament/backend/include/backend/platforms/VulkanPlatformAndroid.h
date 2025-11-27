@@ -17,11 +17,12 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H
 #define TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H
 
-#include "AndroidFrameCallback.h"
 #include "AndroidNdk.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
+
+#include <utils/compiler.h>
 
 #include <android/hardware_buffer.h>
 
@@ -91,6 +92,8 @@ protected:
     VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept override;
 
 private:
+    struct AndroidDetails;
+
     struct ExternalImageVulkanAndroid : public ExternalImage {
         AHardwareBuffer* aHardwareBuffer = nullptr;
         bool sRGB = false;
@@ -99,7 +102,7 @@ private:
         ~ExternalImageVulkanAndroid() override;
     };
 
-    AndroidFrameCallback mAndroidFrameCallback;
+    AndroidDetails& mAndroidDetails;
     int mOSVersion{};
 };
 

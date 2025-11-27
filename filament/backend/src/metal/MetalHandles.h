@@ -569,14 +569,22 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
 
 struct MetalMemoryMappedBuffer : public HwMemoryMappedBuffer {
-    MetalMemoryMappedBuffer(BufferObjectHandle boh, size_t const offset,
-            size_t const size, MapBufferAccessFlags const access)
-        : boh(boh), access(access), size(size), offset(offset) {
-    }
-    BufferObjectHandle boh{};
     MapBufferAccessFlags access{};
-    uint32_t size = 0;
-    uint32_t offset = 0;
+    struct {
+        MetalBufferObject* bo;
+        void* vaddr = nullptr;
+        uint32_t size = 0;
+        uint32_t offset = 0;
+    } mtl;
+
+    MetalMemoryMappedBuffer(MetalBufferObject* bo, size_t offset, size_t size,
+            MapBufferAccessFlags access) noexcept;
+
+    ~MetalMemoryMappedBuffer();
+
+    void unmap();
+
+    void copy(MetalDriver& mtld, size_t offset, BufferDescriptor&& data) const;
 };
 
 } // namespace backend

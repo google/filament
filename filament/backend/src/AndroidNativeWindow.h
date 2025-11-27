@@ -32,6 +32,7 @@ struct NativeWindow {
     // is valid query enum value
     enum {
         IS_VALID                = 17,
+        FRAME_TIMESTAMPS_SUPPORTS_PRESENT = 18,
         GET_NEXT_FRAME_ID       = 24,
         ENABLE_FRAME_TIMESTAMPS = 25,
         GET_COMPOSITOR_TIMING   = 26,
@@ -51,6 +52,7 @@ struct NativeWindow {
 
     static int getNextFrameId(ANativeWindow* anw, uint64_t* frameId);
     static int enableFrameTimestamps(ANativeWindow* anw, bool enable);
+    static int frameTimestampsSupportsPresent(ANativeWindow* anw, bool* outSupportsPresent);
     static int getCompositorTiming(ANativeWindow* anw,
             int64_t* compositeDeadline, int64_t* compositeInterval,
             int64_t* compositeToPresentLatency);
