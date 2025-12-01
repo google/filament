@@ -12,15 +12,13 @@ set(TARGET matlang)
 set(HDRS
         src/matc/CommandlineConfig.h
         src/matc/Compiler.h
-        src/matc/DirIncluder.h
         src/matc/MaterialCompiler.h
         )
 
 set(SRCS
         src/matc/Compiler.cpp
-        src/matc/MaterialCompiler.cpp
         src/matc/CommandlineConfig.cpp
-        src/matc/DirIncluder.cpp
+        src/matc/MaterialCompiler.cpp
         )
 
 # ==================================================================================================
@@ -65,15 +63,3 @@ set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 # ==================================================================================================
 install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 
-# ==================================================================================================
-# Tests
-# ==================================================================================================
-project(test_matc)
-set(TARGET test_matc)
-set(SRCS tests/test_includer.cpp)
-
-add_executable(${TARGET} ${SRCS})
-
-target_link_libraries(${TARGET} matlang gtest)
-
-set_target_properties(test_matc PROPERTIES FOLDER Tests)

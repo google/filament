@@ -1395,10 +1395,6 @@ void MetalFence::onSignal(MetalFenceSignalBlock block) {
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
     if (@available(iOS 12, *)) {
         using ns = std::chrono::nanoseconds;
-
-        // keep a reference on the stack so our state cannot be destroyed while we wait
-        auto state = this->state;
-
         std::unique_lock<std::mutex> guard(state->mutex);
         while (state->status == FenceStatus::TIMEOUT_EXPIRED) {
             if (timeoutNs == FENCE_WAIT_FOR_EVER) {
@@ -1666,6 +1662,45 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
     }
 
     return buffer.get();
+}
+
+MetalMemoryMappedBuffer::MetalMemoryMappedBuffer(MetalBufferObject* bo, size_t offset, size_t size,
+    MapBufferAccessFlags access) noexcept : access(access) {
+    MetalBuffer* buffer = bo->getBuffer();
+    assert_invariant(buffer);
+    id<MTLBuffer> mtlBuffer = buffer->getGpuBufferForDraw();
+
+    assert_invariant(offset + size <= bo->byteCount);
+    assert_invariant(mtlBuffer.storageMode != MTLStorageModePrivate);
+
+    mtl.bo = bo;
+    mtl.vaddr = static_cast<char*>(mtlBuffer.contents) + offset;
+    mtl.size = size;
+    mtl.offset = offset;
+}
+
+MetalMemoryMappedBuffer::~MetalMemoryMappedBuffer() = default;
+
+void MetalMemoryMappedBuffer::unmap() {
+#if !defined(FILAMENT_IOS) && defined(__x86_64__)
+    // Managed memory requires didModifyRange to synchronize changes to the GPU. This is specific to Intel Macs.
+    MetalBuffer* buffer = mtl.bo->getBuffer();
+    id<MTLBuffer> mtlBuffer = buffer->getGpuBufferForDraw();
+    if (mtlBuffer && mtlBuffer.storageMode == MTLStorageModeManaged) {
+        [mtlBuffer didModifyRange:NSMakeRange(mtl.offset, mtl.size)];
+    }
+#endif
+    // Shared memory on UMA systems is coherent; no explicit synchronization is required.
+}
+
+void MetalMemoryMappedBuffer::copy(MetalDriver& mtld, size_t offset, BufferDescriptor&& data) const {
+    assert_invariant(any(access & MapBufferAccessFlags::WRITE_BIT));
+    assert_invariant(offset + data.size <= mtl.size);
+    assert_invariant(mtl.vaddr);
+
+    memcpy(static_cast<char*>(mtl.vaddr) + offset, data.buffer, data.size);
+
+    mtld.scheduleDestroy(std::move(data));
 }
 
 } // namespace backend

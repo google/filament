@@ -148,6 +148,15 @@ Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jcla
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nGetLastDynamicResolutionScale(JNIEnv *env, jclass, jlong nativeView, jfloatArray out_) {
+    jfloat* out = env->GetFloatArrayElements(out_, nullptr);
+    View *view = (View *) nativeView;
+    math::float2 result = view->getLastDynamicResolutionScale();
+    std::copy_n(result.v, 2, out);
+    env->ReleaseFloatArrayElements(out_, out, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetShadowType(JNIEnv*, jclass, jlong nativeView, jint type) {
     View* view = (View*) nativeView;
     view->setShadowType((View::ShadowType) type);

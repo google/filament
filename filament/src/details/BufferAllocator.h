@@ -90,24 +90,32 @@ public:
     [[nodiscard]] allocation_size_t getTotalSize() const noexcept;
 
     // Query the allocation offset by AllocationId.
-    allocation_size_t getAllocationOffset(AllocationId id) const;
+    [[nodiscard]] allocation_size_t getAllocationOffset(AllocationId id) const;
+
+    [[nodiscard]] bool isLockedByGpu(AllocationId id) const;
+
+    [[nodiscard]] allocation_size_t alignUp(allocation_size_t size) const noexcept;
+
+    [[nodiscard]] allocation_size_t getAllocationSize(AllocationId id) const;
+
+    [[nodiscard]] static bool isValid(AllocationId id);
 
 private:
     [[nodiscard]] AllocationId calculateIdByOffset(allocation_size_t offset) const;
-    [[nodiscard]] allocation_size_t alignUp(allocation_size_t size) const noexcept;
 
     // Having an internal node type holding the base slot node and additional information.
     struct InternalSlotNode {
-        Slot mSlot;
-        std::list<InternalSlotNode>::iterator mSlotPoolIterator;
-        std::multimap<allocation_size_t, InternalSlotNode*>::iterator mFreeListIterator;
-        std::unordered_map<allocation_size_t, InternalSlotNode*>::iterator mOffsetMapIterator;
+        Slot slot;
+        std::list<InternalSlotNode>::iterator slotPoolIterator;
+        std::multimap<allocation_size_t, InternalSlotNode*>::iterator freeListIterator;
+        std::unordered_map<allocation_size_t, InternalSlotNode*>::iterator offsetMapIterator;
     };
 
     [[nodiscard]] InternalSlotNode* getNodeById(AllocationId id) const noexcept;
 
+    bool mHasPendingFrees = false;
     allocation_size_t mTotalSize;
-    const allocation_size_t mSlotSize; // Size of a single slot in bytes.
+    const allocation_size_t mSlotSize; // Size of a single slot in bytes
     std::list<InternalSlotNode> mSlotPool; // All slots, including both allocated and freed
     std::multimap</*slot size*/allocation_size_t, InternalSlotNode*> mFreeList;
     std::unordered_map</*slot offset*/allocation_size_t, InternalSlotNode*> mOffsetMap;

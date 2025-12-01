@@ -228,6 +228,10 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
+
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+        VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
+#endif
     };
     ExtensionSet exts;
     // Identify supported physical device extensions
@@ -865,6 +869,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     if (!mImpl->mSharedContext) {
         context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context.mPipelineCreationFeedbackSupported =
+                setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
     } else {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsSupported = scontext->debugUtilsSupported;
@@ -873,13 +879,16 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     // Check the availability of lazily allocated memory
     context.mLazilyAllocatedMemorySupported = false;
-    for (uint32_t i = 0, typeCount = context.mMemoryProperties.memoryTypeCount; i < typeCount;
-         ++i) {
-        VkMemoryType const type = context.mMemoryProperties.memoryTypes[i];
-        if (type.propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
-            context.mLazilyAllocatedMemorySupported = true;
-            assert_invariant(type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            break;
+    // RenderDoc doesn't support lazy allocated memory
+    if constexpr (!FVK_RENDERDOC_CAPTURE_MODE) {
+        for (uint32_t i = 0, typeCount = context.mMemoryProperties.memoryTypeCount; i < typeCount;
+                ++i) {
+            VkMemoryType const type = context.mMemoryProperties.memoryTypes[i];
+            if (type.propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
+                context.mLazilyAllocatedMemorySupported = true;
+                assert_invariant(type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                break;
+            }
         }
     }
 
@@ -970,31 +979,6 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     return swapchain;
 }
 
-bool VulkanPlatform::isCompositorTimingSupported() const noexcept {
-#ifdef __ANDROID__
-    return true;
-#else
-    return Platform::isCompositorTimingSupported();
-#endif
-}
-
-bool VulkanPlatform::queryCompositorTiming(SwapChain const* swapchain,
-        CompositorTiming* outCompositorTiming) const noexcept {
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
-}
-
-bool VulkanPlatform::setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept {
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->setPresentFrameId(frameId);
-}
-
-bool VulkanPlatform::queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
-        FrameTimestamps* outFrameTimestamps) const noexcept {
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
-}
-
 Platform::Sync* VulkanPlatform::createSync(VkFence fence,
         std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
     return new VulkanSync{.fence = fence, .fenceStatus = fenceStatus};
@@ -1047,13 +1031,8 @@ VkExternalFenceHandleTypeFlagBits VulkanPlatform::getFenceExportFlags() const no
     return static_cast<VkExternalFenceHandleTypeFlagBits>(0);
 }
 
-ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() const {
-    return getSwapchainInstanceExtensionsImpl();
+bool VulkanPlatform::isTransientAttachmentSupported() const noexcept {
+    return mImpl->mContext.isLazilyAllocatedMemorySupported();
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
-        VkInstance instance, uint64_t flags) const noexcept {
-    return createVkSurfaceKHRImpl(nativeWindow, instance, flags);
-}
-
-}// namespace filament::backend
+} // namespace filament::backend

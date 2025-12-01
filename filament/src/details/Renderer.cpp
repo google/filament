@@ -93,7 +93,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(),
         mRenderTargetHandle(engine.getDefaultRenderTarget()),
-        mFrameInfoManager(engine.getDriverApi()),
+        mFrameInfoManager(engine, engine.getDriverApi()),
         mHdrTranslucent(TextureFormat::RGBA16F),
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),
@@ -452,6 +452,8 @@ void FRenderer::endFrame() {
     mFrameInfoManager.endFrame(driver);
     mFrameSkipper.submitFrame(driver);
 
+    engine.submitFrame();
+
     driver.endFrame(mFrameId);
 
     // gives the backend a chance to execute periodic tasks
@@ -586,6 +588,8 @@ void FRenderer::renderStandaloneView(FView const* view) {
         // the command buffer; we do this before driver.endFrame() to mimic what would
         // happen with Renderer::beginFrame/endFrame.
         renderInternal(view, true);
+
+        engine.submitFrame();
 
         driver.endFrame(mFrameId);
 

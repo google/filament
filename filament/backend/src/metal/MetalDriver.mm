@@ -254,6 +254,18 @@ MetalDriver::~MetalDriver() noexcept {
 void MetalDriver::tick(int) {
     executeTickOps();
     executeDeferredOps();
+
+    // Notify platform of GPU errors.
+    auto& platform = mPlatform;
+    if (UTILS_UNLIKELY(!mContext->commandBufferErrors.isEmpty())) {
+        mContext->commandBufferErrors.flush([&platform](NSError* error) {
+            if (UTILS_VERY_UNLIKELY(!error)) {
+                return;
+            }
+            const utils::CString errorString(error.localizedDescription.UTF8String);
+            platform.debugUpdateStat("filament.metal.command_buffer_error", errorString);
+        });
+    }
 }
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -1039,10 +1051,17 @@ void MetalDriver::updateStreams(DriverApi* driver) {
 
 void MetalDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
-        auto* fence = handle_cast<MetalFence>(fh);
-        fence->cancel();
+        // note: it's invalid to call this during a fenceWait(fh) on another thread. For this
+        // reason there is no point signaling the waiters. There should be no waiters.
         destruct_handle<MetalFence>(fh);
     }
+}
+
+void MetalDriver::fenceCancel(FenceHandle const fh) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
+    auto* fence = handle_cast<MetalFence>(fh);
+    fence->cancel();
 }
 
 FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
@@ -1050,10 +1069,9 @@ FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
 }
 
 FenceStatus MetalDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
     auto* fence = handle_cast<MetalFence>(fh);
-    if (!fence) {
-        return FenceStatus::ERROR;
-    }
     return fence->wait(timeout);
 }
 
@@ -2257,7 +2275,10 @@ MemoryMappedBufferHandle MetalDriver::mapBufferS() noexcept {
 void MetalDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
         BufferObjectHandle boh, size_t offset,
         size_t size, MapBufferAccessFlags access, utils::ImmutableCString&& tag) {
-    construct_handle<MetalMemoryMappedBuffer>(mmbh, boh, offset, size, access);
+    assert_invariant(boh);
+    MetalBufferObject* bo = mHandleAllocator.handle_cast<MetalBufferObject*>(boh);
+    assert_invariant(bo);
+    construct_handle<MetalMemoryMappedBuffer>(mmbh, bo, offset, size, access);
     mHandleAllocator.associateTagToHandle(mmbh.getId(), std::move(tag));
 }
 
@@ -2265,21 +2286,16 @@ void MetalDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
     if (UTILS_UNLIKELY(!mmbh)) {
         return;
     }
+
+    auto* mmb = handle_cast<MetalMemoryMappedBuffer>(mmbh);
+    mmb->unmap();
     destruct_handle<MetalMemoryMappedBuffer>(mmbh);
 }
 
 void MetalDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
         BufferDescriptor&& data) {
-    auto mmb = handle_cast<MetalMemoryMappedBuffer>(mmbh);
-
-    assert_invariant(any(mmb->access & MapBufferAccessFlags::WRITE_BIT));
-    assert_invariant(offset + data.size <= mmb->size);
-
-    // TODO: this isa zero-effort implementation of copyToMemoryMappedBuffer(), where we just
-    //       call updateBufferObject(). This could be a fallback implementation for when
-    //       shared memory is not available.
-    //       On UMA systems, this should just be a memcpy into the memory-mapped buffer.
-    updateBufferObject(mmb->boh, std::move(data), mmb->offset + offset);
+    auto* mmb = handle_cast<MetalMemoryMappedBuffer>(mmbh);
+    mmb->copy(*this, offset, std::move(data));
 }
 
 // explicit instantiation of the Dispatcher

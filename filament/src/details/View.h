@@ -338,6 +338,10 @@ public:
         return mDynamicResolution;
     }
 
+    math::float2 getLastDynamicResolutionScale() const noexcept {
+        return mScale;
+    }
+
     void setRenderQuality(RenderQuality const& renderQuality) noexcept {
         mRenderQuality = renderQuality;
     }

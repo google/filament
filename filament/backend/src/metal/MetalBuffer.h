@@ -165,7 +165,7 @@ public:
          size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
-    [[nodiscard]] bool wasAllocationSuccessful() const noexcept { return mBuffer || mCpuBuffer; }
+    [[nodiscard]] bool wasAllocationSuccessful() const noexcept { return mBuffer; }
 
     MetalBuffer(const MetalBuffer& rhs) = delete;
     MetalBuffer& operator=(const MetalBuffer& rhs) = delete;
@@ -185,13 +185,11 @@ public:
      * Denotes that this buffer is used for a draw call ensuring that its allocation remains valid
      * until the end of the current frame.
      *
-     * @return The MTLBuffer representing the current state of the buffer to bind, or nil if there
-     * is no device allocation.
+     * @return The MTLBuffer representing the current state of the buffer to bind, it never returns
+     * nil.
      *
      */
     id<MTLBuffer> getGpuBufferForDraw() noexcept;
-
-    void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
     void setLabel(const utils::ImmutableCString& label) {
 #if FILAMENT_METAL_DEBUG_LABELS
@@ -235,7 +233,6 @@ private:
     UploadStrategy mUploadStrategy;
     TrackedMetalBuffer mBuffer;
     size_t mBufferSize = 0;
-    void* mCpuBuffer = nullptr;
     MetalContext& mContext;
 };
 

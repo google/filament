@@ -77,46 +77,41 @@ struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     VulkanFence() {}
 
     void setFence(std::shared_ptr<VulkanCmdFence> fence) {
-        std::lock_guard const lock(mState->lock);
-        mState->sharedFence = std::move(fence);
-        mState->cond.notify_all();
+        std::lock_guard const l(lock);
+        sharedFence = std::move(fence);
+        cond.notify_all();
     }
 
     std::shared_ptr<VulkanCmdFence>& getSharedFence() {
-        std::lock_guard const lock(mState->lock);
-        return mState->sharedFence;
+        std::lock_guard const l(lock);
+        return sharedFence;
     }
 
     std::pair<std::shared_ptr<VulkanCmdFence>, bool>
             wait(std::chrono::steady_clock::time_point const until) {
         // hold a reference so that our state doesn't disappear while we wait
-        std::shared_ptr state{ mState };
-        std::unique_lock lock(state->lock);
-        state->cond.wait_until(lock, until, [&state] {
-            return bool(state->sharedFence) || state->canceled;
+        std::unique_lock l(lock);
+        cond.wait_until(l, until, [this] {
+            return bool(sharedFence) || canceled;
         });
         // here mSharedFence will be null if we timed out
-        return { state->sharedFence, state->canceled };
+        return { sharedFence, canceled };
     }
 
     void cancel() const {
-        std::shared_ptr const state{ mState };
-        std::unique_lock const lock(state->lock);
-        if (state->sharedFence) {
-            state->sharedFence->cancel();
+        std::lock_guard const l(lock);
+        if (sharedFence) {
+            sharedFence->cancel();
         }
-        state->canceled = true;
-        state->cond.notify_all();
+        canceled = true;
+        cond.notify_all();
     }
 
 private:
-    struct State {
-        std::mutex lock;
-        std::condition_variable cond;
-        bool canceled = false;
-        std::shared_ptr<VulkanCmdFence> sharedFence;
-    };
-    std::shared_ptr<State> mState{ std::make_shared<State>() };
+    mutable std::mutex lock;
+    mutable std::condition_variable cond;
+    mutable bool canceled = false;
+    std::shared_ptr<VulkanCmdFence> sharedFence;
 };
 
 struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
@@ -138,12 +133,12 @@ struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
           mStoppingQueryIndex(stoppingIndex) {}
 
     void setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {
-        std::unique_lock const lock(mFenceMutex);
+        std::lock_guard const lock(mFenceMutex);
         mFence = std::move(fence);
     }
 
     bool isCompleted() noexcept {
-        std::unique_lock const lock(mFenceMutex);
+        std::lock_guard const lock(mFenceMutex);
         // QueryValue is a synchronous call and might occur before beginTimerQuery has written
         // anything into the command buffer, which is an error according to the validation layer
         // that ships in the Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to

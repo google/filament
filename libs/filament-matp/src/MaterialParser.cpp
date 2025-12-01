@@ -16,6 +16,8 @@
 
 #include <filament-matp/MaterialParser.h>
 
+#include "DirIncluder.h"
+#include "Includes.h"
 #include "JsonishLexer.h"
 #include "JsonishParser.h"
 #include "MaterialLexeme.h"
@@ -358,7 +360,6 @@ utils::Status MaterialParser::parseMaterial(const char* buffer, size_t size,
         }
     }
 
-
     std::string identifier;
     for (auto lexeme : lexemes) {
         if (lexeme.getType() == MaterialType::IDENTIFIER) {
@@ -392,6 +393,35 @@ utils::Status MaterialParser::processMaterialParameters(filamat::MaterialBuilder
         }
     }
     return status;
+}
+
+std::pair<utils::Status, utils::CString> MaterialParser::resolveIncludes(
+        const std::unique_ptr<const char[]>& buffer, ssize_t size,
+        const utils::Path& materialFilePath,
+        bool insertLineDirectives, bool insertLineDirectiveCheck) {
+
+    ResolveOptions const options {
+        .insertLineDirectives = insertLineDirectives,
+        .insertLineDirectiveCheck = insertLineDirectiveCheck
+    };
+
+    // Inline material (i.e. resolve #include directives)
+    DirIncluder includer;
+    includer.setIncludeDirectory(materialFilePath.getParent());
+    utils::CString fileName = utils::CString(materialFilePath.getName().c_str());
+
+    // This is both the source and the result.
+    // This will be mutated by the below `resolveIncludesRecursively` call.
+    IncludeResult result {
+        .includeName = fileName,
+        .text = utils::CString(buffer.get(), size),
+        .name = CString("")
+    };
+
+    utils::Status resolveStatus =
+            matp::resolveIncludesRecursively(result, std::move(includer), options);
+
+    return { resolveStatus, result.text };
 }
 
 utils::Status MaterialParser::processTemplateSubstitutions(
