@@ -98,7 +98,7 @@ using namespace filaflat;
 namespace {
 
 backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
-    return {
+    Platform::DriverConfig driverConfig {
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
         .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
@@ -116,7 +116,15 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
+        .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?
+                instance->getConfig().asynchronousMode : AsynchronousMode::NONE,
     };
+
+    FILAMENT_CHECK_PRECONDITION(
+            UTILS_HAS_THREADING || driverConfig.asynchronousMode != AsynchronousMode::THREAD)
+            << "Invalid driver config: thread not supported";
+
+    return driverConfig;
 }
 
 } // anonymous
@@ -1501,6 +1509,19 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     FILAMENT_CHECK_PRECONDITION(mActiveFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1)
             << "Cannot adjust feature level beyond 0 at runtime";
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
+}
+
+AsynchronousMode FEngine::isAsynchronousOperationSupported(AsynchronousMode mode) const noexcept {
+    switch (mode) {
+        case AsynchronousMode::NONE:
+            PANIC_PRECONDITION("Invalid argument");
+        case AsynchronousMode::THREAD_PREFERRED:
+            return UTILS_HAS_THREADING ? AsynchronousMode::THREAD : AsynchronousMode::AMORTIZATION;
+        case AsynchronousMode::THREAD:
+            return UTILS_HAS_THREADING ? AsynchronousMode::THREAD : AsynchronousMode::NONE;
+        case AsynchronousMode::AMORTIZATION:
+            return AsynchronousMode::AMORTIZATION;
+    }
 }
 
 #if defined(__EMSCRIPTEN__)

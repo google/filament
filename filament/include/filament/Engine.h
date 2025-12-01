@@ -192,6 +192,7 @@ public:
     using StereoscopicType = backend::StereoscopicType;
     using Driver = backend::Driver;
     using GpuContextPriority = backend::Platform::GpuContextPriority;
+    using AsynchronousMode = backend::AsynchronousMode;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -428,6 +429,11 @@ public:
          * initial memory usage.
          */
         uint32_t sharedUboInitialSizeInBytes = 256 * 64;
+
+        /**
+         * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
+         */
+        AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
     };
 
 
@@ -741,6 +747,14 @@ public:
      * @see View::setStereoscopicOptions
      */
     bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept;
+
+    /**
+     * Queries the device and platform for support of asynchronous operation.
+     *
+     * @param mode The asynchronous mode that the caller wants to check whether to support.
+     * @return The mode the engine currently supports. Returns NONE if none of them is supported.
+     */
+    AsynchronousMode isAsynchronousOperationSupported(AsynchronousMode mode) const noexcept;
 
     /**
      * Retrieves the configuration settings of this Engine.

@@ -255,6 +255,34 @@ public:
         REALTIME,
     };
 
+    /**
+     * Defines how asynchronous operations are handled by the engine.
+     */
+    enum class AsynchronousMode : uint8_t {
+        /**
+         * Asynchronous operations are disabled. This is the default.
+         */
+        NONE,
+
+        /**
+         * Attempts to use a dedicated worker thread for asynchronous tasks. If threading is not
+         * supported by the platform, it automatically falls back to using an amortization strategy.
+         */
+        THREAD_PREFERRED,
+
+        /**
+         * Mandates the use of a dedicated worker thread for asynchronous tasks. If the platform
+         * does not support threads, engine initialization will fail.
+         */
+        THREAD,
+
+        /**
+         * Uses an amortization strategy, processing a small number of asynchronous tasks during
+         * each engine update cycle.
+         */
+        AMORTIZATION,
+    };
+
     struct DriverConfig {
         /**
          * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
@@ -324,6 +352,11 @@ public:
          *      - VulkanPlatform
          */
         bool vulkanEnableStagingBufferBypass = false;
+
+        /**
+         * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
+         */
+        AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
     };
 
     Platform() noexcept;
