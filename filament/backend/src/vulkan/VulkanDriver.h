@@ -34,6 +34,7 @@
 #include "vulkan/VulkanDescriptorSetCache.h"
 #include "vulkan/VulkanDescriptorSetLayoutCache.h"
 #include "vulkan/VulkanExternalImageManager.h"
+#include "vulkan/VulkanStreamedImageManager.h"
 #include "vulkan/VulkanPipelineLayoutCache.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
@@ -157,6 +158,12 @@ private:
     VulkanDescriptorSetCache mDescriptorSetCache;
     VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;
+    VulkanStreamedImageManager mStreamedImageManager;
+
+    // Stream transforms
+    std::unordered_map<VulkanBufferObject*, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
+    math::mat3f getStreamTransformMatrix(Handle<HwStream> sh);
+
 
     // This maps a VulkanSwapchain to a native swapchain. VulkanSwapchain should have a copy of the
     // Platform::Swapchain pointer, but queryFrameTimestamps() and queryCompositorTiming() are
@@ -202,6 +209,10 @@ private:
     bool const mIsSRGBSwapChainSupported;
     bool const mIsMSAASwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
+
+    // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the
+    // data to process it at call time. So we store it and process it during updateStreams.
+    std::vector<resource_ptr<VulkanStream>> mStreamsWithPendingAcquiredImage;
 };
 
 } // namespace filament::backend
