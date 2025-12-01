@@ -28,7 +28,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 67;
+static constexpr size_t MATERIAL_VERSION = 68;
 
 /**
  * Supported shading models
