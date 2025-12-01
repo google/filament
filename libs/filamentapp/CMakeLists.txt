@@ -38,6 +38,7 @@ set(SRCS
         src/MeshAssimp.cpp
         src/Sphere.cpp
         src/VulkanPlatformHelper.cpp
+        src/KeyInputConversion.h
 )
 
 set(LIBS

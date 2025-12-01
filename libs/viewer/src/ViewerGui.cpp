@@ -41,6 +41,36 @@ using namespace filament::math;
 namespace filament {
 namespace viewer {
 
+namespace {
+
+ImGuiKey convertKey(int keycode) {
+
+    // The following table uses normal ANSI codes, which is consistent with the keyCode that
+    // comes from a web "keydown" event.
+    switch (keycode) {
+        case 9: return ImGuiKey_Tab;
+        case 37: return ImGuiKey_LeftArrow;
+        case 39: return ImGuiKey_RightArrow;
+        case 38: return ImGuiKey_UpArrow;
+        case 40: return ImGuiKey_DownArrow;
+        case 36: return ImGuiKey_Home;
+        case 35: return ImGuiKey_End;
+        case 46: return ImGuiKey_Delete;
+        case 8: return ImGuiKey_Backspace;
+        case 13: return ImGuiKey_Enter;
+        case 27: return ImGuiKey_Escape;
+        case 65: return ImGuiKey_A;
+        case 67: return ImGuiKey_C;
+        case 86: return ImGuiKey_V;
+        case 88: return ImGuiKey_X;
+        case 89: return ImGuiKey_Y;
+        case 90: return ImGuiKey_Z;
+        default: return ImGuiKey_None;
+    }
+}
+
+}
+
 mat4f fitIntoUnitCube(const Aabb& bounds, float zoffset) {
     float3 minpt = bounds.min;
     float3 maxpt = bounds.max;
@@ -563,27 +593,6 @@ void ViewerGui::renderUserInterface(float timeStepInSeconds, View* guiView, floa
         mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
 
         auto& io = ImGui::GetIO();
-
-        // The following table uses normal ANSI codes, which is consistent with the keyCode that
-        // comes from a web "keydown" event.
-        io.KeyMap[ImGuiKey_Tab] = 9;
-        io.KeyMap[ImGuiKey_LeftArrow] = 37;
-        io.KeyMap[ImGuiKey_RightArrow] = 39;
-        io.KeyMap[ImGuiKey_UpArrow] = 38;
-        io.KeyMap[ImGuiKey_DownArrow] = 40;
-        io.KeyMap[ImGuiKey_Home] = 36;
-        io.KeyMap[ImGuiKey_End] = 35;
-        io.KeyMap[ImGuiKey_Delete] = 46;
-        io.KeyMap[ImGuiKey_Backspace] = 8;
-        io.KeyMap[ImGuiKey_Enter] = 13;
-        io.KeyMap[ImGuiKey_Escape] = 27;
-        io.KeyMap[ImGuiKey_A] = 65;
-        io.KeyMap[ImGuiKey_C] = 67;
-        io.KeyMap[ImGuiKey_V] = 86;
-        io.KeyMap[ImGuiKey_X] = 88;
-        io.KeyMap[ImGuiKey_Y] = 89;
-        io.KeyMap[ImGuiKey_Z] = 90;
-
         // TODO: this is not the best way to handle high DPI in ImGui, but it is fine when using the
         // proggy font. Users need to refresh their window when dragging between displays with
         // different pixel ratios.
@@ -614,15 +623,23 @@ void ViewerGui::mouseEvent(float mouseX, float mouseY, bool mouseButton, float m
 }
 
 void ViewerGui::keyDownEvent(int keyCode) {
-    if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
-        ImGui::GetIO().KeysDown[keyCode] = true;
+    if (!mImGuiHelper) {
+        return;
     }
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddKeyEvent(
+            convertKey(keyCode),
+            true);
 }
 
 void ViewerGui::keyUpEvent(int keyCode) {
-    if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
-        ImGui::GetIO().KeysDown[keyCode] = false;
+    if (!mImGuiHelper) {
+        return;
     }
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddKeyEvent(
+            convertKey(keyCode),
+            false);
 }
 
 void ViewerGui::keyPressEvent(int charCode) {
