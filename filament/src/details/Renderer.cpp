@@ -296,12 +296,9 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     // WARNING: while doing this we can't access any component manager
     auto& js = engine.getJobSystem();
 
-    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+    js.runAndWait(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
 
     engine.flush();     // flush command stream
-
-    // make sure we're done with the gcs
-    js.waitAndRelease(job);
 }
 
 bool FRenderer::shouldRenderFrame() const noexcept {
@@ -472,12 +469,9 @@ void FRenderer::endFrame() {
     // WARNING: while doing this we can't access any component manager
     auto& js = engine.getJobSystem();
 
-    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+    js.runAndWait(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
 
     engine.flush();     // flush command stream
-
-    // make sure we're done with the gcs
-    js.waitAndRelease(job);
 }
 
 void FRenderer::readPixels(
