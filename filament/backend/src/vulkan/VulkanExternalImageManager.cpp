@@ -228,7 +228,8 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
 void VulkanExternalImageManager::addExternallySampledTexture(
        fvkmemory::resource_ptr<VulkanTexture> image,
         Platform::ExternalImageHandleRef platformHandleRef) {
-    // Clearer to pass VK_NULL_HANDLE
+    // By passing VK_NULL_HANDLE which is already there by default.
+    // We make it clear that all default images do NOT have a chroma conversion.
     mImages.push_back({ image, platformHandleRef, false, VK_NULL_HANDLE });
 }
 
