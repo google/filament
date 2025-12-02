@@ -121,7 +121,11 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
                 #if defined(FILAMENT_IOS)
                     options.languageVersion = MTLLanguageVersion2_0;
                 #else
-                    options.languageVersion = MTLLanguageVersion2_3;
+                    if (@available(macOS 11.0, *)) {
+                        options.languageVersion = MTLLanguageVersion2_3;
+                    } else {
+                        options.languageVersion = MTLLanguageVersion2_2;
+                    }
                 #endif
 
                 assert_invariant(source[source.size() - 1] == '\0');
