@@ -37,8 +37,11 @@ set(SRCS
         src/IcoSphere.cpp
         src/MeshAssimp.cpp
         src/Sphere.cpp
-        src/VulkanPlatformHelper.cpp
 )
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    list(APPEND SRCS src/VulkanPlatformHelper.cpp)
+endif()
 
 set(LIBS
         assimp
@@ -79,7 +82,11 @@ endif()
 
 if (WIN32)
     list(APPEND SRCS src/NativeWindowHelperWindows.cpp)
-    list(APPEND SRCS src/VulkanPlatformHelperWindows.cpp)
+
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/VulkanPlatformHelperWindows.cpp)
+    endif()
+
     list(APPEND LIBS sdl2main)
 endif()
 
