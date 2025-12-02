@@ -31,9 +31,6 @@ namespace filament::backend {
 
 namespace {
 
-using Bitmask = fvkutils::UniformBufferBitmask;
-static_assert(sizeof(Bitmask) * 8 == fvkutils::MAX_DESCRIPTOR_SET_BITMASK_BITS);
-
 template<typename T>
 void erasep(std::vector<T>& v, std::function<bool(T const&)> f) {
     auto newEnd = std::remove_if(v.begin(), v.end(), f);
@@ -48,31 +45,6 @@ ImageData& findImage(std::vector<ImageData>& images,
     });
     assert_invariant(itr != images.end());
     return *itr;
-}
-
-void copySet(VkDevice device, VkDescriptorSet srcSet, VkDescriptorSet dstSet, Bitmask bindings) {
-    // TODO: fix the size for better memory management
-    std::vector<VkCopyDescriptorSet> copies;
-    bindings.forEachSetBit([&](size_t index) {
-        copies.push_back({
-            .sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
-            .srcSet = srcSet,
-            .srcBinding = (uint32_t) index,
-            .dstSet = dstSet,
-            .dstBinding = (uint32_t) index,
-            .descriptorCount = 1,
-        });
-    });
-    vkUpdateDescriptorSets(device, 0, nullptr, copies.size(), copies.data());
-}
-
-Bitmask foldBitsInHalf(Bitmask bitset) {
-    Bitmask outBitset;
-    bitset.forEachSetBit([&](size_t index) {
-        constexpr size_t BITMASK_LOWER_BITS_LEN = sizeof(outBitset) * 4;
-        outBitset.set(index % BITMASK_LOWER_BITS_LEN);
-    });
-    return outBitset;
 }
 
 }// namespace
@@ -141,6 +113,9 @@ void VulkanExternalImageManager::updateSetAndLayout(
             continue;
         }
         auto& imageData = findImage(mImages, bindingInfo.image);
+        // For non YUV images (some ext images are NOT ext FMT)
+        // getVkSamplerYcbcrConversion(metadata) will return NULL, and image->conversion will be
+        // null
         updateImage(&imageData);
 
         auto samplerParams = bindingInfo.samplerParams;
@@ -172,38 +147,14 @@ void VulkanExternalImageManager::updateSetAndLayout(
     std::for_each(samplerAndBindings.begin(), samplerAndBindings.end(),
             [&](auto const& b) { outSamplers.push_back(std::get<1>(b)); });
 
-    VkDescriptorSetLayout const oldLayout = layout->getExternalSamplerVkLayout();
     VkDescriptorSetLayout const newLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
             actualExternalSamplers, outSamplers);
-
-    // Need to copy the set
-    VkDescriptorSet const oldSet = set->getExternalSamplerVkSet();
-    if (oldLayout != newLayout || oldSet == VK_NULL_HANDLE) {
-        // Build a new descriptor set from the new layout
-        VkDescriptorSet const newSet = mDescriptorSetCache->getVkSet(layout->count, newLayout);
-        auto const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
-        auto const samplers = layout->bitmask.sampler & (~actualExternalSamplers);
-
-        // Each bitmask denotes a binding index, and separated into two stages - vertex and buffer
-        // We fold the two stages into just the lower half of the bits to denote a combined set of
-        // bindings.
-        Bitmask const copyBindings = foldBitsInHalf(ubo | samplers);
-        VkDescriptorSet const srcSet = oldSet != VK_NULL_HANDLE ? oldSet : set->getVkSet();
-        copySet(mPlatform->getDevice(), srcSet, newSet, copyBindings);
-
-        set->setExternalSamplerVkSet(newSet,
-                [&descriptorSetCache = mDescriptorSetCache, layoutCount = layout->count, newLayout,
-                        newSet](VulkanDescriptorSet*) {
-                    descriptorSetCache->manualRecycle(layoutCount, newLayout, newSet);
-                });
-        if (oldLayout != newLayout) {
-            layout->setExternalSamplerVkLayout(newLayout);
-        }
-    }
-
+    layout->setExternalSamplerVkLayout(newLayout);
     // Update the external samplers in the set
     for (auto& [binding, sampler, image]: samplerAndBindings) {
-        mDescriptorSetCache->updateSamplerForExternalSamplerSet(set, binding, image);
+        // We cannot call updateSamplerForExternalSamplerSet because some samplers are non NULL
+        // (RGB) and we cannot do a combined update with a NULL sampler.
+        mDescriptorSetCache->updateSampler(set, binding, image, sampler, newLayout);
     }
 }
 
@@ -261,13 +212,25 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
         fvkmemory::resource_ptr<VulkanTexture> image, SamplerParams samplerParams) {
     // Should we do duplicate validation here?
     auto& imageData = findImage(mImages, image);
-    mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
+    auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
+            [&](SetBindingInfo const& binding) {
+                return (binding.set == set && binding.binding == bindingPoint);
+            });
+    if (itr == mSetBindings.end()) {
+        mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
+    } else {
+        // override the image data in the binding point
+        itr->image = image;
+        itr->samplerParams = samplerParams;
+    }
 }
 
 void VulkanExternalImageManager::addExternallySampledTexture(
        fvkmemory::resource_ptr<VulkanTexture> image,
         Platform::ExternalImageHandleRef platformHandleRef) {
-    mImages.push_back({ image, platformHandleRef, false });
+    // By passing VK_NULL_HANDLE which is already there by default.
+    // We make it clear that all default images do NOT have a chroma conversion.
+    mImages.push_back({ image, platformHandleRef, false, VK_NULL_HANDLE });
 }
 
 void VulkanExternalImageManager::removeExternallySampledTexture(

@@ -1684,7 +1684,7 @@ MetalMemoryMappedBuffer::~MetalMemoryMappedBuffer() = default;
 void MetalMemoryMappedBuffer::unmap() {
 #if !defined(FILAMENT_IOS) && defined(__x86_64__)
     // Managed memory requires didModifyRange to synchronize changes to the GPU. This is specific to Intel Macs.
-    MetalBuffer* buffer = bo->getBuffer();
+    MetalBuffer* buffer = mtl.bo->getBuffer();
     id<MTLBuffer> mtlBuffer = buffer->getGpuBufferForDraw();
     if (mtlBuffer && mtlBuffer.storageMode == MTLStorageModeManaged) {
         [mtlBuffer didModifyRange:NSMakeRange(mtl.offset, mtl.size)];

@@ -735,7 +735,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
         // - the nameVersion is out of date *and* we're on the protected context, in this case:
         //      - the name must be stale from a previous use of this context because we always
         //        destroy the protected context when we're done with it.
-        bool const recreateVaoName = p != &mDefaultVAO &&
+        bool const recreateVaoName = vao != &mDefaultVAO &&
                 ((vao->vao[contextIndex] == 0) ||
                         (vao->nameVersion != state.age && contextIndex == 1));
         if (UTILS_UNLIKELY(recreateVaoName)) {
