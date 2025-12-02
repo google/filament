@@ -95,8 +95,13 @@ mat4 FCamera::projection(double const focalLengthInMillimeters,
 void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& projection,
         mat4 const& projectionForCulling, double const near, double const far) noexcept {
 
-    FILAMENT_CHECK_PRECONDITION(near != far)
-            << "Camera preconditions not met in setCustomProjection(): near = far = " << near;
+    FILAMENT_CHECK_PRECONDITION(near > 0)
+            << "Camera preconditions not met in setCustomProjection(): near <= 0, near=" << near;
+    auto const& featureFlags = mEngine.features.engine.debug;
+    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(far > near,
+            featureFlags.assert_camera_projection_near_far)
+            << "Camera preconditions not met in setCustomProjection(): far <= near, near="
+            << near << ", far=" << far;
 
     for (auto& eyeProjection: mEyeProjection) {
         eyeProjection = projection;
@@ -110,8 +115,13 @@ void UTILS_NOINLINE FCamera::setCustomEyeProjection(mat4 const* projection, size
         mat4 const& projectionForCulling, double const near, double const far) {
     const Engine::Config& config = mEngine.getConfig();
 
-    FILAMENT_CHECK_PRECONDITION(near != far)
-            << "Camera preconditions not met in setCustomEyeProjection(): near = far = " << near;
+    FILAMENT_CHECK_PRECONDITION(near > 0)
+            << "Camera preconditions not met in setCustomEyeProjection(): near <= 0, near=" << near;
+    auto const& featureFlags = mEngine.features.engine.debug;
+    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(far > near,
+            featureFlags.assert_camera_projection_near_far)
+            << "Camera preconditions not met in setCustomEyeProjection(): far <= near, near="
+            << near << ", far=" << far;
 
     FILAMENT_CHECK_PRECONDITION(count >= config.stereoscopicEyeCount)
             << "All eye projections must be supplied together, count must be >= "
