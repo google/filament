@@ -39,7 +39,7 @@ using allocation_size_t = BufferAllocator::allocation_size_t;
 // FenceManager
 // ------------------------------------------------------------------------------------------------
 
-void UboManager::FenceManager::track(DriverApi& driver, std::vector<AllocationId>&& allocationIds) {
+void UboManager::FenceManager::track(DriverApi& driver, AllocationIdContainer&& allocationIds) {
     if (allocationIds.empty()) {
         return;
     }
@@ -159,9 +159,9 @@ void UboManager::finishBeginFrame(DriverApi& driver) {
 }
 
 void UboManager::endFrame(DriverApi& driver) {
-    std::vector<AllocationId> allocationIds;
-    allocationIds.reserve(mManagedInstances.size());
-    for (const auto* mi : mManagedInstances) {
+    auto allocationIds =
+            FenceManager::AllocationIdContainer::with_capacity(mManagedInstances.size());
+    for (const auto* mi: mManagedInstances) {
         const AllocationId id = mi->getAllocationId();
         if (UTILS_UNLIKELY(!BufferAllocator::isValid(id))) {
             continue;

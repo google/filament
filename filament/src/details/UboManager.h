@@ -55,6 +55,7 @@ public:
     class FenceManager {
     public:
         using AllocationId = BufferAllocator::AllocationId;
+        using AllocationIdContainer = utils::FixedCapacityVector<AllocationId>;
 
         FenceManager() = default;
         ~FenceManager() = default;
@@ -65,7 +66,7 @@ public:
 
         // Creates a new fence to track a set of allocation IDs for the current frame.
         // This marks the beginning of GPU's usage of these resources.
-        void track(backend::DriverApi& driver, std::vector<AllocationId>&& allocationIds);
+        void track(backend::DriverApi& driver, AllocationIdContainer&& allocationIds);
 
 
         // Checks all tracked fences and invokes a callback for resources associated with
@@ -80,7 +81,7 @@ public:
     private:
         // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
         using FenceAndAllocations =
-                std::pair<backend::Handle<backend::HwFence>, std::vector<AllocationId>>;
+                std::pair<backend::Handle<backend::HwFence>, AllocationIdContainer>;
         std::vector<FenceAndAllocations> mFenceAllocationList;
     };
 
