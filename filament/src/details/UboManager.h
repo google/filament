@@ -28,6 +28,8 @@
 #include <unordered_set>
 #include <vector>
 
+class UboManagerTest;
+
 namespace filament {
 
 class FMaterial;
@@ -53,6 +55,7 @@ public:
     class FenceManager {
     public:
         using AllocationId = BufferAllocator::AllocationId;
+        using AllocationIdContainer = utils::FixedCapacityVector<AllocationId>;
 
         FenceManager() = default;
         ~FenceManager() = default;
@@ -63,7 +66,7 @@ public:
 
         // Creates a new fence to track a set of allocation IDs for the current frame.
         // This marks the beginning of GPU's usage of these resources.
-        void track(backend::DriverApi& driver, std::unordered_set<AllocationId>&& allocationIds);
+        void track(backend::DriverApi& driver, AllocationIdContainer&& allocationIds);
 
 
         // Checks all tracked fences and invokes a callback for resources associated with
@@ -78,7 +81,7 @@ public:
     private:
         // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
         using FenceAndAllocations =
-                std::pair<backend::Handle<backend::HwFence>, std::unordered_set<AllocationId>>;
+                std::pair<backend::Handle<backend::HwFence>, AllocationIdContainer>;
         std::vector<FenceAndAllocations> mFenceAllocationList;
     };
 
@@ -115,13 +118,20 @@ public:
     void manageMaterialInstance(FMaterialInstance* instance);
 
     // Call this when a material instance is destroyed.
-    void unmanageMaterialInstance(const FMaterialInstance* materialInstance);
+    void unmanageMaterialInstance(FMaterialInstance* materialInstance);
 
     // Returns the size of the actual UBO. Note that when there's allocation failed, it will be
     // reallocated to a bigger size at the next frame.
     [[nodiscard]] BufferAllocator::allocation_size_t getTotalSize() const noexcept;
 
+    // For testing
+    [[nodiscard]] backend::MemoryMappedBufferHandle getMemoryMappedBufferHandle() const noexcept {
+        return mMemoryMappedBufferHandle;
+    }
+
 private:
+    friend class ::UboManagerTest;
+
     constexpr static float BUFFER_SIZE_GROWTH_MULTIPLIER = 1.5f;
 
     enum AllocationResult {

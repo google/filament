@@ -39,7 +39,7 @@ using allocation_size_t = BufferAllocator::allocation_size_t;
 // FenceManager
 // ------------------------------------------------------------------------------------------------
 
-void UboManager::FenceManager::track(DriverApi& driver, std::unordered_set<AllocationId>&& allocationIds) {
+void UboManager::FenceManager::track(DriverApi& driver, AllocationIdContainer&& allocationIds) {
     if (allocationIds.empty()) {
         return;
     }
@@ -159,15 +159,16 @@ void UboManager::finishBeginFrame(DriverApi& driver) {
 }
 
 void UboManager::endFrame(DriverApi& driver) {
-    std::unordered_set<AllocationId> allocationIds;
-    for (const auto* mi : mManagedInstances) {
+    auto allocationIds =
+            FenceManager::AllocationIdContainer::with_capacity(mManagedInstances.size());
+    for (const auto* mi: mManagedInstances) {
         const AllocationId id = mi->getAllocationId();
         if (UTILS_UNLIKELY(!BufferAllocator::isValid(id))) {
             continue;
         }
 
         mAllocator.acquireGpu(id);
-        allocationIds.insert(id);
+        allocationIds.push_back(id);
     }
 
     mFenceManager.track(driver, std::move(allocationIds));
@@ -192,18 +193,17 @@ void UboManager::manageMaterialInstance(FMaterialInstance* instance) {
     mPendingInstances.insert(instance);
 }
 
-void UboManager::unmanageMaterialInstance(const FMaterialInstance* materialInstance) {
+void UboManager::unmanageMaterialInstance(FMaterialInstance* materialInstance) {
     AllocationId id = materialInstance->getAllocationId();
-    // const_cast should be safe here since this cast is just to match the container type.
-    auto mi = const_cast<FMaterialInstance*>(materialInstance);
-    mPendingInstances.erase(mi);
-    mManagedInstances.erase(mi);
+    mPendingInstances.erase(materialInstance);
+    mManagedInstances.erase(materialInstance);
 
     if (!BufferAllocator::isValid(id)) {
         return;
     }
 
     mAllocator.retire(id);
+    materialInstance->assignUboAllocation(mUbHandle, BufferAllocator::UNALLOCATED, 0);
 }
 
 UboManager::AllocationResult UboManager::allocateOnDemand() {
