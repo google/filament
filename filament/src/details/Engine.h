@@ -781,7 +781,7 @@ public:
                 bool assert_camera_projection_near_far = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
             struct {
-                bool disable_gpu_frame_complete_metric = false;
+                bool disable_gpu_frame_complete_metric = true;
             } frame_info;
         } engine;
         struct {
