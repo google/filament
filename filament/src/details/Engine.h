@@ -216,7 +216,7 @@ public:
         return getDriver().isStereoSupported();
     }
 
-    AsynchronousMode isAsynchronousOperationSupported(AsynchronousMode mode) const noexcept;
+    AsynchronousMode resolveAsynchronousMode(AsynchronousMode hint) const noexcept;
 
     static size_t getMaxStereoscopicEyes() noexcept {
         return CONFIG_MAX_STEREOSCOPIC_EYES;

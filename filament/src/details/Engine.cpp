@@ -1511,8 +1511,8 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 
-AsynchronousMode FEngine::isAsynchronousOperationSupported(AsynchronousMode mode) const noexcept {
-    switch (mode) {
+AsynchronousMode FEngine::resolveAsynchronousMode(AsynchronousMode hint) const noexcept {
+    switch (hint) {
         case AsynchronousMode::NONE:
             PANIC_PRECONDITION("Invalid argument");
         case AsynchronousMode::THREAD_PREFERRED:

@@ -751,10 +751,10 @@ public:
     /**
      * Queries the device and platform for support of asynchronous operation.
      *
-     * @param mode The asynchronous mode that the caller wants to check whether to support.
+     * @param hint The asynchronous mode that the caller wants to check whether to support.
      * @return The mode the engine currently supports. Returns NONE if none of them is supported.
      */
-    AsynchronousMode isAsynchronousOperationSupported(AsynchronousMode mode) const noexcept;
+    AsynchronousMode resolveAsynchronousMode(AsynchronousMode hint) const noexcept;
 
     /**
      * Retrieves the configuration settings of this Engine.
