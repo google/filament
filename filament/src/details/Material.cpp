@@ -75,9 +75,11 @@ namespace {
 using namespace backend;
 using namespace filaflat;
 using namespace utils;
+using UboBatchingMode = Material::UboBatchingMode;
 
-bool shouldEnableBatching(FEngine& engine, MaterialDomain domain) {
-    return engine.isUboBatchingEnabled() && domain == MaterialDomain::SURFACE;
+bool shouldEnableBatching(FEngine& engine, UboBatchingMode batchingMode, MaterialDomain domain) {
+    return batchingMode != UboBatchingMode::DISABLED && engine.isUboBatchingEnabled() &&
+           domain == MaterialDomain::SURFACE;
 }
 
 } // anonymous namespace
@@ -88,7 +90,7 @@ struct Material::BuilderDetails {
     bool mDefaultMaterial = false;
     int32_t mShBandsCount = 3;
     Builder::ShadowSamplingQuality mShadowSamplingQuality = Builder::ShadowSamplingQuality::LOW;
-    bool mDisableUboBatching = false;
+    UboBatchingMode mUboBatchingMode = UboBatchingMode::DEFAULT;
     std::unordered_map<
         CString,
         std::variant<int32_t, float, bool>,
@@ -123,8 +125,8 @@ Material::Builder& Material::Builder::shadowSamplingQuality(ShadowSamplingQualit
     return *this;
 }
 
-Material::Builder& Material::Builder::disableUboBatching(bool const disabled) noexcept {
-    mImpl->mDisableUboBatching = disabled;
+Material::Builder& Material::Builder::uboBatching(UboBatchingMode const mode) noexcept {
+    mImpl->mUboBatchingMode = mode;
     return *this;
 }
 
@@ -161,8 +163,8 @@ Material* Material::Builder::build(Engine& engine) const {
 FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition const& definition)
         : mDefinition(definition),
           mIsDefaultMaterial(builder->mDefaultMaterial),
-          mUseUboBatching(!builder->mDisableUboBatching &&
-                          shouldEnableBatching(engine, definition.materialDomain)),
+          mUseUboBatching(shouldEnableBatching(engine, builder->mUboBatchingMode,
+                  definition.materialDomain)),
           mEngine(engine),
           mMaterialId(engine.getMaterialId()) {
     FILAMENT_CHECK_PRECONDITION(!mUseUboBatching || engine.isUboBatchingEnabled())

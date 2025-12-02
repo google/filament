@@ -261,6 +261,20 @@ public class Material {
         LOW
     }
 
+    /**
+     * Defines whether a material instance should use UBO batching or not.
+     */
+    public enum UboBatchingMode {
+        /**
+         * For default, it follows the engine settings.
+         * If UBO batching is enabled on the engine and the material domain is SURFACE, it
+         * turns on the UBO batching. Otherwise, it turns off the UBO batching.
+        */
+        DEFAULT,
+        /** Disable the Ubo Batching for this material */
+        DISABLED
+    }
+
     public static class UserVariantFilterBit {
         /** Directional lighting */
         public static int DIRECTIONAL_LIGHTING = 0x01;
@@ -372,7 +386,7 @@ public class Material {
         private int mSize;
         private int mShBandCount = 0;
         private ShadowSamplingQuality mShadowSamplingQuality = ShadowSamplingQuality.LOW;
-        private boolean mDisableUboBatching = false;
+        private UboBatchingMode mUboBatchingMode = UboBatchingMode.DEFAULT;
 
 
         /**
@@ -418,13 +432,13 @@ public class Material {
         }
 
         /**
-         * Set to true to force exclude the material from using material batching.
+         * Set the batching mode of the instances created from this material.
          * @param uboBatchingMode
          * @return Reference to this Builder for chaining calls.
          */
         @NonNull
-        public Builder disableUboBatching(boolean disabled) {
-            mDisableUboBatching = disabled;
+        public Builder uboBatching(UboBatchingMode mode) {
+            mUboBatchingMode = mode;
             return this;
         }
 
@@ -440,7 +454,7 @@ public class Material {
         @NonNull
         public Material build(@NonNull Engine engine) {
             long nativeMaterial = nBuilderBuild(engine.getNativeObject(),
-                mBuffer, mSize, mShBandCount, mShadowSamplingQuality.ordinal(), mDisableUboBatching);
+                mBuffer, mSize, mShBandCount, mShadowSamplingQuality.ordinal(), mUboBatchingMode.ordinal());
             if (nativeMaterial == 0) throw new IllegalStateException("Couldn't create Material");
             return new Material(nativeMaterial);
         }
@@ -1106,7 +1120,7 @@ public class Material {
         mNativeObject = 0;
     }
 
-    private static native long nBuilderBuild(long nativeEngine, @NonNull Buffer buffer, int size, int shBandCount, int shadowQuality, boolean disableUboBatching);
+    private static native long nBuilderBuild(long nativeEngine, @NonNull Buffer buffer, int size, int shBandCount, int shadowQuality, int uboBatchingMode);
     private static native long nCreateInstance(long nativeMaterial);
     private static native long nCreateInstanceWithName(long nativeMaterial, @NonNull String name);
     private static native long nGetDefaultInstance(long nativeMaterial);
