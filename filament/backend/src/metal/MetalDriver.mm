@@ -312,6 +312,7 @@ void MetalDriver::execute(std::function<void(void)> const& fn) noexcept {
 }
 
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
+    mContext->presentationTimeNs = monotonic_clock_ns;
 }
 
 void MetalDriver::endFrame(uint32_t frameId) {

@@ -325,11 +325,19 @@ void MetalSwapChain::present() {
     if (frameCompleted.callback) {
         scheduleFrameCompletedCallback();
     }
+    const auto presentationTimeNs = context.presentationTimeNs;
+    context.presentationTimeNs = 0;
     if (drawable) {
         if (frameScheduled.callback) {
-            scheduleFrameScheduledCallback();
+            scheduleFrameScheduledCallback(presentationTimeNs);
         } else  {
-            [getPendingCommandBuffer(&context) presentDrawable:drawable];
+            if (presentationTimeNs) {
+                const CFTimeInterval timeSeconds =
+                        (CFTimeInterval) presentationTimeNs / 1000000000.0;
+                [getPendingCommandBuffer(&context) presentDrawable:drawable atTime:timeSeconds];
+            } else {
+                [getPendingCommandBuffer(&context) presentDrawable:drawable];
+            }
         }
     }
 }
@@ -341,15 +349,22 @@ public:
     PresentDrawableData& operator=(const PresentDrawableData&) = delete;
 
     static PresentDrawableData* create(id<CAMetalDrawable> drawable,
-            std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags) {
+            std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags,
+            int64_t presentationTimeNs) {
         assert_invariant(drawableMutex);
         assert_invariant(driver);
-        return new PresentDrawableData(drawable, drawableMutex, driver, flags);
+        return new PresentDrawableData(drawable, drawableMutex, driver, flags, presentationTimeNs);
     }
 
     static void maybePresentAndDestroyAsync(PresentDrawableData* that, bool shouldPresent) {
         if (shouldPresent) {
-           [that->mDrawable present];
+            if (that->mPresentationTimeNs) {
+                const CFTimeInterval timeSeconds =
+                        (CFTimeInterval) that->mPresentationTimeNs / 1000000000.0;
+                [that->mDrawable presentAtTime:timeSeconds];
+            } else {
+                [that->mDrawable present];
+            }
         }
 
         if (that->mFlags & SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER) {
@@ -367,8 +382,12 @@ public:
 
 private:
     PresentDrawableData(id<CAMetalDrawable> drawable, std::shared_ptr<std::mutex> drawableMutex,
-            MetalDriver* driver, uint64_t flags)
-        : mDrawable(drawable), mDrawableMutex(drawableMutex), mDriver(driver), mFlags(flags) {}
+            MetalDriver* driver, uint64_t flags, int64_t presentationTimeNs)
+            : mDrawable(drawable),
+              mDrawableMutex(drawableMutex),
+              mDriver(driver),
+              mFlags(flags),
+              mPresentationTimeNs(presentationTimeNs) {}
 
     static void cleanupAndDestroy(PresentDrawableData *that) {
         if (that->mDrawable) {
@@ -384,6 +403,7 @@ private:
     std::shared_ptr<std::mutex> mDrawableMutex;
     MetalDriver* mDriver = nullptr;
     uint64_t mFlags = 0;
+    int64_t mPresentationTimeNs = 0;
 };
 
 void presentDrawable(bool presentFrame, void* user) {
@@ -391,7 +411,7 @@ void presentDrawable(bool presentFrame, void* user) {
     PresentDrawableData::maybePresentAndDestroyAsync(presentDrawableData, presentFrame);
 }
 
-void MetalSwapChain::scheduleFrameScheduledCallback() {
+void MetalSwapChain::scheduleFrameScheduledCallback(int64_t presentationTimeNs) {
     if (!frameScheduled.callback) {
         return;
     }
@@ -400,8 +420,11 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
 
     struct Callback {
         Callback(std::shared_ptr<FrameScheduledCallback> callback, id<CAMetalDrawable> drawable,
-                 std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags)
-            : f(callback), data(PresentDrawableData::create(drawable, drawableMutex, driver, flags)) {}
+                std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags,
+                int64_t presentationTimeNs)
+                : f(callback),
+                  data(PresentDrawableData::create(drawable, drawableMutex, driver, flags,
+                          presentationTimeNs)) {}
         std::shared_ptr<FrameScheduledCallback> f;
         // PresentDrawableData* is destroyed by maybePresentAndDestroyAsync() later.
         std::unique_ptr<PresentDrawableData> data;
@@ -419,7 +442,7 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
     uint64_t const flags = frameScheduled.flags;
     ReleasablePointer* callback = [[ReleasablePointer alloc]
             initWithPointer:new Callback(frameScheduled.callback, drawable, layerDrawableMutex,
-                                    context.driver, flags)];
+                                    context.driver, flags, presentationTimeNs)];
 
     backend::CallbackHandler* handler = frameScheduled.handler;
     MetalDriver* driver = context.driver;

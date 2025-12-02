@@ -159,7 +159,7 @@ private:
     bool isCaMetalLayer() const { return type == SwapChainType::CAMETALLAYER; }
     bool isHeadless() const { return type == SwapChainType::HEADLESS; }
 
-    void scheduleFrameScheduledCallback();
+    void scheduleFrameScheduledCallback(int64_t presentationTimeNs);
     void scheduleFrameCompletedCallback();
 
     MetalAttachment acquireBaseDrawable();
