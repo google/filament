@@ -230,9 +230,9 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
                     "eglGetNativeClientBufferANDROID"));
 
     if (ext.egl.ANDROID_presentation_time) {
-        eglGetNativeClientBufferANDROID =
-                PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC(eglGetProcAddress(
-                        "eglGetNativeClientBufferANDROID"));
+        eglPresentationTimeANDROID =
+                PFNEGLPRESENTATIONTIMEANDROIDPROC(eglGetProcAddress(
+                        "eglPresentationTimeANDROID"));
     }
 
     if (ext.egl.ANDROID_get_frame_timestamps) {
