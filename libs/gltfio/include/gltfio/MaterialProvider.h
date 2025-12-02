@@ -94,10 +94,11 @@ struct alignas(4) MaterialKey {
     bool hasSheen : 1;
     bool hasIOR : 1;
     bool hasVolume : 1;
+    bool hasDispersion : 1;
     bool hasSpecular : 1;
     bool hasSpecularTexture : 1;
     bool hasSpecularColorTexture : 1;
-    bool padding : 2;
+    bool padding : 1;
     // -- 32 bit boundary --
     uint8_t specularTextureUV;
     uint8_t specularColorTextureUV;
