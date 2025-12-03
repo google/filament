@@ -375,6 +375,10 @@ export class Material {
     public getName(): string;
 }
 
+export enum Material$UboBatchingMode {
+    DISABLED,
+    DEFAULT,
+}
 export class Frustum {
     constructor(pv: mat4);
     public setProjection(pv: mat4): void;
@@ -542,7 +546,7 @@ export class Engine {
     public static destroy(engine: Engine): void;
     public execute(): void;
     public createCamera(entity: Entity): Camera;
-    public createMaterial(urlOrBuffer: BufferReference): Material;
+    public createMaterial(urlOrBuffer: BufferReference, options?: { uboBatching?: Material$UboBatchingMode }): Material;
     public createRenderer(): Renderer;
     public createScene(): Scene;
     public createSwapChain(): SwapChain;

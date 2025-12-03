@@ -125,10 +125,12 @@ Filament.loadClassExtensions = function() {
 
     /// createMaterial ::method::
     /// package ::argument:: asset string, or Uint8Array, or [Buffer] with filamat contents
+    /// options ::argument:: optional dictionary with `uboBatching` key.
     /// ::retval:: an instance of [createMaterial]
-    Filament.Engine.prototype.createMaterial = function(buffer) {
+    Filament.Engine.prototype.createMaterial = function(buffer, options) {
         buffer = getBufferDescriptor(buffer);
-        const result = this._createMaterial(buffer);
+        const uboBatching = (options && options.uboBatching) || Filament.Material$UboBatchingMode.DEFAULT; // The default is DEFAULT
+        const result = this._createMaterial(buffer, uboBatching);
         buffer.delete();
         return result;
     };

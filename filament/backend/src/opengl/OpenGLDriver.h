@@ -36,7 +36,6 @@
 #include <backend/Platform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
-#include <backend/BufferObjectStreamDescriptor.h>
 
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
@@ -393,8 +392,6 @@ private:
 
     // the must be accessed from the user thread only
     std::vector<GLStream*> mStreamsWithPendingAcquiredImage;
-
-    std::unordered_map<GLuint, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
 
     void attachStream(GLTexture* t, GLStream* stream);
     void detachStream(GLTexture* t) noexcept;

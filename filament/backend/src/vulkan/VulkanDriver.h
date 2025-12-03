@@ -160,10 +160,6 @@ private:
     VulkanExternalImageManager mExternalImageManager;
     VulkanStreamedImageManager mStreamedImageManager;
 
-    // Stream transforms
-    std::unordered_map<VulkanBufferObject*, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
-    math::mat3f getStreamTransformMatrix(Handle<HwStream> sh);
-
 
     // This maps a VulkanSwapchain to a native swapchain. VulkanSwapchain should have a copy of the
     // Platform::Swapchain pointer, but queryFrameTimestamps() and queryCompositorTiming() are
