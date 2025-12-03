@@ -1144,8 +1144,12 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 bool MetalDriver::isFrameBufferFetchSupported() {
     // FrameBuffer fetch is achievable via "programmable blending" in Metal, and only supported on
     // Apple GPUs with readWriteTextureSupport.
-    return mContext->highestSupportedGpuFamily.apple >= 1 &&
-            mContext->device.readWriteTextureSupport;
+    // On macOS, framebuffer fetch requires MSL 2.3, which is only available with macOS 11.0.
+    if (@available(macOS 11.0, *)) {
+        return mContext->highestSupportedGpuFamily.apple >= 1 &&
+               mContext->device.readWriteTextureSupport;
+    }
+    return false;
 }
 
 bool MetalDriver::isFrameBufferFetchMultiSampleSupported() {
