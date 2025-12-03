@@ -15,7 +15,6 @@
  */
 
 #include <backend/BufferDescriptor.h>
-#include <backend/BufferObjectStreamDescriptor.h>
 #include <backend/DescriptorSetOffsetArray.h>
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
@@ -432,10 +431,6 @@ io::ostream& operator<<(io::ostream& out, BufferDescriptor const& b) {
     << ", size=" << b.size
     << ", callback=" << b.getCallback()
     << ", user=" << b.getUser() << " }";
-}
-
-io::ostream& operator<<(io::ostream& out, const BufferObjectStreamDescriptor& b) {
-    return out << "BufferObjectStreamDescriptor{ streams(" << b.mStreams.size() << ")=... }";
 }
 
 io::ostream& operator<<(io::ostream& out, PixelBufferDescriptor const& b) {
