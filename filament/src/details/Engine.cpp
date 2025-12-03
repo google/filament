@@ -727,7 +727,6 @@ void FEngine::prepare() {
             // post-process materials instances must be commited explicitly because their
             // parameters are typically not set at this point in time.
             if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
-                item->commitStreamUniformAssociations(driver);
                 item->commit(driver, uboManager);
             }
         });
