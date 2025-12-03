@@ -37,7 +37,12 @@ set(SRCS
         src/IcoSphere.cpp
         src/MeshAssimp.cpp
         src/Sphere.cpp
+        src/KeyInputConversion.h
 )
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    list(APPEND SRCS src/VulkanPlatformHelper.cpp)
+endif()
 
 set(LIBS
         assimp
@@ -67,16 +72,27 @@ set(MATERIAL_SRCS
 
 if (APPLE)
     list(APPEND SRCS src/NativeWindowHelperCocoa.mm)
+    list(APPEND SRCS src/VulkanPlatformHelperApple.mm)
     list(APPEND LIBS "-framework Cocoa -framework QuartzCore")
 endif()
 
 if (LINUX)
     list(APPEND SRCS src/NativeWindowHelperLinux.cpp)
+    list(APPEND SRCS src/VulkanPlatformHelperLinux.cpp)
 endif()
 
 if (WIN32)
     list(APPEND SRCS src/NativeWindowHelperWindows.cpp)
+
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/VulkanPlatformHelperWindows.cpp)
+    endif()
+
     list(APPEND LIBS sdl2main)
+endif()
+
+if (ANDROID)
+    list(APPEND SRCS src/VulkanPlatformHelperAndroid.cpp)
 endif()
 
 # ==================================================================================================

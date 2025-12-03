@@ -17,13 +17,13 @@
 #include <gtest/gtest.h>
 
 #include "TestMaterialParser.h"
-
-#include <filamat/MaterialBuilder.h>
-
-#include <filament-matp/MaterialParser.h>
 #include "JsonishLexer.h"
 #include "JsonishParser.h"
 #include "MaterialLexer.h"
+#include "MockIncluder.h"
+
+#include <filamat/MaterialBuilder.h>
+#include <filament-matp/MaterialParser.h>
 
 class MaterialLexer: public ::testing::Test {
 protected:

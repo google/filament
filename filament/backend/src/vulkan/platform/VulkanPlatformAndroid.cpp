@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <backend/platforms/VulkanPlatformAndroid.h>
 
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanContext.h"
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/utils/Image.h"
+
+#include "AndroidFrameCallback.h"
 
 #include <private/backend/BackendUtilsAndroid.h>
 
@@ -32,6 +35,7 @@
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 
+#include <new>
 #include <utility>
 
 using namespace bluevk;
@@ -158,7 +162,55 @@ std::pair<TextureFormat, TextureUsage> getFilamentFormatAndUsage(const AHardware
     };
 }
 
-}// namespace
+uint32_t selectMemoryTypeForExternalImage(VkPhysicalDevice physicalDevice, VkDevice device,
+        VkImage image, uint32_t types, VkFlags requiredMemoryFlags) {
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+    uint32_t const memoryTypeIndex =
+            VulkanContext::selectMemoryType(memoryProperties, types, requiredMemoryFlags);
+
+    if constexpr (FVK_RENDERDOC_CAPTURE_MODE) {
+        // RenderDoc will replay external resources as non-external.
+        // Adjust properties that will trip it up when replaying, even though these are not valid.
+        // Update memory type index if necessary so that we can replay the capture.
+
+        VkMemoryRequirements imageMemoryRequirements;
+        vkGetImageMemoryRequirements(device, image, &imageMemoryRequirements);
+
+        uint32_t const imageMemoryTypeBits = imageMemoryRequirements.memoryTypeBits;
+        bool const isMemoryTypeSupported = ((1 << memoryTypeIndex) & imageMemoryTypeBits) != 0;
+        if (isMemoryTypeSupported) {
+            return memoryTypeIndex;
+        }
+
+        // Current memory type will not be replayable by RenderDoc.
+        // Attempt to change the memory type index
+        VkMemoryPropertyFlags const kRenderDocFallBackReqs = 0;
+        uint32_t commonMemoryTypeBits = types & imageMemoryTypeBits;
+        uint32_t commonTypeIndex = VulkanContext::selectMemoryType(memoryProperties,
+                commonMemoryTypeBits, kRenderDocFallBackReqs);
+        if (commonMemoryTypeBits && commonTypeIndex != VK_MAX_MEMORY_TYPES) {
+            return commonTypeIndex;
+        }
+        uint32_t imageTypeIndex = VulkanContext::selectMemoryType(memoryProperties,
+                imageMemoryTypeBits, kRenderDocFallBackReqs);
+        if (imageTypeIndex != VK_MAX_MEMORY_TYPES) {
+            return imageTypeIndex;
+        }
+    }
+
+    return memoryTypeIndex;
+}
+
+} // namespace
+
+// ---------------------------------------------------------------------------------------------
+
+struct VulkanPlatformAndroid::AndroidDetails {
+    AndroidFrameCallback androidFrameCallback;
+};
+
+// ---------------------------------------------------------------------------------------------
 
 VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid() {
     if (__builtin_available(android 26, *)) {
@@ -168,14 +220,19 @@ VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid()
     }
 }
 
-VulkanPlatformAndroid::VulkanPlatformAndroid() {
+// ---------------------------------------------------------------------------------------------
+
+VulkanPlatformAndroid::VulkanPlatformAndroid() :
+        mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
     mOSVersion = android_get_device_api_level();
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
     }
 }
 
-VulkanPlatformAndroid::~VulkanPlatformAndroid() noexcept = default;
+VulkanPlatformAndroid::~VulkanPlatformAndroid() noexcept {
+    delete &mAndroidDetails;
+}
 
 Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
         AHardwareBuffer const* buffer, bool sRGB) noexcept {
@@ -354,8 +411,6 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
             .image = image,
             .buffer = VK_NULL_HANDLE,
         };
-        VkPhysicalDeviceMemoryProperties memoryProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
         VkMemoryPropertyFlags requiredMemoryFlags =
                 !isExternal && any(metadata.filamentUsage & TextureUsage::UPLOADABLE)
                         ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -365,8 +420,8 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
             requiredMemoryFlags |= VK_MEMORY_PROPERTY_PROTECTED_BIT;
         }
 
-        uint32_t const memoryTypeIndex = VulkanContext::selectMemoryType(memoryProperties,
-                metadata.memoryTypeBits, requiredMemoryFlags);
+        uint32_t const memoryTypeIndex = selectMemoryTypeForExternalImage(physicalDevice, device,
+                image, metadata.memoryTypeBits, requiredMemoryFlags);
 
         VkMemoryAllocateInfo const allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -459,14 +514,14 @@ int VulkanPlatformAndroid::getOSVersion() const noexcept {
 }
 
 void VulkanPlatformAndroid::terminate() {
-    mAndroidFrameCallback.terminate();
+    mAndroidDetails.androidFrameCallback.terminate();
     VulkanPlatform::terminate();
 }
 
 Driver* VulkanPlatformAndroid::createDriver(void* sharedContext, DriverConfig const& driverConfig) {
     Driver* driver = VulkanPlatform::createDriver(sharedContext, driverConfig);
     if (driver) {
-        mAndroidFrameCallback.init();
+        mAndroidDetails.androidFrameCallback.init();
     }
     return driver;
 }
@@ -482,13 +537,19 @@ bool VulkanPlatformAndroid::queryCompositorTiming(SwapChain const* swapchain,
     }
 
     AndroidFrameCallback::Timeline const preferredTimeline{
-        mAndroidFrameCallback.getPreferredTimeline() };
+        mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
     outCompositorTiming->frameTime = preferredTimeline.frameTime;
     outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
     outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+    outCompositorTiming->compositeDeadline = CompositorTiming::INVALID;
+    outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
+    outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;
+
+    // From this point on, we always return "success" because some timings were returned.
 
     auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
+    vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
+    return true;
 }
 
 bool VulkanPlatformAndroid::setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept {
@@ -500,15 +561,6 @@ bool VulkanPlatformAndroid::queryFrameTimestamps(SwapChain const* swapchain, uin
         FrameTimestamps* outFrameTimestamps) const noexcept {
     auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
     return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
-}
-
-
-// Deprecated platform dependent helper methods
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() { return {}; }
-
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
-        VkInstance instance, uint64_t flags) noexcept {
-    return SurfaceBundle{};
 }
 
 } // namespace filament::backend

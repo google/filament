@@ -226,6 +226,8 @@ bool Froxelizer::prepare(
         filament::Viewport const& viewport,
         const mat4f& projection, float const projectionNear, float const projectionFar,
         float4 const& clipTransform) noexcept {
+    assert_invariant(projectionFar > projectionNear);
+    assert_invariant(projectionNear > 0);
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
 
@@ -383,8 +385,28 @@ bool Froxelizer::update() noexcept {
     bool uniformsNeedUpdating = false;
 
     if (UTILS_UNLIKELY(mDirtyFlags & (OPTIONS_CHANGED|PROJECTION_CHANGED))) {
-        float const zLightFar  = clamp(mUserZLightFar, mNear, mFar);
-        float zLightNear = clamp(mUserZLightNear, mNear, mFar);
+
+        // sanitize the user's near/far
+        float zLightNear = mUserZLightNear;
+        float zLightFar = mUserZLightFar;
+        if (zLightFar == zLightNear) {
+            zLightNear = mNear;
+            zLightFar = mFar;
+        }
+        if (zLightFar < zLightNear) {
+            std::swap(zLightFar, zLightNear);
+        }
+        if (zLightNear < mNear || zLightNear >= mFar) {
+            zLightNear = mNear;
+        }
+        if (zLightFar > mFar || zLightFar <= mNear) {
+            zLightFar = mFar;
+        }
+
+        assert_invariant(zLightNear < zLightFar);
+        assert_invariant(zLightNear >= mNear && zLightNear <= mFar);
+        assert_invariant(zLightFar <= mFar && zLightNear >= mNear);
+
         zLightNear = std::min(zLightNear, zLightFar);
         if (zLightFar != mZLightFar || zLightNear != mZLightNear) {
             mDirtyFlags |= VIEWPORT_CHANGED;

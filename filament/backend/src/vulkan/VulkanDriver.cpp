@@ -231,7 +231,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
       mPipelineLayoutCache(mPlatform->getDevice()),
-      mPipelineCache(mPlatform->getDevice()),
+      mPipelineCache(mPlatform->getDevice(), mContext),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
       mBufferCache(mContext, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
@@ -920,14 +920,6 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
             FVK_LOGW << "protected swapchain requested, but Platform does not support it";
         }
     }
-
-#if defined(__ANDROID__)
-    // on Android, disable producer throttling
-    if (mProducerThrottling.isSupported()) {
-        mProducerThrottling.setProducerThrottlingEnabled(
-                static_cast<ANativeWindow*>(nativeWindow), false);
-    }
-#endif
 
     auto swapChain = resource_ptr<VulkanSwapChain>::make(&mResourceManager, sch, mPlatform,
             mContext, &mResourceManager, mAllocator, &mCommands, mStagePool, nativeWindow, flags);

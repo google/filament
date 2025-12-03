@@ -7,6 +7,12 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.68.0
+
+- engine: add `View::getLastDynamicResolutionScale()` (b/457753622)
+- Metal: report GPU errors to the platform via `debugUpdateStat` (b/431665753).
+- materials: Make Material Instances' UBO descriptor use dynamic offsets. [⚠️ **Recompile Materials**]
+
 ## v1.67.1
 
 - Metal: Add support for the `SwapChain::CONFIG_MSAA_4_SAMPLES` flag.

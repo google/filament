@@ -252,10 +252,21 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/StaticVector.h
     )
-    if (LINUX OR WIN32)
-        list(APPEND SRCS src/vulkan/platform/VulkanPlatformLinuxWindows.cpp)
+    if (LINUX)
+        list(APPEND SRCS
+            src/vulkan/platform/VulkanPlatformLinux.cpp
+            include/backend/platforms/VulkanPlatformLinux.h
+        )
+    elseif (WIN32)
+        list(APPEND SRCS
+            include/backend/platforms/VulkanPlatformWindows.h
+            src/vulkan/platform/VulkanPlatformWindows.cpp
+        )
     elseif (APPLE OR IOS)
-        list(APPEND SRCS src/vulkan/platform/VulkanPlatformApple.mm)
+        list(APPEND SRCS
+            include/backend/platforms/VulkanPlatformApple.h
+            src/vulkan/platform/VulkanPlatformApple.mm
+        )
     elseif (ANDROID)
         list(APPEND SRCS
             include/backend/platforms/VulkanPlatformAndroid.h

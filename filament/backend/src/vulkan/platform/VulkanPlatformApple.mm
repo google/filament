@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatform.h>
+#include <backend/platforms/VulkanPlatformApple.h>
 
 #include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanDriverFactory.h"
 
 #include <utils/Panic.h>
 
@@ -36,15 +35,15 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() {
+VulkanPlatform::ExtensionSet VulkanPlatformApple::getSwapchainInstanceExtensions() const {
     ExtensionSet const ret = {
         VK_EXT_METAL_SURFACE_EXTENSION_NAME,
     };
     return ret;
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
-        VkInstance instance, uint64_t flags) noexcept {
+VulkanPlatform::SurfaceBundle VulkanPlatformApple::createVkSurfaceKHR(void* nativeWindow,
+        VkInstance instance, uint64_t flags) const noexcept {
     VkSurfaceKHR surface;
     CAMetalLayer* mlayer = (__bridge CAMetalLayer*) nativeWindow;
     FILAMENT_CHECK_POSTCONDITION(mlayer) << "Unable to obtain Metal-backed layer.";
