@@ -495,8 +495,11 @@ class_<Engine>("Engine")
             (Engine* engine, utils::Entity camera) { engine->destroyCameraComponent(camera); },
             allow_raw_pointers())
 
-    .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
-        return Material::Builder().package(mbd.bd->buffer, mbd.bd->size).build(*engine);
+    .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd, Material::UboBatchingMode uboBatching), {
+        return Material::Builder()
+                .package(mbd.bd->buffer, mbd.bd->size)
+                .uboBatching(uboBatching)
+                .build(*engine);
     }), allow_raw_pointers())
     /// destroyMaterial ::method::
     /// material ::argument:: an instance of [Material]
@@ -1359,6 +1362,10 @@ class_<Material>("Material")
         const char* transformName = self->getParameterTransformName(samplerName.c_str());
         return transformName ? std::string(transformName) : std::string();
     }), allow_raw_pointers());
+
+enum_<Material::UboBatchingMode>("Material$UboBatchingMode")
+    .value("DISABLED", Material::UboBatchingMode::DISABLED)
+    .value("DEFAULT", Material::UboBatchingMode::DEFAULT);
 
 class_<MaterialInstance>("MaterialInstance")
     .function("getName", EMBIND_LAMBDA(std::string, (MaterialInstance* self), {

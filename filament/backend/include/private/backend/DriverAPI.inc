@@ -392,10 +392,6 @@ DECL_DRIVER_API_N(updateBufferObject,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 
-DECL_DRIVER_API_N(registerBufferObjectStreams,
-        backend::BufferObjectHandle, boh,
-        backend::BufferObjectStreamDescriptor&&, streams)
-
 DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
         backend::BufferObjectHandle, boh,
         backend::BufferDescriptor&&, data,

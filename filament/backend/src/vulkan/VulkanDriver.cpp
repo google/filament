@@ -150,31 +150,6 @@ static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
     cbData->cb(cbData->sync, cbData->userData);
 };
 
-// This needs to be discussed because Vulkan has different default Matrix formats
-// right now this is following GL.
-static void copyMat3f(void* addr, size_t const offset, const math::mat3f& v) noexcept {
-    struct mat43 {
-        float v[3][4];
-    };
-
-    addr = static_cast<char*>(addr) + offset;
-    mat43& temp = *static_cast<mat43*>(addr);
-
-    temp.v[0][0] = v[0][0];
-    temp.v[0][1] = v[0][1];
-    temp.v[0][2] = v[0][2];
-
-    temp.v[1][0] = v[1][0];
-    temp.v[1][1] = v[1][1];
-    temp.v[1][2] = v[1][2];
-
-    temp.v[2][0] = v[2][0];
-    temp.v[2][1] = v[2][1];
-    temp.v[2][2] = v[2][2];
-
-    // don't store anything in temp.v[][3] because there could be uniforms packed there
-}
-
 }// anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -1206,7 +1181,6 @@ void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math
         scheduleRelease(stream->takePrevious());
     }
     stream->acquire({ image, cb, userData, handler});
-    stream->setFrontEndTransform(transform);
     mStreamsWithPendingAcquiredImage.push_back(stream);
 }
 
@@ -1234,10 +1208,8 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
             // a copy of a resource_ptr<VulkanStream>. We only need it find the associated stream
             // inside the mStreamedImageManager texture bindings
             driver->queueCommand([this, stream, s = stream.get(),
-                                        image = stream->getAcquired().image,
-                                        transform = stream->getFrontEndTransform()]() {
+                                         image = stream->getAcquired().image]() {
                 auto texture = s->getTexture(image);
-                s->setBackendTransform(transform);
                 if (!texture) {
                     auto externalImage = fvkutils::createExternalImageFromRaw(mPlatform, image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
@@ -1583,46 +1555,12 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh,
-        BufferObjectStreamDescriptor&& streams) {
-
-    auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-    mStreamUniformDescriptors[bo.get()] = std::move(streams);
-}
-
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
         uint32_t byteOffset) {
     VulkanCommandBuffer& commands = mCommands.get();
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
-
-    if (UTILS_UNLIKELY(!mStreamUniformDescriptors.empty())) {
-        auto streamDescriptors = mStreamUniformDescriptors.find(bo.get());
-        if (streamDescriptors != mStreamUniformDescriptors.end()) {
-            for (auto const& [offset, streamHandle, associationType]:
-                    streamDescriptors->second.mStreams) {
-                if (associationType == BufferObjectStreamAssociationType::TRANSFORM_MATRIX) {
-                    math::mat3f transform;
-                    if (streamHandle) {
-                        auto stream =
-                                resource_ptr<VulkanStream>::cast(&mResourceManager, streamHandle);
-                        if (stream->streamType == StreamType::NATIVE) {
-                            FILAMENT_CHECK_PRECONDITION(false)
-                                    << "Native Stream not supported in Vulkan.";
-                        } else {
-                            // Backend call since getStreamTransformMatrix is called from async
-                            // updateBufferObject.
-                            transform = stream->getBackEndTransform();
-                        }
-                    }
-
-                    copyMat3f(bd.buffer, offset, transform);
-                }
-            }
-            mStreamUniformDescriptors.erase(streamDescriptors);
-        }
-    }
 
     bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
