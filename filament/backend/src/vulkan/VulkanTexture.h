@@ -36,6 +36,43 @@ namespace filament::backend {
 
 struct VulkanTexture;
 
+struct VulkanStream : public HwStream, fvkmemory::Resource {
+
+    //-- These methods are only called from the frontend
+    void acquire(const AcquiredImage& image) {
+        user_thread.mPrevious = user_thread.mAcquired;
+        user_thread.mAcquired = image;
+    }
+    bool previousNeedsRelease() const { return (user_thread.mPrevious.image != nullptr); }
+    // this function will null the previous once the caller takes it.
+    // It ensures we don't schedule for release twice.
+    AcquiredImage takePrevious() {
+        AcquiredImage previous = user_thread.mPrevious;
+        user_thread.mPrevious = {};
+        return previous;
+    }
+    const AcquiredImage& getAcquired() const { return user_thread.mAcquired; }
+
+    //-- These methods are only called from the backend thread
+    fvkmemory::resource_ptr<VulkanTexture> getTexture(void* ahb) {
+        if (auto itr = mTextures.find(ahb); itr != mTextures.end()) {
+            return itr->second;
+        }
+        return {};
+    }
+    void pushImage(void* ahb, fvkmemory::resource_ptr<VulkanTexture> tex) { mTextures[ahb] = tex; }
+
+private:
+    // These are only called from the frontend
+    struct {
+        AcquiredImage mAcquired;
+        AcquiredImage mPrevious;
+    } user_thread;
+
+    // #TODO b/442937292
+    std::unordered_map<void*, fvkmemory::resource_ptr<VulkanTexture>> mTextures;
+};
+
 struct VulkanTextureState : public fvkmemory::Resource {
     VulkanTextureState(VulkanStagePool& stagePool, VulkanCommands* commands, VmaAllocator allocator,
             VkDevice device, VkImage image, VkDeviceMemory deviceMemory, VkFormat format,
@@ -74,6 +111,8 @@ private:
 
     // The texture with the sidecar owns the sidecar.
     fvkmemory::resource_ptr<VulkanTexture> mSidecarMSAA;
+    // The stream this texture is associated with.
+    fvkmemory::resource_ptr<VulkanStream> mStream;
 
     VkImage const mTextureImage;
     VkDeviceMemory const mTextureImageMemory;
@@ -104,6 +143,7 @@ private:
     utils::RangeMap<uint32_t, VulkanLayout> mSubresourceLayouts;
     using ImageViewHash = utils::hash::MurmurHashFn<ImageViewKey>;
     std::unordered_map<ImageViewKey, VkImageView, ImageViewHash> mCachedImageViews;
+
 
     friend struct VulkanTexture;
 };
@@ -180,6 +220,14 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
 
     fvkmemory::resource_ptr<VulkanTexture> getSidecar() const {
         return mState->mSidecarMSAA;
+    }
+
+    void setStream(fvkmemory::resource_ptr<VulkanStream> stream) {
+        mState->mStream = stream;
+    }
+
+    fvkmemory::resource_ptr<VulkanStream> getStream() const {
+        return mState->mStream;
     }
 
     bool isTransientAttachment() const {
