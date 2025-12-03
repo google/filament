@@ -113,7 +113,6 @@ target_link_libraries(gltfio-jni
         PRIVATE basis_transcoder
         PRIVATE uberarchive
         PRIVATE dracodec
-        PRIVATE webpdecoder
         PRIVATE utils
         PRIVATE uberzlib
         PRIVATE perfetto        # needed only when FILAMENT_ENABLE_PERFETTO is defined
