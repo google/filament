@@ -76,6 +76,7 @@ set(SRCS
         src/FixedCapacityVectorBase.cpp
         src/ImmutableCString.cpp
         src/Invocable.cpp
+        src/JobStorage.cpp
         src/JobSystem.cpp
         src/Log.cpp
         src/NameComponentManager.cpp
