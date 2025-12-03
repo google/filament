@@ -181,6 +181,7 @@ set(TEST_SRCS
         test/test_Hash.cpp
         test/test_InternPool.cpp
         test/test_JobSystem.cpp
+        test/test_JobStorage.cpp
         test/test_MonotonicRingMap.cpp
         test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp

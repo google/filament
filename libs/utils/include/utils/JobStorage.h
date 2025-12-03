@@ -50,7 +50,7 @@ namespace utils {
  * [ or JobWorker::Ptr worker = ThreadWorker::create(storage, config); ]
  *
  * void loop() {
- *     worker->process(2);
+ *     worker->process(2); // for AmortizationWorker
  * }
  *
  * void cleanup() {
@@ -228,8 +228,8 @@ public:
      * Config settings for the worker
      */
     struct Config {
-        std::string_view name;
-        Priority priority;
+        std::string_view name = "";
+        Priority priority = Priority::NORMAL;
         Invocable<void()> onBegin;  // Executed when the thread worker begins
         Invocable<void()> onEnd;    // Executed when the thread worker ends
     };
