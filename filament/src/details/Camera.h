@@ -48,6 +48,11 @@ public:
 
     void terminate(FEngine&) noexcept { }
 
+    void setProjection(double const fovInDegrees, double const aspect,
+            double const near, double const far, Fov const direction);
+
+    void setLensProjection(double const focalLengthInMillimeters,
+            double const aspect, double const near, double const far);
 
     // Sets the projection matrices (viewing and culling). The viewing matrice has infinite far.
     void setProjection(Projection projection,

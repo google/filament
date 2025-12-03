@@ -33,20 +33,12 @@ using namespace math;
 
 void Camera::setProjection(double const fovInDegrees, double const aspect,
         double const near, double const far, Fov const direction) {
-
-    setCustomProjection(
-            projection(direction, fovInDegrees, aspect, near),
-            projection(direction, fovInDegrees, aspect, near, far),
-            near, far);
+    downcast(this)->setProjection(fovInDegrees, aspect, near, far, direction);
 }
 
 void Camera::setLensProjection(double const focalLengthInMillimeters,
         double const aspect, double const near, double const far) {
-
-    setCustomProjection(
-            projection(focalLengthInMillimeters, aspect, near),
-            projection(focalLengthInMillimeters, aspect, near, far),
-            near, far);
+    downcast(this)->setLensProjection(focalLengthInMillimeters, aspect, near, far);
 }
 
 mat4f Camera::inverseProjection(const mat4f& p) noexcept {
