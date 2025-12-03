@@ -120,10 +120,6 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
                 instance->getConfig().asynchronousMode : AsynchronousMode::NONE,
     };
 
-    FILAMENT_CHECK_PRECONDITION(
-            UTILS_HAS_THREADING || driverConfig.asynchronousMode != AsynchronousMode::THREAD)
-            << "Invalid driver config: thread not supported";
-
     return driverConfig;
 }
 

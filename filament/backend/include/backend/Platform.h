@@ -271,12 +271,6 @@ public:
         THREAD_PREFERRED,
 
         /**
-         * Mandates the use of a dedicated worker thread for asynchronous tasks. If the platform
-         * does not support threads, engine initialization will fail.
-         */
-        THREAD,
-
-        /**
          * Uses an amortization strategy, processing a small number of asynchronous tasks during
          * each engine update cycle.
          */
