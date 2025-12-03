@@ -52,12 +52,8 @@ struct VulkanStream : public HwStream, fvkmemory::Resource {
         return previous;
     }
     const AcquiredImage& getAcquired() const { return user_thread.mAcquired; }
-    void setFrontEndTransform(const math::mat3f& transform) { user_thread.mTransform = transform; }
-    const math::mat3f& getFrontEndTransform() const { return user_thread.mTransform; }
 
     //-- These methods are only called from the backend thread
-    void setBackendTransform(const math::mat3f& transform) { mTransform = transform; }
-    const math::mat3f& getBackEndTransform() const { return mTransform; }
     fvkmemory::resource_ptr<VulkanTexture> getTexture(void* ahb) {
         if (auto itr = mTextures.find(ahb); itr != mTextures.end()) {
             return itr->second;
@@ -71,11 +67,9 @@ private:
     struct {
         AcquiredImage mAcquired;
         AcquiredImage mPrevious;
-        math::mat3f mTransform;
     } user_thread;
 
     // #TODO b/442937292
-    math::mat3f mTransform;
     std::unordered_map<void*, fvkmemory::resource_ptr<VulkanTexture>> mTextures;
 };
 

@@ -651,11 +651,6 @@ void WebGPUDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math
     //todo
 }
 
-void WebGPUDriver::registerBufferObjectStreams(Handle<HwBufferObject> bufferObjectHandle,
-        BufferObjectStreamDescriptor&& streams) {
-    //todo
-}
-
 void WebGPUDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
     //todo
 }

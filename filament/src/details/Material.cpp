@@ -70,10 +70,19 @@
 
 namespace filament {
 
+namespace {
+
 using namespace backend;
 using namespace filaflat;
 using namespace utils;
-using UboBatchingMode = FEngine::UboBatchingMode;
+using UboBatchingMode = Material::UboBatchingMode;
+
+bool shouldEnableBatching(FEngine& engine, UboBatchingMode batchingMode, MaterialDomain domain) {
+    return batchingMode != UboBatchingMode::DISABLED && engine.isUboBatchingEnabled() &&
+           domain == MaterialDomain::SURFACE;
+}
+
+} // anonymous namespace
 
 struct Material::BuilderDetails {
     const void* mPayload = nullptr;
@@ -81,6 +90,7 @@ struct Material::BuilderDetails {
     bool mDefaultMaterial = false;
     int32_t mShBandsCount = 3;
     Builder::ShadowSamplingQuality mShadowSamplingQuality = Builder::ShadowSamplingQuality::LOW;
+    UboBatchingMode mUboBatchingMode = UboBatchingMode::DEFAULT;
     std::unordered_map<
         CString,
         std::variant<int32_t, float, bool>,
@@ -112,6 +122,11 @@ Material::Builder& Material::Builder::sphericalHarmonicsBandCount(size_t const s
 
 Material::Builder& Material::Builder::shadowSamplingQuality(ShadowSamplingQuality const quality) noexcept {
     mImpl->mShadowSamplingQuality = quality;
+    return *this;
+}
+
+Material::Builder& Material::Builder::uboBatching(UboBatchingMode const mode) noexcept {
+    mImpl->mUboBatchingMode = mode;
     return *this;
 }
 
@@ -148,8 +163,12 @@ Material* Material::Builder::build(Engine& engine) const {
 FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition const& definition)
         : mDefinition(definition),
           mIsDefaultMaterial(builder->mDefaultMaterial),
+          mUseUboBatching(shouldEnableBatching(engine, builder->mUboBatchingMode,
+                  definition.materialDomain)),
           mEngine(engine),
           mMaterialId(engine.getMaterialId()) {
+    FILAMENT_CHECK_PRECONDITION(!mUseUboBatching || engine.isUboBatchingEnabled())
+            << "UBO batching is not enabled.";
     mSpecializationConstants = processSpecializationConstants(builder);
     precacheDepthVariants(engine);
 
@@ -282,14 +301,14 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
         return FMaterialInstance::duplicate(mDefaultMaterialInstance, name);
     } else {
         // but if we don't, just create an instance with all the default parameters
-        return mEngine.createMaterialInstance(this, name, UboBatchingMode::DEFAULT);
+        return mEngine.createMaterialInstance(this, name);
     }
 }
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
         mDefaultMaterialInstance =
-                mEngine.createMaterialInstance(this, mDefinition.name.c_str(), UboBatchingMode::DEFAULT);
+                mEngine.createMaterialInstance(this, mDefinition.name.c_str());
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;
