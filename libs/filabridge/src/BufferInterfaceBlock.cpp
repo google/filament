@@ -122,8 +122,6 @@ BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
 
     auto& uniformsInfoList = mFieldInfoList;
 
-    auto& transformOffsetMap = mTransformOffsetMap;
-
     uint32_t i = 0;
     uint16_t offset = 0;
     for (auto const& e : builder.mEntries) {
@@ -150,11 +148,6 @@ BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
         // record this uniform info
         infoMap[{ info.name.data(), info.name.size() }] = i;
 
-        // record the transform offset if this is an external sampler
-        if (e.associatedSampler != 0) {
-            transformOffsetMap[e.associatedSampler] = offset;
-        }
-
         // advance offset to next slot
         offset += stride * std::max(1u, e.size);
         ++i;
@@ -168,14 +161,6 @@ ssize_t BufferInterfaceBlock::getFieldOffset(std::string_view name, size_t index
     auto const* info = getFieldInfo(name);
     assert_invariant(info);
     return (ssize_t)info->getBufferOffset(index);
-}
-
-ssize_t BufferInterfaceBlock::getTransformFieldOffset(uint8_t binding) const {
-    auto pos = mTransformOffsetMap.find(binding);
-    if (pos == mTransformOffsetMap.end()) {
-        return -1;
-    }
-    return (ssize_t)pos->second * sizeof(uint32_t);
 }
 
 BufferInterfaceBlock::FieldInfo const* BufferInterfaceBlock::getFieldInfo(

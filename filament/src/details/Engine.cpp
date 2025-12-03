@@ -727,7 +727,6 @@ void FEngine::prepare() {
             // post-process materials instances must be commited explicitly because their
             // parameters are typically not set at this point in time.
             if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
-                item->commitStreamUniformAssociations(driver);
                 item->commit(driver, uboManager);
             }
         });
@@ -991,10 +990,9 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
     return p;
 }
 
-FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material, const char* name,
-        UboBatchingMode batchingMode) noexcept {
-    FMaterialInstance* p =
-            mHeapAllocator.make<FMaterialInstance>(*this, material, name, batchingMode);
+FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
+        const char* name) noexcept {
+    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material, name);
     if (UTILS_LIKELY(p)) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);

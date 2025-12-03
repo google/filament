@@ -292,16 +292,11 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     // do this before engine.flush()
     mResourceAllocator->gc(true);
 
-    // Run the component managers' GC in parallel
-    // WARNING: while doing this we can't access any component manager
-    auto& js = engine.getJobSystem();
-
-    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
-
     engine.flush();     // flush command stream
 
-    // make sure we're done with the gcs
-    js.waitAndRelease(job);
+    // Run the component managers' GC
+    auto& js = engine.getJobSystem();
+    js.runAndWait(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
 }
 
 bool FRenderer::shouldRenderFrame() const noexcept {
@@ -468,16 +463,11 @@ void FRenderer::endFrame() {
     // do this before engine.flush()
     mResourceAllocator->gc();
 
-    // Run the component managers' GC in parallel
-    // WARNING: while doing this we can't access any component manager
-    auto& js = engine.getJobSystem();
-
-    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
-
     engine.flush();     // flush command stream
 
-    // make sure we're done with the gcs
-    js.waitAndRelease(job);
+    // Run the component managers' GC
+    auto& js = engine.getJobSystem();
+    js.runAndWait(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
 }
 
 void FRenderer::readPixels(
