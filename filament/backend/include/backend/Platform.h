@@ -19,13 +19,17 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORM_H
 
+#include <utils/CString.h>
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+#include <utils/Mutex.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include <atomic>
+#include <memory>
+#include <mutex>
 
 namespace filament::backend {
 
@@ -70,6 +74,9 @@ public:
         ExternalImageHandle& operator=(ExternalImageHandle const& rhs) noexcept;
         ExternalImageHandle& operator=(ExternalImageHandle&& rhs) noexcept;
 
+        bool operator==(const ExternalImageHandle& rhs) const noexcept {
+            return mTarget == rhs.mTarget;
+        }
         explicit operator bool() const noexcept { return mTarget != nullptr; }
 
         ExternalImage* UTILS_NULLABLE get() noexcept { return mTarget; }
@@ -508,12 +515,21 @@ public:
     // --------------------------------------------------------------------------------------------
     // Debugging APIs
 
-    using DebugUpdateStatFunc = utils::Invocable<void(const char* UTILS_NONNULL key, uint64_t value)>;
+    using DebugUpdateStatFunc = utils::Invocable<void(const char* UTILS_NONNULL key,
+            uint64_t intValue, utils::CString stringValue)>;
 
     /**
      * Sets the callback function that the backend can use to update backend-specific statistics
      * to aid with debugging. This callback is guaranteed to be called on the Filament driver
      * thread.
+     *
+     * The callback signature is (key, intValue, stringValue). Note that for any given call,
+     * only one of the value parameters (intValue or stringValue) will be meaningful, depending on
+     * the specific key.
+     *
+     * IMPORTANT_NOTE: because the callback is called on the driver thread, only quick, non-blocking
+     * work should be done inside it. Furthermore, no graphics API calls (such as GL calls) should
+     * be made, which could interfere with Filament's driver state.
      *
      * @param debugUpdateStat   an Invocable that updates debug statistics
      */
@@ -533,15 +549,32 @@ public:
      * This function is guaranteed to be called only on a single thread, the Filament driver
      * thread.
      *
-     * @param key          a null-terminated C-string with the key of the debug statistic
-     * @param value        the updated value of key
+     * @param key           a null-terminated C-string with the key of the debug statistic
+     * @param intValue      the updated integer value of key (the string value passed to the
+     *                      callback will be empty)
      */
-    void debugUpdateStat(const char* UTILS_NONNULL key, uint64_t value);
+    void debugUpdateStat(const char* UTILS_NONNULL key, uint64_t intValue);
+
+    /**
+     * To track backend-specific statistics, the backend implementation can call the
+     * application-provided callback function debugUpdateStatFunc to associate or update a value
+     * with a given key. It is possible for this function to be called multiple times with the
+     * same key, in which case newer values should overwrite older values.
+     *
+     * This function is guaranteed to be called only on a single thread, the Filament driver
+     * thread.
+     *
+     * @param key           a null-terminated C-string with the key of the debug statistic
+     * @param stringValue   the updated string value of key (the integer value passed to the
+     *                      callback will be 0)
+     */
+    void debugUpdateStat(const char* UTILS_NONNULL key, utils::CString stringValue);
 
 private:
-    InsertBlobFunc mInsertBlob;
-    RetrieveBlobFunc mRetrieveBlob;
-    DebugUpdateStatFunc mDebugUpdateStat;
+    std::shared_ptr<InsertBlobFunc> mInsertBlob;
+    std::shared_ptr<RetrieveBlobFunc> mRetrieveBlob;
+    std::shared_ptr<DebugUpdateStatFunc> mDebugUpdateStat;
+    mutable utils::Mutex mMutex;
 };
 
 } // namespace filament

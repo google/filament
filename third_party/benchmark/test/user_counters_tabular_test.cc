@@ -7,19 +7,25 @@
 // @todo: <jpmag> this checks the full output at once; the rule for
 // CounterSet1 was failing because it was not matching "^[-]+$".
 // @todo: <jpmag> check that the counters are vertically aligned.
-ADD_CASES(
-    TC_ConsoleOut,
-    {
-        // keeping these lines long improves readability, so:
-        // clang-format off
+ADD_CASES(TC_ConsoleOut,
+          {
+              // keeping these lines long improves readability, so:
+              // clang-format off
     {"^[-]+$", MR_Next},
     {"^Benchmark %s Time %s CPU %s Iterations %s Bar %s Bat %s Baz %s Foo %s Frob %s Lob$", MR_Next},
     {"^[-]+$", MR_Next},
-    {"^BM_Counters_Tabular/threads:%int %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
-    {"^BM_Counters_Tabular/threads:%int %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
-    {"^BM_Counters_Tabular/threads:%int %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
-    {"^BM_Counters_Tabular/threads:%int %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
-    {"^BM_Counters_Tabular/threads:%int %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+      {"^BM_Counters_Tabular/repeats:2/threads:1 %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+      {"^BM_Counters_Tabular/repeats:2/threads:1 %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+      {"^BM_Counters_Tabular/repeats:2/threads:1_mean %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+      {"^BM_Counters_Tabular/repeats:2/threads:1_median %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+            {"^BM_Counters_Tabular/repeats:2/threads:1_stddev %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+            {"^BM_Counters_Tabular/repeats:2/threads:1_cv %console_percentage_report [ ]*%percentage[ ]*% [ ]*%percentage[ ]*% [ ]*%percentage[ ]*% [ ]*%percentage[ ]*% [ ]*%percentage[ ]*% [ ]*%percentage[ ]*%$", MR_Next},
+      {"^BM_Counters_Tabular/repeats:2/threads:2 %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+      {"^BM_Counters_Tabular/repeats:2/threads:2 %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+      {"^BM_Counters_Tabular/repeats:2/threads:2_mean %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+      {"^BM_Counters_Tabular/repeats:2/threads:2_median %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+            {"^BM_Counters_Tabular/repeats:2/threads:2_stddev %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
+            {"^BM_Counters_Tabular/repeats:2/threads:2_cv %console_percentage_report [ ]*%percentage[ ]*% [ ]*%percentage[ ]*% [ ]*%percentage[ ]*% [ ]*%percentage[ ]*% [ ]*%percentage[ ]*% [ ]*%percentage[ ]*%$", MR_Next},
     {"^BM_CounterRates_Tabular/threads:%int %console_report [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s$", MR_Next},
     {"^BM_CounterRates_Tabular/threads:%int %console_report [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s$", MR_Next},
     {"^BM_CounterRates_Tabular/threads:%int %console_report [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s [ ]*%hrfloat/s$", MR_Next},
@@ -46,8 +52,8 @@ ADD_CASES(
     {"^BM_CounterSet2_Tabular/threads:%int %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
     {"^BM_CounterSet2_Tabular/threads:%int %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$", MR_Next},
     {"^BM_CounterSet2_Tabular/threads:%int %console_report [ ]*%hrfloat [ ]*%hrfloat [ ]*%hrfloat$"},
-        // clang-format on
-    });
+              // clang-format on
+          });
 ADD_CASES(TC_CSVOut, {{"%csv_header,"
                        "\"Bar\",\"Bat\",\"Baz\",\"Foo\",\"Frob\",\"Lob\""}});
 
@@ -57,6 +63,10 @@ ADD_CASES(TC_CSVOut, {{"%csv_header,"
 
 void BM_Counters_Tabular(benchmark::State& state) {
   for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
+    benchmark::DoNotOptimize(iterations);
   }
   namespace bm = benchmark;
   state.counters.insert({
@@ -68,11 +78,17 @@ void BM_Counters_Tabular(benchmark::State& state) {
       {"Lob", {32, bm::Counter::kAvgThreads}},
   });
 }
-BENCHMARK(BM_Counters_Tabular)->ThreadRange(1, 16);
+BENCHMARK(BM_Counters_Tabular)->ThreadRange(1, 2)->Repetitions(2);
 ADD_CASES(TC_JSONOut,
-          {{"\"name\": \"BM_Counters_Tabular/threads:%int\",$"},
-           {"\"run_name\": \"BM_Counters_Tabular/threads:%int\",$", MR_Next},
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:1\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:1\",$",
+            MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -84,8 +100,260 @@ ADD_CASES(TC_JSONOut,
            {"\"Frob\": %float,$", MR_Next},
            {"\"Lob\": %float$", MR_Next},
            {"}", MR_Next}});
-ADD_CASES(TC_CSVOut, {{"^\"BM_Counters_Tabular/threads:%int\",%csv_report,"
-                       "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:1\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:1\",$",
+            MR_Next},
+           {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"repetition_index\": 1,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:1_mean\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:1\",$",
+            MR_Next},
+           {"\"run_type\": \"aggregate\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
+           {"\"aggregate_name\": \"mean\",$", MR_Next},
+           {"\"aggregate_unit\": \"time\",$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:1_median\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:1\",$",
+            MR_Next},
+           {"\"run_type\": \"aggregate\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
+           {"\"aggregate_name\": \"median\",$", MR_Next},
+           {"\"aggregate_unit\": \"time\",$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:1_stddev\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:1\",$",
+            MR_Next},
+           {"\"run_type\": \"aggregate\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
+           {"\"aggregate_name\": \"stddev\",$", MR_Next},
+           {"\"aggregate_unit\": \"time\",$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:1_cv\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:1\",$",
+            MR_Next},
+           {"\"run_type\": \"aggregate\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
+           {"\"aggregate_name\": \"cv\",$", MR_Next},
+           {"\"aggregate_unit\": \"percentage\",$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:2\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 1,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:2\",$",
+            MR_Next},
+           {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 2,$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:2\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 1,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:2\",$",
+            MR_Next},
+           {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"repetition_index\": 1,$", MR_Next},
+           {"\"threads\": 2,$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:2_median\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 1,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:2\",$",
+            MR_Next},
+           {"\"run_type\": \"aggregate\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"threads\": 2,$", MR_Next},
+           {"\"aggregate_name\": \"median\",$", MR_Next},
+           {"\"aggregate_unit\": \"time\",$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:2_stddev\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 1,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:2\",$",
+            MR_Next},
+           {"\"run_type\": \"aggregate\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"threads\": 2,$", MR_Next},
+           {"\"aggregate_name\": \"stddev\",$", MR_Next},
+           {"\"aggregate_unit\": \"time\",$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_Tabular/repeats:2/threads:2_cv\",$"},
+           {"\"family_index\": 0,$", MR_Next},
+           {"\"per_family_instance_index\": 1,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_Tabular/repeats:2/threads:2\",$",
+            MR_Next},
+           {"\"run_type\": \"aggregate\",$", MR_Next},
+           {"\"repetitions\": 2,$", MR_Next},
+           {"\"threads\": 2,$", MR_Next},
+           {"\"aggregate_name\": \"cv\",$", MR_Next},
+           {"\"aggregate_unit\": \"percentage\",$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"Bar\": %float,$", MR_Next},
+           {"\"Bat\": %float,$", MR_Next},
+           {"\"Baz\": %float,$", MR_Next},
+           {"\"Foo\": %float,$", MR_Next},
+           {"\"Frob\": %float,$", MR_Next},
+           {"\"Lob\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:1\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:1\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:1_mean\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:1_median\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:1_stddev\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:1_cv\",%csv_cv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:2\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:2\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:2_mean\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:2_median\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:2_stddev\",%csv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_Tabular/repeats:2/threads:2_cv\",%csv_cv_report,"
+            "%float,%float,%float,%float,%float,%float$"}});
 // VS2013 does not allow this function to be passed as a lambda argument
 // to CHECK_BENCHMARK_RESULTS()
 void CheckTabular(Results const& e) {
@@ -96,7 +364,10 @@ void CheckTabular(Results const& e) {
   CHECK_COUNTER_VALUE(e, int, "Frob", EQ, 16);
   CHECK_COUNTER_VALUE(e, int, "Lob", EQ, 32);
 }
-CHECK_BENCHMARK_RESULTS("BM_Counters_Tabular/threads:%int", &CheckTabular);
+CHECK_BENCHMARK_RESULTS("BM_Counters_Tabular/repeats:2/threads:1$",
+                        &CheckTabular);
+CHECK_BENCHMARK_RESULTS("BM_Counters_Tabular/repeats:2/threads:2$",
+                        &CheckTabular);
 
 // ========================================================================= //
 // -------------------- Tabular+Rate Counters Output ----------------------- //
@@ -104,6 +375,10 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_Tabular/threads:%int", &CheckTabular);
 
 void BM_CounterRates_Tabular(benchmark::State& state) {
   for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
+    benchmark::DoNotOptimize(iterations);
   }
   namespace bm = benchmark;
   state.counters.insert({
@@ -118,9 +393,14 @@ void BM_CounterRates_Tabular(benchmark::State& state) {
 BENCHMARK(BM_CounterRates_Tabular)->ThreadRange(1, 16);
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_CounterRates_Tabular/threads:%int\",$"},
+           {"\"family_index\": 1,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_CounterRates_Tabular/threads:%int\",$",
             MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -166,8 +446,13 @@ void BM_CounterSet0_Tabular(benchmark::State& state) {
 BENCHMARK(BM_CounterSet0_Tabular)->ThreadRange(1, 16);
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_CounterSet0_Tabular/threads:%int\",$"},
+           {"\"family_index\": 2,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_CounterSet0_Tabular/threads:%int\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -201,8 +486,13 @@ void BM_CounterSet1_Tabular(benchmark::State& state) {
 BENCHMARK(BM_CounterSet1_Tabular)->ThreadRange(1, 16);
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_CounterSet1_Tabular/threads:%int\",$"},
+           {"\"family_index\": 3,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_CounterSet1_Tabular/threads:%int\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -240,8 +530,13 @@ void BM_CounterSet2_Tabular(benchmark::State& state) {
 BENCHMARK(BM_CounterSet2_Tabular)->ThreadRange(1, 16);
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_CounterSet2_Tabular/threads:%int\",$"},
+           {"\"family_index\": 4,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_CounterSet2_Tabular/threads:%int\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -265,4 +560,7 @@ CHECK_BENCHMARK_RESULTS("BM_CounterSet2_Tabular", &CheckSet2);
 // --------------------------- TEST CASES END ------------------------------ //
 // ========================================================================= //
 
-int main(int argc, char* argv[]) { RunOutputTests(argc, argv); }
+int main(int argc, char* argv[]) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
+  RunOutputTests(argc, argv);
+}

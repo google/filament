@@ -61,6 +61,8 @@ public:
 
     MetalContext* getContext() { return mContext; }
 
+    using DriverBase::scheduleDestroy;
+
 private:
 
     friend class MetalSwapChain;

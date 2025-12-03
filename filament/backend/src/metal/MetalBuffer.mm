@@ -39,34 +39,30 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
         mUploadStrategy = UploadStrategy::POOL;
     }
 
-    // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
-    // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
-    // This won't work for SSBOs, since they are read/write.
+    MTLResourceOptions options = MTLResourceStorageModePrivate;
 
-    /*
-    if (size <= 4 * 1024 && bindingType != BufferObjectBinding::SHADER_STORAGE &&
-            usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
-        mBuffer = nil;
-        mCpuBuffer = malloc(size);
-        return;
+    // The buffer will be memory mapped for write operations.
+    if (any(usage & BufferUsage::SHARED_WRITE_BIT)) {
+#if defined(FILAMENT_IOS) || defined(__arm64__) || defined(__aarch64__)
+        // iOS and Apple Silicon devices use UMA (Unified Memory Architecture), so we use Shared memory.
+        options = MTLResourceStorageModeShared;
+#else
+        // Intel Macs require Managed memory for CPU/GPU synchronization.
+        options = MTLResourceStorageModeManaged;
+#endif
     }
-    */
 
-    // Otherwise, we allocate a private GPU buffer.
     {
         ScopedAllocationTimer timer("generic");
-        mBuffer = { [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate],
+        mBuffer = { [context.device newBufferWithLength:size options:options],
             TrackedMetalBuffer::Type::GENERIC };
     }
+
     // mBuffer might fail to be allocated. Clients can check for this by calling
     // wasAllocationSuccessful().
 }
 
-MetalBuffer::~MetalBuffer() {
-    if (mCpuBuffer) {
-        free(mCpuBuffer);
-    }
-}
+MetalBuffer::~MetalBuffer() = default;
 
 void MetalBuffer::copyIntoBuffer(
         void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag) {
@@ -82,12 +78,6 @@ void MetalBuffer::copyIntoBuffer(
     // The copy blit requires that byteOffset be a multiple of 4.
     FILAMENT_CHECK_PRECONDITION(!(byteOffset & 0x3))
             << "byteOffset must be a multiple of 4, tag=" << getHandleTag();
-
-    // If we have a cpu buffer, we can directly copy into it.
-    if (mCpuBuffer) {
-        memcpy(static_cast<uint8_t*>(mCpuBuffer) + byteOffset, src, size);
-        return;
-    }
 
     switch (mUploadStrategy) {
         case UploadStrategy::BUMP_ALLOCATOR:
@@ -106,11 +96,6 @@ void MetalBuffer::copyIntoBufferUnsynchronized(
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw() noexcept {
-    // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
-    // separately.
-    if (mCpuBuffer) {
-        return nil;
-    }
     assert_invariant(mBuffer);
     return mBuffer.get();
 }
@@ -170,41 +155,6 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncod
         [(id<MTLComputeCommandEncoder>) encoder setBuffers:metalBuffers.data()
                                                    offsets:metalOffsets.data()
                                                  withRange:bufferRange];
-    }
-
-    for (size_t b = 0; b < count; b++) {
-        MetalBuffer* const buffer = buffers[b];
-        if (!buffer) {
-            continue;
-        }
-
-        const void* cpuBuffer = buffer->getCpuBuffer();
-        if (!cpuBuffer) {
-            continue;
-        }
-
-        const size_t bufferIndex = bufferStart + b;
-        const size_t offset = offsets[b];
-        auto* bytes = static_cast<const uint8_t*>(cpuBuffer);
-
-        if (stages & Stage::VERTEX) {
-            [(id<MTLRenderCommandEncoder>) encoder setVertexBytes:(bytes + offset)
-                                                           length:(buffer->getSize() - offset)
-                                                          atIndex:bufferIndex];
-        }
-        if (stages & Stage::FRAGMENT) {
-            [(id<MTLRenderCommandEncoder>) encoder setFragmentBytes:(bytes + offset)
-                                                             length:(buffer->getSize() - offset)
-                                                            atIndex:bufferIndex];
-        }
-        if (stages & Stage::COMPUTE) {
-            // TODO: using setBytes means the data is read-only, which currently isn't enforced.
-            // In practice this won't be an issue since MetalBuffer ensures all SSBOs are realized
-            // through actual id<MTLBuffer> allocations.
-            [(id<MTLComputeCommandEncoder>) encoder setBytes:(bytes + offset)
-                                                      length:(buffer->getSize() - offset)
-                                                     atIndex:bufferIndex];
-        }
     }
 }
 

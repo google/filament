@@ -1,0 +1,49 @@
+name: build-and-test-min-cmake
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CMAKE_GENERATOR: Ninja
+
+jobs:
+  job:
+    name: ${{ matrix.os }}.min-cmake
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.13.0
+
+      - name: create build environment
+        run: cmake -E make_directory ${{ runner.workspace }}/_build
+
+      - name: setup cmake initial cache
+        run: touch compiler-cache.cmake
+
+      - name: configure cmake
+        env:
+          CXX: ${{ matrix.compiler }}
+        shell: bash
+        working-directory: ${{ runner.workspace }}/_build
+        run: >
+          cmake -C ${{ github.workspace }}/compiler-cache.cmake
+          $GITHUB_WORKSPACE
+          -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
+          -DCMAKE_CXX_VISIBILITY_PRESET=hidden
+          -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON
+
+      - name: build
+        shell: bash
+        working-directory: ${{ runner.workspace }}/_build
+        run: cmake --build .

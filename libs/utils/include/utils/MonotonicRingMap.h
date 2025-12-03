@@ -56,6 +56,9 @@ public:
     //! Returns true if the map is full.
     bool full() const noexcept { return mSize == N; }
 
+    //! Clears the map entirely.
+    void clear() noexcept { mSize = 0; mHead = 0; }
+
     /**
      * Inserts a new key-value pair.
      * The key must be greater than the key of the last inserted element.
@@ -65,7 +68,7 @@ public:
      */
     UTILS_NOINLINE void insert(key_type key, mapped_type value) {
         assert(empty() || key > back().first); // assert monotonic
-        if (full()) {
+        if (UTILS_LIKELY(full())) {
             // container is full, replace the oldest element
             mStorage[mHead] = { key, value };
             mHead = (mHead + 1) % N;

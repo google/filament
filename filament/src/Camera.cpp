@@ -20,8 +20,6 @@
 
 #include <math/mat4.h>
 
-#include <utils/Panic.h>
-
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -36,10 +34,6 @@ using namespace math;
 void Camera::setProjection(double const fovInDegrees, double const aspect,
         double const near, double const far, Fov const direction) {
 
-    FILAMENT_CHECK_PRECONDITION(near > 0 && far > near)
-            << "Camera preconditions not met in setProjection(): near <= 0 or far <= near, near="
-            << near << ", far=" << far;
-
     setCustomProjection(
             projection(direction, fovInDegrees, aspect, near),
             projection(direction, fovInDegrees, aspect, near, far),
@@ -48,10 +42,6 @@ void Camera::setProjection(double const fovInDegrees, double const aspect,
 
 void Camera::setLensProjection(double const focalLengthInMillimeters,
         double const aspect, double const near, double const far) {
-
-    FILAMENT_CHECK_PRECONDITION(near > 0 && far > near)
-        << "Camera preconditions not met in setLensProjection(): near <= 0 or far <= near, near="
-        << near << ", far=" << far;
 
     setCustomProjection(
             projection(focalLengthInMillimeters, aspect, near),

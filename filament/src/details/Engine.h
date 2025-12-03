@@ -778,9 +778,10 @@ public:
                 bool assert_material_instance_texture_descriptor_set_compatible =
                         CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_camera_projection_near_far = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
             struct {
-                bool disable_gpu_frame_complete_metric = false;
+                bool disable_gpu_frame_complete_metric = true;
             } frame_info;
         } engine;
         struct {
@@ -847,6 +848,9 @@ public:
             { "engine.debug.assert_texture_can_generate_mipmap",
               "Assert if a texture has the correct usage set for generating mipmaps.",
               &features.engine.debug.assert_texture_can_generate_mipmap, false },
+            { "engine.debug.assert_camera_projection_near_far",
+              "Assert that the near plane is smaller than the far plane.",
+              &features.engine.debug.assert_camera_projection_near_far, false },
             { "material.check_crc32_after_loading",
               "Verify the checksum of package data when a material is loaded.",
               &features.material.check_crc32_after_loading, false },
