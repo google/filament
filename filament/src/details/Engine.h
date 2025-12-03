@@ -345,21 +345,10 @@ public:
 
     FRenderer* createRenderer() noexcept;
 
-    // Defines whether a material instance should use UBO batching or not.
-    enum class UboBatchingMode {
-        // For default, it follows the engine settings.
-        // If UBO batching is enabled on the engine and the material domain is not SURFACE, it
-        // turns on the UBO batching. Otherwise, it turns off the UBO batching.
-        DEFAULT,
-        NO_UBO_BATCHING,
-        UBO_BATCHING
-    };
-
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
             const FMaterialInstance* other, const char* name) noexcept;
 
-    FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name,
-            UboBatchingMode batchingMode) noexcept;
+    FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
@@ -778,7 +767,6 @@ public:
                 bool assert_material_instance_texture_descriptor_set_compatible =
                         CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
-                bool assert_camera_projection_near_far = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
             struct {
                 bool disable_gpu_frame_complete_metric = true;
@@ -848,9 +836,6 @@ public:
             { "engine.debug.assert_texture_can_generate_mipmap",
               "Assert if a texture has the correct usage set for generating mipmaps.",
               &features.engine.debug.assert_texture_can_generate_mipmap, false },
-            { "engine.debug.assert_camera_projection_near_far",
-              "Assert that the near plane is smaller than the far plane.",
-              &features.engine.debug.assert_camera_projection_near_far, false },
             { "material.check_crc32_after_loading",
               "Verify the checksum of package data when a material is loaded.",
               &features.material.check_crc32_after_loading, false },
