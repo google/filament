@@ -749,12 +749,12 @@ public:
     bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept;
 
     /**
-     * Queries the device and platform for support of asynchronous operation.
+     * Checks if the engine is set up for asynchronous operation. If it returns true, the
+     * asynchronous versions of the APIs are available for use.
      *
-     * @param hint The asynchronous mode that the caller wants to check whether to support.
-     * @return The mode the engine currently supports. Returns NONE if none of them is supported.
+     * @return true if the engine supports asynchronous operation.
      */
-    AsynchronousMode resolveAsynchronousMode(AsynchronousMode hint) const noexcept;
+    bool isAsynchronousOperationSupported() const noexcept;
 
     /**
      * Retrieves the configuration settings of this Engine.

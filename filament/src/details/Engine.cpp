@@ -1511,17 +1511,8 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 
-AsynchronousMode FEngine::resolveAsynchronousMode(AsynchronousMode hint) const noexcept {
-    switch (hint) {
-        case AsynchronousMode::NONE:
-            PANIC_PRECONDITION("Invalid argument");
-        case AsynchronousMode::THREAD_PREFERRED:
-            return UTILS_HAS_THREADING ? AsynchronousMode::THREAD : AsynchronousMode::AMORTIZATION;
-        case AsynchronousMode::THREAD:
-            return UTILS_HAS_THREADING ? AsynchronousMode::THREAD : AsynchronousMode::NONE;
-        case AsynchronousMode::AMORTIZATION:
-            return AsynchronousMode::AMORTIZATION;
-    }
+bool FEngine::isAsynchronousOperationSupported() const noexcept {
+    return mConfig.asynchronousMode != AsynchronousMode::NONE;
 }
 
 #if defined(__EMSCRIPTEN__)
