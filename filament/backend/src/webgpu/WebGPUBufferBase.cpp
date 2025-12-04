@@ -30,7 +30,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <iostream>
 
 namespace filament::backend {
 
