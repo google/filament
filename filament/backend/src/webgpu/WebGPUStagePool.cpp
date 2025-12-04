@@ -19,8 +19,6 @@
 #include "WebGPUConstants.h"
 #include "WebGPUQueueManager.h"
 
-#include <iostream>
-
 namespace filament::backend {
 
 WebGPUStagePool::WebGPUStagePool(wgpu::Device const& device) : mDevice(device) {}
@@ -29,20 +27,13 @@ WebGPUStagePool::~WebGPUStagePool() = default;
 
 wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize,
         std::shared_ptr<WebGPUSubmissionState> latestSubmissionState) {
-    std::cout << "Run Yu: required size in acquireBuffer: " << requiredSize << std::endl;
-    std::cout << "Run Yu: the pool size is " << mBuffers.size() << std::endl;
     wgpu::Buffer buffer;
     {
         std::lock_guard<std::mutex> lock(mMutex);
         auto iter = mBuffers.lower_bound(requiredSize);
         if (iter != mBuffers.end()) {
             buffer = iter->second;
-            std::cout << "Run Yu: found buffer in the pool with size " << buffer.GetSize()
-                      << std::endl;
             mBuffers.erase(iter);
-            if (buffer.GetMapState() != wgpu::BufferMapState::Mapped) {
-                std::cout << "Run Yu: buffer from pool is not mapped!!" << std::endl;
-            }
         }
     }
     if (!buffer.Get()) {
@@ -62,13 +53,12 @@ void WebGPUStagePool::recycleBuffer(wgpu::Buffer buffer) {
     buffer.MapAsync(wgpu::MapMode::Write, 0, buffer.GetSize(), wgpu::CallbackMode::AllowSpontaneous,
             [data = std::move(userData)](wgpu::MapAsyncStatus status, const char* message) {
                 if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
-                    if (data->webGPUStagePool) {
-                        std::cout << "Run Yu: MapAsync successful with size "
-                                  << data->buffer.GetSize() << std::endl;
-                        std::lock_guard<std::mutex> lock(data->webGPUStagePool->mMutex);
-                        data->webGPUStagePool->mBuffers.insert(
-                                { data->buffer.GetSize(), data->buffer });
+                    if (!data->webGPUStagePool) {
+                        return;
                     }
+                    std::lock_guard<std::mutex> lock(data->webGPUStagePool->mMutex);
+                    data->webGPUStagePool->mBuffers.insert(
+                            { data->buffer.GetSize(), data->buffer });
                 } else {
                     FWGPU_LOGE << "Failed to MapAsync when recycling staging buffer: " << message;
                 }
@@ -76,9 +66,9 @@ void WebGPUStagePool::recycleBuffer(wgpu::Buffer buffer) {
 }
 
 void WebGPUStagePool::gc() {
-    // We found that MapAsync would lead to nullptr with GetMappedRange if the command using that
-    // staging buffer has not finished executing, so here we only recycle those buffers that are not
-    // still being used by any command
+    // We found that MapAsync would sometimes lead to GetMappedRange returning nullptr if the
+    // command using that staging buffer has not finished executing, so here we only recycle those
+    // buffers that are not still being used by any command
     std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> stillInProgress;
     for (auto& [st, buffer]: mInProgress) {
         if (st->getStatus() == FenceStatus::CONDITION_SATISFIED) {
@@ -91,7 +81,6 @@ void WebGPUStagePool::gc() {
 }
 
 wgpu::Buffer WebGPUStagePool::createNewBuffer(size_t bufferSize) {
-    std::cout << "Run Yu: creating new buffer with size " << bufferSize << std::endl;
     wgpu::BufferDescriptor descriptor{
         .label = "Filament WebGPU Staging Buffer",
         .usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc,
