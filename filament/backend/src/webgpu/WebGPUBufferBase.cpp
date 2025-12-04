@@ -87,7 +87,8 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     const size_t stagingBufferSize =
             remainder == 0 ? bufferDescriptor.size : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
-    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize);
+    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize,
+            webGPUQueueManager->getLatestSubmissionState());
 
     void* mappedRange = stagingBuffer.GetMappedRange();
     std::string mappedRangeIsNull = mappedRange
@@ -120,25 +121,6 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
             byteOffset,
             remainder == 0 ? bufferDescriptor.size
                            : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
-    webGPUQueueManager->flush();
-
-    struct UserData final {
-        wgpu::Buffer stagingBuffer;
-        WebGPUStagePool* webGPUStagePool;
-    };
-    auto userData = std::make_unique<UserData>(
-            UserData{ .stagingBuffer = stagingBuffer, .webGPUStagePool = webGPUStagePool });
-    stagingBuffer.MapAsync(
-            wgpu::MapMode::Write, 0, stagingBufferSize, wgpu::CallbackMode::AllowSpontaneous,
-            [](wgpu::MapAsyncStatus status, const char* message, UserData* userData) {
-                if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
-                    std::unique_ptr<UserData> data(static_cast<UserData*>(userData));
-                    userData->webGPUStagePool->addBufferToPool(userData->stagingBuffer);
-                } else {
-                    std::cout << "Run Yu: MAPPING UNSUCCESSFUL!!\n";
-                }
-            },
-            userData.release());
 }
 
 } // namespace filament::backend
