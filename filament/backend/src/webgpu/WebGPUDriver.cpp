@@ -178,6 +178,9 @@ void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
     for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
         mCurrentDescriptorSets[i] = {};
     }
+
+    // Garbage collection (if necessary)
+    mStagePool.gc();
 }
 
 // If a command encoder is in flight then the encoder is finished and submitted to the GPU queue.

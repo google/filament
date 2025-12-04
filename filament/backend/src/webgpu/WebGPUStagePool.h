@@ -24,21 +24,27 @@
 
 namespace filament::backend {
 
+struct WebGPUSubmissionState;
+
 class WebGPUStagePool {
 public:
     WebGPUStagePool(wgpu::Device const& device);
     ~WebGPUStagePool();
 
-    wgpu::Buffer acquireBuffer(size_t requiredSize);
-    void addBufferToPool(wgpu::Buffer buffer);
+    wgpu::Buffer acquireBuffer(size_t requiredSize,
+            std::shared_ptr<WebGPUSubmissionState> latestSubmissionState);
+    void recycleBuffer(wgpu::Buffer buffer);
+    void gc();
+
 private:
     wgpu::Buffer createNewBuffer(size_t bufferSize);
     std::multimap<uint32_t, wgpu::Buffer> mBuffers;
+    std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> mInProgress;
     mutable std::mutex mMutex;
 
     wgpu::Device mDevice;
 };
 
-}
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_WEBGPUSTAGEPOOL_H
