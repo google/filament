@@ -1508,7 +1508,8 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
 }
 
 bool FEngine::isAsynchronousOperationSupported() const noexcept {
-    return mConfig.asynchronousMode != AsynchronousMode::NONE;
+    return features.backend.enable_asynchronous_operation &&
+        mConfig.asynchronousMode != AsynchronousMode::NONE;
 }
 
 #if defined(__EMSCRIPTEN__)
