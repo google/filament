@@ -134,18 +134,17 @@ jobs:
         env:
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
         run: |
-          ls ./gltf/Models
           TEST_DIR=test/renderdiff
           source ${TEST_DIR}/src/preamble.sh
-          start_
+          set -eux
           GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 ${TEST_DIR}/src/commit_msg.py)
-          bash ${TEST_DIR}/generate.sh && \
-              python3 ${TEST_DIR}/src/golden_manager.py \
+          bash ${TEST_DIR}/generate.sh
+          python3 ${TEST_DIR}/src/golden_manager.py \
                   --branch=${GOLDEN_BRANCH} \
                   --output=${GOLDEN_OUTPUT_DIR}
 
-          # Note that we need to upload the output even if comparison fails, so we undo `set -ex`
-          end_
+          # Note that we need to upload the output even if comparison fails, so we undo `set -eux`
+          set +eux
 
           python3 ${TEST_DIR}/src/compare.py \
               --src=${GOLDEN_OUTPUT_DIR} \
@@ -158,6 +157,7 @@ jobs:
              cat compare_output.txt >> "$GITHUB_OUTPUT"
              echo "$DELIMITER" >> "$GITHUB_OUTPUT"
           fi
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result

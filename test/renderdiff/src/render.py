@@ -42,7 +42,8 @@ def _render_single_model(gltf_viewer, test_json_path, named_output_dir,
     env |= {
       'VK_ICD_FILENAMES': vk_icd,
       'VK_DRIVER_FILES': vk_icd,
-      'VK_LOADER_DEBUG': 'all',
+      # Uncomment when there's a problem finding the vk driver
+      # 'VK_LOADER_DEBUG': 'all',
     }
 
   out_name = f'{test_name}.{backend}.{model}'

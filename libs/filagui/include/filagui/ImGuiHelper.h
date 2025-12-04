@@ -17,9 +17,6 @@
 #ifndef FILAGUI_IMGUIHELPER_H_
 #define FILAGUI_IMGUIHELPER_H_
 
-#include <vector>
-#include <functional>
-
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
@@ -31,6 +28,10 @@
 
 #include <utils/Entity.h>
 #include <utils/Path.h>
+
+#include <functional>
+#include <vector>
+#include <unordered_set>
 
 struct ImDrawData;
 struct ImGuiIO;
@@ -100,6 +101,7 @@ public:
       filament::TextureSampler mSampler;
       bool mFlipVertical = false;
       utils::Path mSettingsPath;
+      std::unordered_set<filament::Texture*> mImGuiTextures;
 };
 
 } // namespace filagui
