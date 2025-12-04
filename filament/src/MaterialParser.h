@@ -145,6 +145,8 @@ public:
         return getMaterialChunk().hasShader(model, variant, stage);
     }
 
+    bool getSourceShader(utils::CString* cstring) const noexcept;
+
     filaflat::MaterialChunk const& getMaterialChunk() const noexcept {
         return mImpl.mMaterialChunk;
     }

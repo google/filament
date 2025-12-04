@@ -16,6 +16,7 @@ set(HDRS
 set(COMMON_PRIVATE_HDRS
         src/eiff/Chunk.h
         src/eiff/ChunkContainer.h
+        src/eiff/CompressedStringChunk.h
         src/eiff/DictionaryTextChunk.h
         src/eiff/Flattener.h
         src/eiff/LineDictionary.h
@@ -28,6 +29,7 @@ set(COMMON_PRIVATE_HDRS
 set(COMMON_SRCS
         src/eiff/Chunk.cpp
         src/eiff/ChunkContainer.cpp
+        src/eiff/CompressedStringChunk.cpp
         src/eiff/DictionaryTextChunk.cpp
         src/eiff/LineDictionary.cpp
         src/eiff/MaterialTextChunk.cpp

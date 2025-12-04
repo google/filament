@@ -113,6 +113,7 @@ struct MaterialDefinition {
 
     utils::CString name;
     uint64_t cacheId = 0;
+    utils::CString source;
 
 private:
     friend class MaterialCache;
