@@ -237,6 +237,14 @@ bool MaterialParser::getName(CString* cstring) const noexcept {
    return unflattener.read(cstring);
 }
 
+bool MaterialParser::getSourceShader(CString* cstring) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialSource);
+    // Source shader is optional, consider this as a success.
+    if (start == end) return true;
+    Unflattener unflattener(start, end);
+    return unflattener.read(cstring);
+}
+
 bool MaterialParser::getCacheId(uint64_t* cacheId) const noexcept {
    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialCacheId);
     if (start == end) return false;

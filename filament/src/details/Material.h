@@ -248,8 +248,10 @@ public:
         return mDefinition.perViewLayoutIndex;
     }
 
-    bool useUboBatching() const noexcept {
-        return mUseUboBatching;
+    bool useUboBatching() const noexcept { return mUseUboBatching; }
+
+    std::string_view getSource() const noexcept {
+        return mDefinition.source.c_str_safe();
     }
 
 #if FILAMENT_ENABLE_MATDBG
