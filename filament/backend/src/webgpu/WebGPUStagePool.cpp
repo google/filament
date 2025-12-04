@@ -53,24 +53,26 @@ wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize,
 }
 
 void WebGPUStagePool::recycleBuffer(wgpu::Buffer buffer) {
-    using UserData = std::pair<wgpu::Buffer, WebGPUStagePool*>;
-    auto userData = std::make_unique<UserData>(buffer, this);
-    buffer.MapAsync(
-            wgpu::MapMode::Write, 0, buffer.GetSize(), wgpu::CallbackMode::AllowSpontaneous,
-            [](wgpu::MapAsyncStatus status, const char* message, UserData* userData) {
+    struct UserData final {
+        wgpu::Buffer buffer;
+        WebGPUStagePool* webGPUStagePool;
+    };
+    auto userData =
+            std::make_unique<UserData>(UserData{ .buffer = buffer, .webGPUStagePool = this });
+    buffer.MapAsync(wgpu::MapMode::Write, 0, buffer.GetSize(), wgpu::CallbackMode::AllowSpontaneous,
+            [data = std::move(userData)](wgpu::MapAsyncStatus status, const char* message) {
                 if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
-                    std::unique_ptr<UserData> data(static_cast<UserData*>(userData));
-                    auto [buf, pool] = *data;
-                    if (pool) {
-                        std::cout << "Run Yu: MapAsync successful with size " << buf.GetSize() << std::endl;
-                        std::lock_guard<std::mutex> lock(pool->mMutex);
-                        pool->mBuffers.insert({ buf.GetSize(), buf });
+                    if (data->webGPUStagePool) {
+                        std::cout << "Run Yu: MapAsync successful with size "
+                                  << data->buffer.GetSize() << std::endl;
+                        std::lock_guard<std::mutex> lock(data->webGPUStagePool->mMutex);
+                        data->webGPUStagePool->mBuffers.insert(
+                                { data->buffer.GetSize(), data->buffer });
                     }
                 } else {
                     FWGPU_LOGE << "Failed to MapAsync when recycling staging buffer: " << message;
                 }
-            },
-            userData.release());
+            });
 }
 
 void WebGPUStagePool::gc() {
