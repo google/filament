@@ -29,6 +29,8 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 
+#include "JobQueue.h"
+
 #include <condition_variable>
 #include <memory>
 #include <mutex>

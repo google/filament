@@ -54,13 +54,13 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
         include/private/backend/HandleAllocator.h
-        include/private/backend/JobQueue.h
         include/private/backend/PlatformFactory.h
         src/CallbackManager.h
         src/CommandStreamDispatcher.h
         src/CompilerThreadPool.h
         src/DataReshaper.h
         src/DriverBase.h
+        src/JobQueue.h
 )
 
 # ==================================================================================================

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/backend/JobQueue.h"
+#include "JobQueue.h"
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>

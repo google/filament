@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "private/backend/JobQueue.h"
+#include "JobQueue.h"
 
 #include <atomic>
 #include <thread>
