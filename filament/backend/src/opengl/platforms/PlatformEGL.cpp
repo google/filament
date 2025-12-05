@@ -179,7 +179,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
         requestES2Context = bool(atoi(property));
     }
 #else
-    bool requestES2Context = isOpenGL();
+    constexpr bool requestES2Context = false;
 #endif
 
     Config contextAttribs;
