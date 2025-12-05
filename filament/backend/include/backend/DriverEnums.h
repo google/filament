@@ -1713,6 +1713,8 @@ using FrameTimestamps = Platform::FrameTimestamps;
 
 using CompositorTiming = Platform::CompositorTiming;
 
+using AsynchronousMode = Platform::AsynchronousMode;
+
 } // namespace filament::backend
 
 template<> struct utils::EnableBitMaskOperators<filament::backend::ShaderStageFlags>
