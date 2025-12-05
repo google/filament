@@ -132,11 +132,6 @@ struct MetalContext {
     uint32_t currentFrame = 0;
     MetalErrorQueue commandBufferErrors;
 
-    // If zero, the next presentation should happen as soon as possible.
-    // Otherwise, this is the timestamp when the present should happen.
-    // Resets to 0 after the present.
-    int64_t presentationTimeNs = 0;
-
     std::atomic<bool> memorylessLimitsReached = false;
 
     // Supported features.

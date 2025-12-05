@@ -141,6 +141,8 @@ public:
     // FrameScheduledCallback.
     void present();
 
+    void setPresentationTime(int64_t timeNs) { presentationTimeNs = timeNs; }
+
     NSUInteger getSurfaceWidth() const;
     NSUInteger getSurfaceHeight() const;
     NSUInteger getSampleCount() const;
@@ -191,6 +193,11 @@ private:
     uint64_t flags;
 
     int64_t abandonedUntilFrame = -1;
+
+    // If zero, the next presentation should happen as soon as possible.
+    // Otherwise, this is the timestamp when the present should happen.
+    // Resets to 0 after the present.
+    int64_t presentationTimeNs = 0;
 
     // These fields store a callback to notify the client that a frame is ready for presentation. If
     // !frameScheduled.callback, then the Metal backend automatically calls presentDrawable when the

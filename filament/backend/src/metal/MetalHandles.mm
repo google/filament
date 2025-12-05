@@ -325,11 +325,11 @@ void MetalSwapChain::present() {
     if (frameCompleted.callback) {
         scheduleFrameCompletedCallback();
     }
-    const auto presentationTimeNs = context.presentationTimeNs;
-    context.presentationTimeNs = 0;
+    const auto timeNs = presentationTimeNs;
+    presentationTimeNs = 0;
     if (drawable) {
         if (frameScheduled.callback) {
-            scheduleFrameScheduledCallback(presentationTimeNs);
+            scheduleFrameScheduledCallback(timeNs);
         } else  {
             if (presentationTimeNs) {
                 const CFTimeInterval timeSeconds =
