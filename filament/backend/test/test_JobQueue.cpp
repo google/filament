@@ -16,32 +16,32 @@
 
 #include <gtest/gtest.h>
 
-#include <utils/JobStorage.h>
+#include "private/backend/JobQueue.h"
 
 #include <atomic>
 #include <thread>
 
-using namespace utils;
+using namespace filament::backend;
 
-TEST(JobStorage, PushAndPop) {
-    JobStorage::Ptr storage = JobStorage::create();
+TEST(JobQueue, PushAndPop) {
+    JobQueue::Ptr storage = JobQueue::create();
     int v = 0;
 
     storage->push([&v]() { v = 1; });
-    JobStorage::Job job = storage->pop(false);
+    JobQueue::Job job = storage->pop(false);
     ASSERT_TRUE(job);
     job();
     EXPECT_EQ(1, v);
 }
 
-TEST(JobStorage, PopEmpty) {
-    JobStorage::Ptr storage = JobStorage::create();
-    JobStorage::Job job = storage->pop(false);
+TEST(JobQueue, PopEmpty) {
+    JobQueue::Ptr storage = JobQueue::create();
+    JobQueue::Job job = storage->pop(false);
     ASSERT_FALSE(job);
 }
 
-TEST(JobStorage, PopBatch) {
-    JobStorage::Ptr storage = JobStorage::create();
+TEST(JobQueue, PopBatch) {
+    JobQueue::Ptr storage = JobQueue::create();
     int v = 0;
 
     storage->push([&v]() { v++; });
@@ -63,8 +63,8 @@ TEST(JobStorage, PopBatch) {
     EXPECT_EQ(3, v);
 }
 
-TEST(JobStorage, PopAll) {
-    JobStorage::Ptr storage = JobStorage::create();
+TEST(JobQueue, PopAll) {
+    JobQueue::Ptr storage = JobQueue::create();
     int v = 0;
 
     storage->push([&v]() { v++; });
@@ -79,11 +79,11 @@ TEST(JobStorage, PopAll) {
     EXPECT_EQ(3, v);
 }
 
-TEST(JobStorage, Cancel) {
-    JobStorage::Ptr storage = JobStorage::create();
+TEST(JobQueue, Cancel) {
+    JobQueue::Ptr storage = JobQueue::create();
     int v = 0;
 
-    JobStorage::JobId idToCancel = storage->push([&v]() { v = 1; });
+    JobQueue::JobId idToCancel = storage->push([&v]() { v = 1; });
     storage->push([&v]() { v = 2; });
 
     EXPECT_TRUE(storage->cancel(idToCancel));
@@ -94,19 +94,19 @@ TEST(JobStorage, Cancel) {
     EXPECT_EQ(2, v);
 }
 
-TEST(JobStorage, CancelInvalid) {
-    JobStorage::Ptr storage = JobStorage::create();
+TEST(JobQueue, CancelInvalid) {
+    JobQueue::Ptr storage = JobQueue::create();
     EXPECT_FALSE(storage->cancel(123));
 }
 
-TEST(JobStorage, Stop) {
-    JobStorage::Ptr storage = JobStorage::create();
+TEST(JobQueue, Stop) {
+    JobQueue::Ptr storage = JobQueue::create();
     int v = 0;
     storage->push([&v]() { v = 1; });
     storage->stop();
     // After stop, we can't push new jobs. This should be a no-op.
-    JobStorage::JobId id = storage->push([&v]() { v = 2; });
-    EXPECT_EQ(JobStorage::InvalidJobId, id);
+    JobQueue::JobId id = storage->push([&v]() { v = 2; });
+    EXPECT_EQ(JobQueue::InvalidJobId, id);
 
     auto job = storage->pop(false);
     EXPECT_TRUE(job);
@@ -117,15 +117,15 @@ TEST(JobStorage, Stop) {
     EXPECT_FALSE(job);
 }
 
-TEST(JobStorage, PreIssuedJobId) {
-    JobStorage::Ptr storage = JobStorage::create();
-    JobStorage::JobId preIssuedId = storage->issueJobId();
-    JobStorage::JobId id = storage->push([]() {}, preIssuedId);
+TEST(JobQueue, PreIssuedJobId) {
+    JobQueue::Ptr storage = JobQueue::create();
+    JobQueue::JobId preIssuedId = storage->issueJobId();
+    JobQueue::JobId id = storage->push([]() {}, preIssuedId);
     EXPECT_EQ(id, preIssuedId);
 }
 
-TEST(JobStorage, MultipleProducersConsumers) {
-    JobStorage::Ptr storage = JobStorage::create();
+TEST(JobQueue, MultipleProducersConsumers) {
+    JobQueue::Ptr storage = JobQueue::create();
     std::atomic_int v = {0};
     constexpr int NUM_THREADS = 4;
     constexpr int JOBS_PER_THREAD = 200;
@@ -165,7 +165,7 @@ TEST(JobStorage, MultipleProducersConsumers) {
     });
     std::thread nonBlockingPopBatchConsumer = std::thread([&]() {
         while (true) {
-            FixedCapacityVector<JobStorage::Job> jobs = storage->popBatch(2);
+            FixedCapacityVector<JobQueue::Job> jobs = storage->popBatch(2);
             if (!jobs.empty()) {
                 for (auto& job : jobs) {
                     job();
@@ -196,7 +196,7 @@ TEST(JobStorage, MultipleProducersConsumers) {
 
 
 TEST(AmortizationWorker, Process) {
-    JobStorage::Ptr storage = JobStorage::create();
+    JobQueue::Ptr storage = JobQueue::create();
     JobWorker::Ptr worker = AmortizationWorker::create(storage);
     int v = 0;
 
@@ -216,7 +216,7 @@ TEST(AmortizationWorker, Process) {
 }
 
 TEST(AmortizationWorker, ProcessAll) {
-    JobStorage::Ptr storage = JobStorage::create();
+    JobQueue::Ptr storage = JobQueue::create();
     JobWorker::Ptr worker = AmortizationWorker::create(storage);
     int v = 0;
 
@@ -233,7 +233,7 @@ TEST(AmortizationWorker, ProcessAll) {
 }
 
 TEST(AmortizationWorker, TerminateDrainsAllJobs) {
-    JobStorage::Ptr storage = JobStorage::create();
+    JobQueue::Ptr storage = JobQueue::create();
     JobWorker::Ptr worker = AmortizationWorker::create(storage);
     int v = 0;
 
@@ -252,7 +252,7 @@ TEST(AmortizationWorker, TerminateDrainsAllJobs) {
 
 
 TEST(ThreadWorker, Process) {
-    JobStorage::Ptr storage = JobStorage::create();
+    JobQueue::Ptr storage = JobQueue::create();
     JobWorker::Ptr worker = ThreadWorker::create(storage, {});
     std::atomic_int v = {0};
 
@@ -270,7 +270,7 @@ TEST(ThreadWorker, Process) {
 }
 
 TEST(ThreadWorker, Callbacks) {
-    JobStorage::Ptr storage = JobStorage::create();
+    JobQueue::Ptr storage = JobQueue::create();
     bool beginCalled = false;
     bool endCalled = false;
 

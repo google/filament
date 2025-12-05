@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_JOBSTORAGE_H
-#define TNT_UTILS_JOBSTORAGE_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_JOBSTORAGE_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_JOBSTORAGE_H
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
@@ -29,7 +29,7 @@
 #include <limits>
 #include <queue>
 
-namespace utils {
+namespace filament::backend {
 
 /**
  * A thread-safe producer-consumer queue with batching capabilities.
@@ -42,10 +42,10 @@ namespace utils {
  * A typical use case looks like this:
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * #include <utils/JobSystem.h>
- * using namespace utils;
+ * #include "private/backend/JobQueue.h"
+ * using namespace filament::backend;
  *
- * JobStorage::Ptr storage = JobStorage::create();
+ * JobQueue::Ptr storage = JobQueue::create();
  * JobWorker::Ptr worker = AmortizationWorker::create(storage);
  * [ or JobWorker::Ptr worker = ThreadWorker::create(storage, config); ]
  *
@@ -65,23 +65,23 @@ namespace utils {
  * assert(id == preIssuedId);
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
-class JobStorage : public std::enable_shared_from_this<JobStorage> {
+class JobQueue : public std::enable_shared_from_this<JobQueue> {
     struct PassKey {};
 public:
-    using Job = Invocable<void()>;
+    using Job = utils::Invocable<void()>;
     using JobId = uint32_t;
-    using Ptr = std::shared_ptr<JobStorage>;
+    using Ptr = std::shared_ptr<JobQueue>;
     static constexpr JobId InvalidJobId = std::numeric_limits<JobId>::max();
 
     /**
-     * Creates an instance of JobStorage. Users should call this to create one.
-     * @return An instance of JobStorage
+     * Creates an instance of JobQueue. Users should call this to create one.
+     * @return An instance of JobQueue
      */
     static Ptr create() {
-        return std::make_shared<JobStorage>(PassKey{});
+        return std::make_shared<JobQueue>(PassKey{});
     }
 
-    explicit JobStorage(PassKey) {} // This can be created only via `create()`
+    explicit JobQueue(PassKey) {} // This can be created only via `create()`
 
     /**
      * Pushes a new job into storage.
@@ -114,7 +114,7 @@ public:
      * @return A FixedCapacityVector<Job> containing the retrieved jobs.
      * Returns an empty vector if the queue is empty.
      */
-    FixedCapacityVector<Job> popBatch(int maxJobsToPop);
+    utils::FixedCapacityVector<Job> popBatch(int maxJobsToPop);
 
     /**
      * Generate a new job ID. This newly generated ID is meant to be used for the `preIssuedJobId`
@@ -139,8 +139,8 @@ public:
     void stop() noexcept;
 
 private:
-    JobStorage(const JobStorage&) = delete;
-    JobStorage& operator=(const JobStorage&) = delete;
+    JobQueue(const JobQueue&) = delete;
+    JobQueue& operator=(const JobQueue&) = delete;
 
     std::mutex mStorageMutex;
     std::condition_variable mStorageCondition;
@@ -171,9 +171,9 @@ public:
     virtual void terminate();
 
 protected:
-    explicit JobWorker(JobStorage::Ptr storage) : mStorage(std::move(storage)) {}
+    explicit JobWorker(JobQueue::Ptr storage) : mStorage(std::move(storage)) {}
 
-    JobStorage::Ptr mStorage;
+    JobQueue::Ptr mStorage;
 
 private:
     JobWorker(const JobWorker&) = delete;
@@ -191,11 +191,11 @@ public:
      * Creates an instance of AmortizationWorker. Users should call this to create one.
      * @return An instance of AmortizationWorker
      */
-    static Ptr create(JobStorage::Ptr storage) {
+    static Ptr create(JobQueue::Ptr storage) {
         return std::make_unique<AmortizationWorker>(std::move(storage), PassKey{});
     }
 
-    explicit AmortizationWorker(JobStorage::Ptr storage, PassKey); // This can be created only via `create()`
+    explicit AmortizationWorker(JobQueue::Ptr storage, PassKey); // This can be created only via `create()`
 
     /**
      * Polls the storage and executes a batch of jobs.
@@ -222,7 +222,7 @@ public:
 class ThreadWorker final : public JobWorker {
     struct PassKey {};
 public:
-    using Priority = JobSystem::Priority;
+    using Priority = utils::JobSystem::Priority;
 
     /**
      * Config settings for the worker
@@ -230,19 +230,19 @@ public:
     struct Config {
         std::string_view name = "";
         Priority priority = Priority::NORMAL;
-        Invocable<void()> onBegin;  // Executed when the thread worker begins
-        Invocable<void()> onEnd;    // Executed when the thread worker ends
+        utils::Invocable<void()> onBegin;  // Executed when the thread worker begins
+        utils::Invocable<void()> onEnd;    // Executed when the thread worker ends
     };
 
     /**
      * Creates an instance of ThreadWorker. Users should call this to create one.
      * @return An instance of ThreadWorker
      */
-    static Ptr create(JobStorage::Ptr storage, Config config) {
+    static Ptr create(JobQueue::Ptr storage, Config config) {
         return std::make_unique<ThreadWorker>(std::move(storage), std::move(config), PassKey{});
     }
 
-    ThreadWorker(JobStorage::Ptr storage, Config config, PassKey); // This can be created only via `create()`
+    ThreadWorker(JobQueue::Ptr storage, Config config, PassKey); // This can be created only via `create()`
 
     ~ThreadWorker() override = default;
 
@@ -257,6 +257,6 @@ private:
     std::thread mThread;
 };
 
-} // namespace utils
+} // namespace filament::backend
 
-#endif //TNT_UTILS_JOBSTORAGE_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_JOBSTORAGE_H

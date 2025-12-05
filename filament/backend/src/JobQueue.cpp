@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-#include <utils/JobStorage.h>
+#include "private/backend/JobQueue.h"
+
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
-namespace utils {
+namespace filament::backend {
 
-JobStorage::JobId JobStorage::push(Job job, JobId const preIssuedJobId/* = InvalidJobId*/) {
+JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJobId*/) {
     JobId jobId = preIssuedJobId;
     {
         std::lock_guard<std::mutex> lock(mStorageMutex);
@@ -52,7 +53,7 @@ JobStorage::JobId JobStorage::push(Job job, JobId const preIssuedJobId/* = Inval
     return jobId;
 }
 
-JobStorage::Job JobStorage::pop(bool shouldBlock) {
+JobQueue::Job JobQueue::pop(bool shouldBlock) {
     std::unique_lock<std::mutex> lock(mStorageMutex);
 
     decltype(mJobsMap)::iterator it;
@@ -86,8 +87,8 @@ JobStorage::Job JobStorage::pop(bool shouldBlock) {
     return job;
 }
 
-FixedCapacityVector<JobStorage::Job> JobStorage::popBatch(int const maxJobsToPop) {
-    FixedCapacityVector<Job> jobs;
+utils::FixedCapacityVector<JobQueue::Job> JobQueue::popBatch(int const maxJobsToPop) {
+    utils::FixedCapacityVector<Job> jobs;
 
     if (UTILS_UNLIKELY(maxJobsToPop == 0)) {
         return jobs;
@@ -123,7 +124,7 @@ FixedCapacityVector<JobStorage::Job> JobStorage::popBatch(int const maxJobsToPop
     return jobs;
 }
 
-JobStorage::JobId JobStorage::issueJobId() noexcept {
+JobQueue::JobId JobQueue::issueJobId() noexcept {
     std::lock_guard<std::mutex> lock(mStorageMutex);
     JobId const jobId = mNextJobId++;
     // Preallocate a job, which servers two main purposes. It provides a valid jobId that can be
@@ -133,7 +134,7 @@ JobStorage::JobId JobStorage::issueJobId() noexcept {
     return jobId;
 }
 
-bool JobStorage::cancel(JobId const jobId) noexcept {
+bool JobQueue::cancel(JobId const jobId) noexcept {
     std::lock_guard<std::mutex> lock(mStorageMutex);
 
     auto it = mJobsMap.find(jobId);
@@ -146,7 +147,7 @@ bool JobStorage::cancel(JobId const jobId) noexcept {
     return true;
 }
 
-void JobStorage::stop() noexcept {
+void JobQueue::stop() noexcept {
     {
         std::lock_guard<std::mutex> lock(mStorageMutex);
         mIsStopping = true;
@@ -162,7 +163,7 @@ void JobWorker::terminate() {
     }
 }
 
-AmortizationWorker::AmortizationWorker(JobStorage::Ptr storage, PassKey)
+AmortizationWorker::AmortizationWorker(JobQueue::Ptr storage, PassKey)
     : JobWorker(std::move(storage)) {
 }
 
@@ -180,7 +181,7 @@ void AmortizationWorker::process(int const jobCount) {
     }
 
     // Handle batch (jobCount > 1 or jobCount < 0 for "all pending jobs")
-    FixedCapacityVector<JobStorage::Job> jobs = mStorage->popBatch(jobCount);
+    utils::FixedCapacityVector<JobQueue::Job> jobs = mStorage->popBatch(jobCount);
     if (jobs.empty()) {
         return;
     }
@@ -197,17 +198,17 @@ void AmortizationWorker::terminate() {
     process(-1);
 }
 
-ThreadWorker::ThreadWorker(JobStorage::Ptr storage, Config config, PassKey)
+ThreadWorker::ThreadWorker(JobQueue::Ptr storage, Config config, PassKey)
         : JobWorker(std::move(storage)), mConfig(std::move(config)) {
     mThread = std::thread([this]() {
-        JobSystem::setThreadName(mConfig.name.data());
-        JobSystem::setThreadPriority(mConfig.priority);
+        utils::JobSystem::setThreadName(mConfig.name.data());
+        utils::JobSystem::setThreadPriority(mConfig.priority);
 
         if (mConfig.onBegin) {
             mConfig.onBegin();
         }
 
-        while (JobStorage::Job job = mStorage->pop(true)) {
+        while (JobQueue::Job job = mStorage->pop(true)) {
             job();
         }
 

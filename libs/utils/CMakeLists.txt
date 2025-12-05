@@ -76,7 +76,6 @@ set(SRCS
         src/FixedCapacityVectorBase.cpp
         src/ImmutableCString.cpp
         src/Invocable.cpp
-        src/JobStorage.cpp
         src/JobSystem.cpp
         src/Log.cpp
         src/NameComponentManager.cpp
@@ -181,7 +180,6 @@ set(TEST_SRCS
         test/test_Hash.cpp
         test/test_InternPool.cpp
         test/test_JobSystem.cpp
-        test/test_JobStorage.cpp
         test/test_MonotonicRingMap.cpp
         test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp
