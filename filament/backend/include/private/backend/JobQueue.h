@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_PRIVATE_JOBSTORAGE_H
-#define TNT_FILAMENT_BACKEND_PRIVATE_JOBSTORAGE_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_JOBQUEUE_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_JOBQUEUE_H
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
@@ -45,9 +45,9 @@ namespace filament::backend {
  * #include "private/backend/JobQueue.h"
  * using namespace filament::backend;
  *
- * JobQueue::Ptr storage = JobQueue::create();
- * JobWorker::Ptr worker = AmortizationWorker::create(storage);
- * [ or JobWorker::Ptr worker = ThreadWorker::create(storage, config); ]
+ * JobQueue::Ptr queue = JobQueue::create();
+ * JobWorker::Ptr worker = AmortizationWorker::create(queue);
+ * [ or JobWorker::Ptr worker = ThreadWorker::create(queue, config); ]
  *
  * void loop() {
  *     worker->process(2); // for AmortizationWorker
@@ -57,11 +57,11 @@ namespace filament::backend {
  *     worker->terminate();
  * }
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * JobId id = storage->push([](){ ... });
- * storage->cancel(id);
+ * JobId id = queue->push([](){ ... });
+ * queue->cancel(id);
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * JobId preIssuedId = storage->issueJobId();
- * JobId id = storage->push([](){ ... }, preIssuedId);
+ * JobId preIssuedId = queue->issueJobId();
+ * JobId id = queue->push([](){ ... }, preIssuedId);
  * assert(id == preIssuedId);
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
@@ -84,7 +84,10 @@ public:
     explicit JobQueue(PassKey) {} // This can be created only via `create()`
 
     /**
-     * Pushes a new job into storage.
+     * Pushes a new job into queue.
+     *
+     * If the queue is in the process of shutting down (via a call to `stop`), this method does
+     * nothing (a no-op) and returns an invalid job ID.
      *
      * @param job The function/lambda to be executed.
      * @param preIssuedJobId The previously issued job ID where this job is assigned to.
@@ -94,7 +97,10 @@ public:
     JobId push(Job job, JobId preIssuedJobId = InvalidJobId);
 
     /**
-     * Retrieves the next job from storage.
+     * Retrieves the next job from queue.
+     *
+     * This method returns a valid job ID if there are pending jobs in the queue, even if the queue
+     * is currently in the process of shutting down (via a call to `stop`).
      *
      * @param shouldBlock If true (typically used by ThreadWorker), waits for a job and returns it.
      *  If false (typically used by AmortizationWorker), tries retrieving a job. But may return an
@@ -107,7 +113,10 @@ public:
     Job pop(bool shouldBlock);
 
     /**
-     * Retrieves a batch of next jobs from storage. Always non-blocking.
+     * Retrieves a batch of next jobs from queue. Always non-blocking.
+     *
+     * This method returns a valid job ID if there are pending jobs in the queue, even if the queue
+     * is currently in the process of shutting down (via a call to `stop`).
      *
      * @param maxJobsToPop The maximum number of jobs to retrieve.
      *  If < 0, retrieves all pending jobs.
@@ -133,8 +142,8 @@ public:
     bool cancel(JobId jobId) noexcept;
 
     /**
-     * Signals the storage to shut down, after which no further jobs can be added using the `push`
-     * method.
+     * Signals the queue to shut down, after which no further jobs can be added using the `push`
+     * method. but all jobs already pushed can still be processed using `pop`.
      */
     void stop() noexcept;
 
@@ -142,8 +151,8 @@ private:
     JobQueue(const JobQueue&) = delete;
     JobQueue& operator=(const JobQueue&) = delete;
 
-    std::mutex mStorageMutex;
-    std::condition_variable mStorageCondition;
+    std::mutex mQueueMutex;
+    std::condition_variable mQueueCondition;
     std::unordered_map<JobId, Job> mJobsMap;
     std::queue<JobId> mJobOrder;
     JobId mNextJobId = 0;
@@ -171,9 +180,9 @@ public:
     virtual void terminate();
 
 protected:
-    explicit JobWorker(JobQueue::Ptr storage) : mStorage(std::move(storage)) {}
+    explicit JobWorker(JobQueue::Ptr queue) : mQueue(std::move(queue)) {}
 
-    JobQueue::Ptr mStorage;
+    JobQueue::Ptr mQueue;
 
 private:
     JobWorker(const JobWorker&) = delete;
@@ -191,14 +200,14 @@ public:
      * Creates an instance of AmortizationWorker. Users should call this to create one.
      * @return An instance of AmortizationWorker
      */
-    static Ptr create(JobQueue::Ptr storage) {
-        return std::make_unique<AmortizationWorker>(std::move(storage), PassKey{});
+    static Ptr create(JobQueue::Ptr queue) {
+        return std::make_unique<AmortizationWorker>(std::move(queue), PassKey{});
     }
 
-    explicit AmortizationWorker(JobQueue::Ptr storage, PassKey); // This can be created only via `create()`
+    explicit AmortizationWorker(JobQueue::Ptr queue, PassKey); // This can be created only via `create()`
 
     /**
-     * Polls the storage and executes a batch of jobs.
+     * Polls the queue and executes a batch of jobs.
      *
      * @param jobCount The max number of jobs to process.
      *  0 = do nothing.
@@ -209,7 +218,7 @@ public:
     void process(int jobCount) override;
 
     /**
-     * Signals the storage to stop and drain all pending jobs.
+     * Signals the queue to stop and drain all pending jobs.
      * This is safe to call multiple times.
      */
     void terminate() override;
@@ -238,16 +247,16 @@ public:
      * Creates an instance of ThreadWorker. Users should call this to create one.
      * @return An instance of ThreadWorker
      */
-    static Ptr create(JobQueue::Ptr storage, Config config) {
-        return std::make_unique<ThreadWorker>(std::move(storage), std::move(config), PassKey{});
+    static Ptr create(JobQueue::Ptr queue, Config config) {
+        return std::make_unique<ThreadWorker>(std::move(queue), std::move(config), PassKey{});
     }
 
-    ThreadWorker(JobQueue::Ptr storage, Config config, PassKey); // This can be created only via `create()`
+    ThreadWorker(JobQueue::Ptr queue, Config config, PassKey); // This can be created only via `create()`
 
     ~ThreadWorker() override = default;
 
     /**
-     * Signals the storage to stop and joins the worker thread.
+     * Signals the queue to stop and joins the worker thread.
      * This is safe to call multiple times.
      */
     void terminate() override;
@@ -259,4 +268,4 @@ private:
 
 } // namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_PRIVATE_JOBSTORAGE_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_JOBQUEUE_H

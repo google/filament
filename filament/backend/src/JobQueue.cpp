@@ -24,7 +24,7 @@ namespace filament::backend {
 JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJobId*/) {
     JobId jobId = preIssuedJobId;
     {
-        std::lock_guard<std::mutex> lock(mStorageMutex);
+        std::lock_guard<std::mutex> lock(mQueueMutex);
         if (mIsStopping) {
             return InvalidJobId;
         }
@@ -40,7 +40,7 @@ JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJo
                 // or the job must have been canceled (likely)
                 return InvalidJobId;
             }
-            FILAMENT_CHECK_PRECONDITION(static_cast<bool>(it->second) == false)
+            FILAMENT_CHECK_PRECONDITION(!static_cast<bool>(it->second))
                     << "pre-issued job has already been populated";
             it->second = std::move(job);
         }
@@ -48,24 +48,24 @@ JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJo
     }
 
     // Always notify. A ThreadWorker might be waiting.
-    mStorageCondition.notify_one();
+    mQueueCondition.notify_one();
 
     return jobId;
 }
 
 JobQueue::Job JobQueue::pop(bool shouldBlock) {
-    std::unique_lock<std::mutex> lock(mStorageMutex);
+    std::unique_lock<std::mutex> lock(mQueueMutex);
 
     decltype(mJobsMap)::iterator it;
 
     while (true) {
         if (shouldBlock) {
             // Wait only if we're in blocking mode and the queue is empty
-            mStorageCondition.wait(lock, [this] { return !mJobOrder.empty() || mIsStopping; });
+            mQueueCondition.wait(lock, [this] { return !mJobOrder.empty() || mIsStopping; });
         }
 
         if (mJobOrder.empty()) {
-            // When `shouldBlock` is true, this means the storage is stopping now.
+            // When `shouldBlock` is true, this means the queue is stopping now.
             // When `shouldBlock` is false, this means there's no job.
             return nullptr;
         }
@@ -94,7 +94,7 @@ utils::FixedCapacityVector<JobQueue::Job> JobQueue::popBatch(int const maxJobsTo
         return jobs;
     }
 
-    std::lock_guard<std::mutex> lock(mStorageMutex);
+    std::lock_guard<std::mutex> lock(mQueueMutex);
     if (mJobOrder.empty()) {
         return jobs;
     }
@@ -125,7 +125,7 @@ utils::FixedCapacityVector<JobQueue::Job> JobQueue::popBatch(int const maxJobsTo
 }
 
 JobQueue::JobId JobQueue::issueJobId() noexcept {
-    std::lock_guard<std::mutex> lock(mStorageMutex);
+    std::lock_guard<std::mutex> lock(mQueueMutex);
     JobId const jobId = mNextJobId++;
     // Preallocate a job, which servers two main purposes. It provides a valid jobId that can be
     // checked for integrity when passed to the `push` method, and it enables job cancellation for
@@ -135,7 +135,7 @@ JobQueue::JobId JobQueue::issueJobId() noexcept {
 }
 
 bool JobQueue::cancel(JobId const jobId) noexcept {
-    std::lock_guard<std::mutex> lock(mStorageMutex);
+    std::lock_guard<std::mutex> lock(mQueueMutex);
 
     auto it = mJobsMap.find(jobId);
     if (it == mJobsMap.end()) {
@@ -149,39 +149,39 @@ bool JobQueue::cancel(JobId const jobId) noexcept {
 
 void JobQueue::stop() noexcept {
     {
-        std::lock_guard<std::mutex> lock(mStorageMutex);
+        std::lock_guard<std::mutex> lock(mQueueMutex);
         mIsStopping = true;
     }
-    mStorageCondition.notify_all(); // Wake up all waiting threads
+    mQueueCondition.notify_all(); // Wake up all waiting threads
 }
 
 JobWorker::~JobWorker() = default;
 
 void JobWorker::terminate() {
-    if (mStorage) {
-        mStorage->stop();
+    if (mQueue) {
+        mQueue->stop();
     }
 }
 
-AmortizationWorker::AmortizationWorker(JobQueue::Ptr storage, PassKey)
-    : JobWorker(std::move(storage)) {
+AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue, PassKey)
+    : JobWorker(std::move(queue)) {
 }
 
 void AmortizationWorker::process(int const jobCount) {
-    if (!mStorage || jobCount == 0) {
+    if (!mQueue || jobCount == 0) {
         return;
     }
 
     if (jobCount == 1) {
         // Handle single job without vector allocation.
-        if (auto job = mStorage->pop(false)) {
+        if (auto job = mQueue->pop(false)) {
             job();
         }
         return;
     }
 
     // Handle batch (jobCount > 1 or jobCount < 0 for "all pending jobs")
-    utils::FixedCapacityVector<JobQueue::Job> jobs = mStorage->popBatch(jobCount);
+    utils::FixedCapacityVector<JobQueue::Job> jobs = mQueue->popBatch(jobCount);
     if (jobs.empty()) {
         return;
     }
@@ -198,8 +198,8 @@ void AmortizationWorker::terminate() {
     process(-1);
 }
 
-ThreadWorker::ThreadWorker(JobQueue::Ptr storage, Config config, PassKey)
-        : JobWorker(std::move(storage)), mConfig(std::move(config)) {
+ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
+        : JobWorker(std::move(queue)), mConfig(std::move(config)) {
     mThread = std::thread([this]() {
         utils::JobSystem::setThreadName(mConfig.name.data());
         utils::JobSystem::setThreadPriority(mConfig.priority);
@@ -208,7 +208,7 @@ ThreadWorker::ThreadWorker(JobQueue::Ptr storage, Config config, PassKey)
             mConfig.onBegin();
         }
 
-        while (JobQueue::Job job = mStorage->pop(true)) {
+        while (JobQueue::Job job = mQueue->pop(true)) {
             job();
         }
 
