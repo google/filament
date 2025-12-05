@@ -19,6 +19,7 @@
 #include "VulkanCommands.h"
 #include "VulkanTexture.h"
 
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
@@ -105,6 +106,11 @@ void VulkanSwapChain::update() {
 }
 
 void VulkanSwapChain::present(DriverBase& driver) {
+    // The last acquire failed, so just skip presenting.
+    if (!mAcquired) {
+        return;
+    }
+
     if (!mHeadless && mTransitionSwapChainImageLayoutForPresent) {
         VulkanCommandBuffer& commands = mCommands->get();
         VkImageSubresourceRange const subresources{
@@ -161,7 +167,15 @@ void VulkanSwapChain::acquire(bool& resized) {
 
     VulkanPlatform::ImageSyncData imageSyncData;
     VkResult const result = mPlatform->acquire(swapChain, &imageSyncData);
+
+    if (result != VK_SUCCESS) {
+        // We just don't set mAcquired here so the next present will just skip.
+        FVK_LOGD << "Failed to acquire next image in the swapchain result=" << (int) result;
+        return;
+    }
+
     mCurrentSwapIndex = imageSyncData.imageIndex;
+    assert_invariant(mCurrentSwapIndex < mFinishedDrawing.size());
     mFinishedDrawing[mCurrentSwapIndex] = {};
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
             << "Cannot acquire in swapchain. error=" << static_cast<int32_t>(result);
