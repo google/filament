@@ -62,7 +62,9 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     // a memcpy if its available.
     bool const isStaticOrShared =
             any(mUsage & (BufferUsage::STATIC | BufferUsage::SHARED_WRITE_BIT));
-    bool const useMemcpy = ((isUniformAndAvailable && mStagingBufferBypassEnabled) || isStaticOrShared) && isMemcopyable;
+    bool const useMemcpy =
+            ((isUniformAndAvailable && mStagingBufferBypassEnabled) || isStaticOrShared) &&
+            isMemcopyable;
     if (useMemcpy) {
         char* dest = static_cast<char*>(mBuffer->getGpuBuffer()->allocationInfo.pMappedData) +
                      byteOffset;
