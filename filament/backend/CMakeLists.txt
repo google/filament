@@ -36,6 +36,7 @@ set(SRCS
         src/Driver.cpp
         src/Handle.cpp
         src/HandleAllocator.cpp
+        src/JobQueue.cpp
         src/ostream.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
@@ -53,6 +54,7 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
         include/private/backend/HandleAllocator.h
+        include/private/backend/JobQueue.h
         include/private/backend/PlatformFactory.h
         src/CallbackManager.h
         src/CommandStreamDispatcher.h
@@ -566,6 +568,7 @@ if (APPLE OR LINUX)
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
+        test/test_JobQueue.cpp
         test/test_MemoryMappedBuffer.cpp
         test/test_MsaaSwapChain.cpp
         test/test_MRT.cpp
