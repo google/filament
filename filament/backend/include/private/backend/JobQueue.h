@@ -65,7 +65,7 @@ namespace filament::backend {
  * assert(id == preIssuedId);
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
-class JobQueue : public std::enable_shared_from_this<JobQueue> {
+class JobQueue {
     struct PassKey {};
 public:
     using Job = utils::Invocable<void()>;
