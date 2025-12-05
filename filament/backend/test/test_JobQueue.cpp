@@ -165,7 +165,7 @@ TEST(JobQueue, MultipleProducersConsumers) {
     });
     std::thread nonBlockingPopBatchConsumer = std::thread([&]() {
         while (true) {
-            FixedCapacityVector<JobQueue::Job> jobs = storage->popBatch(2);
+            utils::FixedCapacityVector<JobQueue::Job> jobs = storage->popBatch(2);
             if (!jobs.empty()) {
                 for (auto& job : jobs) {
                     job();

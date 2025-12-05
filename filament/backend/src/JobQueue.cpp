@@ -101,7 +101,7 @@ utils::FixedCapacityVector<JobQueue::Job> JobQueue::popBatch(int const maxJobsTo
 
     // Calculate jobs to take. If maxJobsToPop is negative, we take all jobs.
     size_t jobsToTake = mJobOrder.size();
-    if (0 < maxJobsToPop && maxJobsToPop < jobsToTake) {
+    if (0 < maxJobsToPop && maxJobsToPop < static_cast<int>(jobsToTake)) {
         jobsToTake = maxJobsToPop;
     }
     jobs.reserve(jobsToTake);
