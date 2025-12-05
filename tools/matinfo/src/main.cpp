@@ -643,7 +643,9 @@ static bool parseChunks(Config config, void* data, size_t size) {
         return false;
     }
 
+    std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
     std::cout << writer.getString();
+    std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;    
 
     return true;
 }

@@ -38,8 +38,8 @@ using namespace utils;
 namespace filament {
 namespace matdbg {
 
-constexpr int alignment = 32;
-constexpr int shortAlignment = 15;
+constexpr int alignment = 27;
+constexpr int shortAlignment = 13;
 
 static string arraySizeToString(uint64_t size) {
     if (size > 1) {
@@ -253,6 +253,21 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
 
     text << "Parameters:" << endl;
 
+    auto uniformPrint = [](ostream& text,
+            std::string_view fieldName,
+            std::string_view uniformType,
+            std::string_view precision,
+            std::string_view associatedSampler) {
+        text << "    "
+             << setw(alignment) << fieldName
+             << setw(shortAlignment) << uniformType
+             << setw(shortAlignment) << precision
+             << setw(shortAlignment) << associatedSampler
+             << endl;
+    };
+
+    uniformPrint(text, "FIELD NAME", "UNIFORM TYPE", "PRECISION", "ASSOCIATED SAMPLER");
+
     for (uint64_t i = 0; i < uibCount; i++) {
         CString fieldName;
         uint64_t fieldSize;
@@ -280,13 +295,37 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
         }
 
-        text << "    "
-                  << setw(alignment) << fieldName.c_str_safe()
-                  << setw(shortAlignment) << toString(UniformType(fieldType))
-                  << arraySizeToString(fieldSize)
-                  << setw(shortAlignment) << toString(Precision(fieldPrecision))
-                  << endl;
+        uniformPrint(text, fieldName.c_str_safe(),
+                toString(UniformType(fieldType)) + arraySizeToString(fieldSize),
+                toString(Precision(fieldPrecision)),
+                std::to_string(fieldAssociatedSampler));
     }
+
+    if (uibCount > 0 && sibCount > 0) {
+        text << endl;
+    }
+
+    auto samplerPrint = [](ostream& text,
+            std::string_view fieldName,
+            std::string_view binding,
+            std::string_view type,
+            std::string_view format,
+            std::string_view precision,
+            std::string_view filterable,
+            std::string_view multisample) {            
+        text << "    "
+             << setw(alignment) << fieldName
+             << setw(shortAlignment) << binding
+             << setw(shortAlignment) << type
+             << setw(shortAlignment) << format
+             << setw(shortAlignment) << precision
+             << setw(shortAlignment) << filterable
+             << setw(shortAlignment) << multisample
+             << endl;
+    };
+
+    samplerPrint(text, "SAMPLER NAME", "BINDING", "TYPE", "FORMAT", "PRECISION", "FILTERABLE",
+            "MULTISAMPLE");
 
     for (uint64_t i = 0; i < sibCount; i++) {
         CString fieldName;
@@ -324,13 +363,10 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
         }
 
-        text << "    "
-                << setw(alignment) << fieldName.c_str_safe()
-                << setw(shortAlignment) << +fieldBinding
-                << setw(shortAlignment) << toString(SamplerType(fieldType))
-                << setw(shortAlignment) << toString(Precision(fieldPrecision))
-                << toString(SamplerFormat(fieldFormat))
-                << endl;
+        samplerPrint(text, fieldName.c_str_safe(), std::to_string(fieldBinding),
+                toString(SamplerType(fieldType)), toString(SamplerFormat(fieldFormat)),
+                toString(Precision(fieldPrecision)), (fieldFilterable ? "true" : "false"),
+                (fieldMultisample ? "true" : "false"));
     }
 
     text << endl;
