@@ -503,10 +503,7 @@ void VulkanDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_
     assert_invariant(any(mmb->access & MapBufferAccessFlags::WRITE_BIT));
     assert_invariant(offset + data.size <= mmb->size);
 
-    // TODO: this isa zero-effort implementation of copyToMemoryMappedBuffer(), where we just
-    //       call updateBufferObject(). This could be a fallback implementation for when
-    //       shared memory is not available.
-    //       On UMA systems, this should just be a memcpy into the memory-mapped buffer.
+    // On UMA systems, this is a memcpy into the memory-mapped buffer, otherwise use a staging buffer.
     updateBufferObject(mmb->boh, std::move(data), mmb->offset + offset);
 }
 
