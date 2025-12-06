@@ -334,6 +334,12 @@ std::string shaderFromKey(const MaterialKey& config) {
             )SHADER";
         }
 
+        if (config.hasDispersion) {
+            shader += R"SHADER(
+                material.dispersion = materialParams.dispersion;
+            )SHADER";
+        }
+
         if (config.hasSpecular) {
             shader += R"SHADER(
                 material.specularFactor = materialParams.specularStrength;
@@ -597,6 +603,10 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
     // IOR
     if (config.hasIOR) {
         builder.parameter("ior", MaterialBuilder::UniformType::FLOAT);
+    }
+
+    if (config.hasDispersion) {
+        builder.parameter("dispersion", MaterialBuilder::UniformType::FLOAT);
     }
 
     if (config.unlit) {

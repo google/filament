@@ -447,22 +447,22 @@ struct Refraction {
     float d;
 };
 
-void refractionSolidSphere(const PixelParams pixel,
+void refractionSolidSphere(float etaIR, float etaRI, float thickness,
     const vec3 n, vec3 r, out Refraction ray) {
-    r = refract(r, n, pixel.etaIR);
+    r = refract(r, n, etaIR);
     float NoR = dot(n, r);
-    float d = pixel.thickness * -NoR;
+    float d = thickness * -NoR;
     ray.position = vec3(shading_position + r * d);
     ray.d = d;
     vec3 n1 = normalize(NoR * r - n * 0.5);
-    ray.direction = refract(r, n1,  pixel.etaRI);
+    ray.direction = refract(r, n1,  etaRI);
 }
 
-void refractionSolidBox(const PixelParams pixel,
+void refractionSolidBox(float etaIR, float thickness,
     const vec3 n, vec3 r, out Refraction ray) {
-    vec3 rr = refract(r, n, pixel.etaIR);
+    vec3 rr = refract(r, n, etaIR);
     float NoR = dot(n, rr);
-    float d = pixel.thickness / max(-NoR, 0.001);
+    float d = thickness / max(-NoR, 0.001);
     ray.position = vec3(shading_position + rr * d);
     ray.direction = r;
     ray.d = d;
@@ -473,15 +473,15 @@ void refractionSolidBox(const PixelParams pixel,
 #endif
 }
 
-void refractionThinSphere(const PixelParams pixel,
+void refractionThinSphere(float etaIR, float uThickness,
     const vec3 n, vec3 r, out Refraction ray) {
     float d = 0.0;
 #if defined(MATERIAL_HAS_MICRO_THICKNESS)
     // note: we need the refracted ray to calculate the distance traveled
     // we could use shading_NoV, but we would lose the dependency on ior.
-    vec3 rr = refract(r, n, pixel.etaIR);
+    vec3 rr = refract(r, n, etaIR);
     float NoR = dot(n, rr);
-    d = pixel.uThickness / max(-NoR, 0.001);
+    d = uThickness / max(-NoR, 0.001);
     ray.position = vec3(shading_position + rr * d);
 #else
     ray.position = vec3(shading_position);
@@ -494,63 +494,79 @@ vec3 evaluateRefraction(
     const PixelParams pixel,
     const vec3 n0, vec3 E) {
 
-    Refraction ray;
+    vec3 Ft;
+
+#if defined(MATERIAL_HAS_DISPERSION)
+    for (int i = 0; i < 3; i++) {
+        float etaIR = pixel.etaIR[i];
+        float etaRI = pixel.etaRI[i];
+#else
+        float etaIR = pixel.etaIR;
+        float etaRI = pixel.etaRI;
+#endif
+
+        Refraction ray;
 
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
-    refractionSolidSphere(pixel, n0, -shading_view, ray);
+        refractionSolidSphere(etaIR, etaRI, pixel.thickness, n0, -shading_view, ray);
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    refractionThinSphere(pixel, n0, -shading_view, ray);
+        refractionThinSphere(etaIR, pixel.uThickness, n0, -shading_view, ray);
 #else
 #error invalid REFRACTION_TYPE
 #endif
 
-    // compute transmission T
+        // compute transmission T
 #if defined(MATERIAL_HAS_ABSORPTION)
-    vec3 T = min(vec3(1.0), exp(-pixel.absorption * ray.d));
+        vec3 T = min(vec3(1.0), exp(-pixel.absorption * ray.d));
 #endif
 
-    // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
-    // of 1.5 has full microfacet refraction
-    float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0,
-            saturate(pixel.etaIR * 3.0 - 2.0));
+        // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
+        // of 1.5 has full microfacet refraction
+        float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0,
+                saturate(etaIR * 3.0 - 2.0));
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // For thin surfaces, the light will bounce off at the second interface in the direction of
-    // the reflection, effectively adding to the specular, but this process will repeat itself.
-    // Each time the ray exits the surface on the front side after the first bounce,
-    // it's multiplied by E^2, and we get: E + E(1-E)^2 + E^3(1-E)^2 + ...
-    // This infinite series converges and is easy to simplify.
-    // Note: we calculate these bounces only on a single component,
-    // since it's a fairly subtle effect.
-    E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);
+        // For thin surfaces, the light will bounce off at the second interface in the direction of
+        // the reflection, effectively adding to the specular, but this process will repeat itself.
+        // Each time the ray exits the surface on the front side after the first bounce,
+        // it's multiplied by E^2, and we get: E + E(1-E)^2 + E^3(1-E)^2 + ...
+        // This infinite series converges and is easy to simplify.
+        // Note: we calculate these bounces only on a single component,
+        // since it's a fairly subtle effect.
+        E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);
 #endif
 
-    /* sample the cubemap or screen-space */
+        /* sample the cubemap or screen-space */
 #if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
-    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
-    // which is not the case when we'll read from the screen-space buffer
-    vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
+        // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
+        // which is not the case when we'll read from the screen-space buffer
+        vec3 t = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
 #else
-    vec3 Ft;
+        // compute the point where the ray exits the medium, if needed
+        vec4 p = vec4(getClipFromWorldMatrix() * vec4(ray.position, 1.0));
+        p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
 
-    // compute the point where the ray exits the medium, if needed
-    vec4 p = vec4(getClipFromWorldMatrix() * vec4(ray.position, 1.0));
-    p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
-
-    // distance to camera plane
-    const float invLog2sqrt5 = 0.8614;
-    float lod = max(0.0, (2.0 * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
-    Ft = textureLod(sampler0_ssr, vec3(p.xy, 0.0), lod).rgb;
+        // distance to camera plane
+        const float invLog2sqrt5 = 0.8614;
+        float lod = max(0.0, (2.0 * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
+        vec3 t = textureLod(sampler0_ssr, vec3(p.xy, 0.0), lod).rgb;
 #endif
 
-    // base color changes the amount of light passing through the boundary
-    Ft *= pixel.diffuseColor;
+        // base color changes the amount of light passing through the boundary
+        t *= pixel.diffuseColor;
 
-    // fresnel from the first interface
-    Ft *= 1.0 - E;
+        // fresnel from the first interface
+        t *= 1.0 - E;
 
-    // apply absorption
+        // apply absorption
 #if defined(MATERIAL_HAS_ABSORPTION)
-    Ft *= T;
+        t *= T;
+#endif
+
+#if defined(MATERIAL_HAS_DISPERSION)
+        Ft[i] = t[i];
+    }
+#else
+        Ft = t;
 #endif
 
     return Ft;

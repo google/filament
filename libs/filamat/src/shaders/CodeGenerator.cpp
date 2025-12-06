@@ -1248,6 +1248,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::ABSORPTION:                  return "ABSORPTION";
         case Property::TRANSMISSION:                return "TRANSMISSION";
         case Property::IOR:                         return "IOR";
+        case Property::DISPERSION:                  return "DISPERSION";
         case Property::MICRO_THICKNESS:             return "MICRO_THICKNESS";
         case Property::BENT_NORMAL:                 return "BENT_NORMAL";
         case Property::SPECULAR_FACTOR:             return "SPECULAR_FACTOR";
