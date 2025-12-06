@@ -1708,7 +1708,9 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
     container.emplace<uint64_t>(MaterialCacheId, materialId);
     if (!mMaterialSource.empty()) {
-        container.push<CompressedStringChunk>(MaterialSource, mMaterialSource.data());
+        container.push<CompressedStringChunk>(
+                MaterialSource, mMaterialSource,
+                CompressedStringChunk::CompressionLevel::MAX);
     }
 }
 

@@ -20,21 +20,24 @@
 #include "Chunk.h"
 #include "Flattener.h"
 
+#include <utils/CString.h>
+
 namespace filamat {
 
 class CompressedStringChunk final : public Chunk {
 public:
-    enum class Compression { NONE, COMPRESSED };
-
-    CompressedStringChunk(ChunkType type, Compression compression, std::string_view string)
-            : Chunk(type), mString(string) {}
-    ~CompressedStringChunk() = default;
+    enum class CompressionLevel { MIN, MAX, DEFAULT };
+    CompressedStringChunk(
+            ChunkType type, std::string_view string, CompressionLevel compressionLevel)
+            : Chunk(type),
+              mString(utils::CString(string.data(), string.size())),
+              mCompressionLevel(compressionLevel) {}
+    ~CompressedStringChunk() override = default;
 
 private:
     void flatten(Flattener& f) override;
-
-    Compression mCompression;
-    std::string_view mString;
+    utils::CString mString;
+    CompressionLevel mCompressionLevel;
 };
 
 } // namespace filamat
