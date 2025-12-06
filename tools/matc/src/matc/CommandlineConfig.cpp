@@ -70,6 +70,7 @@ static const option OPTIONS[] = {
         { "workarounds",       required_argument, nullptr, 'W' },
         { "no-insert-line-directives",       no_argument, nullptr, 'n' },
         { "no-insert-line-directive-check",       no_argument, nullptr, 'N' },
+        { "include-source-mat",       no_argument, nullptr, 'm' },
         { nullptr, 0, nullptr, 0 }  // termination of the option list
 };
 
@@ -163,6 +164,8 @@ static void usage(char* name) {
             "       #if defined(GL_GOOGLE_cpp_style_line_directive)\n"
             "       Some drivers may complain about the use of cpp style #line directives\n"
             "       if they don't support it.\n\n"
+            "   --include-source-mat\n"
+            "       Embeds the source ASCII material definition if set.\n"
 
             "Internal use and debugging only:\n"
             "   --optimize-none, -g, -O0\n"
@@ -405,6 +408,9 @@ bool CommandlineConfig::parse() {
                 break;
             case 'N':
                 mInsertLineDirectiveChecks = false;
+                break;
+            case 'm':
+                mIncludeSourceMaterial = true;
                 break;
         }
     }

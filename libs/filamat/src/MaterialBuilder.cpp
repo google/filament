@@ -31,6 +31,7 @@
 
 #include "eiff/BlobDictionary.h"
 #include "eiff/ChunkContainer.h"
+#include "eiff/CompressedStringChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
 #include "eiff/DictionaryTextChunk.h"
 #include "eiff/LineDictionary.h"
@@ -1251,6 +1252,11 @@ MaterialBuilder& MaterialBuilder::useLegacyMorphing() noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::materialSource(std::string_view source) noexcept {
+    mMaterialSource = source;
+    return *this;
+}
+
 Package MaterialBuilder::build(JobSystem& jobSystem) {
     if (materialBuilderClients == 0) {
         slog.e << "Error: MaterialBuilder::init() must be called before build()." << io::endl;
@@ -1701,6 +1707,11 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
                     hasher({ frag.data(), frag.size() })));
 
     container.emplace<uint64_t>(MaterialCacheId, materialId);
+    if (!mMaterialSource.empty()) {
+        container.push<CompressedStringChunk>(
+                MaterialSource, mMaterialSource,
+                CompressedStringChunk::CompressionLevel::MAX);
+    }
 }
 
 void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexcept {

@@ -257,6 +257,8 @@ void MaterialDefinition::processMain() {
     bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
 
     perViewLayoutIndex = ColorPassDescriptorSet::getIndex(isLit, isSSR, hasFog);
+
+    mMaterialParser->getSourceShader(&source);
 }
 
 void MaterialDefinition::processBlendingMode() {

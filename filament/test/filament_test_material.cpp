@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include <gtest/gtest.h>
+
+#include <filamat/MaterialBuilder.h>
 
 #include <filament/Engine.h>
 #include <filament/Material.h>
@@ -79,6 +80,53 @@ TEST(MaterialTransformName, QueryMultipleSamplersWithoutTransforms) {
 
     EXPECT_EQ(material->getParameterTransformName("sampler1"), nullptr);
     EXPECT_EQ(material->getParameterTransformName("sampler3"), nullptr);
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(Material, MaterialWithSourceMaterialSuccessfullyRetrieveSource) {
+    // Need to set a specific backend to create a proper MaterialParser.
+    Engine* engine = Engine::create(Engine::Backend::OPENGL);
+
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.);
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.materialSource(shaderCode);
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    EXPECT_EQ(material->getSource(), shaderCode);
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+
+TEST(Material, MaterialWithoutSourceMaterialReturnsEmptySource) {
+    // Need to set a specific backend to create a proper MaterialParser.
+    Engine* engine = Engine::create(Engine::Backend::OPENGL);
+    filamat::MaterialBuilder builder;
+    builder.init();
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    EXPECT_EQ(material->getSource(), "");
 
     engine->destroy(material);
     Engine::destroy(engine);

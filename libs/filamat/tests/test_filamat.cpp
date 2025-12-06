@@ -964,6 +964,20 @@ TEST_F(MaterialCompiler, FeatureLevel0Ess3CallFails) {
   EXPECT_FALSE(result.isValid());
 }
 
+TEST_F(MaterialCompiler, EmbedMaterialSourceSucceeds) {
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.);
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.materialSource(shaderCode);
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
 #if FILAMENT_SUPPORTS_WEBGPU
 TEST_F(MaterialCompiler, WgslConversionBakedColor) {
     std::string bakedColorCodeFrag(R"(
