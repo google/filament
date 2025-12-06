@@ -102,7 +102,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
 
     MaterialCrc32 = charTo64bitNum("MAT_CRC "),
 
-    MaterialSource = charTo64bitNum("MAT_SRC"),
+    MaterialSource = charTo64bitNum("MAT_SRC "),
 };
 
 } // namespace filamat

@@ -165,7 +165,7 @@ static void usage(char* name) {
             "       Some drivers may complain about the use of cpp style #line directives\n"
             "       if they don't support it.\n\n"
             "   --include-source-mat\n"
-            "       Embeds the source ASCII material if set.\n"
+            "       Embeds the source ASCII material definition if set.\n"
 
             "Internal use and debugging only:\n"
             "   --optimize-none, -g, -O0\n"
