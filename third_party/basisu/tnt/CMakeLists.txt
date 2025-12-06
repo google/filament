@@ -2,8 +2,6 @@ project(basisu)
 
 cmake_minimum_required(VERSION 3.19)
 
-set(ZSTD zstd-basisu)
-
 set(TRANSCODER_SRC
     ../transcoder/basisu_transcoder.cpp
 )
@@ -52,21 +50,28 @@ else()
     set (BASIS_CONFIG ${BASIS_CONFIG} BASISD_SUPPORT_DXT5A=0 BASISD_SUPPORT_DXT1=0)
 endif()
 
-add_library(${ZSTD} ../zstd/zstd.c)
+# If an external zstd target exists, use it.
+if(NOT TARGET zstd)
+    add_library(zstd-basisu ../zstd/zstd.c)
+    target_include_directories(zstd-basisu PUBLIC ../zstd)
+    set_target_properties(zstd-basisu PROPERTIES FOLDER ThirdParty)
+    set(ZSTD_TARGET zstd-basisu)
+else()
+    set(ZSTD_TARGET zstd)
+endif()
+
 add_library(basis_encoder ${ENCODER_SRC})
 add_library(basis_transcoder ${TRANSCODER_SRC})
 
-target_link_libraries(basis_transcoder PRIVATE ${ZSTD})
+target_link_libraries(basis_transcoder PRIVATE ${ZSTD_TARGET})
 target_link_libraries(basis_encoder basis_transcoder)
 
-target_include_directories(${ZSTD} PUBLIC ../zstd)
 target_include_directories(basis_encoder PUBLIC ../encoder)
 target_include_directories(basis_transcoder PUBLIC ../transcoder)
 
 target_compile_definitions(basis_encoder PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_transcoder PRIVATE ${BASIS_CONFIG})
 
-set_target_properties(${ZSTD} PROPERTIES FOLDER ThirdParty)
 set_target_properties(basis_encoder PROPERTIES FOLDER ThirdParty)
 set_target_properties(basis_transcoder PROPERTIES FOLDER ThirdParty)
 
