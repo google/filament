@@ -872,6 +872,8 @@ add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${LIBRARIES}/viewer)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/abseil/tnt)
+# Add zstd before basisu to force it to use the external zstd target,
+# preventing a duplicate symbol conflict with its bundled version.
 add_subdirectory(${EXTERNAL}/zstd/tnt)
 add_subdirectory(${EXTERNAL}/civetweb/tnt)
 add_subdirectory(${EXTERNAL}/imgui/tnt)
