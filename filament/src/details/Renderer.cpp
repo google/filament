@@ -571,7 +571,6 @@ void FRenderer::renderStandaloneView(FView const* view) {
 
     if (UTILS_LIKELY(view->getScene())) {
         mPreviousRenderTargets.clear();
-        mFrameId++;
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
         FEngine& engine = mEngine;
@@ -581,8 +580,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
         driver.beginFrame(
                 steady_clock::now().time_since_epoch().count(),
                 mDisplayInfo.refreshRate == 0.0 ? 0 : int64_t(
-                        1'000'000'000.0 / mDisplayInfo.refreshRate),
-                mFrameId);
+                        1'000'000'000.0 / mDisplayInfo.refreshRate), 0);
 
         // because we don't have a "present" call, we use flush so the driver can submit
         // the command buffer; we do this before driver.endFrame() to mimic what would
@@ -591,7 +589,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
 
         engine.submitFrame();
 
-        driver.endFrame(mFrameId);
+        driver.endFrame(0);
 
         // engine.flush() has already been called by renderInternal(), but we need an extra one
         // for endFrame() above. This operation in actually not too heavy, it just kicks the

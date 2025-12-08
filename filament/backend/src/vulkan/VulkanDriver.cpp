@@ -447,12 +447,14 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_BEGINFRAME);
 
-    if (mCurrentSwapChain) { // This should be guaranteed
+    // if frameId is 0, it means we're not associated to a particular frame, which is the case
+    // for standalone views. And in this case we skip the frame info timing collection.
+    if (frameId && mCurrentSwapChain) { // This should be guaranteed
         mPlatform->setPresentFrameId(mCurrentSwapChain->swapChain, frameId);
     }
 
     // Check if any command have finished and reset all its used resources. The resources
-    // wont be destroyed but their reference count will decreased if the command is already
+    // won't be destroyed but their reference count will be decreased if the command is already
     // completed.
     //
     // This will let us check if any VulkanBuffer is currently in flight or not.
