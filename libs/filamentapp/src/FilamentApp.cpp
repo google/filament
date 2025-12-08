@@ -17,6 +17,7 @@
 #include <filamentapp/FilamentApp.h>
 
 #include "KeyInputConversion.h"
+#include "utils/generic/ThermalManager.h"
 
 #if defined(WIN32)
 #    include <SDL_syswm.h>
@@ -54,7 +55,15 @@
 #endif
 
 #if defined(FILAMENT_SUPPORTS_WEBGPU)
-#include <backend/platforms/WebGPUPlatform.h>
+    #if defined(__ANDROID__)
+        #include "backend/platforms/WebGPUPlatformAndroid.h"
+    #elif defined(__APPLE__)
+        #include "backend/platforms/WebGPUPlatformApple.h"
+    #elif defined(__linux__)
+        #include "backend/platforms/WebGPUPlatformLinux.h"
+    #elif defined(WIN32)
+        #include "backend/platforms/WebGPUPlatformWindows.h"
+    #endif
 #endif
 
 #include <filagui/ImGuiHelper.h>
@@ -84,7 +93,15 @@ namespace {
 using namespace filament::backend;
 
 #if defined(FILAMENT_SUPPORTS_WEBGPU)
-class FilamentAppWebGPUPlatform : public WebGPUPlatform {
+    #if defined(__ANDROID__)
+        class FilamentAppWebGPUPlatform : public WebGPUPlatformAndroid {
+    #elif defined(__APPLE__)
+        class FilamentAppWebGPUPlatform : public WebGPUPlatformApple {
+    #elif defined(__linux__)
+        class FilamentAppWebGPUPlatform : public WebGPUPlatformLinux {
+    #elif defined(WIN32)
+        class FilamentAppWebGPUPlatform : public WebGPUPlatformWindows {
+    #endif
 public:
     FilamentAppWebGPUPlatform(Config::WebGPUBackend backend)
         : mBackend(backend) {}
