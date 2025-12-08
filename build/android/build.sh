@@ -18,8 +18,8 @@ if [[ "$GITHUB_WORKFLOW" ]]; then
     fi
 fi
 
-# Unless explicitly specified, NDK version will be set to match exactly the required one
-FILAMENT_NDK_VERSION=${GITHUB_NDK_VERSION:-27.0.11718014}
+# Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
+FILAMENT_NDK_VERSION=$(cat `dirname $0`/../common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g)
 
 (! grep "${FILAMENT_NDK_VERSION}" `dirname $0`/../../android/build.gradle > /dev/null) &&
     echo "Mismatch of NDK versions: want ${FILAMENT_NDK_VERSION} and not found in android/build.gradle" &&

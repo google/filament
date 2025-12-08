@@ -216,6 +216,8 @@ public:
         return getDriver().isStereoSupported();
     }
 
+    bool isAsynchronousOperationSupported() const noexcept;
+
     static size_t getMaxStereoscopicEyes() noexcept {
         return CONFIG_MAX_STEREOSCOPIC_EYES;
     }
@@ -786,6 +788,7 @@ public:
             bool disable_amortized_shader_compile = true;
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
+            bool enable_asynchronous_operation = false;
         } backend;
         struct {
             bool check_crc32_after_loading = false;
@@ -806,6 +809,9 @@ public:
             { "backend.disable_heap_handle_tags",
               "Disable Handle<> tags for heap-allocated handles.",
               &features.backend.disable_heap_handle_tags, true },
+            { "backend.enable_asynchronous_operation",
+              "Enable asynchronous operation for resource management.",
+              &features.backend.enable_asynchronous_operation, true },
             { "backend.opengl.assert_native_window_is_valid",
               "Asserts that the ANativeWindow is valid when rendering starts.",
               &features.backend.opengl.assert_native_window_is_valid, true },
