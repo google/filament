@@ -32,7 +32,7 @@ public:
     ~WebGPUStagePool();
 
     wgpu::Buffer acquireBuffer(size_t requiredSize,
-            std::shared_ptr<WebGPUSubmissionState> latestSubmissionState);
+            std::shared_ptr<WebGPUSubmissionState> submissionState);
     void recycleBuffer(wgpu::Buffer buffer);
     void gc();
 
@@ -40,7 +40,7 @@ private:
     wgpu::Buffer createNewBuffer(size_t bufferSize);
     std::multimap<uint32_t, wgpu::Buffer> mBuffers;
     std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> mInProgress;
-    mutable std::mutex mMutex;
+    std::mutex mMutex;
 
     wgpu::Device mDevice;
 };

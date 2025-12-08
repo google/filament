@@ -90,6 +90,7 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
             webGPUQueueManager->getLatestSubmissionState());
 
     void* mappedRange = stagingBuffer.GetMappedRange();
+    assert_invariant(mappedRange);
 
     memcpy(mappedRange, bufferDescriptor.buffer, bufferDescriptor.size);
 

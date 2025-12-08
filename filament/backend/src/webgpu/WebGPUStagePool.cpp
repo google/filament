@@ -26,7 +26,7 @@ WebGPUStagePool::WebGPUStagePool(wgpu::Device const& device) : mDevice(device) {
 WebGPUStagePool::~WebGPUStagePool() = default;
 
 wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize,
-        std::shared_ptr<WebGPUSubmissionState> latestSubmissionState) {
+        std::shared_ptr<WebGPUSubmissionState> submissionState) {
     wgpu::Buffer buffer;
     {
         std::lock_guard<std::mutex> lock(mMutex);
@@ -39,7 +39,7 @@ wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize,
     if (!buffer.Get()) {
         buffer = createNewBuffer(requiredSize);
     }
-    mInProgress.push_back({latestSubmissionState, buffer});
+    mInProgress.push_back({submissionState, buffer});
     return buffer;
 }
 
