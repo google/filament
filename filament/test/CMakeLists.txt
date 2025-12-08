@@ -13,11 +13,25 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(RESOURCE_DIR  "${GENERATION_ROOT}/resources")
 file(MAKE_DIRECTORY ${RESOURCE_DIR})
 
+set(MATERIAL_DIR  "${GENERATION_ROOT}/material")
+file(MAKE_DIRECTORY ${MATERIAL_DIR})
+
+set(SANDBOX_TRANSFORM_NAME_MAT ${CMAKE_CURRENT_SOURCE_DIR}/sandboxTransformName.mat)
+set(TEST_MATERIAL_TRANSFORM_NAME_FILAMAT ${MATERIAL_DIR}/test_material_transformname.filamat)
+
+add_custom_command(
+        OUTPUT ${TEST_MATERIAL_TRANSFORM_NAME_FILAMAT}
+        COMMAND matc ${MATC_BASE_FLAGS} -o ${TEST_MATERIAL_TRANSFORM_NAME_FILAMAT} ${SANDBOX_TRANSFORM_NAME_MAT}
+        MAIN_DEPENDENCY ${SANDBOX_TRANSFORM_NAME_MAT}
+        DEPENDS matc
+        COMMENT "Compiling material ${SANDBOX_TRANSFORM_NAME_MAT}"
+)
+
 get_resgen_vars(${RESOURCE_DIR} filament_test_resources)
 
 set(RESOURCE_BINS
         ${CMAKE_CURRENT_SOURCE_DIR}/test_material.filamat
-        ${CMAKE_CURRENT_SOURCE_DIR}/test_material_transformname.filamat
+        ${TEST_MATERIAL_TRANSFORM_NAME_FILAMAT}
 )
 
 add_custom_command(
