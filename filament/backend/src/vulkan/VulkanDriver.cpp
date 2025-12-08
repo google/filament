@@ -1154,7 +1154,7 @@ void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream, utils::ImmutableCString tag) {
-    FILAMENT_CHECK_PRECONDITION(false) << "createStreamNative not supported in Vulkan.";
+    FVK_LOGW << "createStreamNative not supported in Vulkan.";
     return {};
 }
 
