@@ -197,7 +197,7 @@ TEST(JobQueue, MultipleProducersConsumers) {
 
 TEST(AmortizationWorker, Process) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue.get());
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -217,7 +217,7 @@ TEST(AmortizationWorker, Process) {
 
 TEST(AmortizationWorker, ProcessAll) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue.get());
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -234,7 +234,7 @@ TEST(AmortizationWorker, ProcessAll) {
 
 TEST(AmortizationWorker, TerminateDrainsAllJobs) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue.get());
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -253,7 +253,7 @@ TEST(AmortizationWorker, TerminateDrainsAllJobs) {
 
 TEST(ThreadWorker, Process) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = ThreadWorker::create(queue, {});
+    JobWorker::Ptr worker = ThreadWorker::create(queue.get(), {});
     std::atomic_int v = {0};
 
     queue->push([&v]() { v++; });
@@ -280,7 +280,7 @@ TEST(ThreadWorker, Callbacks) {
         .onBegin = [&beginCalled]() { beginCalled = true; },
         .onEnd = [&endCalled]() { endCalled = true; }
     };
-    JobWorker::Ptr worker = ThreadWorker::create(queue, std::move(config));
+    JobWorker::Ptr worker = ThreadWorker::create(queue.get(), std::move(config));
     worker->terminate();
 
     EXPECT_TRUE(beginCalled);

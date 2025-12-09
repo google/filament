@@ -66,11 +66,10 @@ namespace filament::backend {
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 class JobQueue {
-    struct PassKey {};
 public:
     using Job = utils::Invocable<void()>;
     using JobId = uint32_t;
-    using Ptr = std::shared_ptr<JobQueue>;
+    using Ptr = std::unique_ptr<JobQueue>;
     static constexpr JobId InvalidJobId = std::numeric_limits<JobId>::max();
 
     /**
@@ -78,10 +77,8 @@ public:
      * @return An instance of JobQueue
      */
     static Ptr create() {
-        return std::make_shared<JobQueue>(PassKey{});
+        return Ptr(new JobQueue);
     }
-
-    explicit JobQueue(PassKey) {} // This can be created only via `create()`
 
     /**
      * Pushes a new job into queue.
@@ -148,8 +145,12 @@ public:
     void stop() noexcept;
 
 private:
+    JobQueue();
+
     JobQueue(const JobQueue&) = delete;
     JobQueue& operator=(const JobQueue&) = delete;
+
+    JobId genNextJobId() noexcept;
 
     std::mutex mQueueMutex;
     std::condition_variable mQueueCondition;
@@ -180,9 +181,9 @@ public:
     virtual void terminate();
 
 protected:
-    explicit JobWorker(JobQueue::Ptr queue) : mQueue(std::move(queue)) {}
+    explicit JobWorker(JobQueue* queue) : mQueue(queue) {}
 
-    JobQueue::Ptr mQueue;
+    JobQueue* mQueue;
 
 private:
     JobWorker(const JobWorker&) = delete;
@@ -194,17 +195,14 @@ private:
  * A non-threaded worker that consumes jobs in batches.
  */
 class AmortizationWorker final : public JobWorker {
-    struct PassKey {};
 public:
     /**
      * Creates an instance of AmortizationWorker. Users should call this to create one.
      * @return An instance of AmortizationWorker
      */
-    static Ptr create(JobQueue::Ptr queue) {
-        return std::make_unique<AmortizationWorker>(std::move(queue), PassKey{});
+    static Ptr create(JobQueue* queue) {
+        return Ptr(new AmortizationWorker(queue));
     }
-
-    explicit AmortizationWorker(JobQueue::Ptr queue, PassKey); // This can be created only via `create()`
 
     ~AmortizationWorker() override;
 
@@ -224,6 +222,9 @@ public:
      * This is safe to call multiple times.
      */
     void terminate() override;
+
+private:
+    explicit AmortizationWorker(JobQueue* queue);
 };
 
 
@@ -231,7 +232,6 @@ public:
  * A threaded worker that consumes jobs one by one, blocking when empty.
  */
 class ThreadWorker final : public JobWorker {
-    struct PassKey {};
 public:
     using Priority = utils::JobSystem::Priority;
 
@@ -249,11 +249,9 @@ public:
      * Creates an instance of ThreadWorker. Users should call this to create one.
      * @return An instance of ThreadWorker
      */
-    static Ptr create(JobQueue::Ptr queue, Config config) {
-        return std::make_unique<ThreadWorker>(std::move(queue), std::move(config), PassKey{});
+    static Ptr create(JobQueue* queue, Config config) {
+        return Ptr(new ThreadWorker(queue, std::move(config)));
     }
-
-    ThreadWorker(JobQueue::Ptr queue, Config config, PassKey); // This can be created only via `create()`
 
     ~ThreadWorker() override;
 
@@ -264,6 +262,8 @@ public:
     void terminate() override;
 
 private:
+    ThreadWorker(JobQueue* queue, Config config);
+
     Config mConfig;
     std::thread mThread;
 };

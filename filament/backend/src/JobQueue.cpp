@@ -17,9 +17,12 @@
 #include "JobQueue.h"
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Panic.h>
 
 namespace filament::backend {
+
+JobQueue::JobQueue() = default;
 
 JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJobId*/) {
     JobId jobId = preIssuedJobId;
@@ -30,7 +33,7 @@ JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJo
         }
 
         if (jobId == InvalidJobId) {
-            jobId = mNextJobId++;
+            jobId = genNextJobId();
             mJobsMap[jobId] = std::move(job);
         } else {
             // Use the job ID previously issued by `issueJobId()`
@@ -126,7 +129,7 @@ utils::FixedCapacityVector<JobQueue::Job> JobQueue::popBatch(int const maxJobsTo
 
 JobQueue::JobId JobQueue::issueJobId() noexcept {
     std::lock_guard<std::mutex> lock(mQueueMutex);
-    JobId const jobId = mNextJobId++;
+    JobId const jobId = genNextJobId();
     // Preallocate a job, which serves two main purposes. It provides a valid jobId that can be
     // checked for integrity when passed to the `push` method, and it enables job cancellation for
     // tasks that are yet to be pushed.
@@ -155,6 +158,14 @@ void JobQueue::stop() noexcept {
     mQueueCondition.notify_all(); // Wake up all waiting threads
 }
 
+JobQueue::JobId JobQueue::genNextJobId() noexcept {
+    // We assume this method is called within the critical section.
+    JobId newJobId = mNextJobId++;
+    // We assume the job ID won't overflow or wraps around to zero within the application's lifetime.
+    assert_invariant(newJobId != InvalidJobId);
+    return newJobId;
+}
+
 JobWorker::~JobWorker() = default;
 
 void JobWorker::terminate() {
@@ -163,8 +174,8 @@ void JobWorker::terminate() {
     }
 }
 
-AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue, PassKey)
-    : JobWorker(std::move(queue)) {
+AmortizationWorker::AmortizationWorker(JobQueue* queue)
+    : JobWorker(queue) {
 }
 
 AmortizationWorker::~AmortizationWorker() = default;
@@ -200,8 +211,8 @@ void AmortizationWorker::terminate() {
     process(-1);
 }
 
-ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
-        : JobWorker(std::move(queue)), mConfig(std::move(config)) {
+ThreadWorker::ThreadWorker(JobQueue* queue, Config config)
+        : JobWorker(queue), mConfig(std::move(config)) {
     mThread = std::thread([this]() {
         utils::JobSystem::setThreadName(mConfig.name.data());
         utils::JobSystem::setThreadPriority(mConfig.priority);
