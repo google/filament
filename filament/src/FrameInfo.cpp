@@ -114,8 +114,10 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
             // front element of the queue, we can't pop/push. Our only option is to not record
             // a new entry for this frame, which will create a false skipped frame in the
             // data.
-            LOG(WARNING) << "FrameInfo's circular queue is full, but the latest item hasn't "
-                            " been processed yet. Skipping this frame, id = " << frameId;
+            LOG(WARNING) << "FrameInfo's circular queue is full, but the oldest item hasn't "
+                            "been processed yet. Skipping this frame, id = " << frameId;
+            mLastBeginFrameSkipped = true;
+            return;
         }
     }
 
@@ -204,6 +206,14 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
 }
 
 void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
+    if (mLastBeginFrameSkipped) {
+        // if we had to skip the last beginFrame(), endFrame() needs to be skipped too
+        // because history.front() now references the wrong frame.
+        // It is guaranteed that if beginFrame() is called, endFrame() will be called too.
+        mLastBeginFrameSkipped = false;
+        return;
+    }
+
     auto& front = mFrameTimeHistory.front();
     front.endFrame = std::chrono::steady_clock::now();
 
