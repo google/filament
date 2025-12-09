@@ -196,7 +196,7 @@ private:
     PipelineMap mPipelines;
 
     // These helpers all return unstable pointers that should not be stored.
-    PipelineCacheEntry* createPipeline() noexcept;
+    VkPipeline createPipeline(const PipelineKey& key) noexcept;
 
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
