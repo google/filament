@@ -7,4 +7,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- materials: added support for the `KHR_materials_dispersion` extension, which adds dispersion for refractive objects
+- materials: added support for the glTF `KHR_materials_dispersion` extension, which adds dispersion for refractive objects
