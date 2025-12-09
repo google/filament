@@ -127,7 +127,7 @@ utils::FixedCapacityVector<JobQueue::Job> JobQueue::popBatch(int const maxJobsTo
 JobQueue::JobId JobQueue::issueJobId() noexcept {
     std::lock_guard<std::mutex> lock(mQueueMutex);
     JobId const jobId = mNextJobId++;
-    // Preallocate a job, which servers two main purposes. It provides a valid jobId that can be
+    // Preallocate a job, which serves two main purposes. It provides a valid jobId that can be
     // checked for integrity when passed to the `push` method, and it enables job cancellation for
     // tasks that are yet to be pushed.
     mJobsMap[jobId];
