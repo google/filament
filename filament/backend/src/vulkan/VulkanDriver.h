@@ -41,6 +41,7 @@
 #include "vulkan/utils/Definitions.h"
 
 #include "backend/DriverEnums.h"
+#include "backend/BufferObjectStreamDescriptor.h"
 
 #include "DriverBase.h"
 #include "private/backend/Driver.h"
