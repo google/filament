@@ -315,6 +315,7 @@ private:
     FrameHistoryQueue mFrameTimeHistory{};
     utils::AsyncJobQueue mJobQueue;
     FSwapChain* mLastSeenSwapChain = nullptr;
+    bool mLastBeginFrameSkipped = false;
     bool const mHasTimerQueries = false;
     bool const mDisableGpuFrameComplete = false;
 };
