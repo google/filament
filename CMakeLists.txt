@@ -876,7 +876,9 @@ add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${LIBRARIES}/viewer)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/abseil/tnt)
-add_subdirectory(${EXTERNAL}/basisu/tnt)
+# Add zstd before basisu to force it to use the external zstd target,
+# preventing a duplicate symbol conflict with its bundled version.
+add_subdirectory(${EXTERNAL}/zstd/tnt)
 add_subdirectory(${EXTERNAL}/civetweb/tnt)
 add_subdirectory(${EXTERNAL}/imgui/tnt)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
@@ -890,7 +892,7 @@ add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
-add_subdirectory(${EXTERNAL}/zstd/tnt)
+add_subdirectory(${EXTERNAL}/basisu/tnt)
 
 
 # Note that this has to be placed after mikktspace in order for combine_static_libs to work.

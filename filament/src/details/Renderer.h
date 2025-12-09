@@ -209,7 +209,7 @@ private:
     backend::Handle<backend::HwRenderTarget> mRenderTargetHandle;
     FSwapChain* mSwapChain = nullptr;
     size_t mCommandsHighWatermark = 0;
-    uint32_t mFrameId = 0;
+    uint32_t mFrameId = 1; // id 0 is reserved for standalone views
     FrameInfoManager mFrameInfoManager;
     backend::TextureFormat mHdrTranslucent;
     backend::TextureFormat mHdrQualityMedium;

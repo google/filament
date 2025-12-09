@@ -178,20 +178,30 @@ void PlatformEGLAndroid::beginFrame(
         int64_t const monotonic_clock_ns,
         int64_t refreshIntervalNs,
         uint32_t const frameId) noexcept {
-    // associate the user frameid with the system frame id
-    setPresentFrameId(mCurrentDrawSwapChain, frameId);
+    // if frameId is 0, it means we're not associated to a particular frame, which is the case
+    // for standalone views. And in this case we skip the performance hint (since we wouldn't get
+    // the right timing anyway as well as the frame info timing collections)
 
-    if (mPerformanceHintSession.isValid()) {
+    // associate the user frameid with the system frame id.
+    if (frameId && mCurrentDrawSwapChain) {
+        // mCurrentDrawSwapChain could be null if we're called from renderStandaloneView
+        setPresentFrameId(mCurrentDrawSwapChain, frameId);
+    }
+
+    if (frameId && mPerformanceHintSession.isValid()) {
         if (refreshIntervalNs <= 0) {
             // we're not provided with a target time, use the display period, if everything fails,
             // assume 16.67ms
             refreshIntervalNs = 16'666'667;
 
-            CompositorTiming compositorTiming{};
-            bool const hasCompositorTiming =
-                    queryCompositorTiming(mCurrentDrawSwapChain, &compositorTiming);
-            if (hasCompositorTiming && compositorTiming.compositeInterval > 0) {
-                refreshIntervalNs = compositorTiming.compositeInterval;
+            if (mCurrentDrawSwapChain) {
+                // mCurrentDrawSwapChain could be null if we're called from renderStandaloneView
+                CompositorTiming compositorTiming{};
+                bool const hasCompositorTiming =
+                        queryCompositorTiming(mCurrentDrawSwapChain, &compositorTiming);
+                if (hasCompositorTiming && compositorTiming.compositeInterval > 0) {
+                    refreshIntervalNs = compositorTiming.compositeInterval;
+                }
             }
         }
         mStartTimeOfActualWork = clock::time_point(std::chrono::nanoseconds(monotonic_clock_ns));
@@ -440,6 +450,10 @@ Platform::SwapChain* PlatformEGLAndroid::createSwapChain(
 void PlatformEGLAndroid::destroySwapChain(SwapChain* swapChain) noexcept {
     if (swapChain) {
         SwapChainEGLAndroid* const sc = static_cast<SwapChainEGLAndroid*>(swapChain);
+        if (mCurrentDrawSwapChain == sc) {
+            // don't keep a dangling pointer around
+            mCurrentDrawSwapChain = nullptr;
+        }
         sc->terminate(*this);
         delete sc;
     }
