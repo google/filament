@@ -495,14 +495,14 @@ vec3 evaluateRefraction(
     const vec3 n0, vec3 E) {
 
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // For thin surfaces, the light will bounce off at the second interface in the direction of
-    // the reflection, effectively adding to the specular, but this process will repeat itself.
-    // Each time the ray exits the surface on the front side after the first bounce,
-    // it's multiplied by E^2, and we get: E + E(1-E)^2 + E^3(1-E)^2 + ...
-    // This infinite series converges and is easy to simplify.
-    // Note: we calculate these bounces only on a single component,
-    // since it's a fairly subtle effect.
-    E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);
+        // For thin surfaces, the light will bounce off at the second interface in the direction of
+        // the reflection, effectively adding to the specular, but this process will repeat itself.
+        // Each time the ray exits the surface on the front side after the first bounce,
+        // it's multiplied by E^2, and we get: E + E(1-E)^2 + E^3(1-E)^2 + ...
+        // This infinite series converges and is easy to simplify.
+        // Note: we calculate these bounces only on a single component,
+        // since it's a fairly subtle effect.
+        E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);
 #endif
 
     vec3 Ft;
