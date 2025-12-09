@@ -167,6 +167,8 @@ AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue, PassKey)
     : JobWorker(std::move(queue)) {
 }
 
+AmortizationWorker::~AmortizationWorker() = default;
+
 void AmortizationWorker::process(int const jobCount) {
     if (!mQueue || jobCount == 0) {
         return;
@@ -217,6 +219,8 @@ ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
         }
     });
 }
+
+ThreadWorker::~ThreadWorker() = default;
 
 void ThreadWorker::terminate() {
     JobWorker::terminate();

@@ -206,6 +206,8 @@ public:
 
     explicit AmortizationWorker(JobQueue::Ptr queue, PassKey); // This can be created only via `create()`
 
+    ~AmortizationWorker() override;
+
     /**
      * Polls the queue and executes a batch of jobs.
      *
@@ -253,7 +255,7 @@ public:
 
     ThreadWorker(JobQueue::Ptr queue, Config config, PassKey); // This can be created only via `create()`
 
-    ~ThreadWorker() override = default;
+    ~ThreadWorker() override;
 
     /**
      * Signals the queue to stop and joins the worker thread.
