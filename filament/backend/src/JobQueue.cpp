@@ -22,7 +22,7 @@
 
 namespace filament::backend {
 
-JobQueue::JobQueue() = default;
+JobQueue::JobQueue(PassKey) {}
 
 JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJobId*/) {
     JobId jobId = preIssuedJobId;
@@ -174,8 +174,8 @@ void JobWorker::terminate() {
     }
 }
 
-AmortizationWorker::AmortizationWorker(JobQueue* queue)
-    : JobWorker(queue) {
+AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue, PassKey)
+    : JobWorker(std::move(queue)) {
 }
 
 AmortizationWorker::~AmortizationWorker() = default;
@@ -211,8 +211,8 @@ void AmortizationWorker::terminate() {
     process(-1);
 }
 
-ThreadWorker::ThreadWorker(JobQueue* queue, Config config)
-        : JobWorker(queue), mConfig(std::move(config)) {
+ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
+        : JobWorker(std::move(queue)), mConfig(std::move(config)) {
     mThread = std::thread([this]() {
         utils::JobSystem::setThreadName(mConfig.name.data());
         utils::JobSystem::setThreadPriority(mConfig.priority);
