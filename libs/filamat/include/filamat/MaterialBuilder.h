@@ -661,6 +661,12 @@ public:
     MaterialBuilder& useDefaultDepthVariant() noexcept;
 
     /**
+     * Sets the source ASCII material (aka .mat file).
+     * The provided `source` string_view must remain valid until MaterialBuilder::build() is called.
+     */
+    MaterialBuilder& materialSource(std::string_view source) noexcept;
+
+    /**
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
      */
@@ -905,6 +911,7 @@ private:
 
     ShaderCode mMaterialFragmentCode;
     ShaderCode mMaterialVertexCode;
+    std::string_view mMaterialSource;
 
     PropertyList mProperties;
     ParameterList mParameters;
