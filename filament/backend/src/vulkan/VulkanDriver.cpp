@@ -1707,12 +1707,19 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
-    if (rt->isSwapChain()) {
+    if (rt->isSwapChain()) {	
         fvkmemory::resource_ptr<VulkanSwapChain> sc = mCurrentSwapChain;
         assert_invariant(sc);
         if (sc->isFirstRenderPass()) {
             discardStart |= TargetBufferFlags::COLOR;
             sc->markFirstRenderPass();
+
+	    bool resized = false;
+	    sc->acquire(resized);
+
+	    if (resized) {
+		mFramebufferCache.resetFramebuffers();
+	    }
         }
     }
 
@@ -1929,13 +1936,6 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     resource_ptr<VulkanSwapChain> swapChain =
             resource_ptr<VulkanSwapChain>::cast(&mResourceManager, drawSch);
     mCurrentSwapChain = swapChain;
-
-    bool resized = false;
-    swapChain->acquire(resized);
-
-    if (resized) {
-        mFramebufferCache.resetFramebuffers();
-    }
 
     if (UTILS_LIKELY(mDefaultRenderTarget)) {
         mDefaultRenderTarget->bindToSwapChain(swapChain);
