@@ -123,6 +123,9 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
         case ResourceType::SEMAPHORE:
             destruct<VulkanSemaphore>(Handle<VulkanSemaphore>(id));
             break;
+        case ResourceType::STREAM:
+            destruct<VulkanStream>(Handle<VulkanStream>(id));
+            break;
         case ResourceType::UNDEFINED_TYPE:
             break;
     }

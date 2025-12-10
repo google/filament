@@ -191,9 +191,12 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .alphaToCoverageEnable = raster.alphaToCoverageEnable,
         .alphaToOneEnable = VK_FALSE,
     };
+    bool const enableDepthTest =
+        raster.depthCompareOp != SamplerCompareFunc::A ||
+        raster.depthWriteEnable;
     VkPipelineDepthStencilStateCreateInfo vkDs = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable = VK_TRUE,
+        .depthTestEnable = enableDepthTest ? VK_TRUE : VK_FALSE,
         .depthWriteEnable = raster.depthWriteEnable,
         .depthCompareOp = fvkutils::getCompareOp(raster.depthCompareOp),
         .depthBoundsTestEnable = VK_FALSE,

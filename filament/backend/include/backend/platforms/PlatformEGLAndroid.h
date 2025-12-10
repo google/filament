@@ -30,8 +30,6 @@
 
 #include <math/mat3.h>
 
-#include "AndroidNativeWindow.h"
-
 #include <chrono>
 
 #include <stddef.h>

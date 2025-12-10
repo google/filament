@@ -95,6 +95,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
 
     if (mUseUboBatching) {
         mUboData = BufferAllocator::UNALLOCATED;
+        engine.getUboManager()->manageMaterialInstance(this);
     } else {
         mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
                 BufferUsage::STATIC, ImmutableCString{ material->getName().c_str_safe() });
@@ -167,6 +168,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     if (mUseUboBatching) {
         mUboData = BufferAllocator::UNALLOCATED;
+        engine.getUboManager()->manageMaterialInstance(this);
     } else {
         mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
                 BufferUsage::DYNAMIC, ImmutableCString{ material->getName().c_str_safe() });
@@ -211,6 +213,10 @@ FMaterialInstance::~FMaterialInstance() noexcept = default;
 void FMaterialInstance::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mDescriptorSet.terminate(driver);
+    if (mUseUboBatching) {
+        engine.getUboManager()->unmanageMaterialInstance(this);
+    }
+
     auto* ubHandle = std::get_if<Handle<HwBufferObject>>(&mUboData);
     if (ubHandle){
         driver.destroyBufferObject(*ubHandle);

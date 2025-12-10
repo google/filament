@@ -15,34 +15,36 @@
 // Source project : https://github.com/ismaelJimenez/cpp.leastsq
 // Adapted to be used with google benchmark
 
-#include "benchmark/benchmark.h"
+#include "complexity.h"
 
 #include <algorithm>
 #include <cmath>
+
+#include "benchmark/benchmark.h"
 #include "check.h"
-#include "complexity.h"
 
 namespace benchmark {
 
 // Internal function to calculate the different scalability forms
 BigOFunc* FittingCurve(BigO complexity) {
-  static const double kLog2E = 1.44269504088896340736;
   switch (complexity) {
     case oN:
-      return [](int64_t n) -> double { return static_cast<double>(n); };
+      return [](IterationCount n) -> double { return static_cast<double>(n); };
     case oNSquared:
-      return [](int64_t n) -> double { return std::pow(n, 2); };
+      return [](IterationCount n) -> double { return std::pow(n, 2); };
     case oNCubed:
-      return [](int64_t n) -> double { return std::pow(n, 3); };
+      return [](IterationCount n) -> double { return std::pow(n, 3); };
     case oLogN:
-      /* Note: can't use log2 because Android's GNU STL lacks it */
-      return [](int64_t n) { return kLog2E * log(static_cast<double>(n)); };
+      return [](IterationCount n) -> double {
+        return std::log2(static_cast<double>(n));
+      };
     case oNLogN:
-      /* Note: can't use log2 because Android's GNU STL lacks it */
-      return [](int64_t n) { return kLog2E * n * log(static_cast<double>(n)); };
+      return [](IterationCount n) -> double {
+        return static_cast<double>(n) * std::log2(static_cast<double>(n));
+      };
     case o1:
     default:
-      return [](int64_t) { return 1.0; };
+      return [](IterationCount) { return 1.0; };
   }
 }
 
@@ -71,15 +73,14 @@ std::string GetBigOString(BigO complexity) {
 // given by the lambda expression.
 //   - n             : Vector containing the size of the benchmark tests.
 //   - time          : Vector containing the times for the benchmark tests.
-//   - fitting_curve : lambda expression (e.g. [](int64_t n) {return n; };).
+//   - fitting_curve : lambda expression (e.g. [](ComplexityN n) {return n; };).
 
-// For a deeper explanation on the algorithm logic, look the README file at
-// http://github.com/ismaelJimenez/Minimal-Cpp-Least-Squared-Fit
+// For a deeper explanation on the algorithm logic, please refer to
+// https://en.wikipedia.org/wiki/Least_squares#Least_squares,_regression_analysis_and_statistics
 
-LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
+LeastSq MinimalLeastSq(const std::vector<ComplexityN>& n,
                        const std::vector<double>& time,
                        BigOFunc* fitting_curve) {
-  double sigma_gn = 0.0;
   double sigma_gn_squared = 0.0;
   double sigma_time = 0.0;
   double sigma_time_gn = 0.0;
@@ -87,7 +88,6 @@ LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
   // Calculate least square fitting parameter
   for (size_t i = 0; i < n.size(); ++i) {
     double gn_i = fitting_curve(n[i]);
-    sigma_gn += gn_i;
     sigma_gn_squared += gn_i * gn_i;
     sigma_time += time[i];
     sigma_time_gn += time[i] * gn_i;
@@ -103,12 +103,12 @@ LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
   double rms = 0.0;
   for (size_t i = 0; i < n.size(); ++i) {
     double fit = result.coef * fitting_curve(n[i]);
-    rms += pow((time[i] - fit), 2);
+    rms += std::pow((time[i] - fit), 2);
   }
 
   // Normalized RMS by the mean of the observed values
-  double mean = sigma_time / n.size();
-  result.rms = sqrt(rms / n.size()) / mean;
+  double mean = sigma_time / static_cast<double>(n.size());
+  result.rms = std::sqrt(rms / static_cast<double>(n.size())) / mean;
 
   return result;
 }
@@ -120,12 +120,12 @@ LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
 //   - complexity : If different than oAuto, the fitting curve will stick to
 //                  this one. If it is oAuto, it will be calculated the best
 //                  fitting curve.
-LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
+LeastSq MinimalLeastSq(const std::vector<ComplexityN>& n,
                        const std::vector<double>& time, const BigO complexity) {
-  CHECK_EQ(n.size(), time.size());
-  CHECK_GE(n.size(), 2);  // Do not compute fitting curve is less than two
-                          // benchmark runs are given
-  CHECK_NE(complexity, oNone);
+  BM_CHECK_EQ(n.size(), time.size());
+  BM_CHECK_GE(n.size(), 2);  // Do not compute fitting curve is less than two
+                             // benchmark runs are given
+  BM_CHECK_NE(complexity, oNone);
 
   LeastSq best_fit;
 
@@ -157,19 +157,24 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
   typedef BenchmarkReporter::Run Run;
   std::vector<Run> results;
 
-  if (reports.size() < 2) return results;
+  if (reports.size() < 2) {
+    return results;
+  }
 
   // Accumulators.
-  std::vector<int64_t> n;
+  std::vector<ComplexityN> n;
   std::vector<double> real_time;
   std::vector<double> cpu_time;
 
   // Populate the accumulators.
   for (const Run& run : reports) {
-    CHECK_GT(run.complexity_n, 0) << "Did you forget to call SetComplexityN?";
+    BM_CHECK_GT(run.complexity_n, 0)
+        << "Did you forget to call SetComplexityN?";
     n.push_back(run.complexity_n);
-    real_time.push_back(run.real_accumulated_time / run.iterations);
-    cpu_time.push_back(run.cpu_accumulated_time / run.iterations);
+    real_time.push_back(run.real_accumulated_time /
+                        static_cast<double>(run.iterations));
+    cpu_time.push_back(run.cpu_accumulated_time /
+                       static_cast<double>(run.iterations));
   }
 
   LeastSq result_cpu;
@@ -179,18 +184,37 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
     result_cpu = MinimalLeastSq(n, cpu_time, reports[0].complexity_lambda);
     result_real = MinimalLeastSq(n, real_time, reports[0].complexity_lambda);
   } else {
-    result_cpu = MinimalLeastSq(n, cpu_time, reports[0].complexity);
-    result_real = MinimalLeastSq(n, real_time, result_cpu.complexity);
+    const BigO* InitialBigO = &reports[0].complexity;
+    const bool use_real_time_for_initial_big_o =
+        reports[0].use_real_time_for_initial_big_o;
+    if (use_real_time_for_initial_big_o) {
+      result_real = MinimalLeastSq(n, real_time, *InitialBigO);
+      InitialBigO = &result_real.complexity;
+      // The Big-O complexity for CPU time must have the same Big-O function!
+    }
+    result_cpu = MinimalLeastSq(n, cpu_time, *InitialBigO);
+    InitialBigO = &result_cpu.complexity;
+    if (!use_real_time_for_initial_big_o) {
+      result_real = MinimalLeastSq(n, real_time, *InitialBigO);
+    }
   }
 
-  std::string run_name = reports[0].benchmark_name().substr(
-      0, reports[0].benchmark_name().find('/'));
+  // Drop the 'args' when reporting complexity.
+  auto run_name = reports[0].run_name;
+  run_name.args.clear();
 
   // Get the data from the accumulator to BenchmarkReporter::Run's.
   Run big_o;
   big_o.run_name = run_name;
+  big_o.family_index = reports[0].family_index;
+  big_o.per_family_instance_index = reports[0].per_family_instance_index;
   big_o.run_type = BenchmarkReporter::Run::RT_Aggregate;
+  big_o.repetitions = reports[0].repetitions;
+  big_o.repetition_index = Run::no_repetition_index;
+  big_o.threads = reports[0].threads;
   big_o.aggregate_name = "BigO";
+  big_o.aggregate_unit = StatisticUnit::kTime;
+  big_o.report_label = reports[0].report_label;
   big_o.iterations = 0;
   big_o.real_accumulated_time = result_real.coef;
   big_o.cpu_accumulated_time = result_cpu.coef;
@@ -207,11 +231,16 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
   // Only add label to mean/stddev if it is same for all runs
   Run rms;
   rms.run_name = run_name;
-  big_o.report_label = reports[0].report_label;
+  rms.family_index = reports[0].family_index;
+  rms.per_family_instance_index = reports[0].per_family_instance_index;
   rms.run_type = BenchmarkReporter::Run::RT_Aggregate;
   rms.aggregate_name = "RMS";
+  rms.aggregate_unit = StatisticUnit::kPercentage;
   rms.report_label = big_o.report_label;
   rms.iterations = 0;
+  rms.repetition_index = Run::no_repetition_index;
+  rms.repetitions = reports[0].repetitions;
+  rms.threads = reports[0].threads;
   rms.real_accumulated_time = result_real.rms / multiplier;
   rms.cpu_accumulated_time = result_cpu.rms / multiplier;
   rms.report_rms = true;

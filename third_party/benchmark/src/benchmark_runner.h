@@ -15,22 +15,20 @@
 #ifndef BENCHMARK_RUNNER_H_
 #define BENCHMARK_RUNNER_H_
 
+#include <memory>
+#include <thread>
+#include <vector>
+
 #include "benchmark_api_internal.h"
-#include "internal_macros.h"
-
-DECLARE_double(benchmark_min_time);
-
-DECLARE_int32(benchmark_repetitions);
-
-DECLARE_bool(benchmark_report_aggregates_only);
-
-DECLARE_bool(benchmark_display_aggregates_only);
+#include "perf_counters.h"
+#include "thread_manager.h"
 
 namespace benchmark {
 
 namespace internal {
 
 extern MemoryManager* memory_manager;
+extern ProfilerManager* profiler_manager;
 
 struct RunResults {
   std::vector<BenchmarkReporter::Run> non_aggregates;
@@ -40,9 +38,87 @@ struct RunResults {
   bool file_report_aggregates_only = false;
 };
 
-RunResults RunBenchmark(
-    const benchmark::internal::BenchmarkInstance& b,
-    std::vector<BenchmarkReporter::Run>* complexity_reports);
+struct BENCHMARK_EXPORT BenchTimeType {
+  enum { UNSPECIFIED, ITERS, TIME } tag;
+  union {
+    IterationCount iters;
+    double time;
+  };
+};
+
+BENCHMARK_EXPORT
+BenchTimeType ParseBenchMinTime(const std::string& value);
+
+class BenchmarkRunner {
+ public:
+  BenchmarkRunner(const benchmark::internal::BenchmarkInstance& b_,
+                  benchmark::internal::PerfCountersMeasurement* pcm_,
+                  BenchmarkReporter::PerFamilyRunReports* reports_for_family);
+
+  int GetNumRepeats() const { return repeats; }
+
+  bool HasRepeatsRemaining() const {
+    return GetNumRepeats() != num_repetitions_done;
+  }
+
+  void DoOneRepetition();
+
+  RunResults&& GetResults();
+
+  BenchmarkReporter::PerFamilyRunReports* GetReportsForFamily() const {
+    return reports_for_family;
+  }
+
+  double GetMinTime() const { return min_time; }
+
+  bool HasExplicitIters() const { return has_explicit_iteration_count; }
+
+  IterationCount GetIters() const { return iters; }
+
+ private:
+  RunResults run_results;
+
+  const benchmark::internal::BenchmarkInstance& b;
+  BenchmarkReporter::PerFamilyRunReports* reports_for_family;
+
+  BenchTimeType parsed_benchtime_flag;
+  const double min_time;
+  const double min_warmup_time;
+  bool warmup_done;
+  const int repeats;
+  const bool has_explicit_iteration_count;
+
+  int num_repetitions_done = 0;
+
+  std::unique_ptr<ThreadRunnerBase> thread_runner;
+
+  IterationCount iters;  // preserved between repetitions!
+  // So only the first repetition has to find/calculate it,
+  // the other repetitions will just use that precomputed iteration count.
+
+  PerfCountersMeasurement* const perf_counters_measurement_ptr = nullptr;
+
+  struct IterationResults {
+    internal::ThreadManager::Result results;
+    IterationCount iters;
+    double seconds;
+  };
+  IterationResults DoNIterations();
+
+  MemoryManager::Result RunMemoryManager(IterationCount memory_iterations);
+
+  void RunProfilerManager(IterationCount profile_iterations);
+
+  IterationCount PredictNumItersNeeded(const IterationResults& i) const;
+
+  bool ShouldReportIterationResults(const IterationResults& i) const;
+
+  double GetMinTimeToApply() const;
+
+  void FinishWarmUp(const IterationCount& i);
+
+  void RunWarmUp();
+};
 
 }  // namespace internal
 
