@@ -36,6 +36,7 @@ set(SRCS
         src/Driver.cpp
         src/Handle.cpp
         src/HandleAllocator.cpp
+        src/JobQueue.cpp
         src/ostream.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
@@ -59,6 +60,7 @@ set(PRIVATE_HDRS
         src/CompilerThreadPool.h
         src/DataReshaper.h
         src/DriverBase.h
+        src/JobQueue.h
 )
 
 # ==================================================================================================
@@ -568,6 +570,7 @@ if (APPLE OR LINUX)
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
+        test/test_JobQueue.cpp
         test/test_MemoryMappedBuffer.cpp
         test/test_MsaaSwapChain.cpp
         test/test_MRT.cpp
