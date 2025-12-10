@@ -169,6 +169,9 @@ JobQueue::JobId JobQueue::genNextJobId() noexcept {
 JobWorker::~JobWorker() = default;
 
 void JobWorker::terminate() {
+    // This is called from workers `terminate()`, which may hinder the concurrent use of multiple
+    // workers. Consider removing this line and require the owner/caller to explicitly invoke it to
+    // enable multiple worker instances.
     if (mQueue) {
         mQueue->stop();
     }
