@@ -148,6 +148,12 @@ ImGuiHelper::~ImGuiHelper() {
         mEngine->destroy(ib);
     }
 
+    // These are textures that have been created by imgui but were not explicitly freed before
+    // shutdown.
+    for (auto itextures: mImGuiTextures) {
+        mEngine->destroy(itextures);
+    }
+
     EntityManager& em = utils::EntityManager::get();
     em.destroy(mRenderable);
     em.destroy(mCameraEntity);
@@ -189,7 +195,6 @@ void ImGuiHelper::render(float timeStepInSeconds, Callback imguiCommands) {
 
 void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) {
     ImGui::SetCurrentContext(mImGuiContext);
-
     if (commands->Textures != nullptr) {
         for (ImTextureData* tex : *commands->Textures) {
             if (tex->Status == ImTextureStatus_OK) {
@@ -203,7 +208,6 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                         .format(Texture::InternalFormat::RGBA8)
                         .sampler(Texture::Sampler::SAMPLER_2D)
                         .build(*mEngine);
-
                 IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
                 const int size = tex->Width * tex->Height * 4;
                 Texture::PixelBufferDescriptor pb(tex->GetPixels(), size,
@@ -213,6 +217,7 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
 
                 tex->SetTexID((ImTextureID)ftex);
                 tex->SetStatus(ImTextureStatus_OK);
+                mImGuiTextures.insert(ftex);
             } else if (tex->Status == ImTextureStatus_WantUpdates) {
                 const int size = tex->Width * tex->Height * 4;
                 Texture::PixelBufferDescriptor pb(tex->GetPixels(), size,
@@ -222,11 +227,13 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                 ftex->setImage(*mEngine, 0, std::move(pb));
                 tex->SetStatus(ImTextureStatus_OK);
             } else if (tex->Status == ImTextureStatus_WantDestroy &&
-                       tex->UnusedFrames > 0) {
-              filament::Texture* ftex = (filament::Texture*)tex->TexID;
-              mEngine->destroy(ftex);
-              tex->SetTexID(ImTextureID_Invalid);
-              tex->SetStatus(ImTextureStatus_Destroyed);
+                    tex->UnusedFrames > 0) {
+
+                filament::Texture* ftex = (filament::Texture*)tex->TexID;
+                mEngine->destroy(ftex);
+                tex->SetTexID(ImTextureID_Invalid);
+                tex->SetStatus(ImTextureStatus_Destroyed);
+                mImGuiTextures.erase(ftex);
             }
         }
     }

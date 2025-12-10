@@ -98,7 +98,7 @@ using namespace filaflat;
 namespace {
 
 backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
-    return {
+    Platform::DriverConfig driverConfig {
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
         .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
@@ -116,7 +116,11 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
+        .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?
+                instance->getConfig().asynchronousMode : AsynchronousMode::NONE,
     };
+
+    return driverConfig;
 }
 
 } // anonymous
@@ -1499,6 +1503,11 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     FILAMENT_CHECK_PRECONDITION(mActiveFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1)
             << "Cannot adjust feature level beyond 0 at runtime";
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
+}
+
+bool FEngine::isAsynchronousOperationSupported() const noexcept {
+    return features.backend.enable_asynchronous_operation &&
+        mConfig.asynchronousMode != AsynchronousMode::NONE;
 }
 
 #if defined(__EMSCRIPTEN__)
