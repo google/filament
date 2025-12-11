@@ -22,11 +22,12 @@
 #include "VulkanBufferCache.h"
 #include "VulkanBufferProxy.h"
 #include "VulkanCommands.h"
+#include "VulkanConstants.h"
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
+#include "VulkanSamplerCache.h"
 #include "VulkanTexture.h"
-#include "vulkan/VulkanSamplerCache.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
@@ -422,12 +423,14 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_BEGINFRAME);
 
-    if (mCurrentSwapChain) { // This should be guaranteed
+    // if frameId is 0, it means we're not associated to a particular frame, which is the case
+    // for standalone views. And in this case we skip the frame info timing collection.
+    if (frameId && mCurrentSwapChain) { // This should be guaranteed
         mPlatform->setPresentFrameId(mCurrentSwapChain->swapChain, frameId);
     }
 
     // Check if any command have finished and reset all its used resources. The resources
-    // wont be destroyed but their reference count will decreased if the command is already
+    // won't be destroyed but their reference count will be decreased if the command is already
     // completed.
     //
     // This will let us check if any VulkanBuffer is currently in flight or not.
@@ -503,10 +506,7 @@ void VulkanDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_
     assert_invariant(any(mmb->access & MapBufferAccessFlags::WRITE_BIT));
     assert_invariant(offset + data.size <= mmb->size);
 
-    // TODO: this isa zero-effort implementation of copyToMemoryMappedBuffer(), where we just
-    //       call updateBufferObject(). This could be a fallback implementation for when
-    //       shared memory is not available.
-    //       On UMA systems, this should just be a memcpy into the memory-mapped buffer.
+    // On UMA systems, this is a memcpy into the memory-mapped buffer, otherwise use a staging buffer.
     updateBufferObject(mmb->boh, std::move(data), mmb->offset + offset);
 }
 
@@ -1157,7 +1157,7 @@ void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream, utils::ImmutableCString tag) {
-    FILAMENT_CHECK_PRECONDITION(false) << "createStreamNative not supported in Vulkan.";
+    FVK_LOGW << "createStreamNative not supported in Vulkan.";
     return {};
 }
 
@@ -1970,16 +1970,16 @@ void VulkanDriver::pushGroupMarker(char const* string) {
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.pushGroupMarker(string);
 #endif
-    FVK_SYSTRACE_CONTEXT();
-    FVK_SYSTRACE_START(string);
+    FVK_ALWAYS_ON_SYSTRACE_CONTEXT();
+    FVK_ALWAYS_ON_SYSTRACE_START(string);
 }
 
 void VulkanDriver::popGroupMarker(int) {
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.popGroupMarker();
 #endif
-    FVK_SYSTRACE_CONTEXT();
-    FVK_SYSTRACE_END();
+    FVK_ALWAYS_ON_SYSTRACE_CONTEXT();
+    FVK_ALWAYS_ON_SYSTRACE_END();
 }
 
 void VulkanDriver::startCapture(int) {}

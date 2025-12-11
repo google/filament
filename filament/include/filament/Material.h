@@ -371,7 +371,12 @@ public:
     //! Indicates whether an existing parameter is a sampler or not.
     bool isSampler(const char* UTILS_NONNULL name) const noexcept;
 
-
+    /**
+     * Returns a view of the material source (.mat which is a JSON-ish file) string,
+     * if it has been set. Otherwise, it returns a view of an empty string.
+     * The lifetime of the string_view is tied to the lifetime of the Material.
+     */
+    std::string_view getSource() const noexcept;
     /**
      *
      * Gets the name of the transform field associated for the given sampler parameter.

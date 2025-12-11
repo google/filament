@@ -101,11 +101,24 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
     auto& history = mFrameTimeHistory;
     // don't exceed the capacity, drop the oldest entry
     if (UTILS_LIKELY(history.size() == history.capacity())) {
-        if (!mDisableGpuFrameComplete) {
-            assert_invariant(history.back().fence);
-            driver.destroyFence(std::move(history.back().fence));
+        FrameInfoImpl& frameInfo = history.back();
+        if (frameInfo.ready.load(std::memory_order_relaxed)) {
+            if (!mDisableGpuFrameComplete) {
+                assert_invariant(frameInfo.fence);
+                driver.destroyFence(std::move(frameInfo.fence));
+            }
+            history.pop_back();
+        } else {
+            // This is a big problem, we ran out of space in the circular queue and that entry
+            // hasn't been processed yet. Because the code below keeps a reference to the
+            // front element of the queue, we can't pop/push. Our only option is to not record
+            // a new entry for this frame, which will create a false skipped frame in the
+            // data.
+            LOG(WARNING) << "FrameInfo's circular queue is full, but the oldest item hasn't "
+                            "been processed yet. Skipping this frame, id = " << frameId;
+            mLastBeginFrameSkipped = true;
+            return;
         }
-        history.pop_back();
     }
 
     // create a new entry
@@ -193,6 +206,14 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
 }
 
 void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
+    if (mLastBeginFrameSkipped) {
+        // if we had to skip the last beginFrame(), endFrame() needs to be skipped too
+        // because history.front() now references the wrong frame.
+        // It is guaranteed that if beginFrame() is called, endFrame() will be called too.
+        mLastBeginFrameSkipped = false;
+        return;
+    }
+
     auto& front = mFrameTimeHistory.front();
     front.endFrame = std::chrono::steady_clock::now();
 
