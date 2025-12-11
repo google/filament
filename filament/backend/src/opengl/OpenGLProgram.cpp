@@ -39,6 +39,7 @@
 #include <new>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -55,6 +56,26 @@ struct OpenGLProgram::LazyInitializationData {
     FixedCapacityVector<Program::PushConstant> vertexPushConstants;
     FixedCapacityVector<Program::PushConstant> fragmentPushConstants;
 };
+
+struct PackedMat3f {
+    float entries[3][3];
+};
+
+// This is a workaround for the fact that mat3f are 3x3, but our uniforms have
+// additional padding locally for std140 alignment reasons
+PackedMat3f packMat3f(const float* expandedMat3f) {
+    PackedMat3f packedMat3f;
+    packedMat3f.entries[0][0] = expandedMat3f[0];
+    packedMat3f.entries[0][1] = expandedMat3f[1];
+    packedMat3f.entries[0][2] = expandedMat3f[2];
+    packedMat3f.entries[1][0] = expandedMat3f[4];
+    packedMat3f.entries[1][1] = expandedMat3f[5];
+    packedMat3f.entries[1][2] = expandedMat3f[6];
+    packedMat3f.entries[2][0] = expandedMat3f[8];
+    packedMat3f.entries[2][1] = expandedMat3f[9];
+    packedMat3f.entries[2][2] = expandedMat3f[10];
+    return packedMat3f;
+}
 
 
 OpenGLProgram::OpenGLProgram() noexcept = default;
@@ -328,9 +349,17 @@ void OpenGLProgram::updateUniforms(
                 glUniform4iv(loc, u.size, bi);
                 break;
 
-            case UniformType::MAT3:
-                glUniformMatrix3fv(loc, u.size, GL_FALSE, bf);
+            case UniformType::MAT3: {
+                std::vector<PackedMat3f> packedMat3fs;
+                packedMat3fs.reserve(u.size);
+                for (int mat = 0; mat < u.size; mat++) {
+                    constexpr uint16_t paddedVec3Size = sizeof(float) * 4;
+                    PackedMat3f packedMat3f = packMat3f(static_cast<const float*>(bf + (mat * paddedVec3Size)));
+                    packedMat3fs.emplace_back(packedMat3f);
+                }
+                glUniformMatrix3fv(loc, u.size, GL_FALSE, &packedMat3fs[0].entries[0][0]);
                 break;
+            }
             case UniformType::MAT4:
                 glUniformMatrix4fv(loc, u.size, GL_FALSE, bf);
                 break;
