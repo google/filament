@@ -83,6 +83,9 @@ public:
         bool debugUtilsSupported = false;
         bool debugMarkersSupported = false;
         bool multiviewSupported = false;
+        bool dynamicRenderingSupported = false;
+        bool pipelineCreationFeedbackSupported = false;
+        bool vertexInputDynamicStateSupported = false;
     };
 
     /**

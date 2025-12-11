@@ -1416,7 +1416,7 @@ bool VulkanDriver::isStereoSupported() {
 }
 
 bool VulkanDriver::isParallelShaderCompileSupported() {
-    return false;
+    return VulkanPipelineCache::isAsyncPrewarmingSupported(mContext);
 }
 
 bool VulkanDriver::isDepthStencilResolveSupported() {

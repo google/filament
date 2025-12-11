@@ -722,6 +722,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     VulkanContext& context = mImpl->mContext;
 
     // Pass along relevant driver config (feature flags)
+    context.mAsyncPipelineCachePrewarmingEnabled = driverConfig.vulkanEnableAsyncPipelineCachePrewarming;
     context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
 
     ExtensionSet instExts;
@@ -869,12 +870,17 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     if (!mImpl->mSharedContext) {
         context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context.mDynamicRenderingSupported = setContains(deviceExts, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
         context.mPipelineCreationFeedbackSupported =
                 setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
+        context.mVertexInputDynamicStateSupported = setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
     } else {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsSupported = scontext->debugUtilsSupported;
         context.mDebugMarkersSupported = scontext->debugMarkersSupported;
+        context.mDynamicRenderingSupported = scontext->dynamicRenderingSupported;
+        context.mPipelineCreationFeedbackSupported = scontext->pipelineCreationFeedbackSupported;
+        context.mVertexInputDynamicStateSupported = scontext->vertexInputDynamicStateSupported;
     }
 
     // Check the availability of lazily allocated memory
