@@ -16,6 +16,7 @@
 
 #include "VulkanPipelineCache.h"
 
+#include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
@@ -35,6 +36,8 @@ using namespace bluevk;
 namespace filament::backend {
 
 namespace {
+
+using utils::JobSystem;
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
 void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedbackInfo) {
@@ -66,13 +69,26 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 
 } // namespace
 
-VulkanPipelineCache::VulkanPipelineCache(VkDevice device, VulkanContext const& context)
+VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context)
         : mDevice(device),
+          mCallbackManager(driver),
           mContext(context) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
     };
     bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
+
+    if (isAsyncPrewarmingSupported(context)) {
+        mCompilerThreadPool.init(
+            /*threadCount=*/1,
+            []() {
+                JobSystem::setThreadName("CompilerThreadPool");
+                // This thread should be lower priority than the main thread.
+                JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+            }, []() {
+                // No cleanup required.
+            });
+    }
 }
 
 void VulkanPipelineCache::bindLayout(VkPipelineLayout layout) noexcept {
@@ -88,8 +104,8 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
         return &pipeline;
     }
     PipelineCacheEntry cacheEntry {
-        .lastUsed = mCurrentTime,
         .handle = createPipeline(mPipelineRequirements),
+        .lastUsed = mCurrentTime,
     };
     return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
