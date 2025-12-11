@@ -126,6 +126,10 @@ public:
         return mDebugUtilsSupported;
     }
 
+    inline bool isDynamicRenderingSupported() const noexcept {
+        return mDynamicRenderingSupported;
+    }
+
     inline bool isMultiviewEnabled() const noexcept {
         return mPhysicalDeviceVk11Features.multiview == VK_TRUE;
     }
@@ -148,6 +152,14 @@ public:
 
     inline bool isUnifiedMemoryArchitecture() const noexcept {
         return mIsUnifiedMemoryArchitecture;
+    }
+
+    inline bool isVertexInputDynamicStateSupported() const noexcept {
+        return mVertexInputDynamicStateSupported;
+    }
+
+    inline bool asyncPipelineCachePrewarmingEnabled() const noexcept {
+        return mAsyncPipelineCachePrewarmingEnabled;
     }
 
     inline bool stagingBufferBypassEnabled() const noexcept {
@@ -179,13 +191,20 @@ private:
 
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
+    // These are options that can be enabled or disabled at an application level.
+    bool mAsyncPipelineCachePrewarmingEnabled = false;
+    bool mStagingBufferBypassEnabled = false;
+
+    // These are options that are either supported or not supported in the current
+    // device and instance.
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
-    bool mLazilyAllocatedMemorySupported = false;
-    bool mProtectedMemorySupported = false;
+    bool mDynamicRenderingSupported = false;
     bool mIsUnifiedMemoryArchitecture = false;
-    bool mStagingBufferBypassEnabled = false;
+    bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
+    bool mProtectedMemorySupported = false;
+    bool mVertexInputDynamicStateSupported = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

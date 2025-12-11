@@ -348,6 +348,17 @@ public:
         bool vulkanEnableStagingBufferBypass = false;
 
         /**
+         * Enables asynchronous pipeline cache preloading.
+         * This is only supported for:
+         *      - VulkanPlatform
+         * When the following device extensions are available:
+         *      - VK_KHR_dynamic_rendering
+         *      - VK_EXT_vertex_input_dynamic_state
+         * And is dependent on Vulkan driver implementation on the current device.
+         */
+        bool vulkanEnableAsyncPipelineCachePrewarming = false;
+
+        /**
          * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
          */
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
