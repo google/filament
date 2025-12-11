@@ -24,6 +24,7 @@
 #include <backend/DriverEnums.h>
 
 #include <array>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <variant>
@@ -51,7 +52,7 @@ public:
     };
 
     using SpecializationConstant = std::variant<int32_t, float, bool>;
-    using DescriptorSetLayoutArray = std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT>;
+    using DescriptorSetLayoutArray = std::array<std::optional<DescriptorSetLayout>, MAX_DESCRIPTOR_SET_COUNT>;
 
     struct Uniform { // For ES2 support
         utils::CString name;    // full qualified name of the uniform field
@@ -154,7 +155,7 @@ public:
         return *this;
     }
 
-    const DescriptorSetLayoutArray& getDescriptorSetLayouts() const noexcept {
+    inline const DescriptorSetLayoutArray& getDescriptorSetLayouts() const noexcept {
         return mDescriptorLayouts;
     }
 
@@ -189,7 +190,7 @@ private:
 
     // Descriptions for descriptor set layouts that may be used for this Program, which
     // can be useful for attempting to compile the pipeline ahead of time.
-    DescriptorSetLayoutArray mDescriptorLayouts;
+    DescriptorSetLayoutArray mDescriptorLayouts{};
 
     // For ES2 support only
     AttributesInfo mAttributes;

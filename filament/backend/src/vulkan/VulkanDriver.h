@@ -206,6 +206,7 @@ private:
     bool const mIsSRGBSwapChainSupported;
     bool const mIsMSAASwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
+    uint8_t const mStereoscopicEyeCount;
     backend::AsynchronousMode const mAsynchronousMode;
 
     // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the

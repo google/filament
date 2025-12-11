@@ -110,6 +110,7 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
         .forceGLES2Context = instance->getConfig().forceGLES2Context,
         .stereoscopicType = instance->getConfig().stereoscopicType,
+        .stereoscopicEyeCount = instance->getConfig().stereoscopicEyeCount,
         .assertNativeWindowIsValid =
                 instance->features.backend.opengl.assert_native_window_is_valid,
         .metalDisablePanicOnDrawableFailure =
