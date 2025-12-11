@@ -16,6 +16,7 @@ set(HDRS
 set(COMMON_PRIVATE_HDRS
         src/eiff/Chunk.h
         src/eiff/ChunkContainer.h
+        src/eiff/CompressedStringChunk.h
         src/eiff/DictionaryTextChunk.h
         src/eiff/Flattener.h
         src/eiff/LineDictionary.h
@@ -28,6 +29,7 @@ set(COMMON_PRIVATE_HDRS
 set(COMMON_SRCS
         src/eiff/Chunk.cpp
         src/eiff/ChunkContainer.cpp
+        src/eiff/CompressedStringChunk.cpp
         src/eiff/DictionaryTextChunk.cpp
         src/eiff/LineDictionary.cpp
         src/eiff/MaterialTextChunk.cpp
@@ -81,7 +83,7 @@ include_directories(${CMAKE_BINARY_DIR})
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
-target_link_libraries(${TARGET} backend_headers shaders filabridge utils smol-v)
+target_link_libraries(${TARGET} backend_headers shaders filabridge utils smol-v zstd)
 
 if (FILAMENT_SUPPORTS_WEBGPU)
     target_link_libraries(${TARGET} libtint)
@@ -133,6 +135,7 @@ set(FILAMAT_DEPS
         spirv-cross-core
         spirv-cross-glsl
         spirv-cross-msl
+        zstd
         )
 
 set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")

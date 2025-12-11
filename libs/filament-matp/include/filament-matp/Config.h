@@ -157,6 +157,7 @@ public:
 
     bool getInsertLineDirectives() const noexcept { return mInsertLineDirectives; }
     bool getInsertLineDirectiveChecks() const noexcept { return mInsertLineDirectiveChecks; }
+    bool getIncludeSourceMaterial() const noexcept { return mIncludeSourceMaterial; }
 
 protected:
     bool mDebug = false;
@@ -179,6 +180,7 @@ protected:
     bool mIncludeEssl1 = true;
     bool mInsertLineDirectives = true;
     bool mInsertLineDirectiveChecks = true;
+    bool mIncludeSourceMaterial = false;
 };
 
 } // namespace matp

@@ -100,7 +100,7 @@ set_target_properties(test_material_parser PROPERTIES FOLDER Tests)
 add_executable(test_material
         filament_test_material.cpp
         ${RESGEN_SOURCE})
-target_link_libraries(test_material PRIVATE filament gtest)
+target_link_libraries(test_material PRIVATE filamat filament gtest)
 target_compile_options(test_material PRIVATE ${COMPILER_FLAGS})
 target_include_directories(test_material PRIVATE ${RESOURCE_DIR})
 set_target_properties(test_material PROPERTIES FOLDER Tests)

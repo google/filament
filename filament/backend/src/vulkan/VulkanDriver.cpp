@@ -22,11 +22,12 @@
 #include "VulkanBufferCache.h"
 #include "VulkanBufferProxy.h"
 #include "VulkanCommands.h"
+#include "VulkanConstants.h"
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
+#include "VulkanSamplerCache.h"
 #include "VulkanTexture.h"
-#include "vulkan/VulkanSamplerCache.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
@@ -1156,7 +1157,7 @@ void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream, utils::ImmutableCString tag) {
-    FILAMENT_CHECK_PRECONDITION(false) << "createStreamNative not supported in Vulkan.";
+    FVK_LOGW << "createStreamNative not supported in Vulkan.";
     return {};
 }
 
@@ -1969,16 +1970,16 @@ void VulkanDriver::pushGroupMarker(char const* string) {
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.pushGroupMarker(string);
 #endif
-    FVK_SYSTRACE_CONTEXT();
-    FVK_SYSTRACE_START(string);
+    FVK_ALWAYS_ON_SYSTRACE_CONTEXT();
+    FVK_ALWAYS_ON_SYSTRACE_START(string);
 }
 
 void VulkanDriver::popGroupMarker(int) {
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.popGroupMarker();
 #endif
-    FVK_SYSTRACE_CONTEXT();
-    FVK_SYSTRACE_END();
+    FVK_ALWAYS_ON_SYSTRACE_CONTEXT();
+    FVK_ALWAYS_ON_SYSTRACE_END();
 }
 
 void VulkanDriver::startCapture(int) {}
