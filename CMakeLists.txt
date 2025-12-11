@@ -563,6 +563,10 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     add_definitions(-DFILAMENT_SUPPORTS_WEBGPU)
 endif()
 
+if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
+    add_definitions(-DFILAMENT_SUPPORTS_WEBP_TEXTURES)
+endif()
+
 # Build with Metal support on non-WebGL Apple platforms.
 if (APPLE AND NOT WEBGL)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
@@ -915,7 +919,6 @@ endif()
 
 if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
     add_subdirectory(${EXTERNAL}/libwebp/tnt)
-    add_definitions(-DFILAMENT_SUPPORTS_WEBP_TEXTURES)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)

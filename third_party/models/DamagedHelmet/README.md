@@ -13,3 +13,10 @@ https://sketchfab.com/models/b81008d513954189a063ff901f7abfe4
 ## Modifications
 
 The original model was built on an early draft of glTF 2.0 that did not become final.  This new model has been imported and re-exported from Blender to bring it into alignment with the final release glTF 2.0 specification.
+
+## Damaged Helmet WebP
+* Derived from DamagedHelmet.glb described above
+  * Images converted to webp
+  * Textures updated to use EXT_texture_webp extension
+  * geometry draco compressed
+* Modifications done via [gltf-transform](https://gltf-transform.dev/) CLI utility
