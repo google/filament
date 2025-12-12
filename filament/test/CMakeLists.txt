@@ -70,6 +70,7 @@ if (TNT_DEV)
             filament_bimap_test.cpp
             filament_framegraph_test.cpp
             filament_test.cpp
+            filament_test_material.cpp
             ${RESGEN_SOURCE})
 
     target_link_libraries(test_${TARGET} PRIVATE filament gtest)
