@@ -1,0 +1,562 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>iOS Tutorial - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="cocoapods-hello-triangle"><a class="header" href="#cocoapods-hello-triangle">CocoaPods Hello Triangle</a></h1>
+<p>As of release 1.8.0, you can install Filament in your iOS application using CocoaPods.</p>
+<p>This guide will walk you through creating a basic "hello triangle" iOS application using Filament and the Metal backend.</p>
+<p><img src="../images/ios_sample/rotating-triangle.gif" alt="a rotating triangle" /></p>
+<p>The full source for this example is <a href="https://github.com/google/filament/tree/main/ios/samples/HelloCocoaPods">here</a>. If you're just looking to get something up and running quickly, download the project, <code>pod install</code>, build, and run.</p>
+<p>We'll be walking through 7 steps to get the rotating triangle up and running. All of the code we'll be writing will be in a single ViewController.mm file, and you can follow along <a href="https://github.com/google/filament/blob/main/ios/samples/HelloCocoaPods/HelloCocoaPods/ViewController.mm">here</a>.</p>
+<ul>
+<li><a href="%22#creating-a-boilerplate-app-with-filament">1. Creating a Boilerplate App</a></li>
+<li><a href="#instantiating-the-filament-engine">2. Instantiating Filament</a></li>
+<li><a href="#creating-a-swapchain">3. Creating a SwapChain</a></li>
+<li><a href="#clearing-the-screen">4. Clearing the Screen</a></li>
+<li><a href="#drawing-a-triangle">5. Drawing a Triangle</a></li>
+<li><a href="#compiling-a-custom-material">6. Compiling a Custom Material</a></li>
+<li><a href="#animating-the-triangle">7. Animating the Triangle</a></li>
+</ul>
+<h2 id="creating-a-boilerplate-app-with-filament"><a class="header" href="#creating-a-boilerplate-app-with-filament">Creating a Boilerplate App with Filament</a></h2>
+<p>We'll start fresh by creating a new Single View App in Xcode.</p>
+<p><img src="../images/ios_sample/single-view-app.png" alt="create a single view app in Xcodde" /></p>
+<p>Give your app a name, and use the default options.</p>
+<p><img src="../images/ios_sample/default-options.png" alt="use the default options in Xcode" /></p>
+<p>If you haven't used CocoaPods before, I recommend watching <a href="https://www.youtube.com/watch?v=iEAjvNRdZa0">this Route 85 video</a> to help you get set up.</p>
+<p>Create a Podfile in the Xcode project directory with the following:</p>
+<pre><code>platform :ios, '11.0'
+
+target 'HelloCocoaPods' do
+    pod 'Filament'
+end
+</code></pre>
+<p>Then run:</p>
+<pre><code class="language-shell">pod install
+</code></pre>
+<p>Close the project and then re-open the newly created HelloCocoaPods.xcworkspace file.</p>
+<h2 id="instantiating-the-filament-engine"><a class="header" href="#instantiating-the-filament-engine">Instantiating the Filament Engine</a></h2>
+<p>Before we do anything with Filament, we first need to include the appropriate headers. Filament exposes a C++ API, so any files that include Filament headers need to be compiled in a variant of C++. We'll be using Objective-C++.</p>
+<p>You should be able to simply change the extension of the default ViewController from .m to .mm, though I've found Xcode to be buggy with this on occasion. To make sure Xcode recognizes it as an Objective-C++ file, check that the type of file is "Objective-C++ Source".</p>
+<p><img src="../images/ios_sample/obj-cpp.png" alt="change the type of ViewController.m to Objective-C++" /></p>
+<p>Then, add the following to the top of ViewController.</p>
+<pre><code class="language-obj-c">#include &lt;filament/Engine.h&gt;
+
+using namespace filament;
+</code></pre>
+<p>We'll need to keep track of a few Filament objects, so let's add a section for private instance variables and add a pointer for our <code>Engine</code> instance.</p>
+<pre><code class="language-obj-c">@implementation Viewcontroller {
+     Engine* _engine;
+}
+</code></pre>
+<p>The Filament <code>Engine</code> is our main entrypoint into Filament. We start by instantiating it inside <code>viewDidLoad</code>.</p>
+<pre><code class="language-obj-c">- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    _engine = Engine::create(Engine::Backend::METAL);
+}
+</code></pre>
+<p>We specify <code>Engine::Backend::METAL</code> to select the Metal backend. Filament also supports OpenGL on iOS, but we strongly recommend sticking to Metal.</p>
+<p>Every Filament object we create must also be destroyed. Add the <code>dealloc</code> method and the following:</p>
+<pre><code class="language-obj-c">- (void)dealloc {
+    _engine-&gt;destroy(&amp;_engine);
+}
+</code></pre>
+<p>If you compile and run the app now you should see output similar to the following:</p>
+<pre><code>FEngine (64 bits) created at 0x10ab94000 (threading is enabled)
+FEngine resolved backend: Metal
+</code></pre>
+<h2 id="creating-a-swapchain"><a class="header" href="#creating-a-swapchain">Creating a SwapChain</a></h2>
+<p>Before we can render anything, we'll first need to create a <code>SwapChain</code>. The <code>SwapChain</code> represents a platform-specific surface that can be rendered into. On iOS with Metal, it's a <a href="https://developer.apple.com/documentation/quartzcore/cametallayer"><code>CAMetalLayer</code></a>.</p>
+<p>We could set up our own <code>CAMetalLayer</code> if we wanted to, but Apple provides a <code>MTKView</code> that is already backed by a <code>CAMetalLayer</code>. It also has a delegate protocol with some methods that will make things easier for us.</p>
+<p>Inside Main.storyboard, change the type of ViewController's view to a <code>MTKView</code>.</p>
+<p><img src="../images/ios_sample/view.png" alt="ViewController view" /></p>
+<p><img src="../images/ios_sample/mtkview.gif" alt="change type of MTKView" /></p>
+<p>Include the SwapChain.h and MTKView.h headers and make the <code>ViewController</code> conform to the <code>MTKViewDelegate</code> protocol.</p>
+<pre><code class="language-obj-c">#include &lt;filament/SwapChain.h&gt;
+
+#import &lt;MetalKit/MTKView.h&gt;
+
+@interface ViewController () &lt;MTKViewDelegate&gt;
+
+@end
+</code></pre>
+<p>Add a new private var:</p>
+<pre><code class="language-obj-c">SwapChain* _swapChain;
+</code></pre>
+<p>Inside <code>viewDidLoad</code>, we'll set our <code>ViewController</code> as the <code>MTKView</code> delegate and instantiate our <code>SwapChain</code>. To instantiate the <code>SwapChain</code>, we pass in <code>view.layer</code> which, because we set our <code>View</code> to a <code>MTKView</code>, will be a <code>CAMetalLayer</code>. Filament's API is platform-agnostic, which is why we need to cast the layer to a <code>void*</code>.</p>
+<pre><code class="language-obj-c">MTKView* mtkView = (MTKView*) self.view;
+mtkView.delegate = self;
+_swapChain = _engine-&gt;createSwapChain((__bridge void*) mtkView.layer);
+</code></pre>
+<p>The <code>SwapChain</code> needs to be destroyed in our <code>dealloc</code> function. We'll destroy the objects in the reverse order we created them; the <code>Engine</code> object should always be the the last object we destroy.</p>
+<pre><code class="language-obj-c">_engine-&gt;destroy(_swapChain);
+_engine-&gt;destroy(&amp;_engine);
+</code></pre>
+<p>Finally, add stubs for some <code>MTKViewDelegate</code> methods, which we'll fill in later.</p>
+<pre><code class="language-obj-c">- (void)mtkView:(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size {
+    // todo
+}
+
+- (void)drawInMTKView:(nonnull MTKView*)view {
+    // todo
+}
+</code></pre>
+<h2 id="clearing-the-screen"><a class="header" href="#clearing-the-screen">Clearing The Screen</a></h2>
+<p>We now have a Filament <code>Engine</code> and <code>SwapChain</code> set up. We'll need a few more objects before we can render anything.</p>
+<p>A Filament <code>Renderer</code> gives us an API to render frames into the <code>SwapChain</code>. It takes a <code>View</code>, which defines a <code>Viewport</code>, <code>Scene</code> and <code>Camera</code> for rendering. The <code>Camera</code> represents a vantage point into a <code>Scene</code>, which contains references to all the entities we want to render.</p>
+<p>Creating these are objects is straightforward. First, include the appropriate headers</p>
+<pre><code class="language-c++">#include &lt;filament/Renderer.h&gt;
+#include &lt;filament/View.h&gt;
+#include &lt;filament/Camera.h&gt;
+#include &lt;filament/Scene.h&gt;
+#include &lt;filament/Viewport.h&gt;
+
+#include &lt;utils/Entity.h&gt;
+#include &lt;utils/EntityManager.h&gt;
+
+using namespace utils;
+</code></pre>
+<p>add the following private vars</p>
+<pre><code class="language-obj-c">Renderer* _renderer;
+View* _view;
+Scene* _scene;
+Camera* _camera;
+Entity _cameraEntity;
+</code></pre>
+<p>and then instantiate them</p>
+<pre><code class="language-obj-c">_renderer = _engine-&gt;createRenderer();
+_view = _engine-&gt;createView();
+_scene = _engine-&gt;createScene();
+</code></pre>
+<p>The camera is a bit special. Filament uses an entity-component system, so we'll first need to create an <code>Entity</code> which we then attach a <code>Camera</code> component to.</p>
+<pre><code class="language-obj-c">_cameraEntity = EntityManager::get().create();
+_camera = _engine-&gt;createCamera(_cameraEntity);
+</code></pre>
+<p>Let's also inform our <code>Renderer</code> to clear to a light blue clear color, so we can know everything is working.</p>
+<pre><code class="language-obj-c">_renderer-&gt;setClearOptions({
+    .clearColor = {0.25f, 0.5f, 1.0f, 1.0f},
+    .clear = true
+});
+</code></pre>
+<p>The <code>Camera</code> and <code>Scene</code> need to be wired up to the <code>View</code>.</p>
+<pre><code class="language-obj-c">_view-&gt;setScene(_scene);
+_view-&gt;setCamera(_camera);
+</code></pre>
+<p>Our newly created objects get cleaned up inside <code>dealloc</code>.</p>
+<pre><code class="language-obj-c">_engine-&gt;destroyCameraComponent(_cameraEntity);
+EntityManager::get().destroy(_cameraEntity);
+_engine-&gt;destroy(_scene);
+_engine-&gt;destroy(_view);
+_engine-&gt;destroy(_renderer);
+</code></pre>
+<p>We need to set the <code>Viewport</code> on our <code>View</code>, which we want to do whenever the size of our <code>SwapChain</code> changes. We'll also update the projection matrix on our camera.</p>
+<p>Let's create a new method, <code>resize:</code>, which will update the <code>Viewport</code> on our <code>View</code> to a given size. We'll call it in the <code>mtkView:drawableSizeWillChange:</code> delegate method, and at the end of <code>viewDidLoad</code>:</p>
+<pre><code class="language-obj-c">- (void)resize:(CGSize)size {
+    _view-&gt;setViewport({0, 0, (uint32_t) size.width, (uint32_t) size.height});
+
+    const double aspect = size.width / size.height;
+    const double left   = -2.0 * aspect;
+    const double right  =  2.0 * aspect;
+    const double bottom = -2.0;
+    const double top    =  2.0;
+    const double near   =  0.0;
+    const double far    =  1.0;
+    _camera-&gt;setProjection(Camera::Projection::ORTHO, left, right, bottom, top, near, far);
+}
+
+- (void)viewDidLoad {
+    ...
+
+    // Give our View a starting size based on the drawable size.
+    [self resize:mtkView.drawableSize];
+}
+
+- (void)mtkView(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size {
+    [self resize:size];
+}
+</code></pre>
+<p>Lastly, in order to render, we'll call a few Filament API methods inside the <code>drawInMTKView:</code> method:</p>
+<pre><code class="language-obj-c">- (void)drawInMTKView:(nonnull MTKView*)view {
+    if (_renderer-&gt;beginFrame(_swapChain)) {
+        _renderer-&gt;render(_view);
+        _renderer-&gt;endFrame();
+    }
+}
+</code></pre>
+<p>The <code>beginFrame</code> method instructs Filament to start rendering to our specific <code>SwapChain</code> instance. It returns <code>true</code> if the engine is ready for another frame. It returns <code>false</code> to signal us to skip this frame, which could happen if we're sending frames down too quickly for the GPU to process.</p>
+<p>At this point, you should be able to build and run the app, and you'll see a blue screen.</p>
+<p><img src="../images/ios_sample/blue-screen.png" alt="blue screen after clearing" /></p>
+<h2 id="drawing-a-triangle"><a class="header" href="#drawing-a-triangle">Drawing a Triangle</a></h2>
+<p>In order to draw a triangle, we need to create vertex and index buffers to define its geometry. We'll then create a <code>Renderable</code> component.</p>
+<p>We'll start by including some additional headers and adding a few new private vars:</p>
+<pre><code class="language-obj-c">#include &lt;filament/VertexBuffer.h&gt;
+#include &lt;filament/IndexBuffer.h&gt;
+#include &lt;filament/RenderableManager.h&gt;
+
+...
+
+VertexBuffer* _vertexBuffer;
+IndexBuffer* _indexBuffer;
+Entity _triangle;
+</code></pre>
+<p>First, we'll define the data for a single vertex.</p>
+<pre><code class="language-obj-c">struct Vertex {
+    math::float2 position;
+    math::float3 color;
+};
+</code></pre>
+<p>Creating a <code>VertexBuffer</code> and <code>IndexBuffer</code> is a matter of giving Filament a pointer to the data, along with information on its layout and size. Filament uses <code>BufferDescriptors</code> to accomplish this.</p>
+<p>Inside <code>viewDidLoad</code>, we'll statically define some verticies and indices and create a <code>BufferDescriptor</code> for each.</p>
+<pre><code class="language-obj-c">static const Vertex TRIANGLE_VERTICES[3] = {
+    { { 0.867, -0.500}, {1.0, 0.0, 0.0} },
+    { { 0.000,  1.000}, {0.0, 1.0, 0.0} },
+    { {-0.867, -0.500}, {0.0, 0.0, 1.0} },
+};
+static const uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+
+VertexBuffer::BufferDescriptor vertices(TRIANGLE_VERTICES, sizeof(Vertex) * 3, nullptr);
+IndexBuffer::BufferDescriptor indices(TRIANGLE_INDICES, sizeof(uint16_t) * 3, nullptr);
+</code></pre>
+<p>The last argument is an optional callback function, which will be called after Filament is done uploading the data to the GPU. Inside the callback, you'd typically release the memory of any buffers via a <code>free</code> or <code>delete</code> call. We pass <code>nullptr</code> because we don't need a callback as our vertex and index buffer memory is static.</p>
+<p>Now we can instantiate our <code>VertexBuffer</code> and <code>IndexBuffer</code>.</p>
+<pre><code class="language-obj-c">using Type = VertexBuffer::AttributeType;
+
+const uint8_t stride = sizeof(Vertex);
+_vertexBuffer = VertexBuffer::Builder()
+    .vertexCount(3)
+    .bufferCount(1)
+    .attribute(VertexAttribute::POSITION, 0, Type::FLOAT2, offsetof(Vertex, position), stride)
+    .attribute(VertexAttribute::COLOR,    0, Type::FLOAT3, offsetof(Vertex, color),    stride)
+    .build(*_engine);
+
+_indexBuffer = IndexBuffer::Builder()
+    .indexCount(3)
+    .bufferType(IndexBuffer::IndexType::USHORT)
+    .build(*_engine);
+
+_vertexBuffer-&gt;setBufferAt(*_engine, 0, std::move(vertices));
+_indexBuffer-&gt;setBuffer(*_engine, std::move(indices));
+</code></pre>
+<p>We first create an <code>Entity</code> like we did for our camera. This time, we're attaching a <code>Renderable</code> component to the entity. The <code>Renderable</code> component takes geometry defined by our vertex and index buffers, and makes the entity visible in our scene.</p>
+<pre><code class="language-obj-c">_triangle = utils::EntityManager::get().create();
+
+using Primitive = RenderableManager::PrimitiveType;
+RenderableManager::Builder(1)
+    .geometry(0, Primitive::TRIANGLES, _vertexBuffer, _indexBuffer, 0, 3)
+    .culling(false)
+    .receiveShadows(false)
+    .castShadows(false)
+    .build(*_engine, _triangle);
+
+// Add the triangle to the scene.
+_scene-&gt;addEntity(_triangle);
+</code></pre>
+<p>Destroy the entity and buffers in <code>dealloc</code>.</p>
+<pre><code class="language-obj-c">_engine-&gt;destroy(_triangle);
+EntityManager::get().destroy(_triangle);
+_engine-&gt;destroy(_indexBuffer);
+_engine-&gt;destroy(_vertexBuffer);
+</code></pre>
+<p>If you build and run the app now, you should see a plain white triangle. When we created the renderable, we didn't specify any specific <code>Material</code> to use, so Filament used a default, white material. Let's create a custom material to color the triangle.</p>
+<p><img src="../images/ios_sample/white-triangle.png" alt="a white triangle" /></p>
+<h2 id="compiling-a-custom-material"><a class="header" href="#compiling-a-custom-material">Compiling a Custom Material</a></h2>
+<p>For simplicity, we're going to compile a custom material at runtime. For production, we recommend using our matc tool to compile materials offline. You can download it as part of one of our <a href="https://github.com/google/filament/releases">releases</a>.</p>
+<p>First, add a few more headers. We'll be using Filament's filamat library to compile a custom material.</p>
+<pre><code class="language-c++">#include &lt;filament/Material.h&gt;
+#include &lt;filament/MaterialInstance.h&gt;
+
+#include &lt;filamat/MaterialBuilder.h&gt;
+</code></pre>
+<p>We'll store our material in a new private var. We'll also need one to store a material <em>instance</em>. You can think of a material as a "template", where a material instance is an instantiation of the template (similar to OOP classes and instances). For more information on Filament materials, read the <a href="https://google.github.io/filament/Materials.html">Filament Materials Guide</a>.</p>
+<pre><code class="language-obj-c">Material* _material;
+MaterialInstance* _materialInstance;
+</code></pre>
+<p>We'll use the filamat library to compile a material into a  package, which we can then load into Filament. The material will be simple; it will load the interpolated color attribute and set it as the <code>baseColor</code>.</p>
+<p>Make sure to insert this code into <code>viewDidLoad</code> <em>before</em> we create our <code>Renderable</code>.</p>
+<pre><code class="language-obj-c">// init must be called before we can build any materials.
+filamat::MaterialBuilder::init();
+
+// Compile a custom material to use on the triangle.
+filamat::Package pkg = filamat::MaterialBuilder()
+    // The material name, only used for debugging purposes.
+    .name("Triangle material")
+    // Use the unlit shading mode, because we don't have any lights in our scene.
+    .shading(filamat::MaterialBuilder::Shading::UNLIT)
+    // Expose the COLOR attribute visible to our shader code.
+    .require(VertexAttribute::COLOR)
+    // Custom GLSL fragment shader
+    .material("void material (inout MaterialInputs material) {"
+              "  prepareMaterial(material);"
+              "  material.baseColor = getColor();"
+              "}")
+    // Compile for Metal on mobile platforms.
+    .targetApi(filamat::MaterialBuilder::TargetApi::METAL)
+    .platform(filamat::MaterialBuilder::Platform::MOBILE)
+    .build();
+assert(pkg.isValid());
+
+// shutdown should be called after all materials are built.
+filamat::MaterialBuilder::shutdown();
+</code></pre>
+<p>Now that we have a <code>filamat::Package</code> representing the material, we can use it to instantiate a Filament <code>Material</code>. Note that again, we recommend using the matc command-line tool to compile material packages during your app's compilation phase if possible, instead of at run-time.</p>
+<pre><code class="language-obj-c">// Create a Filament material from the Package.
+_material = Material::Builder()
+    .package(pkg.getData(), pkg.getSize())
+    .build(*_engine);
+_materialInstance = _material-&gt;getDefaultInstance();
+</code></pre>
+<p>Now we can use the <code>MaterialInstance</code> when creating our <code>Renderable</code>.</p>
+<pre><code class="language-obj-c">// Create a renderable using our geometry and material.
+using Primitive = RenderableManager::PrimitiveType;
+RenderableManager::Builder(1)
+    .geometry(0, Primitive::TRIANGLES, _vertexBuffer, _indexBuffer, 0, 3)
+    // Use the MaterialInstance we just created.
+    .material(0, _materialInstance)
+    .culling(false)
+    .receiveShadows(false)
+    .castShadows(false)
+    .build(*_engine, _triangle);
+</code></pre>
+<p>Lastly, we make sure to destroy everything inside <code>dealloc</code>.</p>
+<pre><code class="language-obj-c">_engine-&gt;destroy(_materialInstance);
+_engine-&gt;destroy(_material);
+</code></pre>
+<p>Build and run. You should see the same triangle, but with colors.</p>
+<p><img src="../images/ios_sample/colored-triangle.png" alt="the triangle with our custom material" /></p>
+<h2 id="animating-the-triangle"><a class="header" href="#animating-the-triangle">Animating the Triangle</a></h2>
+<p>We'll do this by animating a transform on our triangle entity. First, include a new header.</p>
+<pre><code class="language-obj-c">#include &lt;filament/TransformManager.h&gt;
+</code></pre>
+<p>When we create our triangle entity, we'll also attach a transform component. We've already seen two other components: <code>Renderable</code> and <code>Camera</code>. The <code>Transform</code> component allows us to set world-space transformations on entities.</p>
+<p>Inside <code>viewDidLoad</code>, after we create the triangle entity's <code>Renderable</code> component, we'll also attach a <code>Transform</code> component.</p>
+<pre><code class="language-obj-c">// Add a Transform component to the triangle, so we can animate it.
+_engine-&gt;getTransformManager().create(_triangle);
+</code></pre>
+<p>Create a new function, <code>update</code>, and add call it inside the <code>drawInMTKView:</code> method.</p>
+<pre><code class="language-obj-c">- (void)update {
+    auto&amp; tm = _engine-&gt;getTransformManager();
+    auto i = tm.getInstance(_triangle);
+    const auto time = CACurrentMediaTime();
+    tm.setTransform(i, math::mat4f::rotation(time, math::float3 {0.0, 0.0, 1.0}));
+}
+
+- (void)drawInMTKView:(nonnull MTKView*)view {
+    [self update];
+    if (_renderer-&gt;beginFrame(_swapChain)) {
+        _renderer-&gt;render(_view);
+        _renderer-&gt;endFrame();
+    }
+}
+</code></pre>
+<p>Now we should see the triangle rotate around its z axis.</p>
+<p><img src="../images/ios_sample/rotating-triangle.gif" alt="a rotating triangle" /></p>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<p>In this guide we've covered how to install Filament with CocoaPods and get rendering using the Metal backend. We also compiled a custom material. Again, here's the <a href="https://github.com/google/filament/tree/main/ios/samples/HelloCocoaPods">complete sample code</a> for the app. If you're interesting in learning more, check out Filament's additional <a href="https://github.com/google/filament/tree/main/ios/samples">iOS samples</a>. If you have any problems, feel free to open an <a href="https://github.com/google/filament/issues">issue</a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../samples/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../samples/web.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../samples/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../samples/web.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
