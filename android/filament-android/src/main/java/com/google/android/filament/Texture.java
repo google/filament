@@ -71,6 +71,16 @@ import static com.google.android.filament.Texture.Type.COMPRESSED;
  * @see MaterialInstance#setParameter(String, Texture, TextureSampler)
  */
 public class Texture {
+
+    private static Class<?> HardwareBufferClass = null;
+
+    static {
+        try {
+            HardwareBufferClass = Class.forName("android.hardware.HardwareBuffer");
+        } catch (ClassNotFoundException ignored) {
+        }
+    }
+
     private static final Sampler[] sSamplerValues = Sampler.values();
     private static final InternalFormat[] sInternalFormatValues = InternalFormat.values();
 
@@ -1173,6 +1183,38 @@ public class Texture {
     }
 
     /**
+     * Specifies the external image to associate with this <code>Texture</code>.
+     *
+     * <p>Typically, the external image is OS specific, and can be a video or camera frame.
+     * There are many restrictions when using an external image as a texture, such as:</p>
+     * <ul>
+     *   <li> only the level of detail (lod) 0 can be specified</li>
+     *   <li> only nearest or linear filtering is supported</li>
+     *   <li> the size and format of the texture is defined by the external image</li>
+     *   <li> only the CLAMP_TO_EDGE wrap mode is supported</li>
+     * </ul>
+     *
+     * @param engine    {@link Engine} this texture is associated to. Must be the
+     *                  instance passed to {@link Builder#build Builder.build()}.
+     * @param externalImageRef An OS specific Object. On Android it must be a
+     *                         <code>android.hardware.HardwareBuffer</code>
+     */
+    public void setExternalImage(@NonNull Engine engine, Object externalImageRef) {
+        if (HardwareBufferClass != null) {
+            if (!HardwareBufferClass.isInstance(externalImageRef)) {
+                throw new IllegalArgumentException("externalImageRef must be a AHardwareBuffer");
+            }
+            if (!nSetExternalImageByAHB(getNativeObject(), engine.getNativeObject(), externalImageRef)) {
+                throw new IllegalStateException("Error setting AHardwareBuffer as external image");
+            }
+        } else {
+            throw new UnsupportedOperationException(
+                "setExternalImage(Engine, Object) not supported on this platform");
+        }
+    }
+
+
+    /**
      * Specifies the external stream to associate with this <code>Texture</code>.
      *
      *  <p>This <code>Texture</code> instance must use
@@ -1363,6 +1405,8 @@ public class Texture {
 
     private static native void nSetExternalImage(
             long nativeObject, long nativeEngine, long eglImage);
+
+    private static native boolean nSetExternalImageByAHB(long nativeTexture, long nativeObject, Object ahb);
 
     private static native void nSetExternalStream(long nativeTexture,
             long nativeEngine, long nativeStream);

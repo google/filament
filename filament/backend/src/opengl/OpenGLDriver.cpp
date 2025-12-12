@@ -1344,7 +1344,6 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
     GLTexture* t = handle_cast<GLTexture*>(binfo.handle);
 
     assert_invariant(t);
-    assert_invariant(t->target != SamplerType::SAMPLER_EXTERNAL);
     assert_invariant(rt->width  <= valueForLevel(binfo.level, t->width) &&
            rt->height <= valueForLevel(binfo.level, t->height));
 
@@ -1418,6 +1417,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             case SamplerType::SAMPLER_3D:
             case SamplerType::SAMPLER_2D_ARRAY:
             case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            case SamplerType::SAMPLER_EXTERNAL:
                 // this could be GL_TEXTURE_2D_MULTISAMPLE or GL_TEXTURE_2D_ARRAY
                 target = t->gl.target;
                 // note: multi-sampled textures can't have mipmaps
@@ -1425,10 +1425,6 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             case SamplerType::SAMPLER_CUBEMAP:
                 target = getCubemapTarget(binfo.layer);
                 // note: cubemaps can't be multi-sampled
-                break;
-            case SamplerType::SAMPLER_EXTERNAL:
-                // This is an error. We have asserted in debug build.
-                target = t->gl.target;
                 break;
         }
     }
@@ -1458,6 +1454,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
             case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             case GL_TEXTURE_2D:
+            case GL_TEXTURE_EXTERNAL_OES:
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
             case GL_TEXTURE_2D_MULTISAMPLE:
 #endif
@@ -1465,7 +1462,9 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
                     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
                             target, t->gl.id, binfo.level);
                 } else {
-                    assert_invariant(target == GL_TEXTURE_2D);
+                    // in principle, it's possible to have a renderbuffer that's external
+                    // (it filament this never happens, currently)
+                    assert_invariant(target == GL_TEXTURE_2D || target == GL_TEXTURE_EXTERNAL_OES);
                     glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
                             GL_RENDERBUFFER, t->gl.id);
                 }

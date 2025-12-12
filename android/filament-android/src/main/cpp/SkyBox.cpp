@@ -63,6 +63,14 @@ Java_com_google_android_filament_Skybox_nBuilderColor(JNIEnv *,  jclass,
     builder->color({r, g, b, a});
 }
 
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_Skybox_nBuilderPriority(JNIEnv *,  jclass,
+        jlong nativeSkyBoxBuilder, jint priority) {
+    Skybox::Builder *builder = (Skybox::Builder *) nativeSkyBoxBuilder;
+    builder->priority(uint8_t(priority));
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Skybox_nBuilderBuild(JNIEnv *env, jclass type,
         jlong nativeSkyBoxBuilder, jlong nativeEngine) {

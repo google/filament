@@ -132,6 +132,20 @@ public:
         Builder& color(math::float4 color) noexcept;
 
         /**
+         * Set the rendering priority of the Skybox. By default, it is set to the lowest
+         * priority (7) such that the Skybox is always rendered after the opaque objects,
+         * to reduce overdraw when depth culling is enabled.
+         *
+         * @param priority clamped to the range [0..7], defaults to 4; 7 is lowest priority
+         *                 (rendered last).
+         *
+         * @return Builder reference for chaining calls.
+         *
+         * @see RenderableManager::Builder::priority()
+         */
+        Builder& priority(uint8_t priority) noexcept;
+
+        /**
          * Creates the Skybox object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this Skybox with.

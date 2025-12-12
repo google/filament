@@ -156,6 +156,24 @@ public class Skybox {
         }
 
         /**
+         * Set the rendering priority of the Skybox. By default, it is set to the lowest
+         * priority (7) such that the Skybox is always rendered after the opaque objects,
+         * to reduce overdraw when depth culling is enabled.
+         *
+         * @param priority clamped to the range [0..7], defaults to 4; 7 is lowest priority
+         *                 (rendered last).
+         *
+         * @return Builder reference for chaining calls.
+         *
+         * @see RenderableManager.Builder#priority
+         */
+        @NonNull
+        public Builder priority(@IntRange(from = 0, to = 7) int priority) {
+            nBuilderPriority(mNativeBuilder, priority);
+            return this;
+        }
+
+        /**
          * Creates a <code>Skybox</code> object
          *
          * @param engine the {@link Engine} to associate this <code>Skybox</code> with.
@@ -262,6 +280,7 @@ public class Skybox {
     private static native void nBuilderShowSun(long nativeSkyboxBuilder, boolean show);
     private static native void nBuilderIntensity(long nativeSkyboxBuilder, float intensity);
     private static native void nBuilderColor(long nativeSkyboxBuilder, float r, float g, float b, float a);
+    private static native void nBuilderPriority(long nativeSkyboxBuilder, int priority);
     private static native long nBuilderBuild(long nativeSkyboxBuilder, long nativeEngine);
     private static native void nSetLayerMask(long nativeSkybox, int select, int value);
     private static native int  nGetLayerMask(long nativeSkybox);
