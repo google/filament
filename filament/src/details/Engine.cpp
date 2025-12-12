@@ -132,7 +132,7 @@ struct Engine::BuilderDetails {
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
-    std::unordered_map<std::string_view, bool> mFeatureFlags;
+    std::unordered_map<std::string, bool> mFeatureFlags;
 
     static Config validateConfig(Config config) noexcept;
 };
@@ -273,7 +273,7 @@ FEngine::FEngine(Builder const& builder) :
     // update a feature flag from Engine::Config if the flag is not specified in the Builder
     auto const featureFlagsBackwardCompatibility =
             [this, &builder](std::string_view const name, bool const value) {
-        if (builder->mFeatureFlags.find(name) == builder->mFeatureFlags.end()) {
+        if (builder->mFeatureFlags.find(name.data()) == builder->mFeatureFlags.end()) {
             auto* const p = getFeatureFlagPtr(name, true);
             if (p) {
                 *p = value;
