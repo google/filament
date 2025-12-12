@@ -1790,16 +1790,16 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, ImmutableCString&& tag) {
     GLFence* const f = handle_cast<GLFence*>(fh);
     assert_invariant(f->state);
 
-    bool const platformCanCreateFence = mPlatform.canCreateFence();
-
-    if (mContext.isES2() || platformCanCreateFence) {
+    if (mPlatform.canCreateFence()) {
         std::lock_guard const lock(f->state->lock);
-        if (platformCanCreateFence) {
-            f->fence = mPlatform.createFence();
-            f->state->cond.notify_all();
-        } else {
-            f->state->status = FenceStatus::ERROR;
-        }
+        f->fence = mPlatform.createFence();
+        f->state->cond.notify_all();
+        return;
+    }
+
+    if (!mContext.hasFences()) {
+        // this would happen on ES2
+        f->state->status = FenceStatus::ERROR;
         return;
     }
 
@@ -1814,6 +1814,8 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, ImmutableCString&& tag) {
             state->cond.notify_all();
         }
     });
+#else
+    f->state->status = FenceStatus::ERROR;
 #endif
 }
 
@@ -2289,7 +2291,7 @@ mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
 void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
         GLFence const* const f = handle_cast<GLFence*>(fh);
-        if (mPlatform.canCreateFence() || mContext.isES2()) {
+        if (mPlatform.canCreateFence()) {
             mPlatform.destroyFence(f->fence);
         }
         // note: it's invalid to call this during a fenceWait(fh) on another thread. For this
@@ -2298,7 +2300,7 @@ void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
     }
 }
 
-void OpenGLDriver::fenceCancel(FenceHandle fh) {
+void OpenGLDriver::fenceCancel(Handle<HwFence> fh) {
     // Even though this is a synchronous call, the fence handle must be (and stay) valid
     assert_invariant(fh);
     GLFence const* const f = handle_cast<GLFence*>(fh);
@@ -2331,30 +2333,30 @@ FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     // we don't need to acquire a reference to f->state here because `f` already has one, and
     // `f` is not supposed to become invalid while we wait.
 
-    bool const platformCanCreateFence = mPlatform.canCreateFence();
-    if (mContext.isES2() || platformCanCreateFence) {
-        if (platformCanCreateFence) {
-            std::unique_lock lock(f->state->lock);
+    if (mPlatform.canCreateFence()) {
+        std::unique_lock lock(f->state->lock);
+        if (f->fence == nullptr) {
+            // we've been called before the fence was created asynchronously,
+            // so we need to wait for that, before using the real fence.
+            // By construction, "f" can't be destroyed while we wait, because its
+            // construction call is in the queue and a destroy call will have to come later.
+            f->state->cond.wait_until(lock, until, [f] {
+                return f->fence != nullptr;
+            });
             if (f->fence == nullptr) {
-                // we've been called before the fence was created asynchronously,
-                // so we need to wait for that, before using the real fence.
-                // By construction, "f" can't be destroyed while we wait, because its
-                // construction call is in the queue and a destroy call will have to come later.
-                f->state->cond.wait_until(lock, until, [f] {
-                    return f->fence != nullptr;
-                });
-                if (f->fence == nullptr) {
-                    // the only possible choice here is that we timed out
-                    assert_invariant(f->state->status == FenceStatus::TIMEOUT_EXPIRED);
-                    return FenceStatus::TIMEOUT_EXPIRED;
-                }
+                // the only possible choice here is that we timed out
+                assert_invariant(f->state->status == FenceStatus::TIMEOUT_EXPIRED);
+                return FenceStatus::TIMEOUT_EXPIRED;
             }
-            lock.unlock();
-            // here we know that we have the platform fence
-            assert_invariant(f->fence);
-            return mPlatform.waitFence(f->fence, timeout);
         }
-        // platform doesn't support fences -- nothing we can do.
+        lock.unlock();
+        // here we know that we have the platform fence
+        assert_invariant(f->fence);
+        return mPlatform.waitFence(f->fence, timeout);
+    }
+
+    if (!mContext.hasFences()) {
+        // this would be the case on ES2
         return FenceStatus::ERROR;
     }
 
@@ -2365,6 +2367,8 @@ FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
         return f->state->status != FenceStatus::TIMEOUT_EXPIRED;
     });
     return f->state->status;
+#else
+    return FenceStatus::ERROR;
 #endif
 }
 
