@@ -268,7 +268,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
 WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
         const uint8_t levelCount) noexcept
     : HwTexture{ src->target, levelCount, src->samples, src->width, src->height, src->depth,
-          src->format, src->usage, src->asynchronous },
+          src->format, src->usage, static_cast<bool>(src->asynchronous) },
       mViewFormat{ src->mViewFormat },
       mMipmapGenerationStrategy{ src->mMipmapGenerationStrategy },
       mWebGPUFormat{ src->mWebGPUFormat },
@@ -312,7 +312,7 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
 WebGPUTexture::WebGPUTexture(const WebGPUTexture* src,
         const wgpu::TextureComponentSwizzle nextSwizzle) noexcept
     : HwTexture{ src->target, src->levels, src->samples, src->width, src->height, src->depth,
-              src->format, src->usage, src->asynchronous },
+              src->format, src->usage, static_cast<bool>(src->asynchronous) },
       mViewFormat{ src->mViewFormat },
       mMipmapGenerationStrategy{ src->mMipmapGenerationStrategy },
       mWebGPUFormat{ src->mWebGPUFormat },
