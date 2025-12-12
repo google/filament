@@ -22,6 +22,7 @@
 #include <climits>
 #include <utility>
 #include <type_traits>
+#include <unordered_set>
 
 using namespace utils;
 
@@ -242,7 +243,7 @@ TEST(CString, Concatenation) {
     }
 }
 
-TEST(CString, Comparison) {
+TEST(CString, ComparisonCString) {
     CString s1("abc");
     CString s2("abc");
     CString s3("def");
@@ -270,6 +271,106 @@ TEST(CString, Comparison) {
 
     EXPECT_TRUE(s4 < s1);
     EXPECT_TRUE(s1 > s4);
+}
+
+TEST(CString, ComparisonStringView) {
+    const CString CS1("abc");
+    const CString CS2("abc");
+    const CString CS3("def");
+    const CString CS4("ab");
+    const std::string_view sv1("abc");
+    const std::string_view sv2("abc");
+    const std::string_view sv3("def");
+    const std::string_view sv4("ab");
+
+    EXPECT_TRUE(CS1 == sv2);
+    EXPECT_TRUE(sv2 == CS1);
+    EXPECT_FALSE(CS1 == sv3);
+    EXPECT_FALSE(sv3 == CS1);
+
+    EXPECT_TRUE(CS1 != sv3);
+    EXPECT_TRUE(sv3 != CS1);
+    EXPECT_FALSE(CS1 != sv2);
+    EXPECT_FALSE(sv2 != CS1);
+
+    EXPECT_TRUE(CS1 < sv3);
+    EXPECT_TRUE(sv1 < CS3);
+    EXPECT_FALSE(CS3 < sv1);
+    EXPECT_FALSE(sv3 < CS1);
+
+    EXPECT_TRUE(CS3 > sv1);
+    EXPECT_TRUE(sv3 > CS1);
+    EXPECT_FALSE(CS1 > sv3);
+    EXPECT_FALSE(sv1 > CS3);
+
+    EXPECT_TRUE(CS1 <= sv2);
+    EXPECT_TRUE(sv1 <= CS2);
+    EXPECT_TRUE(CS1 <= sv3);
+    EXPECT_TRUE(sv1 <= CS3);
+    EXPECT_FALSE(CS3 <= sv1);
+    EXPECT_FALSE(sv3 <= CS1);
+
+    EXPECT_TRUE(CS2 >= sv1);
+    EXPECT_TRUE(sv2 >= CS1);
+    EXPECT_TRUE(CS3 >= sv1);
+    EXPECT_TRUE(sv3 >= CS1);
+    EXPECT_FALSE(CS1 >= sv3);
+    EXPECT_FALSE(sv1 >= CS3);
+
+    EXPECT_TRUE(CS4 < sv1);
+    EXPECT_TRUE(sv4 < CS1);
+    EXPECT_TRUE(CS1 > sv4);
+    EXPECT_TRUE(sv1 > CS4);
+}
+
+TEST(CString, ComparisonStringLiteral) {
+    const CString CS1("abc");
+    const CString CS2("abc");
+    const CString CS3("def");
+    const CString CS4("ab");
+    const char* sv1("abc");
+    const char* sv2("abc");
+    const char* sv3("def");
+    const char* sv4("ab");
+
+    EXPECT_TRUE(CS1 == sv2);
+    EXPECT_TRUE(sv2 == CS1);
+    EXPECT_FALSE(CS1 == sv3);
+    EXPECT_FALSE(sv3 == CS1);
+
+    EXPECT_TRUE(CS1 != sv3);
+    EXPECT_TRUE(sv3 != CS1);
+    EXPECT_FALSE(CS1 != sv2);
+    EXPECT_FALSE(sv2 != CS1);
+
+    EXPECT_TRUE(CS1 < sv3);
+    EXPECT_TRUE(sv1 < CS3);
+    EXPECT_FALSE(CS3 < sv1);
+    EXPECT_FALSE(sv3 < CS1);
+
+    EXPECT_TRUE(CS3 > sv1);
+    EXPECT_TRUE(sv3 > CS1);
+    EXPECT_FALSE(CS1 > sv3);
+    EXPECT_FALSE(sv1 > CS3);
+
+    EXPECT_TRUE(CS1 <= sv2);
+    EXPECT_TRUE(sv1 <= CS2);
+    EXPECT_TRUE(CS1 <= sv3);
+    EXPECT_TRUE(sv1 <= CS3);
+    EXPECT_FALSE(CS3 <= sv1);
+    EXPECT_FALSE(sv3 <= CS1);
+
+    EXPECT_TRUE(CS2 >= sv1);
+    EXPECT_TRUE(sv2 >= CS1);
+    EXPECT_TRUE(CS3 >= sv1);
+    EXPECT_TRUE(sv3 >= CS1);
+    EXPECT_FALSE(CS1 >= sv3);
+    EXPECT_FALSE(sv1 >= CS3);
+
+    EXPECT_TRUE(CS4 < sv1);
+    EXPECT_TRUE(sv4 < CS1);
+    EXPECT_TRUE(CS1 > sv4);
+    EXPECT_TRUE(sv1 > CS4);
 }
 
 TEST(CString, ElementAccess) {
@@ -593,6 +694,31 @@ TEST(CString, ToString) {
     EXPECT_STREQ("0.000000", to_string(0.0f).c_str());
     EXPECT_STREQ("1.500000", to_string(1.5f).c_str());
     EXPECT_STREQ("-3.140000", to_string(-3.14f).c_str());
+}
+
+TEST(CString, HeterogeneousLookupForContainer) {
+    std::unordered_set<CString> us;
+
+    const char* world("world");
+    const std::string_view filament("filament");
+    const CString unittest("unittest");
+
+    EXPECT_TRUE(us.insert("hello").second);
+    EXPECT_TRUE(us.insert(CString(world)).second); // or emplace(world)
+    EXPECT_TRUE(us.insert(CString(filament)).second); // or emplace(filament)
+    EXPECT_TRUE(us.insert(unittest).second);
+
+    auto it = us.find("hello");
+    EXPECT_NE(it, us.end());
+    it = us.find(world);
+    EXPECT_NE(it, us.end());
+    it = us.find(filament);
+    EXPECT_NE(it, us.end());
+    it = us.find(unittest);
+    EXPECT_NE(it, us.end());
+
+    it = us.find("invalid key");
+    EXPECT_EQ(it, us.end());
 }
 
 TEST(FixedSizeString, EmptyString) {

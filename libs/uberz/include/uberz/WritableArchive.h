@@ -56,7 +56,7 @@ private:
         utils::FixedCapacityVector<uint8_t> package;
         Shading shadingModel;
         BlendingMode blendingMode;
-        tsl::robin_map<utils::CString, ArchiveFeature, utils::CString::Hasher> flags;
+        tsl::robin_map<utils::CString, ArchiveFeature> flags;
     };
 
     utils::FixedCapacityVector<Material> mMaterials;

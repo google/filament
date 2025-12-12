@@ -55,6 +55,7 @@
 
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
+#include <utils/CString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
@@ -132,7 +133,7 @@ struct Engine::BuilderDetails {
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
-    std::unordered_map<std::string, bool> mFeatureFlags;
+    std::unordered_map<CString, bool> mFeatureFlags;
 
     static Config validateConfig(Config config) noexcept;
 };
@@ -273,7 +274,7 @@ FEngine::FEngine(Builder const& builder) :
     // update a feature flag from Engine::Config if the flag is not specified in the Builder
     auto const featureFlagsBackwardCompatibility =
             [this, &builder](std::string_view const name, bool const value) {
-        if (builder->mFeatureFlags.find(name.data()) == builder->mFeatureFlags.end()) {
+        if (builder->mFeatureFlags.find(name) == builder->mFeatureFlags.end()) {
             auto* const p = getFeatureFlagPtr(name, true);
             if (p) {
                 *p = value;
@@ -283,7 +284,7 @@ FEngine::FEngine(Builder const& builder) :
 
     // update all the features flags specified in the builder
     for (auto const& feature : builder->mFeatureFlags) {
-        auto* const p = getFeatureFlagPtr(feature.first, true);
+        auto* const p = getFeatureFlagPtr(feature.first.c_str_safe(), true);
         if (p) {
             *p = feature.second;
         }
@@ -1589,7 +1590,7 @@ Engine::Builder& Engine::Builder::paused(bool const paused) noexcept {
 }
 
 Engine::Builder& Engine::Builder::feature(char const* name, bool const value) noexcept {
-    mImpl->mFeatureFlags[name] = value;
+    mImpl->mFeatureFlags.emplace(name, value);
     return *this;
 }
 
