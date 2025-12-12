@@ -17,7 +17,6 @@
 #include <filamentapp/FilamentApp.h>
 
 #include "KeyInputConversion.h"
-#include "utils/generic/ThermalManager.h"
 
 #if defined(WIN32)
 #    include <SDL_syswm.h>
