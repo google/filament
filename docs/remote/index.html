@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Filament Remote</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+<link href="../favicon.png" rel="icon" type="image/x-icon" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+<style>
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+.container {
+    font-family: "Open Sans";
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.connection-settings {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    max-width: 640px;
+    max-height: 32px;
+    background: rgb(189, 189, 189);
+    border: solid 2px black;
+    border-bottom: none;
+    font-size: 12px;
+}
+
+.connection-settings input {
+    font-family: "Open Sans";
+    background-color: rgb(240, 240, 240);
+    border: solid 2px black;
+    outline: none;
+    text-align: center;
+    height: 20px;
+    width: 120px;
+}
+.connection-settings input:invalid { background-color: #ff9090; }
+
+.connection-settings .connect-to-label {
+    display: inline-block;
+    margin-right: 15px;
+}
+
+.connection-settings .port-label {
+    display: inline-block;
+    margin-left: 7px;
+}
+
+canvas {
+    flex-direction: column;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    max-width: 640px;
+    max-height: 640px;
+    border: solid 2px black;
+}
+
+.dropbox-area {
+    flex-direction: column;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    max-width: 640px;
+    max-height: 160px;
+    background: rgb(189, 189, 189);
+    border: solid 2px black;
+    border-top: none;
+}
+
+.dropbox-area p { text-align: center; }
+.instructions-area { margin-top: 12px; }
+a { text-decoration: none; }
+a:visited { color: rgb(26, 65, 78); }
+.bad { background: lightcoral; }
+.good { background: #45d48d; }
+</style>
+</head>
+
+<body>
+<div class="container">
+<div class="connection-settings">
+    <label class="connect-to-label">Connect to</label>
+    <input id="connection-url" type="text" value="localhost" />
+    <label class="port-label">: 8082</label>
+</div>
+<canvas id="webgl2-canvas"></canvas>
+<div id="dropbox" class="dropbox-area"><p>Disconnected.</p></div>
+<div id="instructions" class="instructions-area">
+    <button id="copyButton">Copy adb command to clipboard</button>
+</div>
+</div>
+
+<script src="filament.js"></script>
+
+<script>
+"use strict";
+
+document.getElementById("copyButton").addEventListener("click", () => {
+    navigator.clipboard.writeText("adb forward tcp:8082 tcp:8082");
+});
+
+["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+    dropbox.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation() }, false)
+})
+
+Filament.init([], () => window.app = new App() );
+
+const debounce = (callback, delay) => {
+    let timeout;
+    return () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(callback, delay);
+    };
+};
+
+/**
+ * Manages a WebSocket connection. If connection fails, continuously tries to reconnect.
+ * This class mantains the invariant that at most one socket connection is open at any given time.
+ */
+class Connection {
+    constructor() {
+        this.retryInterval = 3000;
+        this.poll = null;
+        this.connectionOpen = false;
+        this.listeners = {};
+    }
+
+    /**
+     * Attempt to connect to url through a WebSocket. The url should be a valid WebSocket URL,
+     * using either the ws:// or ws:// scheme. Calling 'connect' cancels any previous connection
+     * attempts.
+     * If the connection succeeds, the 'open' event is fired.
+     * If the connection fails or is closed, the 'close' event is fired. A connection will be
+     * continuously re-attempted until either the connection succeeds, or 'disconnect' is called.
+     */
+    connect(url) {
+        this.disconnect();
+
+        const websocket = this.ws = new WebSocket(url);
+
+        this.ws.addEventListener("open", () => {
+            if (websocket.ignoreEvents) {
+                return;
+            }
+            clearTimeout(this.poll);
+            this.connectionOpen = true;
+            this.listeners["open"] && this.listeners["open"]();
+        });
+
+        this.ws.addEventListener("close", () => {
+            if (websocket.ignoreEvents) {
+                return;
+            }
+            if (this.connectionOpen) {
+                this.connectionOpen = false;
+                this.listeners["close"] && this.listeners["close"]();
+            }
+            // Reset the polling timeout. It's important that we clear the previous timeout, as
+            // we're about to lose its handle.
+            clearTimeout(this.poll);
+            this.poll = setTimeout(() => this.connect(url), this.retryInterval);
+        });
+
+        this.ws.addEventListener("message", event => {
+            this.listeners["message"] && this.listeners["message"](event);
+        });
+
+        this.poll = setTimeout(() => this.connect(url), this.retryInterval);
+    }
+
+    send(what) {
+        if (!this.ws || !this.connectionOpen) {
+            return;
+        }
+        this.ws.send(what);
+    }
+
+    /**
+     * Immediately disconnects a WebSocket or cancels any connection attempt. If a connection was
+     * active, the 'close' event is fired.
+     */
+    disconnect() {
+        // Calling ws.close() causes the 'close' event to fire. We set a flag to ensure the listener
+        // callbacks return immediately, without any further action.
+        if (this.ws) {
+            this.ws.ignoreEvents = true;
+            this.ws.close();
+        }
+        this.ws = null;
+        if (this.connectionOpen) {
+            this.connectionOpen = false;
+            this.listeners['close'] && this.listeners['close']();
+        }
+        clearTimeout(this.poll);
+    }
+
+    isConnected() {
+        return this.connectionOpen;
+    }
+
+    addEventListener(type, listener) {
+        this.listeners[type] = listener;
+    }
+}
+
+
+class App {
+    constructor(canvas) {
+        this.connection = new Connection();
+        this.cachedFile = null;
+
+        this.connectionUrl = document.getElementById("connection-url");
+        this.dropbox = document.getElementById("dropbox");
+        this.canvas = document.getElementsByTagName("canvas")[0];
+
+        const engine = this.engine = Filament.Engine.create(this.canvas);
+        const scene = this.scene = engine.createScene();
+        const view = this.view = engine.createView();
+        const uiview = this.uiview = engine.createView();
+
+        this.swapChain = engine.createSwapChain();
+        this.renderer = engine.createRenderer();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
+        this.serializer = new Filament.JsonSerializer();
+        this.previousSettingsJson = "";
+
+        this.urlRegex =
+            /^((\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$|localhost$/;
+
+        view.setScene(scene);
+        view.setCamera(this.camera);
+        view.setPostProcessingEnabled(false);
+
+        // For now, we initialize the "sidebar" such that it stretches across the entire viewport.
+        // In the future we might want to draw stuff in the central 3D viewport.
+        const kInitialSidebarWidth = this.canvas.clientWidth * window.devicePixelRatio;
+
+        // Clear the central 3D viewport to light gray, which is not visible by default.
+        const L = 189 / 255;
+        const kBackgroundColor = [L, L, L, 1];
+        this.renderer.setClearOptions({clearColor: kBackgroundColor, clear: true});
+
+        this.render = this.render.bind(this);
+        this.simpleViewer = new Filament.ViewerGui(engine, scene, view, kInitialSidebarWidth);
+
+        this.mouseX = -1;
+        this.mouseY = -1;
+        this.mouseButton = null;
+        this.mouseButtonEvents = [];
+        this.mouseWheelY = 0;
+
+        Object.seal(this);
+
+        this.canvas.addEventListener("pointermove", e => {
+            this.mouseX = e.offsetX * window.devicePixelRatio;
+            this.mouseY = e.offsetY * window.devicePixelRatio;
+        });
+
+        this.canvas.addEventListener("pointerup", e => this.mouseButtonEvents.push(null));
+        this.canvas.addEventListener("pointerdown", e => this.mouseButtonEvents.push(e));
+        this.canvas.addEventListener("mousewheel", e => this.mouseWheelY = e.deltaY / 8);
+
+        this.canvas.addEventListener("contextmenu", event => event.preventDefault());
+
+        document.addEventListener("keydown", e => this.simpleViewer.keyDownEvent(e.keyCode));
+        document.addEventListener("keyup", e => this.simpleViewer.keyUpEvent(e.keyCode));
+        document.addEventListener("keypress", e => this.simpleViewer.keyPressEvent(e.charCode));
+
+        const resize = () => {
+            const dpr = window.devicePixelRatio;
+            const width = this.canvas.clientWidth * dpr;
+            const height = this.canvas.clientHeight * dpr;
+            this.resize(width, height);
+        };
+        window.addEventListener("resize", resize);
+        resize();
+
+        const dropbox = this.dropbox;
+        const upload = this.uploadFile.bind(this);
+
+        dropbox.addEventListener("dragover", dragEvent => {
+            dropbox.classList.add("bad");
+            if (!event.dataTransfer) return;
+            if (event.dataTransfer.items[0].kind !== "file") return;
+            dropbox.classList.remove("bad");
+            dropbox.classList.add("good");
+        }, false);
+
+        dropbox.addEventListener("dragleave", () => {
+            dropbox.classList.remove("good", "bad");
+        }, false);
+
+        dropbox.addEventListener("drop", dragEvent => {
+            dropbox.classList.remove("good", "bad");
+            if (!event.dataTransfer) return;
+            if (event.dataTransfer.items[0].kind !== "file") return;
+            const file = event.dataTransfer.items[0].getAsFile();
+            const is_glb = file.name.match(/\.(glb)$/i);
+            const is_zip = file.name.match(/\.(zip)$/i);
+            const is_hdr = file.name.match(/\.(hdr)$/i);
+            if (!is_glb && !is_zip && !is_hdr) return;
+            const files = event.dataTransfer.files;
+            ([...files]).forEach(upload);
+        }, false);
+
+        const url = this.connectionUrl;
+
+        // The pattern attribute only serves as a visual indication that the inputted URL is valid.
+        // We'll check the URL against the regex inside of startConnection.
+        url.pattern = this.urlRegex.source;
+        url.addEventListener("input", debounce(this.startConnection.bind(this), 1000));
+
+        const connectionUrlString = localStorage.getItem("connectionUrlString");
+        if (connectionUrlString) {
+            url.value = connectionUrlString;
+        }
+
+        this.startConnection();
+        window.requestAnimationFrame(this.render);
+    }
+
+    uploadFile(file) {
+        if (this.connection.isConnected()) {
+            console.info(`Uploading ${file.name}`);
+            file.arrayBuffer().then(buffer => {
+                this.connection.send(file.name);
+                this.connection.send(buffer);
+            });
+        }
+        this.cachedFile = file;
+    }
+
+    updateDom() {
+        const instructions = document.getElementById("instructions");
+        if (this.connection.isConnected()) {
+            instructions.style.visibility = "hidden";
+            this.dropbox.innerHTML = `<div>
+                <p>Connected.</p>
+                <p>Drop a <b>glb</b>, <b>zip</b>, or <b>hdr</b> file here.</p>
+            </div>`;
+        } else {
+            instructions.style.visibility = "visible";
+            this.dropbox.innerHTML = `<div>
+                <p>Disconnected.</p>
+                <p>Ensure app is active and port forwarding is enabled.</p>
+                <p><b>adb forward tcp:8082 tcp:8082</b></p>
+            </div>`;
+        }
+    }
+
+    startConnection() {
+        const urlInput = this.connectionUrl.value;
+        if (!urlInput.match(this.urlRegex)) {
+            // This is an invalid URL. We'll stop trying to connect for now, and try again upon
+            // the next edit to the url input.
+            console.info(`Invalid URL: ${urlInput}`);
+            this.connection.disconnect();
+            return;
+        }
+
+        // Given a valid URL, we'll save it in local storage to persist it even if the user reloads
+        // the page.
+        localStorage.setItem("connectionUrlString", urlInput);
+
+        const url = `ws://${urlInput}:8082`;
+
+        this.connection.connect(url);
+        this.connection.addEventListener("open", () => {
+            this.updateDom();
+            this.previousSettingsJson = "";
+            if (this.cachedFile) {
+                this.uploadFile(this.cachedFile);
+            }
+        });
+        this.connection.addEventListener("close", () => {
+            this.updateDom();
+        });
+        this.connection.addEventListener("message", (event) => {
+            if (!event.data) return;
+            let commands = [];
+            try {
+                commands = JSON.parse(event.data);
+            }
+            catch (err) {
+                console.error(err, event.data);
+                return;
+            }
+            for (const command of commands) {
+                // TODO: process incoming messages here.
+                // Currently we do not send messages from the app on the device to the web client.
+            }
+        });
+    }
+
+    render() {
+        // Process only a single mouse button event to ensure that ImGui detects a touch event
+        // even when a down-up pair occurs between consecutive frames.
+        let mouseButton = this.mouseButton;
+        if (this.mouseButtonEvents.length > 0) {
+            this.mouseButton = this.mouseButtonEvents.shift();
+        }
+        const mouseWheel = this.mouseWheelY;
+        this.mouseWheelY = 0;
+        this.simpleViewer.mouseEvent(this.mouseX, this.mouseY, !!this.mouseButton,
+                mouseWheel, this.mouseButton && this.mouseButton.ctrlKey);
+
+        // If there's no connection, let Filament clear the canvas, but do not render the UI view.
+        if (!this.connection.isConnected()) {
+            this.renderer.beginFrame(this.swapChain);
+            this.renderer.renderView(this.view);
+            this.renderer.endFrame();
+            this.engine.execute();
+            window.requestAnimationFrame(this.render);
+            return;
+        }
+
+        // Draw the UI and potentially mutate the settings object.
+        const deltaTime = 1.0 / 60.0;
+        this.simpleViewer.renderUserInterface(deltaTime, this.uiview, window.devicePixelRatio);
+
+        // Check if the user has changed any settings.
+        const settingsJson = this.serializer.writeJson(this.simpleViewer.getSettings()).slice();
+        if (this.previousSettingsJson != settingsJson) {
+            if (this.connection.isConnected()) {
+                this.connection.send("settings.json");
+                this.connection.send(settingsJson);
+            }
+            this.previousSettingsJson = settingsJson;
+        }
+
+        // Use Filament to render the 3D viewport and the UI.
+        this.renderer.beginFrame(this.swapChain);
+        this.renderer.renderView(this.view);
+        this.renderer.renderView(this.uiview);
+        this.renderer.endFrame();
+        this.engine.execute();
+        window.requestAnimationFrame(this.render);
+    }
+
+    resize(width, height) {
+        const Projection = Filament.Camera$Projection;
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.view.setViewport([0, 0, width, height]);
+        this.uiview.setViewport([0, 0, width, height]);
+        this.camera.setProjection(Projection.ORTHO, 0, width, height, 0, 0, 1);
+    }
+}
+
+</script>
+</body>
+</html>
