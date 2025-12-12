@@ -142,6 +142,18 @@ public:
 #endif
     }
 
+    bool hasFences() const noexcept {
+#if defined(BACKEND_OPENGL_VERSION_GLES) && !defined(FILAMENT_IOS) && !defined(__EMSCRIPTEN__)
+#   ifndef BACKEND_OPENGL_LEVEL_GLES30
+        return false;
+#   else
+        return mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0;
+#   endif
+#else
+        return true;
+#endif
+    }
+
     constexpr        inline size_t getIndexForCap(GLenum cap) noexcept;
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
 

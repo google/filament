@@ -469,6 +469,47 @@ add_library(draco_points_dec OBJECT ${draco_points_common_sources}
 add_library(draco_points_enc OBJECT ${draco_points_common_sources}
                               ${draco_points_enc_sources})
 
+# In parallel Windows builds, multiple object libraries might try to write to the same
+# internal 'generate.stamp' file, leading to 'Access denied' errors.
+# This dependency chain serializes their build order to prevent that race condition.
+set(draco_object_libraries
+    draco_attributes
+    draco_compression_attributes_dec
+    draco_compression_attributes_enc
+    draco_compression_attributes_pred_schemes_dec
+    draco_compression_attributes_pred_schemes_enc
+    draco_compression_bit_coders
+    draco_enc_config
+    draco_dec_config
+    draco_compression_decode
+    draco_compression_encode
+    draco_compression_entropy
+    draco_compression_mesh_traverser
+    draco_compression_mesh_dec
+    draco_compression_mesh_enc
+    draco_compression_point_cloud_dec
+    draco_compression_point_cloud_enc
+    draco_core
+    draco_io
+    draco_mesh
+    draco_metadata_dec
+    draco_metadata_enc
+    draco_metadata
+    draco_animation_dec
+    draco_animation_enc
+    draco_animation
+    draco_point_cloud
+    draco_points_dec
+    draco_points_enc
+)
+set(previous_library "")
+foreach(current_library ${draco_object_libraries})
+    if(NOT "${previous_library}" STREQUAL "")
+        add_dependencies(${current_library} ${previous_library})
+    endif()
+    set(previous_library ${current_library})
+endforeach()
+
 # Library targets that consume the object collections.
 add_library(dracodec
             dummy.c     # needed for Xcode

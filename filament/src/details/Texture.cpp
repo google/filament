@@ -219,7 +219,7 @@ Texture* Texture::Builder::build(Engine& engine) {
             << "SamplerType " << uint8_t(mImpl->mTarget) << " not support at feature level "
             << uint8_t(engine.getActiveFeatureLevel());
 
-    // SAMPLER_EXTERNAL implies imported.
+    // SAMPLER_EXTERNAL implies external textures.
     if (mImpl->mTarget == SamplerType::SAMPLER_EXTERNAL) {
         mImpl->mExternal = true;
     }
@@ -229,7 +229,6 @@ Texture* Texture::Builder::build(Engine& engine) {
         case SamplerType::SAMPLER_2D:
         case SamplerType::SAMPLER_2D_ARRAY:
         case SamplerType::SAMPLER_CUBEMAP:
-        case SamplerType::SAMPLER_EXTERNAL:
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
             maxLevelCount = FTexture::maxLevelCount(mImpl->mWidth, mImpl->mHeight);
             break;
@@ -237,11 +236,19 @@ Texture* Texture::Builder::build(Engine& engine) {
             maxLevelCount = FTexture::maxLevelCount(std::max(
                     { mImpl->mWidth, mImpl->mHeight, mImpl->mDepth }));
             break;
+        case SamplerType::SAMPLER_EXTERNAL:
+            // external samplers can't mipmap
+            maxLevelCount = 1;
+            break;
     }
     mImpl->mLevels = std::min(mImpl->mLevels, maxLevelCount);
 
     if (mImpl->mUsage == TextureUsage::NONE) {
         mImpl->mUsage = TextureUsage::DEFAULT;
+        if (mImpl->mExternal) {
+            // external textures can't be uploadable
+            mImpl->mUsage = TextureUsage::SAMPLEABLE;
+        }
     }
 
     auto const& featureFlags = downcast(engine).features.engine.debug;
@@ -662,7 +669,6 @@ bool FTexture::textureHandleCanMutate() const noexcept {
 }
 
 void FTexture::updateLodRange(uint8_t const baseLevel, uint8_t const levelCount) noexcept {
-    assert_invariant(!mExternal);
     if (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) {
         auto& range = mLodRange;
         uint8_t const last = int8_t(baseLevel + levelCount);
