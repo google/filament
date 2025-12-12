@@ -242,12 +242,6 @@ foremost for `arm64-v8a`.
 
 To build Android on Windows machines, see [android/Windows.md](android/Windows.md).
 
-#### Important: SDK location
-
-Either ensure your `ANDROID_HOME` environment variable is set or make sure the root project
-contains a `local.properties` file with the `sdk.dir` property pointing to your installation of
-the Android SDK.
-
 #### Easy Android build
 
 The easiest way to build Filament for Android is to use `build.sh` and the
@@ -257,44 +251,7 @@ The easiest way to build Filament for Android is to use `build.sh` and the
 ./build.sh -p android release
 ```
 
-To build a sample (such as `android/samples/sample-hello-triangle`) for an ARM 64-bit phone, you would run
-```shell
-./build.sh -p android -q arm64-v8a -k sample-hello-triangle release
-```
-
-The output APK can be found in `android/samples/sample-hello-triangle/build/outputs/apk/release/sample-hello-triangle-release-unsigned.apk`
-
 Run `build.sh -h` for more information.
-
-#### Android Studio
-
-You must use the latest stable release of Android Studio.
-
-The Android build of filament is separated into java/kotlin client APIs, a layer of jni bindings
-that bridges java/kotlin with native code, and Filament and other component code that have been compiled
-into architecture-specific libraries. Our default Android Studio gradle setup can compile java/kotlin and
-the jni bindings for you, but it will treat the filament libraries as already compiled and present on
-the system.
-
-Therefore, before compiling the sample app or any other targets, you must
-make sure that the native filament libraries have been compiled and are located at a prescribed location
-so that the jni bindings can link against them. You can do so by using the easy build script
-
-```shell
-./build.sh -p android release -q arm64-v8a
-```
-
-Note that the above step will also install host machine tools into prescribed locations.  These tools are
-required for compiling Filament assets such as materials and environment maps.
-
-Now we are ready to compile the apps.  To open the project, point Studio to the `android` folder.
-After opening the project and syncing with Gradle, select the sample of your choice
-using the drop-down widget in the toolbar. Additionally, you will need to select a deployment target.
-By doing so, Android Studio will automatically try to compile the app only for that specific
-device's architecture. So if you are targeting a new Pixel phone, make sure that the step above
-(compiling the library) is targeting ARM 64-bit (`-q arm64-v8a` ), and if you are running the app on
-an emulator on a Linux machine with an x86 64-bit chipset, you would indicate (`-q x86_64`) in the above step.
-
 
 #### Manual builds
 
