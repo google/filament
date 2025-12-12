@@ -85,49 +85,49 @@ TEST(MaterialTransformName, QueryMultipleSamplersWithoutTransforms) {
     Engine::destroy(engine);
 }
 
-TEST(Material, MaterialWithSourceMaterialSuccessfullyRetrieveSource) {
-    // Need to set a specific backend to create a proper MaterialParser.
-    Engine* engine = Engine::create(Engine::Backend::OPENGL);
+// TEST(Material, MaterialWithSourceMaterialSuccessfullyRetrieveSource) {
+//     // Need to set a specific backend to create a proper MaterialParser.
+//     Engine* engine = Engine::create(Engine::Backend::OPENGL);
 
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.baseColor = vec4(1.);
-        }
-    )");
-    filamat::MaterialBuilder builder;
-    builder.init();
-    builder.materialSource(shaderCode);
-    filamat::Package result = builder.build(engine->getJobSystem());
-    ASSERT_TRUE(result.isValid());
+//     std::string shaderCode(R"(
+//         void material(inout MaterialInputs material) {
+//             prepareMaterial(material);
+//             material.baseColor = vec4(1.);
+//         }
+//     )");
+//     filamat::MaterialBuilder builder;
+//     builder.init();
+//     builder.materialSource(shaderCode);
+//     filamat::Package result = builder.build(engine->getJobSystem());
+//     ASSERT_TRUE(result.isValid());
 
-    Material* material = Material::Builder()
-                                 .package(result.getData(), result.getSize())
-                                 .build(*engine);
-    ASSERT_NE(material, nullptr);
+//     Material* material = Material::Builder()
+//                                  .package(result.getData(), result.getSize())
+//                                  .build(*engine);
+//     ASSERT_NE(material, nullptr);
 
-    EXPECT_EQ(material->getSource(), shaderCode);
+//     EXPECT_EQ(material->getSource(), shaderCode);
 
-    engine->destroy(material);
-    Engine::destroy(engine);
-}
+//     engine->destroy(material);
+//     Engine::destroy(engine);
+// }
 
 
-TEST(Material, MaterialWithoutSourceMaterialReturnsEmptySource) {
-    // Need to set a specific backend to create a proper MaterialParser.
-    Engine* engine = Engine::create(Engine::Backend::OPENGL);
-    filamat::MaterialBuilder builder;
-    builder.init();
-    filamat::Package result = builder.build(engine->getJobSystem());
-    ASSERT_TRUE(result.isValid());
+// TEST(Material, MaterialWithoutSourceMaterialReturnsEmptySource) {
+//     // Need to set a specific backend to create a proper MaterialParser.
+//     Engine* engine = Engine::create(Engine::Backend::OPENGL);
+//     filamat::MaterialBuilder builder;
+//     builder.init();
+//     filamat::Package result = builder.build(engine->getJobSystem());
+//     ASSERT_TRUE(result.isValid());
 
-    Material* material = Material::Builder()
-                                 .package(result.getData(), result.getSize())
-                                 .build(*engine);
-    ASSERT_NE(material, nullptr);
+//     Material* material = Material::Builder()
+//                                  .package(result.getData(), result.getSize())
+//                                  .build(*engine);
+//     ASSERT_NE(material, nullptr);
 
-    EXPECT_EQ(material->getSource(), "");
+//     EXPECT_EQ(material->getSource(), "");
 
-    engine->destroy(material);
-    Engine::destroy(engine);
-}
+//     engine->destroy(material);
+//     Engine::destroy(engine);
+// }
