@@ -38,8 +38,13 @@ using namespace utils;
 namespace filament {
 namespace matdbg {
 
-constexpr int alignment = 32;
-constexpr int shortAlignment = 15;
+namespace {
+
+constexpr int alignment = 27;
+constexpr int shortAlignment = 13;
+constexpr char const* BLANK_OFFSET = "    ";
+
+}
 
 static string arraySizeToString(uint64_t size) {
     if (size > 1) {
@@ -56,7 +61,7 @@ static void printChunk(ostream& text, const ChunkContainer& container, ChunkType
         const char* title) {
     T value;
     if (read(container, type, reinterpret_cast<V*>(&value))) {
-        text << "    " << setw(alignment) << left << title;
+        text << BLANK_OFFSET << setw(alignment) << left << title;
         text << toString(value) << endl;
     }
 }
@@ -65,7 +70,7 @@ static void printFloatChunk(ostream& text, const ChunkContainer& container, Chun
         const char* title) {
     float value;
     if (read(container, type, &value)) {
-        text << "    " << setw(alignment) << left << title;
+        text << BLANK_OFFSET << setw(alignment) << left << title;
         text << setprecision(2) << value << endl;
     }
 }
@@ -91,25 +96,25 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
 
     uint32_t version;
     if (read(container, MaterialVersion, &version)) {
-        text << "    " << setw(alignment) << left << "Version: ";
+        text << BLANK_OFFSET << setw(alignment) << left << "Version: ";
         text << version << endl;
     }
 
     uint8_t featureLevel;
     if (read(container, MaterialFeatureLevel, &featureLevel)) {
-        text << "    " << setw(alignment) << left << "Feature level: ";
+        text << BLANK_OFFSET << setw(alignment) << left << "Feature level: ";
         text << +featureLevel << endl;
     }
 
     CString name;
     if (read(container, MaterialName, &name)) {
-        text << "    " << setw(alignment) << left << "Name: ";
+        text << BLANK_OFFSET << setw(alignment) << left << "Name: ";
         text << name.c_str() << endl;
     }
 
     CString compilationParameters;
     if (read(container, MaterialCompilationParameters, &compilationParameters)) {
-        text << "    " << setw(alignment) << left << "Compilation Parameters: ";
+        text << BLANK_OFFSET << setw(alignment) << left << "Compilation Parameters: ";
         text << compilationParameters.c_str() << endl;
     }
 
@@ -152,7 +157,7 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
             text << "Required attributes:" << endl;
             for (size_t i = 0; i < bitset.size(); i++) {
                 if (bitset.test(i)) {
-                    text << "    " << toString(static_cast<VertexAttribute>(i)) << endl;
+                    text << BLANK_OFFSET << toString(static_cast<VertexAttribute>(i)) << endl;
                 }
             }
             text << endl;
@@ -177,6 +182,22 @@ static bool printDescriptorSetLayout(ostream& text, const ChunkContainer& contai
 
     text << "Descriptors:" << endl;
 
+    auto descriptorPrint = [](ostream& text,
+            std::string_view type,
+            std::string_view stages,
+            std::string_view binding,
+            std::string_view flags) {
+        text << BLANK_OFFSET
+             << setw(alignment) << type
+             << setw(alignment) << stages
+             << setw(shortAlignment) << binding
+             << setw(shortAlignment) << flags
+             << endl;
+    };
+
+    if (descriptorCount > 0) {
+        descriptorPrint(text, "TYPE", "STAGES", "BINDING", "FLAGS");
+    }
     for (int i = 0; i < descriptorCount; i++) {
         uint8_t type;
         uint8_t stages;
@@ -204,12 +225,11 @@ static bool printDescriptorSetLayout(ostream& text, const ChunkContainer& contai
             return false;
         }
 
-        text << "    "
-                  << setw(alignment) << toString(DescriptorType(type))
-                  << setw(alignment) << toString(ShaderStageFlags(stages))
-                  << setw(shortAlignment) << static_cast<int>(binding)
-                  << setw(alignment) << toString(DescriptorFlags(flags))
-                  << endl;
+        descriptorPrint(text,
+                toString(DescriptorType(type)),
+                toString(ShaderStageFlags(stages)),
+                std::to_string(binding),
+                toString(DescriptorFlags(flags)));
     }
 
     text << endl;
@@ -253,6 +273,23 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
 
     text << "Parameters:" << endl;
 
+    auto uniformPrint = [](ostream& text,
+            std::string_view fieldName,
+            std::string_view uniformType,
+            std::string_view precision,
+            std::string_view associatedSampler) {
+        text << BLANK_OFFSET
+             << setw(alignment) << fieldName
+             << setw(shortAlignment) << uniformType
+             << setw(shortAlignment) << precision
+             << setw(shortAlignment) << associatedSampler
+             << endl;
+    };
+
+    if (uibCount > 0) {
+        uniformPrint(text, "FIELD NAME", "UNIFORM TYPE", "PRECISION", "ASSOCIATED SAMPLER");
+    }
+
     for (uint64_t i = 0; i < uibCount; i++) {
         CString fieldName;
         uint64_t fieldSize;
@@ -280,12 +317,38 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
         }
 
-        text << "    "
-                  << setw(alignment) << fieldName.c_str_safe()
-                  << setw(shortAlignment) << toString(UniformType(fieldType))
-                  << arraySizeToString(fieldSize)
-                  << setw(shortAlignment) << toString(Precision(fieldPrecision))
-                  << endl;
+        uniformPrint(text, fieldName.c_str_safe(),
+                toString(UniformType(fieldType)) + arraySizeToString(fieldSize),
+                toString(Precision(fieldPrecision)),
+                std::to_string(fieldAssociatedSampler));
+    }
+
+    if (uibCount > 0 && sibCount > 0) {
+        text << endl;
+    }
+
+    auto samplerPrint = [](ostream& text,
+            std::string_view fieldName,
+            std::string_view binding,
+            std::string_view type,
+            std::string_view format,
+            std::string_view precision,
+            std::string_view filterable,
+            std::string_view multisample) {
+        text << BLANK_OFFSET
+             << setw(alignment) << fieldName
+             << setw(shortAlignment) << binding
+             << setw(shortAlignment) << type
+             << setw(shortAlignment) << format
+             << setw(shortAlignment) << precision
+             << setw(shortAlignment) << filterable
+             << setw(shortAlignment) << multisample
+             << endl;
+    };
+
+    if (sibCount > 0) {
+        samplerPrint(text, "SAMPLER NAME", "BINDING", "TYPE", "FORMAT", "PRECISION", "FILTERABLE",
+                "MULTISAMPLE");
     }
 
     for (uint64_t i = 0; i < sibCount; i++) {
@@ -324,13 +387,10 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
         }
 
-        text << "    "
-                << setw(alignment) << fieldName.c_str_safe()
-                << setw(shortAlignment) << +fieldBinding
-                << setw(shortAlignment) << toString(SamplerType(fieldType))
-                << setw(shortAlignment) << toString(Precision(fieldPrecision))
-                << toString(SamplerFormat(fieldFormat))
-                << endl;
+        samplerPrint(text, fieldName.c_str_safe(), std::to_string(fieldBinding),
+                toString(SamplerType(fieldType)), toString(SamplerFormat(fieldFormat)),
+                toString(Precision(fieldPrecision)), (fieldFilterable ? "true" : "false"),
+                (fieldMultisample ? "true" : "false"));
     }
 
     text << endl;
@@ -351,6 +411,18 @@ static bool printConstantInfo(ostream& text, const ChunkContainer& container) {
 
     text << "Constants:" << endl;
 
+    auto constantPrint = [](ostream& text,
+            std::string_view fieldName,
+            std::string_view constantType) {
+        text << BLANK_OFFSET
+             << setw(alignment) << fieldName
+             << setw(shortAlignment) << constantType
+             << endl;
+    };
+
+    if (constantsCount > 0) {
+        constantPrint(text, "NAME", "TYPE");
+    }
     for (uint64_t i = 0; i < constantsCount; i++) {
         CString fieldName;
         uint8_t fieldType;
@@ -363,10 +435,7 @@ static bool printConstantInfo(ostream& text, const ChunkContainer& container) {
             return false;
         }
 
-         text << "    "
-         << setw(alignment) << fieldName.c_str_safe()
-         << setw(shortAlignment) << toString(ConstantType(fieldType))
-         << endl;
+        constantPrint(text, fieldName.c_str_safe(), toString(ConstantType(fieldType)));
     }
 
     text << endl;
@@ -389,6 +458,29 @@ static bool printSubpassesInfo(ostream& text, const ChunkContainer& container) {
 
         uint64_t subpassCount;
         subpasses.read(&subpassCount);
+
+        if (subpassCount == 0) {
+            return true;
+        }
+
+        auto subpassPrint = [](ostream& text,
+                std::string_view fieldName,
+                std::string_view type,
+                std::string_view precision,
+                std::string_view format,
+                std::string_view attachmentIndex,
+                std::string_view binding) {
+            text << BLANK_OFFSET
+                 << setw(alignment) << fieldName
+                 << setw(shortAlignment) << type
+                 << setw(shortAlignment) << precision
+                 << setw(shortAlignment) << format
+                 << setw(shortAlignment) << attachmentIndex
+                 << setw(shortAlignment) << binding
+                 << endl;
+        };
+
+        subpassPrint(text, "FIELD NAME", "TYPE", "PRECISION", "FORMAT", "ATTACHMENT INDEX", "BINDING");
 
         for (uint64_t i = 0; i < subpassCount; i++) {
             CString fieldName;
@@ -421,12 +513,9 @@ static bool printSubpassesInfo(ostream& text, const ChunkContainer& container) {
                 return false;
             }
 
-            text << "    "
-                    << setw(alignment) << fieldName.c_str()
-                    << setw(shortAlignment) << toString(SubpassType(fieldType))
-                    << setw(shortAlignment) << toString(Precision(fieldPrecision))
-                    << toString(SamplerFormat(fieldFormat))
-                    << endl;
+            subpassPrint(text, fieldName.c_str(), toString(SubpassType(fieldType)),
+                    toString(Precision(fieldPrecision)), toString(SamplerFormat(fieldFormat)),
+                    std::to_string(attachmentIndex), std::to_string(binding));
         }
         text << endl;
     }
@@ -447,13 +536,13 @@ inline utils::CString typeToString(uint64_t v) {
 static void printChunks(ostream& text, const ChunkContainer& container) {
     text << "Chunks:" << endl;
 
-    text << "    " << setw(9) << left << "Name ";
+    text << BLANK_OFFSET << setw(9) << left << "Name ";
     text << setw(7) << right << "Size" << endl;
 
     size_t count = container.getChunkCount();
     for (size_t i = 0; i < count; i++) {
         auto chunk = container.getChunk(i);
-        text << "    " << typeToString(chunk.type).c_str() << " ";
+        text << BLANK_OFFSET << typeToString(chunk.type).c_str() << " ";
         text << setw(7) << right << chunk.desc.size << endl;
     }
 }
