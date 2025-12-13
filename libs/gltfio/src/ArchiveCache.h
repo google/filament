@@ -58,7 +58,7 @@ namespace filament::gltfio {
     struct ArchiveRequirements {
         Shading shadingModel;
         BlendingMode blendingMode;
-        tsl::robin_map<utils::CString, bool, utils::CString::Hasher> features;
+        tsl::robin_map<utils::CString, bool> features;
     };
 
 } // namespace filament::uberz

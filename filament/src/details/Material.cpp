@@ -93,8 +93,7 @@ struct Material::BuilderDetails {
     UboBatchingMode mUboBatchingMode = UboBatchingMode::DEFAULT;
     std::unordered_map<
         CString,
-        std::variant<int32_t, float, bool>,
-        CString::Hasher> mConstantSpecializations;
+        std::variant<int32_t, float, bool>> mConstantSpecializations;
 };
 
 FMaterial::DefaultMaterialBuilder::DefaultMaterialBuilder() {
