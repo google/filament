@@ -1715,6 +1715,12 @@ using CompositorTiming = Platform::CompositorTiming;
 
 using AsynchronousMode = Platform::AsynchronousMode;
 
+using AsyncCallId = uint32_t;
+
+static constexpr AsyncCallId InvalidAsyncCallId = std::numeric_limits<AsyncCallId>::max();
+
+using AsynchronousMode = Platform::AsynchronousMode;
+
 } // namespace filament::backend
 
 template<> struct utils::EnableBitMaskOperators<filament::backend::ShaderStageFlags>

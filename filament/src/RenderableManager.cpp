@@ -18,6 +18,7 @@
 
 #include "details/Engine.h"
 #include "details/VertexBuffer.h"
+#include "details/IndexBuffer.h"
 #include "details/Material.h"
 
 using namespace utils;

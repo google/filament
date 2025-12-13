@@ -28,6 +28,7 @@ set(SRCS
         src/BackendUtils.cpp
         src/BlobCacheKey.cpp
         src/Callable.cpp
+        src/CallbackHandler.cpp
         src/CallbackManager.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp

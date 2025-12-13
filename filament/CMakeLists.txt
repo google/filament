@@ -198,6 +198,7 @@ set(PRIVATE_HDRS
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
+        src/details/AsyncHelpers.h
         src/details/BufferAllocator.h
         src/details/BufferObject.h
         src/details/Camera.h

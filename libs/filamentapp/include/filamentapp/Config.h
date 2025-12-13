@@ -46,6 +46,9 @@ struct Config {
     using WebGPUBackend = filament::Engine::Backend;
     // Force a backend for webgpu.
     WebGPUBackend forcedWebGPUBackend = WebGPUBackend::DEFAULT;
+
+    // Asynchronous mode for Engine
+    filament::backend::AsynchronousMode asynchronousMode = filament::backend::AsynchronousMode::NONE;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_CONFIG_H

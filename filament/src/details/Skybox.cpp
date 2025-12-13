@@ -21,6 +21,7 @@
 #include "details/Material.h"
 #include "details/Texture.h"
 #include "details/VertexBuffer.h"
+#include "details/IndexBuffer.h"
 
 #include "FilamentAPI-impl.h"
 

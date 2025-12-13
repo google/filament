@@ -675,7 +675,7 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
 VulkanBufferObject::VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
         VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage)
-    : HwBufferObject(byteCount),
+    : HwBufferObject(byteCount, false),
       bindingType(bindingType),
       mBuffer(context, allocator, stagePool, bufferCache, getBufferObjectBinding(bindingType),
               usage, byteCount) {}

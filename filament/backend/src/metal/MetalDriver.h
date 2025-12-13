@@ -161,6 +161,7 @@ private:
             const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f);
 
     backend::StereoscopicType const mStereoscopicType;
+    backend::AsynchronousMode const mAsynchronousMode;
 };
 
 } // namespace backend

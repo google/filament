@@ -358,6 +358,39 @@ private:
     static GLsizei getAttachments(AttachmentArray& attachments, TargetBufferFlags buffers,
             bool isDefaultFramebuffer) noexcept;
 
+    // ThreadWorker override
+    void onBeginForThreadWorker() override {
+        mPlatform.createContext(true);
+    }
+    void onEndForThreadWorker() override {
+        mPlatform.releaseContext();
+    }
+
+    // Common methods
+    void createTextureCommon(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+            TextureUsage usage, utils::ImmutableCString&& tag);
+    void update3DImageCommon(Handle<HwTexture> th,
+            uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth,
+            PixelBufferDescriptor&& data);
+    void createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
+            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+            TextureSwizzle a, utils::ImmutableCString&& tag);
+    void importTextureCommon(Handle<HwTexture> th, intptr_t id, SamplerType target, uint8_t levels,
+            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+            TextureUsage usage, utils::ImmutableCString&& tag);
+    void createBufferObjectCommon(Handle<HwBufferObject> boh, uint32_t byteCount,
+            BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag);
+    void setVertexBufferObjectCommon(Handle<HwVertexBuffer> vbh, uint32_t index,
+            Handle<HwBufferObject> boh);
+    void updateBufferObjectCommon(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
+            uint32_t byteOffset);
+    void createIndexBufferCommon(Handle<HwIndexBuffer> ibh, ElementType const elementType,
+            uint32_t indexCount, BufferUsage const usage, utils::ImmutableCString&& tag);
+    void updateIndexBufferCommon(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
+            uint32_t const byteOffset);
+
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
     RenderPassParams mRenderPassParams;
@@ -412,9 +445,6 @@ private:
     void runEveryNowAndThen(std::function<bool()> fn);
     void executeEveryNowAndThenOps() noexcept;
     std::vector<std::function<bool()>> mEveryNowAndThenOps;
-
-    const Platform::DriverConfig mDriverConfig;
-    Platform::DriverConfig const& getDriverConfig() const noexcept { return mDriverConfig; }
 
     // for ES2 sRGB support
     GLSwapChain* mCurrentDrawSwapChain = nullptr;

@@ -64,7 +64,7 @@ protected:
     std::vector<int> mAttribs;
 
     // For shared contexts
-    static constexpr int SHARED_CONTEXT_NUM = 1;
+    static constexpr int SHARED_CONTEXT_NUM = 2;
     std::vector<HGLRC> mAdditionalContexts;
     std::atomic<int> mNextFreeSharedContextIndex{0};
 };

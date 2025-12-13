@@ -70,6 +70,8 @@ public:
     // is where the driver can execute user callbacks.
     virtual void purge() noexcept = 0;
 
+    virtual void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) = 0;
+
     virtual ShaderModel getShaderModel() const noexcept = 0;
 
     // The shader languages used for shaders for this driver in order of preference, used to inform

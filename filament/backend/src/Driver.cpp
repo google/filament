@@ -28,7 +28,9 @@
 #include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/JobSystem.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <math/half.h>
 #include <math/vec2.h>
@@ -47,10 +49,12 @@ using namespace filament::math;
 
 namespace filament::backend {
 
-DriverBase::DriverBase() noexcept {
+DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
+    : mDriverConfig(driverConfig) {
     if constexpr (UTILS_HAS_THREADING) {
         // This thread services user callbacks
         mServiceThread = std::thread([this]() {
+            JobSystem::setThreadName("ServiceThread");
             do {
                 auto& serviceThreadCondition = mServiceThreadCondition;
                 auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
@@ -72,6 +76,28 @@ DriverBase::DriverBase() noexcept {
                 }
             } while (true);
         });
+    }
+
+    if (driverConfig.asynchronousMode != AsynchronousMode::NONE) {
+        mJobQueue = JobQueue::create();
+
+        bool useThreadWorker = false;
+        if (driverConfig.asynchronousMode == AsynchronousMode::THREAD_PREFERRED &&
+                UTILS_HAS_THREADING) {
+            useThreadWorker = true;
+        }
+
+        if (useThreadWorker) {
+            ThreadWorker::Config threadWorkerConfig{
+                "JobQueueThreadWorker",
+                JobSystem::Priority::NORMAL,
+                [this]() { onBeginForThreadWorker(); },
+                [this]() { onEndForThreadWorker(); },
+            };
+            mJobWorker = ThreadWorker::create(mJobQueue, std::move(threadWorkerConfig));
+        } else {
+            mJobWorker = AmortizationWorker::create(mJobQueue);
+        }
     }
 }
 

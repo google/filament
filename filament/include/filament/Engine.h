@@ -193,6 +193,7 @@ public:
     using Driver = backend::Driver;
     using GpuContextPriority = backend::Platform::GpuContextPriority;
     using AsynchronousMode = backend::AsynchronousMode;
+    using AsyncCallId = backend::AsyncCallId;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -1022,6 +1023,38 @@ public:
     size_t getColorGradingCount() const noexcept;
     size_t getRenderTargetCount() const noexcept;
     /**  @} */
+
+    /**
+     * An asynchronous version of `CommandStream::queueCommand()`.
+     *
+     * This executes a custom command on the same worker thread used for asynchronous calls. It
+     * guarantees that this command, along with all prior asynchronous calls, will be executed in
+     * strict sequence.
+     *
+     * Users can call the `Engine::cancelAsyncCall()` method with the returned ID to cancel the
+     * asynchronous call.
+     *
+     * @param command The custom command to be executed.
+     * @param onComplete The callback function that runs once the command has finished.
+     * @param handler The handler from which `onComplete` is invoked. If null, it's called from the
+     * main thread.
+     * @return A unique identifier for the asynchronous call.
+     */
+    AsyncCallId queueCommandAsync(utils::Invocable<void()>&& command,
+            backend::CallbackHandler* UTILS_NULLABLE handler,
+            utils::Invocable<void()>&& onComplete);
+
+    /**
+     * Cancel the pending asynchronous call pointed to by `id`, which is retrieved whenever you
+     * invoke a non-blocking version of method on an object, such as `Texture::setImageAsync` or
+     * `BufferObject::setBufferAsync`.
+     *
+     * @param id The unique identifier for the asynchronous call to be canceled.
+     * @return Returns true upon successful cancellation. It returns false if the asynchronous
+     * operation cannot be canceled because it is currently running, has finished, or has previously
+     * been canceled.
+     */
+    bool cancelAsyncCall(AsyncCallId id);
 
     /**
      * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until

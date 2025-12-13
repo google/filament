@@ -14,23 +14,13 @@
  * limitations under the License.
  */
 
-#include "WebGPUIndexBuffer.h"
-
-#include "WebGPUBufferBase.h"
-
-#include "DriverBase.h"
-
-#include <webgpu/webgpu_cpp.h>
-
-#include <cstdint>
+#include <backend/CallbackHandler.h>
 
 namespace filament::backend {
 
-WebGPUIndexBuffer::WebGPUIndexBuffer(wgpu::Device const& device, const uint8_t elementSize,
-        const uint32_t indexCount)
-    : HwIndexBuffer{ elementSize, indexCount, false },
-      WebGPUBufferBase{ device, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
-          elementSize * indexCount, "index_buffer" },
-      mIndexFormat{ elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32 } {}
+// Define the virtual destructor here to avoid a compiler warning that we treat as an error.
+// "'CallbackHandler' has no out-of-line virtual method definitions; its vtable will be emitted in every translation unit"
+// The warning occurs when a class inherits from CallbackHandler.
+CallbackHandler::~CallbackHandler() = default;
 
 } // namespace filament::backend

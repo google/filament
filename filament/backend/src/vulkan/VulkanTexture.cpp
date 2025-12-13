@@ -346,7 +346,7 @@ VulkanTexture::VulkanTexture(VulkanContext const& context, VkDevice device, VmaA
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage tusage,
         VulkanStagePool& stagePool)
     : HwTexture(getSamplerTypeFromDepth(depth), 1, samples, width, height, depth,
-              TextureFormat::UNUSED, tusage),
+              TextureFormat::UNUSED, tusage, false),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
               commands, allocator, device, image, memory, format,
               fvkutils::getViewType(SamplerType::SAMPLER_2D),
@@ -362,7 +362,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, SamplerType target,
         uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h,
         uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool)
-     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage) {
+     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage, false) {
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkFormat const vkFormat = fvkutils::getVkFormat(tformat);
     bool const isProtected = any(tusage & TextureUsage::PROTECTED);
@@ -492,7 +492,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         fvkmemory::resource_ptr<VulkanTexture> src, uint8_t baseLevel,
         uint8_t levelCount)
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-            src->format, src->usage),
+            src->format, src->usage, src->asynchronous),
       mState(src->mState) {
     mPrimaryViewRange = src->mPrimaryViewRange;
     mPrimaryViewRange.baseMipLevel = src->mPrimaryViewRange.baseMipLevel + baseLevel;
@@ -504,7 +504,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
         fvkmemory::resource_ptr<VulkanTexture> src, VkComponentMapping swizzle)
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-              src->format, src->usage),
+              src->format, src->usage, src->asynchronous),
       mState(src->mState),
       mPrimaryViewRange(src->mPrimaryViewRange),
       mSwizzle(composeSwizzle(src->mSwizzle, swizzle)) {}
