@@ -249,7 +249,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
         computeToneMapPlot(colorGrading, toneMapPlot);
 
         ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
-        ImGui::PlotLines("", toneMapPlot, 1024, 0, "Tone map", 0.0f, 1.05f, ImVec2(0, 160));
+        ImGui::PlotLines("##ToneMap", toneMapPlot, 1024, 0, "Tone map", 0.0f, 1.05f,
+                ImVec2(0, 160));
         ImGui::PopStyleColor();
 
         ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
@@ -312,9 +313,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
             ImGui::SliderFloat("Weight##highlightsWeight", &colorGrading.highlights.w, -2.0f, 2.0f);
             ImGui::SliderFloat4("Ranges", &colorGrading.ranges.x, 0.0f, 1.0f);
             computeRangePlot(settings, rangePlot);
-            ImGuiExt::PlotLinesSeries("", 3,
-                    rangePlotSeriesStart, getRangePlotValue, rangePlotSeriesEnd,
-                    rangePlot, 1024, 0, "", 0.0f, 1.0f, plotLinesWideSize);
+            ImGuiExt::PlotLinesSeries("##RangePlot", 3, rangePlotSeriesStart, getRangePlotValue,
+                    rangePlotSeriesEnd, rangePlot, 1024, 0, "", 0.0f, 1.0f, plotLinesWideSize);
         }
         if (ImGui::CollapsingHeader("Color decision list")) {
             ImGui::SliderFloat3("Slope", &colorGrading.slope.x, 0.0f, 2.0f);
@@ -345,7 +345,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 popSliderColors();
 
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
-                ImGui::PlotLines("", curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PlotLines("##RedCurve", curvePlot, 1024, 0, "Red", 0.0f, 2.0f,
+                        plotLinesSize);
                 ImGui::PopStyleColor();
 
                 pushSliderColors(2.0f / 7.0f);
@@ -361,7 +362,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 popSliderColors();
 
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
-                ImGui::PlotLines("", curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PlotLines("##GreenCurve", curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f,
+                        plotLinesSize);
                 ImGui::PopStyleColor();
 
                 pushSliderColors(4.0f / 7.0f);
@@ -377,7 +379,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 popSliderColors();
 
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
-                ImGui::PlotLines("", curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PlotLines("##BlueCurve", curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f,
+                        plotLinesSize);
                 ImGui::PopStyleColor();
             } else {
                 ImGui::VSliderFloat("##curveGamma", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
@@ -395,7 +398,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 colorGrading.scale = float3{colorGrading.scale.r};
 
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
-                ImGui::PlotLines("", curvePlot, 1024, 0, "RGB", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PlotLines("##RGBCurve", curvePlot, 1024, 0, "RGB", 0.0f, 2.0f,
+                        plotLinesSize);
                 ImGui::PopStyleColor();
             }
         }

@@ -124,6 +124,7 @@ buildscript {
 
     ext.cmakeArgs = [
         "--no-warn-unused-cli",
+        "-DANDROID_WEAK_API_DEFS=ON",
         "-DANDROID_PIE=ON",
         "-DANDROID_PLATFORM=21",
         "-DANDROID_STL=c++_static",

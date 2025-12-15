@@ -1598,6 +1598,8 @@ class_<SkyBuilder>("Skybox$Builder")
     .function("_build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
+    .BUILDER_FUNCTION("priority", SkyBuilder, (SkyBuilder* builder, uint8_t priority), {
+        return &builder->priority(priority); })
     .BUILDER_FUNCTION("color", SkyBuilder, (SkyBuilder* builder, filament::math::float4 color), {
         return &builder->color(color); })
     .BUILDER_FUNCTION("environment", SkyBuilder, (SkyBuilder* builder, Texture* cubemap), {

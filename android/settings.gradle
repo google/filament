@@ -17,6 +17,7 @@ include ':samples:sample-multi-view'
 include ':samples:sample-page-curl'
 include ':samples:sample-stream-test'
 include ':samples:sample-texture-view'
+include ':samples:sample-texture-target'
 include ':samples:sample-textured-object'
 include ':samples:sample-transparent-view'
 
