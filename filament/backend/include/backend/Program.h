@@ -147,6 +147,16 @@ public:
         return mDescriptorBindings;
     }
 
+    inline Program& descriptorLayout(backend::descriptor_set_t set,
+            DescriptorSetLayout descriptorLayout) noexcept {
+        mDescriptorLayouts[set] = descriptorLayout;
+        return *this;
+    }
+
+    const std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT>& getDescriptorSetLayouts() const noexcept {
+        return mDescriptorLayouts;
+    }
+
     utils::FixedCapacityVector<PushConstant> const& getPushConstants(
             ShaderStage stage) const noexcept {
         return mPushConstants[static_cast<uint8_t>(stage)];
@@ -175,6 +185,10 @@ private:
     SpecializationConstantsInfo mSpecializationConstants;
     std::array<utils::FixedCapacityVector<PushConstant>, SHADER_TYPE_COUNT> mPushConstants;
     DescriptorSetInfo mDescriptorBindings;
+
+    // Descriptions for descriptor set layouts that may be used for this Program, which
+    // can be useful for attempting to compile the pipeline ahead of time.
+    std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> mDescriptorLayouts;
 
     // For ES2 support only
     AttributesInfo mAttributes;
