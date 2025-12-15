@@ -128,6 +128,11 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nCreateKtx2Provider(JNIEn
     return (jlong) createKtx2Provider(engine);
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nIsWebpSupported(JNIEnv*, jclass) {
+    return (jboolean) isWebpSupported();
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_ResourceLoader_nCreateWebpProvider(JNIEnv*, jclass,
         jlong nativeEngine) {

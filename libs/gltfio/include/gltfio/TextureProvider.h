@@ -186,6 +186,12 @@ TextureProvider* createKtx2Provider(filament::Engine* engine);
  */
 TextureProvider* createWebpProvider(filament::Engine* engine);
 
+/**
+ * Indicates if build-time webp support was included.
+ * Returns true if it was and false if not.
+ */
+bool isWebpSupported();
+
 } // namespace filament::gltfio
 
 template<> struct utils::EnableBitMaskOperators<filament::gltfio::TextureProvider::TextureFlags>

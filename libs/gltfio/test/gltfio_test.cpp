@@ -253,9 +253,11 @@ TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
     std::string_view name{materialInst->getName()};
     EXPECT_EQ(name, "Material_MR");
 #if defined(FILAMENT_SUPPORTS_WEBP_TEXTURES)
+    EXPECT_TRUE(isWebpSupported());
     EXPECT_EQ(!!*mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder, true);
     EXPECT_EQ(mEngine->getTextureCount() == 8, true);    
 #else
+    EXPECT_FALSE(isWebpSupported());
     EXPECT_EQ(*mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder, nullptr);
     EXPECT_EQ(mEngine->getTextureCount() == 3, true);    
 #endif

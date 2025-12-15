@@ -2068,7 +2068,8 @@ class_<Ktx2Provider>("gltfio$Ktx2Provider")
 class_<WebpProvider>("gltfio$WebpProvider")
     .constructor(EMBIND_LAMBDA(WebpProvider, (Engine* engine), {
         return WebpProvider { createWebpProvider(engine) };
-    }));
+    }))    
+    .class_function("isWebpSupported", &isWebpSupported);
 
 class_<AssetLoader>("gltfio$AssetLoader")
 

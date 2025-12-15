@@ -211,12 +211,15 @@ int main(int argc, char** argv) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
             app.stbDecoder = createStbProvider(app.engine);
             app.ktxDecoder = createKtx2Provider(app.engine);
-            app.webpDecoder = createWebpProvider(app.engine);
             app.resourceLoader->addTextureProvider("image/png", app.stbDecoder);
             app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
             app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
-            if (app.webpDecoder) {
+            if (isWebpSupported()) {
+                app.webpDecoder = createWebpProvider(app.engine);                
                 app.resourceLoader->addTextureProvider("image/webp", app.webpDecoder);
+            }
+            else {
+                app.webpDecoder = nullptr;
             }
         }
 

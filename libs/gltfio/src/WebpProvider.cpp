@@ -19,8 +19,12 @@
 #if !defined(FILAMENT_SUPPORTS_WEBP_TEXTURES)
 
 namespace filament::gltfio {
+    bool isWebpSupported() {
+        return false;
+    }
+
     TextureProvider* createWebpProvider(Engine* engine) {
-        return nullptr;
+        return nullptr;        
     }
 }
 
@@ -284,6 +288,10 @@ WebpProvider::WebpProvider(Engine* engine) : mEngine(engine) {
 WebpProvider::~WebpProvider() {
     cancelDecoding();
     mEngine->getJobSystem().release(mDecoderRootJob);
+}
+
+bool isWebpSupported() {
+    return true;
 }
 
 TextureProvider* createWebpProvider(Engine* engine) {

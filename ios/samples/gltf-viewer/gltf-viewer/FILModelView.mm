@@ -136,7 +136,12 @@ const float kSensitivity = 100.0f;
     _resourceLoader = new ResourceLoader({.engine = _engine, .normalizeSkinningWeights = true});
     _stbDecoder = createStbProvider(_engine);
     _ktxDecoder = createKtx2Provider(_engine);
-    _webpDecoder = createWebpProvider(_engine);
+    if (isWebpSupported()) {
+        _webpDecoder = createWebpProvider(_engine);
+    }
+    else {
+        _webpDecoder = nullptr;
+    }
 
     _resourceLoader->addTextureProvider("image/png", _stbDecoder);
     _resourceLoader->addTextureProvider("image/jpeg", _stbDecoder);
