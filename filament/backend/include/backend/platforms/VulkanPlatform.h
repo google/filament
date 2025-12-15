@@ -436,6 +436,11 @@ protected:
         VkFence fence;
         std::shared_ptr<VulkanCmdFence> fenceStatus;
     };
+    virtual VkInstance createVkInstance(VkInstanceCreateInfo const& createInfo);
+
+    virtual VkPhysicalDevice selectVkPhysicalDevice(VkInstance instance);
+
+    virtual VkDevice createVkDevice(VkDeviceCreateInfo const& createInfo);
 
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
     virtual ExtensionSet getSwapchainInstanceExtensions() const = 0;
@@ -450,6 +455,13 @@ protected:
     bool isTransientAttachmentSupported() const noexcept;
 
 private:
+    VkInstance createInstance(ExtensionSet const& requiredExts);
+
+    VkDevice createLogicalDeviceAndQueues(ExtensionSet const& deviceExtensions,
+            VkPhysicalDeviceFeatures const& features,
+            VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
+            bool requestImageView2DOn3DImage);
+
     friend struct VulkanPlatformPrivate;
 };
 
