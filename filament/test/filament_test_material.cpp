@@ -25,7 +25,7 @@
 using namespace filament;
 
 TEST(MaterialTransformName, QuerySamplerWithTransform) {
-    Engine* engine = Engine::create(Engine::Backend::DEFAULT);
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
 
     Material* material = Material::Builder()
                                  .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
@@ -40,7 +40,7 @@ TEST(MaterialTransformName, QuerySamplerWithTransform) {
 }
 
 TEST(MaterialTransformName, QueryMultipleSamplersWithTransforms) {
-    Engine* engine = Engine::create(Engine::Backend::DEFAULT);
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
 
     Material* material = Material::Builder()
                                  .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
@@ -56,7 +56,7 @@ TEST(MaterialTransformName, QueryMultipleSamplersWithTransforms) {
 }
 
 TEST(MaterialTransformName, QuerySamplerWithoutTransform) {
-    Engine* engine = Engine::create(Engine::Backend::DEFAULT);
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
     Material* material = Material::Builder()
                                  .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
                                          FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
@@ -70,7 +70,7 @@ TEST(MaterialTransformName, QuerySamplerWithoutTransform) {
 }
 
 TEST(MaterialTransformName, QueryMultipleSamplersWithoutTransforms) {
-    Engine* engine = Engine::create(Engine::Backend::DEFAULT);
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
 
     Material* material = Material::Builder()
                                  .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
@@ -87,7 +87,7 @@ TEST(MaterialTransformName, QueryMultipleSamplersWithoutTransforms) {
 
 TEST(Material, MaterialWithSourceMaterialSuccessfullyRetrieveSource) {
     // Need to set a specific backend to create a proper MaterialParser.
-    Engine* engine = Engine::create(Engine::Backend::OPENGL);
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
 
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -115,7 +115,7 @@ TEST(Material, MaterialWithSourceMaterialSuccessfullyRetrieveSource) {
 
 TEST(Material, MaterialWithoutSourceMaterialReturnsEmptySource) {
     // Need to set a specific backend to create a proper MaterialParser.
-    Engine* engine = Engine::create(Engine::Backend::OPENGL);
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
     filamat::MaterialBuilder builder;
     builder.init();
     filamat::Package result = builder.build(engine->getJobSystem());
@@ -130,9 +130,4 @@ TEST(Material, MaterialWithoutSourceMaterialReturnsEmptySource) {
 
     engine->destroy(material);
     Engine::destroy(engine);
-}
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }

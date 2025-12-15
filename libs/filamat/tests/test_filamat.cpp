@@ -475,6 +475,32 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerDispersion) {
+    std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.absorption = vec3(0.0);
+            material.transmission = 0.96;
+            material.ior = 1.33;
+            material.dispersion = 0.33;
+        }
+    )");
+
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode, "", filamat::MaterialBuilder::Shading::LIT,
+            filamat::MaterialBuilder::RefractionMode::CUBEMAP);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::DISPERSION)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
     std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {

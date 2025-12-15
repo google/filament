@@ -81,6 +81,27 @@ def pull_markdeep_docs():
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=MARKDEEP_DIR, **kwargs)
 
+    def do_GET(self):
+      # Use the checked-in markdeep since its locked to a version
+      if self.path == '/third_party/markdeep/markdeep.min.js':
+        file_path = f'{ROOT_DIR}/third_party/markdeep/markdeep.min.js'
+        try:
+          with open(file_path, 'rb') as f:
+            content = f.read()
+
+          self.send_response(200)
+          self.send_header('Content-type', 'application/javascript')
+          self.send_header('Content-Length', len(content))
+          self.end_headers()
+
+          # Send the file content
+          self.wfile.write(content)
+        except FileNotFoundError:
+          self.send_error(404, 'File not found')
+      else:
+        # For all other paths, use the default behavior (serve from MARKDEEP_DIR)
+        super().do_GET()
+
   def start_server(port):
     """Starts the web server in a separate thread."""
     httpd = Server(("", port), Handler)

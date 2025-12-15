@@ -62,7 +62,10 @@ bool FrameSkipper::shouldRenderFrame(DriverApi& driver) const noexcept {
             // The fence hasn't signaled yet, skip this frame
             return false;
         }
-        assert_invariant(status == FenceStatus::CONDITION_SATISFIED);
+        // If we get a FenceStatus::ERROR, it doesn't necessarily indicate a "bug", it could
+        // just be that fences are not supported. Regardless, we should return `true` in that
+        // case.
+        assert_invariant(status != FenceStatus::TIMEOUT_EXPIRED);
     }
     return true;
 }

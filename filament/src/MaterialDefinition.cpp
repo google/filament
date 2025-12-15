@@ -41,6 +41,8 @@ std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const b
 
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
+    CString name;
+    materialParser->getName(&name);
     if (UTILS_UNLIKELY(materialResult == MaterialParser::ParseResult::ERROR_MISSING_BACKEND)) {
         CString languageNames;
         for (auto it = languages.begin(); it != languages.end(); ++it) {
@@ -52,7 +54,7 @@ std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const b
 
         FILAMENT_CHECK_POSTCONDITION(
                 materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND)
-                << "the material was not built for any of the " << to_string(backend)
+                << "the material " << name.c_str_safe() << " was not built for any of the " << to_string(backend)
                 << " backend's supported shader languages (" << languageNames.c_str() << ")\n";
     }
 
@@ -61,13 +63,13 @@ std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const b
     }
 
     FILAMENT_CHECK_POSTCONDITION(materialResult == MaterialParser::ParseResult::SUCCESS)
-            << "could not parse the material package";
+            << "could not parse the material package for material " << name.c_str_safe();
 
     uint32_t version = 0;
     materialParser->getMaterialVersion(&version);
     FILAMENT_CHECK_POSTCONDITION(version == MATERIAL_VERSION)
             << "Material version mismatch. Expected " << MATERIAL_VERSION << " but received "
-            << version << ".";
+            << version << " for material " << name.c_str_safe();
 
     assert_invariant(backend != Backend::DEFAULT && "Default backend has not been resolved.");
 

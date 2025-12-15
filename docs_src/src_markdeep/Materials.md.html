@@ -97,6 +97,7 @@ in table [standardProperties].
 **transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
 **ior**                 | Index of refraction, either for refractive objects or as an alternative to reflectance
 **microThickness**      | Thickness of the thin layer of refractive objects
+**dispersion**          | Strength of the dispersion effect for refractive objects, specified as 20/Abbe number
 **bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
 **shadowStrength**      | Strength factor between 0 and 1 for all shadows received by this material
 [Table [standardProperties]: Properties of the standard model]
@@ -126,6 +127,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **absorption**          | float3   |  [0..n]                  |
 **microThickness**      | float    |  [0..n]                  |
 **thickness**           | float    |  [0..n]                  |
+**dispersion**          | float    |  [0..n]                  | Realistic values are between [0, 1], with the exception of Rutile, which has a value of 2.04
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
@@ -153,13 +155,14 @@ The type and range of each property is described in table [standardPropertiesTyp
     as-is, which can lead to physically impossible materials, however, this might be desirable
     for artistic reasons.
 
-!!! Note: About `thickness` and `microThickness` for refraction
+!!! Note: About `thickness`, `microThickness` and `dispersion` for refraction
     `thickness` represents the thickness of solid objects in the direction of the normal, for
     satisfactory results, this should be provided per fragment (e.g.: as a texture) or at least per
     vertex. `microThickness` represent the thickness of the thin layer of an object, and can
     generally be provided as a constant value. For example, a 1mm thin hollow sphere of radius 1m,
-    would have a `thickness` of 1 and a `microThickness` of 0.001. Currently `thickness` is not
-    used when `refractionType` is set to `thin`.
+    would have a `thickness` of 1 and a `microThickness` of 0.001. Dispersion controls the angular
+    separation of colors transmitting through a volume, and can be set by a contant value.
+    Currently `thickness` and `dispersion` are not used when `refractionType` is set to `thin`.
 
 ### Base color
 
@@ -650,6 +653,23 @@ the `refractionType` is set to `solid` and `absorption` coefficients are set.
 
 ![Figure [varyingThickness]: `thickness` varying from 0.0 at the top of the prism to 3.0 at the
 bottom of the prism](images/material_thickness.png)
+
+### Dispersion
+
+The dispersion property controls the angular separation of colors transmitting through a relatively
+clear volume. It can only be used when `refractionType` is set to `volume`.
+Its value is specified as 20/Abbe number. When the value is zero, no dispersion is used.
+
+Table [commonMatDispersion] describes acceptable dispersion values for various types of materials.
+
+Material                   |   Abbe Number (V)	|  Dispersion (20/V)
+--------------------------:|:------------------:|:-----------------
+Rutile                     | 9.8                | 2.04
+Polycarbonate              | 32                 | 0.625
+Diamond                    | 55                 | 0.36
+Water                      | 55                 | 0.36
+Crown Glass                | 59                 | 0.33
+[Table [commonMatDispersion]: Dispersion of common materials]
 
 ## Subsurface model
 
@@ -2276,6 +2296,7 @@ struct MaterialInputs {
     float3 absorption;          // default float3(0.0, 0.0, 0.0)
     float ior;                  // default: 1.5
     float microThickness;       // default: 0.0, not available with refractionType "solid"
+    float dispersion;           // default: 0.0, not available with refractionType "thin"
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
