@@ -113,7 +113,7 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
     //  is difficult and risky, and will be done at a later time.
     //  Note: that the correct fix is actually needed to properly support FL3 once we want
     //  to take advantage of having more samplers.
-    if (UTILS_UNLIKELY(driver.getFeatureLevel() > backend::FeatureLevel::FEATURE_LEVEL_0)) {
+    if (UTILS_LIKELY(driver.getFeatureLevel() > backend::FeatureLevel::FEATURE_LEVEL_0)) {
         auto const unsetValidDescriptors = layout.getValidDescriptors() & ~mValid;
         if (UTILS_VERY_UNLIKELY(!unsetValidDescriptors.empty() && !mSetUndefinedParameterWarning)) {
             unsetValidDescriptors.forEachSetBit([&](auto i) {
