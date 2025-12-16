@@ -51,6 +51,7 @@ public:
     };
 
     using SpecializationConstant = std::variant<int32_t, float, bool>;
+    using DescriptorSetLayoutArray = std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT>;
 
     struct Uniform { // For ES2 support
         utils::CString name;    // full qualified name of the uniform field
@@ -149,11 +150,11 @@ public:
 
     inline Program& descriptorLayout(backend::descriptor_set_t set,
             DescriptorSetLayout descriptorLayout) noexcept {
-        mDescriptorLayouts[set] = descriptorLayout;
+        mDescriptorLayouts[set] = std::move(descriptorLayout);
         return *this;
     }
 
-    const std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT>& getDescriptorSetLayouts() const noexcept {
+    const DescriptorSetLayoutArray& getDescriptorSetLayouts() const noexcept {
         return mDescriptorLayouts;
     }
 
@@ -188,7 +189,7 @@ private:
 
     // Descriptions for descriptor set layouts that may be used for this Program, which
     // can be useful for attempting to compile the pipeline ahead of time.
-    std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> mDescriptorLayouts;
+    DescriptorSetLayoutArray mDescriptorLayouts;
 
     // For ES2 support only
     AttributesInfo mAttributes;

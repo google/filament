@@ -270,6 +270,18 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
     return mDefinition.perViewDescriptorSetLayout;
 }
 
+backend::DescriptorSetLayout const& FMaterial::getDescriptorSetLayoutDescription(Variant variant)
+        const noexcept {
+    if (!isSharedVariant(variant)) {
+        return mDefinition.descriptorSetLayoutDescription;
+    }
+    FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+    if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+        return mDefinition.descriptorSetLayoutDescription;
+    }
+    return pDefaultMaterial->getDescriptorSetLayoutDescription();
+}
+
 void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
@@ -521,7 +533,7 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
     // Note: right now, we're going to assume VSM is disabled. In the future, we may
     // want to provide both to the backend, so that both can be built.
     p.descriptorLayout(+DescriptorSetBindingPoints::PER_VIEW,
-        getPerViewDescriptorSetLayoutDescription(variant, /*useVsm=*/false));
+        getPerViewDescriptorSetLayoutDescription(variant, Variant::isVSMVariant(variant)));
     p.descriptorLayout(+DescriptorSetBindingPoints::PER_RENDERABLE,
         descriptor_sets::getPerRenderableLayout());
     p.descriptorLayout(+DescriptorSetBindingPoints::PER_MATERIAL,
