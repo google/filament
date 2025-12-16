@@ -111,28 +111,9 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
         id<MTLLibrary> library = nil;
         switch (program.getShaderLanguage()) {
             case ShaderLanguage::MSL: {
+                // By default, Metal uses the most recent language version.
                 MTLCompileOptions* options = [MTLCompileOptions new];
                 options.fastMathEnabled = YES;
-                // The docs for MTLCompileOptions say that Metal uses the most
-                // recent language version if it is not specified, but this is
-                // not always true: it is possible for the environment to be set
-                // up in a way where an older version is used by default. So we
-                // explicitly set the minimum version we require.
-                #if defined(FILAMENT_IOS)
-                    options.languageVersion = MTLLanguageVersion2_0;
-                    // Mac Catalyst requires at least MSL 2.2.
-                    if (@available(iOS 13.0, *)) {
-                        if (UTILS_UNLIKELY([NSProcessInfo processInfo].isMacCatalystApp)) {
-                            options.languageVersion = MTLLanguageVersion2_2;
-                        }
-                    }
-                #else
-                    if (@available(macOS 11.0, *)) {
-                        options.languageVersion = MTLLanguageVersion2_3;
-                    } else {
-                        options.languageVersion = MTLLanguageVersion2_2;
-                    }
-                #endif
 
                 assert_invariant(source[source.size() - 1] == '\0');
                 // the shader string is null terminated and the length includes the null character
