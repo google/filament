@@ -36,6 +36,7 @@ set(SRCS
         src/Driver.cpp
         src/Handle.cpp
         src/HandleAllocator.cpp
+        src/JobQueue.cpp
         src/ostream.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
@@ -59,6 +60,7 @@ set(PRIVATE_HDRS
         src/CompilerThreadPool.h
         src/DataReshaper.h
         src/DriverBase.h
+        src/JobQueue.h
 )
 
 # ==================================================================================================
@@ -318,6 +320,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPURenderPrimitive.h
             src/webgpu/WebGPURenderTarget.cpp
             src/webgpu/WebGPURenderTarget.h
+            src/webgpu/WebGPUStagePool.cpp
+            src/webgpu/WebGPUStagePool.h
             src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
@@ -566,6 +570,7 @@ if (APPLE OR LINUX)
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
+        test/test_JobQueue.cpp
         test/test_MemoryMappedBuffer.cpp
         test/test_MsaaSwapChain.cpp
         test/test_MRT.cpp

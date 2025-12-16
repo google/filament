@@ -41,7 +41,6 @@
 #include "vulkan/utils/Definitions.h"
 
 #include "backend/DriverEnums.h"
-#include "backend/BufferObjectStreamDescriptor.h"
 
 #include "DriverBase.h"
 #include "private/backend/Driver.h"
@@ -160,10 +159,6 @@ private:
     VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;
     VulkanStreamedImageManager mStreamedImageManager;
-
-    // Stream transforms
-    std::unordered_map<VulkanBufferObject*, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
-    math::mat3f getStreamTransformMatrix(Handle<HwStream> sh);
 
 
     // This maps a VulkanSwapchain to a native swapchain. VulkanSwapchain should have a copy of the

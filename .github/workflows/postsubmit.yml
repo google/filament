@@ -21,8 +21,9 @@ jobs:
       - name: Run update script
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
         run: |
-          GOLDEN_BRANCH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | python3 test/renderdiff/src/commit_msg.py)
+          GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py)
           COMMIT_HASH="${{ steps.get_commit_msg.outputs.hash }}"
           if [[ "${GOLDEN_BRANCH}" != "main" ]]; then
               git config --global user.email "filament.bot@gmail.com"

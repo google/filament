@@ -248,6 +248,14 @@ public:
         return mDefinition.perViewLayoutIndex;
     }
 
+    bool useUboBatching() const noexcept {
+        return mUseUboBatching;
+    }
+
+    std::string_view getSource() const noexcept {
+        return mDefinition.source.c_str_safe();
+    }
+
 #if FILAMENT_ENABLE_MATDBG
     void applyPendingEdits() noexcept;
 
@@ -309,6 +317,8 @@ private:
     MaterialDefinition const& mDefinition;
 
     bool mIsDefaultMaterial = false;
+
+    bool mUseUboBatching = false;
 
     // reserve some space to construct the default material instance
     mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;

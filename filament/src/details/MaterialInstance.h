@@ -56,8 +56,7 @@ class FTexture;
 
 class FMaterialInstance : public MaterialInstance {
 public:
-    FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name,
-            FEngine::UboBatchingMode batchingMode) noexcept;
+    FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name) noexcept;
     FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
@@ -67,8 +66,6 @@ public:
     ~FMaterialInstance() noexcept;
 
     void terminate(FEngine& engine);
-
-    void commitStreamUniformAssociations(FEngine::DriverApi& driver);
     
     void commit(FEngine& engine) const;
 
@@ -288,7 +285,6 @@ private:
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
-    bool mHasStreamUniformAssociations = false;
 
     backend::PolygonOffset mPolygonOffset{};
     backend::StencilState mStencilState{};

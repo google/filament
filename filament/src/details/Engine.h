@@ -216,6 +216,8 @@ public:
         return getDriver().isStereoSupported();
     }
 
+    bool isAsynchronousOperationSupported() const noexcept;
+
     static size_t getMaxStereoscopicEyes() noexcept {
         return CONFIG_MAX_STEREOSCOPIC_EYES;
     }
@@ -345,21 +347,10 @@ public:
 
     FRenderer* createRenderer() noexcept;
 
-    // Defines whether a material instance should use UBO batching or not.
-    enum class UboBatchingMode {
-        // For default, it follows the engine settings.
-        // If UBO batching is enabled on the engine and the material domain is not SURFACE, it
-        // turns on the UBO batching. Otherwise, it turns off the UBO batching.
-        DEFAULT,
-        NO_UBO_BATCHING,
-        UBO_BATCHING
-    };
-
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
             const FMaterialInstance* other, const char* name) noexcept;
 
-    FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name,
-            UboBatchingMode batchingMode) noexcept;
+    FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
@@ -797,6 +788,7 @@ public:
             bool disable_amortized_shader_compile = true;
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
+            bool enable_asynchronous_operation = false;
         } backend;
         struct {
             bool check_crc32_after_loading = false;
@@ -817,6 +809,9 @@ public:
             { "backend.disable_heap_handle_tags",
               "Disable Handle<> tags for heap-allocated handles.",
               &features.backend.disable_heap_handle_tags, true },
+            { "backend.enable_asynchronous_operation",
+              "Enable asynchronous operation for resource management.",
+              &features.backend.enable_asynchronous_operation, true },
             { "backend.opengl.assert_native_window_is_valid",
               "Asserts that the ANativeWindow is valid when rendering starts.",
               &features.backend.opengl.assert_native_window_is_valid, true },
