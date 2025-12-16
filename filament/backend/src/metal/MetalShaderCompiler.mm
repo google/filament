@@ -120,6 +120,12 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
                 // explicitly set the minimum version we require.
                 #if defined(FILAMENT_IOS)
                     options.languageVersion = MTLLanguageVersion2_0;
+                    // Mac Catalyst requires at least MSL 2.2.
+                    if (@available(iOS 13.0, *)) {
+                        if (UTILS_UNLIKELY([NSProcessInfo processInfo].isMacCatalystApp)) {
+                            options.languageVersion = MTLLanguageVersion2_2;
+                        }
+                    }
                 #else
                     if (@available(macOS 11.0, *)) {
                         options.languageVersion = MTLLanguageVersion2_3;
