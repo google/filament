@@ -270,6 +270,18 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
     return mDefinition.perViewDescriptorSetLayout;
 }
 
+backend::DescriptorSetLayout const& FMaterial::getDescriptorSetLayoutDescription(Variant variant)
+        const noexcept {
+    if (!isSharedVariant(variant)) {
+        return mDefinition.descriptorSetLayoutDescription;
+    }
+    FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+    if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+        return mDefinition.descriptorSetLayoutDescription;
+    }
+    return pDefaultMaterial->getDescriptorSetLayoutDescription();
+}
+
 void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,

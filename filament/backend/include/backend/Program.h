@@ -149,7 +149,7 @@ public:
 
     inline Program& descriptorLayout(backend::descriptor_set_t set,
             DescriptorSetLayout descriptorLayout) noexcept {
-        mDescriptorLayouts[set] = descriptorLayout;
+        mDescriptorLayouts[set] = std::move(descriptorLayout);
         return *this;
     }
 

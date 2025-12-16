@@ -81,14 +81,14 @@ public:
         return mDefinition.uniformInterfaceBlock;
     }
 
-    backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription() const noexcept {
+    inline backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription() const noexcept {
         return mDefinition.perViewDescriptorSetLayoutDescription;
     }
 
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
             Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
 
-    filament::DescriptorSetLayout const& getPerViewDescriptorSetLayout() const noexcept {
+    inline filament::DescriptorSetLayout const& getPerViewDescriptorSetLayout() const noexcept {
         assert_invariant(mDefinition.materialDomain == MaterialDomain::POST_PROCESS);
         return mDefinition.perViewDescriptorSetLayout;
     }
@@ -99,16 +99,7 @@ public:
     // Returns the description for the layout that should be used when this material is bound to
     // the pipeline for the given variant. If using a shared variant, we should also reference the
     // default material's layout.
-    backend::DescriptorSetLayout const& getDescriptorSetLayoutDescription(Variant variant = {}) const noexcept {
-        if (!isSharedVariant(variant)) {
-            return mDefinition.descriptorSetLayoutDescription;
-        }
-        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
-        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
-            return mDefinition.descriptorSetLayoutDescription;
-        }
-        return pDefaultMaterial->getDescriptorSetLayoutDescription();
-    }
+    backend::DescriptorSetLayout const& getDescriptorSetLayoutDescription(Variant variant = {}) const noexcept;
 
     // Returns the layout that should be used when this material is bound to the pipeline for the
     // given variant. Shared variants use the Engine's default material's variants, so we should
