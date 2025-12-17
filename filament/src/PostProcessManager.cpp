@@ -2534,7 +2534,7 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
         VignetteOptions const& vignetteOptions, uint32_t const width, uint32_t const height) noexcept {
 
     auto& material = getPostProcessMaterial("colorGradingAsSubpass");
-    FMaterialInstance* const mi =
+    FMaterialInstance const* const mi =
             configureColorGradingMaterial(material, colorGrading, colorGradingConfig,
                     vignetteOptions, width, height);
     mi->commit(driver, getUboManager());
