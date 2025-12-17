@@ -24,6 +24,7 @@
 #include <backend/DriverEnums.h>
 
 #include <array>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <variant>
@@ -153,7 +154,8 @@ public:
         return *this;
     }
 
-    const std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT>& getDescriptorSetLayouts() const noexcept {
+    inline const std::array<std::optional<DescriptorSetLayout>, MAX_DESCRIPTOR_SET_COUNT>& getDescriptorSetLayouts()
+            const noexcept {
         return mDescriptorLayouts;
     }
 
@@ -188,7 +190,7 @@ private:
 
     // Descriptions for descriptor set layouts that may be used for this Program, which
     // can be useful for attempting to compile the pipeline ahead of time.
-    std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> mDescriptorLayouts;
+    std::array<std::optional<DescriptorSetLayout>, MAX_DESCRIPTOR_SET_COUNT> mDescriptorLayouts{};
 
     // For ES2 support only
     AttributesInfo mAttributes;
