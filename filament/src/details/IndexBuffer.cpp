@@ -79,6 +79,9 @@ IndexBuffer::Builder& IndexBuffer::Builder::async(backend::CallbackHandler* hand
 }
 
 IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
+    FILAMENT_CHECK_PRECONDITION(!mImpl->mAsynchronous || engine.isAsynchronousOperationSupported())
+            << "Engine not configured for async operations";
+
     return downcast(engine).createIndexBuffer(*this);
 }
 

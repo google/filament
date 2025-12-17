@@ -309,6 +309,9 @@ Texture* Texture::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(!(external && asynchronous))
             << "Asynchronous operation is not supported for external texture";
 
+    FILAMENT_CHECK_PRECONDITION(!asynchronous || engine.isAsynchronousOperationSupported())
+            << "Engine not configured for async operations";
+
     return downcast(engine).createTexture(*this);
 }
 

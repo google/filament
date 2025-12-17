@@ -1445,20 +1445,20 @@ size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
 size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
-AsyncCallId FEngine::queueCommandAsync(Invocable<void()>&& command,
+AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
         CallbackHandler* handler, Invocable<void()>&& onComplete) {
 
-    struct QueueCommandAsyncCallback {
+    struct RunCommandAsyncCallback {
         Invocable<void()> f;
         static void func(void* user) {
-            auto* const c = static_cast<QueueCommandAsyncCallback*>(user);
+            auto* const c = static_cast<RunCommandAsyncCallback*>(user);
             c->f();
             delete c;
         }
     };
-    auto* const user = new(std::nothrow) QueueCommandAsyncCallback{ std::move(onComplete) };
+    auto* const user = new(std::nothrow) RunCommandAsyncCallback{ std::move(onComplete) };
 
-    return getDriverApi().queueCommandAsync(std::move(command), handler, &QueueCommandAsyncCallback::func,
+    return getDriverApi().queueCommandAsync(std::move(command), handler, &RunCommandAsyncCallback::func,
             user);
 }
 

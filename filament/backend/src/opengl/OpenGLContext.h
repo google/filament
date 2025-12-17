@@ -703,7 +703,7 @@ void OpenGLContext::activeTexture(GLuint unit) noexcept {
     assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
     update_state(state.textures.active, unit, [&]() {
         glActiveTexture(GL_TEXTURE0 + unit);
-    }, true); // TODO: split the GL state for shared contexts
+    });
 }
 
 void OpenGLContext::bindSampler(GLuint unit, GLuint sampler) noexcept {
@@ -764,7 +764,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
             // glBindBuffer().
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vao->elementArray);
         }
-    }, true); // TODO: split the GL state for shared contexts
+    });
 }
 
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
@@ -803,11 +803,11 @@ void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, bool e
     update_state(state.textures.units[unit].target, target, [&]() {
         activeTexture(unit);
         glBindTexture(state.textures.units[unit].target, 0);
-    }, true); // TODO: split the GL state for shared contexts
+    });
     update_state(state.textures.units[unit].id, texId, [&]() {
         activeTexture(unit);
         glBindTexture(target, texId);
-    }, true/*external*/); // TODO: split the GL state for shared contexts
+    }, external);
 }
 
 void OpenGLContext::useProgram(GLuint program) noexcept {

@@ -642,22 +642,22 @@ Handle<HwTexture> OpenGLDriver::importTextureAsyncS() noexcept {
 }
 
 AsyncCallId OpenGLDriver::update3DImageAsyncS() noexcept {
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
     return getJobQueue()->issueJobId();
 }
 
 AsyncCallId OpenGLDriver::setVertexBufferObjectAsyncS() noexcept {
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
     return getJobQueue()->issueJobId();
 }
 
 AsyncCallId OpenGLDriver::updateBufferObjectAsyncS() noexcept {
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
     return getJobQueue()->issueJobId();
 }
 
 AsyncCallId OpenGLDriver::updateIndexBufferAsyncS() noexcept {
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
     return getJobQueue()->issueJobId();
 }
 
@@ -702,7 +702,7 @@ MemoryMappedBufferHandle OpenGLDriver::mapBufferS() noexcept {
 }
 
 AsyncCallId OpenGLDriver::queueCommandAsyncS() noexcept {
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
     return getJobQueue()->issueJobId();
 }
 
@@ -771,7 +771,7 @@ void OpenGLDriver::createIndexBufferAsyncR(
     // subsequent backend APIs can handle operations based on this setting.
     construct<GLIndexBuffer>(ibh, elementSize, indexCount, true);
 
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
 
     getJobQueue()->push([this, ibh, elementType, indexCount, usage, handler, callback, user,
             tag=std::move(tag)]() mutable {
@@ -830,7 +830,7 @@ void OpenGLDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
     // subsequent backend APIs can handle operations based on this setting.
     construct<GLBufferObject>(boh, byteCount, bindingType, usage, true);
 
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
 
     getJobQueue()->push([this, boh, byteCount, bindingType, usage, handler, callback, user,
             tag=std::move(tag)]() mutable {
@@ -1110,7 +1110,7 @@ void OpenGLDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target,
     // subsequent backend APIs can handle operations based on this setting.
     construct<GLTexture>(th, target, levels, samples, width, height, depth, format, usage, true);
 
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
 
     getJobQueue()->push([this, th, target, levels, format, samples, width, height, depth, usage,
             handler, callback, user, tag=std::move(tag)]() mutable {
@@ -1256,7 +1256,7 @@ void OpenGLDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<H
     construct<GLTexture>(th, src->target, src->levels, src->samples, src->width, src->height,
             src->depth, src->format, src->usage, src->asynchronous);
 
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
 
     getJobQueue()->push([this, th, srch, r, g, b, a, handler, callback, user,
             tag=std::move(tag)]() mutable {
@@ -1460,7 +1460,7 @@ void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t const id,
     // subsequent backend APIs can handle operations based on this setting.
     construct<GLTexture>(th, target, levels, samples, width, height, depth, format, usage, true);
 
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
 
     getJobQueue()->push([this, th, id, target, levels, format, samples, width, height, depth, usage,
             handler, callback, user, tag=std::move(tag)]() mutable {
@@ -4799,7 +4799,7 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, uint3 const workGr
 
 void OpenGLDriver::queueCommandAsyncR(AsyncCallId jobId, Invocable<void()>&& command, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
     getJobQueue()->push([this, command=std::move(command), handler, callback, user]() {
         DEBUG_MARKER_NAME("queueCommandAsync")
         if (command) {
@@ -4810,7 +4810,7 @@ void OpenGLDriver::queueCommandAsyncR(AsyncCallId jobId, Invocable<void()>&& com
 }
 
 bool OpenGLDriver::cancelAsyncJob(AsyncCallId jobId) {
-    FILAMENT_CHECK_PRECONDITION(getJobQueue()) << "Engine not configured for async operations";
+    assert_invariant(getJobQueue());
     return getJobQueue()->cancel(jobId);
 }
 

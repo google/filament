@@ -424,7 +424,7 @@ public:
     size_t getColorGradingCount() const noexcept;
     size_t getRenderTargetCount() const noexcept;
 
-    AsyncCallId queueCommandAsync(utils::Invocable<void()>&& command,
+    AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
             backend::CallbackHandler* handler, utils::Invocable<void()>&& onComplete);
     bool cancelAsyncCall(AsyncCallId id);
 

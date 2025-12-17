@@ -269,8 +269,14 @@ public:
          * within the GPU memory. This enables the resource creation process to be handled
          * asynchronously.
          *
+         * Any asynchronous calls made during a resource's asynchronous creation (using this method)
+         * are safe because they are queued and executed in sequence. However, invoking regular
+         * methods on the same resource before it's fully ready is unsafe and may cause undefined
+         * behavior. Users can call the `isCreationComplete()` method for the resource to confirm
+         * when the resource is ready for regular API calls.
+         *
          * To use this method, the engine must be configured for asynchronous operation. Otherwise,
-         * the program will crash or fail.
+         * calling async method will cause the program to terminate.
          *
          * This method and the `external()` method are mutually exclusive. You cannot use both
          * because external texture's contents are filled later by calling `setExternalImage()`.
@@ -468,6 +474,9 @@ public:
      * Users can call the `Engine::cancelAsyncCall()` method with the returned ID to cancel the
      * asynchronous call.
      *
+     * To use this method, the engine must be configured for asynchronous operation. Otherwise,
+     * calling async method will cause the program to terminate.
+     *
      * @param engine    Engine this texture is associated to.
      * @param level     Level to set the image for.
      * @param xoffset   Left offset of the sub-region to update.
@@ -649,7 +658,8 @@ public:
     /**
      * This non-blocking method checks if the resource has finished creation. If the resource
      * creation was initiated asynchronously, it will return true only after all related
-     * asynchronous tasks are complete.
+     * asynchronous tasks are complete. If the resource was created normally without using async
+     * method, it will always return true.
      *
      * @return Whether the resource is created.
      *

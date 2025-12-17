@@ -15,7 +15,6 @@
  */
 
 #include "details/Material.h"
-
 #include "details/Engine.h"
 
 #include "Froxelizer.h"

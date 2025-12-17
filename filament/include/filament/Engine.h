@@ -1025,14 +1025,15 @@ public:
     /**  @} */
 
     /**
-     * An asynchronous version of `CommandStream::queueCommand()`.
-     *
-     * This executes a custom command on the same worker thread used for asynchronous calls. It
-     * guarantees that this command, along with all prior asynchronous calls, will be executed in
-     * strict sequence.
+     * This asynchronously executes user-defined commands. The commands are queued sequentially
+     * alongside other asynchronous operations (see Texture, VertexBuffer, and IndexBuffer) and
+     * guaranteed to be executed in the exact order they were invoked.
      *
      * Users can call the `Engine::cancelAsyncCall()` method with the returned ID to cancel the
      * asynchronous call.
+     *
+     * To use this method, the engine must be configured for asynchronous operation. Otherwise,
+     * calling async method will cause the program to terminate.
      *
      * @param command The custom command to be executed.
      * @param onComplete The callback function that runs once the command has finished.
@@ -1040,7 +1041,7 @@ public:
      * main thread.
      * @return A unique identifier for the asynchronous call.
      */
-    AsyncCallId queueCommandAsync(utils::Invocable<void()>&& command,
+    AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
             backend::CallbackHandler* UTILS_NULLABLE handler,
             utils::Invocable<void()>&& onComplete);
 
