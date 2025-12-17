@@ -374,7 +374,7 @@ public:
          *      - VK_EXT_vertex_input_dynamic_state
          * And is dependent on Vulkan driver implementation on the current device.
          */
-        bool vulkanEnableAsyncPipelineCachePrewarming = false;
+        bool vulkanAllowAsyncPipelineCachePrewarming = false;
 
         /**
          * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
