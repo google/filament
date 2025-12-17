@@ -562,7 +562,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         instExts.merge(getRequiredInstanceExtensions());
     }
     if (mImpl->mInstance == VK_NULL_HANDLE) {
-        mImpl->mInstance = createInstance(instExts);
+        createInstance(instExts);
     }
     assert_invariant(mImpl->mInstance != VK_NULL_HANDLE);
 
@@ -581,7 +581,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     printDeviceInfo(mImpl->mInstance, mImpl->mPhysicalDevice);
 
     ExtensionSet deviceExts;
-    // If using a shared context, we do not assume any extensions.
+    // If a shared context is not used, we will use our own provided list; otherwise, we do not
+    // assume any extensions.
     if (!mImpl->mSharedContext) {
         deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
         auto [prunedInstExts, prunedDeviceExts] =
@@ -590,78 +591,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         deviceExts = prunedDeviceExts;
     }
 
-    // Query all the supported physical device features and Enable/Disable any feature as needed
-    {
-        VulkanContext& context = mImpl->mContext;
-
-        VkPhysicalDeviceProtectedMemoryFeatures queryProtectedMemoryFeatures = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
-        };
-        // Note that we're chaining a struct on the stack into a struct in context, which will then be
-        // passed to the driver. However, this should be ok since the use of
-        // queryProtectedMemoryFeatures is only in this function.
-        chainStruct(&context.mPhysicalDeviceFeatures, &queryProtectedMemoryFeatures);
-        chainStruct(&context.mPhysicalDeviceFeatures, &context.mPhysicalDeviceVk11Features);
-
-        if (setContains(deviceExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
-            // We are on a non-conformant vulkan implementation so we need to ascertain if the features
-            // we need are available.
-            chainStruct(&context.mPhysicalDeviceFeatures, &context.mPortabilitySubsetFeatures);
-        }
-
-        // Initialize the following fields: physicalDeviceProperties, memoryProperties,
-        // physicalDeviceFeatures.
-        vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
-        vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
-        vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
-
-        // Store the extension support in the context
-        if (!mImpl->mSharedContext) {
-            context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-            context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-            context.mPipelineCreationFeedbackSupported =
-                    setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
-        } else {
-            VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
-            context.mDebugUtilsSupported = scontext->debugUtilsSupported;
-            context.mDebugMarkersSupported = scontext->debugMarkersSupported;
-        }
-
-        // Pass along relevant driver config (feature flags)
-        context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
-
-        // We know we need to allocate the protected version of the VK objects
-        context.mProtectedMemorySupported =
-            static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
-
-        // Only enable shaderClipDistance if we are doing instanced stereoscopic rendering.
-        if (driverConfig.stereoscopicType != StereoscopicType::INSTANCED) {
-            context.mPhysicalDeviceFeatures.features.shaderClipDistance = VK_FALSE;
-        }
-
-        // Check the availability of lazily allocated memory
-        context.mLazilyAllocatedMemorySupported = false;
-        // RenderDoc doesn't support lazy allocated memory
-        if constexpr (!FVK_RENDERDOC_CAPTURE_MODE) {
-            for (uint32_t i = 0, typeCount = context.mMemoryProperties.memoryTypeCount;
-                    i < typeCount; ++i) {
-                VkMemoryType const type = context.mMemoryProperties.memoryTypes[i];
-                if (type.propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
-                    context.mLazilyAllocatedMemorySupported = true;
-                    assert_invariant(type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-                    break;
-                }
-            }
-        }
-
-        context.mIsUnifiedMemoryArchitecture =
-                hasUnifiedMemoryArchitecture(context.mMemoryProperties);
-        context.mDepthStencilFormats = findAttachmentDepthStencilFormats(mImpl->mPhysicalDevice);\
-        assert_invariant(context.mDepthStencilFormats.size() > 0);
-        context.mBlittableDepthStencilFormats =
-                findBlittableDepthStencilFormats(mImpl->mPhysicalDevice);
-        context.mFenceExportFlags = getFenceExportFlags();
-    }
+    // Query all the supported physical device features and enable/disable any feature as needed
+    queryAndSetDeviceFeatures(driverConfig, instExts, deviceExts, sharedContext);
 
     VulkanContext const& context = mImpl->mContext;
 
@@ -699,9 +630,9 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     if (mImpl->mDevice == VK_NULL_HANDLE) {
-        mImpl->mDevice = createLogicalDeviceAndQueues(deviceExts,
-                context.mPhysicalDeviceFeatures.features, context.mPhysicalDeviceVk11Features,
-                context.mProtectedMemorySupported, requestPortabilitySubsetImageView2DOn3DImage);
+        createLogicalDeviceAndQueues(deviceExts, context.mPhysicalDeviceFeatures.features,
+                context.mPhysicalDeviceVk11Features, context.mProtectedMemorySupported,
+                requestPortabilitySubsetImageView2DOn3DImage);
     }
 
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
@@ -857,7 +788,7 @@ bool VulkanPlatform::isTransientAttachmentSupported() const noexcept {
     return mImpl->mContext.isLazilyAllocatedMemorySupported();
 }
 
-VkInstance VulkanPlatform::createVkInstance(const VkInstanceCreateInfo& createInfo) {
+VkInstance VulkanPlatform::createVkInstance(const VkInstanceCreateInfo& createInfo) noexcept {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(&createInfo, VKALLOC, &instance);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
@@ -865,12 +796,12 @@ VkInstance VulkanPlatform::createVkInstance(const VkInstanceCreateInfo& createIn
     return instance;
 }
 
-VkPhysicalDevice VulkanPlatform::selectVkPhysicalDevice(VkInstance instance) {
+VkPhysicalDevice VulkanPlatform::selectVkPhysicalDevice(VkInstance instance) noexcept {
     VulkanPlatform::Customization::GPUPreference const pref = getCustomization().gpu;
     return selectPhysicalDevice(mImpl->mInstance, pref);
 }
 
-VkDevice VulkanPlatform::createVkDevice(const VkDeviceCreateInfo& createInfo) {
+VkDevice VulkanPlatform::createVkDevice(const VkDeviceCreateInfo& createInfo) noexcept {
     VkDevice device = VK_NULL_HANDLE;
     VkResult result = vkCreateDevice(mImpl->mPhysicalDevice, &createInfo, VKALLOC, &device);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
@@ -878,7 +809,7 @@ VkDevice VulkanPlatform::createVkDevice(const VkDeviceCreateInfo& createInfo) {
     return device;
 }
 
-VkInstance VulkanPlatform::createInstance(ExtensionSet const& requiredExts) {
+void VulkanPlatform::createInstance(ExtensionSet const& requiredExts) noexcept {
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -954,13 +885,87 @@ VkInstance VulkanPlatform::createInstance(ExtensionSet const& requiredExts) {
         chainStruct(&instanceCreateInfo, &features);
     }
 
-    return createVkInstance(instanceCreateInfo);
+    mImpl->mInstance = createVkInstance(instanceCreateInfo);
 }
 
-VkDevice VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExtensions,
+void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& driverConfig,
+        ExtensionSet const& instExts, ExtensionSet const& deviceExts,
+        void* sharedContext) noexcept {
+    VulkanContext& context = mImpl->mContext;
+
+    VkPhysicalDeviceProtectedMemoryFeatures queryProtectedMemoryFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
+    };
+    // Note that we're chaining a struct on the stack into a struct in context, which will then be
+    // passed to the driver. However, this should be ok since the use of
+    // queryProtectedMemoryFeatures is only in this function.
+    chainStruct(&context.mPhysicalDeviceFeatures, &queryProtectedMemoryFeatures);
+    chainStruct(&context.mPhysicalDeviceFeatures, &context.mPhysicalDeviceVk11Features);
+
+    if (setContains(deviceExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
+        // We are on a non-conformant vulkan implementation so we need to ascertain if the features
+        // we need are available.
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mPortabilitySubsetFeatures);
+    }
+
+    // Initialize the following fields: physicalDeviceProperties, memoryProperties,
+    // physicalDeviceFeatures.
+    vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
+    vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
+    vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
+
+    // Store the extension support in the context
+    if (!mImpl->mSharedContext) {
+        context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        context.mDebugMarkersSupported =
+                setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context.mPipelineCreationFeedbackSupported =
+                setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
+    } else {
+        VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
+        context.mDebugUtilsSupported = scontext->debugUtilsSupported;
+        context.mDebugMarkersSupported = scontext->debugMarkersSupported;
+    }
+
+    // Pass along relevant driver config (feature flags)
+    context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
+
+    // We know we need to allocate the protected version of the VK objects
+    context.mProtectedMemorySupported =
+            static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
+
+    // Only enable shaderClipDistance if we are doing instanced stereoscopic rendering.
+    if (driverConfig.stereoscopicType != StereoscopicType::INSTANCED) {
+        context.mPhysicalDeviceFeatures.features.shaderClipDistance = VK_FALSE;
+    }
+
+    // Check the availability of lazily allocated memory
+    context.mLazilyAllocatedMemorySupported = false;
+    // RenderDoc doesn't support lazy allocated memory
+    if constexpr (!FVK_RENDERDOC_CAPTURE_MODE) {
+        for (uint32_t i = 0, typeCount = context.mMemoryProperties.memoryTypeCount; i < typeCount;
+                ++i) {
+            VkMemoryType const type = context.mMemoryProperties.memoryTypes[i];
+            if (type.propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
+                context.mLazilyAllocatedMemorySupported = true;
+                assert_invariant(type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                break;
+            }
+        }
+    }
+
+    context.mIsUnifiedMemoryArchitecture = hasUnifiedMemoryArchitecture(context.mMemoryProperties);
+    context.mDepthStencilFormats = findAttachmentDepthStencilFormats(mImpl->mPhysicalDevice);
+    assert_invariant(context.mDepthStencilFormats.size() > 0);
+    context.mBlittableDepthStencilFormats =
+            findBlittableDepthStencilFormats(mImpl->mPhysicalDevice);
+    context.mFenceExportFlags = getFenceExportFlags();
+}
+
+void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExtensions,
         VkPhysicalDeviceFeatures const& features,
         VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
-        bool requestImageView2DOn3DImage) {
+        bool requestImageView2DOn3DImage) noexcept {
 
     // Identify and select all the required queues
     mImpl->mGraphicsQueueFamilyIndex =
@@ -1058,7 +1063,7 @@ VkDevice VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& device
         chainStruct(&deviceCreateInfo, &protectedMemory);
     }
 
-    return createVkDevice(deviceCreateInfo);
+    mImpl->mDevice = createVkDevice(deviceCreateInfo);
 }
 
 } // namespace filament::backend

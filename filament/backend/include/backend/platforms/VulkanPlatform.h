@@ -436,11 +436,50 @@ protected:
         VkFence fence;
         std::shared_ptr<VulkanCmdFence> fenceStatus;
     };
-    virtual VkInstance createVkInstance(VkInstanceCreateInfo const& createInfo);
 
-    virtual VkPhysicalDevice selectVkPhysicalDevice(VkInstance instance);
+    /**
+     * Creates the VkInstance used by Filament's Vulkan backend.
+     *
+     * This method can be overridden in subclasses to customize VkInstance creation, such as
+     * adding application-specific layers or extensions.
+     *
+     * The provided `createInfo` contains layers and extensions required by Filament.
+     * If you override this method and need to modify the `createInfo` struct, you must first
+     * make a copy of it and modify the copy.
+     *
+     * @param createInfo The VkInstanceCreateInfo prepared by Filament.
+     * @return The created VkInstance, or VK_NULL_HANDLE on failure.
+     */
+    virtual VkInstance createVkInstance(VkInstanceCreateInfo const& createInfo) noexcept;
 
-    virtual VkDevice createVkDevice(VkDeviceCreateInfo const& createInfo);
+    /**
+     * Selects a VkPhysicalDevice (GPU) for Filament's Vulkan backend to use.
+     *
+     * This method can be overridden in subclasses to implement custom GPU selection logic.
+     * For example, an application might override this to prefer a discrete GPU over an
+     * integrated one based on device properties.
+     *
+     * The default implementation selects the first device that meets Filament's requirements.
+     *
+     * @param instance The VkInstance to enumerate devices from.
+     * @return The selected VkPhysicalDevice, or VK_NULL_HANDLE if no suitable device is found.
+     */
+    virtual VkPhysicalDevice selectVkPhysicalDevice(VkInstance instance) noexcept;
+
+    /**
+     * Creates the VkDevice used by Filament's Vulkan backend.
+     *
+     * This method can be overridden in subclasses to customize VkDevice creation, such as
+     * adding application-specific extensions or enabling features.
+     *
+     * The provided `createInfo` contains extensions and features required by Filament.
+     * If you override this method and need to modify the `createInfo` struct, you must first
+     * make a copy of it and modify the copy.
+     *
+     * @param createInfo The VkDeviceCreateInfo prepared by Filament.
+     * @return The created VkDevice, or VK_NULL_HANDLE on failure.
+     */
+    virtual VkDevice createVkDevice(VkDeviceCreateInfo const& createInfo) noexcept;
 
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
     virtual ExtensionSet getSwapchainInstanceExtensions() const = 0;
@@ -455,12 +494,16 @@ protected:
     bool isTransientAttachmentSupported() const noexcept;
 
 private:
-    VkInstance createInstance(ExtensionSet const& requiredExts);
+    void createInstance(ExtensionSet const& requiredExts) noexcept;
 
-    VkDevice createLogicalDeviceAndQueues(ExtensionSet const& deviceExtensions,
+    void queryAndSetDeviceFeatures(Platform::DriverConfig const& driverConfig,
+            ExtensionSet const& instExts, ExtensionSet const& deviceExts,
+            void* sharedContext) noexcept;
+
+    void createLogicalDeviceAndQueues(ExtensionSet const& deviceExtensions,
             VkPhysicalDeviceFeatures const& features,
             VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
-            bool requestImageView2DOn3DImage);
+            bool requestImageView2DOn3DImage) noexcept;
 
     friend struct VulkanPlatformPrivate;
 };
