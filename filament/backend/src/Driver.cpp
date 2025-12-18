@@ -77,28 +77,6 @@ DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
             } while (true);
         });
     }
-
-    if (driverConfig.asynchronousMode != AsynchronousMode::NONE) {
-        mJobQueue = JobQueue::create();
-
-        bool useThreadWorker = false;
-        if (driverConfig.asynchronousMode == AsynchronousMode::THREAD_PREFERRED &&
-                UTILS_HAS_THREADING) {
-            useThreadWorker = true;
-        }
-
-        if (useThreadWorker) {
-            ThreadWorker::Config threadWorkerConfig{
-                "JobQueueThreadWorker",
-                JobSystem::Priority::NORMAL,
-                [this]() { onBeginForThreadWorker(); },
-                [this]() { onEndForThreadWorker(); },
-            };
-            mJobWorker = ThreadWorker::create(mJobQueue, std::move(threadWorkerConfig));
-        } else {
-            mJobWorker = AmortizationWorker::create(mJobQueue);
-        }
-    }
 }
 
 DriverBase::~DriverBase() noexcept {

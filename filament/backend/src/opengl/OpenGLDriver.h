@@ -26,6 +26,7 @@
 #include "GLDescriptorSetLayout.h"
 #include "GLMemoryMappedBuffer.h"
 #include "GLTexture.h"
+#include "JobQueue.h"
 #include "ShaderCompilerService.h"
 
 #include <backend/AcquiredImage.h>
@@ -248,6 +249,9 @@ private:
         return utils::CString{ mContext.state.renderer };
     }
 
+    JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
+    JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
+
     template<typename T>
     friend class ConcreteDispatcher;
 
@@ -358,14 +362,6 @@ private:
     static GLsizei getAttachments(AttachmentArray& attachments, TargetBufferFlags buffers,
             bool isDefaultFramebuffer) noexcept;
 
-    // ThreadWorker override
-    void onBeginForThreadWorker() override {
-        mPlatform.createContext(true);
-    }
-    void onEndForThreadWorker() override {
-        mPlatform.releaseContext();
-    }
-
     // Common methods
     void createTextureCommon(Handle<HwTexture> th, SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
@@ -452,6 +448,9 @@ private:
 
     PushConstantBundle* mCurrentPushConstants = nullptr;
     PipelineLayout::SetLayout mCurrentSetLayout;
+
+    JobQueue::Ptr mJobQueue;
+    JobWorker::Ptr mJobWorker;
 };
 
 // ------------------------------------------------------------------------------------------------

@@ -29,8 +29,6 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 
-#include "JobQueue.h"
-
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -221,12 +219,9 @@ public:
 protected:
     class CallbackDataDetails;
 
-    [[nodiscard]] Platform::DriverConfig const& getDriverConfig() const noexcept {
+    Platform::DriverConfig const& getDriverConfig() const noexcept {
         return mDriverConfig;
     }
-
-    [[nodiscard]] JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
-    [[nodiscard]] JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
 
     void scheduleDestroy(BufferDescriptor&& buffer) {
         if (buffer.hasCallback()) {
@@ -242,10 +237,6 @@ protected:
     void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
 private:
-    // Event callbacks invoked from the worker thread
-    virtual void onBeginForThreadWorker() {}
-    virtual void onEndForThreadWorker() {}
-
     const Platform::DriverConfig mDriverConfig;
 
     std::mutex mPurgeLock;
@@ -256,9 +247,6 @@ private:
     std::condition_variable mServiceThreadCondition;
     std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue;
     bool mExitRequested = false;
-
-    JobQueue::Ptr mJobQueue;
-    JobWorker::Ptr mJobWorker;
 };
 
 
