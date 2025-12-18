@@ -61,6 +61,7 @@ class FMaterialInstance;
 class FRenderPrimitive;
 class RenderPassBuilder;
 class ColorPassDescriptorSet;
+struct PerRenderableData;
 
 class RenderPass {
 public:
@@ -310,6 +311,10 @@ public:
     // allocated commands ARE NOT freed, they're owned by the Arena
     ~RenderPass() noexcept;
 
+    // this must be called before calling getExecutor(), but can't be called from within
+    // a render pass
+    void finalize(FEngine const& engine, backend::DriverApi& driver);
+
     // Specifies the viewport for the scissor rectangle, that is, the final scissor rect is
     // offset by the viewport's left-top and clipped to the viewport's width/height.
     void setScissorViewport(backend::Viewport const viewport) noexcept {
@@ -324,14 +329,14 @@ public:
         std::reference_wrapper<backend::DriverApi> driver;
     public:
         explicit BufferObjectHandleDeleter(backend::DriverApi& driver) noexcept : driver(driver) { }
-        void operator()(backend::BufferObjectHandle handle) noexcept;
+        void operator()(backend::BufferObjectHandle handle) const noexcept;
     };
 
     class DescriptorSetHandleDeleter {
         std::reference_wrapper<backend::DriverApi> driver;
     public:
         explicit DescriptorSetHandleDeleter(backend::DriverApi& driver) noexcept : driver(driver) { }
-        void operator()(backend::DescriptorSetHandle handle) noexcept;
+        void operator()(backend::DescriptorSetHandle handle) const noexcept;
     };
 
     using BufferObjectSharedHandle = SharedHandle<
@@ -409,8 +414,7 @@ public:
 private:
     friend class FRenderer;
     friend class RenderPassBuilder;
-    RenderPass(FEngine const& engine, backend::DriverApi& driver,
-            RenderPassBuilder const& builder) noexcept;
+    RenderPass(FEngine const& engine, RenderPassBuilder const& builder) noexcept;
 
     // This is the main function of this class, this appends commands to the pass using
     // the current camera, geometry and flags set. This can be called multiple times if needed.
@@ -427,7 +431,7 @@ private:
     // Appends a custom command.
     void appendCustomCommand(Command* commands,
             uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
-            Executor::CustomCommandFn command);
+            Executor::CustomCommandFn command) const;
 
     static Command* resize(Arena& arena, Command* last) noexcept;
 
@@ -436,10 +440,7 @@ private:
             Command* begin, Command* end) noexcept;
 
     // instanceify commands then trims sentinels
-    Command* instanceify(backend::DriverApi& driver,
-            backend::DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
-            Command* begin, Command* end,
-            int32_t eyeCount) const noexcept;
+    Command* instanceify(Command* begin, Command* end, int32_t eyeCount) const noexcept;
 
     // We choose the command count per job to minimize JobSystem overhead.
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 128;
@@ -474,8 +475,11 @@ private:
     backend::Viewport mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
     Command const* /* const */ mCommandBegin = nullptr;   // Pointer to the first command
     Command const* /* const */ mCommandEnd = nullptr;     // Pointer to one past the last command
-    mutable BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
-    mutable DescriptorSetSharedHandle mInstancedDescriptorSetHandle; // a descriptor-set to hold the ubo
+    mutable std::vector<PerRenderableData> mInstancingStagingBuffer;
+    mutable std::vector<Command*> mInstancingDescriptorSetPatch;
+    BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
+    DescriptorSetSharedHandle mInstancedDescriptorSetHandle; // a descriptor-set to hold the ubo
+
     // a vector for our custom commands
     using CustomCommandVector = utils::FixedCapacityVector<Executor::CustomCommandFn>;
     mutable CustomCommandVector mCustomCommands;
@@ -573,7 +577,7 @@ public:
             uint32_t order,
             const RenderPass::Executor::CustomCommandFn& command);
 
-    RenderPass build(FEngine const& engine, backend::DriverApi& driver) const;
+    RenderPass build(FEngine const& engine) const;
 };
 
 

@@ -168,6 +168,7 @@ set(PRIVATE_HDRS
         src/Bimap.h
         src/BufferPoolAllocator.h
         src/ColorSpaceUtils.h
+        src/compact.h
         src/Culler.h
         src/DFG.h
         src/FilamentAPI-impl.h

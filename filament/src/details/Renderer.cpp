@@ -1190,7 +1190,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 
     // create the pass, which generates all its commands (this is a heavy operation)
-    RenderPass const pass{ passBuilder.build(engine, driver) };
+    RenderPass const pass{ passBuilder.build(engine) };
 
     // now that we have the commands we can figure out if we have refraction commands
     auto* const firstRefractionCommand = [&view](RenderPass const& pass) {
@@ -1218,8 +1218,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // the scissor viewport during construction
     const_cast<RenderPass&>(pass).setScissorViewport(useIntermediateBuffer ? xvp : vp);
 
-
-
+    const_cast<RenderPass&>(pass).finalize(engine, driver);
 
     // the color pass itself + color-grading as subpass if needed
     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view, {
