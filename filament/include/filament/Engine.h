@@ -449,7 +449,7 @@ public:
         char const* UTILS_NONNULL name;         //!< name of the feature flag
         char const* UTILS_NONNULL description;  //!< short description
         bool const* UTILS_NONNULL value;        //!< pointer to the value of the flag
-        bool constant;                          //!< whether the flag is constant after construction
+        bool constant = true;                   //!< whether the flag is constant after construction
     };
 
     /**
