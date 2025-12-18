@@ -111,6 +111,8 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const Builder& builder)
                 /* userParam1 */ this,
                 /* userParam2 */ builder->mAsyncCreationUserData,
                 /* onCountdownComplete */ [this]() {
+                    // `std::memory_order_relaxed` should be sufficient because no other variables
+                    // need to be visible to other threads in a strict sequence.
                     mCreationComplete.store(true, std::memory_order_relaxed);
                 },
                 /* driver */ &engine.getDriver());

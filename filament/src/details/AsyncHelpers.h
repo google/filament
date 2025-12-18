@@ -118,6 +118,8 @@ public:
 
     // Increase the countdown. Users are required to call this for each async call they make.
     uint32_t increaseCountdown() {
+        // `std::memory_order_relaxed` should be sufficient because no other variables need to be
+        // visible to other threads in a strict sequence.
         auto prev = mCount.fetch_add(1, std::memory_order_relaxed);
         return prev + 1;
     }
@@ -125,7 +127,10 @@ public:
 private:
     // Reduces the countdown and returns true upon reaching zero.
     bool decreaseCountdown() {
-        auto prev = mCount.fetch_sub(1, std::memory_order_relaxed);
+        // `std::memory_order_acq_rel` is recommended here to ensure all member fields (mUserHandler,
+        // mCountdownCompleteCallback, and others) are visible to this `ServiceThread` before using
+        // them.
+        auto prev = mCount.fetch_sub(1, std::memory_order_acq_rel);
         return prev == 1;
     }
 

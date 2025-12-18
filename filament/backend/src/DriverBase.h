@@ -83,7 +83,7 @@ struct HwMemoryMappedBuffer : public HwBase {
 };
 
 struct HwIndexBuffer : public HwBase {
-    uint32_t count : 26;
+    uint32_t count : 26; // 67M indices
     uint32_t elementSize : 5;
     uint32_t asynchronous : 1;
 

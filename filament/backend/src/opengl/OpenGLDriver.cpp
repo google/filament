@@ -2243,60 +2243,62 @@ void OpenGLDriver::destroyProgram(Handle<HwProgram> ph) {
     }
 }
 
+void OpenGLDriver::destroyTextureCommon(Handle<HwTexture> th) {
+    GLTexture* t = handle_cast<GLTexture*>(th);
+    auto& gl = mContext;
+    if (UTILS_LIKELY(!t->gl.imported)) {
+        if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
+            // drop a reference
+            uint16_t count = 0;
+            if (UTILS_UNLIKELY(t->ref)) {
+                // the common case is that we don't have a ref handle
+                GLTextureRef* const ref = handle_cast<GLTextureRef*>(t->ref);
+                count = --(ref->count);
+                if (count == 0) {
+                    destruct(t->ref, ref);
+                }
+            }
+            if (count == 0) {
+                // if this was the last reference, we destroy the refcount as well as
+                // the GL texture name itself.
+                gl.unbindTexture(t->gl.target, t->gl.id);
+                if (UTILS_UNLIKELY(t->hwStream)) {
+                    detachStream(t);
+                }
+                if (UTILS_UNLIKELY(t->externalTexture)) {
+                    mPlatform.destroyExternalImageTexture(t->externalTexture);
+                } else {
+                    glDeleteTextures(1, &t->gl.id);
+                }
+            } else {
+                // The Handle<HwTexture> is always destroyed. For extra precaution we also
+                // check that the GLTexture has a trivial destructor.
+                static_assert(std::is_trivially_destructible_v<GLTexture>);
+            }
+        } else {
+            assert_invariant(t->gl.target == GL_RENDERBUFFER);
+            glDeleteRenderbuffers(1, &t->gl.id);
+        }
+        if (t->gl.sidecarRenderBufferMS) {
+            glDeleteRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
+        }
+    } else {
+        gl.unbindTexture(t->gl.target, t->gl.id);
+    }
+    destruct(th, t);
+}
+
 void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     DEBUG_MARKER()
 
     if (th) {
         GLTexture* t = handle_cast<GLTexture*>(th);
-
-        auto destroyTextureCommon = [this, th, t]() mutable {
-            auto& gl = mContext;
-            if (UTILS_LIKELY(!t->gl.imported)) {
-                if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
-                    // drop a reference
-                    uint16_t count = 0;
-                    if (UTILS_UNLIKELY(t->ref)) {
-                        // the common case is that we don't have a ref handle
-                        GLTextureRef* const ref = handle_cast<GLTextureRef*>(t->ref);
-                        count = --(ref->count);
-                        if (count == 0) {
-                            destruct(t->ref, ref);
-                        }
-                    }
-                    if (count == 0) {
-                        // if this was the last reference, we destroy the refcount as well as
-                        // the GL texture name itself.
-                        gl.unbindTexture(t->gl.target, t->gl.id);
-                        if (UTILS_UNLIKELY(t->hwStream)) {
-                            detachStream(t);
-                        }
-                        if (UTILS_UNLIKELY(t->externalTexture)) {
-                            mPlatform.destroyExternalImageTexture(t->externalTexture);
-                        } else {
-                            glDeleteTextures(1, &t->gl.id);
-                        }
-                    } else {
-                        // The Handle<HwTexture> is always destroyed. For extra precaution we also
-                        // check that the GLTexture has a trivial destructor.
-                        static_assert(std::is_trivially_destructible_v<GLTexture>);
-                    }
-                } else {
-                    assert_invariant(t->gl.target == GL_RENDERBUFFER);
-                    glDeleteRenderbuffers(1, &t->gl.id);
-                }
-                if (t->gl.sidecarRenderBufferMS) {
-                    glDeleteRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
-                }
-            } else {
-                gl.unbindTexture(t->gl.target, t->gl.id);
-            }
-            destruct(th, t);
-        };
-
         if (t->asynchronous) {
-            getJobQueue()->push(std::move(destroyTextureCommon));
+            getJobQueue()->push([this, th]() {
+                destroyTextureCommon(th);
+            });
         } else {
-            destroyTextureCommon();
+            destroyTextureCommon(th);
         }
     }
 }

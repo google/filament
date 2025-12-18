@@ -31,6 +31,7 @@
 
 #include <utility>
 
+#include <functional>
 #include <stddef.h>
 #include <stdint.h>
 

@@ -386,6 +386,7 @@ private:
             uint32_t indexCount, BufferUsage const usage, utils::ImmutableCString&& tag);
     void updateIndexBufferCommon(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
             uint32_t const byteOffset);
+    void destroyTextureCommon(Handle<HwTexture> th);
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
