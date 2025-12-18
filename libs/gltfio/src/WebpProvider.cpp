@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -246,7 +246,7 @@ void WebpProvider::cancelDecoding() {
         // decodedTexelsBaseMipmap is loaded is in the job threads, and we have waited them to
         // completion above. We also expect the TextureProvider API calls to be made only from one
         // thread.
-        if (intptr_t data = info->decodedTexelsBaseMipmap.load()) {
+        if (auto data = (void*)info->decodedTexelsBaseMipmap.load()) {
             WebPFree(data);
         }
         info->state = TextureState::POPPED;
