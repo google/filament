@@ -26,7 +26,7 @@
 #include <utils/StaticString.h>
 
 namespace filament {
-class ResourceAllocatorInterface;
+class TextureCacheInterface;
 } // namespace::filament
 
 namespace filament {
@@ -89,11 +89,11 @@ public:
             ResourceEdgeBase const* writer) noexcept = 0;
 
     /* Instantiate the concrete resource */
-    virtual void devirtualize(ResourceAllocatorInterface& resourceAllocator,
+    virtual void devirtualize(TextureCacheInterface& resourceAllocator,
             bool useProtectedMemory) noexcept = 0;
 
     /* Destroy the concrete resource */
-    virtual void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept = 0;
+    virtual void destroy(TextureCacheInterface& resourceAllocator) noexcept = 0;
 
     /* Destroy an Edge instantiated by this resource */
     virtual void destroyEdge(DependencyGraph::Edge* edge) noexcept = 0;
@@ -235,7 +235,7 @@ protected:
         delete static_cast<ResourceEdge *>(edge);
     }
 
-    void devirtualize(ResourceAllocatorInterface& resourceAllocator,
+    void devirtualize(TextureCacheInterface& resourceAllocator,
             bool useProtectedMemory) noexcept override {
         if (!isSubResource()) {
             resource.create(resourceAllocator, name, descriptor, usage, useProtectedMemory);
@@ -245,7 +245,7 @@ protected:
         }
     }
 
-    void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept override {
+    void destroy(TextureCacheInterface& resourceAllocator) noexcept override {
         if (detached || isSubResource()) {
             return;
         }
@@ -275,10 +275,10 @@ public:
     }
 
 protected:
-    void devirtualize(ResourceAllocatorInterface&, bool) noexcept override {
+    void devirtualize(TextureCacheInterface&, bool) noexcept override {
         // imported resources don't need to devirtualize
     }
-    void destroy(ResourceAllocatorInterface&) noexcept override {
+    void destroy(TextureCacheInterface&) noexcept override {
         // imported resources never destroy the concrete resource
     }
 

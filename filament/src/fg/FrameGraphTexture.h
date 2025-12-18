@@ -25,7 +25,7 @@
 #include <backend/Handle.h>
 
 namespace filament {
-class ResourceAllocatorInterface;
+class TextureCacheInterface;
 } // namespace::filament
 
 namespace filament {
@@ -80,14 +80,14 @@ struct FrameGraphTexture {
      * @param resourceAllocator resource allocator for textures and such
      * @param descriptor Descriptor to the resource
      */
-    void create(ResourceAllocatorInterface& resourceAllocator, utils::StaticString name,
+    void create(TextureCacheInterface& resourceAllocator, utils::StaticString name,
             Descriptor const& descriptor, Usage usage, bool useProtectedMemory) noexcept;
 
     /**
      * Destroy the concrete resource
      * @param resourceAllocator
      */
-    void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept;
+    void destroy(TextureCacheInterface& resourceAllocator) noexcept;
 
     /**
      * Generates the Descriptor for a subresource from its parent Descriptor and its

@@ -17,7 +17,7 @@
 #include "details/Engine.h"
 
 #include "MaterialParser.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 #include "RenderPrimitive.h"
 
 #include "details/BufferObject.h"
@@ -342,7 +342,7 @@ void FEngine::init() {
     LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
 
 
-    mResourceAllocatorDisposer = std::make_shared<ResourceAllocatorDisposer>(driverApi);
+    mResourceAllocatorDisposer = std::make_shared<TextureCacheDisposer>(driverApi);
 
     mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)

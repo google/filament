@@ -97,7 +97,6 @@ set(SRCS
         src/RenderableManager.cpp
         src/Renderer.cpp
         src/RendererUtils.cpp
-        src/ResourceAllocator.cpp
         src/ResourceList.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
@@ -108,6 +107,7 @@ set(SRCS
         src/SwapChain.cpp
         src/Sync.cpp
         src/Texture.cpp
+        src/TextureCache.cpp
         src/ToneMapper.cpp
         src/TransformManager.cpp
         src/UniformBuffer.cpp
@@ -189,11 +189,11 @@ set(PRIVATE_HDRS
         src/RenderPass.h
         src/RenderPrimitive.h
         src/RendererUtils.h
-        src/ResourceAllocator.h
         src/ResourceList.h
         src/ShadowMap.h
         src/ShadowMapManager.h
         src/SharedHandle.h
+        src/TextureCache.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h

@@ -16,15 +16,16 @@
 
 #include "fg/FrameGraphTexture.h"
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include <utils/StaticString.h>
 
+#include <array>
 #include <algorithm>
 
 namespace filament {
 
-void FrameGraphTexture::create(ResourceAllocatorInterface& resourceAllocator,
+void FrameGraphTexture::create(TextureCacheInterface& resourceAllocator,
         utils::StaticString const name,
         Descriptor const& descriptor, Usage usage,
         bool const useProtectedMemory) noexcept {
@@ -43,7 +44,7 @@ void FrameGraphTexture::create(ResourceAllocatorInterface& resourceAllocator,
             swizzle, usage);
 }
 
-void FrameGraphTexture::destroy(ResourceAllocatorInterface& resourceAllocator) noexcept {
+void FrameGraphTexture::destroy(TextureCacheInterface& resourceAllocator) noexcept {
     if (handle) {
         resourceAllocator.destroyTexture(handle);
         handle.clear();

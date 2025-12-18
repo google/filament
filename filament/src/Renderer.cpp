@@ -16,7 +16,7 @@
 
 #include <filament/Renderer.h>
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/Engine.h"
 #include "details/Renderer.h"
