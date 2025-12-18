@@ -82,18 +82,16 @@ if (TNT_DEV)
     target_link_libraries(test_depth PRIVATE utils)
 endif()
 
-if (ANDROID)
-    add_executable(test_compiler compiler_test.cpp)
-    target_link_libraries(test_compiler PRIVATE gtest)
-    target_link_libraries(test_compiler PRIVATE utils)
-    target_link_libraries(test_compiler PRIVATE EGL)
-    target_link_libraries(test_compiler PRIVATE GLESv3)
-endif()
-
 add_executable(test_material_parser
         filament_test_material_parser.cpp
-        ${RESGEN_SOURCE})
+        ${RESGEN_SOURCE}
+)
 target_link_libraries(test_material_parser PRIVATE filamat filament gtest)
 target_compile_options(test_material_parser PRIVATE ${COMPILER_FLAGS})
 target_include_directories(test_material_parser PRIVATE ${RESOURCE_DIR})
 set_target_properties(test_material_parser PROPERTIES FOLDER Tests)
+
+if (ANDROID)
+    add_executable(test_compiler compiler_test.cpp)
+    target_link_libraries(test_compiler PRIVATE gtest utils EGL GLESv3)
+endif()

@@ -52,9 +52,6 @@ if (ANDROID AND FILAMENT_BUILD_FILAMAT)
         tint_lang_spirv_writer
         tint_lang_wgsl
         tint_lang_wgsl_ast
-        tint_lang_wgsl_ast_transform
-        tint_lang_wgsl_common
-        tint_lang_wgsl_features
         tint_lang_wgsl_intrinsic
         tint_lang_wgsl_ir
         tint_lang_wgsl_program
@@ -64,11 +61,9 @@ if (ANDROID AND FILAMENT_BUILD_FILAMAT)
         tint_lang_wgsl_writer_ast_printer
         tint_lang_wgsl_writer_ir_to_program
         tint_lang_wgsl_writer_raise
-        tint_results
         tint_utils
         tint_utils_diagnostic
         tint_utils_ice
-        tint_utils_result
         tint_utils_rtti
         tint_utils_strconv
         tint_utils_symbol
