@@ -332,6 +332,21 @@ TEST_F(MaterialLexer, JsonMaterialParserInvalidInputReturnsError) {
     EXPECT_EQ(root, nullptr);
 }
 
+TEST_F(MaterialLexer, JsonMaterialParserSingleDoubleQuoteDoesntCrash) {
+    static std::string singleDoubleQuote = R"(
+        material: {
+            name: ",
+        }
+    )";
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
+    filamat::MaterialBuilder unused;
+    utils::Status result = testParser.parseMaterialAsJSON(
+            singleDoubleQuote.c_str(), singleDoubleQuote.size(), unused);
+
+    EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
