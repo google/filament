@@ -3,7 +3,7 @@ material {
     shadingModel : unlit,
     parameters : [
         {
-            type : sampler2d,
+            type : samplerExternal,
             name : texture
         }
     ],
