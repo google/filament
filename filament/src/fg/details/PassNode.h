@@ -26,7 +26,9 @@
 
 #include <backend/TargetBufferInfo.h>
 
+#include <cstdint>
 #include <unordered_set>
+#include <vector>
 
 namespace utils {
 class CString;
@@ -62,7 +64,7 @@ public:
     Vector<VirtualResource*> destroy;              // resources we need to destroy after executing
 };
 
-class RenderPassNode : public PassNode {
+class RenderPassNode final : public PassNode {
 public:
     class RenderPassData {
     public:
@@ -107,7 +109,7 @@ private:
     std::vector<RenderPassData> mRenderTargetData;
 };
 
-class PresentPassNode : public PassNode {
+class PresentPassNode final : public PassNode {
 public:
     explicit PresentPassNode(FrameGraph& fg) noexcept;
     PresentPassNode(PresentPassNode&& rhs) noexcept;
