@@ -327,12 +327,41 @@ host tools are required to successfully build for Android.</p>
 <p>Note that the main target is the ARM 64-bit target. Our implementation is optimized first and
 foremost for <code>arm64-v8a</code>.</p>
 <p>To build Android on Windows machines, see <a href="android/Windows.html">android/Windows.md</a>.</p>
+<h4 id="important-sdk-location"><a class="header" href="#important-sdk-location">Important: SDK location</a></h4>
+<p>Either ensure your <code>ANDROID_HOME</code> environment variable is set or make sure the root project
+contains a <code>local.properties</code> file with the <code>sdk.dir</code> property pointing to your installation of
+the Android SDK.</p>
 <h4 id="easy-android-build"><a class="header" href="#easy-android-build">Easy Android build</a></h4>
 <p>The easiest way to build Filament for Android is to use <code>build.sh</code> and the
 <code>-p android</code> flag. For instance to build the release target:</p>
 <pre><code class="language-shell">./build.sh -p android release
 </code></pre>
+<p>To build a sample (such as <code>android/samples/sample-hello-triangle</code>) for an ARM 64-bit phone, you would run</p>
+<pre><code class="language-shell">./build.sh -p android -q arm64-v8a -k sample-hello-triangle release
+</code></pre>
+<p>The output APK can be found in <code>android/samples/sample-hello-triangle/build/outputs/apk/release/sample-hello-triangle-release-unsigned.apk</code></p>
 <p>Run <code>build.sh -h</code> for more information.</p>
+<h4 id="android-studio"><a class="header" href="#android-studio">Android Studio</a></h4>
+<p>You must use the latest stable release of Android Studio.</p>
+<p>The Android build of filament is separated into java/kotlin client APIs, a layer of jni bindings
+that bridges java/kotlin with native code, and Filament and other component code that have been compiled
+into architecture-specific libraries. Our default Android Studio gradle setup can compile java/kotlin and
+the jni bindings for you, but it will treat the filament libraries as already compiled and present on
+the system.</p>
+<p>Therefore, before compiling the sample app or any other targets, you must
+make sure that the native filament libraries have been compiled and are located at a prescribed location
+so that the jni bindings can link against them. You can do so by using the easy build script</p>
+<pre><code class="language-shell">./build.sh -p android release -q arm64-v8a
+</code></pre>
+<p>Note that the above step will also install host machine tools into prescribed locations.  These tools are
+required for compiling Filament assets such as materials and environment maps.</p>
+<p>Now we are ready to compile the apps.  To open the project, point Studio to the <code>android</code> folder.
+After opening the project and syncing with Gradle, select the sample of your choice
+using the drop-down widget in the toolbar. Additionally, you will need to select a deployment target.
+By doing so, Android Studio will automatically try to compile the app only for that specific
+device's architecture. So if you are targeting a new Pixel phone, make sure that the step above
+(compiling the library) is targeting ARM 64-bit (<code>-q arm64-v8a</code> ), and if you are running the app on
+an emulator on a Linux machine with an x86 64-bit chipset, you would indicate (<code>-q x86_64</code>) in the above step.</p>
 <h4 id="manual-builds"><a class="header" href="#manual-builds">Manual builds</a></h4>
 <p>Invoke CMake in a build directory of your choice, inside of filament's directory. The commands
 below show how to build Filament for ARM 64-bit (<code>aarch64</code>).</p>
