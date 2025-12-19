@@ -970,3 +970,102 @@ TEST_F(FrameGraphTest, WriteResourceReadAsAttachment) {
 
     fg.execute(driverApi);
 }
+
+// ------------------------------------------------------------------------------------------------
+// Custom Resources Tests
+// ------------------------------------------------------------------------------------------------
+
+struct GenericResource {
+    struct Descriptor {};
+    struct SubResourceDescriptor {};
+    using Usage = uint32_t;
+    static constexpr Usage DEFAULT_R_USAGE = 0x1;
+    static constexpr Usage DEFAULT_W_USAGE = 0x2;
+
+    static bool sCreated;
+    static bool sDestroyed;
+
+    void create(utils::StaticString, Descriptor const&, Usage) { sCreated = true; }
+    void destroy() { sDestroyed = true; }
+
+    static void reset() {
+        sCreated = false;
+        sDestroyed = false;
+    }
+};
+bool GenericResource::sCreated = false;
+bool GenericResource::sDestroyed = false;
+
+struct BackendResource {
+    struct Descriptor {};
+    struct SubResourceDescriptor {};
+    using Usage = uint32_t;
+    static constexpr Usage DEFAULT_R_USAGE = 0x1;
+    static constexpr Usage DEFAULT_W_USAGE = 0x2;
+
+    static bool sCreated;
+    static bool sDestroyed;
+
+    void create(DriverApi&, utils::StaticString, Descriptor const&, Usage) { sCreated = true; }
+    void destroy(DriverApi&) { sDestroyed = true; }
+
+    static void reset() {
+        sCreated = false;
+        sDestroyed = false;
+    }
+};
+bool BackendResource::sCreated = false;
+bool BackendResource::sDestroyed = false;
+
+
+TEST_F(FrameGraphTest, GenericCustomResource) {
+    GenericResource::reset();
+    EXPECT_FALSE(GenericResource::sCreated);
+    EXPECT_FALSE(GenericResource::sDestroyed);
+
+    struct PassData {
+        FrameGraphId<GenericResource> res;
+    };
+    fg.addPass<PassData>("Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.res = builder.create<GenericResource>("Generic Resource");
+                data.res = builder.write(data.res);
+                builder.sideEffect();
+            },
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                EXPECT_TRUE(GenericResource::sCreated);
+                EXPECT_FALSE(GenericResource::sDestroyed);
+            });
+
+    fg.compile();
+    fg.execute(driverApi);
+
+    EXPECT_TRUE(GenericResource::sCreated);
+    EXPECT_TRUE(GenericResource::sDestroyed);
+}
+
+TEST_F(FrameGraphTest, BackendCustomResource) {
+    BackendResource::reset();
+    EXPECT_FALSE(BackendResource::sCreated);
+    EXPECT_FALSE(BackendResource::sDestroyed);
+
+    struct PassData {
+        FrameGraphId<BackendResource> res;
+    };
+    fg.addPass<PassData>("Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.res = builder.create<BackendResource>("Backend Resource");
+                data.res = builder.write(data.res);
+                builder.sideEffect();
+            },
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                EXPECT_TRUE(BackendResource::sCreated);
+                EXPECT_FALSE(BackendResource::sDestroyed);
+            });
+
+    fg.compile();
+    fg.execute(driverApi);
+
+    EXPECT_TRUE(BackendResource::sCreated);
+    EXPECT_TRUE(BackendResource::sDestroyed);
+}

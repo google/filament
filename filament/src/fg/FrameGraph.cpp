@@ -15,16 +15,16 @@
  */
 
 #include "fg/FrameGraph.h"
+#include "fg/details/DependencyGraph.h"
 #include "fg/details/PassNode.h"
 #include "fg/details/Resource.h"
 #include "fg/details/ResourceNode.h"
-#include "fg/details/DependencyGraph.h"
+#include "fg/details/ResourceCreationContext.h"
 
 #include "FrameGraphId.h"
 #include "FrameGraphPass.h"
 #include "FrameGraphRenderPass.h"
 #include "FrameGraphTexture.h"
-#include "ResourceAllocator.h"
 
 #include "details/Engine.h"
 
@@ -200,7 +200,8 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
 
     bool const useProtectedMemory = mMode == Mode::PROTECTED;
     auto const& passNodes = mPassNodes;
-    auto& resourceAllocator = mResourceAllocator;
+
+    ResourceCreationContext const context{ *this, driver, useProtectedMemory };
 
     FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "FrameGraph");
     driver.pushGroupMarker("FrameGraph");
@@ -218,7 +219,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
         // devirtualize resourcesList
         for (VirtualResource* resource : node->devirtualize) {
             assert_invariant(resource->first == node);
-            resource->devirtualize(resourceAllocator, useProtectedMemory);
+            resource->devirtualize(context);
         }
 
         // call execute
@@ -228,7 +229,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
         // destroy concrete resources
         for (VirtualResource* resource : node->destroy) {
             assert_invariant(resource->last == node);
-            resource->destroy(resourceAllocator);
+            resource->destroy(context);
         }
         driver.popGroupMarker();
     }

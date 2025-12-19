@@ -158,6 +158,7 @@ set(SRCS
         src/fg/FrameGraphTexture.cpp
         src/fg/PassNode.cpp
         src/fg/ResourceNode.cpp
+        src/fg/ResourceCreationContext.cpp
         src/fsr.cpp
         src/ZstdHelper.cpp
 )
@@ -233,6 +234,7 @@ set(PRIVATE_HDRS
         src/ds/TypedUniformBuffer.h
         src/fg/Blackboard.h
         src/fg/FrameGraph.h
+        src/fg/FrameGraphDummyLink.h
         src/fg/FrameGraphId.h
         src/fg/FrameGraphPass.h
         src/fg/FrameGraphRenderPass.h
@@ -242,6 +244,7 @@ set(PRIVATE_HDRS
         src/fg/details/DependencyGraph.h
         src/fg/details/PassNode.h
         src/fg/details/Resource.h
+        src/fg/details/ResourceAllocator.h
         src/fg/details/ResourceNode.h
         src/fg/details/Utilities.h
         src/fsr.h

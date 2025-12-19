@@ -20,14 +20,21 @@
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphTexture.h"
 #include "fg/FrameGraphRenderPass.h"
+
+#include "fg/details/ResourceAllocator.h"
+#include "fg/details/ResourceCreationContext.h"
 #include "fg/details/DependencyGraph.h"
 
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/Panic.h>
 #include <utils/StaticString.h>
 
-namespace filament {
-class TextureCacheInterface;
-} // namespace::filament
+#include <cstddef>
+#include <cstdint>
 
 namespace filament {
 
@@ -89,11 +96,10 @@ public:
             ResourceEdgeBase const* writer) noexcept = 0;
 
     /* Instantiate the concrete resource */
-    virtual void devirtualize(TextureCacheInterface& resourceAllocator,
-            bool useProtectedMemory) noexcept = 0;
+    virtual void devirtualize(ResourceCreationContext const& context) noexcept = 0;
 
     /* Destroy the concrete resource */
-    virtual void destroy(TextureCacheInterface& resourceAllocator) noexcept = 0;
+    virtual void destroy(ResourceCreationContext const& context) noexcept = 0;
 
     /* Destroy an Edge instantiated by this resource */
     virtual void destroyEdge(DependencyGraph::Edge* edge) noexcept = 0;
@@ -102,7 +108,7 @@ public:
 
     virtual bool isImported() const noexcept { return false; }
 
-    // this is to workaround our lack of RTTI -- otherwise we could use dynamic_cast
+    // this is to work around our lack of RTTI -- otherwise we could use dynamic_cast
     virtual ImportedRenderTarget* asImportedRenderTarget() noexcept { return nullptr; }
 
 protected:
@@ -122,11 +128,11 @@ protected:
  */
 template<typename RESOURCE>
 class Resource : public VirtualResource {
-    using Usage = typename RESOURCE::Usage;
+    using Usage = RESOURCE::Usage;
 
 public:
-    using Descriptor = typename RESOURCE::Descriptor;
-    using SubResourceDescriptor = typename RESOURCE::SubResourceDescriptor;
+    using Descriptor = RESOURCE::Descriptor;
+    using SubResourceDescriptor = RESOURCE::SubResourceDescriptor;
 
     // valid only after devirtualize() has been called
     RESOURCE resource{};
@@ -152,18 +158,18 @@ public:
     };
 
     UTILS_NOINLINE
-    Resource(utils::StaticString name, Descriptor const& desc) noexcept
+    Resource(utils::StaticString const name, Descriptor const& desc) noexcept
         : VirtualResource(name), descriptor(desc) {
     }
 
     UTILS_NOINLINE
-    Resource(Resource* parent, utils::StaticString name, SubResourceDescriptor const& desc) noexcept
+    Resource(Resource* parent, utils::StaticString const name, SubResourceDescriptor const& desc) noexcept
             : VirtualResource(parent, name),
               descriptor(RESOURCE::generateSubResourceDescriptor(parent->descriptor, desc)),
               subResourceDescriptor(desc) {
     }
 
-    ~Resource() noexcept = default;
+    ~Resource() noexcept override = default;
 
     // pass Node to resource Node edge (a write to)
     UTILS_NOINLINE
@@ -235,21 +241,20 @@ protected:
         delete static_cast<ResourceEdge *>(edge);
     }
 
-    void devirtualize(TextureCacheInterface& resourceAllocator,
-            bool useProtectedMemory) noexcept override {
+    void devirtualize(ResourceCreationContext const& context) noexcept override {
         if (!isSubResource()) {
-            resource.create(resourceAllocator, name, descriptor, usage, useProtectedMemory);
+            ResourceAllocator<RESOURCE>::create(resource, context, name, descriptor, usage);
         } else {
             // resource is guaranteed to be initialized before we are by construction
             resource = static_cast<Resource const*>(parent)->resource;
         }
     }
 
-    void destroy(TextureCacheInterface& resourceAllocator) noexcept override {
+    void destroy(ResourceCreationContext const& context) noexcept override {
         if (detached || isSubResource()) {
             return;
         }
-        resource.destroy(resourceAllocator);
+        ResourceAllocator<RESOURCE>::destroy(resource, context);
     }
 
     utils::CString usageString() const noexcept override {
@@ -264,8 +269,8 @@ protected:
 template<typename RESOURCE>
 class ImportedResource : public Resource<RESOURCE> {
 public:
-    using Descriptor = typename RESOURCE::Descriptor;
-    using Usage = typename RESOURCE::Usage;
+    using Descriptor = RESOURCE::Descriptor;
+    using Usage = RESOURCE::Usage;
 
     UTILS_NOINLINE
     ImportedResource(utils::StaticString name, Descriptor const& desc, Usage usage, RESOURCE const& rsrc) noexcept
@@ -275,10 +280,10 @@ public:
     }
 
 protected:
-    void devirtualize(TextureCacheInterface&, bool) noexcept override {
+    void devirtualize(ResourceCreationContext const&) noexcept override {
         // imported resources don't need to devirtualize
     }
-    void destroy(TextureCacheInterface&) noexcept override {
+    void destroy(ResourceCreationContext const&) noexcept override {
         // imported resources never destroy the concrete resource
     }
 
@@ -300,7 +305,7 @@ protected:
 
 private:
     UTILS_NOINLINE
-    void assertConnect(FrameGraphTexture::Usage u) {
+    void assertConnect(FrameGraphTexture::Usage u) const {
         FILAMENT_CHECK_PRECONDITION((u & this->usage) == u)
                 << "Requested usage " << utils::to_string(u).c_str()
                 << " not available on imported resource \"" << this->name.c_str() << "\" with usage "
@@ -309,7 +314,7 @@ private:
 };
 
 
-class ImportedRenderTarget : public ImportedResource<FrameGraphTexture> {
+class ImportedRenderTarget final : public ImportedResource<FrameGraphTexture> {
 public:
     backend::Handle<backend::HwRenderTarget> target;
     FrameGraphRenderPass::ImportDescriptor importedDesc;
@@ -334,7 +339,7 @@ protected:
     ImportedRenderTarget* asImportedRenderTarget() noexcept override { return this; }
 
 private:
-    void assertConnect(FrameGraphTexture::Usage u);
+    void assertConnect(FrameGraphTexture::Usage u) const;
 
     static FrameGraphTexture::Usage usageFromAttachmentsFlags(
             backend::TargetBufferFlags attachments) noexcept;

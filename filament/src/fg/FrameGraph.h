@@ -51,6 +51,7 @@ class TextureCacheInterface;
 class FrameGraphPassExecutor;
 class PassNode;
 class ResourceNode;
+struct ResourceCreationContext;
 class VirtualResource;
 
 class FrameGraph {
@@ -453,6 +454,7 @@ private:
     friend class PassNode;
     friend class ResourceNode;
     friend class RenderPassNode;
+    friend struct ResourceCreationContext;
 
     LinearAllocatorArena& getArena() noexcept { return mArena; }
     DependencyGraph& getGraph() noexcept { return mGraph; }

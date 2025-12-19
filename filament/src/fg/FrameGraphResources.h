@@ -66,7 +66,7 @@ public:
      * @return          Reference to the descriptor
      */
     template<typename RESOURCE>
-    typename RESOURCE::Descriptor const& getDescriptor(FrameGraphId<RESOURCE> handle) const;
+    RESOURCE::Descriptor const& getDescriptor(FrameGraphId<RESOURCE> handle) const;
 
     /**
      * Retrieves the descriptor associated to a subresource
@@ -75,7 +75,7 @@ public:
      * @return          Reference to the subresource descriptor
      */
     template<typename RESOURCE>
-    typename RESOURCE::SubResourceDescriptor const& getSubResourceDescriptor(
+    RESOURCE::SubResourceDescriptor const& getSubResourceDescriptor(
             FrameGraphId<RESOURCE> handle) const;
 
     /**
@@ -85,7 +85,7 @@ public:
      * @return          Reference to the descriptor
      */
     template<typename RESOURCE>
-    typename RESOURCE::Usage const& getUsage(FrameGraphId<RESOURCE> handle) const;
+    RESOURCE::Usage const& getUsage(FrameGraphId<RESOURCE> handle) const;
 
     /**
      * detach() is used to detach (export) a resource from the framegraph, at which point its
@@ -100,7 +100,7 @@ public:
      */
     template<typename RESOURCE>
     void detach(FrameGraphId<RESOURCE> handle,
-            RESOURCE* pOutResource, typename RESOURCE::Descriptor* pOutDescriptor) const;
+            RESOURCE* pOutResource, RESOURCE::Descriptor* pOutDescriptor) const;
 
     /**
      * Retrieves the render pass information associated with Builder::userRenderTarget() with the
@@ -134,19 +134,19 @@ RESOURCE const& FrameGraphResources::get(FrameGraphId<RESOURCE> handle) const {
 }
 
 template<typename RESOURCE>
-typename RESOURCE::Descriptor const& FrameGraphResources::getDescriptor(
+RESOURCE::Descriptor const& FrameGraphResources::getDescriptor(
         FrameGraphId<RESOURCE> handle) const {
     return static_cast<Resource<RESOURCE> const&>(getResource(handle)).descriptor;
 }
 
 template<typename RESOURCE>
-typename RESOURCE::SubResourceDescriptor const& FrameGraphResources::getSubResourceDescriptor(
+RESOURCE::SubResourceDescriptor const& FrameGraphResources::getSubResourceDescriptor(
         FrameGraphId<RESOURCE> handle) const {
     return static_cast<Resource<RESOURCE> const&>(getResource(handle)).subResourceDescriptor;
 }
 
 template<typename RESOURCE>
-typename RESOURCE::Usage const& FrameGraphResources::getUsage(
+RESOURCE::Usage const& FrameGraphResources::getUsage(
         FrameGraphId<RESOURCE> handle) const {
     return static_cast<Resource<RESOURCE> const&>(getResource(handle)).usage;
 }
