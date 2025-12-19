@@ -16,9 +16,9 @@
 
 #include "RenderPass.h"
 
+#include "compact.h"
 #include "RenderPrimitive.h"
 #include "ShadowMap.h"
-#include "SharedHandle.h"
 
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
@@ -32,6 +32,7 @@
 
 #include <filament/MaterialEnums.h>
 
+#include <backend/BufferDescriptor.h>
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -43,6 +44,7 @@
 #include <private/utils/Tracing.h>
 
 #include <utils/JobSystem.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
@@ -51,8 +53,10 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <utility>
+#include <vector>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -80,21 +84,20 @@ RenderPassBuilder& RenderPassBuilder::customCommand(
     return *this;
 }
 
-RenderPass RenderPassBuilder::build(FEngine const& engine, DriverApi& driver) const {
+RenderPass RenderPassBuilder::build(FEngine const& engine) const {
     assert_invariant(mRenderableSoa);
-    return RenderPass{ engine, driver, *this };
+    return RenderPass{ engine, *this };
 }
 
 // ------------------------------------------------------------------------------------------------
 
-void RenderPass::BufferObjectHandleDeleter::operator()(BufferObjectHandle handle) noexcept {
+void RenderPass::BufferObjectHandleDeleter::operator()(BufferObjectHandle handle) const noexcept {
     if (handle) { // this is common case
         driver.get().destroyBufferObject(handle);
     }
 }
 
-void RenderPass::DescriptorSetHandleDeleter::operator()(
-        DescriptorSetHandle handle) noexcept {
+void RenderPass::DescriptorSetHandleDeleter::operator()(DescriptorSetHandle handle) const noexcept {
     if (handle) { // this is common case
         driver.get().destroyDescriptorSet(handle);
     }
@@ -102,7 +105,7 @@ void RenderPass::DescriptorSetHandleDeleter::operator()(
 
 // ------------------------------------------------------------------------------------------------
 
-RenderPass::RenderPass(FEngine const& engine, DriverApi& driver,
+RenderPass::RenderPass(FEngine const& engine,
         RenderPassBuilder const& builder) noexcept
         : mRenderableSoa(*builder.mRenderableSoa),
           mColorPassDescriptorSet(builder.mColorPassDescriptorSet) {
@@ -163,9 +166,7 @@ RenderPass::RenderPass(FEngine const& engine, DriverApi& driver,
             stereoscopicEyeCount *= engine.getConfig().stereoscopicEyeCount;
         }
         commandEnd = resize(builder.mArena,
-                instanceify(driver,
-                        engine.getPerRenderableDescriptorSetLayout().getHandle(),
-                        commandBegin, commandEnd, stereoscopicEyeCount));
+                instanceify(commandBegin, commandEnd, stereoscopicEyeCount));
     }
 
     // these are `const` from this point on...
@@ -250,7 +251,7 @@ void RenderPass::appendCommands(FEngine const& engine,
 
 void RenderPass::appendCustomCommand(Command* commands,
         uint8_t channel, Pass pass, CustomCommand custom, uint32_t const order,
-        Executor::CustomCommandFn command) {
+        Executor::CustomCommandFn command) const {
 
     assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
 
@@ -283,8 +284,7 @@ RenderPass::Command* RenderPass::sortCommands(
     return last;
 }
 
-RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
-        DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
+RenderPass::Command* RenderPass::instanceify(
         Command* curr, Command* const last,
         int32_t const eyeCount) const noexcept {
     FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "instanceify");
@@ -298,137 +298,111 @@ RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
     // hash of those parameters.
 
     UTILS_UNUSED uint32_t drawCallsSavedCount = 0;
-
-    Command* firstSentinel = nullptr;
     PerRenderableData const* uboData = nullptr;
-    PerRenderableData* stagingBuffer = nullptr;
-    uint32_t stagingBufferSize = 0;
     uint32_t instancedPrimitiveOffset = 0;
-    size_t const count = last - curr;
+    size_t const count = std::distance(curr, last);
 
-    // TODO: for the case of instancing we could actually use 128 instead of 64 instances
-    constexpr size_t maxInstanceCount = CONFIG_MAX_INSTANCES;
+    auto equivalent = [](Command const& lhs, Command const& rhs) {
+        // This predicate must also filter out commands that are not eligible for auto-instancing.
+        if (UTILS_UNLIKELY(lhs.info.hasSkinning || lhs.info.hasMorphing || lhs.info.instanceCount > 1)) {
+            return false;
+        }
+        if (UTILS_UNLIKELY(rhs.info.hasSkinning || rhs.info.hasMorphing || rhs.info.instanceCount > 1)) {
+            return false;
+        }
+        // Now check for equality
+        return lhs.info.mi == rhs.info.mi &&
+               lhs.info.rph == rhs.info.rph &&
+               lhs.info.vbih == rhs.info.vbih &&
+               lhs.info.indexOffset == rhs.info.indexOffset &&
+               lhs.info.indexCount == rhs.info.indexCount &&
+               lhs.info.rasterState == rhs.info.rasterState;
+    };
 
-    while (curr != last) {
-        // Currently, if we have skinning or morphing, we can't use auto instancing. This is
-        // because the morphing/skinning data for comparison is not easily accessible; and also
-        // because we're assuming that the per-renderable descriptor-set only has the
-        // OBJECT_UNIFORMS descriptor active (i.e. the skinning/morphing descriptors are unused).
-        // We also can't use auto-instancing if manual- or hybrid- instancing is used.
-        // TODO: support auto-instancing for skinning/morphing
-        Command const* e = curr + 1;
-        if (UTILS_LIKELY(
-                !curr->info.hasSkinning && !curr->info.hasMorphing &&
-                 curr->info.instanceCount <= 1))
-        {
-            assert_invariant(!curr->info.hasHybridInstancing);
-            // we can't have nice things! No more than maxInstanceCount due to UBO size limits
-            e = std::find_if_not(curr, std::min(last, curr + maxInstanceCount),
-                    [lhs = *curr](Command const& rhs) {
-                        // primitives must be identical to be instanced
-                        // Currently, instancing doesn't support skinning/morphing.
-                        return lhs.info.mi == rhs.info.mi &&
-                               lhs.info.rph == rhs.info.rph &&
-                               lhs.info.vbih == rhs.info.vbih &&
-                               lhs.info.indexOffset == rhs.info.indexOffset &&
-                               lhs.info.indexCount == rhs.info.indexCount &&
-                               lhs.info.rasterState == rhs.info.rasterState;
-                    });
+    auto processor = [this, eyeCount, count,
+            &uboData, &instancedPrimitiveOffset, &drawCallsSavedCount,
+            &stagingBuffer = mInstancingStagingBuffer,
+            &descriptorSetPatch = mInstancingDescriptorSetPatch]
+            (Command* const dst, Command* const begin, Command* const end) mutable {
+
+        uint32_t const instanceCount = std::distance(begin, end);
+        drawCallsSavedCount += instanceCount - 1;
+
+        if (UTILS_UNLIKELY(stagingBuffer.empty())) {
+            stagingBuffer.resize(count);
+            descriptorSetPatch.reserve(count);
+            uboData = mRenderableSoa.data<FScene::UBO>();
+            assert_invariant(uboData);
         }
 
-        uint32_t const instanceCount = e - curr;
-        assert_invariant(instanceCount > 0);
-        assert_invariant(instanceCount <= CONFIG_MAX_INSTANCES);
-
-        if (UTILS_UNLIKELY(instanceCount > 1)) {
-            drawCallsSavedCount += instanceCount - 1;
-
-            // allocate our staging buffer only if needed
-            if (UTILS_UNLIKELY(!stagingBuffer)) {
-                // Create a temporary UBO for holding the per-renderable data of each primitive,
-                // The `curr->info.index` is updated so that this (now instanced) command can
-                // bind the UBO in the right place (where the per-instance data is).
-                // The lifetime of this object is the longest of this RenderPass and all its
-                // executors.
-
-                // create a temporary UBO for instancing
-                mInstancedUboHandle = BufferObjectSharedHandle{
-                        driver.createBufferObject(
-                                count * sizeof(PerRenderableData) + sizeof(PerRenderableUib),
-                                BufferObjectBinding::UNIFORM, BufferUsage::STATIC), driver };
-
-                // TODO: use stream inline buffer for small sizes
-                // TODO: use a pool for larger heap buffers
-                // buffer large enough for all instances data
-                stagingBufferSize = count * sizeof(PerRenderableData);
-                stagingBuffer = static_cast<PerRenderableData*>(malloc(stagingBufferSize));
-                uboData = mRenderableSoa.data<FScene::UBO>();
-                assert_invariant(uboData);
-
-                // We also need a descriptor-set to hold the custom UBO. This works because
-                // we currently assume the descriptor-set only needs to hold this UBO in the
-                // instancing case (it wouldn't be true if we supported skinning/morphing, and
-                // in this case we would need to preserve the default descriptor-set content).
-                // This has the same lifetime as the UBO (see above).
-                mInstancedDescriptorSetHandle = DescriptorSetSharedHandle{
-                        driver.createDescriptorSet(perRenderableDescriptorSetLayoutHandle),
-                        driver
-                };
-                driver.updateDescriptorSetBuffer(mInstancedDescriptorSetHandle,
-                        +PerRenderableBindingPoints::OBJECT_UNIFORMS,
-                        mInstancedUboHandle, 0, sizeof(PerRenderableUib));
-            }
-
-            // copy the ubo data to a staging buffer
-            assert_invariant(instancedPrimitiveOffset + instanceCount
-                             <= stagingBufferSize / sizeof(PerRenderableData));
-            for (uint32_t i = 0; i < instanceCount; i++) {
-                stagingBuffer[instancedPrimitiveOffset + i] = uboData[curr[i].info.index];
-            }
-
-            // make the first command instanced
-            curr[0].info.instanceCount = instanceCount * eyeCount;
-            curr[0].info.index = instancedPrimitiveOffset;
-            curr[0].info.dsh = mInstancedDescriptorSetHandle;
-
-            instancedPrimitiveOffset += instanceCount;
-
-            // cancel commands that are now instances
-            firstSentinel = !firstSentinel ? curr : firstSentinel;
-            for (uint32_t i = 1; i < instanceCount; i++) {
-                curr[i].key = uint64_t(Pass::SENTINEL);
-            }
+        assert_invariant(instancedPrimitiveOffset + instanceCount <= stagingBuffer.size());
+        for (uint32_t i = 0; i < instanceCount; i++) {
+            stagingBuffer[instancedPrimitiveOffset + i] = uboData[begin[i].info.index];
         }
 
-        curr = const_cast<Command*>(e);
-    }
+        // Modify the command at its final destination
+        dst->info.instanceCount = instanceCount * eyeCount;
+        dst->info.index = instancedPrimitiveOffset;
+        dst->info.dsh = {}; // this will be filled up in finalize
+        descriptorSetPatch.push_back(dst); // Store the stable iterator
 
-    if (UTILS_UNLIKELY(firstSentinel)) {
-        // DLOG(INFO) << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
-        //            << count;
-        // we have instanced primitives
-        // copy our instanced ubo data
-        driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {
-                stagingBuffer, sizeof(PerRenderableData) * instancedPrimitiveOffset,
-                +[](void* buffer, size_t, void*) {
-                    free(buffer);
-                }
-        }, 0);
+        instancedPrimitiveOffset += instanceCount;
+    };
 
-        stagingBuffer = nullptr;
-
-        // remove all the canceled commands
-        auto const lastCommand = std::remove_if(firstSentinel, last, [](auto const& command) {
-            return command.key == uint64_t(Pass::SENTINEL);
-        });
-
-        return lastCommand;
-    }
-
-    assert_invariant(stagingBuffer == nullptr);
-    return last;
+    auto const end = compact<CONFIG_MAX_INSTANCES>(curr, last, equivalent, processor);
+    // if (!mInstancingStagingBuffer.empty()) {
+    //     slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
+    //             << count << io::endl;
+    // }
+    return end;
 }
 
+
+void RenderPass::finalize(FEngine const& engine, DriverApi& driver) {
+    mFinalized = true;
+    if (UTILS_UNLIKELY(!mInstancingStagingBuffer.empty())) {
+        auto const* p = mInstancingStagingBuffer.data();
+        size_t const size = sizeof(PerRenderableData) * mInstancingStagingBuffer.size();
+
+        // Create a temporary UBO for holding the per-renderable data of each primitive,
+        // The `curr->info.index` is updated so that this (now instanced) command can
+        // bind the UBO in the right place (where the per-instance data is).
+        // The lifetime of this object is the longest of this RenderPass and all its
+        // executors.
+
+        // create a temporary UBO for instancing
+        mInstancedUboHandle = BufferObjectSharedHandle{
+            driver.createBufferObject(size + sizeof(PerRenderableUib),
+                    BufferObjectBinding::UNIFORM, BufferUsage::STATIC), driver };
+
+        // We also need a descriptor-set to hold the custom UBO. This works because
+        // we currently assume the descriptor-set only needs to hold this UBO in the
+        // instancing case (it wouldn't be true if we supported skinning/morphing, and
+        // in this case we would need to preserve the default descriptor-set content).
+        // This has the same lifetime as the UBO (see above).
+
+        mInstancedDescriptorSetHandle = DescriptorSetSharedHandle{
+            driver.createDescriptorSet(engine.getPerRenderableDescriptorSetLayout().getHandle()),
+            driver };
+
+        driver.updateDescriptorSetBuffer(mInstancedDescriptorSetHandle,
+                +PerRenderableBindingPoints::OBJECT_UNIFORMS,
+                mInstancedUboHandle, 0, sizeof(PerRenderableUib));
+
+        driver.updateBufferObjectUnsynchronized(mInstancedUboHandle,
+            BufferDescriptor::make(p, size,
+                [data = std::move(mInstancingStagingBuffer)](void*, size_t) {}), 0);
+
+        // patch the commands with the descriptor set
+        for (Command* const curr : mInstancingDescriptorSetPatch) {
+            assert_invariant(curr[0].info.instanceCount > 1);
+            assert_invariant(!curr[0].info.dsh);
+            curr[0].info.dsh = mInstancedDescriptorSetHandle;
+        }
+        mInstancingDescriptorSetPatch.clear();
+        assert_invariant(mInstancingStagingBuffer.empty());
+    }
+}
 
 /* static */
 UTILS_ALWAYS_INLINE // This function exists only to make the code more readable. we want it inlined.
@@ -693,7 +667,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
-        Slice<const FRenderPrimitive> primitives = soaPrimitives[i];
+        Slice<const FRenderPrimitive> const primitives = soaPrimitives[i];
         /*
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.
@@ -1160,6 +1134,7 @@ RenderPass::Executor::Executor(RenderPass const& pass, Command const* b, Command
     mHasScissorViewport = mScissor != backend::Viewport{ 0, 0, INT32_MAX, INT32_MAX };
     assert_invariant(b >= pass.begin());
     assert_invariant(e <= pass.end());
+    assert_invariant(pass.isFinalized());
 }
 
 RenderPass::Executor::Executor() noexcept
