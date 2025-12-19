@@ -424,7 +424,7 @@ AsyncCallId FVertexBuffer::setBufferAtAsync(FEngine& engine, uint8_t const buffe
         << "byteOffset must be a multiple of 4";
 
     using VertexBufferCallbackAdapter = CallbackAdapter<VertexBuffer>;
-        auto* const cbWrapper = VertexBufferCallbackAdapter::make(std::move(callback), this, user);
+    auto* const cbWrapper = VertexBufferCallbackAdapter::make(std::move(callback), this, user);
     return engine.getDriverApi().updateBufferObjectAsync(mBufferObjects[bufferIndex],
             std::move(buffer), byteOffset, handler, &VertexBufferCallbackAdapter::func, cbWrapper);
 }
@@ -460,7 +460,7 @@ AsyncCallId FVertexBuffer::setBufferObjectAtAsync(FEngine& engine, uint8_t const
     auto const hwBufferObject = bufferObject->getHwHandle();
 
     using VertexBufferCallbackAdapter = CallbackAdapter<VertexBuffer>;
-        auto* const cbWrapper = VertexBufferCallbackAdapter::make(std::move(callback), this, user);
+    auto* const cbWrapper = VertexBufferCallbackAdapter::make(std::move(callback), this, user);
     AsyncCallId id = engine.getDriverApi().setVertexBufferObjectAsync(mHandle, bufferIndex,
             hwBufferObject, handler, &VertexBufferCallbackAdapter::func, cbWrapper);
 

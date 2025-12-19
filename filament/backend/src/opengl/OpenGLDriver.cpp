@@ -319,11 +319,9 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
     if (driverConfig.asynchronousMode != AsynchronousMode::NONE) {
         mJobQueue = JobQueue::create();
 
-        bool useThreadWorker = false;
-        if (driverConfig.asynchronousMode == AsynchronousMode::THREAD_PREFERRED &&
-                UTILS_HAS_THREADING) {
-            useThreadWorker = true;
-        }
+        bool const useThreadWorker =
+                (driverConfig.asynchronousMode == AsynchronousMode::THREAD_PREFERRED) &&
+                UTILS_HAS_THREADING;
 
         if (useThreadWorker) {
             ThreadWorker::Config threadWorkerConfig{
