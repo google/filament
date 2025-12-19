@@ -387,8 +387,9 @@ VulkanRenderTarget::VulkanRenderTarget()
 
 VulkanRenderTarget::~VulkanRenderTarget() = default;
 
-void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
+void VulkanRenderTarget::bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
     assert_invariant(!mOffscreen);
+    assert_invariant(!mInfo->colors[0]);
 
     VkExtent2D const extent = swapchain->getExtent();
     width = extent.width;
@@ -396,7 +397,8 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
     mProtected = swapchain->isProtected();
 
     VulkanAttachment color = createSwapchainAttachment(swapchain->getCurrentColor());
-    mInfo->attachments = {color};
+    assert_invariant(mInfo->attachments.size() == 0);
+    mInfo->attachments.push_back(color);
 
     auto& fbkey = mInfo->fbkey;
     auto& rpkey = mInfo->rpkey;
@@ -420,6 +422,11 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
         fbkey.depth = VK_NULL_HANDLE;
     }
     mInfo->colors.set(0);
+}
+
+void VulkanRenderTarget::releaseSwapchain() {
+    mInfo->colors = {};
+    mInfo->attachments.clear();
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,

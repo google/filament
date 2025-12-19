@@ -366,7 +366,13 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
     inline bool isSwapChain() const { return !mOffscreen; }
     inline bool isProtected() const { return mProtected; }
 
-    void bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain);
+    void bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain);
+
+    void releaseSwapchain();
+
+    bool isSwapchainBound() const {
+        return isSwapChain() && mInfo->colors[0];
+    }
 
     void emitBarriersBeginRenderPass(VulkanCommandBuffer& commands);
 
