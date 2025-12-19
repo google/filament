@@ -54,17 +54,12 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     // Check if we can just memcpy directly to the GPU memory.
     bool const isMemcopyable = mBuffer->getGpuBuffer()->allocationInfo.pMappedData != nullptr;
 
-    // In the case of UNIFORMS, check that is available to see to know if a memcpy is possible.
-    // This works regardless if it's a full or partial update of the buffer.
-    bool const isUniformAndAvailable = getBinding() == VulkanBufferBinding::UNIFORM && isAvailable;
-
     // In the case the content is marked as memory mapped or static, is guaranteed to be safe to do
     // a memcpy if its available.
     bool const isStaticOrShared =
             any(mUsage & (BufferUsage::STATIC | BufferUsage::SHARED_WRITE_BIT));
     bool const useMemcpy =
-            ((isUniformAndAvailable && mStagingBufferBypassEnabled) || isStaticOrShared) &&
-            isMemcopyable;
+            ((isAvailable && mStagingBufferBypassEnabled) || isStaticOrShared) && isMemcopyable;
     if (useMemcpy) {
         char* dest = static_cast<char*>(mBuffer->getGpuBuffer()->allocationInfo.pMappedData) +
                      byteOffset;
