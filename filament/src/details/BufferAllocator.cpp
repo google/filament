@@ -45,29 +45,35 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
 
     mTotalSize = newTotalSize;
 
-    mSlotPool.clear();
+    mNodePool.clear();
     mFreeList.clear();
-    mOffsetMap.clear();
+    mSlotMap.clear();
+    mFreeNodeIndices.clear();
 
-    // Initialize the pool with a single large free slot.
-    mSlotPool.emplace_back(InternalSlotNode{
-        .slot = {
-            .offset = 0,
-            .slotSize = mTotalSize,
-            .isAllocated = false,
-            .gpuUseCount = 0
-        }
-    });
+    const size_t maxSlots = mTotalSize / mSlotSize;
+    mNodePool.resize(maxSlots);
+    // Initialize the pool with a single large free slot at index 0.
+    mNodePool[0] = InternalSlotNode{
+        .slot = { .offset = 0, .slotSize = mTotalSize, .isAllocated = false, .gpuUseCount = 0 }
+    };
 
-    InternalSlotNode* firstNode = &mSlotPool.front();
+    mFreeNodeIndices.clear();
+    mFreeNodeIndices.reserve(maxSlots - 1);
+    // Fill free node indices with 1..maxSlots-1 (0 is taken)
+    for (size_t i = 0; i < maxSlots - 1; ++i) {
+        mFreeNodeIndices.push_back(maxSlots - 1 - i);
+    }
 
-    // Add this initial free slot to the free list and offset map.
+    InternalSlotNode* firstNode = &mNodePool[0];
+
+    // Add the initial free slot to the free list.
     auto freeListIter = mFreeList.emplace(newTotalSize, firstNode);
-    auto offsetMapIter = mOffsetMap.emplace(0, firstNode);
 
-    firstNode->slotPoolIterator = mSlotPool.begin();
+    mSlotMap.resize(mTotalSize / mSlotSize, nullptr);
+    mSlotMap[0] = firstNode;
+    mSlotMap[mSlotMap.size() - 1] = firstNode;
+
     firstNode->freeListIterator = freeListIter;
-    firstNode->offsetMapIterator = offsetMapIter.first;
 }
 
 std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
@@ -99,24 +105,32 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
         assert_invariant(remainingSize % mSlotSize == 0);
         assert_invariant(newSlotOffset % mSlotSize == 0);
 
-        // Create a new node for the remaining free space.
-        auto insertPos = std::next(targetNode->slotPoolIterator);
-        auto newNodeIter = mSlotPool.emplace(insertPos, InternalSlotNode{
-            .slot = {
-                .offset = newSlotOffset,
-                .slotSize = remainingSize,
-                .isAllocated = false,
-                .gpuUseCount = 0
-            }
-        });
-        InternalSlotNode* newNode = &(*newNodeIter);
+        // Get a free node from the pool
+        assert_invariant(!mFreeNodeIndices.empty());
+        uint32_t nodeIndex = mFreeNodeIndices.back();
+        mFreeNodeIndices.pop_back();
+
+        InternalSlotNode* newNode = &mNodePool[nodeIndex];
+        *newNode = InternalSlotNode{ .slot = { .offset = newSlotOffset,
+                                         .slotSize = remainingSize,
+                                         .isAllocated = false,
+                                         .gpuUseCount = 0 } };
 
         // Add the new free slot to our tracking maps.
         auto freeListIter = mFreeList.emplace(remainingSize, newNode);
-        auto offsetMapIter = mOffsetMap.emplace(newSlotOffset, newNode);
-        newNode->slotPoolIterator = newNodeIter;
+
+        // Update mSlotMap for the new node (start and end)
+        size_t newStartIdx = newSlotOffset / mSlotSize;
+        size_t newEndIdx = (newSlotOffset + remainingSize) / mSlotSize - 1;
+        mSlotMap[newStartIdx] = newNode;
+        mSlotMap[newEndIdx] = newNode;
+
         newNode->freeListIterator = freeListIter;
-        newNode->offsetMapIterator = offsetMapIter.first;
+
+        // Update targetNode's map entry for its new size
+        // targetNode now ends at newSlotOffset - 1
+        size_t targetEndIdx = newStartIdx - 1;
+        mSlotMap[targetEndIdx] = targetNode;
     }
 
     AllocationId allocationId = calculateIdByOffset(targetNode->slot.offset);
@@ -129,14 +143,12 @@ BufferAllocator::InternalSlotNode* BufferAllocator::getNodeById(
         return nullptr;
     }
 
-    allocation_size_t offset = getAllocationOffset(id);
-    auto iter = mOffsetMap.find(offset);
-
-    // We cannot find the corresponding node in the map.
-    if (iter == mOffsetMap.end()) {
+    // AllocationId is 1-based
+    size_t index = id - 1;
+    if (index >= mSlotMap.size()) {
         return nullptr;
     }
-    return iter->second;
+    return mSlotMap[index];
 }
 
 void BufferAllocator::retire(AllocationId id) {
@@ -146,13 +158,19 @@ void BufferAllocator::retire(AllocationId id) {
     Slot& slot = targetNode->slot;
     slot.isAllocated = false;
     if (slot.gpuUseCount == 0) {
-        mHasPendingFrees = true;
+        freeSlot(targetNode);
     }
 }
 
 void BufferAllocator::acquireGpu(AllocationId id) {
     InternalSlotNode* targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
+
+    // Should not happen, just for safety
+    if (UTILS_UNLIKELY(targetNode->slot.isFree())) {
+        mFreeList.erase(targetNode->freeListIterator);
+        targetNode->freeListIterator = mFreeList.end();
+    }
 
     targetNode->slot.gpuUseCount++;
 }
@@ -165,55 +183,49 @@ void BufferAllocator::releaseGpu(AllocationId id) {
     Slot& slot = targetNode->slot;
     slot.gpuUseCount--;
     if (slot.gpuUseCount == 0 && !slot.isAllocated) {
-        mHasPendingFrees = true;
+        freeSlot(targetNode);
     }
 }
 
-void BufferAllocator::releaseFreeSlots() {
-    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-    if (!mHasPendingFrees) {
-        return;
+void BufferAllocator::freeSlot(InternalSlotNode* node) {
+    // Check previous
+    const size_t currentStartIdx = node->slot.offset / mSlotSize;
+    if (currentStartIdx > 0) {
+        InternalSlotNode* prev = mSlotMap[currentStartIdx - 1];
+        if (prev && prev->slot.isFree()) {
+            prev->slot.slotSize += node->slot.slotSize;
+            assert_invariant(prev->slot.slotSize % mSlotSize == 0);
+
+            mFreeList.erase(prev->freeListIterator);
+
+            size_t nodeIndex = std::distance(&mNodePool[0], node);
+            mFreeNodeIndices.push_back(nodeIndex);
+
+            node = prev;
+        }
     }
 
-    auto curr = mSlotPool.begin();
-    while (curr != mSlotPool.end()) {
-        if (!curr->slot.isFree()) {
-            ++curr;
-            continue;
+    // Check next
+    const size_t currentEndIdx = (node->slot.offset + node->slot.slotSize) / mSlotSize;
+    if (currentEndIdx < mSlotMap.size()) {
+        InternalSlotNode* next = mSlotMap[currentEndIdx];
+        if (next && next->slot.isFree()) {
+            node->slot.slotSize += next->slot.slotSize;
+            assert_invariant(node->slot.slotSize % mSlotSize == 0);
+
+            mFreeList.erase(next->freeListIterator);
+
+            size_t nextIndex = std::distance(&mNodePool[0], next);
+            mFreeNodeIndices.push_back(nextIndex);
         }
-
-        auto next = std::next(curr);
-        bool merged = false;
-        while (next != mSlotPool.end() && next->slot.isFree()) {
-            merged = true;
-            // Combine the size of free slots
-            curr->slot.slotSize += next->slot.slotSize;
-            assert_invariant(curr->slot.slotSize % mSlotSize == 0);
-
-            // Erase the merged slot from all maps
-            if (next->freeListIterator != mFreeList.end()) {
-                mFreeList.erase(next->freeListIterator);
-            }
-            mOffsetMap.erase(next->offsetMapIterator);
-            next = mSlotPool.erase(next);
-        }
-
-        // If we performed any merge, the current block's size has changed.
-        // We need to update its position in the mFreeList.
-        if (curr->freeListIterator != mFreeList.end()) {
-            // If it's already in the free list and we merged, we need to update it.
-            if (merged) {
-                mFreeList.erase(curr->freeListIterator);
-                curr->freeListIterator = mFreeList.emplace(curr->slot.slotSize, &(*curr));
-            }
-        } else {
-            // If it's not in the free list, it must be a newly freed block. Add it.
-            curr->freeListIterator = mFreeList.emplace(curr->slot.slotSize, &(*curr));
-        }
-
-        curr = next;
     }
-    mHasPendingFrees = false;
+
+    size_t newStartIdx = node->slot.offset / mSlotSize;
+    size_t newEndIdx = (node->slot.offset + node->slot.slotSize) / mSlotSize - 1;
+    mSlotMap[newStartIdx] = node;
+    mSlotMap[newEndIdx] = node;
+
+    node->freeListIterator = mFreeList.emplace(node->slot.slotSize, node);
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::getTotalSize() const noexcept {
