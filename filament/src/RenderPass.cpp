@@ -359,6 +359,7 @@ RenderPass::Command* RenderPass::instanceify(
 
 
 void RenderPass::finalize(FEngine const& engine, DriverApi& driver) {
+    mFinalized = true;
     if (UTILS_UNLIKELY(!mInstancingStagingBuffer.empty())) {
         auto const* p = mInstancingStagingBuffer.data();
         size_t const size = sizeof(PerRenderableData) * mInstancingStagingBuffer.size();
@@ -1133,6 +1134,7 @@ RenderPass::Executor::Executor(RenderPass const& pass, Command const* b, Command
     mHasScissorViewport = mScissor != backend::Viewport{ 0, 0, INT32_MAX, INT32_MAX };
     assert_invariant(b >= pass.begin());
     assert_invariant(e <= pass.end());
+    assert_invariant(pass.isFinalized());
 }
 
 RenderPass::Executor::Executor() noexcept

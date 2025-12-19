@@ -345,6 +345,8 @@ public:
     using DescriptorSetSharedHandle = SharedHandle<
             backend::HwDescriptorSet, DescriptorSetHandleDeleter>;
 
+    bool isFinalized() const noexcept { return mFinalized; }
+
     /*
      * Executor holds the range of commands to execute for a given pass
      */
@@ -479,6 +481,7 @@ private:
     mutable std::vector<Command*> mInstancingDescriptorSetPatch;
     BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
     DescriptorSetSharedHandle mInstancedDescriptorSetHandle; // a descriptor-set to hold the ubo
+    bool mFinalized = false;
 
     // a vector for our custom commands
     using CustomCommandVector = utils::FixedCapacityVector<Executor::CustomCommandFn>;
