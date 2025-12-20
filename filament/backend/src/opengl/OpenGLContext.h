@@ -373,8 +373,8 @@ public:
 
     FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
 
-    // This is the index of the context in use. Must be 0 or 1. This is used to manange the
-    // OpenGL name of ContainerObjects within each context.
+    // This is the index of the context in use. Must be either 0 (Unprotected) or 1 (Protected).
+    // This is used to manage the OpenGL name of ContainerObjects within each context.
     uint32_t contextIndex = 0;
 
     // Try to keep the State structure sorted by data-access patterns
@@ -536,7 +536,7 @@ private:
     TimerQueryFactoryInterface* mTimerQueryFactory = nullptr;
     std::vector<std::function<void(OpenGLContext&)>> mDestroyWithNormalContext;
     RenderPrimitive mDefaultVAO;
-    std::optional<GLuint> mDefaultFbo[2];
+    std::optional<GLuint> mDefaultFbo[2]; // 0:Unprotected, 1:Protected
     mutable tsl::robin_map<SamplerParams, GLuint,
             SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 

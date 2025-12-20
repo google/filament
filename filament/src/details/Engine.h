@@ -40,7 +40,6 @@
 #include "details/ColorGrading.h"
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
-#include "details/IndexBuffer.h"
 #include "details/InstanceBuffer.h"
 #include "details/MorphTargetBuffer.h"
 #include "details/RenderTarget.h"
@@ -63,6 +62,7 @@
 #include <filament/Stream.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
+#include <filament/IndexBuffer.h>
 
 #include <backend/DriverEnums.h>
 
@@ -423,6 +423,10 @@ public:
     size_t getSkyboxeCount() const noexcept;
     size_t getColorGradingCount() const noexcept;
     size_t getRenderTargetCount() const noexcept;
+
+    AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
+            backend::CallbackHandler* handler, utils::Invocable<void()>&& onComplete);
+    bool cancelAsyncCall(AsyncCallId id);
 
     void destroy(utils::Entity e);
 

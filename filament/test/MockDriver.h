@@ -20,6 +20,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <backend/DriverEnums.h>
+
 #include "private/backend/CommandStream.h"
 #include "private/backend/Driver.h"
 
@@ -98,6 +100,7 @@ public:
     MOCK_METHOD(bool, queryFrameTimestamps, (SwapChainHandle, uint64_t, FrameTimestamps*), (override));
     MOCK_METHOD(bool, queryCompositorTiming, (SwapChainHandle, CompositorTiming*), (override));
     MOCK_METHOD(void, fenceCancel, (backend::FenceHandle), (override));
+    MOCK_METHOD(bool, cancelAsyncJob, (backend::AsyncCallId), (override));
 
 
     ShaderModel getShaderModel() const noexcept final { return ShaderModel::DESKTOP; }
@@ -117,6 +120,8 @@ public:
     void debugCommandEnd(CommandStream* cmds, bool synchronous,
             const char* methodName) noexcept override {}
     void purge() noexcept override {}
+    void scheduleCallback(CallbackHandler* handler, void* user,
+            CallbackHandler::Callback callback) override {}
 
     template<typename T>
     friend class ConcreteDispatcher;
@@ -126,7 +131,7 @@ public:
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                            \
     RetType methodName##S() noexcept override {                                                    \
-        return RetType((RetType::HandleId) nextFakeHandle++);                                      \
+        return RetType(nextFakeHandle++);                                      \
     }                                                                                              \
     UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl) {}
 
