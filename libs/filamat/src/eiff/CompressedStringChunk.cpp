@@ -16,6 +16,7 @@
 
 #include "CompressedStringChunk.h"
 
+#include <stdint.h>
 #include <zstd.h>
 
 namespace filamat {
@@ -35,7 +36,7 @@ int toZstdCompressionLevel(CompressedStringChunk::CompressionLevel compressionLe
 
 void CompressedStringChunk::flatten(filamat::Flattener& f) {
     const size_t bufferBound = ZSTD_compressBound(mString.size());
-    std::vector<std::uint8_t> compressed(bufferBound);
+    std::vector<uint8_t> compressed(bufferBound);
 
     const size_t compressedSize = ZSTD_compress(
             compressed.data(), compressed.size(),

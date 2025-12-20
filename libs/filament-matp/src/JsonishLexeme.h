@@ -34,7 +34,7 @@ enum JsonType {
     COLUMN,
 };
 
-class JsonLexeme final: public Lexeme<JsonType > {
+class JsonLexeme final: public Lexeme<JsonType> {
 public:
     static const char* getTypeString(JsonType type) {
         switch (type) {
@@ -63,6 +63,13 @@ public:
         }
         const char *start = (*mStart == '"') ? mStart + 1 : mStart;
         const char *end = (*mEnd == '"') ? mEnd - 1 : mEnd;
+        // Edge case: If the string only contains a single double-quote, the end can be before the
+        // start, which causes Lexeme::getStringValue to allocate a string with a large size, since
+        // it under flows. So we don't trim in this case, though this will fail to parse.
+         if (start > end) {
+             start = mStart;
+             end = mEnd;
+         }
         return { mType, start, end, mLineNumber, mPosition };
     }
 

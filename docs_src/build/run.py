@@ -82,6 +82,7 @@ def pull_markdeep_docs():
         super().__init__(*args, directory=MARKDEEP_DIR, **kwargs)
 
     def do_GET(self):
+      print(f'================ {self.path}')
       # Use the checked-in markdeep since its locked to a version
       if self.path == '/third_party/markdeep/markdeep.min.js':
         file_path = f'{ROOT_DIR}/third_party/markdeep/markdeep.min.js'
@@ -114,6 +115,9 @@ def pull_markdeep_docs():
   PORT = 12345
   httpd = start_server(PORT)
 
+  # Workaround for unknown dead-lock when the selenium tries to make request to the local server above.
+  time.sleep(3)
+
   # Set up Chrome options for headless mode
   chrome_options = Options()
   chrome_options.add_argument("--headless")
@@ -128,7 +132,8 @@ def pull_markdeep_docs():
     # Open the URL with ?export, which markdeep will export the resulting html.
     driver.get(f"http://localhost:{PORT}/{doc}.md.html?export")
 
-    time.sleep(3)
+    time.sleep(1.5)
+
     # We extract the html from the resulting "page" (an html output itself).
     text = driver.find_elements(By.TAG_NAME, "pre")[0].text
 
