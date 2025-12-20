@@ -415,13 +415,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         renderPassFlags |= RenderPass::HAS_DEPTH_CLAMP;
                     }
 
-                    RenderPass const pass = passBuilder
+                    RenderPass pass = passBuilder
                             .renderFlags(RenderPass::HAS_DEPTH_CLAMP, renderPassFlags)
                             .camera(cameraInfo.getPosition(), cameraInfo.getForwardVector())
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
-                            .build(engine, driver);
+                            .build(engine);
+
+                    pass.finalize(engine, driver);
 
                     entry.executor = pass.getExecutor();
 

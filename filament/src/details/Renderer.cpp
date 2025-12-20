@@ -1093,6 +1093,46 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 
     // --------------------------------------------------------------------------------------------
+    // Prepare Color passes
+
+    FrameGraphTexture::Descriptor const colorBufferDesc = [&] {
+        FrameGraphTexture::Descriptor desc{
+            .width = config.physicalViewport.width,
+            .height = config.physicalViewport.height,
+            .format = config.hdrFormat
+        };
+        // Set the depth to the number of layers if we're rendering multiview.
+        if (isRenderingMultiview) {
+            desc.depth = engine.getConfig().stereoscopicEyeCount;
+            desc.type = SamplerType::SAMPLER_2D_ARRAY;
+        }
+        return desc;
+    }();
+
+    // a non-drawing pass to prepare everything that need to be before the color passes execute
+    fg.addTrivialSideEffectPass("Prepare Color Passes",
+            [colorGradingConfig, colorGrading, colorBufferDesc, vignetteOptions,
+                &js, &view, &ppm](DriverApi& driver) {
+                // prepare color grading as subpass material
+                if (colorGradingConfig.asSubpass) {
+                    ppm.colorGradingPrepareSubpass(driver,
+                            colorGrading, colorGradingConfig, vignetteOptions,
+                            colorBufferDesc.width, colorBufferDesc.height);
+                } else if (colorGradingConfig.customResolve) {
+                    ppm.customResolvePrepareSubpass(driver,
+                            PostProcessManager::CustomResolveOp::COMPRESS);
+                }
+
+                // We use a framegraph pass to wait for froxelization to finish (so it can be done
+                // in parallel with .compile()
+                if (auto sync = view.getFroxelizerSync()) {
+                    js.waitAndRelease(sync);
+                    view.commitFroxels(driver);
+                }
+            });
+
+
+    // --------------------------------------------------------------------------------------------
     // Color passes
 
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
@@ -1150,7 +1190,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 
     // create the pass, which generates all its commands (this is a heavy operation)
-    RenderPass const pass{ passBuilder.build(engine, driver) };
+    RenderPass const pass{ passBuilder.build(engine) };
 
     // now that we have the commands we can figure out if we have refraction commands
     auto* const firstRefractionCommand = [&view](RenderPass const& pass) {
@@ -1178,39 +1218,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // the scissor viewport during construction
     const_cast<RenderPass&>(pass).setScissorViewport(useIntermediateBuffer ? xvp : vp);
 
-    FrameGraphTexture::Descriptor colorBufferDesc = {
-            .width = config.physicalViewport.width,
-            .height = config.physicalViewport.height,
-            .format = config.hdrFormat
-    };
-
-    // Set the depth to the number of layers if we're rendering multiview.
-    if (isRenderingMultiview) {
-        colorBufferDesc.depth = engine.getConfig().stereoscopicEyeCount;
-        colorBufferDesc.type = SamplerType::SAMPLER_2D_ARRAY;
-    }
-
-    // a non-drawing pass to prepare everything that need to be before the color passes execute
-    fg.addTrivialSideEffectPass("Prepare Color Passes",
-            [=, &js, &view, &ppm](DriverApi& driver) {
-                // prepare color grading as subpass material
-                if (colorGradingConfig.asSubpass) {
-                    ppm.colorGradingPrepareSubpass(driver,
-                            colorGrading, colorGradingConfig, vignetteOptions,
-                            colorBufferDesc.width, colorBufferDesc.height);
-                } else if (colorGradingConfig.customResolve) {
-                    ppm.customResolvePrepareSubpass(driver,
-                            PostProcessManager::CustomResolveOp::COMPRESS);
-                }
-
-                // We use a framegraph pass to wait for froxelization to finish (so it can be done
-                // in parallel with .compile()
-                if (auto sync = view.getFroxelizerSync()) {
-                    js.waitAndRelease(sync);
-                    view.commitFroxels(driver);
-                }
-            }
-    );
+    const_cast<RenderPass&>(pass).finalize(engine, driver);
 
     // the color pass itself + color-grading as subpass if needed
     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view, {
