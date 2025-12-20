@@ -1029,6 +1029,13 @@ public:
      * alongside other asynchronous operations (see Texture, VertexBuffer, and IndexBuffer) and
      * guaranteed to be executed in the exact order they were invoked.
      *
+     * Beware of overusing this method. It shares the execution queue with other asynchronous tasks
+     * like texture updates, so flooding it can delay those critical engine tasks. The recommended
+     * practice is to use this method for resource preparation, such as asset loading(images/meshes).
+     * This facilitates an efficient chaining pattern, where subsequent asynchronous operations
+     * (e.g., creating textures/vertex buffers) can be initiated directly within the completion
+     * callback.
+     *
      * Users can call the `Engine::cancelAsyncCall()` method with the returned ID to cancel the
      * asynchronous call.
      *
