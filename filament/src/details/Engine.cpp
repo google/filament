@@ -1446,6 +1446,27 @@ size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
 size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
+AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
+        CallbackHandler* handler, Invocable<void()>&& onComplete) {
+
+    struct RunCommandAsyncCallback {
+        Invocable<void()> f;
+        static void func(void* user) {
+            auto* const c = static_cast<RunCommandAsyncCallback*>(user);
+            c->f();
+            delete c;
+        }
+    };
+    auto* const user = new(std::nothrow) RunCommandAsyncCallback{ std::move(onComplete) };
+
+    return getDriverApi().queueCommandAsync(std::move(command), handler, &RunCommandAsyncCallback::func,
+            user);
+}
+
+bool FEngine::cancelAsyncCall(AsyncCallId const id) {
+    return getDriver().cancelAsyncJob(id);
+}
+
 size_t FEngine::getMaxShadowMapCount() const noexcept {
     return features.engine.shadows.use_shadow_atlas ?
         CONFIG_MAX_SHADOWMAPS : CONFIG_MAX_SHADOW_LAYERS;

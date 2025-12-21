@@ -19,12 +19,16 @@
 
 #include "DriverBase.h"
 
+#include <backend/Platform.h>
+
 #include <utils/CString.h>
 
 namespace filament::backend {
 
 class OpenGLDriverBase : public DriverBase {
 protected:
+    explicit OpenGLDriverBase(const Platform::DriverConfig& driverConfig)
+        : DriverBase(driverConfig) {}
     ~OpenGLDriverBase() override;
 
 public:
