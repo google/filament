@@ -22,123 +22,138 @@
 #include <utils/debug.h>
 
 #include "MaterialKey.h"
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace filament::gltfio;
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateUbershaderProvider(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateUbershaderProvider(JNIEnv* env, jclass,
         jlong nativeEngine) {
-    Engine* engine = (Engine*) nativeEngine;
-    return (jlong) createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateUbershaderProvider", 0, [&]() -> jlong {
+            Engine* engine = (Engine*) nativeEngine;
+            return (jlong) createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyUbershaderProvider(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyUbershaderProvider(JNIEnv* env, jclass,
         jlong nativeProvider) {
-    auto provider = (MaterialProvider*) nativeProvider;
-    delete provider;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyUbershaderProvider", [&]() {
+            auto provider = (MaterialProvider*) nativeProvider;
+            delete provider;
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyMaterials(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyMaterials(JNIEnv* env, jclass,
         jlong nativeProvider) {
-    auto provider = (MaterialProvider*) nativeProvider;
-    provider->destroyMaterials();
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyMaterials", [&]() {
+            auto provider = (MaterialProvider*) nativeProvider;
+            provider->destroyMaterials();
+    });
 }
 
 extern "C" JNIEXPORT long JNICALL
 Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateMaterialInstance(JNIEnv* env, jclass,
         jlong nativeProvider, jobject materialKey, jintArray uvmap, jstring label, jstring extras) {
-    MaterialKey nativeKey = {};
+    return filament::android::jniGuard<long>(env, "Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateMaterialInstance", 0, [&]() -> long {
+            MaterialKey nativeKey = {};
 
-    auto& helper = MaterialKeyHelper::get();
-    helper.copy(env, nativeKey, materialKey);
+            auto& helper = MaterialKeyHelper::get();
+            helper.copy(env, nativeKey, materialKey);
 
-    const char* nativeLabel = label ? env->GetStringUTFChars(label, nullptr) : nullptr;
-    const char* nativeExtras = extras ? env->GetStringUTFChars(extras, nullptr) : nullptr;
+            const char* nativeLabel = label ? env->GetStringUTFChars(label, nullptr) : nullptr;
+            const char* nativeExtras = extras ? env->GetStringUTFChars(extras, nullptr) : nullptr;
 
-    UvMap nativeUvMap = {};
-    auto provider = (MaterialProvider*) nativeProvider;
-    MaterialInstance* instance = provider->createMaterialInstance(&nativeKey, &nativeUvMap,
-            nativeLabel, nativeExtras);
+            UvMap nativeUvMap = {};
+            auto provider = (MaterialProvider*) nativeProvider;
+            MaterialInstance* instance = provider->createMaterialInstance(&nativeKey, &nativeUvMap,
+                    nativeLabel, nativeExtras);
 
-    // Copy the UvMap results from the native array into the JVM array.
-    jint* elements = env->GetIntArrayElements(uvmap, nullptr);
-    if (elements) {
-        const size_t javaSize = env->GetArrayLength(uvmap);
-        for (int i = 0, n = std::min(javaSize, nativeUvMap.size()); i < n; ++i) {
-            elements[i] = nativeUvMap[i];
-        }
-        env->ReleaseIntArrayElements(uvmap, elements, 0);
-    }
+            // Copy the UvMap results from the native array into the JVM array.
+            jint* elements = env->GetIntArrayElements(uvmap, nullptr);
+            if (elements) {
+                const size_t javaSize = env->GetArrayLength(uvmap);
+                for (int i = 0, n = std::min(javaSize, nativeUvMap.size()); i < n; ++i) {
+                    elements[i] = nativeUvMap[i];
+                }
+                env->ReleaseIntArrayElements(uvmap, elements, 0);
+            }
 
-    // The config parameter is an in-out parameter so we need to copy the results back to Java.
-    helper.copy(env, materialKey, nativeKey);
+            // The config parameter is an in-out parameter so we need to copy the results back to Java.
+            helper.copy(env, materialKey, nativeKey);
 
-    if (label) {
-        env->ReleaseStringUTFChars(label, nativeLabel);
-    }
+            if (label) {
+                env->ReleaseStringUTFChars(label, nativeLabel);
+            }
 
-    if (extras) {
-        env->ReleaseStringUTFChars(extras, nativeExtras);
-    }
+            if (extras) {
+                env->ReleaseStringUTFChars(extras, nativeExtras);
+            }
 
-    return (long) instance;
+            return (long) instance;
+    });
 }
 
 extern "C" JNIEXPORT long JNICALL
 Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterial(JNIEnv* env, jclass,
         jlong nativeProvider, jobject materialKey, jintArray uvmap, jstring label) {
-    MaterialKey nativeKey = {};
+    return filament::android::jniGuard<long>(env, "Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterial", 0, [&]() -> long {
+            MaterialKey nativeKey = {};
 
-    auto& helper = MaterialKeyHelper::get();
-    helper.copy(env, nativeKey, materialKey);
+            auto& helper = MaterialKeyHelper::get();
+            helper.copy(env, nativeKey, materialKey);
 
-    const char* nativeLabel = label ? env->GetStringUTFChars(label, nullptr) : nullptr;
+            const char* nativeLabel = label ? env->GetStringUTFChars(label, nullptr) : nullptr;
 
-    UvMap nativeUvMap = {};
-    auto provider = (MaterialProvider*) nativeProvider;
-    Material* material = provider->getMaterial(&nativeKey, &nativeUvMap, nativeLabel);
+            UvMap nativeUvMap = {};
+            auto provider = (MaterialProvider*) nativeProvider;
+            Material* material = provider->getMaterial(&nativeKey, &nativeUvMap, nativeLabel);
 
-    // Copy the UvMap results from the native array into the JVM array.
-    jint* elements = env->GetIntArrayElements(uvmap, nullptr);
-    if (elements) {
-        const size_t javaSize = env->GetArrayLength(uvmap);
-        for (int i = 0, n = std::min(javaSize, nativeUvMap.size()); i < n; ++i) {
-            elements[i] = nativeUvMap[i];
-        }
-        env->ReleaseIntArrayElements(uvmap, elements, 0);
-    }
+            // Copy the UvMap results from the native array into the JVM array.
+            jint* elements = env->GetIntArrayElements(uvmap, nullptr);
+            if (elements) {
+                const size_t javaSize = env->GetArrayLength(uvmap);
+                for (int i = 0, n = std::min(javaSize, nativeUvMap.size()); i < n; ++i) {
+                    elements[i] = nativeUvMap[i];
+                }
+                env->ReleaseIntArrayElements(uvmap, elements, 0);
+            }
 
-    // The config parameter is an in-out parameter so we need to copy the results back to Java.
-    helper.copy(env, materialKey, nativeKey);
+            // The config parameter is an in-out parameter so we need to copy the results back to Java.
+            helper.copy(env, materialKey, nativeKey);
 
-    if (label) {
-        env->ReleaseStringUTFChars(label, nativeLabel);
-    }
+            if (label) {
+                env->ReleaseStringUTFChars(label, nativeLabel);
+            }
 
-    return (long) material;
+            return (long) material;
+    });
 }
 
 extern "C" JNIEXPORT int JNICALL
-Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterialCount(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterialCount(JNIEnv* env, jclass,
         jlong nativeProvider) {
-    auto provider = (MaterialProvider*) nativeProvider;
-    return provider->getMaterialsCount();
+    return filament::android::jniGuard<int>(env, "Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterialCount", 0, [&]() -> int {
+            auto provider = (MaterialProvider*) nativeProvider;
+            return provider->getMaterialsCount();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterials(JNIEnv* env, jclass,
         jlong nativeProvider, jlongArray result) {
-    auto provider = (MaterialProvider *) nativeProvider;
-    auto materials = provider->getMaterials();
-    jlong *resultElements = env->GetLongArrayElements(result, nullptr);
-    if (resultElements) {
-        const size_t javaSize = env->GetArrayLength(result);
-        for (int i = 0, n = std::min(javaSize, provider->getMaterialsCount()); i < n; ++i) {
-            resultElements[i] = (jlong) materials[i];
-        }
-        env->ReleaseLongArrayElements(result, resultElements, JNI_ABORT);
-    }
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterials", [&]() {
+            auto provider = (MaterialProvider *) nativeProvider;
+            auto materials = provider->getMaterials();
+            jlong *resultElements = env->GetLongArrayElements(result, nullptr);
+            if (resultElements) {
+                const size_t javaSize = env->GetArrayLength(result);
+                for (int i = 0, n = std::min(javaSize, provider->getMaterialsCount()); i < n; ++i) {
+                    resultElements[i] = (jlong) materials[i];
+                }
+                env->ReleaseLongArrayElements(result, resultElements, JNI_ABORT);
+            }
+    });
 }

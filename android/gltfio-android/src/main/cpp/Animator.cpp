@@ -17,6 +17,7 @@
 #include <jni.h>
 
 #include <gltfio/Animator.h>
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -24,49 +25,63 @@ using namespace filament::gltfio;
 using namespace utils;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_Animator_nApplyAnimation(JNIEnv*, jclass, jlong nativeAnimator,
+Java_com_google_android_filament_gltfio_Animator_nApplyAnimation(JNIEnv* env, jclass, jlong nativeAnimator,
         jint index, jfloat time) {
-    Animator* animator = (Animator*) nativeAnimator;
-    animator->applyAnimation(static_cast<size_t>(index), time);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_gltfio_Animator_nApplyAnimation", [&]() {
+            Animator* animator = (Animator*) nativeAnimator;
+            animator->applyAnimation(static_cast<size_t>(index), time);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_Animator_nUpdateBoneMatrices(JNIEnv*, jclass, jlong nativeAnimator) {
-    Animator* animator = (Animator*) nativeAnimator;
-    animator->updateBoneMatrices();
+Java_com_google_android_filament_gltfio_Animator_nUpdateBoneMatrices(JNIEnv* env, jclass, jlong nativeAnimator) {
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_gltfio_Animator_nUpdateBoneMatrices", [&]() {
+            Animator* animator = (Animator*) nativeAnimator;
+            animator->updateBoneMatrices();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_Animator_nApplyCrossFade(JNIEnv*, jclass, jlong nativeAnimator,
+Java_com_google_android_filament_gltfio_Animator_nApplyCrossFade(JNIEnv* env, jclass, jlong nativeAnimator,
         jint previousAnimIndex, jfloat previousAnimTime, jfloat alpha) {
-    Animator* animator = (Animator*) nativeAnimator;
-    animator->applyCrossFade(previousAnimIndex, previousAnimTime, alpha);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_gltfio_Animator_nApplyCrossFade", [&]() {
+            Animator* animator = (Animator*) nativeAnimator;
+            animator->applyCrossFade(previousAnimIndex, previousAnimTime, alpha);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_Animator_nResetBoneMatrices(JNIEnv*, jclass, jlong nativeAnimator) {
-    Animator* animator = (Animator*) nativeAnimator;
-    animator->resetBoneMatrices();
+Java_com_google_android_filament_gltfio_Animator_nResetBoneMatrices(JNIEnv* env, jclass, jlong nativeAnimator) {
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_gltfio_Animator_nResetBoneMatrices", [&]() {
+            Animator* animator = (Animator*) nativeAnimator;
+            animator->resetBoneMatrices();
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_gltfio_Animator_nGetAnimationCount(JNIEnv*, jclass, jlong nativeAnimator) {
-    Animator* animator = (Animator*) nativeAnimator;
-    return animator->getAnimationCount();
+Java_com_google_android_filament_gltfio_Animator_nGetAnimationCount(JNIEnv* env, jclass, jlong nativeAnimator) {
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_gltfio_Animator_nGetAnimationCount", 0, [&]() -> jint {
+            Animator* animator = (Animator*) nativeAnimator;
+            return animator->getAnimationCount();
+    });
 }
 
 extern "C" JNIEXPORT float JNICALL
-Java_com_google_android_filament_gltfio_Animator_nGetAnimationDuration(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_Animator_nGetAnimationDuration(JNIEnv* env, jclass,
         jlong nativeAnimator, jint index) {
-    Animator* animator = (Animator*) nativeAnimator;
-    return animator->getAnimationDuration(static_cast<size_t>(index));
+    return filament::android::jniGuard<float>(env, "Java_com_google_android_filament_gltfio_Animator_nGetAnimationDuration", 0, [&]() -> float {
+            Animator* animator = (Animator*) nativeAnimator;
+            return animator->getAnimationDuration(static_cast<size_t>(index));
+    });
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_gltfio_Animator_nGetAnimationName(JNIEnv* env, jclass,
         jlong nativeAnimator, jint index) {
-    Animator* animator = (Animator*) nativeAnimator;
-    const char* val = animator->getAnimationName(static_cast<size_t>(index));
-    return val ? env->NewStringUTF(val) : nullptr;
+    return filament::android::jniGuard<jstring>(env, "Java_com_google_android_filament_gltfio_Animator_nGetAnimationName", 0, [&]() -> jstring {
+            Animator* animator = (Animator*) nativeAnimator;
+            const char* val = animator->getAnimationName(static_cast<size_t>(index));
+            return val ? env->NewStringUTF(val) : nullptr;
 
+    });
 }
