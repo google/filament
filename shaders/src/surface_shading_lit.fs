@@ -110,15 +110,10 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     float materialIor = max(1.0, material.ior);
 #endif
 
-#if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
-    float halfSpread = (materialIor - 1.0) * 0.025 * material.dispersion;
-    vec3 iors = vec3(materialIor - halfSpread, materialIor, materialIor + halfSpread);
-
-    pixel.etaIR = vec3(airIor) / iors; // air -> material
-    pixel.etaRI = iors / vec3(airIor); // material -> air
-#else
     pixel.etaIR = airIor / materialIor;  // air -> material
     pixel.etaRI = materialIor / airIor;  // material -> air
+#if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
+    pixel.dispersion = material.dispersion;
 #endif
 #if defined(MATERIAL_HAS_TRANSMISSION)
     pixel.transmission = saturate(material.transmission);
