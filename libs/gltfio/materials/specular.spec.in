@@ -33,3 +33,6 @@ TransmissionTexture = unsupported
 # Volume Features
 Volume = unsupported
 VolumeThicknessTexture = unsupported
+
+# KHR_materials_dispersion Features
+Dispersion = unsupported

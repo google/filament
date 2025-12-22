@@ -67,6 +67,9 @@ material {
         { type : int, name : specularColorIndex },
         { type : mat3, name : specularColorUvMatrix, precision: high },
 
+        // KHR_materials_dispersion
+        { type : float, name : dispersion },
+
         // IOR
         { type : float, name : ior }
 
@@ -115,6 +118,7 @@ fragment {
         material.absorption = materialParams.volumeAbsorption;
         material.thickness = materialParams.volumeThicknessFactor * getObjectUserData();
         material.ior = materialParams.ior;
+        material.dispersion = materialParams.dispersion;
 
         material.emissive = vec4(materialParams.emissiveStrength *
                 materialParams.emissiveFactor.rgb, 0.0);
