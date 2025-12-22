@@ -23,6 +23,7 @@
 #include <ktxreader/Ktx1Reader.h>
 
 #include "common/NioUtils.h"
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace filament::math;

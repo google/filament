@@ -17,11 +17,14 @@
 #include <jni.h>
 
 #include <camutils/Bookmark.h>
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament::camutils;
 using namespace filament::math;
 
-extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Bookmark_nDestroyBookmark(JNIEnv*, jclass, jlong nativeBookmark) {
-    Bookmark<float>* bookmark = (Bookmark<float>*) nativeBookmark;
-    delete bookmark;
+extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Bookmark_nDestroyBookmark(JNIEnv* env, jclass, jlong nativeBookmark) {
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_utils_Bookmark_nDestroyBookmark", [&]() {
+            Bookmark<float>* bookmark = (Bookmark<float>*) nativeBookmark;
+            delete bookmark;
+    });
 }
