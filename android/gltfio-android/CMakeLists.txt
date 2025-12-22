@@ -67,6 +67,10 @@ set(GLTFIO_SRCS
         ${FILAMENT_DIR}/include/gltfio/materials/uberarchive.h
 
         ../common/NioUtils.cpp
+        # Panic Handler
+        ../common/PanicState.h
+        ../common/PanicState.cpp
+        ../common/JniExceptionBridge.h
 )
 
 set(GLTFIO_INCLUDE_DIRS
