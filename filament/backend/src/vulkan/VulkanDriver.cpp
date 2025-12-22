@@ -1821,6 +1821,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         if (sc->isFirstRenderPass()) {
             discardStart |= TargetBufferFlags::COLOR;
             sc->markFirstRenderPass();
+            bool resized = false;
+            sc->acquire(resized);
+            if (resized) {
+                mFramebufferCache.resetFramebuffers();
+            }
+            if (UTILS_LIKELY(mDefaultRenderTarget)) {
+                mDefaultRenderTarget->bindToSwapChain(sc);
+            }
+
         }
     }
 
@@ -2037,17 +2046,6 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     resource_ptr<VulkanSwapChain> swapChain =
             resource_ptr<VulkanSwapChain>::cast(&mResourceManager, drawSch);
     mCurrentSwapChain = swapChain;
-
-    bool resized = false;
-    swapChain->acquire(resized);
-
-    if (resized) {
-        mFramebufferCache.resetFramebuffers();
-    }
-
-    if (UTILS_LIKELY(mDefaultRenderTarget)) {
-        mDefaultRenderTarget->bindToSwapChain(swapChain);
-    }
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {
