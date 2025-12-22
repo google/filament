@@ -44,36 +44,24 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
     assert_invariant(newTotalSize % mSlotSize == 0);
 
     mTotalSize = newTotalSize;
-
-    mNodePool.clear();
     mFreeList.clear();
-    mSlotMap.clear();
-    mFreeNodeIndices.clear();
 
-    const size_t maxSlots = mTotalSize / mSlotSize;
-    mNodePool.resize(maxSlots);
-    // Initialize the pool with a single large free slot at index 0.
-    mNodePool[0] = InternalSlotNode{
-        .slot = { .offset = 0, .slotSize = mTotalSize, .isAllocated = false, .gpuUseCount = 0 }
-    };
+    // Resize mNodes to the number of slots
+    size_t slotCount = mTotalSize / mSlotSize;
+    mNodes.clear();
+    mNodes.reserve(slotCount);
+    mNodes.resize(slotCount);
 
-    mFreeNodeIndices.clear();
-    mFreeNodeIndices.reserve(maxSlots - 1);
-    // Fill free node indices with 1..maxSlots-1 (0 is taken)
-    for (size_t i = 0; i < maxSlots - 1; ++i) {
-        mFreeNodeIndices.push_back(maxSlots - 1 - i);
-    }
+    // Initialize the single free block covering the entire buffer
+    InternalSlotNode* node = &mNodes[0];
+    node->slot.offset = 0;
+    node->slot.slotSize = mTotalSize;
+    node->slot.isAllocated = false;
+    node->slot.gpuUseCount = 0;
+    node->freeListIterator = mFreeList.emplace(mTotalSize, node);
 
-    InternalSlotNode* firstNode = &mNodePool[0];
-
-    // Add the initial free slot to the free list.
-    auto freeListIter = mFreeList.emplace(newTotalSize, firstNode);
-
-    mSlotMap.resize(mTotalSize / mSlotSize, nullptr);
-    mSlotMap[0] = firstNode;
-    mSlotMap[mSlotMap.size() - 1] = firstNode;
-
-    firstNode->freeListIterator = freeListIter;
+    // Set the tail tag
+    mNodes[slotCount - 1] = *node;
 }
 
 std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
@@ -93,62 +81,57 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
     const allocation_size_t originalSlotSize = targetNode->slot.slotSize;
 
     mFreeList.erase(bestFitIter);
-    targetNode->freeListIterator = mFreeList.end();
-    targetNode->slot.isAllocated = true;
+
+    const allocation_size_t remainingSize = targetNode->slot.slotSize - alignedSize;
+    const allocation_size_t offset = targetNode->slot.offset;
+    assert_invariant(remainingSize % mSlotSize == 0);
+    assert_invariant((offset + alignedSize) % mSlotSize == 0);
 
     // Split the slot if it is larger than what we need.
     if (originalSlotSize > alignedSize) {
+        // Update Head block
         targetNode->slot.slotSize = alignedSize;
+        targetNode->slot.isAllocated = true;
 
-        allocation_size_t remainingSize = originalSlotSize - alignedSize;
-        allocation_size_t newSlotOffset = targetNode->slot.offset + alignedSize;
-        assert_invariant(remainingSize % mSlotSize == 0);
-        assert_invariant(newSlotOffset % mSlotSize == 0);
+        // Update Tail block
+        size_t endSlotIndex = (offset + alignedSize) / mSlotSize - 1;
+        mNodes[endSlotIndex] = *targetNode; // Copy Head to Tail
 
-        // Get a free node from the pool
-        assert_invariant(!mFreeNodeIndices.empty());
-        uint32_t nodeIndex = mFreeNodeIndices.back();
-        mFreeNodeIndices.pop_back();
+        // The Head of remaining free block
+        size_t nextSlotIndex = endSlotIndex + 1;
+        InternalSlotNode* nextNode = &mNodes[nextSlotIndex];
+        nextNode->slot.offset = offset + alignedSize;
+        nextNode->slot.slotSize = remainingSize;
+        nextNode->slot.isAllocated = false;
+        nextNode->slot.gpuUseCount = 0;
+        nextNode->freeListIterator = mFreeList.emplace(remainingSize, nextNode);
 
-        InternalSlotNode* newNode = &mNodePool[nodeIndex];
-        *newNode = InternalSlotNode{ .slot = { .offset = newSlotOffset,
-                                         .slotSize = remainingSize,
-                                         .isAllocated = false,
-                                         .gpuUseCount = 0 } };
+        // Update the Tail of remaining free block
+        size_t nextEndSlotIndex = (nextNode->slot.offset + nextNode->slot.slotSize) / mSlotSize - 1;
+        mNodes[nextEndSlotIndex] = *nextNode; // Copy Head to Tail
+    } else {
+        // Allocate the whole block
+        targetNode->slot.isAllocated = true;
 
-        // Add the new free slot to our tracking maps.
-        auto freeListIter = mFreeList.emplace(remainingSize, newNode);
-
-        // Update mSlotMap for the new node (start and end)
-        size_t newStartIdx = newSlotOffset / mSlotSize;
-        size_t newEndIdx = (newSlotOffset + remainingSize) / mSlotSize - 1;
-        mSlotMap[newStartIdx] = newNode;
-        mSlotMap[newEndIdx] = newNode;
-
-        newNode->freeListIterator = freeListIter;
-
-        // Update targetNode's map entry for its new size
-        // targetNode now ends at newSlotOffset - 1
-        size_t targetEndIdx = newStartIdx - 1;
-        mSlotMap[targetEndIdx] = targetNode;
+        // Update Tail block
+        size_t endSlotIndex = (offset + targetNode->slot.slotSize) / mSlotSize - 1;
+        mNodes[endSlotIndex] = *targetNode;
     }
 
-    AllocationId allocationId = calculateIdByOffset(targetNode->slot.offset);
-    return { allocationId, targetNode->slot.offset };
+    return { calculateIdByOffset(offset), offset };
 }
 
-BufferAllocator::InternalSlotNode* BufferAllocator::getNodeById(
-        AllocationId id) const noexcept {
-    if (!isValid(id)) {
-        return nullptr;
-    }
+BufferAllocator::InternalSlotNode* BufferAllocator::getNodeById(AllocationId id) {
+    assert_invariant(id > 0);
+    assert_invariant(id <= mNodes.size());
+    return &mNodes[id - 1];
+}
 
-    // AllocationId is 1-based
-    size_t index = id - 1;
-    if (index >= mSlotMap.size()) {
-        return nullptr;
-    }
-    return mSlotMap[index];
+const BufferAllocator::InternalSlotNode* BufferAllocator::getNodeById(
+        AllocationId id) const {
+    assert_invariant(id > 0);
+    assert_invariant(id <= mNodes.size());
+    return &mNodes[id - 1];
 }
 
 void BufferAllocator::retire(AllocationId id) {
@@ -188,44 +171,55 @@ void BufferAllocator::releaseGpu(AllocationId id) {
 }
 
 void BufferAllocator::freeSlot(InternalSlotNode* node) {
-    // Check previous
-    const size_t currentStartIdx = node->slot.offset / mSlotSize;
+    size_t currentStartIdx = node->slot.offset / mSlotSize;
+    size_t currentEndIdx = (node->slot.offset + node->slot.slotSize) / mSlotSize - 1;
+
+    // Check Previous (Left Neighbor)
     if (currentStartIdx > 0) {
-        InternalSlotNode* prev = mSlotMap[currentStartIdx - 1];
-        if (prev && prev->slot.isFree()) {
-            prev->slot.slotSize += node->slot.slotSize;
-            assert_invariant(prev->slot.slotSize % mSlotSize == 0);
+        InternalSlotNode* prev = &mNodes[currentStartIdx - 1];
+        size_t prevHeadIdx = prev->slot.offset / mSlotSize;
+        InternalSlotNode* prevHead = &mNodes[prevHeadIdx];
 
-            mFreeList.erase(prev->freeListIterator);
+        if (prevHead->slot.isFree()) {
+            // Merge with prev
+            // prev is the TAIL of the left block.
 
-            size_t nodeIndex = std::distance(&mNodePool[0], node);
-            mFreeNodeIndices.push_back(nodeIndex);
+            assert_invariant(prevHead->slot.offset == prev->slot.offset);
+            assert_invariant(prevHead->slot.slotSize == prev->slot.slotSize);
 
-            node = prev;
+            mFreeList.erase(prevHead->freeListIterator);
+            prevHead->slot.slotSize += node->slot.slotSize;
+            assert_invariant(prevHead->slot.slotSize % mSlotSize == 0);
+
+            // Switch current node pointer to prevHead for potential next merge
+            node = prevHead;
+            currentStartIdx = prevHeadIdx;
         }
     }
 
-    // Check next
-    const size_t currentEndIdx = (node->slot.offset + node->slot.slotSize) / mSlotSize;
-    if (currentEndIdx < mSlotMap.size()) {
-        InternalSlotNode* next = mSlotMap[currentEndIdx];
-        if (next && next->slot.isFree()) {
+    // Check Next (Right Neighbor)
+    size_t nextStartIdx = currentEndIdx + 1;
+    if (nextStartIdx < mNodes.size()) {
+        InternalSlotNode* next = &mNodes[nextStartIdx];
+        if (next->slot.isFree()) {
+            // Merge with next
+
+            mFreeList.erase(next->freeListIterator);
             node->slot.slotSize += next->slot.slotSize;
             assert_invariant(node->slot.slotSize % mSlotSize == 0);
 
-            mFreeList.erase(next->freeListIterator);
-
-            size_t nextIndex = std::distance(&mNodePool[0], next);
-            mFreeNodeIndices.push_back(nextIndex);
+            // currentEndIdx increases
+            currentEndIdx = (node->slot.offset + node->slot.slotSize) / mSlotSize - 1;
         }
     }
 
-    size_t newStartIdx = node->slot.offset / mSlotSize;
-    size_t newEndIdx = (node->slot.offset + node->slot.slotSize) / mSlotSize - 1;
-    mSlotMap[newStartIdx] = node;
-    mSlotMap[newEndIdx] = node;
+    assert_invariant(node->slot.offset / mSlotSize == currentStartIdx);
 
+    // Push merged free block to the list
     node->freeListIterator = mFreeList.emplace(node->slot.slotSize, node);
+
+    // Copy Head to Tail
+    mNodes[currentEndIdx] = *node;
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::getTotalSize() const noexcept {
@@ -234,15 +228,11 @@ BufferAllocator::allocation_size_t BufferAllocator::getTotalSize() const noexcep
 
 BufferAllocator::allocation_size_t
     BufferAllocator::getAllocationOffset(AllocationId id) const {
-    assert_invariant(isValid(id));
-
-    return (id - 1) * mSlotSize;
+    return getNodeById(id)->slot.offset;
 }
 
 bool BufferAllocator::isLockedByGpu(AllocationId id) const {
-    InternalSlotNode* targetNode = getNodeById(id);
-    assert_invariant(targetNode != nullptr);
-
+    const InternalSlotNode* targetNode = getNodeById(id);
     return targetNode->slot.gpuUseCount > 0;
 }
 
@@ -255,10 +245,7 @@ BufferAllocator::AllocationId BufferAllocator::calculateIdByOffset(
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::getAllocationSize(AllocationId id) const {
-    InternalSlotNode* targetNode = getNodeById(id);
-    assert_invariant(targetNode != nullptr);
-
-    return targetNode->slot.slotSize;
+    return getNodeById(id)->slot.slotSize;
 }
 
 bool BufferAllocator::isValid(AllocationId id) {

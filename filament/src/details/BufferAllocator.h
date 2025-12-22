@@ -17,9 +17,10 @@
 #ifndef TNT_FILAMENT_DETAILS_BUFFERALLOCATOR_H
 #define TNT_FILAMENT_DETAILS_BUFFERALLOCATOR_H
 
+#include <utils/FixedCapacityVector.h>
+
 #include <cstdint>
 #include <map>
-#include <vector>
 
 
 namespace filament {
@@ -104,16 +105,15 @@ private:
         std::multimap<allocation_size_t, InternalSlotNode*>::iterator freeListIterator;
     };
 
-    [[nodiscard]] InternalSlotNode* getNodeById(AllocationId id) const noexcept;
+    [[nodiscard]] InternalSlotNode* getNodeById(AllocationId id);
+    [[nodiscard]] const InternalSlotNode* getNodeById(AllocationId id) const;
 
     void freeSlot(InternalSlotNode* node);
 
     allocation_size_t mTotalSize;
     const allocation_size_t mSlotSize; // Size of a single slot in bytes
-    std::vector<InternalSlotNode> mNodePool; // Fixed-size pool of nodes
-    std::vector<uint32_t> mFreeNodeIndices;  // Indices of free nodes in the pool
-    std::multimap</*slot size*/allocation_size_t, InternalSlotNode*> mFreeList;
-    std::vector<InternalSlotNode*> mSlotMap;
+    utils::FixedCapacityVector<InternalSlotNode> mNodes;
+    std::multimap</*slot size*/ allocation_size_t, InternalSlotNode*> mFreeList;
 };
 
 } // namespace filament
