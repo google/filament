@@ -20,287 +20,344 @@
 
 #include "common/NioUtils.h"
 #include "common/CallbackUtils.h"
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Material_nBuilderBuild(JNIEnv *env, jclass,
         jlong nativeEngine, jobject buffer_, jint size, jint shBandCount, jint shadowQuality, jint uboBatchingMode) {
-    Engine* engine = (Engine*) nativeEngine;
-    AutoBuffer buffer(env, buffer_, size);
-    auto builder = Material::Builder();
-    if (shBandCount) {
-        builder.sphericalHarmonicsBandCount(shBandCount);
-    }
-    builder.shadowSamplingQuality((Material::Builder::ShadowSamplingQuality)shadowQuality);
-    builder.uboBatching((Material::UboBatchingMode)uboBatchingMode);
-    Material* material = builder
-            .package(buffer.getData(), buffer.getSize())
-            .build(*engine);
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_Material_nBuilderBuild", 0, [&]() -> jlong {
+            Engine* engine = (Engine*) nativeEngine;
+            AutoBuffer buffer(env, buffer_, size);
+            auto builder = Material::Builder();
+            if (shBandCount) {
+                builder.sphericalHarmonicsBandCount(shBandCount);
+            }
+            builder.shadowSamplingQuality((Material::Builder::ShadowSamplingQuality)shadowQuality);
+            builder.uboBatching((Material::UboBatchingMode)uboBatchingMode);
+            Material* material = builder
+                    .package(buffer.getData(), buffer.getSize())
+                    .build(*engine);
 
-    return (jlong) material;
+            return (jlong) material;
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_Material_nGetDefaultInstance(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetDefaultInstance(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material const* material = (Material const*) nativeMaterial;
-    return (jlong) material->getDefaultInstance();
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_Material_nGetDefaultInstance", 0, [&]() -> jlong {
+            Material const* material = (Material const*) nativeMaterial;
+            return (jlong) material->getDefaultInstance();
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_Material_nCreateInstance(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nCreateInstance(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jlong) material->createInstance();
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_Material_nCreateInstance", 0, [&]() -> jlong {
+            Material* material = (Material*) nativeMaterial;
+            return (jlong) material->createInstance();
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Material_nCreateInstanceWithName(JNIEnv* env, jclass,
         jlong nativeMaterial, jstring name_) {
-    Material* material = (Material*) nativeMaterial;
-    const char *name = env->GetStringUTFChars(name_, 0);
-    jlong instance = (jlong) material->createInstance(name);
-    env->ReleaseStringUTFChars(name_, name);
-    return instance;
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_Material_nCreateInstanceWithName", 0, [&]() -> jlong {
+            Material* material = (Material*) nativeMaterial;
+            const char *name = env->GetStringUTFChars(name_, 0);
+            jlong instance = (jlong) material->createInstance(name);
+            env->ReleaseStringUTFChars(name_, name);
+            return instance;
+    });
 }
 
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_Material_nGetName(JNIEnv* env, jclass, jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return env->NewStringUTF(material->getName());
+    return filament::android::jniGuard<jstring>(env, "Java_com_google_android_filament_Material_nGetName", 0, [&]() -> jstring {
+            Material* material = (Material*) nativeMaterial;
+            return env->NewStringUTF(material->getName());
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetShading(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetShading(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getShading();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetShading", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getShading();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetInterpolation(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetInterpolation(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getInterpolation();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetInterpolation", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getInterpolation();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetBlendingMode(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetBlendingMode(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getBlendingMode();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetBlendingMode", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getBlendingMode();
+    });
 }
 
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetRefractionMode(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetRefractionMode(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint)material->getRefractionMode();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetRefractionMode", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint)material->getRefractionMode();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetRefractionType(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetRefractionType(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getRefractionType();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetRefractionType", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getRefractionType();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetReflectionMode(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetReflectionMode(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getReflectionMode();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetReflectionMode", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getReflectionMode();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetFeatureLevel(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetFeatureLevel(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getFeatureLevel();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetFeatureLevel", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getFeatureLevel();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetVertexDomain(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetVertexDomain(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getVertexDomain();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetVertexDomain", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getVertexDomain();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetCullingMode(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetCullingMode(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getCullingMode();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetCullingMode", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getCullingMode();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Material_nIsColorWriteEnabled(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nIsColorWriteEnabled(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jboolean) material->isColorWriteEnabled();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Material_nIsColorWriteEnabled", JNI_FALSE, [&]() -> jboolean {
+            Material* material = (Material*) nativeMaterial;
+            return (jboolean) material->isColorWriteEnabled();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Material_nIsDepthWriteEnabled(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nIsDepthWriteEnabled(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jboolean) material->isDepthWriteEnabled();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Material_nIsDepthWriteEnabled", JNI_FALSE, [&]() -> jboolean {
+            Material* material = (Material*) nativeMaterial;
+            return (jboolean) material->isDepthWriteEnabled();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Material_nIsDepthCullingEnabled(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nIsDepthCullingEnabled(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jboolean) material->isDepthCullingEnabled();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Material_nIsDepthCullingEnabled", JNI_FALSE, [&]() -> jboolean {
+            Material* material = (Material*) nativeMaterial;
+            return (jboolean) material->isDepthCullingEnabled();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Material_nIsDoubleSided(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nIsDoubleSided(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jboolean) material->isDoubleSided();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Material_nIsDoubleSided", JNI_FALSE, [&]() -> jboolean {
+            Material* material = (Material*) nativeMaterial;
+            return (jboolean) material->isDoubleSided();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Material_nIsAlphaToCoverageEnabled(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nIsAlphaToCoverageEnabled(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jboolean) material->isAlphaToCoverageEnabled();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Material_nIsAlphaToCoverageEnabled", JNI_FALSE, [&]() -> jboolean {
+            Material* material = (Material*) nativeMaterial;
+            return (jboolean) material->isAlphaToCoverageEnabled();
+    });
 }
 
 extern "C"
 JNIEXPORT jfloat JNICALL
-Java_com_google_android_filament_Material_nGetMaskThreshold(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetMaskThreshold(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return material->getMaskThreshold();
+    return filament::android::jniGuard<jfloat>(env, "Java_com_google_android_filament_Material_nGetMaskThreshold", 0.0f, [&]() -> jfloat {
+            Material* material = (Material*) nativeMaterial;
+            return material->getMaskThreshold();
+    });
 }
 
 extern "C"
 JNIEXPORT jfloat JNICALL
-Java_com_google_android_filament_Material_nGetSpecularAntiAliasingVariance(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetSpecularAntiAliasingVariance(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return material->getSpecularAntiAliasingVariance();
+    return filament::android::jniGuard<jfloat>(env, "Java_com_google_android_filament_Material_nGetSpecularAntiAliasingVariance", 0.0f, [&]() -> jfloat {
+            Material* material = (Material*) nativeMaterial;
+            return material->getSpecularAntiAliasingVariance();
+    });
 }
 
 extern "C"
 JNIEXPORT jfloat JNICALL
-Java_com_google_android_filament_Material_nGetSpecularAntiAliasingThreshold(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetSpecularAntiAliasingThreshold(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return material->getSpecularAntiAliasingThreshold();
+    return filament::android::jniGuard<jfloat>(env, "Java_com_google_android_filament_Material_nGetSpecularAntiAliasingThreshold", 0.0f, [&]() -> jfloat {
+            Material* material = (Material*) nativeMaterial;
+            return material->getSpecularAntiAliasingThreshold();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetParameterCount(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetParameterCount(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return (jint) material->getParameterCount();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetParameterCount", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return (jint) material->getParameterCount();
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_Material_nGetParameters(JNIEnv* env, jclass,
         jlong nativeMaterial, jobject parameters, jint count) {
-    Material* material = (Material*) nativeMaterial;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Material_nGetParameters", [&]() {
+            Material* material = (Material*) nativeMaterial;
 
-    Material::ParameterInfo* info = new Material::ParameterInfo[count];
-    size_t received = material->getParameters(info, (size_t) count);
-    assert(received == count);
+            Material::ParameterInfo* info = new Material::ParameterInfo[count];
+            size_t received = material->getParameters(info, (size_t) count);
+            assert(received == count);
 
-    jclass parameterClass = env->FindClass("com/google/android/filament/Material$Parameter");
-    parameterClass = (jclass) env->NewLocalRef(parameterClass);
+            jclass parameterClass = env->FindClass("com/google/android/filament/Material$Parameter");
+            parameterClass = (jclass) env->NewLocalRef(parameterClass);
 
-    jmethodID parameterAdd = env->GetStaticMethodID(parameterClass, "add",
-            "(Ljava/util/List;Ljava/lang/String;III)V");
+            jmethodID parameterAdd = env->GetStaticMethodID(parameterClass, "add",
+                    "(Ljava/util/List;Ljava/lang/String;III)V");
 
-    jfieldID parameterSamplerOffset = env->GetStaticFieldID(parameterClass,
-            "SAMPLER_OFFSET", "I");
+            jfieldID parameterSamplerOffset = env->GetStaticFieldID(parameterClass,
+                    "SAMPLER_OFFSET", "I");
 
-    jfieldID parameterSubpassOffset = env->GetStaticFieldID(parameterClass,
-            "SUBPASS_OFFSET", "I");
+            jfieldID parameterSubpassOffset = env->GetStaticFieldID(parameterClass,
+                    "SUBPASS_OFFSET", "I");
 
-    jint offset = env->GetStaticIntField(parameterClass, parameterSamplerOffset);
-    jint subpassOffset = env->GetStaticIntField(parameterClass, parameterSubpassOffset);
-    for (size_t i = 0; i < received; i++) {
-        jint type;
-        if (info[i].isSampler) {
-            type = (jint) info[i].samplerType + offset;
-        } else if (info[i].isSubpass) {
-            type = subpassOffset;
-        } else {
-            type = (jint) info[i].type;
-        }
+            jint offset = env->GetStaticIntField(parameterClass, parameterSamplerOffset);
+            jint subpassOffset = env->GetStaticIntField(parameterClass, parameterSubpassOffset);
+            for (size_t i = 0; i < received; i++) {
+                jint type;
+                if (info[i].isSampler) {
+                    type = (jint) info[i].samplerType + offset;
+                } else if (info[i].isSubpass) {
+                    type = subpassOffset;
+                } else {
+                    type = (jint) info[i].type;
+                }
 
-        env->CallStaticVoidMethod(
-                parameterClass, parameterAdd,
-                parameters, env->NewStringUTF(info[i].name), type, (jint) info[i].precision,
-                (jint) info[i].count);
-    }
+                env->CallStaticVoidMethod(
+                        parameterClass, parameterAdd,
+                        parameters, env->NewStringUTF(info[i].name), type, (jint) info[i].precision,
+                        (jint) info[i].count);
+            }
 
-    env->DeleteLocalRef(parameterClass);
+            env->DeleteLocalRef(parameterClass);
 
-    delete[] info;
+            delete[] info;
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetRequiredAttributes(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetRequiredAttributes(JNIEnv* env, jclass,
         jlong nativeMaterial) {
-    Material* material = (Material*) nativeMaterial;
-    return material->getRequiredAttributes().getValue();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Material_nGetRequiredAttributes", 0, [&]() -> jint {
+            Material* material = (Material*) nativeMaterial;
+            return material->getRequiredAttributes().getValue();
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Material_nHasParameter(JNIEnv* env, jclass,
         jlong nativeMaterial, jstring name_) {
-    Material* material = (Material*) nativeMaterial;
-    const char* name = env->GetStringUTFChars(name_, 0);
-    bool hasParameter = material->hasParameter(name);
-    env->ReleaseStringUTFChars(name_, name);
-    return (jboolean) hasParameter;
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Material_nHasParameter", JNI_FALSE, [&]() -> jboolean {
+            Material* material = (Material*) nativeMaterial;
+            const char* name = env->GetStringUTFChars(name_, 0);
+            bool hasParameter = material->hasParameter(name);
+            env->ReleaseStringUTFChars(name_, name);
+            return (jboolean) hasParameter;
+    });
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_Material_nGetParameterTransformName(JNIEnv* env, jclass,
         jlong nativeMaterial, jstring samplerName_) {
-    Material* material = (Material*) nativeMaterial;
-    const char* samplerName = env->GetStringUTFChars(samplerName_, 0);
-    const char* transformName = material->getParameterTransformName(samplerName);
-    jstring transformName_ = env->NewStringUTF(transformName ? transformName : "");
-    env->ReleaseStringUTFChars(samplerName_, samplerName);
-    return transformName_;
+    return filament::android::jniGuard<jstring>(env, "Java_com_google_android_filament_Material_nGetParameterTransformName", 0, [&]() -> jstring {
+            Material* material = (Material*) nativeMaterial;
+            const char* samplerName = env->GetStringUTFChars(samplerName_, 0);
+            const char* transformName = material->getParameterTransformName(samplerName);
+            jstring transformName_ = env->NewStringUTF(transformName ? transformName : "");
+            env->ReleaseStringUTFChars(samplerName_, samplerName);
+            return transformName_;
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_Material_nCompile(JNIEnv *env, jclass clazz,
         jlong nativeMaterial, jint priority, jint variants, jobject handler, jobject runnable) {
-    Material* material = (Material*) nativeMaterial;
-    JniCallback* jniCallback = JniCallback::make(env, handler, runnable);
-    material->compile(
-            (Material::CompilerPriorityQueue) priority,
-            (UserVariantFilterBit) variants,
-            jniCallback->getHandler(), [jniCallback](Material*){
-                JniCallback::postToJavaAndDestroy(jniCallback);
-            });
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Material_nCompile", [&]() {
+            Material* material = (Material*) nativeMaterial;
+            JniCallback* jniCallback = JniCallback::make(env, handler, runnable);
+            material->compile(
+                    (Material::CompilerPriorityQueue) priority,
+                    (UserVariantFilterBit) variants,
+                    jniCallback->getHandler(), [jniCallback](Material*){
+                        JniCallback::postToJavaAndDestroy(jniCallback);
+                    });
+    });
 }

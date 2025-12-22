@@ -25,6 +25,7 @@
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -64,21 +65,27 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jboolean x) {
-    setParameter(env, nativeMaterialInstance, name_, bool(x));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterBool", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, bool(x));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jboolean x, jboolean y) {
-    setParameter(env, nativeMaterialInstance, name_, bool2{x, y});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterBool2", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, bool2{x, y});
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jboolean x, jboolean y, jboolean z) {
-    setParameter(env, nativeMaterialInstance, name_, bool3{x, y, z});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterBool3", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, bool3{x, y, z});
+    });
 }
 
 extern "C"
@@ -86,28 +93,36 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jboolean x, jboolean y, jboolean z, jboolean w) {
-    setParameter(env, nativeMaterialInstance, name_, bool4{x, y, z, w});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterBool4", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, bool4{x, y, z, w});
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint x) {
-    setParameter(env, nativeMaterialInstance, name_, int32_t(x));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterInt", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, int32_t(x));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint x, jint y) {
-    setParameter(env, nativeMaterialInstance, name_, int2{x, y});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterInt2", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, int2{x, y});
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint x, jint y, jint z) {
-    setParameter(env, nativeMaterialInstance, name_, int3{x, y, z});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterInt3", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, int3{x, y, z});
+    });
 }
 
 extern "C"
@@ -115,28 +130,36 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jint x, jint y, jint z, jint w) {
-    setParameter(env, nativeMaterialInstance, name_, int4{x, y, z, w});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterInt4", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, int4{x, y, z, w});
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jfloat x) {
-    setParameter(env, nativeMaterialInstance, name_, float(x));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterFloat", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, float(x));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jfloat x, jfloat y) {
-    setParameter(env, nativeMaterialInstance, name_, float2{x, y});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterFloat2", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, float2{x, y});
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jfloat x, jfloat y, jfloat z) {
-    setParameter(env, nativeMaterialInstance, name_, float3{x, y, z});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterFloat3", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, float3{x, y, z});
+    });
 }
 
 extern "C"
@@ -144,7 +167,9 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jfloat x, jfloat y, jfloat z, jfloat w) {
-    setParameter(env, nativeMaterialInstance, name_, float4{x, y, z, w});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterFloat4", [&]() {
+            setParameter(env, nativeMaterialInstance, name_, float4{x, y, z, w});
+    });
 }
 
 extern "C"
@@ -152,32 +177,34 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetBooleanParameterArray(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint element,
         jbooleanArray v_, jint offset, jint count) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetBooleanParameterArray", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
 
-    const char* name = env->GetStringUTFChars(name_, 0);
-    jboolean* v = env->GetBooleanArrayElements(v_, NULL);
+            const char* name = env->GetStringUTFChars(name_, 0);
+            jboolean* v = env->GetBooleanArrayElements(v_, NULL);
 
-    // NOTE: In C++, bool has an implementation-defined size. Here we assume
-    // it has the same size as jboolean, which is 1 byte.
+            // NOTE: In C++, bool has an implementation-defined size. Here we assume
+            // it has the same size as jboolean, which is 1 byte.
 
-    switch ((BooleanElement) element) {
-        case BOOL:
-            instance->setParameter(name, ((const bool*) v) + offset, count);
-            break;
-        case BOOL2:
-            instance->setParameter(name, ((const bool2*) v) + offset, count);
-            break;
-        case BOOL3:
-            instance->setParameter(name, ((const bool3*) v) + offset, count);
-            break;
-        case BOOL4:
-            instance->setParameter(name, ((const bool4*) v) + offset, count);
-            break;
-    }
+            switch ((BooleanElement) element) {
+                case BOOL:
+                    instance->setParameter(name, ((const bool*) v) + offset, count);
+                    break;
+                case BOOL2:
+                    instance->setParameter(name, ((const bool2*) v) + offset, count);
+                    break;
+                case BOOL3:
+                    instance->setParameter(name, ((const bool3*) v) + offset, count);
+                    break;
+                case BOOL4:
+                    instance->setParameter(name, ((const bool4*) v) + offset, count);
+                    break;
+            }
 
-    env->ReleaseBooleanArrayElements(v_, v, 0);
+            env->ReleaseBooleanArrayElements(v_, v, 0);
 
-    env->ReleaseStringUTFChars(name_, name);
+            env->ReleaseStringUTFChars(name_, name);
+    });
 }
 
 extern "C"
@@ -185,29 +212,31 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetIntParameterArray(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint element,
         jintArray v_, jint offset, jint count) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetIntParameterArray", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
 
-    const char* name = env->GetStringUTFChars(name_, 0);
-    jint* v = env->GetIntArrayElements(v_, NULL);
+            const char* name = env->GetStringUTFChars(name_, 0);
+            jint* v = env->GetIntArrayElements(v_, NULL);
 
-    switch ((IntElement) element) {
-        case INT:
-            instance->setParameter(name, ((const int32_t*) v) + offset, count);
-            break;
-        case INT2:
-            instance->setParameter(name, ((const int2*) v) + offset, count);
-            break;
-        case INT3:
-            instance->setParameter(name, ((const int3*) v) + offset, count);
-            break;
-        case INT4:
-            instance->setParameter(name, ((const int4*) v) + offset, count);
-            break;
-    }
+            switch ((IntElement) element) {
+                case INT:
+                    instance->setParameter(name, ((const int32_t*) v) + offset, count);
+                    break;
+                case INT2:
+                    instance->setParameter(name, ((const int2*) v) + offset, count);
+                    break;
+                case INT3:
+                    instance->setParameter(name, ((const int3*) v) + offset, count);
+                    break;
+                case INT4:
+                    instance->setParameter(name, ((const int4*) v) + offset, count);
+                    break;
+            }
 
-    env->ReleaseIntArrayElements(v_, v, JNI_ABORT);
+            env->ReleaseIntArrayElements(v_, v, JNI_ABORT);
 
-    env->ReleaseStringUTFChars(name_, name);
+            env->ReleaseStringUTFChars(name_, name);
+    });
 }
 
 extern "C"
@@ -215,35 +244,37 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetFloatParameterArray(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint element,
         jfloatArray v_, jint offset, jint count) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetFloatParameterArray", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
 
-    const char* name = env->GetStringUTFChars(name_, 0);
-    jfloat* v = env->GetFloatArrayElements(v_, NULL);
+            const char* name = env->GetStringUTFChars(name_, 0);
+            jfloat* v = env->GetFloatArrayElements(v_, NULL);
 
-    switch ((FloatElement) element) {
-        case FLOAT:
-            instance->setParameter(name, ((const float*) v) + offset, count);
-            break;
-        case FLOAT2:
-            instance->setParameter(name, ((const float2*) v) + offset, count);
-            break;
-        case FLOAT3:
-            instance->setParameter(name, ((const float3*) v) + offset, count);
-            break;
-        case FLOAT4:
-            instance->setParameter(name, ((const float4*) v) + offset, count);
-            break;
-        case MAT3:
-            instance->setParameter(name, ((const mat3f*) v) + offset, count);
-            break;
-        case MAT4:
-            instance->setParameter(name, ((const mat4f*) v) + offset, count);
-            break;
-    }
+            switch ((FloatElement) element) {
+                case FLOAT:
+                    instance->setParameter(name, ((const float*) v) + offset, count);
+                    break;
+                case FLOAT2:
+                    instance->setParameter(name, ((const float2*) v) + offset, count);
+                    break;
+                case FLOAT3:
+                    instance->setParameter(name, ((const float3*) v) + offset, count);
+                    break;
+                case FLOAT4:
+                    instance->setParameter(name, ((const float4*) v) + offset, count);
+                    break;
+                case MAT3:
+                    instance->setParameter(name, ((const mat3f*) v) + offset, count);
+                    break;
+                case MAT4:
+                    instance->setParameter(name, ((const mat4f*) v) + offset, count);
+                    break;
+            }
 
-    env->ReleaseFloatArrayElements(v_, v, 0);
+            env->ReleaseFloatArrayElements(v_, v, 0);
 
-    env->ReleaseStringUTFChars(name_, name);
+            env->ReleaseStringUTFChars(name_, name);
+    });
 }
 
 // defined in TextureSampler.cpp
@@ -256,12 +287,14 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterTexture(
         JNIEnv *env, jclass, jlong nativeMaterialInstance, jstring name_,
         jlong nativeTexture, jlong sampler_) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    Texture* texture = (Texture*) nativeTexture;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetParameterTexture", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            Texture* texture = (Texture*) nativeTexture;
 
-    const char *name = env->GetStringUTFChars(name_, 0);
-    instance->setParameter(name, texture, JniUtils::from_long(sampler_));
-    env->ReleaseStringUTFChars(name_, name);
+            const char *name = env->GetStringUTFChars(name_, 0);
+            instance->setParameter(name, texture, JniUtils::from_long(sampler_));
+            env->ReleaseStringUTFChars(name_, name);
+    });
 }
 
 extern "C"
@@ -269,298 +302,368 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetScissor(
         JNIEnv *env, jclass, jlong nativeMaterialInstance, jint left,
         jint bottom, jint width, jint height) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setScissor(left, bottom, width, height);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetScissor", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setScissor(left, bottom, width, height);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nUnsetScissor(
         JNIEnv *env, jclass, jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->unsetScissor();
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nUnsetScissor", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->unsetScissor();
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetPolygonOffset(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetPolygonOffset(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jfloat scale, jfloat constant) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setPolygonOffset(scale, constant);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetPolygonOffset", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setPolygonOffset(scale, constant);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetMaskThreshold(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetMaskThreshold(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jfloat threshold) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setMaskThreshold(threshold);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetMaskThreshold", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setMaskThreshold(threshold);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetSpecularAntiAliasingVariance(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetSpecularAntiAliasingVariance(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jfloat variance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setSpecularAntiAliasingVariance(variance);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetSpecularAntiAliasingVariance", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setSpecularAntiAliasingVariance(variance);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetSpecularAntiAliasingThreshold(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetSpecularAntiAliasingThreshold(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jfloat threshold) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setSpecularAntiAliasingThreshold(threshold);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetSpecularAntiAliasingThreshold", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setSpecularAntiAliasingThreshold(threshold);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetDoubleSided(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetDoubleSided(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jboolean doubleSided) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setDoubleSided(doubleSided);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetDoubleSided", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setDoubleSided(doubleSided);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetCullingMode(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetCullingMode(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jlong cullingMode) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setCullingMode((MaterialInstance::CullingMode) cullingMode);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetCullingMode", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setCullingMode((MaterialInstance::CullingMode) cullingMode);
+    });
 }
 
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetCullingModeSeparate(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetCullingModeSeparate(JNIEnv* env, jclass,
         jlong nativeMaterialInstance,
         jlong colorPassCullingMode, jlong shadowPassCullingMode) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setCullingMode(
-            (MaterialInstance::CullingMode) colorPassCullingMode,
-            (MaterialInstance::CullingMode) shadowPassCullingMode);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetCullingModeSeparate", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setCullingMode(
+                    (MaterialInstance::CullingMode) colorPassCullingMode,
+                    (MaterialInstance::CullingMode) shadowPassCullingMode);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetColorWrite(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetColorWrite(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jboolean enable) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setColorWrite(enable);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetColorWrite", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setColorWrite(enable);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetDepthWrite(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetDepthWrite(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jboolean enable) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setDepthWrite(enable);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetDepthWrite", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setDepthWrite(enable);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetStencilWrite(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetStencilWrite(JNIEnv* env, jclass,
         jlong nativeMaterialInstance, jboolean enable) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setStencilWrite(enable);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetStencilWrite", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setStencilWrite(enable);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetDepthCulling(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetDepthCulling(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jboolean enable) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setDepthCulling(enable);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetDepthCulling", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setDepthCulling(enable);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetDepthFunc(JNIEnv*,
+Java_com_google_android_filament_MaterialInstance_nSetDepthFunc(JNIEnv* env,
         jclass, jlong nativeMaterialInstance, jlong function) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setDepthFunc(static_cast<MaterialInstance::DepthFunc>(function));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetDepthFunc", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setDepthFunc(static_cast<MaterialInstance::DepthFunc>(function));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetStencilCompareFunction(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetStencilCompareFunction(JNIEnv* env, jclass,
         jlong nativeMaterialInstance, jlong function, jlong face) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setStencilCompareFunction(
-            static_cast<MaterialInstance::StencilCompareFunc>(function),
-            static_cast<MaterialInstance::StencilFace>(face));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetStencilCompareFunction", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setStencilCompareFunction(
+                    static_cast<MaterialInstance::StencilCompareFunc>(function),
+                    static_cast<MaterialInstance::StencilFace>(face));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetStencilOpStencilFail(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetStencilOpStencilFail(JNIEnv* env, jclass,
         jlong nativeMaterialInstance, jlong op, jlong face) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setStencilOpStencilFail(
-            static_cast<MaterialInstance::StencilOperation>(op),
-            static_cast<MaterialInstance::StencilFace>(face));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetStencilOpStencilFail", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setStencilOpStencilFail(
+                    static_cast<MaterialInstance::StencilOperation>(op),
+                    static_cast<MaterialInstance::StencilFace>(face));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetStencilOpDepthFail(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetStencilOpDepthFail(JNIEnv* env, jclass,
         jlong nativeMaterialInstance, jlong op, jlong face) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setStencilOpDepthFail(
-            static_cast<MaterialInstance::StencilOperation>(op),
-            static_cast<MaterialInstance::StencilFace>(face));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetStencilOpDepthFail", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setStencilOpDepthFail(
+                    static_cast<MaterialInstance::StencilOperation>(op),
+                    static_cast<MaterialInstance::StencilFace>(face));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetStencilOpDepthStencilPass(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetStencilOpDepthStencilPass(JNIEnv* env, jclass,
         jlong nativeMaterialInstance, jlong op, jlong face) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setStencilOpDepthStencilPass(
-            static_cast<MaterialInstance::StencilOperation>(op),
-            static_cast<MaterialInstance::StencilFace>(face));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetStencilOpDepthStencilPass", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setStencilOpDepthStencilPass(
+                    static_cast<MaterialInstance::StencilOperation>(op),
+                    static_cast<MaterialInstance::StencilFace>(face));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetStencilReferenceValue(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetStencilReferenceValue(JNIEnv* env, jclass,
         jlong nativeMaterialInstance, jint value, jlong face) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setStencilReferenceValue(value, static_cast<MaterialInstance::StencilFace>(face));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetStencilReferenceValue", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setStencilReferenceValue(value, static_cast<MaterialInstance::StencilFace>(face));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetStencilReadMask(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetStencilReadMask(JNIEnv* env, jclass,
         jlong nativeMaterialInstance, jint readMask, jlong face) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setStencilReadMask(readMask, static_cast<MaterialInstance::StencilFace>(face));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetStencilReadMask", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setStencilReadMask(readMask, static_cast<MaterialInstance::StencilFace>(face));
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetStencilWriteMask(JNIEnv*, jclass,
+Java_com_google_android_filament_MaterialInstance_nSetStencilWriteMask(JNIEnv* env, jclass,
         jlong nativeMaterialInstance, jint writeMask, jlong face) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setStencilWriteMask(writeMask, static_cast<MaterialInstance::StencilFace>(face));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MaterialInstance_nSetStencilWriteMask", [&]() {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            instance->setStencilWriteMask(writeMask, static_cast<MaterialInstance::StencilFace>(face));
+    });
 }
 
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetName(JNIEnv* env, jclass,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    return env->NewStringUTF(instance->getName());
+    return filament::android::jniGuard<jstring>(env, "Java_com_google_android_filament_MaterialInstance_nGetName", 0, [&]() -> jstring {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            return env->NewStringUTF(instance->getName());
+    });
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetMaterial(JNIEnv* env, jclass,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    return (jlong) instance->getMaterial();
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_MaterialInstance_nGetMaterial", 0, [&]() -> jlong {
+            MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+            return (jlong) instance->getMaterial();
+    });
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_MaterialInstance_nDuplicate(JNIEnv* env, jclass clazz,
         jlong otherNativeMaterialInstance, jstring name) {
-    MaterialInstance* other = (MaterialInstance*) otherNativeMaterialInstance;
-    const char *cstr = nullptr;
-    if (name != nullptr) {
-        cstr = env->GetStringUTFChars(name, nullptr);
-    }
-    MaterialInstance* mi = MaterialInstance::duplicate(other, cstr);
-    if (name != nullptr) {
-        env->ReleaseStringUTFChars(name, cstr);
-    }
-    return (jlong)mi;
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_MaterialInstance_nDuplicate", 0, [&]() -> jlong {
+            MaterialInstance* other = (MaterialInstance*) otherNativeMaterialInstance;
+            const char *cstr = nullptr;
+            if (name != nullptr) {
+                cstr = env->GetStringUTFChars(name, nullptr);
+            }
+            MaterialInstance* mi = MaterialInstance::duplicate(other, cstr);
+            if (name != nullptr) {
+                env->ReleaseStringUTFChars(name, cstr);
+            }
+            return (jlong)mi;
+    });
 }
 
 extern "C"
 JNIEXPORT jfloat JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetMaskThreshold(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return instance->getMaskThreshold();
+    return filament::android::jniGuard<jfloat>(env, "Java_com_google_android_filament_MaterialInstance_nGetMaskThreshold", 0.0f, [&]() -> jfloat {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return instance->getMaskThreshold();
+    });
 }
 
 extern "C"
 JNIEXPORT jfloat JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetSpecularAntiAliasingVariance(JNIEnv* env,
         jclass clazz, jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return instance->getSpecularAntiAliasingVariance();
+    return filament::android::jniGuard<jfloat>(env, "Java_com_google_android_filament_MaterialInstance_nGetSpecularAntiAliasingVariance", 0.0f, [&]() -> jfloat {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return instance->getSpecularAntiAliasingVariance();
+    });
 }
 
 extern "C"
 JNIEXPORT jfloat JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetSpecularAntiAliasingThreshold(JNIEnv* env,
         jclass clazz, jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return instance->getSpecularAntiAliasingThreshold();
+    return filament::android::jniGuard<jfloat>(env, "Java_com_google_android_filament_MaterialInstance_nGetSpecularAntiAliasingThreshold", 0.0f, [&]() -> jfloat {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return instance->getSpecularAntiAliasingThreshold();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsDoubleSided(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return instance->isDoubleSided();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_MaterialInstance_nIsDoubleSided", JNI_FALSE, [&]() -> jboolean {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return instance->isDoubleSided();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetCullingMode(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return (jint)instance->getCullingMode();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_MaterialInstance_nGetCullingMode", 0, [&]() -> jint {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return (jint)instance->getCullingMode();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetShadowCullingMode(JNIEnv* env, jclass,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return (jint)instance->getShadowCullingMode();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_MaterialInstance_nGetShadowCullingMode", 0, [&]() -> jint {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return (jint)instance->getShadowCullingMode();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsColorWriteEnabled(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return instance->isColorWriteEnabled();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_MaterialInstance_nIsColorWriteEnabled", JNI_FALSE, [&]() -> jboolean {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return instance->isColorWriteEnabled();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsDepthWriteEnabled(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return instance->isDepthWriteEnabled();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_MaterialInstance_nIsDepthWriteEnabled", JNI_FALSE, [&]() -> jboolean {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return instance->isDepthWriteEnabled();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsStencilWriteEnabled(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return instance->isStencilWriteEnabled();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_MaterialInstance_nIsStencilWriteEnabled", JNI_FALSE, [&]() -> jboolean {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return instance->isStencilWriteEnabled();
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsDepthCullingEnabled(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return instance->isDepthCullingEnabled();
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_MaterialInstance_nIsDepthCullingEnabled", JNI_FALSE, [&]() -> jboolean {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return instance->isDepthCullingEnabled();
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetDepthFunc(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
-    return (jint)instance->getDepthFunc();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_MaterialInstance_nGetDepthFunc", 0, [&]() -> jint {
+            MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+            return (jint)instance->getDepthFunc();
+    });
 }

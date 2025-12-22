@@ -18,6 +18,7 @@
 
 #include <math/mat3.h>
 #include <math/quat.h>
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament::math;
 
@@ -27,12 +28,13 @@ Java_com_google_android_filament_MathUtils_nPackTangentFrame(JNIEnv *env, jclass
         jfloat bitangentX, jfloat bitangentY, jfloat bitangentZ,
         jfloat normalX, jfloat normalY, jfloat normalZ,
         jfloatArray quaternion_, jint offset) {
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_MathUtils_nPackTangentFrame", [&]() {
+            float3 tangent{tangentX, tangentY, tangentZ};
+            float3 bitangent{bitangentX, bitangentY, bitangentZ};
+            float3 normal{normalX, normalY, normalZ};
+            quatf q = mat3f::packTangentFrame({tangent, bitangent, normal});
 
-    float3 tangent{tangentX, tangentY, tangentZ};
-    float3 bitangent{bitangentX, bitangentY, bitangentZ};
-    float3 normal{normalX, normalY, normalZ};
-    quatf q = mat3f::packTangentFrame({tangent, bitangent, normal});
-
-    env->SetFloatArrayRegion(quaternion_, offset, 4,
-             reinterpret_cast<jfloat*>(&q));
+            env->SetFloatArrayRegion(quaternion_, offset, 4,
+                     reinterpret_cast<jfloat*>(&q));
+    });
 }

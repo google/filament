@@ -17,6 +17,7 @@
 #include <jni.h>
 
 #include "private/backend/VirtualMachineEnv.h"
+#include "../../../../common/JniExceptionBridge.h"
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;

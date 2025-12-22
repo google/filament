@@ -19,6 +19,7 @@
 #include <filament/Scene.h>
 
 #include <utils/Entity.h>
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace utils;
@@ -26,94 +27,116 @@ using namespace utils;
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nSetSkybox(JNIEnv *env, jclass type, jlong nativeScene,
         jlong nativeSkybox) {
-    Scene* scene = (Scene*) nativeScene;
-    Skybox* skybox = (Skybox*) nativeSkybox;
-    scene->setSkybox(skybox);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Scene_nSetSkybox", [&]() {
+            Scene* scene = (Scene*) nativeScene;
+            Skybox* skybox = (Skybox*) nativeSkybox;
+            scene->setSkybox(skybox);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nSetIndirectLight(JNIEnv *env, jclass type,
         jlong nativeScene, jlong nativeIndirectLight) {
-    Scene *scene = (Scene *) nativeScene;
-    IndirectLight* indirectLight = (IndirectLight*) nativeIndirectLight;
-    scene->setIndirectLight(indirectLight);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Scene_nSetIndirectLight", [&]() {
+            Scene *scene = (Scene *) nativeScene;
+            IndirectLight* indirectLight = (IndirectLight*) nativeIndirectLight;
+            scene->setIndirectLight(indirectLight);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nAddEntity(JNIEnv *env, jclass type, jlong nativeScene,
         jint entity) {
-    Scene* scene = (Scene*) nativeScene;
-    scene->addEntity((Entity&) entity);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Scene_nAddEntity", [&]() {
+            Scene* scene = (Scene*) nativeScene;
+            scene->addEntity((Entity&) entity);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nAddEntities(JNIEnv *env, jclass type, jlong nativeScene,
         jintArray entities) {
-    Scene* scene = (Scene*) nativeScene;
-    Entity* nativeEntities = (Entity*) env->GetIntArrayElements(entities, nullptr);
-    scene->addEntities(nativeEntities, env->GetArrayLength(entities));
-    env->ReleaseIntArrayElements(entities, (jint*) nativeEntities, JNI_ABORT);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Scene_nAddEntities", [&]() {
+            Scene* scene = (Scene*) nativeScene;
+            Entity* nativeEntities = (Entity*) env->GetIntArrayElements(entities, nullptr);
+            scene->addEntities(nativeEntities, env->GetArrayLength(entities));
+            env->ReleaseIntArrayElements(entities, (jint*) nativeEntities, JNI_ABORT);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nRemove(JNIEnv *env, jclass type, jlong nativeScene,
         jint entity) {
-    Scene* scene = (Scene*) nativeScene;
-    scene->remove((Entity&) entity);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Scene_nRemove", [&]() {
+            Scene* scene = (Scene*) nativeScene;
+            scene->remove((Entity&) entity);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nRemoveEntities(JNIEnv *env, jclass type, jlong nativeScene,
         jintArray entities) {
-    Scene* scene = (Scene*) nativeScene;
-    Entity* nativeEntities = (Entity*) env->GetIntArrayElements(entities, nullptr);
-    scene->removeEntities(nativeEntities, env->GetArrayLength(entities));
-    env->ReleaseIntArrayElements(entities, (jint*) nativeEntities, JNI_ABORT);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Scene_nRemoveEntities", [&]() {
+            Scene* scene = (Scene*) nativeScene;
+            Entity* nativeEntities = (Entity*) env->GetIntArrayElements(entities, nullptr);
+            scene->removeEntities(nativeEntities, env->GetArrayLength(entities));
+            env->ReleaseIntArrayElements(entities, (jint*) nativeEntities, JNI_ABORT);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Scene_nGetEntityCount(JNIEnv *env, jclass type,
         jlong nativeScene) {
-    Scene* scene = (Scene*) nativeScene;
-    return (jint) scene->getEntityCount();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Scene_nGetEntityCount", 0, [&]() -> jint {
+            Scene* scene = (Scene*) nativeScene;
+            return (jint) scene->getEntityCount();
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Scene_nGetRenderableCount(JNIEnv *env, jclass type,
         jlong nativeScene) {
-    Scene* scene = (Scene*) nativeScene;
-    return (jint) scene->getRenderableCount();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Scene_nGetRenderableCount", 0, [&]() -> jint {
+            Scene* scene = (Scene*) nativeScene;
+            return (jint) scene->getRenderableCount();
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Scene_nGetLightCount(JNIEnv *env, jclass type, jlong nativeScene) {
-    Scene* scene = (Scene*) nativeScene;
-    return (jint) scene->getLightCount();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Scene_nGetLightCount", 0, [&]() -> jint {
+            Scene* scene = (Scene*) nativeScene;
+            return (jint) scene->getLightCount();
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Scene_nHasEntity(JNIEnv *env, jclass type, jlong nativeScene,
         jint entityId) {
-    Scene* scene = (Scene*) nativeScene;
-    Entity entity = Entity::import(entityId);
-    return (jboolean) scene->hasEntity(entity);
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Scene_nHasEntity", JNI_FALSE, [&]() -> jboolean {
+            Scene* scene = (Scene*) nativeScene;
+            Entity entity = Entity::import(entityId);
+            return (jboolean) scene->hasEntity(entity);
+    });
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Scene_nGetEntities(JNIEnv *env, jclass ,
         jlong nativeScene, jintArray outArray, jint length) {
-    Scene const* const scene = (Scene*) nativeScene;
-    if (length < scene->getEntityCount()) {
-        // should not happen because we already checked on the java side
-        return JNI_FALSE;
-    }
-    jint *out = (jint *) env->GetIntArrayElements(outArray, nullptr);
-    scene->forEach([out, length, i = 0](Entity entity)mutable {
-        if (i < length) { // this is just paranoia here
-            out[i++] = (jint) entity.getId();
-        }
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Scene_nGetEntities", JNI_FALSE, [&]() -> jboolean {
+            Scene const* const scene = (Scene*) nativeScene;
+            if (length < scene->getEntityCount()) {
+                // should not happen because we already checked on the java side
+                return JNI_FALSE;
+            }
+            jint *out = (jint *) env->GetIntArrayElements(outArray, nullptr);
+            scene->forEach([out, length, i = 0](Entity entity)mutable {
+                if (i < length) { // this is just paranoia here
+                    out[i++] = (jint) entity.getId();
+                }
+            });
+            env->ReleaseIntArrayElements(outArray, (jint*) out, 0);
+            return JNI_TRUE;
     });
-    env->ReleaseIntArrayElements(outArray, (jint*) out, 0);
-    return JNI_TRUE;
 }

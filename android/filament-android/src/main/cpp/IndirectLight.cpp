@@ -21,162 +21,201 @@
 #include <common/NioUtils.h>
 #include <common/CallbackUtils.h>
 #include <math/mat4.h>
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_IndirectLight_nCreateBuilder(JNIEnv*, jclass) {
-    return (jlong) new IndirectLight::Builder();
+Java_com_google_android_filament_IndirectLight_nCreateBuilder(JNIEnv* env, jclass) {
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_IndirectLight_nCreateBuilder", 0, [&]() -> jlong {
+            return (jlong) new IndirectLight::Builder();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_IndirectLight_nDestroyBuilder(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nDestroyBuilder(JNIEnv* env, jclass,
         jlong nativeBuilder) {
-    IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
-    delete builder;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nDestroyBuilder", [&]() {
+            IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
+            delete builder;
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_IndirectLight_nBuilderBuild(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeEngine) {
-    IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
-    Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_IndirectLight_nBuilderBuild", 0, [&]() -> jlong {
+            IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
+            Engine *engine = (Engine *) nativeEngine;
+            return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_IndirectLight_nBuilderReflections(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nBuilderReflections(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeTexture) {
-    IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
-    const Texture *texture = (const Texture *) nativeTexture;
-    builder->reflections(texture);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nBuilderReflections", [&]() {
+            IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
+            const Texture *texture = (const Texture *) nativeTexture;
+            builder->reflections(texture);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nIrradiance(JNIEnv* env, jclass,
         jlong nativeBuilder, jint bands, jfloatArray sh_) {
-    IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
-    jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
-    builder->irradiance((uint8_t) bands, (const filament::math::float3*) sh);
-    env->ReleaseFloatArrayElements(sh_, sh, JNI_ABORT);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nIrradiance", [&]() {
+            IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
+            jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
+            builder->irradiance((uint8_t) bands, (const filament::math::float3*) sh);
+            env->ReleaseFloatArrayElements(sh_, sh, JNI_ABORT);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nRadiance(JNIEnv* env, jclass,
         jlong nativeBuilder, jint bands, jfloatArray sh_) {
-    IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
-    jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
-    builder->radiance((uint8_t) bands, (const filament::math::float3*) sh);
-    env->ReleaseFloatArrayElements(sh_, sh, JNI_ABORT);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nRadiance", [&]() {
+            IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
+            jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
+            builder->radiance((uint8_t) bands, (const filament::math::float3*) sh);
+            env->ReleaseFloatArrayElements(sh_, sh, JNI_ABORT);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_IndirectLight_nIrradianceAsTexture(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nIrradianceAsTexture(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeTexture) {
-    IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
-    const Texture* texture = (const Texture*) nativeTexture;
-    builder->irradiance(texture);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nIrradianceAsTexture", [&]() {
+            IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
+            const Texture* texture = (const Texture*) nativeTexture;
+            builder->irradiance(texture);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_IndirectLight_nIntensity(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nIntensity(JNIEnv* env, jclass,
         jlong nativeBuilder, jfloat envIntensity) {
-    IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
-    builder->intensity(envIntensity);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nIntensity", [&]() {
+            IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
+            builder->intensity(envIntensity);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_IndirectLight_nRotation(JNIEnv *, jclass, jlong nativeBuilder,
+Java_com_google_android_filament_IndirectLight_nRotation(JNIEnv * env, jclass, jlong nativeBuilder,
         jfloat v0, jfloat v1, jfloat v2, jfloat v3, jfloat v4, jfloat v5, jfloat v6, jfloat v7,
         jfloat v8) {
-    IndirectLight::Builder *builder = (IndirectLight::Builder *) nativeBuilder;
-    builder->rotation(filament::math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nRotation", [&]() {
+            IndirectLight::Builder *builder = (IndirectLight::Builder *) nativeBuilder;
+            builder->rotation(filament::math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_IndirectLight_nSetIntensity(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nSetIntensity(JNIEnv* env, jclass,
         jlong nativeIndirectLight, jfloat intensity) {
-    IndirectLight* indirectLight = (IndirectLight*) nativeIndirectLight;
-    indirectLight->setIntensity(intensity);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nSetIntensity", [&]() {
+            IndirectLight* indirectLight = (IndirectLight*) nativeIndirectLight;
+            indirectLight->setIntensity(intensity);
+    });
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
-Java_com_google_android_filament_IndirectLight_nGetIntensity(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nGetIntensity(JNIEnv* env, jclass,
         jlong nativeIndirectLight) {
-    IndirectLight* indirectLight = (IndirectLight*) nativeIndirectLight;
-    return indirectLight->getIntensity();
+    return filament::android::jniGuard<jfloat>(env, "Java_com_google_android_filament_IndirectLight_nGetIntensity", 0.0f, [&]() -> jfloat {
+            IndirectLight* indirectLight = (IndirectLight*) nativeIndirectLight;
+            return indirectLight->getIntensity();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_IndirectLight_nSetRotation(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nSetRotation(JNIEnv* env, jclass,
         jlong nativeIndirectLight, jfloat v0, jfloat v1, jfloat v2,
         jfloat v3, jfloat v4, jfloat v5, jfloat v6, jfloat v7, jfloat v8) {
-    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
-    indirectLight->setRotation(filament::math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nSetRotation", [&]() {
+            IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+            indirectLight->setRotation(filament::math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nGetRotation(JNIEnv* env, jclass,
         jlong nativeIndirectLight, jfloatArray outRotation_) {
-    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
-    jfloat *outRotation = env->GetFloatArrayElements(outRotation_, NULL);
-    *reinterpret_cast<filament::math::mat3f*>(outRotation) = indirectLight->getRotation();
-    env->ReleaseFloatArrayElements(outRotation_, outRotation, 0);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nGetRotation", [&]() {
+            IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+            jfloat *outRotation = env->GetFloatArrayElements(outRotation_, NULL);
+            *reinterpret_cast<filament::math::mat3f*>(outRotation) = indirectLight->getRotation();
+            env->ReleaseFloatArrayElements(outRotation_, outRotation, 0);
 
+    });
 }
 
 extern "C" [[deprecated]] JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nGetDirectionEstimate(JNIEnv* env, jclass,
         jlong nativeIndirectLight, jfloatArray outDirection_) {
-    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
-    jfloat *outDirection = env->GetFloatArrayElements(outDirection_, NULL);
-    *reinterpret_cast<filament::math::float3*>(outDirection) = indirectLight->getDirectionEstimate();
-    env->ReleaseFloatArrayElements(outDirection_, outDirection, 0);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nGetDirectionEstimate", [&]() {
+            IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+            jfloat *outDirection = env->GetFloatArrayElements(outDirection_, NULL);
+            *reinterpret_cast<filament::math::float3*>(outDirection) = indirectLight->getDirectionEstimate();
+            env->ReleaseFloatArrayElements(outDirection_, outDirection, 0);
+    });
 }
 
 extern "C" [[deprecated]] JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nGetColorEstimate(JNIEnv* env, jclass,
         jlong nativeIndirectLight, jfloatArray outColor_, jfloat x, jfloat y, jfloat z) {
-    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
-    jfloat *outColor = env->GetFloatArrayElements(outColor_, NULL);
-    *reinterpret_cast<filament::math::float4*>(outColor) =
-            indirectLight->getColorEstimate(math::float3{x, y, z});
-    env->ReleaseFloatArrayElements(outColor_, outColor, 0);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nGetColorEstimate", [&]() {
+            IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+            jfloat *outColor = env->GetFloatArrayElements(outColor_, NULL);
+            *reinterpret_cast<filament::math::float4*>(outColor) =
+                    indirectLight->getColorEstimate(math::float3{x, y, z});
+            env->ReleaseFloatArrayElements(outColor_, outColor, 0);
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_IndirectLight_nGetReflectionsTexture(JNIEnv* env, jclass,
         jlong nativeIndirectLight) {
-    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
-    Texture const *tex = indirectLight->getReflectionsTexture();
-    return (jlong) tex;
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_IndirectLight_nGetReflectionsTexture", 0, [&]() -> jlong {
+            IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+            Texture const *tex = indirectLight->getReflectionsTexture();
+            return (jlong) tex;
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_IndirectLight_nGetIrradianceTexture(JNIEnv* env, jclass,
         jlong nativeIndirectLight) {
-    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
-    Texture const *tex = indirectLight->getIrradianceTexture();
-    return (jlong) tex;
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_IndirectLight_nGetIrradianceTexture", 0, [&]() -> jlong {
+            IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+            Texture const *tex = indirectLight->getIrradianceTexture();
+            return (jlong) tex;
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nGetDirectionEstimateStatic(JNIEnv *env, jclass,
         jfloatArray sh_, jfloatArray outDirection_) {
-    jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
-    jfloat *outDirection = env->GetFloatArrayElements(outDirection_, NULL);
-    *reinterpret_cast<filament::math::float3*>(outDirection) = IndirectLight::getDirectionEstimate((filament::math::float3*)sh);
-    env->ReleaseFloatArrayElements(outDirection_, outDirection, 0);
-    env->ReleaseFloatArrayElements(sh_, sh, 0);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nGetDirectionEstimateStatic", [&]() {
+            jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
+            jfloat *outDirection = env->GetFloatArrayElements(outDirection_, NULL);
+            *reinterpret_cast<filament::math::float3*>(outDirection) = IndirectLight::getDirectionEstimate((filament::math::float3*)sh);
+            env->ReleaseFloatArrayElements(outDirection_, outDirection, 0);
+            env->ReleaseFloatArrayElements(sh_, sh, 0);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nGetColorEstimateStatic(JNIEnv *env, jclass,
         jfloatArray outColor_, jfloatArray sh_, jfloat x, jfloat y, jfloat z) {
-    jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
-    jfloat *outColor = env->GetFloatArrayElements(outColor_, NULL);
-    *reinterpret_cast<filament::math::float4*>(outColor) =
-            IndirectLight::getColorEstimate((filament::math::float3*)sh, math::float3{x, y, z});
-    env->ReleaseFloatArrayElements(outColor_, outColor, 0);
-    env->ReleaseFloatArrayElements(sh_, sh, 0);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndirectLight_nGetColorEstimateStatic", [&]() {
+            jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
+            jfloat *outColor = env->GetFloatArrayElements(outColor_, NULL);
+            *reinterpret_cast<filament::math::float4*>(outColor) =
+                    IndirectLight::getColorEstimate((filament::math::float3*)sh, math::float3{x, y, z});
+            env->ReleaseFloatArrayElements(outColor_, outColor, 0);
+            env->ReleaseFloatArrayElements(sh_, sh, 0);
+    });
 }

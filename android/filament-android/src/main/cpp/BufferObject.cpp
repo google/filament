@@ -26,51 +26,64 @@
 
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace backend;
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_BufferObject_nCreateBuilder(JNIEnv *env, jclass type) {
-    return (jlong) new BufferObject::Builder();
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_BufferObject_nCreateBuilder", 0, [&]() -> jlong {
+            return (jlong) new BufferObject::Builder();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_BufferObject_nDestroyBuilder(JNIEnv *env, jclass type,
         jlong nativeBuilder) {
-    BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
-    delete builder;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_BufferObject_nDestroyBuilder", [&]() {
+            BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
+            delete builder;
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_BufferObject_nBuilderSize(JNIEnv *env, jclass type,
         jlong nativeBuilder, jint byteCount) {
-    BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
-    builder->size((uint32_t) byteCount);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_BufferObject_nBuilderSize", [&]() {
+            BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
+            builder->size((uint32_t) byteCount);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_BufferObject_nBuilderBindingType(JNIEnv *env, jclass type,
         jlong nativeBuilder, jint bindingType) {
-    using BindingType = BufferObject::BindingType;
-    BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
-    BindingType types[] = {BindingType::VERTEX};
-    builder->bindingType(types[bindingType]);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_BufferObject_nBuilderBindingType", [&]() {
+            using BindingType = BufferObject::BindingType;
+            BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
+            BindingType types[] = {BindingType::VERTEX};
+            builder->bindingType(types[bindingType]);
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_BufferObject_nBuilderBuild(JNIEnv *env, jclass type,
         jlong nativeBuilder, jlong nativeEngine) {
-    BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
-    Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_BufferObject_nBuilderBuild", 0, [&]() -> jlong {
+            BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
+            Engine *engine = (Engine *) nativeEngine;
+            return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_BufferObject_nGetByteCount(JNIEnv *env, jclass type,
         jlong nativeBufferObject) {
-    BufferObject *bufferObject = (BufferObject *) nativeBufferObject;
-    return (jint) bufferObject->getByteCount();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_BufferObject_nGetByteCount", 0, [&]() -> jint {
+            BufferObject *bufferObject = (BufferObject *) nativeBufferObject;
+            return (jint) bufferObject->getByteCount();
+    });
 }
 
 extern "C" JNIEXPORT int JNICALL
@@ -78,23 +91,25 @@ Java_com_google_android_filament_BufferObject_nSetBuffer(JNIEnv *env, jclass typ
         jlong nativeBufferObject, jlong nativeEngine, jobject buffer, int remaining,
         jint destOffsetInBytes, jint count,
         jobject handler, jobject runnable) {
-    BufferObject *bufferObject = (BufferObject *) nativeBufferObject;
-    Engine *engine = (Engine *) nativeEngine;
+    return filament::android::jniGuard<int>(env, "Java_com_google_android_filament_BufferObject_nSetBuffer", 0, [&]() -> int {
+            BufferObject *bufferObject = (BufferObject *) nativeBufferObject;
+            Engine *engine = (Engine *) nativeEngine;
 
-    AutoBuffer nioBuffer(env, buffer, count);
-    void* data = nioBuffer.getData();
-    size_t sizeInBytes = nioBuffer.getSize();
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
+            AutoBuffer nioBuffer(env, buffer, count);
+            void* data = nioBuffer.getData();
+            size_t sizeInBytes = nioBuffer.getSize();
+            if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+                // BufferOverflowException
+                return -1;
+            }
 
-    auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+            auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    BufferDescriptor desc(data, sizeInBytes,
-            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
+            BufferDescriptor desc(data, sizeInBytes,
+                    callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    bufferObject->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
+            bufferObject->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
 
-    return 0;
+            return 0;
+    });
 }

@@ -24,65 +24,80 @@
 
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace backend;
 
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSkipFrame(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nSkipFrame(JNIEnv * env, jclass, jlong nativeRenderer,
         jlong vsyncSteadyClockTimeNano) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->skipFrame(uint64_t(vsyncSteadyClockTimeNano));
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nSkipFrame", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->skipFrame(uint64_t(vsyncSteadyClockTimeNano));
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Renderer_nShouldRenderFrame(JNIEnv *, jclass, jlong nativeRenderer) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    return (jboolean) renderer->shouldRenderFrame();
+Java_com_google_android_filament_Renderer_nShouldRenderFrame(JNIEnv * env, jclass, jlong nativeRenderer) {
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Renderer_nShouldRenderFrame", JNI_FALSE, [&]() -> jboolean {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            return (jboolean) renderer->shouldRenderFrame();
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Renderer_nBeginFrame(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nBeginFrame(JNIEnv * env, jclass, jlong nativeRenderer,
         jlong nativeSwapChain, jlong frameTimeNanos) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    SwapChain *swapChain = (SwapChain *) nativeSwapChain;
-    return (jboolean) renderer->beginFrame(swapChain, uint64_t(frameTimeNanos));
+    return filament::android::jniGuard<jboolean>(env, "Java_com_google_android_filament_Renderer_nBeginFrame", JNI_FALSE, [&]() -> jboolean {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            SwapChain *swapChain = (SwapChain *) nativeSwapChain;
+            return (jboolean) renderer->beginFrame(swapChain, uint64_t(frameTimeNanos));
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nEndFrame(JNIEnv *, jclass, jlong nativeRenderer) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->endFrame();
+Java_com_google_android_filament_Renderer_nEndFrame(JNIEnv * env, jclass, jlong nativeRenderer) {
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nEndFrame", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->endFrame();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nRender(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nRender(JNIEnv * env, jclass, jlong nativeRenderer,
         jlong nativeView) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    View *view = (View *) nativeView;
-    renderer->render(view);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nRender", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            View *view = (View *) nativeView;
+            renderer->render(view);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nRenderStandaloneView(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nRenderStandaloneView(JNIEnv * env, jclass, jlong nativeRenderer,
         jlong nativeView) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    View *view = (View *) nativeView;
-    renderer->renderStandaloneView(view);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nRenderStandaloneView", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            View *view = (View *) nativeView;
+            renderer->renderStandaloneView(view);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nCopyFrame(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nCopyFrame(JNIEnv * env, jclass, jlong nativeRenderer,
         jlong nativeDstSwapChain,
         jint dstLeft, jint dstBottom, jint dstWidth, jint dstHeight,
         jint srcLeft, jint srcBottom, jint srcWidth, jint srcHeight,
         jint flags) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    SwapChain *dstSwapChain = (SwapChain *) nativeDstSwapChain;
-    const filament::Viewport dstViewport {dstLeft, dstBottom, (uint32_t) dstWidth, (uint32_t) dstHeight};
-    const filament::Viewport srcViewport {srcLeft, srcBottom, (uint32_t) srcWidth, (uint32_t) srcHeight};
-    renderer->copyFrame(dstSwapChain, dstViewport, srcViewport, (uint32_t) flags);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nCopyFrame", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            SwapChain *dstSwapChain = (SwapChain *) nativeDstSwapChain;
+            const filament::Viewport dstViewport {dstLeft, dstBottom, (uint32_t) dstWidth, (uint32_t) dstHeight};
+            const filament::Viewport srcViewport {srcLeft, srcBottom, (uint32_t) srcWidth, (uint32_t) srcHeight};
+            renderer->copyFrame(dstSwapChain, dstViewport, srcViewport, (uint32_t) flags);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -92,32 +107,34 @@ Java_com_google_android_filament_Renderer_nReadPixels(JNIEnv *env, jclass,
         jobject storage, jint remaining,
         jint left, jint top, jint type, jint alignment, jint stride, jint format,
         jobject handler, jobject runnable) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    Engine *engine = (Engine *) nativeEngine;
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Renderer_nReadPixels", 0, [&]() -> jint {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            Engine *engine = (Engine *) nativeEngine;
 
-    stride = stride ? stride : width;
-    size_t sizeInBytes = PixelBufferDescriptor::computeDataSize(
-            (PixelDataFormat) format, (PixelDataType) type,
-            (size_t) stride, (size_t) (height + top), (size_t) alignment);
+            stride = stride ? stride : width;
+            size_t sizeInBytes = PixelBufferDescriptor::computeDataSize(
+                    (PixelDataFormat) format, (PixelDataType) type,
+                    (size_t) stride, (size_t) (height + top), (size_t) alignment);
 
-    AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
+            AutoBuffer nioBuffer(env, storage, 0);
+            if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+                // BufferOverflowException
+                return -1;
+            }
 
-    void *buffer = nioBuffer.getData();
-    auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+            void *buffer = nioBuffer.getData();
+            auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
-            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
-            (uint32_t) stride,
-            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
+            PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
+                    (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
+                    (uint32_t) stride,
+                    callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    renderer->readPixels(uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
-            std::move(desc));
+            renderer->readPixels(uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
+                    std::move(desc));
 
-    return 0;
+            return 0;
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -127,100 +144,120 @@ Java_com_google_android_filament_Renderer_nReadPixelsEx(JNIEnv *env, jclass,
         jobject storage, jint remaining,
         jint left, jint top, jint type, jint alignment, jint stride, jint format,
         jobject handler, jobject runnable) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    Engine *engine = (Engine *) nativeEngine;
-    RenderTarget *renderTarget = (RenderTarget *) nativeRenderTarget;
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Renderer_nReadPixelsEx", 0, [&]() -> jint {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            Engine *engine = (Engine *) nativeEngine;
+            RenderTarget *renderTarget = (RenderTarget *) nativeRenderTarget;
 
-    stride = stride ? stride : width;
-    size_t sizeInBytes = PixelBufferDescriptor::computeDataSize(
-            (PixelDataFormat) format, (PixelDataType) type,
-            (size_t) stride, (size_t) (height + top), (size_t) alignment);
+            stride = stride ? stride : width;
+            size_t sizeInBytes = PixelBufferDescriptor::computeDataSize(
+                    (PixelDataFormat) format, (PixelDataType) type,
+                    (size_t) stride, (size_t) (height + top), (size_t) alignment);
 
-    AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
+            AutoBuffer nioBuffer(env, storage, 0);
+            if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+                // BufferOverflowException
+                return -1;
+            }
 
-    void *buffer = nioBuffer.getData();
-    auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+            void *buffer = nioBuffer.getData();
+            auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
-            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
-            (uint32_t) stride,
-            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
+            PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
+                    (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
+                    (uint32_t) stride,
+                    callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    renderer->readPixels(renderTarget,
-            uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
-            std::move(desc));
+            renderer->readPixels(renderTarget,
+                    uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
+                    std::move(desc));
 
-    return 0;
+            return 0;
+    });
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
-Java_com_google_android_filament_Renderer_nGetUserTime(JNIEnv*, jclass, jlong nativeRenderer) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    return renderer->getUserTime();
+Java_com_google_android_filament_Renderer_nGetUserTime(JNIEnv* env, jclass, jlong nativeRenderer) {
+    return filament::android::jniGuard<jdouble>(env, "Java_com_google_android_filament_Renderer_nGetUserTime", 0.0, [&]() -> jdouble {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            return renderer->getUserTime();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv*, jclass, jlong nativeRenderer) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->resetUserTime();
+Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv* env, jclass, jlong nativeRenderer) {
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nResetUserTime", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->resetUserTime();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetDisplayInfo(JNIEnv*, jclass, jlong nativeRenderer, jfloat refreshRate) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->setDisplayInfo({ .refreshRate = refreshRate });
+Java_com_google_android_filament_Renderer_nSetDisplayInfo(JNIEnv* env, jclass, jlong nativeRenderer, jfloat refreshRate) {
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nSetDisplayInfo", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->setDisplayInfo({ .refreshRate = refreshRate });
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetFrameRateOptions(JNIEnv*, jclass,
+Java_com_google_android_filament_Renderer_nSetFrameRateOptions(JNIEnv* env, jclass,
     jlong nativeRenderer, jfloat interval, jfloat headRoomRatio, jfloat scaleRate, jint history) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->setFrameRateOptions({ .headRoomRatio = headRoomRatio,
-                                     .scaleRate = scaleRate,
-                                     .history = (uint8_t)history,
-                                     .interval = (uint8_t)interval });
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nSetFrameRateOptions", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->setFrameRateOptions({ .headRoomRatio = headRoomRatio,
+                                             .scaleRate = scaleRate,
+                                             .history = (uint8_t)history,
+                                             .interval = (uint8_t)interval });
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetClearOptions(JNIEnv *, jclass ,
+Java_com_google_android_filament_Renderer_nSetClearOptions(JNIEnv * env, jclass ,
         jlong nativeRenderer, jfloat r, jfloat g, jfloat b, jfloat a,
         jboolean clear, jboolean discard) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->setClearOptions({ .clearColor = {r, g, b, a},
-                                .clear = (bool) clear,
-                                .discard = (bool) discard});
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nSetClearOptions", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->setClearOptions({ .clearColor = {r, g, b, a},
+                                        .clear = (bool) clear,
+                                        .discard = (bool) discard});
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetPresentationTime(JNIEnv *, jclass ,
+Java_com_google_android_filament_Renderer_nSetPresentationTime(JNIEnv * env, jclass ,
     jlong nativeRenderer, jlong monotonicClockNanos) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->setPresentationTime(monotonicClockNanos);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nSetPresentationTime", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->setPresentationTime(monotonicClockNanos);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetVsyncTime(JNIEnv *, jclass,
+Java_com_google_android_filament_Renderer_nSetVsyncTime(JNIEnv * env, jclass,
     jlong nativeRenderer, jlong steadyClockTimeNano) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->setVsyncTime(steadyClockTimeNano);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nSetVsyncTime", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->setVsyncTime(steadyClockTimeNano);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSkipNextFrames(JNIEnv *, jclass ,
+Java_com_google_android_filament_Renderer_nSkipNextFrames(JNIEnv * env, jclass ,
     jlong nativeRenderer, jint frameCount) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->skipNextFrames(frameCount);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_Renderer_nSkipNextFrames", [&]() {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            renderer->skipNextFrames(frameCount);
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Renderer_nGetFrameToSkipCount(JNIEnv *, jclass ,
+Java_com_google_android_filament_Renderer_nGetFrameToSkipCount(JNIEnv * env, jclass ,
     jlong nativeRenderer) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    return renderer->getFrameToSkipCount();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_Renderer_nGetFrameToSkipCount", 0, [&]() -> jint {
+            Renderer *renderer = (Renderer *) nativeRenderer;
+            return renderer->getFrameToSkipCount();
+    });
 }

@@ -15,6 +15,7 @@
  */
 
 #include <jni.h>
+#include "../../../../common/JniExceptionBridge.h"
 
 extern "C" {
 jlong createNativeSurface(jint width, jint height);
@@ -22,13 +23,17 @@ void destroyNativeSurface(jlong surface);
 };
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_NativeSurface_nCreateSurface(JNIEnv*, jclass,
+Java_com_google_android_filament_NativeSurface_nCreateSurface(JNIEnv* env, jclass,
         jint width, jint height) {
-    return createNativeSurface(width, height);
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_NativeSurface_nCreateSurface", 0, [&]() -> jlong {
+            return createNativeSurface(width, height);
+    });
 }
 
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_NativeSurface_nDestroySurface(JNIEnv*, jclass, jlong surface){
-    destroyNativeSurface(surface);
+Java_com_google_android_filament_NativeSurface_nDestroySurface(JNIEnv* env, jclass, jlong surface){
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_NativeSurface_nDestroySurface", [&]() {
+            destroyNativeSurface(surface);
+    });
 }

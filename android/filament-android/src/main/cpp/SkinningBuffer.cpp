@@ -24,47 +24,58 @@
 
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace backend;
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_SkinningBuffer_nCreateBuilder(JNIEnv*, jclass) {
-    return (jlong) new SkinningBuffer::Builder();
+Java_com_google_android_filament_SkinningBuffer_nCreateBuilder(JNIEnv* env, jclass) {
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_SkinningBuffer_nCreateBuilder", 0, [&]() -> jlong {
+            return (jlong) new SkinningBuffer::Builder();
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_SkinningBuffer_nDestroyBuilder(JNIEnv*, jclass,
+Java_com_google_android_filament_SkinningBuffer_nDestroyBuilder(JNIEnv* env, jclass,
         jlong nativeBuilder) {
-    SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
-    delete builder;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_SkinningBuffer_nDestroyBuilder", [&]() {
+            SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
+            delete builder;
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_SkinningBuffer_nBuilderBoneCount(JNIEnv*, jclass,
+Java_com_google_android_filament_SkinningBuffer_nBuilderBoneCount(JNIEnv* env, jclass,
         jlong nativeBuilder, jint boneCount) {
-    SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
-    builder->boneCount((uint32_t)boneCount);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_SkinningBuffer_nBuilderBoneCount", [&]() {
+            SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
+            builder->boneCount((uint32_t)boneCount);
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_SkinningBuffer_nBuilderInitialize(JNIEnv*, jclass,
+Java_com_google_android_filament_SkinningBuffer_nBuilderInitialize(JNIEnv* env, jclass,
         jlong nativeBuilder, jboolean initialize) {
-    SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
-    builder->initialize((bool)initialize);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_SkinningBuffer_nBuilderInitialize", [&]() {
+            SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
+            builder->initialize((bool)initialize);
+    });
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_SkinningBuffer_nBuilderBuild(JNIEnv*, jclass,
+Java_com_google_android_filament_SkinningBuffer_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeEngine) {
-    SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
-    Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_SkinningBuffer_nBuilderBuild", 0, [&]() -> jlong {
+            SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
+            Engine *engine = (Engine *) nativeEngine;
+            return (jlong) builder->build(*engine);
+    });
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -74,18 +85,20 @@ JNIEXPORT jint JNICALL
 Java_com_google_android_filament_SkinningBuffer_nSetBonesAsMatrices(JNIEnv* env, jclass,
         jlong nativeSkinningBuffer, jlong nativeEngine, jobject matrices, jint remaining, jint boneCount,
         jint offset) {
-    SkinningBuffer *skinningBuffer = (SkinningBuffer *) nativeSkinningBuffer;
-    Engine *engine = (Engine *) nativeEngine;
-    AutoBuffer nioBuffer(env, matrices, boneCount * 16);
-    void* data = nioBuffer.getData();
-    size_t sizeInBytes = nioBuffer.getSize();
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
-    skinningBuffer->setBones(*engine,
-            static_cast<filament::math::mat4f const *>(data), (size_t)boneCount, (size_t)offset);
-    return 0;
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_SkinningBuffer_nSetBonesAsMatrices", 0, [&]() -> jint {
+            SkinningBuffer *skinningBuffer = (SkinningBuffer *) nativeSkinningBuffer;
+            Engine *engine = (Engine *) nativeEngine;
+            AutoBuffer nioBuffer(env, matrices, boneCount * 16);
+            void* data = nioBuffer.getData();
+            size_t sizeInBytes = nioBuffer.getSize();
+            if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+                // BufferOverflowException
+                return -1;
+            }
+            skinningBuffer->setBones(*engine,
+                    static_cast<filament::math::mat4f const *>(data), (size_t)boneCount, (size_t)offset);
+            return 0;
+    });
 }
 
 extern "C"
@@ -93,24 +106,28 @@ JNIEXPORT jint JNICALL
 Java_com_google_android_filament_SkinningBuffer_nSetBonesAsQuaternions(JNIEnv* env, jclass,
         jlong nativeSkinningBuffer, jlong nativeEngine, jobject quaternions, jint remaining,
         jint boneCount, jint offset) {
-    SkinningBuffer *skinningBuffer = (SkinningBuffer *) nativeSkinningBuffer;
-    Engine *engine = (Engine *) nativeEngine;
-    AutoBuffer nioBuffer(env, quaternions, boneCount * 8);
-    void* data = nioBuffer.getData();
-    size_t sizeInBytes = nioBuffer.getSize();
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
-    skinningBuffer->setBones(*engine,
-            static_cast<RenderableManager::Bone const *>(data), (size_t)boneCount, (size_t)offset);
-    return 0;
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_SkinningBuffer_nSetBonesAsQuaternions", 0, [&]() -> jint {
+            SkinningBuffer *skinningBuffer = (SkinningBuffer *) nativeSkinningBuffer;
+            Engine *engine = (Engine *) nativeEngine;
+            AutoBuffer nioBuffer(env, quaternions, boneCount * 8);
+            void* data = nioBuffer.getData();
+            size_t sizeInBytes = nioBuffer.getSize();
+            if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+                // BufferOverflowException
+                return -1;
+            }
+            skinningBuffer->setBones(*engine,
+                    static_cast<RenderableManager::Bone const *>(data), (size_t)boneCount, (size_t)offset);
+            return 0;
+    });
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_SkinningBuffer_nGetBoneCount(JNIEnv*, jclass,
+Java_com_google_android_filament_SkinningBuffer_nGetBoneCount(JNIEnv* env, jclass,
         jlong nativeSkinningBuffer) {
-    SkinningBuffer *skinningBuffer = (SkinningBuffer *) nativeSkinningBuffer;
-    return (jint)skinningBuffer->getBoneCount();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_SkinningBuffer_nGetBoneCount", 0, [&]() -> jint {
+            SkinningBuffer *skinningBuffer = (SkinningBuffer *) nativeSkinningBuffer;
+            return (jint)skinningBuffer->getBoneCount();
+    });
 }

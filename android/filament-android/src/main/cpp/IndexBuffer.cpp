@@ -26,51 +26,64 @@
 
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+#include "../../../../common/JniExceptionBridge.h"
 
 using namespace filament;
 using namespace backend;
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_IndexBuffer_nCreateBuilder(JNIEnv *env, jclass type) {
-    return (jlong) new IndexBuffer::Builder();
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_IndexBuffer_nCreateBuilder", 0, [&]() -> jlong {
+            return (jlong) new IndexBuffer::Builder();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndexBuffer_nDestroyBuilder(JNIEnv *env, jclass type,
         jlong nativeBuilder) {
-    IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
-    delete builder;
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndexBuffer_nDestroyBuilder", [&]() {
+            IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
+            delete builder;
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndexBuffer_nBuilderIndexCount(JNIEnv *env, jclass type,
         jlong nativeBuilder, jint indexCount) {
-    IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
-    builder->indexCount((uint32_t) indexCount);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndexBuffer_nBuilderIndexCount", [&]() {
+            IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
+            builder->indexCount((uint32_t) indexCount);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndexBuffer_nBuilderBufferType(JNIEnv *env, jclass type,
         jlong nativeBuilder, jint indexType) {
-    using IndexType = IndexBuffer::IndexType;
-    IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
-    IndexType types[] = {IndexType::USHORT, IndexType::UINT};
-    builder->bufferType(types[indexType & 1]);
+    filament::android::jniGuardVoid(env, "Java_com_google_android_filament_IndexBuffer_nBuilderBufferType", [&]() {
+            using IndexType = IndexBuffer::IndexType;
+            IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
+            IndexType types[] = {IndexType::USHORT, IndexType::UINT};
+            builder->bufferType(types[indexType & 1]);
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_IndexBuffer_nBuilderBuild(JNIEnv *env, jclass type,
         jlong nativeBuilder, jlong nativeEngine) {
-    IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
-    Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::jniGuard<jlong>(env, "Java_com_google_android_filament_IndexBuffer_nBuilderBuild", 0, [&]() -> jlong {
+            IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
+            Engine *engine = (Engine *) nativeEngine;
+            return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_IndexBuffer_nGetIndexCount(JNIEnv *env, jclass type,
         jlong nativeIndexBuffer) {
-    IndexBuffer *indexBuffer = (IndexBuffer *) nativeIndexBuffer;
-    return (jint) indexBuffer->getIndexCount();
+    return filament::android::jniGuard<jint>(env, "Java_com_google_android_filament_IndexBuffer_nGetIndexCount", 0, [&]() -> jint {
+            IndexBuffer *indexBuffer = (IndexBuffer *) nativeIndexBuffer;
+            return (jint) indexBuffer->getIndexCount();
+    });
 }
 
 extern "C" JNIEXPORT int JNICALL
@@ -78,23 +91,25 @@ Java_com_google_android_filament_IndexBuffer_nSetBuffer(JNIEnv *env, jclass type
         jlong nativeIndexBuffer, jlong nativeEngine, jobject buffer, int remaining,
         jint destOffsetInBytes, jint count,
         jobject handler, jobject runnable) {
-    IndexBuffer *indexBuffer = (IndexBuffer *) nativeIndexBuffer;
-    Engine *engine = (Engine *) nativeEngine;
+    return filament::android::jniGuard<int>(env, "Java_com_google_android_filament_IndexBuffer_nSetBuffer", 0, [&]() -> int {
+            IndexBuffer *indexBuffer = (IndexBuffer *) nativeIndexBuffer;
+            Engine *engine = (Engine *) nativeEngine;
 
-    AutoBuffer nioBuffer(env, buffer, count);
-    void* data = nioBuffer.getData();
-    size_t sizeInBytes = nioBuffer.getSize();
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
+            AutoBuffer nioBuffer(env, buffer, count);
+            void* data = nioBuffer.getData();
+            size_t sizeInBytes = nioBuffer.getSize();
+            if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+                // BufferOverflowException
+                return -1;
+            }
 
-    auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+            auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    BufferDescriptor desc(data, sizeInBytes,
-            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
+            BufferDescriptor desc(data, sizeInBytes,
+                    callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    indexBuffer->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
+            indexBuffer->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
 
-    return 0;
+            return 0;
+    });
 }
