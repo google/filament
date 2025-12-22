@@ -90,6 +90,10 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 
 add_library(filament-jni SHARED
+    src/main/cpp/PanicState.h
+    src/main/cpp/PanicState.cpp
+    src/main/cpp/JniExceptionBridge.h
+
     src/main/cpp/BufferObject.cpp
     src/main/cpp/Camera.cpp
     src/main/cpp/Colors.cpp
