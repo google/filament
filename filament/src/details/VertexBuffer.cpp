@@ -235,7 +235,7 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
                 << "Vertex buffer uses to many buffers (" << mImpl->mBufferCount << ")";
     }
 
-    FILAMENT_CHECK_PRECONDITION(!mImpl->mAsynchronous || engine.isAsynchronousOperationSupported())
+    FILAMENT_CHECK_PRECONDITION(!mImpl->mAsynchronous || engine.isAsynchronousModeEnabled())
             << "Engine not configured for async operations";
 
     return downcast(engine).createVertexBuffer(*this);

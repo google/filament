@@ -2880,7 +2880,7 @@ bool OpenGLDriver::isDepthClampSupported() {
 }
 
 bool OpenGLDriver::isAsynchronousOperationSupported() {
-    return true;
+    return getJobQueue() != nullptr;
 }
 
 bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
