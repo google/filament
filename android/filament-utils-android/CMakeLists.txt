@@ -65,6 +65,10 @@ add_library(filament-utils-jni SHARED
 
         ../common/CallbackUtils.cpp
         ../common/NioUtils.cpp
+        # Panic Handler
+        ../common/PanicState.h
+        ../common/PanicState.cpp
+        ../common/JniExceptionBridge.h
 )
 
 target_compile_definitions(filament-utils-jni PUBLIC IMAGEIO_LITE=1)
