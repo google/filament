@@ -112,7 +112,7 @@ TEST_F(MaterialLexer, MaterialParserWithToolSection) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    utils::Status result =testParser.parseMaterial(
+    utils::Status result = testParser.parseMaterial(
             materialSourceWithTool.c_str(), materialSourceWithTool.size(), unused);
     EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
 }
@@ -172,6 +172,20 @@ TEST_F(MaterialLexer, MaterialParserSyntaxError) {
     filamat::MaterialBuilder unused;
     utils::Status result = testParser.parseMaterial(sourceSyntaxError.c_str(), sourceSyntaxError.size(), unused);
     EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
+}
+
+TEST_F(MaterialLexer, MaterialParserCanParseApiLevel) {
+    static std::string sourceWithApiLevel(R"(
+        material {
+            apiLevel: 1,
+        }
+    )");
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
+    filamat::MaterialBuilder unused;
+    utils::Status result =
+            testParser.parseMaterial(sourceWithApiLevel.c_str(), sourceWithApiLevel.size(), unused);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
 }
 
 static std::string jsonMaterialSource(R"(
@@ -330,6 +344,21 @@ TEST_F(MaterialLexer, JsonMaterialParserInvalidInputReturnsError) {
 
     EXPECT_FALSE(jsonishParser.getParseStatus().isOk());
     EXPECT_EQ(root, nullptr);
+}
+
+TEST_F(MaterialLexer, JsonMaterialParserSingleDoubleQuoteDoesntCrash) {
+    static std::string singleDoubleQuote = R"(
+        material: {
+            name: ",
+        }
+    )";
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
+    filamat::MaterialBuilder unused;
+    utils::Status result = testParser.parseMaterialAsJSON(
+            singleDoubleQuote.c_str(), singleDoubleQuote.size(), unused);
+
+    EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
 }
 
 int main(int argc, char** argv) {

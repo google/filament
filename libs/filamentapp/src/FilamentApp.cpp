@@ -764,8 +764,17 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         }
 #endif
 
-        return Engine::Builder()
-                .backend(backend)
+        Engine::Builder builder = Engine::Builder();
+
+        engineConfig.asynchronousMode = config.asynchronousMode;
+        if (engineConfig.asynchronousMode != AsynchronousMode::NONE) {
+            // This feature flag is forcibly enabled here, inheriting the setting from the Engine,
+            // purely to demonstrate the object's asynchronous behavior within Filament. Users
+            // should manage this flag at their discretion.
+            builder.feature("backend.enable_asynchronous_operation", true);
+        }
+
+        return builder.backend(backend)
                 .featureLevel(config.featureLevel)
                 .platform(platform)
                 .config(&engineConfig)

@@ -14,23 +14,14 @@
  * limitations under the License.
  */
 
-#include "WebGPUIndexBuffer.h"
+#include "fg/details/ResourceCreationContext.h"
 
-#include "WebGPUBufferBase.h"
+#include "FrameGraph.h"
 
-#include "DriverBase.h"
+namespace filament {
 
-#include <webgpu/webgpu_cpp.h>
+TextureCacheInterface& ResourceCreationContext::getTextureCache() const noexcept {
+    return fg.getTextureCache();
+}
 
-#include <cstdint>
-
-namespace filament::backend {
-
-WebGPUIndexBuffer::WebGPUIndexBuffer(wgpu::Device const& device, const uint8_t elementSize,
-        const uint32_t indexCount)
-    : HwIndexBuffer{ elementSize, indexCount, false },
-      WebGPUBufferBase{ device, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
-          elementSize * indexCount, "index_buffer" },
-      mIndexFormat{ elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32 } {}
-
-} // namespace filament::backend
+} //namespace filament

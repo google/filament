@@ -599,7 +599,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 passBuilder.variant(structureVariant);
                 passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SSAO);
 
-                RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                RenderPass pass{ passBuilder.build(mEngine) };
+                pass.finalize(mEngine, driver);
                 auto const out = resources.getRenderPassInfo();
                 driver.beginRenderPass(out.target, out.params);
                 pass.getExecutor().execute(mEngine, driver);
@@ -710,7 +711,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
                         passBuilder.variant(pickingVariant);
                         passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::DEPTH);
 
-                        RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                        RenderPass pass{ passBuilder.build(mEngine) };
+                        pass.finalize(mEngine, driver);
                         driver.beginRenderPass(target, params);
                         pass.getExecutor().execute(mEngine, driver);
                         driver.endRenderPass();
@@ -808,7 +810,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // generate all our drawing commands, except blended objects.
                 passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
 
-                RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                RenderPass pass{ passBuilder.build(mEngine) };
+                pass.finalize(mEngine, driver);
                 driver.beginRenderPass(out.target, out.params);
                 pass.getExecutor().execute(mEngine, driver);
                 driver.endRenderPass();
@@ -2534,7 +2537,7 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
         VignetteOptions const& vignetteOptions, uint32_t const width, uint32_t const height) noexcept {
 
     auto& material = getPostProcessMaterial("colorGradingAsSubpass");
-    FMaterialInstance* const mi =
+    FMaterialInstance const* const mi =
             configureColorGradingMaterial(material, colorGrading, colorGradingConfig,
                     vignetteOptions, width, height);
     mi->commit(driver, getUboManager());

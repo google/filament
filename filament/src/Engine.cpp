@@ -16,7 +16,7 @@
 
 #include "details/Engine.h"
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/BufferObject.h"
 #include "details/Camera.h"
@@ -349,6 +349,14 @@ size_t Engine::getRenderTargetCount() const noexcept {
     return downcast(this)->getRenderTargetCount();
 }
 
+AsyncCallId Engine::runCommandAsync(Invocable<void()>&& command, CallbackHandler* handler,
+        Invocable<void()>&& onComplete) {
+    return downcast(this)->runCommandAsync(std::move(command), handler, std::move(onComplete));
+}
+
+bool Engine::cancelAsyncCall(AsyncCallId const id) {
+    return downcast(this)->cancelAsyncCall(id);
+}
 
 void Engine::flushAndWait() {
     downcast(this)->flushAndWait();

@@ -14,23 +14,20 @@
  * limitations under the License.
  */
 
-#include "WebGPUIndexBuffer.h"
+#pragma once
 
-#include "WebGPUBufferBase.h"
+#include <backend/DriverApiForward.h>
 
-#include "DriverBase.h"
+namespace filament {
 
-#include <webgpu/webgpu_cpp.h>
+class FrameGraph;
+class TextureCacheInterface;
 
-#include <cstdint>
+struct ResourceCreationContext {
+    FrameGraph& fg;
+    backend::DriverApi& driver;
+    bool useProtectedMemory;
+    TextureCacheInterface& getTextureCache() const noexcept;
+};
 
-namespace filament::backend {
-
-WebGPUIndexBuffer::WebGPUIndexBuffer(wgpu::Device const& device, const uint8_t elementSize,
-        const uint32_t indexCount)
-    : HwIndexBuffer{ elementSize, indexCount, false },
-      WebGPUBufferBase{ device, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
-          elementSize * indexCount, "index_buffer" },
-      mIndexFormat{ elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32 } {}
-
-} // namespace filament::backend
+} // namespace filament

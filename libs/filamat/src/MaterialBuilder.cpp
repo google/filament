@@ -1257,6 +1257,11 @@ MaterialBuilder& MaterialBuilder::materialSource(std::string_view source) noexce
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::setApiLevel(uint32_t apiLevel) noexcept {
+    mApiLevel = apiLevel;
+    return *this;
+}
+
 Package MaterialBuilder::build(JobSystem& jobSystem) {
     if (materialBuilderClients == 0) {
         slog.e << "Error: MaterialBuilder::init() must be called before build()." << io::endl;
@@ -1290,6 +1295,12 @@ error:
 
     if (mCustomSurfaceShading && mShading != Shading::LIT) {
         slog.e << "Error: customSurfaceShading can only be used with lit materials." << io::endl;
+        goto error;
+    }
+
+    if (mApiLevel < 1 || mApiLevel > filament::UNSTABLE_MATERIAL_API_LEVEL) {
+        slog.e << "Error: api level can't be set below 1 or above unstable material level(" <<
+                filament::UNSTABLE_MATERIAL_API_LEVEL << ")" << io::endl;
         goto error;
     }
 

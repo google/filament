@@ -14,23 +14,18 @@
  * limitations under the License.
  */
 
-#include "WebGPUIndexBuffer.h"
-
-#include "WebGPUBufferBase.h"
-
-#include "DriverBase.h"
-
-#include <webgpu/webgpu_cpp.h>
+#pragma once
 
 #include <cstdint>
 
-namespace filament::backend {
+namespace filament {
 
-WebGPUIndexBuffer::WebGPUIndexBuffer(wgpu::Device const& device, const uint8_t elementSize,
-        const uint32_t indexCount)
-    : HwIndexBuffer{ elementSize, indexCount, false },
-      WebGPUBufferBase{ device, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
-          elementSize * indexCount, "index_buffer" },
-      mIndexFormat{ elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32 } {}
+struct FrameGraphDummyLink {
+    struct Descriptor {};
+    struct SubResourceDescriptor {};
+    using Usage = uint32_t;
+    static constexpr Usage DEFAULT_R_USAGE = 0x1;
+    static constexpr Usage DEFAULT_W_USAGE = 0x2;
+};
 
-} // namespace filament::backend
+} // namespace filament

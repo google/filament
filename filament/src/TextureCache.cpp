@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include <filament/Engine.h>
 
@@ -56,31 +56,31 @@ using namespace backend;
 
 template<typename K, typename V, typename H>
 UTILS_NOINLINE
-ResourceAllocator::AssociativeContainer<K, V, H>::AssociativeContainer() {
+TextureCache::AssociativeContainer<K, V, H>::AssociativeContainer() {
     mContainer.reserve(128);
 }
 
 template<typename K, typename V, typename H>
 UTILS_NOINLINE
-ResourceAllocator::AssociativeContainer<K, V, H>::~AssociativeContainer() noexcept = default;
+TextureCache::AssociativeContainer<K, V, H>::~AssociativeContainer() noexcept = default;
 
 template<typename K, typename V, typename H>
 UTILS_NOINLINE
-typename ResourceAllocator::AssociativeContainer<K, V, H>::iterator
-ResourceAllocator::AssociativeContainer<K, V, H>::erase(iterator it) {
+typename TextureCache::AssociativeContainer<K, V, H>::iterator
+TextureCache::AssociativeContainer<K, V, H>::erase(iterator it) {
     return mContainer.erase(it);
 }
 
 template<typename K, typename V, typename H>
-typename ResourceAllocator::AssociativeContainer<K, V, H>::const_iterator
-ResourceAllocator::AssociativeContainer<K, V, H>::find(key_type const& key) const {
+typename TextureCache::AssociativeContainer<K, V, H>::const_iterator
+TextureCache::AssociativeContainer<K, V, H>::find(key_type const& key) const {
     return const_cast<AssociativeContainer*>(this)->find(key);
 }
 
 template<typename K, typename V, typename H>
 UTILS_NOINLINE
-typename ResourceAllocator::AssociativeContainer<K, V, H>::iterator
-ResourceAllocator::AssociativeContainer<K, V, H>::find(key_type const& key) {
+typename TextureCache::AssociativeContainer<K, V, H>::iterator
+TextureCache::AssociativeContainer<K, V, H>::find(key_type const& key) {
     return std::find_if(mContainer.begin(), mContainer.end(), [&key](auto const& v) {
         return v.first == key;
     });
@@ -89,21 +89,21 @@ ResourceAllocator::AssociativeContainer<K, V, H>::find(key_type const& key) {
 template<typename K, typename V, typename H>
 template<typename... ARGS>
 UTILS_NOINLINE
-void ResourceAllocator::AssociativeContainer<K, V, H>::emplace(ARGS&& ... args) {
+void TextureCache::AssociativeContainer<K, V, H>::emplace(ARGS&& ... args) {
     mContainer.emplace_back(std::forward<ARGS>(args)...);
 }
 
 // ------------------------------------------------------------------------------------------------
 
-ResourceAllocatorInterface::~ResourceAllocatorInterface() = default;
+TextureCacheInterface::~TextureCacheInterface() = default;
 
 // ------------------------------------------------------------------------------------------------
 
-ResourceAllocatorDisposerInterface::~ResourceAllocatorDisposerInterface() = default;
+TextureCacheDisposerInterface::~TextureCacheDisposerInterface() = default;
 
 // ------------------------------------------------------------------------------------------------
 
-size_t ResourceAllocator::TextureKey::getSize() const noexcept {
+size_t TextureCache::TextureKey::getSize() const noexcept {
     size_t const pixelCount = width * height * depth;
     size_t size = pixelCount * FTexture::getFormatSize(format);
     size_t const s = std::max(uint8_t(1), samples);
@@ -120,24 +120,24 @@ size_t ResourceAllocator::TextureKey::getSize() const noexcept {
     return size;
 }
 
-ResourceAllocator::ResourceAllocator(Engine::Config const& config, DriverApi& driverApi) noexcept
+TextureCache::TextureCache(Engine::Config const& config, DriverApi& driverApi) noexcept
         : mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
           mBackend(driverApi),
-          mDisposer(std::make_shared<ResourceAllocatorDisposer>(driverApi)) {
+          mDisposer(std::make_shared<TextureCacheDisposer>(driverApi)) {
 }
 
-ResourceAllocator::ResourceAllocator(std::shared_ptr<ResourceAllocatorDisposer> disposer,
+TextureCache::TextureCache(std::shared_ptr<TextureCacheDisposer> disposer,
         Engine::Config const& config, DriverApi& driverApi) noexcept
         : mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
           mBackend(driverApi),
           mDisposer(std::move(disposer)) {
 }
 
-ResourceAllocator::~ResourceAllocator() noexcept {
+TextureCache::~TextureCache() noexcept {
     assert_invariant(mTextureCache.empty());
 }
 
-void ResourceAllocator::terminate() noexcept {
+void TextureCache::terminate() noexcept {
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         mBackend.destroyTexture(it->second.handle);
@@ -145,7 +145,7 @@ void ResourceAllocator::terminate() noexcept {
     }
 }
 
-RenderTargetHandle ResourceAllocator::createRenderTarget(StaticString name,
+RenderTargetHandle TextureCache::createRenderTarget(StaticString name,
         TargetBufferFlags const targetBufferFlags, uint32_t const width, uint32_t const height,
         uint8_t const samples, uint8_t const layerCount, MRT const color, TargetBufferInfo const depth,
         TargetBufferInfo const stencil) noexcept {
@@ -154,11 +154,11 @@ RenderTargetHandle ResourceAllocator::createRenderTarget(StaticString name,
     return handle;
 }
 
-void ResourceAllocator::destroyRenderTarget(RenderTargetHandle const h) noexcept {
+void TextureCache::destroyRenderTarget(RenderTargetHandle const h) noexcept {
     mBackend.destroyRenderTarget(h);
 }
 
-TextureHandle ResourceAllocator::createTexture(StaticString name,
+TextureHandle TextureCache::createTexture(StaticString name,
         SamplerType const target, uint8_t const levels, TextureFormat const format, uint8_t samples,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         std::array<TextureSwizzle, 4> const swizzle,
@@ -207,7 +207,7 @@ TextureHandle ResourceAllocator::createTexture(StaticString name,
     return handle;
 }
 
-void ResourceAllocator::destroyTexture(TextureHandle const h) noexcept {
+void TextureCache::destroyTexture(TextureHandle const h) noexcept {
     auto const key = mDisposer->checkin(h);
     if constexpr (mEnabled) {
         if (UTILS_LIKELY(key.has_value())) {
@@ -221,11 +221,11 @@ void ResourceAllocator::destroyTexture(TextureHandle const h) noexcept {
     }
 }
 
-ResourceAllocatorDisposerInterface& ResourceAllocator::getDisposer() noexcept {
+TextureCacheDisposerInterface& TextureCache::getDisposer() noexcept {
     return *mDisposer;
 }
 
-void ResourceAllocator::gc(bool const skippedFrame) noexcept {
+void TextureCache::gc(bool const skippedFrame) noexcept {
     // this is called regularly -- usually once per frame
 
     // increase our age at each (non-skipped) frame
@@ -289,7 +289,7 @@ void ResourceAllocator::gc(bool const skippedFrame) noexcept {
 }
 
 UTILS_NOINLINE
-void ResourceAllocator::dump(bool const brief) const noexcept {
+void TextureCache::dump(bool const brief) const noexcept {
     constexpr float MiB = 1.0f / float(1u << 20u);
     DLOG(INFO) << "# entries=" << mTextureCache.size() << ", sz=" << (float) mCacheSize * MiB
                << " MiB"
@@ -305,8 +305,8 @@ void ResourceAllocator::dump(bool const brief) const noexcept {
     }
 }
 
-ResourceAllocator::CacheContainer::iterator
-ResourceAllocator::purge(
+TextureCache::CacheContainer::iterator
+TextureCache::purge(
         CacheContainer::iterator const& pos) {
     // DLOG(INFO) << "purging " << pos->second.handle.getId() << ", age=" << pos->second.age;
     mBackend.destroyTexture(pos->second.handle);
@@ -316,19 +316,19 @@ ResourceAllocator::purge(
 
 // ------------------------------------------------------------------------------------------------
 
-ResourceAllocatorDisposer::ResourceAllocatorDisposer(DriverApi& driverApi) noexcept
+TextureCacheDisposer::TextureCacheDisposer(DriverApi& driverApi) noexcept
         : mBackend(driverApi) {
 }
 
-ResourceAllocatorDisposer::~ResourceAllocatorDisposer() noexcept {
+TextureCacheDisposer::~TextureCacheDisposer() noexcept {
      assert_invariant(mInUseTextures.empty());
 }
 
-void ResourceAllocatorDisposer::terminate() noexcept {
+void TextureCacheDisposer::terminate() noexcept {
     assert_invariant(mInUseTextures.empty());
 }
 
-void ResourceAllocatorDisposer::destroy(TextureHandle const handle) noexcept {
+void TextureCacheDisposer::destroy(TextureHandle const handle) noexcept {
     if (handle) {
         auto r = checkin(handle);
         if (r.has_value()) {
@@ -337,12 +337,12 @@ void ResourceAllocatorDisposer::destroy(TextureHandle const handle) noexcept {
     }
 }
 
-void ResourceAllocatorDisposer::checkout(TextureHandle handle,
-        ResourceAllocator::TextureKey key) {
+void TextureCacheDisposer::checkout(TextureHandle handle,
+        TextureCache::TextureKey key) {
     mInUseTextures.emplace(handle, key);
 }
 
-std::optional<ResourceAllocator::TextureKey> ResourceAllocatorDisposer::checkin(
+std::optional<TextureCache::TextureKey> TextureCacheDisposer::checkin(
         TextureHandle handle) {
     // find the texture in the in-use list (it must be there!)
     auto it = mInUseTextures.find(handle);

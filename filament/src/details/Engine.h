@@ -40,7 +40,6 @@
 #include "details/ColorGrading.h"
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
-#include "details/IndexBuffer.h"
 #include "details/InstanceBuffer.h"
 #include "details/MorphTargetBuffer.h"
 #include "details/RenderTarget.h"
@@ -63,6 +62,7 @@
 #include <filament/Stream.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
+#include <filament/IndexBuffer.h>
 
 #include <backend/DriverEnums.h>
 
@@ -113,7 +113,7 @@ namespace filament {
 
 class Renderer;
 class MaterialParser;
-class ResourceAllocatorDisposer;
+class TextureCacheDisposer;
 
 namespace backend {
 class Driver;
@@ -128,7 +128,7 @@ class FSwapChain;
 class FSync;
 class FView;
 
-class ResourceAllocator;
+class TextureCache;
 
 /*
  * Concrete implementation of the Engine interface. This keeps track of all hardware resources
@@ -300,12 +300,12 @@ public:
         return getDriver().getShaderLanguages(preferredLanguage);
     }
 
-    ResourceAllocatorDisposer& getResourceAllocatorDisposer() noexcept {
+    TextureCacheDisposer& getResourceAllocatorDisposer() noexcept {
         assert_invariant(mResourceAllocatorDisposer);
         return *mResourceAllocatorDisposer;
     }
 
-    std::shared_ptr<ResourceAllocatorDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
+    std::shared_ptr<TextureCacheDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
         return mResourceAllocatorDisposer;
     }
 
@@ -423,6 +423,10 @@ public:
     size_t getSkyboxeCount() const noexcept;
     size_t getColorGradingCount() const noexcept;
     size_t getRenderTargetCount() const noexcept;
+
+    AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
+            backend::CallbackHandler* handler, utils::Invocable<void()>&& onComplete);
+    bool cancelAsyncCall(AsyncCallId id);
 
     void destroy(utils::Entity e);
 
@@ -612,7 +616,7 @@ private:
     FTransformManager mTransformManager;
     FLightManager mLightManager;
     FCameraManager mCameraManager;
-    std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
+    std::shared_ptr<TextureCacheDisposer> mResourceAllocatorDisposer;
     mutable MaterialCache mMaterialCache;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
     HwDescriptorSetLayoutFactory mHwDescriptorSetLayoutFactory;

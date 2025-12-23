@@ -17,7 +17,7 @@
 #include "details/Engine.h"
 
 #include "MaterialParser.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 #include "RenderPrimitive.h"
 
 #include "details/BufferObject.h"
@@ -342,7 +342,7 @@ void FEngine::init() {
     LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
 
 
-    mResourceAllocatorDisposer = std::make_shared<ResourceAllocatorDisposer>(driverApi);
+    mResourceAllocatorDisposer = std::make_shared<TextureCacheDisposer>(driverApi);
 
     mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)
@@ -1445,6 +1445,27 @@ size_t FEngine::getTextureCount() const noexcept { return mTextures.size(); }
 size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
 size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
+
+AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
+        CallbackHandler* handler, Invocable<void()>&& onComplete) {
+
+    struct RunCommandAsyncCallback {
+        Invocable<void()> f;
+        static void func(void* user) {
+            auto* const c = static_cast<RunCommandAsyncCallback*>(user);
+            c->f();
+            delete c;
+        }
+    };
+    auto* const user = new(std::nothrow) RunCommandAsyncCallback{ std::move(onComplete) };
+
+    return getDriverApi().queueCommandAsync(std::move(command), handler, &RunCommandAsyncCallback::func,
+            user);
+}
+
+bool FEngine::cancelAsyncCall(AsyncCallId const id) {
+    return getDriver().cancelAsyncJob(id);
+}
 
 size_t FEngine::getMaxShadowMapCount() const noexcept {
     return features.engine.shadows.use_shadow_atlas ?

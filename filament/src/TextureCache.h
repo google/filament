@@ -40,19 +40,19 @@
 
 namespace filament {
 
-class ResourceAllocatorDisposer;
+class TextureCacheDisposer;
 
 // The only reason we use an interface here is for unit-tests, so we can mock this allocator.
 // This is not too time-critical, so that's okay.
 
-class ResourceAllocatorDisposerInterface {
+class TextureCacheDisposerInterface {
 public:
     virtual void destroy(backend::TextureHandle handle) noexcept = 0;
 protected:
-    virtual ~ResourceAllocatorDisposerInterface();
+    virtual ~TextureCacheDisposerInterface();
 };
 
-class ResourceAllocatorInterface {
+class TextureCacheInterface {
 public:
     virtual backend::RenderTargetHandle createRenderTarget(utils::StaticString name,
             backend::TargetBufferFlags targetBufferFlags,
@@ -74,21 +74,21 @@ public:
 
     virtual void destroyTexture(backend::TextureHandle h) noexcept = 0;
 
-    virtual ResourceAllocatorDisposerInterface& getDisposer() noexcept = 0;
+    virtual TextureCacheDisposerInterface& getDisposer() noexcept = 0;
 
 protected:
-    virtual ~ResourceAllocatorInterface();
+    virtual ~TextureCacheInterface();
 };
 
-class ResourceAllocator final : public ResourceAllocatorInterface {
+class TextureCache final : public TextureCacheInterface {
 public:
-    explicit ResourceAllocator(std::shared_ptr<ResourceAllocatorDisposer> disposer,
+    explicit TextureCache(std::shared_ptr<TextureCacheDisposer> disposer,
             Engine::Config const& config, backend::DriverApi& driverApi) noexcept;
 
-    explicit ResourceAllocator(
+    explicit TextureCache(
             Engine::Config const& config, backend::DriverApi& driverApi) noexcept;
 
-    ~ResourceAllocator() noexcept override;
+    ~TextureCache() noexcept override;
 
     void terminate() noexcept;
 
@@ -112,7 +112,7 @@ public:
 
     void destroyTexture(backend::TextureHandle h) noexcept override;
 
-    ResourceAllocatorDisposerInterface& getDisposer() noexcept override;
+    TextureCacheDisposerInterface& getDisposer() noexcept override;
 
     void gc(bool skippedFrame = false) noexcept;
 
@@ -220,30 +220,30 @@ private:
     purge(CacheContainer::iterator const& pos);
 
     backend::DriverApi& mBackend;
-    std::shared_ptr<ResourceAllocatorDisposer> mDisposer;
+    std::shared_ptr<TextureCacheDisposer> mDisposer;
     CacheContainer mTextureCache;
     size_t mAge = 0;
     uint32_t mCacheSize = 0;
     uint32_t mCacheSizeHiWaterMark = 0;
     static constexpr bool mEnabled = true;
 
-    friend class ResourceAllocatorDisposer;
+    friend class TextureCacheDisposer;
 };
 
-class ResourceAllocatorDisposer final : public ResourceAllocatorDisposerInterface {
-    using TextureKey = ResourceAllocator::TextureKey;
+class TextureCacheDisposer final : public TextureCacheDisposerInterface {
+    using TextureKey = TextureCache::TextureKey;
 public:
-    explicit ResourceAllocatorDisposer(backend::DriverApi& driverApi) noexcept;
-    ~ResourceAllocatorDisposer() noexcept override;
+    explicit TextureCacheDisposer(backend::DriverApi& driverApi) noexcept;
+    ~TextureCacheDisposer() noexcept override;
     void terminate() noexcept;
     void destroy(backend::TextureHandle handle) noexcept override;
 
 private:
-    friend class ResourceAllocator;
+    friend class TextureCache;
     void checkout(backend::TextureHandle handle, TextureKey key);
     std::optional<TextureKey> checkin(backend::TextureHandle handle);
 
-    using InUseContainer = ResourceAllocator::AssociativeContainer<backend::TextureHandle, TextureKey>;
+    using InUseContainer = TextureCache::AssociativeContainer<backend::TextureHandle, TextureKey>;
     backend::DriverApi& mBackend;
     InUseContainer mInUseTextures;
 };
