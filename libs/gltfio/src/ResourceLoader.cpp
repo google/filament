@@ -525,7 +525,7 @@ void ResourceLoader::asyncUpdateLoad() {
 std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset,
         size_t textureIndex, TextureProvider::TextureFlags flags) {
     const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[textureIndex];
-    const cgltf_image* image = srcTexture.basisu_image ?
+    const cgltf_image* image = srcTexture.webp_image ? srcTexture.webp_image : srcTexture.basisu_image ?
             srcTexture.basisu_image : srcTexture.image;
 
     if (!image) {
