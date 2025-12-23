@@ -113,7 +113,7 @@ namespace filament {
 
 class Renderer;
 class MaterialParser;
-class ResourceAllocatorDisposer;
+class TextureCacheDisposer;
 
 namespace backend {
 class Driver;
@@ -128,7 +128,7 @@ class FSwapChain;
 class FSync;
 class FView;
 
-class ResourceAllocator;
+class TextureCache;
 
 /*
  * Concrete implementation of the Engine interface. This keeps track of all hardware resources
@@ -300,12 +300,12 @@ public:
         return getDriver().getShaderLanguages(preferredLanguage);
     }
 
-    ResourceAllocatorDisposer& getResourceAllocatorDisposer() noexcept {
+    TextureCacheDisposer& getResourceAllocatorDisposer() noexcept {
         assert_invariant(mResourceAllocatorDisposer);
         return *mResourceAllocatorDisposer;
     }
 
-    std::shared_ptr<ResourceAllocatorDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
+    std::shared_ptr<TextureCacheDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
         return mResourceAllocatorDisposer;
     }
 
@@ -616,7 +616,7 @@ private:
     FTransformManager mTransformManager;
     FLightManager mLightManager;
     FCameraManager mCameraManager;
-    std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
+    std::shared_ptr<TextureCacheDisposer> mResourceAllocatorDisposer;
     mutable MaterialCache mMaterialCache;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
     HwDescriptorSetLayoutFactory mHwDescriptorSetLayoutFactory;

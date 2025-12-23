@@ -22,7 +22,7 @@
 #include "PostProcessManager.h"
 #include "RendererUtils.h"
 #include "RenderPass.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/Engine.h"
 #include "details/Fence.h"
@@ -99,7 +99,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
         mUserEpoch(engine.getEngineEpoch()),
-        mResourceAllocator(std::make_unique<ResourceAllocator>(
+        mResourceAllocator(std::make_unique<TextureCache>(
                 engine.getSharedResourceAllocatorDisposer(),
                 engine.getConfig(),
                 engine.getDriverApi()))
