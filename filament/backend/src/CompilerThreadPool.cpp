@@ -21,6 +21,10 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 
+#ifdef __ANDROID__
+#include "../../../android/common/ThreadExceptionBridge.h"
+#endif
+
 #include <algorithm>
 #include <iterator>
 #include <memory>
@@ -49,44 +53,56 @@ void CompilerThreadPool::init(uint32_t threadCount,
 
     for (size_t i = 0; i < threadCount; i++) {
         mCompilerThreads.emplace_back([this, setup, cleanup]() {
-            FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+#ifdef __ANDROID__
+            filament::android::runThreadGuardedVoid("CompilerThreadPool::thread", [&]() {
+#endif
+                FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-            (*setup)();
+                (*setup)();
 
-            // process jobs from the queue until we're asked to exit
-            while (!mExitRequested) {
-                std::unique_lock lock(mQueueLock);
-                mQueueCondition.wait(lock, [this]() {
-                    return  mExitRequested ||
-                            (!std::all_of( std::begin(mQueues), std::end(mQueues),
-                                    [](auto&& q) { return q.empty(); }));
-                });
+                // process jobs from the queue until we're asked to exit
+                while (!mExitRequested) {
+                    std::unique_lock lock(mQueueLock);
+                    mQueueCondition.wait(lock, [this]() {
+                        return  mExitRequested ||
+                                (!std::all_of( std::begin(mQueues), std::end(mQueues),
+                                        [](auto&& q) { return q.empty(); }));
+                    });
 
-                FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "CompilerThreadPool Jobs",
-                        mQueues[0].size() + mQueues[1].size() + mQueues[2].size());
+                    FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "CompilerThreadPool Jobs",
+                            mQueues[0].size() + mQueues[1].size() + mQueues[2].size());
 
-                if (UTILS_LIKELY(!mExitRequested)) {
-                    Job job;
-                    // use the first queue that's not empty
-                    auto& queue = [this]() -> auto& {
-                        for (auto& q: mQueues) {
-                            if (!q.empty()) {
-                                return q;
+                    if (UTILS_LIKELY(!mExitRequested)) {
+                        Job job;
+                        // use the first queue that's not empty
+                        auto& queue = [this]() -> auto& {
+                            for (auto& q: mQueues) {
+                                if (!q.empty()) {
+                                    return q;
+                                }
                             }
-                        }
-                        return mQueues[0]; // we should never end-up here.
-                    }();
-                    assert_invariant(!queue.empty());
-                    std::swap(job, queue.front().second);
-                    queue.pop_front();
+                            return mQueues[0]; // we should never end-up here.
+                        }();
+                        assert_invariant(!queue.empty());
+                        std::swap(job, queue.front().second);
+                        queue.pop_front();
 
-                    // execute the job without holding any locks
-                    lock.unlock();
-                    job();
+                        // execute the job without holding any locks
+                        lock.unlock();
+#ifdef __ANDROID__
+                        filament::android::runThreadGuardedVoid("CompilerThreadPool::job", [&]() {
+                            job();
+                        });
+#else
+                        job();
+#endif
+                    }
                 }
-            }
 
-            (*cleanup)();
+                (*cleanup)();
+#ifdef __ANDROID__
+            });
+#endif
         });
 
     }

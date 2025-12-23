@@ -35,6 +35,10 @@
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 
+#ifdef __ANDROID__
+#include "../../../android/common/ThreadExceptionBridge.h"
+#endif
+
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
@@ -434,7 +438,13 @@ bool JobSystem::execute(ThreadState& state) noexcept {
         if (UTILS_LIKELY(job->function)) {
             HEAVY_FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_JOBSYSTEM, "job->function");
             job->id = std::distance(mThreadStates.data(), &state);
+#ifdef __ANDROID__
+            filament::android::runThreadGuardedVoid("JobSystem::job::function", [&]() {
+                job->function(job->storage, *this, job);
+            });
+#else
             job->function(job->storage, *this, job);
+#endif
             job->id = invalidThreadId;
         }
         finish(job);
@@ -443,25 +453,31 @@ bool JobSystem::execute(ThreadState& state) noexcept {
 }
 
 void JobSystem::loop(ThreadState* state) {
-    setThreadName("JobSystem::loop");
-    setThreadPriority(Priority::DISPLAY);
+#ifdef __ANDROID__
+    filament::android::runThreadGuardedVoid("JobSystem::loop", [&]() {
+#endif
+        setThreadName("JobSystem::loop");
+        setThreadPriority(Priority::DISPLAY);
 
-    // record our work queue
-    std::unique_lock lock(mThreadMapLock);
-    bool const inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
-    lock.unlock();
+        // record our work queue
+        std::unique_lock lock(mThreadMapLock);
+        bool const inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
+        lock.unlock();
 
-    FILAMENT_CHECK_PRECONDITION(inserted) << "This thread is already in a loop.";
+        FILAMENT_CHECK_PRECONDITION(inserted) << "This thread is already in a loop.";
 
-    // run our main loop...
-    do {
-        if (!execute(*state)) {
-            std::unique_lock lock(mWaiterLock);
-            while (!exitRequested() && !hasActiveJobs()) {
-                wait(lock);
+        // run our main loop...
+        do {
+            if (!execute(*state)) {
+                std::unique_lock lock(mWaiterLock);
+                while (!exitRequested() && !hasActiveJobs()) {
+                    wait(lock);
+                }
             }
-        }
-    } while (!exitRequested());
+        } while (!exitRequested());
+#ifdef __ANDROID__
+    });
+#endif
 }
 
 UTILS_NOINLINE

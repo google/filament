@@ -64,6 +64,10 @@
 #include <utils/debug.h>
 #include <utils/ostream.h>
 
+#ifdef __ANDROID__
+#include "../../../android/common/ThreadExceptionBridge.h"
+#endif
+
 #include <math/vec3.h>
 #include <math/vec4.h>
 
@@ -166,7 +170,15 @@ Engine* FEngine::create(Builder const& builder) {
 
     } else {
         // start the driver thread
+#ifdef __ANDROID__
+        instance->mDriverThread = std::thread([instance]() {
+            filament::android::runThreadGuardedVoid("FEngine::loop", [instance]() {
+                instance->loop();
+            });
+        });
+#else
         instance->mDriverThread = std::thread(&FEngine::loop, instance);
+#endif
 
         // wait for the driver to be ready
         instance->mDriverBarrier.await();
@@ -198,7 +210,15 @@ void FEngine::create(Builder const& builder, Invocable<void(void*)>&& callback) 
     FEngine* instance = new FEngine(builder);
 
     // start the driver thread
+#ifdef __ANDROID__
+    instance->mDriverThread = std::thread([instance]() {
+        filament::android::runThreadGuardedVoid("FEngine::loop", [instance]() {
+            instance->loop();
+        });
+    });
+#else
     instance->mDriverThread = std::thread(&FEngine::loop, instance);
+#endif
 
     // launch a thread to call the callback -- so it can't do any damage.
     std::thread callbackThread = std::thread([instance, callback = std::move(callback)] {

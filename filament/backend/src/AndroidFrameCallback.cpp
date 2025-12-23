@@ -25,6 +25,8 @@
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
 
+#include "../../../android/common/ThreadExceptionBridge.h"
+
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -47,30 +49,32 @@ void AndroidFrameCallback::init() {
 
         // start the looper thread for our choreographer callbacks
         mLooperThread = std::thread([this] {
-            // create the looper for this thread
-            mLooper = ALooper_prepare(0);
-            // acquire a reference, so we can use it from our main thread
-            ALooper_acquire(mLooper);
-            // set thread name
-            JobSystem::setThreadName("Filament Choreographer");
-            // set priority
-            JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
-            // start the choreographer callbacks
-            if (__builtin_available(android 33, *)) {
-                mChoreographer = AChoreographer_getInstance();
-                // request our first callback for the next frame
-                AChoreographer_postVsyncCallback(mChoreographer, &vsyncCallback, this);
-            }
-            // signal we're ready to run and choreographer and looper are initialized
-            mInitBarrier.latch();
-            // our main loop just sits there to handle events
-            while (true) {
-                int const result = ALooper_pollOnce(-1, nullptr, nullptr, nullptr);
-                if (result == ALOOPER_POLL_ERROR || mExitRequested.
-                    load(std::memory_order_relaxed)) {
-                    return; // exit the loop
+            filament::android::runThreadGuardedVoid("AndroidFrameCallback::looper", [&]() {
+                // create the looper for this thread
+                mLooper = ALooper_prepare(0);
+                // acquire a reference, so we can use it from our main thread
+                ALooper_acquire(mLooper);
+                // set thread name
+                JobSystem::setThreadName("Filament Choreographer");
+                // set priority
+                JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+                // start the choreographer callbacks
+                if (__builtin_available(android 33, *)) {
+                    mChoreographer = AChoreographer_getInstance();
+                    // request our first callback for the next frame
+                    AChoreographer_postVsyncCallback(mChoreographer, &vsyncCallback, this);
                 }
-            }
+                // signal we're ready to run and choreographer and looper are initialized
+                mInitBarrier.latch();
+                // our main loop just sits there to handle events
+                while (true) {
+                    int const result = ALooper_pollOnce(-1, nullptr, nullptr, nullptr);
+                    if (result == ALOOPER_POLL_ERROR || mExitRequested.
+                        load(std::memory_order_relaxed)) {
+                        return; // exit the loop
+                    }
+                }
+            });
         });
 
         // wait for the thread and looper to be created and ready to run

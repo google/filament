@@ -28,6 +28,10 @@
 #include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+
+#ifdef __ANDROID__
+#include "../../../android/common/ThreadExceptionBridge.h"
+#endif
 #include <utils/ostream.h>
 
 #include <math/half.h>
@@ -51,26 +55,38 @@ DriverBase::DriverBase() noexcept {
     if constexpr (UTILS_HAS_THREADING) {
         // This thread services user callbacks
         mServiceThread = std::thread([this]() {
-            do {
-                auto& serviceThreadCondition = mServiceThreadCondition;
-                auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
+#ifdef __ANDROID__
+            filament::android::runThreadGuardedVoid("DriverBase::ServiceThread", [&]() {
+#endif
+                do {
+                    auto& serviceThreadCondition = mServiceThreadCondition;
+                    auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
 
-                // wait for some callbacks to dispatch
-                std::unique_lock<std::mutex> lock(mServiceThreadLock);
-                while (serviceThreadCallbackQueue.empty() && !mExitRequested) {
-                    serviceThreadCondition.wait(lock);
-                }
-                if (mExitRequested) {
-                    break;
-                }
-                // move the callbacks to a temporary vector
-                auto callbacks(std::move(serviceThreadCallbackQueue));
-                lock.unlock();
-                // and make sure to call them without our lock held
-                for (auto[handler, callback, user]: callbacks) {
-                    handler->post(user, callback);
-                }
-            } while (true);
+                    // wait for some callbacks to dispatch
+                    std::unique_lock<std::mutex> lock(mServiceThreadLock);
+                    while (serviceThreadCallbackQueue.empty() && !mExitRequested) {
+                        serviceThreadCondition.wait(lock);
+                    }
+                    if (mExitRequested) {
+                        break;
+                    }
+                    // move the callbacks to a temporary vector
+                    auto callbacks(std::move(serviceThreadCallbackQueue));
+                    lock.unlock();
+                    // and make sure to call them without our lock held
+                    for (auto[handler, callback, user]: callbacks) {
+#ifdef __ANDROID__
+                        filament::android::runThreadGuardedVoid("DriverBase::ServiceCallback", [&]() {
+                            handler->post(user, callback);
+                        });
+#else
+                        handler->post(user, callback);
+#endif
+                    }
+                } while (true);
+#ifdef __ANDROID__
+            });
+#endif
         });
     }
 }

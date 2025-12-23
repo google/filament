@@ -130,6 +130,9 @@ add_library(filament-jni SHARED
     ../common/PanicState.h
     ../common/PanicState.cpp
     ../common/JniExceptionBridge.h
+    # Thread Exception Bridge
+    ../common/ThreadExceptionBridge.h
+    ../common/ThreadExceptionBridge.cpp
 )
 
 target_include_directories(filament-jni PRIVATE

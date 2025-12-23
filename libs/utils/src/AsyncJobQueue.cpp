@@ -20,6 +20,10 @@
 #include <utils/debug.h>
 #include <utils/Logger.h>
 
+#ifdef __ANDROID__
+#include "../../../android/common/ThreadExceptionBridge.h"
+#endif
+
 #include <mutex>
 #include <utility>
 
@@ -29,27 +33,39 @@ AsyncJobQueue::AsyncJobQueue(const char* name, Priority priority) {
 #if !defined(__EMSCRIPTEN__)
     mQueue.reserve(2);
     mThread = std::thread([this, name, priority]() {
-        JobSystem::setThreadName(name);
-        JobSystem::setThreadPriority(priority);
-        bool exitRequested;
-        do {
-            std::unique_lock lock(mLock);
-            // wait until we get a job, or we're asked to exit
-            mCondition.wait(lock, [this]() -> bool {
-                return mExitRequested || !mQueue.empty();
-            });
-            exitRequested = mExitRequested;
-            auto const queue = std::move(mQueue);
-            // here we have drained the whole queue, and if exitRequested is set, we're guaranteed
-            // no more job will be added after we unlock.
-            lock.unlock();
+#ifdef __ANDROID__
+        filament::android::runThreadGuardedVoid("AsyncJobQueue::thread", [&]() {
+#endif
+            JobSystem::setThreadName(name);
+            JobSystem::setThreadPriority(priority);
+            bool exitRequested;
+            do {
+                std::unique_lock lock(mLock);
+                // wait until we get a job, or we're asked to exit
+                mCondition.wait(lock, [this]() -> bool {
+                    return mExitRequested || !mQueue.empty();
+                });
+                exitRequested = mExitRequested;
+                auto const queue = std::move(mQueue);
+                // here we have drained the whole queue, and if exitRequested is set, we're guaranteed
+                // no more job will be added after we unlock.
+                lock.unlock();
 
-            // execute the jobs without holding a lock. These jobs must be executed in order,
-            // front to back, and are allowed to be long-running (like waiting on a fence).
-            for (auto& job : queue) {
-                job();
-            }
-        } while (!exitRequested);
+                // execute the jobs without holding a lock. These jobs must be executed in order,
+                // front to back, and are allowed to be long-running (like waiting on a fence).
+                for (auto& job : queue) {
+#ifdef __ANDROID__
+                    filament::android::runThreadGuardedVoid("AsyncJobQueue::job", [&]() {
+                        job();
+                    });
+#else
+                    job();
+#endif
+                }
+            } while (!exitRequested);
+#ifdef __ANDROID__
+        });
+#endif
     });
 #endif
 }

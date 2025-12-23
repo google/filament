@@ -20,6 +20,10 @@
 #include <utils/debug.h>
 #include <utils/Panic.h>
 
+#ifdef __ANDROID__
+#include "../../../android/common/ThreadExceptionBridge.h"
+#endif
+
 namespace filament::backend {
 
 JobQueue::JobQueue(PassKey) {}
@@ -217,20 +221,32 @@ void AmortizationWorker::terminate() {
 ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
         : JobWorker(std::move(queue)), mConfig(std::move(config)) {
     mThread = std::thread([this]() {
-        utils::JobSystem::setThreadName(mConfig.name.data());
-        utils::JobSystem::setThreadPriority(mConfig.priority);
+#ifdef __ANDROID__
+        filament::android::runThreadGuardedVoid("JobQueue::ThreadWorker", [&]() {
+#endif
+            utils::JobSystem::setThreadName(mConfig.name.data());
+            utils::JobSystem::setThreadPriority(mConfig.priority);
 
-        if (mConfig.onBegin) {
-            mConfig.onBegin();
-        }
+            if (mConfig.onBegin) {
+                mConfig.onBegin();
+            }
 
-        while (JobQueue::Job job = mQueue->pop(true)) {
-            job();
-        }
+            while (JobQueue::Job job = mQueue->pop(true)) {
+#ifdef __ANDROID__
+                filament::android::runThreadGuardedVoid("JobQueue::job", [&]() {
+                    job();
+                });
+#else
+                job();
+#endif
+            }
 
-        if (mConfig.onEnd) {
-            mConfig.onEnd();
-        }
+            if (mConfig.onEnd) {
+                mConfig.onEnd();
+            }
+#ifdef __ANDROID__
+        });
+#endif
     });
 }
 

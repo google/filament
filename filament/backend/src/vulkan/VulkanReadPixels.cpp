@@ -25,6 +25,10 @@
 
 #include <utils/Log.h>
 
+#ifdef __ANDROID__
+#include "../../../../android/common/ThreadExceptionBridge.h"
+#endif
+
 using namespace bluevk;
 
 namespace filament::backend {
@@ -77,30 +81,51 @@ void TaskHandler::shutdown() {
 }
 
 void TaskHandler::loop() {
-    while (true) {
-        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
-        mHasTaskCondition.wait(lock, [this] { return !mTaskQueue.empty() || mShouldStop; });
-        if (mShouldStop) {
-            break;
+#ifdef __ANDROID__
+    filament::android::runThreadGuardedVoid("VulkanReadPixels::TaskHandler::loop", [&]() {
+#endif
+        while (true) {
+            std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+            mHasTaskCondition.wait(lock, [this] { return !mTaskQueue.empty() || mShouldStop; });
+            if (mShouldStop) {
+                break;
+            }
+            auto [workload, oncomplete] = mTaskQueue.front();
+            mTaskQueue.pop();
+            lock.unlock();
+#ifdef __ANDROID__
+            filament::android::runThreadGuardedVoid("VulkanReadPixels::workload", [&]() {
+                workload();
+            });
+            filament::android::runThreadGuardedVoid("VulkanReadPixels::oncomplete", [&]() {
+                oncomplete();
+            });
+#else
+            workload();
+            oncomplete();
+#endif
         }
-        auto [workload, oncomplete] = mTaskQueue.front();
-        mTaskQueue.pop();
-        lock.unlock();
-        workload();
-        oncomplete();
-    }
 
-    // Clean-up: we still need to call oncomplete for clients to do clean-up.
-    while (true) {
-        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
-        if (mTaskQueue.empty()) {
-            break;
+        // Clean-up: we still need to call oncomplete for clients to do clean-up.
+        while (true) {
+            std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+            if (mTaskQueue.empty()) {
+                break;
+            }
+            auto [workload, oncomplete] = mTaskQueue.front();
+            mTaskQueue.pop();
+            lock.unlock();
+#ifdef __ANDROID__
+            filament::android::runThreadGuardedVoid("VulkanReadPixels::cleanup_oncomplete", [&]() {
+                oncomplete();
+            });
+#else
+            oncomplete();
+#endif
         }
-        auto [workload, oncomplete] = mTaskQueue.front();
-        mTaskQueue.pop();
-        lock.unlock();
-        oncomplete();
-    }
+#ifdef __ANDROID__
+    });
+#endif
 }
 
 void VulkanReadPixels::terminate() noexcept {

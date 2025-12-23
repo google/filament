@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utils/Panic.h>   // Filament's panic base type
 #include "PanicState.h"
+#include "ThreadExceptionBridge.h"
 
 namespace filament::android {
 
@@ -38,6 +39,9 @@ inline void throwUnknown(JNIEnv* env, const char* where) {
 
 template <typename Ret, typename Fn>
 inline Ret jniGuard(JNIEnv* env, const char* where, Ret defaultValue, Fn&& fn) {
+    // Mark this thread as main thread since it's calling from JNI
+    MainThreadDetector::markAsMainThread();
+
     if (PanicState::isDisabled()) {
         throwIllegalState(env, "Filament is disabled due to a previous fatal error.");
         return defaultValue;
@@ -57,6 +61,9 @@ inline Ret jniGuard(JNIEnv* env, const char* where, Ret defaultValue, Fn&& fn) {
 
 template <typename Fn>
 inline void jniGuardVoid(JNIEnv* env, const char* where, Fn&& fn) {
+    // Mark this thread as main thread since it's calling from JNI
+    MainThreadDetector::markAsMainThread();
+
     if (PanicState::isDisabled()) {
         throwIllegalState(env, "Filament is disabled due to a previous fatal error.");
         return;

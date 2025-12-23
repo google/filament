@@ -638,6 +638,7 @@ public class Engine {
      * </pre>
      */
     public void destroy() {
+        Filament.healthCheck(); // Surface any pending exceptions before cleanup
         nDestroyEngine(getNativeObject());
         clearNativeObject();
     }

@@ -358,6 +358,7 @@ public class Renderer {
      * @see #render
      */
     public boolean beginFrame(@NonNull SwapChain swapChain, long frameTimeNanos) {
+        Filament.healthCheck(); // Check for worker thread exceptions every frame
         return nBeginFrame(getNativeObject(), swapChain.getNativeObject(), frameTimeNanos);
     }
 

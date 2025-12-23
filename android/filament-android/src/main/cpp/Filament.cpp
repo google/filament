@@ -18,6 +18,7 @@
 
 #include "private/backend/VirtualMachineEnv.h"
 #include "../../../../common/JniExceptionBridge.h"
+#include "../../../../common/ThreadExceptionBridge.h"
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -29,5 +30,13 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     // global VM
     ::filament::VirtualMachineEnv::JNI_OnLoad(vm);
 
+    // Initialize main thread detection for exception handling
+    ::filament::android::MainThreadDetector::initialize();
+
     return JNI_VERSION_1_6;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Filament_nHealthCheck(JNIEnv* env, jclass) {
+    ::filament::android::throwStoredExceptionIfAny(env);
 }

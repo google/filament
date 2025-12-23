@@ -162,6 +162,11 @@ set(SRCS
         src/ZstdHelper.cpp
 )
 
+if (ANDROID)
+    list(APPEND SRCS ../android/common/PanicState.cpp)
+    list(APPEND SRCS ../android/common/ThreadExceptionBridge.cpp)
+endif()
+
 set(PRIVATE_HDRS
         src/materials/StaticMaterialInfo.h
         src/Allocators.h
@@ -663,6 +668,10 @@ add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+
+if (ANDROID)
+    target_include_directories(${TARGET} PRIVATE ../android)
+endif()
 
 # add this subproject to the Filament folder
 set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
