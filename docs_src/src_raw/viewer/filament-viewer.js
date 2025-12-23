@@ -307,7 +307,7 @@ class FilamentViewer extends LitElement {
                 asyncInterval: 30
             };
 
-            const doneAddingResources = (resourceLoader, stbProvider, ktx2Provider) => {
+            const doneAddingResources = (resourceLoader, stbProvider, ktx2Provider, webpProvider) => {
                 this.srcBlobResources = {};
                 resourceLoader.asyncBeginLoad(this.asset);
                 const timer = setInterval(() => {
@@ -318,6 +318,9 @@ class FilamentViewer extends LitElement {
                         resourceLoader.delete();
                         stbProvider.delete();
                         ktx2Provider.delete();
+                        if (webpProvider) {
+                            webpProvider.delete();
+                        }
                         this.animator = this.asset.getInstance().getAnimator();
                         this.animationStartTime = Date.now();
                     }
@@ -335,10 +338,17 @@ class FilamentViewer extends LitElement {
 
                 const stbProvider = new Filament.gltfio$StbProvider(this.engine);
                 const ktx2Provider = new Filament.gltfio$Ktx2Provider(this.engine);
+                let webpProvider = null;
 
                 resourceLoader.addStbProvider("image/jpeg", stbProvider);
                 resourceLoader.addStbProvider("image/png", stbProvider);
                 resourceLoader.addKtx2Provider("image/ktx2", ktx2Provider);
+
+
+                if (Filament.gltfio$WebpProvider.isWebpSupported()) {
+                    webpProvider = new Filament.gltfio$WebpProvider(this.engine);
+                    resourceLoader.addWebpProvider("image/webp", webpProvider);
+                }
 
                 let remaining = Object.keys(this.srcBlobResources).length;
                 for (const name in this.srcBlobResources) {
@@ -346,7 +356,7 @@ class FilamentViewer extends LitElement {
                         const desc = getBufferDescriptor(new Uint8Array(buffer));
                         resourceLoader.addResourceData(name, getBufferDescriptor(desc));
                         if (--remaining === 0) {
-                            doneAddingResources(resourceLoader, stbProvider, ktx2Provider);
+                            doneAddingResources(resourceLoader, stbProvider, ktx2Provider, webpProvider);
                         }
                     });
                 }

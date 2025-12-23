@@ -179,6 +179,19 @@ TextureProvider* createStbProvider(filament::Engine* engine);
  */
 TextureProvider* createKtx2Provider(filament::Engine* engine);
 
+/**
+ * If webp support is enabled at build time, creates a decoder that can handle "image/webp"
+ * lossless and lossy content.
+ * If webp support is not enabled at build time, returns nullptr.
+ */
+TextureProvider* createWebpProvider(filament::Engine* engine);
+
+/**
+ * Indicates if build-time webp support was included.
+ * Returns true if it was and false if not.
+ */
+bool isWebpSupported();
+
 } // namespace filament::gltfio
 
 template<> struct utils::EnableBitMaskOperators<filament::gltfio::TextureProvider::TextureFlags>
