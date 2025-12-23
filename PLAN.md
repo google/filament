@@ -1491,6 +1491,171 @@ Main thread detection uses a hybrid approach:
 
 ---
 
+## 7. Panic Handler (Worker Thread Recovery)
+
+### Overview
+
+A global panic handler is registered during `JNI_OnLoad` that intercepts **all** Filament panics before they terminate the app. This provides a last line of defense for crashes that occur in `noexcept` functions or destructors where normal exception handling cannot work.
+
+### How It Works
+
+Filament's panic system (used by `FILAMENT_CHECK_PRECONDITION/POSTCONDITION/ARITHMETIC` and `assert_invariant`) calls user-defined panic handlers **before** throwing exceptions or calling `abort()`. This hook allows us to store panic information and attempt aggressive recovery.
+
+**Panic Flow with Handler**:
+```
+User code → Panic triggered → Panic object created → Log panic
+    ↓
+→ PANIC HANDLER CALLED ← (our hook!)
+    ↓
+    Check: Is this the main thread?
+    ├─ NO (worker thread)
+    │   ├─ Store panic in ThreadExceptionQueue
+    │   ├─ Mark Filament as disabled (PanicState)
+    │   └─ pthread_exit() → Kill ONLY this thread → App survives!
+    │
+    └─ YES (main thread)
+        ├─ Store panic in ThreadExceptionQueue
+        ├─ Mark Filament as disabled
+        └─ Return → Panic throws → Caught by jniGuard OR std::terminate()
+```
+
+### Behavior by Context
+
+**1. Non-noexcept functions**:
+- Handler stores panic info
+- Returns normally
+- Panic throws exception
+- `jniGuard` catches it → Java `IllegalStateException`
+- ✅ App continues
+
+**2. Worker threads in noexcept functions** (NEW!):
+- Handler stores panic info
+- **Calls `pthread_exit()` to kill ONLY this thread**
+- ✅ **App survives** (main process continues)
+- Exception surfaced via next `healthCheck()` call
+- ⚠️ Thread dies without cleanup (potential resource leaks)
+
+**3. Main thread in noexcept functions**:
+- Handler stores panic info
+- Returns normally
+- `std::terminate()` called (C++ language requirement)
+- ❌ App crashes (but cleaner than worker thread crash)
+
+### Files
+
+**Created**:
+- `android/common/PanicHandler.h` - Panic handler interface
+- `android/common/PanicHandler.cpp` - Implementation with worker thread killing
+
+**Modified**:
+- `android/filament-android/src/main/cpp/Filament.cpp` - Registration in `JNI_OnLoad`
+- `android/filament-android/CMakeLists.txt` - Added source files
+
+### Implementation Details
+
+**Initialization** (`android/filament-android/src/main/cpp/Filament.cpp:38`):
+```cpp
+::filament::android::PanicHandler::initialize();
+```
+
+**Handler Logic** (`android/common/PanicHandler.cpp:handlePanic`):
+```cpp
+void PanicHandler::handlePanic(void* user, utils::Panic const& panic) noexcept {
+    // 1. Log panic details
+    // 2. Store in ThreadExceptionQueue
+    // 3. Mark Filament disabled via PanicState
+
+    // 4. Worker thread recovery
+    if (!isMainThread) {
+        pthread_exit(nullptr);  // Kill ONLY this thread
+        // Never returns
+    }
+
+    // 5. Main thread: return and let panic propagate
+}
+```
+
+### Risks and Trade-offs
+
+**Advantages**:
+- ✅ App survives worker thread panics that would normally crash
+- ✅ Better than aborting the entire process
+- ✅ Panic info stored for diagnostics
+- ✅ Filament automatically disabled to prevent further damage
+
+**Risks** (worker thread killing):
+- ⚠️ **Resource leaks**: Thread dies mid-execution, destructors don't run
+- ⚠️ **Dangling locks**: If thread held mutexes, other threads may deadlock
+- ⚠️ **Corrupted state**: Panic indicates program state is already compromised
+- ⚠️ **Thread zombies**: If other threads wait on killed thread, they'll hang
+
+**Mitigations**:
+1. `PanicState` disables ALL Filament operations after panic
+2. Future Filament calls fail fast (return early)
+3. Main thread never killed (cleaner termination)
+4. Clear logging of worker thread termination
+
+### Testing
+
+**Test 1: Non-noexcept panic (should be caught)**:
+```kotlin
+try {
+    engine.setActiveFeatureLevel(Engine.FeatureLevel.FEATURE_LEVEL_3)
+} catch (e: IllegalStateException) {
+    // ✓ Panic caught and converted to Java exception
+}
+```
+
+**Test 2: Worker thread panic** (previously would crash):
+```kotlin
+Thread {
+    // This used to crash the app
+    resourceLoader.loadResources(asset)  // Thread adoption error
+}.start()
+
+// App survives! Exception surfaced next frame:
+renderer.beginFrame(swapChain)  // Throws FilamentPanicException
+```
+
+### Disabling Aggressive Recovery (Safe Mode)
+
+If worker thread killing causes issues, revert to default behavior by commenting out one line in `android/common/PanicHandler.cpp`:
+
+```cpp
+if (!isMainThread) {
+    // SAFE MODE: Disable worker thread killing
+    // pthread_exit(nullptr);
+
+    // Fall through to normal panic handling (will std::terminate)
+}
+```
+
+This keeps panic storage but allows termination, useful for debugging if thread killing causes deadlocks.
+
+### When Panic Handler Helps
+
+**Scenarios where app survives**:
+- ❌ Material version mismatch → ✅ Caught by jniGuard (non-noexcept)
+- ❌ Feature level check → ✅ Caught by jniGuard (non-noexcept)
+- ❌ Thread adoption error in `JobSystem` → ✅ Worker thread killed, app survives
+- ❌ Panic in gltfio worker → ✅ Worker thread killed, app survives
+
+**Scenarios that still crash** (unavoidable):
+- ❌ Main thread panic in noexcept function → Still crashes (safer than killing main thread)
+- ❌ Destructor panics → Still crashes (C++ language limitation)
+
+### Integration with Existing System
+
+The panic handler **complements** the existing exception handling:
+
+1. **JNI Exception Bridge**: Catches exceptions on main thread (already implemented)
+2. **Thread Exception Bridge**: Wraps worker thread entry points (already implemented)
+3. **Panic Handler**: Last-resort for noexcept contexts (NEW)
+
+All three store exceptions in `ThreadExceptionQueue` and surface via `healthCheck()`, providing comprehensive coverage.
+
+---
+
 ## Summary
 
 This implementation provides **comprehensive exception handling** for Filament's multi-threaded Android architecture:

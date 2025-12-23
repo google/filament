@@ -126,13 +126,16 @@ add_library(filament-jni SHARED
     # Common utils
     ../common/CallbackUtils.cpp
     ../common/NioUtils.cpp
-    # Panic Handler
+    # Panic State
     ../common/PanicState.h
     ../common/PanicState.cpp
     ../common/JniExceptionBridge.h
     # Thread Exception Bridge
     ../common/ThreadExceptionBridge.h
     ../common/ThreadExceptionBridge.cpp
+    # Panic Handler (worker thread recovery)
+    ../common/PanicHandler.h
+    ../common/PanicHandler.cpp
 )
 
 target_include_directories(filament-jni PRIVATE

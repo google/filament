@@ -19,6 +19,7 @@
 #include "private/backend/VirtualMachineEnv.h"
 #include "../../../../common/JniExceptionBridge.h"
 #include "../../../../common/ThreadExceptionBridge.h"
+#include "../../../../common/PanicHandler.h"
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -32,6 +33,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     // Initialize main thread detection for exception handling
     ::filament::android::MainThreadDetector::initialize();
+
+    // Register panic handler for worker thread recovery
+    ::filament::android::PanicHandler::initialize();
 
     return JNI_VERSION_1_6;
 }
