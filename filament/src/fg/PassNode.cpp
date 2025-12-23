@@ -19,7 +19,7 @@
 #include "fg/FrameGraph.h"
 #include "fg/details/ResourceNode.h"
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include <details/Texture.h>
 
@@ -65,18 +65,18 @@ RenderPassNode::~RenderPassNode() noexcept = default;
 void RenderPassNode::execute(FrameGraphResources const& resources, DriverApi& driver) noexcept {
 
     FrameGraph& fg = mFrameGraph;
-    ResourceAllocatorInterface& resourceAllocator = fg.getResourceAllocator();
+    TextureCacheInterface& textureCache = fg.getTextureCache();
 
     // create the render targets
     for (auto& rt : mRenderTargetData) {
-        rt.devirtualize(fg, resourceAllocator);
+        rt.devirtualize(fg, textureCache);
     }
 
     mPassBase->execute(resources, driver);
 
     // destroy the render targets
     for (auto& rt : mRenderTargetData) {
-        rt.destroy(resourceAllocator);
+        rt.destroy(textureCache);
     }
 }
 
@@ -250,7 +250,7 @@ void RenderPassNode::resolve() noexcept {
 }
 
 void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
-        ResourceAllocatorInterface& resourceAllocator) noexcept {
+        TextureCacheInterface& textureCache) noexcept {
     assert_invariant(any(targetBufferFlags));
     if (UTILS_LIKELY(!imported)) {
 
@@ -276,7 +276,7 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
             }
         }
 
-        backend.target = resourceAllocator.createRenderTarget(
+        backend.target = textureCache.createRenderTarget(
                 name, targetBufferFlags,
                 backend.params.viewport.width,
                 backend.params.viewport.height,
@@ -286,9 +286,9 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
 }
 
 void RenderPassNode::RenderPassData::destroy(
-        ResourceAllocatorInterface& resourceAllocator) const noexcept {
+        TextureCacheInterface& textureCache) const noexcept {
     if (UTILS_LIKELY(!imported)) {
-        resourceAllocator.destroyRenderTarget(backend.target);
+        textureCache.destroyRenderTarget(backend.target);
     }
 }
 
