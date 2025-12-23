@@ -227,7 +227,9 @@ vec4 getPosition() {
     if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
         skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
     }
+
 #endif
+
     return pos;
 }
 
