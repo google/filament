@@ -202,6 +202,61 @@ uint32_t selectMemoryTypeForExternalImage(VkPhysicalDevice physicalDevice, VkDev
     return memoryTypeIndex;
 }
 
+struct ExternalSamplerFormatDescription {
+    AHardwareBuffer_Format ahbFormat;
+    uint64_t ahbUsage;
+    VkSamplerYcbcrRange ycbcrRange;
+    VkSamplerYcbcrModelConversion ycbcrModel;
+};
+
+// Until we update our build target, this value will not exist.
+// We'll leave an error so that this can be removed in the future.
+#if __ANDROID_API__ < 36
+#define AHARDWAREBUFFER_FORMAT_YCbCr_P210 static_cast<AHardwareBuffer_Format>(0x3c)
+#else
+#error "Please remove this #if / #define."
+#endif
+
+constexpr std::array kExternalSamplerFormats = {
+    // Standard video playback
+    ExternalSamplerFormatDescription {
+        AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420,
+        AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_VIDEO_ENCODE,
+        VK_SAMPLER_YCBCR_RANGE_ITU_NARROW,
+        VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709,
+    },
+    // HDR video playback
+    ExternalSamplerFormatDescription {
+        AHARDWAREBUFFER_FORMAT_YCbCr_P010,
+        AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_VIDEO_ENCODE,
+        VK_SAMPLER_YCBCR_RANGE_ITU_NARROW,
+        VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020,
+    },
+    // Camera preview. Note: ITU_FULL may cause linker errors with certain formats,
+    // which often come up if AHARDWAREBUFFER_USAGE_VIDEO_ENCODE is used. If there are
+    // crashes on older devices, it may be that we need to remove some of the ITU_FULL
+    // entries, as those conversions may not exist. That case is very unlikely.
+    ExternalSamplerFormatDescription {
+        AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420,
+        AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,
+        VK_SAMPLER_YCBCR_RANGE_ITU_FULL,
+        VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709,
+    },
+    ExternalSamplerFormatDescription {
+        AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420,
+        AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,
+        VK_SAMPLER_YCBCR_RANGE_ITU_FULL,
+        VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601,
+    },
+    // If supported
+    ExternalSamplerFormatDescription {
+        AHARDWAREBUFFER_FORMAT_YCbCr_P210,
+        AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,
+        VK_SAMPLER_YCBCR_RANGE_ITU_FULL,
+        VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020,
+    },
+};
+
 } // namespace
 
 // ---------------------------------------------------------------------------------------------
@@ -561,6 +616,68 @@ bool VulkanPlatformAndroid::queryFrameTimestamps(SwapChain const* swapchain, uin
         FrameTimestamps* outFrameTimestamps) const noexcept {
     auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
     return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
+}
+
+void VulkanPlatformAndroid::registerAndroidExternalFormatsForCachePrewarm() {
+    if (__builtin_available(android 26, *)) {
+        for (const auto& externalFormat : kExternalSamplerFormats) {
+            AHardwareBuffer_Desc desc {
+                .width = 2,
+                .height = 2,
+                .layers = 1,
+                .format = externalFormat.ahbFormat,
+                .usage = externalFormat.ahbUsage,
+            };
+
+            // Some formats may not be supported, depending on the runtime API version. If
+            // isSupported is on the current device, use it as a faster-failing check to see
+            // if the requested format is supported.
+            if (__builtin_available(android 29, *)) {
+                if (!AHardwareBuffer_isSupported(&desc)) {
+                    FVK_LOGW << "Skipping unsupported ahb format " << std::to_string(externalFormat.ahbFormat)
+                            << " for cache prewarming.";
+                    continue;
+                }
+            }
+
+            // Try to create a fake buffer, so we can fetch the external format number.
+            AHardwareBuffer* buffer = nullptr;
+            if (AHardwareBuffer_allocate(&desc, &buffer) != 0) {
+                FVK_LOGE << "Failed to allocate fake AHardwareBuffer to check external format constant, "
+                        << "not registering "
+                        << std::to_string(externalFormat.ahbFormat) << " / "
+                        << std::to_string(externalFormat.ahbUsage);
+                continue;
+            }
+
+            // Get the format properties from Vulkan.
+            VkAndroidHardwareBufferFormatPropertiesANDROID formatProps = {
+                .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
+            };
+            VkAndroidHardwareBufferPropertiesANDROID props = {
+                .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
+                .pNext = &formatProps
+            };
+            VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(getDevice(), buffer, &props);
+            if (result == VK_SUCCESS) {
+                FVK_LOGI << "Registering external format " << std::to_string(formatProps.externalFormat)
+                        << " with conversion " << std::to_string(externalFormat.ycbcrModel)
+                        << " and range " << std::to_string(externalFormat.ycbcrRange)
+                        << " for Vulkan pipeline cache prewarming.";
+                registerCachePrewarmExternalFormat({
+                    .externalFormat = formatProps.externalFormat,
+                    .ycbcrModelConversion = externalFormat.ycbcrModel,
+                    .ycbcrRange = externalFormat.ycbcrRange,
+                });
+            } else {
+                FVK_LOGE << "Failed to fetch format props for fake AHardwareBuffer, not registering "
+                        << std::to_string(externalFormat.ahbFormat) << " / "
+                        << std::to_string(externalFormat.ahbUsage);
+            }
+
+            AHardwareBuffer_release(buffer);
+        }
+    }
 }
 
 } // namespace filament::backend

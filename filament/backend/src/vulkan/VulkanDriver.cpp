@@ -803,12 +803,18 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
     }
 
     // If async prewarming is enabled, let's find the proper layout and build the pipeline.
+    std::array<resource_ptr<VulkanDescriptorSetLayout>, MAX_DESCRIPTOR_SET_COUNT> layouts {};
     VulkanDescriptorSetLayout::DescriptorSetLayoutArray vkLayouts {};
+    bool hasExternalSamplers = false;
     for (const auto& layoutBinding : program.getDescriptorSetLayouts()) {
         DescriptorSetLayout layoutDescription = layoutBinding.layout;
         auto layoutHandle = mResourceManager.allocHandle<VulkanDescriptorSetLayout>();
         auto layout = mDescriptorSetLayoutCache.createLayout(layoutHandle, std::move(layoutDescription));
+        layouts[layoutBinding.set] = layout;
         vkLayouts[layoutBinding.set] = layout->getVkLayout();
+        if (layout->bitmask.externalSampler.count() > 0) {
+            hasExternalSamplers = true;
+        }
     }
 
     StereoscopicType stereoscopicType = mStereoscopicType;
@@ -816,13 +822,63 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
         stereoscopicType = StereoscopicType::NONE;
     }
 
-    VkPipelineLayout layout = mPipelineLayoutCache.getLayout(vkLayouts, vprogram);
-    mPipelineCache.asyncPrewarmCache(
-        *vprogram.get(),
-        layout,
-        stereoscopicType,
-        mStereoscopicEyeCount,
-        program.getPriorityQueue());
+    // If there are no external samplers, that's it! We have enough to compile the
+    // fake pipeline at this point. If there are, though, this is unnecessary - there
+    // MUST be some external samplers defined. In that case, we'll go on to start
+    // instantiating the YCbCr conversions for them.
+    if (!hasExternalSamplers) {
+        mPipelineCache.asyncPrewarmCache(
+            *vprogram.get(),
+            mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
+            stereoscopicType,
+            mStereoscopicEyeCount,
+            program.getPriorityQueue());
+        return;
+    }
+
+    // If we have external samplers, let's do this again with the external samplers
+    // specified.
+    for (const auto& format : mPlatform->getCachePrewarmExternalFormats()) {
+        // The values that seem to matter in terms of cache hits here are the model conversion,
+        // and model range. We need some value for externalFormat that is known to support that
+        // pair of values, but we need not find every possible externalFormat. As we test on
+        // more devices, this may change.
+        VulkanYcbcrConversionCache::Params ycbcrConversion {
+            .conversion = {
+                .ycbcrModel = fvkutils::getYcbcrModelConversionFilament(format.ycbcrModelConversion),
+                .r = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_R, 0),
+                .g = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_G, 1),
+                .b = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_B, 2),
+                .a = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_A, 3),
+                .ycbcrRange = fvkutils::getYcbcrRangeFilament(format.ycbcrRange),
+                .xChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+                .yChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+                .chromaFilter = SamplerMagFilter::NEAREST,
+            },
+            .format = VK_FORMAT_UNDEFINED,
+            .externalFormat = format.externalFormat,
+        };
+        VkSamplerYcbcrConversion vkConversion = mYcbcrConversionCache.getConversion(ycbcrConversion);
+        VkSampler externalSampler = mSamplerCache.getSampler({.sampler = {}, .conversion = vkConversion});
+
+        // Update all layouts to use the external samplers.
+        for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; ++i) {
+            if (!layouts[i]) {
+                continue;
+            }
+
+            utils::FixedCapacityVector<VkSampler> externalSamplers (layouts[i]->bitmask.externalSampler.count(), externalSampler);
+            vkLayouts[i] = mDescriptorSetLayoutCache.getVkLayout(
+                layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
+        }
+
+        mPipelineCache.asyncPrewarmCache(
+            *vprogram.get(),
+            mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
+            stereoscopicType,
+            mStereoscopicEyeCount,
+            program.getPriorityQueue());
+    }
 }
 
 void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {

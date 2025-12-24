@@ -56,6 +56,16 @@ struct VulkanCmdFence;
  */
 class VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
+    /**
+     * Encapsulates information required to instantiate a known external format,
+     * typically for the purpose of preloading a pipeline cache for materials using
+     * external formats for samplers.
+     */
+    struct ExternalYcbcrFormat {
+        uint64_t externalFormat;
+        VkSamplerYcbcrModelConversion ycbcrModelConversion;
+        VkSamplerYcbcrRange ycbcrRange;
+    };
 
     struct ExtensionHashFn {
         std::size_t operator()(utils::CString const& s) const noexcept {
@@ -328,6 +338,30 @@ public:
      */
     VkQueue getProtectedGraphicsQueue() const noexcept;
 
+    /**
+     * Fetches a list of pre-registered external formats for prewarming the Vulkan
+     * pipeline cache.
+     *
+     * @return A list containing an external format number, YCbCr color model conversion,
+     *         and YCbCr color range.
+     */
+    inline const std::vector<ExternalYcbcrFormat>& getCachePrewarmExternalFormats() const noexcept {
+        return mCachePrewarmExternalFormats;
+    }
+
+    /**
+     * For cache prewarming, if external samplers are present, we need to build
+     * the fake pipeline using the proper formats specified. Since there's no way to
+     * get these at material build time, we allow the app to register them before
+     * creating materials.
+     *
+     * @param format The format, containing the external format value which should be
+     *               extracted from an AHardwareBuffer.
+     */
+    inline void registerCachePrewarmExternalFormat(const ExternalYcbcrFormat& format) noexcept {
+        mCachePrewarmExternalFormats.push_back(format);
+    }
+
     struct ExternalImageMetadata {
         /**
          * The Filament texture format.
@@ -533,6 +567,8 @@ private:
             MiscDeviceFeatures const& requestedFeatures) noexcept;
 
     friend struct VulkanPlatformPrivate;
+
+    std::vector<ExternalYcbcrFormat> mCachePrewarmExternalFormats;
 };
 
 }// namespace filament::backend
