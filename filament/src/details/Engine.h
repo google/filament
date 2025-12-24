@@ -791,7 +791,6 @@ public:
                 // buffer. This is an experimental feature that still needs to be implemented fully
                 // before it can be fully enabled.
                 bool enable_staging_buffer_bypass = false;
-                bool allow_async_pipeline_cache_prewarming = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_amortized_shader_compile = true;

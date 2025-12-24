@@ -120,8 +120,6 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
                 instance->features.backend.vulkan.allow_pipeline_cache_prewarming,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
-        .vulkanAllowAsyncPipelineCachePrewarming =
-                instance->features.backend.vulkan.allow_async_pipeline_cache_prewarming,
         .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?
                 instance->getConfig().asynchronousMode : AsynchronousMode::NONE,
     };

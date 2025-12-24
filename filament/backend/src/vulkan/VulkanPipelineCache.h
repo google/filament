@@ -48,12 +48,6 @@ public:
     VulkanPipelineCache(VulkanPipelineCache const&) = delete;
     VulkanPipelineCache& operator=(VulkanPipelineCache const&) = delete;
 
-    static inline bool isAsyncPrewarmingSupported(VulkanContext const& context) {
-        return context.asyncPipelineCachePrewarmingEnabled() &&
-               context.isDynamicRenderingSupported() &&
-               context.isVertexInputDynamicStateSupported();
-    }
-
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
     static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = MAX_VERTEX_ATTRIBUTE_COUNT;
 
