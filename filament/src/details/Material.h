@@ -81,18 +81,18 @@ public:
         return mDefinition.uniformInterfaceBlock;
     }
 
-    DescriptorSetLayout const& getPerViewDescriptorSetLayout() const noexcept {
+    inline filament::DescriptorSetLayout const& getPerViewDescriptorSetLayout() const noexcept {
         assert_invariant(mDefinition.materialDomain == MaterialDomain::POST_PROCESS);
         return mDefinition.perViewDescriptorSetLayout;
     }
 
-    DescriptorSetLayout const& getPerViewDescriptorSetLayout(
+    filament::DescriptorSetLayout const& getPerViewDescriptorSetLayout(
             Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
 
     // Returns the layout that should be used when this material is bound to the pipeline for the
     // given variant. Shared variants use the Engine's default material's variants, so we should
     // also use the default material's layout.
-    DescriptorSetLayout const& getDescriptorSetLayout(Variant variant = {}) const noexcept {
+    filament::DescriptorSetLayout const& getDescriptorSetLayout(Variant variant = {}) const noexcept {
         if (!isSharedVariant(variant)) {
             return mDefinition.descriptorSetLayout;
         }
@@ -307,6 +307,12 @@ private:
     void precacheDepthVariants(FEngine& engine);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
+
+    backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
+            Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
+
+    backend::DescriptorSetLayout const& getDescriptorSetLayoutDescription(
+            Variant variant = {}) const noexcept;
 
     inline bool isSharedVariant(Variant const variant) const {
         return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
