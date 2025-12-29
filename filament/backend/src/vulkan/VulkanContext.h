@@ -158,16 +158,20 @@ public:
         return mVertexInputDynamicStateSupported;
     }
 
-    inline bool asyncPipelineCachePrewarmingEnabled() const noexcept {
-        return mAsyncPipelineCachePrewarmingEnabled;
+    inline bool pipelineCreationFeedbackSupported() const noexcept {
+        return mPipelineCreationFeedbackSupported;
+    }
+
+    inline bool asyncPipelineCachePrewarmingAllowed() const noexcept {
+        return mAsyncPipelineCachePrewarmingAllowed;
+    }
+
+    inline bool parallelShaderCompilationDisabled() const noexcept {
+        return mParallelShaderCompileDisabled;
     }
 
     inline bool stagingBufferBypassEnabled() const noexcept {
         return mStagingBufferBypassEnabled;
-    }
-
-    inline bool pipelineCreationFeedbackSupported() const noexcept {
-        return mPipelineCreationFeedbackSupported;
     }
 
 private:
@@ -191,10 +195,6 @@ private:
 
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
-    // These are options that can be enabled or disabled at an application level.
-    bool mAsyncPipelineCachePrewarmingEnabled = false;
-    bool mStagingBufferBypassEnabled = false;
-
     // These are options that are either supported or not supported in the current
     // device and instance.
     bool mDebugMarkersSupported = false;
@@ -205,6 +205,11 @@ private:
     bool mPipelineCreationFeedbackSupported = false;
     bool mProtectedMemorySupported = false;
     bool mVertexInputDynamicStateSupported = false;
+
+    // These are options that can be enabled or disabled at an application level.
+    bool mAsyncPipelineCachePrewarmingAllowed = false;
+    bool mParallelShaderCompileDisabled = false;
+    bool mStagingBufferBypassEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

@@ -69,16 +69,17 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 
 } // namespace
 
-VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context)
+VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context, bool isAsyncPrewarmingEnabled)
         : mDevice(device),
           mCallbackManager(driver),
-          mContext(context) {
+          mContext(context),
+          mIsAsyncPrewarmingEnabled(isAsyncPrewarmingEnabled) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
     };
     bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
 
-    if (isAsyncPrewarmingSupported(context)) {
+    if (mIsAsyncPrewarmingEnabled) {
         mCompilerThreadPool.init(
             /*threadCount=*/1,
             []() {
@@ -107,6 +108,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
         .handle = createPipeline(mPipelineRequirements),
         .lastUsed = mCurrentTime,
     };
+    assert_invariant(cacheEntry.handle != nullptr && "Pipeline handle is nullptr");
     return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
@@ -360,6 +362,9 @@ void VulkanPipelineCache::terminate() noexcept {
     }
     mPipelines.clear();
     resetBoundPipeline();
+
+    mCallbackManager.terminate();
+    mCompilerThreadPool.terminate();
 
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
 }

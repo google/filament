@@ -115,6 +115,8 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .metalDisablePanicOnDrawableFailure =
                 instance->getConfig().metalDisablePanicOnDrawableFailure,
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
+        .vulkanAllowAsyncPipelineCachePrewarming =
+                instance->features.backend.vulkan.allow_pipeline_cache_prewarming,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
         .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?

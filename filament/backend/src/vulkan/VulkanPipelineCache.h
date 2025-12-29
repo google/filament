@@ -48,12 +48,6 @@ public:
     VulkanPipelineCache(VulkanPipelineCache const&) = delete;
     VulkanPipelineCache& operator=(VulkanPipelineCache const&) = delete;
 
-    static inline bool isAsyncPrewarmingSupported(VulkanContext const& context) {
-        return context.asyncPipelineCachePrewarmingEnabled() &&
-               context.isDynamicRenderingSupported() &&
-               context.isVertexInputDynamicStateSupported();
-    }
-
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
     static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = MAX_VERTEX_ATTRIBUTE_COUNT;
 
@@ -94,7 +88,18 @@ public:
 
     static_assert(sizeof(RasterState) == 16, "RasterState must not have implicit padding.");
 
-    VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context);
+    /**
+     * Creates a new instance of a pipeline cache for graphics pipelines.
+     *
+     * @param driver The driver this is being instantiated for. This is used only for construction of
+     *               the callback manager, which references the driver for scheduling callbacks.
+     * @param device The device that the pipelines will be created and run on.
+     * @param context Information about the current instance of Vulkan, such as supported extensions,
+     *                and enabled features.
+     * @param isAsyncPrewarmingEnabled true if async cache prewarming is enabled (in which case a
+     *                                 threadpool for such jobs will be spawned), false if not.
+     */
+    VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context, bool isAsyncPrewarmingEnabled = false);
 
     // Loads a fake pipeline into memory on a separate thread, with the intent of
     // preloading the Vulkan cache with enough information to have a cache hit when
@@ -235,6 +240,9 @@ private:
     CallbackManager mCallbackManager;
 
     [[maybe_unused]] VulkanContext const& mContext;
+
+    // Keep track of whether or not cache prewarming is enabled.
+    bool mIsAsyncPrewarmingEnabled = false;
 };
 
 } // namespace filament::backend
