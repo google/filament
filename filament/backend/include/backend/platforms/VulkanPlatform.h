@@ -83,6 +83,9 @@ public:
         bool debugUtilsSupported = false;
         bool debugMarkersSupported = false;
         bool multiviewSupported = false;
+        bool dynamicRenderingSupported = false;
+        bool pipelineCreationFeedbackSupported = false;
+        bool vertexInputDynamicStateSupported = false;
     };
 
     /**
@@ -259,6 +262,30 @@ public:
      * @return          A set of extensions to enable for the instance.
      */
     virtual ExtensionSet getRequiredInstanceExtensions() { return {}; }
+
+    /**
+     * Determines if pipeline cache prewarming is supported by the current device. Should be
+     * implemented by derived classes, as by default, this will simply return false.
+     *
+     * @return true if pipeline cache prewarming is safe to be attempted on this device, false
+     *         if not.
+     */
+    virtual bool isPipelineCachePrewarmingDeviceSupported() const noexcept;
+
+    /**
+     * This determines, regardless of whether or not pipeline cache prewarming
+     * is supported by a specific device, if async pipeline cache prewarming should
+     * be enabled in the current application. This depends on:
+     * - if it has been marked as supported for the current device
+     * - if it is allowed in the driver config
+     * - if parallel shader compilation is NOT disabled in the driver config
+     * - if dynamic rendering is supported by the current device
+     * - if vertex input dynamic state is supported by the current device
+     *
+     * @return true if pipeline cache prewarming has been enabled (supported + allowed) on
+     *         this device AND in this application, false if not.
+     */
+    bool isAsyncPipelineCachePrewarmingEnabled() const noexcept;
 
     /**
      * Destroy the swapchain.
