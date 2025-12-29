@@ -227,8 +227,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
 #if defined(__APPLE__)
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
+        VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
-
+        VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
 #endif
@@ -937,6 +938,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 
     // Pass along relevant driver config (feature flags)
     context.mAsyncPipelineCachePrewarmingEnabled = driverConfig.vulkanEnableAsyncPipelineCachePrewarming;
+    context.mParallelShaderCompileDisabled = driverConfig.disableParallelShaderCompile;
     context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
 
     // We know we need to allocate the protected version of the VK objects

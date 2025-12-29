@@ -48,12 +48,6 @@ public:
     VulkanPipelineCache(VulkanPipelineCache const&) = delete;
     VulkanPipelineCache& operator=(VulkanPipelineCache const&) = delete;
 
-    static inline bool isAsyncPrewarmingSupported(VulkanContext const& context) {
-        return context.asyncPipelineCachePrewarmingEnabled() &&
-               context.isDynamicRenderingSupported() &&
-               context.isVertexInputDynamicStateSupported();
-    }
-
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
     static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = MAX_VERTEX_ATTRIBUTE_COUNT;
 
@@ -94,6 +88,15 @@ public:
 
     static_assert(sizeof(RasterState) == 16, "RasterState must not have implicit padding.");
 
+    /**
+     * Creates a new instance of a pipeline cache for graphics pipelines.
+     *
+     * @param driver The driver this is being instantiated for. This is used only for construction of
+     *               the callback manager, which references the driver for scheduling callbacks.
+     * @param device The device that the pipelines will be created and run on.
+     * @param context Information about the current instance of Vulkan, such as supported extensions,
+     *                and enabled features.
+     */
     VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context);
 
     // Loads a fake pipeline into memory on a separate thread, with the intent of

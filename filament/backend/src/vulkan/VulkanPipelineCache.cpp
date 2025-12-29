@@ -78,7 +78,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
     };
     bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
 
-    if (isAsyncPrewarmingSupported(context)) {
+    if (mContext.shouldUsePipelineCachePrewarming()) {
         mCompilerThreadPool.init(
             /*threadCount=*/1,
             []() {
@@ -107,6 +107,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
         .handle = createPipeline(mPipelineRequirements),
         .lastUsed = mCurrentTime,
     };
+    assert_invariant(cacheEntry.handle != nullptr && "Pipeline handle is nullptr");
     return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
@@ -360,6 +361,9 @@ void VulkanPipelineCache::terminate() noexcept {
     }
     mPipelines.clear();
     resetBoundPipeline();
+
+    mCallbackManager.terminate();
+    mCompilerThreadPool.terminate();
 
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
 }

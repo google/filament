@@ -1500,7 +1500,7 @@ bool VulkanDriver::isStereoSupported() {
 }
 
 bool VulkanDriver::isParallelShaderCompileSupported() {
-    return VulkanPipelineCache::isAsyncPrewarmingSupported(mContext);
+    return mContext.shouldUsePipelineCachePrewarming();
 }
 
 bool VulkanDriver::isDepthStencilResolveSupported() {
