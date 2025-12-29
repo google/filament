@@ -980,15 +980,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 if (v.stage == ShaderStage::VERTEX) {
                     shader = sg.createSurfaceVertexProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
-                            info, v.variant, mInterpolation, mVertexDomain);
+                            info, v.variant, mInterpolation, mVertexDomain, mApiLevel);
                 } else if (v.stage == ShaderStage::FRAGMENT) {
                     shader = sg.createSurfaceFragmentProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
-                            info, v.variant, mInterpolation, mVariantFilter);
+                            info, v.variant, mInterpolation, mVariantFilter, mApiLevel);
                 } else if (v.stage == ShaderStage::COMPUTE) {
                     shader = sg.createSurfaceComputeProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
-                            info);
+                            info, mApiLevel);
                 }
 
                 // Write the variant to a file.
@@ -1532,15 +1532,15 @@ std::string MaterialBuilder::peek(backend::ShaderStage const stage,
         case ShaderStage::VERTEX:
             return sg.createSurfaceVertexProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    params.featureLevel, info, {}, mInterpolation, mVertexDomain);
+                    params.featureLevel, info, {}, mInterpolation, mVertexDomain, mApiLevel);
         case ShaderStage::FRAGMENT:
             return sg.createSurfaceFragmentProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    params.featureLevel, info, {}, mInterpolation, mVariantFilter);
+                    params.featureLevel, info, {}, mInterpolation, mVariantFilter, mApiLevel);
         case ShaderStage::COMPUTE:
             return sg.createSurfaceComputeProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    params.featureLevel, info);
+                    params.featureLevel, info, mApiLevel);
     }
     return {};
 }
