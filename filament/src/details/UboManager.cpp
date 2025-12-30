@@ -122,8 +122,11 @@ void UboManager::beginFrame(DriverApi& driver) {
     mFenceManager.reclaimCompletedResources(driver,
             [this](AllocationId id) { mAllocator.releaseGpu(id); });
 
-    // Actually merge the slots.
-    mAllocator.releaseFreeSlots();
+    // Release slots from unmanaged instances.
+    for (AllocationId id: mFreedAllocations) {
+        mAllocator.retire(id);
+    }
+    mFreedAllocations.clear();
 
     // Traverse all MIs and see which of them need slot allocation.
     if (allocateOnDemand() == SUCCESS) {
@@ -190,19 +193,38 @@ void UboManager::updateSlot(DriverApi& driver, AllocationId id,
 }
 
 void UboManager::manageMaterialInstance(FMaterialInstance* instance) {
-    mPendingInstances.insert(instance);
+    assert_invariant(std::find(mPendingInstances.begin(), mPendingInstances.end(), instance) ==
+                     mPendingInstances.end());
+    mPendingInstances.push_back(instance);
 }
 
 void UboManager::unmanageMaterialInstance(FMaterialInstance* materialInstance) {
     AllocationId id = materialInstance->getAllocationId();
-    mPendingInstances.erase(materialInstance);
-    mManagedInstances.erase(materialInstance);
 
-    if (!BufferAllocator::isValid(id)) {
+    auto itPending =
+            std::find(mPendingInstances.begin(), mPendingInstances.end(), materialInstance);
+    if (UTILS_UNLIKELY(itPending != mPendingInstances.end())) {
+        std::swap(*itPending, mPendingInstances.back());
+        mPendingInstances.pop_back();
+
+        // This MI is not even allocated yet. We just return here.
         return;
     }
 
-    mAllocator.retire(id);
+    auto itManaged =
+            std::find(mManagedInstances.begin(), mManagedInstances.end(), materialInstance);
+    if (UTILS_LIKELY(itManaged != mManagedInstances.end())) {
+        std::swap(*itManaged, mManagedInstances.back());
+        mManagedInstances.pop_back();
+    }
+
+    if (UTILS_UNLIKELY(!BufferAllocator::isValid(id))) {
+        return;
+    }
+
+    // We push the allocation id back to the list, and defer the actual retirement to beginFrame,
+    // so that we centralized all the retirements at the same place.
+    mFreedAllocations.push_back(id);
     materialInstance->assignUboAllocation(mUbHandle, BufferAllocator::UNALLOCATED, 0);
 }
 
@@ -212,7 +234,7 @@ UboManager::AllocationResult UboManager::allocateOnDemand() {
 
     // Pass 1: Allocate slots for new material instances (that don't have a slot yet).
     for (auto* mi : mPendingInstances) {
-        mManagedInstances.insert(mi);
+        mManagedInstances.push_back(mi);
         auto [newId, newOffset] = mAllocator.allocate(mi->getUniformBuffer().getSize());
 
         // Even if the newId is not valid, we assign it to the MI so that the following process knows

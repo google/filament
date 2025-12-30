@@ -38,6 +38,12 @@ using allocation_size_t = BufferAllocator::allocation_size_t;
 } // anonymous namespace
 
 class UboManagerTest : public ::testing::Test {
+public:
+    template<typename T>
+    static bool contains(const std::vector<T>& v, const T& item) {
+        return std::find(v.begin(), v.end(), item) != v.end();
+    }
+
 protected:
     static constexpr size_t MIN_COMMAND_BUFFERS_SIZE = 1 * 1024 * 1024;
     static constexpr size_t COMMAND_BUFFERS_SIZE = 3 * MIN_COMMAND_BUFFERS_SIZE;
@@ -82,8 +88,8 @@ protected:
     DriverApi& mDriverApi;
     UboManager mUboManager;
     Material const* mMaterial;
-    std::unordered_set<FMaterialInstance*>& mPendingInstances;
-    std::unordered_set<FMaterialInstance*>& mManagedInstances;
+    std::vector<FMaterialInstance*>& mPendingInstances;
+    std::vector<FMaterialInstance*>& mManagedInstances;
     Handle<HwBufferObject>& mUbHandle;
     BufferAllocator& mAllocator;
 };
@@ -102,14 +108,14 @@ TEST_F(UboManagerTest, BeginFrameWithoutReallocate) {
 
     // The mi1 should be put in the pending list.
     mUboManager.manageMaterialInstance(mi1);
-    EXPECT_TRUE(mPendingInstances.contains(mi1));
-    EXPECT_FALSE(mManagedInstances.contains(mi1));
+    EXPECT_TRUE(contains(mPendingInstances, mi1));
+    EXPECT_FALSE(contains(mManagedInstances, mi1));
 
     mUboManager.beginFrame(mDriverApi);
 
     // The mi1 should be moved to managed list after beginFrame.
-    EXPECT_FALSE(mPendingInstances.contains(mi1));
-    EXPECT_TRUE(mManagedInstances.contains(mi1));
+    EXPECT_FALSE(contains(mPendingInstances, mi1));
+    EXPECT_TRUE(contains(mManagedInstances, mi1));
     // Should have allocation after beginFrame.
     EXPECT_TRUE(BufferAllocator::isValid(mi1->getAllocationId()));
 
@@ -126,8 +132,8 @@ TEST_F(UboManagerTest, BeginFrameWithoutReallocate) {
     // We're not using the UboManager inside mEngine, so we need to unmanage the material instance
     // by ourselves.
     mUboManager.unmanageMaterialInstance(mi1);
-    EXPECT_FALSE(mPendingInstances.contains(mi1));
-    EXPECT_FALSE(mManagedInstances.contains(mi1));
+    EXPECT_FALSE(contains(mPendingInstances, mi1));
+    EXPECT_FALSE(contains(mManagedInstances, mi1));
 
     mUboManager.terminate(mDriverApi);
     mEngine->destroy(mi1);
@@ -162,7 +168,7 @@ TEST_F(UboManagerTest, BeginFrameWithReallocate) {
     EXPECT_TRUE(mPendingInstances.empty());
     EXPECT_EQ(mManagedInstances.size(), numInstances);
     for (const auto* mi: instances) {
-        EXPECT_TRUE(mManagedInstances.contains(const_cast<FMaterialInstance*>(mi)));
+        EXPECT_TRUE(contains(mManagedInstances, const_cast<FMaterialInstance*>(mi)));
         EXPECT_TRUE(BufferAllocator::isValid(mi->getAllocationId()));
     }
 
@@ -263,10 +269,7 @@ TEST_F(UboManagerTest, DoubleManage) {
     auto mi1 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
     mUboManager.manageMaterialInstance(mi1);
     EXPECT_EQ(mPendingInstances.size(), 1);
-
-    // Managing the same instance again should be a no-op.
-    mUboManager.manageMaterialInstance(mi1);
-    EXPECT_EQ(mPendingInstances.size(), 1);
+    EXPECT_DEATH(mUboManager.manageMaterialInstance(mi1), "");
 
     mUboManager.terminate(mDriverApi);
     mEngine->destroy(mi1);
@@ -275,15 +278,15 @@ TEST_F(UboManagerTest, DoubleManage) {
 TEST_F(UboManagerTest, ManageAndUnmanageBeforeBeginFrame) {
     auto mi1 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
     mUboManager.manageMaterialInstance(mi1);
-    EXPECT_TRUE(mPendingInstances.contains(mi1));
+    EXPECT_TRUE(contains(mPendingInstances, mi1));
 
     mUboManager.unmanageMaterialInstance(mi1);
-    EXPECT_FALSE(mPendingInstances.contains(mi1));
+    EXPECT_FALSE(contains(mPendingInstances, mi1));
 
     // After beginFrame, the instance should not be in any list.
     mUboManager.beginFrame(mDriverApi);
-    EXPECT_FALSE(mPendingInstances.contains(mi1));
-    EXPECT_FALSE(mManagedInstances.contains(mi1));
+    EXPECT_FALSE(contains(mPendingInstances, mi1));
+    EXPECT_FALSE(contains(mManagedInstances, mi1));
     EXPECT_EQ(mi1->getAllocationId(), BufferAllocator::UNALLOCATED);
 
     mUboManager.terminate(mDriverApi);
@@ -295,8 +298,8 @@ TEST_F(UboManagerTest, UnmanageUnmanaged) {
 
     // Unmanaging an instance that was never managed should not cause any issues.
     mUboManager.unmanageMaterialInstance(mi1);
-    EXPECT_FALSE(mPendingInstances.contains(mi1));
-    EXPECT_FALSE(mManagedInstances.contains(mi1));
+    EXPECT_FALSE(contains(mPendingInstances, mi1));
+    EXPECT_FALSE(contains(mManagedInstances, mi1));
 
     mUboManager.terminate(mDriverApi);
     mEngine->destroy(mi1);

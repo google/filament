@@ -51,9 +51,9 @@ TEST_F(BufferAllocatorStressTest, StressTest) {
     std::uniform_int_distribution<> slotCountDistrib(1, SLOT_COUNT);
     // Random the slot offset we allocate within a slot.
     std::uniform_int_distribution<> slotOffsetDistrib(0, SLOT_SIZE - 1);
-    // Random the operation we perform: 0,1,2 -> allocate, 3 -> retire, 4 -> release slots
+    // Random the operation we perform: 0,1,2 -> allocate, 3 -> retire
     // We bias the operations to make more allocations than releases.
-    std::uniform_int_distribution operationDistrib(0, 4);
+    std::uniform_int_distribution operationDistrib(0, 3);
 
     // 2. Randomly do some actions and expect to have no crash
     std::vector<BufferAllocator::AllocationId> ids;
@@ -74,7 +74,7 @@ TEST_F(BufferAllocatorStressTest, StressTest) {
                 }
                 break;
             }
-            case 3: // Allocate
+            case 3: // Retire
             {
                 if (ids.empty()) {
                     continue;
@@ -92,11 +92,6 @@ TEST_F(BufferAllocatorStressTest, StressTest) {
                 ids.pop_back();
                 break;
             }
-            case 4: // Allocate
-            {
-                mAllocator.releaseFreeSlots();
-                break;
-            }
             default:
                 break;
         }
@@ -108,14 +103,10 @@ TEST_F(BufferAllocatorStressTest, StressTest) {
     }
     ids.clear();
 
-    // 4. Release and merge everything.
-    mAllocator.releaseFreeSlots();
-
     // 5. The allocator should now be in a pristine state.
     //    A final allocation of the total size should succeed.
     auto [finalId, finalOffset] = mAllocator.allocate(TOTAL_SIZE);
-    EXPECT_NE(finalId, BufferAllocator::REALLOCATION_REQUIRED);
-    EXPECT_NE(finalId, BufferAllocator::UNALLOCATED);
+    EXPECT_TRUE(BufferAllocator::isValid(finalId));
     EXPECT_EQ(finalOffset, 0);
 }
 

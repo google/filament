@@ -25,7 +25,6 @@
 #include <private/backend/DriverApi.h>
 
 #include <functional>
-#include <unordered_set>
 #include <vector>
 
 class UboManagerTest;
@@ -154,11 +153,12 @@ private:
     backend::Handle<backend::HwBufferObject> mUbHandle;
     backend::MemoryMappedBufferHandle mMemoryMappedBufferHandle;
     BufferAllocator::allocation_size_t mUboSize{};
-    std::unordered_set<FMaterialInstance*> mPendingInstances;
-    std::unordered_set<FMaterialInstance*> mManagedInstances;
+    std::vector<FMaterialInstance*> mPendingInstances;
+    std::vector<FMaterialInstance*> mManagedInstances;
 
     FenceManager mFenceManager;
     BufferAllocator mAllocator;
+    std::vector<BufferAllocator::AllocationId> mFreedAllocations;
 };
 
 } // namespace filament

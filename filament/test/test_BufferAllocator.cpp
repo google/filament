@@ -136,16 +136,6 @@ TEST_F(BufferAllocatorTest, AllocationLifecycle) {
     mAllocator.releaseGpu(id);
     EXPECT_FALSE(mAllocator.isLockedByGpu(id));
 
-    // Now the slot should be considered free, but it's not merged yet.
-    // Let's try to allocate something else to see where it goes.
-    auto [id2, offset2] = mAllocator.allocate(200); // Aligns to 256
-    EXPECT_EQ(id2, 3); // It should use the space after the first retired slot.
-    EXPECT_EQ(offset2, 128);
-    EXPECT_EQ(mAllocator.getAllocationSize(id2), 256);
-
-    // Now, let's release the free slots.
-    mAllocator.releaseFreeSlots();
-
     // The first slot (128 bytes) should now be available again.
     // Let's try to allocate something that fits in it.
     auto [id3, offset3] = mAllocator.allocate(100); // Aligns to 128
@@ -167,8 +157,7 @@ TEST_F(BufferAllocatorTest, RetireThenReleaseGpu) {
     mAllocator.retire(id1);
     mAllocator.acquireGpu(id1); // gpuUseCount = 1
 
-    // 3. The slot is now free from CPU but locked by GPU. releaseFreeSlots should do nothing to it.
-    mAllocator.releaseFreeSlots();
+    // 3. The slot is now free from CPU but locked by GPU.
 
     // 4. Try to allocate the same space. It should fail, and the allocation should go
     //    to the next available free space.
@@ -179,10 +168,7 @@ TEST_F(BufferAllocatorTest, RetireThenReleaseGpu) {
     // 5. Now, release the GPU lock.
     mAllocator.releaseGpu(id1); // gpuUseCount = 0
 
-    // 6. Call releaseFreeSlots again. This time it should be freed.
-    mAllocator.releaseFreeSlots();
-
-    // 7. The original slot should now be available for allocation.
+    // 6. The original slot should now be available for allocation immediately.
     auto [id4, offset4] = mAllocator.allocate(64);
     EXPECT_EQ(id4, 1);
     EXPECT_EQ(offset4, 0); // Success! It reuses the first slot.
@@ -193,6 +179,9 @@ TEST_F(BufferAllocatorTest, MultipleGpuAcquires) {
     auto [id, offset] = mAllocator.allocate(128);
     EXPECT_EQ(id, 1);
     EXPECT_EQ(offset, 0);
+
+    // Block merging by allocating another slot
+    auto [blockerId, blockerOffset] = mAllocator.allocate(128);
 
     // 2. Retire from CPU, then acquire multiple times for GPU (e.g., used in 3 command buffers).
     mAllocator.retire(id);
@@ -206,14 +195,14 @@ TEST_F(BufferAllocatorTest, MultipleGpuAcquires) {
     // 3. Release GPU lock once. The slot should still be locked.
     mAllocator.releaseGpu(id); // gpuUseCount = 2
     EXPECT_TRUE(mAllocator.isLockedByGpu(id));
-    mAllocator.releaseFreeSlots();
+
     auto [failId1, failOffset1] = mAllocator.allocate(64);
     EXPECT_NE(failOffset1, 0); // Should not be able to allocate at offset 0.
     EXPECT_NE(failId1, 1);
 
     // 4. Release GPU lock again. The slot should still be locked.
     mAllocator.releaseGpu(id); // gpuUseCount = 1
-    mAllocator.releaseFreeSlots();
+
     EXPECT_TRUE(mAllocator.isLockedByGpu(id));
     auto [failId2, failOffset2] = mAllocator.allocate(64);
     EXPECT_NE(failOffset2, 0); // Still cannot allocate at offset 0.
@@ -223,8 +212,7 @@ TEST_F(BufferAllocatorTest, MultipleGpuAcquires) {
     mAllocator.releaseGpu(id); // gpuUseCount = 0
     EXPECT_FALSE(mAllocator.isLockedByGpu(id));
 
-    // 6. Now it should be freed and available.
-    mAllocator.releaseFreeSlots();
+    // 6. Now it should be freed and available immediately.
     auto [successId, successOffset] = mAllocator.allocate(64);
     EXPECT_EQ(successOffset, 0);
     EXPECT_EQ(successId, 1);
@@ -260,14 +248,9 @@ TEST_F(BufferAllocatorTest, MergeFreeSlots) {
     mAllocator.retire(id1);
     mAllocator.retire(id3);
 
-    // At this point, we have: [Free, Allocated, Free, Free (remaining)]
-    // releaseFreeSlots should not merge slot 1 and 3 because they are not adjacent.
-    // It should merge slot 3 and slot 4 instead.
-    mAllocator.releaseFreeSlots();
-
     // At this point, we have: [Free, Allocated, Free (remaining)]
     // Let's verify by trying to allocate 200. It should go into the merged slot.
-    auto [id4, offset4] = mAllocator.allocate(200); // Aligns to 256
+    auto [id4, offset4] = mAllocator.allocate(200); // 256 bytes
     EXPECT_EQ(id4, 5);
     EXPECT_EQ(offset4, 256);
 
@@ -276,9 +259,6 @@ TEST_F(BufferAllocatorTest, MergeFreeSlots) {
 
     // Now we have: [Free, Free, Allocated, Free (remaining)]
     // The first two blocks are now adjacent and free.
-    mAllocator.releaseFreeSlots();
-
-    // After merging, the first 256 bytes should be one large free block.
     // Let's try to allocate something that requires this merged space.
     auto [id5, offset5] = mAllocator.allocate(200); // Aligns to 256
     EXPECT_EQ(id5, 1);
@@ -301,13 +281,10 @@ TEST_F(BufferAllocatorTest, MergeAllSlots) {
     EXPECT_EQ(failId, BufferAllocator::REALLOCATION_REQUIRED);
     EXPECT_EQ(failOffset, 0);
 
-    // Retire all chunks.
+    // Retire + free all chunks.
     for (auto id : ids) {
         mAllocator.retire(id);
     }
-
-    // Release and merge.
-    mAllocator.releaseFreeSlots();
 
     // Now, the allocator should be back to its initial state with one large free block.
     // We should be able to allocate the entire buffer again.
@@ -336,13 +313,13 @@ TEST_F(BufferAllocatorTest, NoMergePossible) {
     mAllocator.retire(id3);
 
     // At this point, we have: [Free, Allocated, Free, Allocated, Free (remaining)]
-    mAllocator.releaseFreeSlots();
-
-    // Now, let's try to re-allocate the two 128-byte slots.
     auto [id5, offset5] = mAllocator.allocate(128);
     auto [id6, offset6] = mAllocator.allocate(128);
-    EXPECT_EQ(offset5, 0);
-    EXPECT_EQ(offset6, 256);
+
+    bool filledSlot0 = (offset5 == 0 || offset6 == 0);
+    bool filledSlot256 = (offset5 == 256 || offset6 == 256);
+    EXPECT_TRUE(filledSlot0);
+    EXPECT_TRUE(filledSlot256);
 }
 
 TEST_F(BufferAllocatorTest, Reset) {
@@ -427,7 +404,6 @@ TEST_F(BufferAllocatorTest, ComplexScenario) {
     mAllocator.retire(ids[2]);
 
     // 3. Release free slots. This should merge the two retired blocks.
-    mAllocator.releaseFreeSlots();
 
     // We now have a free block of 512 bytes at offset 256.
     // Let's allocate 512 bytes. It should fit perfectly.
