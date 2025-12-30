@@ -76,7 +76,7 @@ public:
 
     // generate prolog for the given shader
     utils::io::sstream& generateCommonProlog(utils::io::sstream& out, ShaderStage stage,
-            MaterialInfo const& material, filament::Variant v) const;
+            MaterialInfo const& material, filament::Variant v, uint32_t apiLevel) const;
 
     static utils::io::sstream& generateCommonEpilog(utils::io::sstream& out);
 

@@ -37,6 +37,7 @@ public class ResourceLoader {
     private final long mNativeObject;
     private final long mNativeStbProvider;
     private final long mNativeKtx2Provider;
+    private final long mNativeWebpProvider;
 
     /**
      * Constructs a resource loader tied to the given Filament engine.
@@ -50,9 +51,17 @@ public class ResourceLoader {
         mNativeObject = nCreateResourceLoader(nativeEngine, false);
         mNativeStbProvider = nCreateStbProvider(nativeEngine);
         mNativeKtx2Provider = nCreateKtx2Provider(nativeEngine);
+
         nAddTextureProvider(mNativeObject, "image/jpeg", mNativeStbProvider);
         nAddTextureProvider(mNativeObject, "image/png", mNativeStbProvider);
         nAddTextureProvider(mNativeObject, "image/ktx2", mNativeKtx2Provider);
+        if (nIsWebpSupported()) {
+            mNativeWebpProvider = nCreateWebpProvider(nativeEngine);            
+            nAddTextureProvider(mNativeObject, "image/webp", mNativeWebpProvider);
+        }
+        else {
+            mNativeWebpProvider = 0;
+        }
     }
 
     /**
@@ -68,9 +77,17 @@ public class ResourceLoader {
         mNativeObject = nCreateResourceLoader(nativeEngine, normalizeSkinningWeights);
         mNativeStbProvider = nCreateStbProvider(nativeEngine);
         mNativeKtx2Provider = nCreateKtx2Provider(nativeEngine);
+ 
         nAddTextureProvider(mNativeObject, "image/jpeg", mNativeStbProvider);
         nAddTextureProvider(mNativeObject, "image/png", mNativeStbProvider);
         nAddTextureProvider(mNativeObject, "image/ktx2", mNativeKtx2Provider);
+        if (nIsWebpSupported()) {
+            mNativeWebpProvider = nCreateWebpProvider(nativeEngine);            
+            nAddTextureProvider(mNativeObject, "image/webp", mNativeWebpProvider);
+        }
+        else {
+            mNativeWebpProvider = 0;
+        }
     }
 
     /**
@@ -80,6 +97,9 @@ public class ResourceLoader {
         nDestroyResourceLoader(mNativeObject);
         nDestroyTextureProvider(mNativeStbProvider);
         nDestroyTextureProvider(mNativeKtx2Provider);
+        if (nIsWebpSupported()) {       
+            nDestroyTextureProvider(mNativeWebpProvider);        
+        }
     }
 
     /**
@@ -191,6 +211,9 @@ public class ResourceLoader {
 
     private static native long nCreateStbProvider(long nativeEngine);
     private static native long nCreateKtx2Provider(long nativeEngine);
+    private static native boolean nIsWebpSupported();
+    private static native long nCreateWebpProvider(long nativeEngine);
+
     private static native void nAddTextureProvider(long nativeLoader, String url, long nativeProvider);
     private static native void nDestroyTextureProvider(long nativeProvider);
 }

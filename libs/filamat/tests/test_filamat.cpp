@@ -1004,6 +1004,63 @@ TEST_F(MaterialCompiler, EmbedMaterialSourceSucceeds) {
     EXPECT_TRUE(result.isValid());
 }
 
+TEST_F(MaterialCompiler, ClientApiLevelUnstableNoUseOfUnstableApiSucceeds) {
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.);
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.material(shaderCode.c_str());
+    builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, ClientApiLevelUnstableUseOfUnstableApiSucceeds) {
+    std::string shaderCode(R"(
+        // Emulate an unstable api added in the public shaders
+        #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+        /* @unstable-api */
+        float unstableApi() { return 1.; }
+        #endif
+
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(unstableApi());
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.material(shaderCode.c_str());
+    builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, ClientApiLevelReleasedUseOfUnstableApiFails) {
+    std::string shaderCode(R"(
+        // Emulate an unstable api added in the public shaders
+        #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+        /* @unstable-api */
+        float unstableApi() { return 1.; }
+        #endif
+
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(unstableApi());
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.material(shaderCode.c_str());
+    builder.setApiLevel(filament::RELEASED_MATERIAL_API_LEVEL);
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
 #if FILAMENT_SUPPORTS_WEBGPU
 TEST_F(MaterialCompiler, WgslConversionBakedColor) {
     std::string bakedColorCodeFrag(R"(
