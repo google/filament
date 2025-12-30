@@ -47,9 +47,8 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
     mFreeList.clear();
 
     // Resize mNodes to the number of slots
-    size_t slotCount = mTotalSize / mSlotSize;
+    const size_t slotCount = mTotalSize / mSlotSize;
     mNodes.clear();
-    mNodes.reserve(slotCount);
     mNodes.resize(slotCount);
 
     // Initialize the single free block covering the entire buffer
@@ -86,19 +85,19 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
     const allocation_size_t offset = targetNode->slot.offset;
     assert_invariant(remainingSize % mSlotSize == 0);
     assert_invariant((offset + alignedSize) % mSlotSize == 0);
+    targetNode->slot.isAllocated = true;
 
     // Split the slot if it is larger than what we need.
     if (originalSlotSize > alignedSize) {
         // Update Head block
         targetNode->slot.slotSize = alignedSize;
-        targetNode->slot.isAllocated = true;
 
         // Update Tail block
-        size_t endSlotIndex = (offset + alignedSize) / mSlotSize - 1;
+        const size_t endSlotIndex = (offset + alignedSize) / mSlotSize - 1;
         mNodes[endSlotIndex] = *targetNode; // Copy Head to Tail
 
         // The Head of remaining free block
-        size_t nextSlotIndex = endSlotIndex + 1;
+        const size_t nextSlotIndex = endSlotIndex + 1;
         InternalSlotNode* nextNode = &mNodes[nextSlotIndex];
         nextNode->slot.offset = offset + alignedSize;
         nextNode->slot.slotSize = remainingSize;
@@ -107,14 +106,12 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
         nextNode->freeListIterator = mFreeList.emplace(remainingSize, nextNode);
 
         // Update the Tail of remaining free block
-        size_t nextEndSlotIndex = (nextNode->slot.offset + nextNode->slot.slotSize) / mSlotSize - 1;
+        const size_t nextEndSlotIndex = (nextNode->slot.offset + nextNode->slot.slotSize) / mSlotSize - 1;
         mNodes[nextEndSlotIndex] = *nextNode; // Copy Head to Tail
     } else {
         // Allocate the whole block
-        targetNode->slot.isAllocated = true;
-
         // Update Tail block
-        size_t endSlotIndex = (offset + targetNode->slot.slotSize) / mSlotSize - 1;
+        const size_t endSlotIndex = (offset + targetNode->slot.slotSize) / mSlotSize - 1;
         mNodes[endSlotIndex] = *targetNode;
     }
 
