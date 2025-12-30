@@ -49,6 +49,7 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
     // Resize mNodes to the number of slots
     const size_t slotCount = mTotalSize / mSlotSize;
     mNodes.clear();
+    mNodes.reserve(slotCount);
     mNodes.resize(slotCount);
 
     // Initialize the single free block covering the entire buffer
