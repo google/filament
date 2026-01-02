@@ -610,7 +610,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
         // calculate the per-primitive face winding order inversion
         bool const inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
-        bool const hasMorphing = soaVisibility[i].morphing;
+        bool const hasMorphing = soaVisibility[i].morphType != RenderableManager::Builder::MorphType::NONE;
         bool const hasSkinning = soaVisibility[i].skinning;
         bool const hasSkinningOrMorphing = hasSkinning || hasMorphing;
 

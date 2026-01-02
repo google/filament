@@ -55,6 +55,11 @@ public:
 
     void setTangentsAt(FEngine& engine, size_t targetIndex,
             math::short4 const* tangents, size_t count, size_t offset);
+    bool hasPositions() const noexcept;
+    bool hasTangents() const noexcept;
+    bool isCustomMorphingEnabled() const noexcept {
+        return mEnableCustomMorphing;
+    }
 
     inline size_t getVertexCount() const noexcept { return mVertexCount; }
     inline size_t getCount() const noexcept { return mCount; }
@@ -72,6 +77,7 @@ private:
             backend::PixelDataFormat format, backend::PixelDataType type, const char* out,
             size_t elementSize, size_t targetIndex, size_t count, size_t offset);
 
+    bool mEnableCustomMorphing;
     backend::TextureHandle mPbHandle;
     backend::TextureHandle mTbHandle;
     uint32_t mVertexCount;

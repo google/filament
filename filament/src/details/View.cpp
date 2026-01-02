@@ -33,6 +33,7 @@
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
 #include "details/InstanceBuffer.h"
+#include "details/MorphTargetBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/Renderer.h"
 #include "details/Scene.h"
@@ -817,7 +818,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                         +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
                         engine.getZeroTexture(), {});
 
-                if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
+                if (UTILS_UNLIKELY(skinning.handle)) {
                     descriptorSet.setBuffer(layout,
                             +PerRenderableBindingPoints::BONES_UNIFORMS,
                             skinning.handle, 0, sizeof(PerRenderableBoneUib));
@@ -825,18 +826,25 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                     descriptorSet.setSampler(layout,
                             +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
                             skinning.boneIndicesAndWeightHandle, {});
+                }
 
+                if (UTILS_UNLIKELY(morphing.handle)) {
+                    const auto* mtb = morphing.morphTargetBuffer;
                     descriptorSet.setBuffer(layout,
                             +PerRenderableBindingPoints::MORPHING_UNIFORMS,
                             morphing.handle, 0, sizeof(PerRenderableMorphingUib));
 
-                    descriptorSet.setSampler(layout,
-                            +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
-                            morphing.morphTargetBuffer->getPositionsHandle(), {});
+                    if (mtb->hasPositions()) {
+                        descriptorSet.setSampler(layout,
+                                +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+                                mtb->getPositionsHandle(), {});
+                    }
 
-                    descriptorSet.setSampler(layout,
-                            +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
-                            morphing.morphTargetBuffer->getTangentsHandle(), {});
+                    if (mtb->hasTangents()) {
+                        descriptorSet.setSampler(layout,
+                                +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
+                                mtb->getTangentsHandle(), {});
+                    }
                 }
 
                 descriptorSet.commit(layout, driver);
