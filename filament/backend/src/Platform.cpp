@@ -194,7 +194,7 @@ void Platform::debugUpdateStat(const char* key, uint64_t intValue) {
         callback = mDebugUpdateStat;
     }
     if (callback) {
-        (*callback)(key, intValue, "");
+        (*callback)(key, intValue, utils::CString(""));
     }
 }
 
