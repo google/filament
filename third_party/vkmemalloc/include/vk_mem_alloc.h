@@ -294,10 +294,6 @@ extern "C" {
     #define VMA_STATS_STRING_ENABLED 1
 #endif
 
-#if VMA_STATS_STRING_ENABLED
-    #include <cstdio> // For snprintf
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 // 
@@ -2580,6 +2576,10 @@ VMA_CALL_PRE void VMA_CALL_POST vmaFreeStatsString(
 #endif
 #if __cplusplus >= 202002L || _MSVC_LANG >= 202002L // C++20
     #include <bit> // For std::popcount
+#endif
+
+#if VMA_STATS_STRING_ENABLED
+    #include <cstdio> // For snprintf
 #endif
 
 /*******************************************************************************
