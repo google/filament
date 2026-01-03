@@ -387,6 +387,8 @@ private:
     void updateIndexBufferCommon(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
             uint32_t const byteOffset);
     void destroyTextureCommon(Handle<HwTexture> th);
+    void destroyBufferObjectCommon(Handle<HwBufferObject> boh);
+    void destroyIndexBufferCommon(Handle<HwIndexBuffer> ibh);
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
