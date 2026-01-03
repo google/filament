@@ -463,8 +463,8 @@ bool Engine::isStereoSupported(StereoscopicType) const noexcept {
     return downcast(this)->isStereoSupported();
 }
 
-bool Engine::isAsynchronousOperationSupported() const noexcept {
-    return downcast(this)->isAsynchronousOperationSupported();
+bool Engine::isAsynchronousModeEnabled() const noexcept {
+    return downcast(this)->isAsynchronousModeEnabled();
 }
 
 size_t Engine::getMaxStereoscopicEyes() noexcept {

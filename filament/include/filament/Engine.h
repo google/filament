@@ -433,6 +433,10 @@ public:
 
         /**
          * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
+         * Note that selecting a non-NONE mode does not guarantee asynchronous methods are
+         * supported, as the underlying backend or the feature flag may override this configuration.
+         * Always validate availability via Engine::isAsynchronousModeEnabled() before
+         * invoking asynchronous methods.
          */
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
     };
@@ -755,7 +759,7 @@ public:
      *
      * @return true if the engine supports asynchronous operation.
      */
-    bool isAsynchronousOperationSupported() const noexcept;
+    bool isAsynchronousModeEnabled() const noexcept;
 
     /**
      * Retrieves the configuration settings of this Engine.
