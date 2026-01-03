@@ -336,6 +336,13 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderRefract
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderReflectionMode(JNIEnv* env,
+        jclass, jlong nativeBuilder, jint mode) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->reflectionMode((MaterialBuilder::ReflectionMode) mode);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderRefractionType(JNIEnv* env,
         jclass, jlong nativeBuilder, jint type) {
     auto builder = (MaterialBuilder*) nativeBuilder;
