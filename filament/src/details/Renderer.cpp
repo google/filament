@@ -1121,6 +1121,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                             PostProcessManager::CustomResolveOp::COMPRESS);
                 }
 
+                if (view.getChannelDepthClearMask().any()) {
+                    ppm.clearAncillaryBuffersPrepare(driver);
+                }
+
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
                 // in parallel with .compile()
                 if (auto sync = view.getFroxelizerSync()) {
@@ -1248,10 +1252,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         //       subpass) here because it's more convenient.
         colorPassOutput.linearColor =
                 ppm.customResolveUncompressPass(fg, colorPassOutput.linearColor);
-    }
-
-    if (view.getChannelDepthClearMask().any()) {
-        ppm.clearAncillaryBuffersPrepare(driver);
     }
 
     // export the color buffer if screen-space reflections are enabled
