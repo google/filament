@@ -81,7 +81,6 @@ public:
     bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
             FrameTimestamps* outFrameTimestamps) const noexcept override;
 
-
 protected:
     ExtensionSet getSwapchainInstanceExtensions() const override;
 
@@ -90,6 +89,18 @@ protected:
             uint64_t flags) const noexcept override;
 
     VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept override;
+
+    /**
+     * Registers an external format from an AHB format by creating and destroying a fake
+     * AHardwareBuffer. This assumes that the given format is a YCbCr format, and will
+     * lead to undefined behavior if not.
+     *
+     * @param ahbFormat The AHardwareBuffer format to load, for example
+     *                  AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420.
+     * @param usageFlags The context in which this external format might be encountered,
+     *                   e.g. framebuffer / sampled image.
+     */
+    void registerAndroidExternalFormatsForCachePrewarm();
 
 private:
     struct AndroidDetails;

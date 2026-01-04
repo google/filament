@@ -28,6 +28,7 @@
 #include <utils/Hash.h>
 #include <utils/PrivateImplementation.h>
 
+#include <cstring>
 #include <cstddef>
 #include <functional>
 #include <string>
@@ -55,14 +56,31 @@ struct VulkanCmdFence;
  */
 class VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
+    /**
+     * Encapsulates information required to instantiate a known external format,
+     * typically for the purpose of preloading a pipeline cache for materials using
+     * external formats for samplers.
+     */
+    struct ExternalYcbcrFormat {
+        uint64_t externalFormat;
+        VkSamplerYcbcrModelConversion ycbcrModelConversion;
+        VkSamplerYcbcrRange ycbcrRange;
+    };
 
     struct ExtensionHashFn {
         std::size_t operator()(utils::CString const& s) const noexcept {
             return std::hash<std::string>{}(s.data());
         }
     };
+    // Note: utils::CString::operator== has an edge case that breaks for the extension set.
+    // Instead, we'll provide our own comparator.
+    struct ExtensionEqualFn {
+        bool operator()(utils::CString const& a, utils::CString const& b) const noexcept {
+            return strcmp(a.c_str(), b.c_str()) == 0;
+        }
+    };
     // Utility for managing device or instance extensions during initialization.
-    using ExtensionSet = std::unordered_set<utils::CString, ExtensionHashFn>;
+    using ExtensionSet = std::unordered_set<utils::CString, ExtensionHashFn, ExtensionEqualFn>;
 
     /**
      * A collection of handles to objects and metadata that comprises a Vulkan context. The client
@@ -83,6 +101,9 @@ public:
         bool debugUtilsSupported = false;
         bool debugMarkersSupported = false;
         bool multiviewSupported = false;
+        bool dynamicRenderingSupported = false;
+        bool pipelineCreationFeedbackSupported = false;
+        bool vertexInputDynamicStateSupported = false;
     };
 
     /**
@@ -261,6 +282,30 @@ public:
     virtual ExtensionSet getRequiredInstanceExtensions() { return {}; }
 
     /**
+     * Determines if pipeline cache prewarming is supported by the current device. Should be
+     * implemented by derived classes, as by default, this will simply return false.
+     *
+     * @return true if pipeline cache prewarming is safe to be attempted on this device, false
+     *         if not.
+     */
+    virtual bool isPipelineCachePrewarmingDeviceSupported() const noexcept;
+
+    /**
+     * This determines, regardless of whether or not pipeline cache prewarming
+     * is supported by a specific device, if async pipeline cache prewarming should
+     * be enabled in the current application. This depends on:
+     * - if it has been marked as supported for the current device
+     * - if it is allowed in the driver config
+     * - if parallel shader compilation is NOT disabled in the driver config
+     * - if dynamic rendering is supported by the current device
+     * - if vertex input dynamic state is supported by the current device
+     *
+     * @return true if pipeline cache prewarming has been enabled (supported + allowed) on
+     *         this device AND in this application, false if not.
+     */
+    bool isAsyncPipelineCachePrewarmingEnabled() const noexcept;
+
+    /**
      * Destroy the swapchain.
      * @param handle    The handle returned by createSwapChain()
      */
@@ -319,6 +364,30 @@ public:
      * @return The protected queue that was selected for the Vulkan backend.
      */
     VkQueue getProtectedGraphicsQueue() const noexcept;
+
+    /**
+     * Fetches a list of pre-registered external formats for prewarming the Vulkan
+     * pipeline cache.
+     *
+     * @return A list containing an external format number, YCbCr color model conversion,
+     *         and YCbCr color range.
+     */
+    inline const std::vector<ExternalYcbcrFormat>& getCachePrewarmExternalFormats() const noexcept {
+        return mCachePrewarmExternalFormats;
+    }
+
+    /**
+     * For cache prewarming, if external samplers are present, we need to build
+     * the fake pipeline using the proper formats specified. Since there's no way to
+     * get these at material build time, we allow the app to register them before
+     * creating materials.
+     *
+     * @param format The format, containing the external format value which should be
+     *               extracted from an AHardwareBuffer.
+     */
+    inline void registerCachePrewarmExternalFormat(const ExternalYcbcrFormat& format) noexcept {
+        mCachePrewarmExternalFormats.push_back(format);
+    }
 
     struct ExternalImageMetadata {
         /**
@@ -506,6 +575,8 @@ private:
             bool requestImageView2DOn3DImage) noexcept;
 
     friend struct VulkanPlatformPrivate;
+
+    std::vector<ExternalYcbcrFormat> mCachePrewarmExternalFormats;
 };
 
 }// namespace filament::backend

@@ -126,6 +126,10 @@ public:
         return mDebugUtilsSupported;
     }
 
+    inline bool isDynamicRenderingSupported() const noexcept {
+        return mDynamicRenderingSupported;
+    }
+
     inline bool isMultiviewEnabled() const noexcept {
         return mPhysicalDeviceVk11Features.multiview == VK_TRUE;
     }
@@ -150,12 +154,24 @@ public:
         return mIsUnifiedMemoryArchitecture;
     }
 
-    inline bool stagingBufferBypassEnabled() const noexcept {
-        return mStagingBufferBypassEnabled;
+    inline bool isVertexInputDynamicStateSupported() const noexcept {
+        return mVertexInputDynamicStateSupported;
     }
 
     inline bool pipelineCreationFeedbackSupported() const noexcept {
         return mPipelineCreationFeedbackSupported;
+    }
+
+    inline bool asyncPipelineCachePrewarmingAllowed() const noexcept {
+        return mAsyncPipelineCachePrewarmingAllowed;
+    }
+
+    inline bool parallelShaderCompilationDisabled() const noexcept {
+        return mParallelShaderCompileDisabled;
+    }
+
+    inline bool stagingBufferBypassEnabled() const noexcept {
+        return mStagingBufferBypassEnabled;
     }
 
 private:
@@ -179,13 +195,21 @@ private:
 
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
+    // These are options that are either supported or not supported in the current
+    // device and instance.
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
-    bool mLazilyAllocatedMemorySupported = false;
-    bool mProtectedMemorySupported = false;
+    bool mDynamicRenderingSupported = false;
     bool mIsUnifiedMemoryArchitecture = false;
-    bool mStagingBufferBypassEnabled = false;
+    bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
+    bool mProtectedMemorySupported = false;
+    bool mVertexInputDynamicStateSupported = false;
+
+    // These are options that can be enabled or disabled at an application level.
+    bool mAsyncPipelineCachePrewarmingAllowed = false;
+    bool mParallelShaderCompileDisabled = false;
+    bool mStagingBufferBypassEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;
