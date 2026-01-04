@@ -227,8 +227,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
 #if defined(__APPLE__)
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
+        VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
-
+        VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
 #endif
@@ -743,6 +744,19 @@ void VulkanPlatform::destroySync(Platform::Sync* sync) noexcept {
     delete sync;
 }
 
+bool VulkanPlatform::isPipelineCachePrewarmingDeviceSupported() const noexcept {
+    // By default, this should not be enabled, as it will not work on most devices.
+    return false;
+}
+
+bool VulkanPlatform::isAsyncPipelineCachePrewarmingEnabled() const noexcept {
+    return isPipelineCachePrewarmingDeviceSupported() &&
+           mImpl->mContext.asyncPipelineCachePrewarmingAllowed() &&
+           !mImpl->mContext.parallelShaderCompilationDisabled() &&
+           mImpl->mContext.isDynamicRenderingSupported() &&
+           mImpl->mContext.isVertexInputDynamicStateSupported();
+}
+
 VkInstance VulkanPlatform::getInstance() const noexcept {
     return mImpl->mInstance;
 }
@@ -916,18 +930,28 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 
     // Store the extension support in the context
     if (!mImpl->mSharedContext) {
-        context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        context.mDebugUtilsSupported =
+                setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported =
                 setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context.mDynamicRenderingSupported =
+                setContains(deviceExts, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
         context.mPipelineCreationFeedbackSupported =
                 setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
+        context.mVertexInputDynamicStateSupported =
+                setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
     } else {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsSupported = scontext->debugUtilsSupported;
         context.mDebugMarkersSupported = scontext->debugMarkersSupported;
+        context.mDynamicRenderingSupported = scontext->dynamicRenderingSupported;
+        context.mPipelineCreationFeedbackSupported = scontext->pipelineCreationFeedbackSupported;
+        context.mVertexInputDynamicStateSupported = scontext->vertexInputDynamicStateSupported;
     }
 
     // Pass along relevant driver config (feature flags)
+    context.mAsyncPipelineCachePrewarmingAllowed = driverConfig.vulkanAllowAsyncPipelineCachePrewarming;
+    context.mParallelShaderCompileDisabled = driverConfig.disableParallelShaderCompile;
     context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
 
     // We know we need to allocate the protected version of the VK objects

@@ -783,6 +783,10 @@ public:
                 bool assert_native_window_is_valid = false;
             } opengl;
             struct {
+                // In certain GPU drivers, graphics pipelines are cached based on a subset of their
+                // parameters. In those cases, we can create fake pipelines ahead of time to ensure
+                // a cache hit when creating graphics pipelines at draw time, eliminating hitching.
+                bool allow_pipeline_cache_prewarming = false;
                 // On Unified Memory Architecture device, it is possible to bypass using the staging
                 // buffer. This is an experimental feature that still needs to be implemented fully
                 // before it can be fully enabled.

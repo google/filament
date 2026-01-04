@@ -110,11 +110,14 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
         .forceGLES2Context = instance->getConfig().forceGLES2Context,
         .stereoscopicType = instance->getConfig().stereoscopicType,
+        .stereoscopicEyeCount = instance->getConfig().stereoscopicEyeCount,
         .assertNativeWindowIsValid =
                 instance->features.backend.opengl.assert_native_window_is_valid,
         .metalDisablePanicOnDrawableFailure =
                 instance->getConfig().metalDisablePanicOnDrawableFailure,
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
+        .vulkanAllowAsyncPipelineCachePrewarming =
+                instance->features.backend.vulkan.allow_pipeline_cache_prewarming,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
         .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?

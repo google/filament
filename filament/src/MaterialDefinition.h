@@ -24,6 +24,7 @@
 
 #include <ds/DescriptorSetLayout.h>
 
+#include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
 namespace filament {
@@ -56,10 +57,16 @@ struct MaterialDefinition {
 
     MaterialParser const& getMaterialParser() const noexcept { return *mMaterialParser; }
 
+    // Keep track of the definitions of the descriptor set layouts, as these
+    // may be used by some backends in parallel compilation of programs.
+    backend::DescriptorSetLayout perViewDescriptorSetLayoutDescription;
+    backend::DescriptorSetLayout perViewDescriptorSetLayoutVsmDescription;
+    backend::DescriptorSetLayout descriptorSetLayoutDescription;
+
     // try to order by frequency of use
-    DescriptorSetLayout perViewDescriptorSetLayout;
-    DescriptorSetLayout perViewDescriptorSetLayoutVsm;
-    DescriptorSetLayout descriptorSetLayout;
+    filament::DescriptorSetLayout perViewDescriptorSetLayout;
+    filament::DescriptorSetLayout perViewDescriptorSetLayoutVsm;
+    filament::DescriptorSetLayout descriptorSetLayout;
     backend::Program::DescriptorSetInfo programDescriptorBindings;
 
     backend::RasterState rasterState;
