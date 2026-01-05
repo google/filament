@@ -494,6 +494,25 @@ protected:
     bool isTransientAttachmentSupported() const noexcept;
 
 private:
+    /**
+     * Contains information about features that should be requested
+     * when calling vkCreateDevice, based on feature support from
+     * vkGetPhysicalDeviceFeatures2.
+     */
+    struct MiscDeviceFeatures {
+        /**
+         * This allows creation of a VkGraphicsPipeline without a
+         * render pass specified.
+         */
+        bool dynamicRendering;
+
+        /**
+         * Allows creation of a 2d image view, or 2d image view array,
+         * to be created from a 3d VkImage.
+         */
+        bool imageView2Don3DImage;
+    };
+
     void createInstance(ExtensionSet const& requiredExts) noexcept;
 
     void queryAndSetDeviceFeatures(Platform::DriverConfig const& driverConfig,
@@ -503,7 +522,7 @@ private:
     void createLogicalDeviceAndQueues(ExtensionSet const& deviceExtensions,
             VkPhysicalDeviceFeatures const& features,
             VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
-            bool requestImageView2DOn3DImage) noexcept;
+            MiscDeviceFeatures const& requestedFeatures) noexcept;
 
     friend struct VulkanPlatformPrivate;
 };

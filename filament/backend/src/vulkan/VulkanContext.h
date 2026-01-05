@@ -126,6 +126,10 @@ public:
         return mDebugUtilsSupported;
     }
 
+    inline bool isDynamicRenderingSupported() const noexcept {
+        return mDynamicRenderingFeatures.dynamicRendering == VK_TRUE;
+    }
+
     inline bool isMultiviewEnabled() const noexcept {
         return mPhysicalDeviceVk11Features.multiview == VK_TRUE;
     }
@@ -150,12 +154,31 @@ public:
         return mIsUnifiedMemoryArchitecture;
     }
 
-    inline bool stagingBufferBypassEnabled() const noexcept {
-        return mStagingBufferBypassEnabled;
+    inline bool isVertexInputDynamicStateSupported() const noexcept {
+        return mVertexInputDynamicStateSupported;
     }
 
     inline bool pipelineCreationFeedbackSupported() const noexcept {
         return mPipelineCreationFeedbackSupported;
+    }
+
+    inline bool asyncPipelineCachePrewarmingEnabled() const noexcept {
+        return mAsyncPipelineCachePrewarmingEnabled;
+    }
+
+    inline bool parallelShaderCompilationDisabled() const noexcept {
+        return mParallelShaderCompileDisabled;
+    }
+
+    inline bool stagingBufferBypassEnabled() const noexcept {
+        return mStagingBufferBypassEnabled;
+    }
+
+    inline bool shouldUsePipelineCachePrewarming() const noexcept {
+        return asyncPipelineCachePrewarmingEnabled() &&
+               !parallelShaderCompilationDisabled() &&
+               isVertexInputDynamicStateSupported() &&
+               isDynamicRenderingSupported();
     }
 
 private:
@@ -169,6 +192,9 @@ private:
     VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
     };
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR mDynamicRenderingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+    };
     VkPhysicalDevicePortabilitySubsetFeaturesKHR mPortabilitySubsetFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
         // By default, on platforms where we don't have portability subset, then this feature must
@@ -179,13 +205,20 @@ private:
 
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
+    // These are options that are either supported or not supported in the current
+    // device and instance.
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
-    bool mLazilyAllocatedMemorySupported = false;
-    bool mProtectedMemorySupported = false;
     bool mIsUnifiedMemoryArchitecture = false;
-    bool mStagingBufferBypassEnabled = false;
+    bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
+    bool mProtectedMemorySupported = false;
+    bool mVertexInputDynamicStateSupported = false;
+
+    // These are options that can be enabled or disabled at an application level.
+    bool mAsyncPipelineCachePrewarmingEnabled = false;
+    bool mParallelShaderCompileDisabled = false;
+    bool mStagingBufferBypassEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;
