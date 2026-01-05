@@ -17,15 +17,13 @@
 #ifndef TNT_FILAMENT_FG_FRAMEGRAPHTEXTURE_H
 #define TNT_FILAMENT_FG_FRAMEGRAPHTEXTURE_H
 
-#include "fg/FrameGraphId.h"
-
 #include <utils/StaticString.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 namespace filament {
-class ResourceAllocatorInterface;
+class TextureCacheInterface;
 } // namespace::filament
 
 namespace filament {
@@ -77,17 +75,18 @@ struct FrameGraphTexture {
 
     /**
      * Create the concrete resource
-     * @param resourceAllocator resource allocator for textures and such
+     * @param textureCache resource allocator for textures and such
      * @param descriptor Descriptor to the resource
+     * @param usage Usage bits
      */
-    void create(ResourceAllocatorInterface& resourceAllocator, utils::StaticString name,
-            Descriptor const& descriptor, Usage usage, bool useProtectedMemory) noexcept;
+    void create(TextureCacheInterface& textureCache, utils::StaticString name,
+            Descriptor const& descriptor, Usage usage) noexcept;
 
     /**
      * Destroy the concrete resource
-     * @param resourceAllocator
+     * @param textureCache
      */
-    void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept;
+    void destroy(TextureCacheInterface& textureCache) noexcept;
 
     /**
      * Generates the Descriptor for a subresource from its parent Descriptor and its

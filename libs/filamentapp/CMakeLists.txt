@@ -72,13 +72,17 @@ set(MATERIAL_SRCS
 
 if (APPLE)
     list(APPEND SRCS src/NativeWindowHelperCocoa.mm)
-    list(APPEND SRCS src/VulkanPlatformHelperApple.mm)
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/VulkanPlatformHelperApple.mm)
+    endif()
     list(APPEND LIBS "-framework Cocoa -framework QuartzCore")
 endif()
 
 if (LINUX)
     list(APPEND SRCS src/NativeWindowHelperLinux.cpp)
-    list(APPEND SRCS src/VulkanPlatformHelperLinux.cpp)
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/VulkanPlatformHelperLinux.cpp)
+    endif()
 endif()
 
 if (WIN32)
@@ -92,7 +96,9 @@ if (WIN32)
 endif()
 
 if (ANDROID)
-    list(APPEND SRCS src/VulkanPlatformHelperAndroid.cpp)
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/VulkanPlatformHelperAndroid.cpp)
+    endif()
 endif()
 
 # ==================================================================================================

@@ -95,7 +95,7 @@ ImportedRenderTarget::ImportedRenderTarget(utils::StaticString resourceName,
 }
 
 UTILS_NOINLINE
-void ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage const u) {
+void ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage const u) const {
     constexpr auto ANY_ATTACHMENT = FrameGraphTexture::Usage::COLOR_ATTACHMENT |
                                     FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
                                     FrameGraphTexture::Usage::STENCIL_ATTACHMENT;

@@ -2182,30 +2182,53 @@ void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     }
 }
 
+void OpenGLDriver::destroyIndexBufferCommon(Handle<HwIndexBuffer> ibh) {
+    GLIndexBuffer const* ib = handle_cast<const GLIndexBuffer*>(ibh);
+    auto& gl = mContext;
+    gl.deleteBuffer(ib->gl.buffer, GL_ELEMENT_ARRAY_BUFFER);
+    destruct(ibh, ib);
+}
+
 void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     DEBUG_MARKER()
 
     if (ibh) {
-        auto& gl = mContext;
         GLIndexBuffer const* ib = handle_cast<const GLIndexBuffer*>(ibh);
-        gl.deleteBuffer(ib->gl.buffer, GL_ELEMENT_ARRAY_BUFFER);
-        destruct(ibh, ib);
+        if (ib->asynchronous) {
+            getJobQueue()->push([this, ibh]() {
+                destroyIndexBufferCommon(ibh);
+            });
+        } else {
+            destroyIndexBufferCommon(ibh);
+        }
     }
+}
+
+void OpenGLDriver::destroyBufferObjectCommon(Handle<HwBufferObject> boh) {
+    GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
+    auto& gl = mContext;
+    // check we're not destroying a buffer that has active mappings
+    assert_invariant(bo->mappingCount == 0);
+    if (UTILS_UNLIKELY(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+        free(bo->gl.buffer);
+    } else {
+        gl.deleteBuffer(bo->gl.id, bo->gl.binding);
+    }
+    destruct(boh, bo);
 }
 
 void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     DEBUG_MARKER()
+
     if (boh) {
-        auto& gl = mContext;
         GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
-        // check we're not destroying a buffer that has active mappings
-        assert_invariant(bo->mappingCount == 0);
-        if (UTILS_UNLIKELY(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-            free(bo->gl.buffer);
+        if (bo->asynchronous) {
+            getJobQueue()->push([this, boh]() {
+                destroyBufferObjectCommon(boh);
+            });
         } else {
-            gl.deleteBuffer(bo->gl.id, bo->gl.binding);
+            destroyBufferObjectCommon(boh);
         }
-        destruct(boh, bo);
     }
 }
 

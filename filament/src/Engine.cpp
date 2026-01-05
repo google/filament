@@ -16,7 +16,7 @@
 
 #include "details/Engine.h"
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/BufferObject.h"
 #include "details/Camera.h"

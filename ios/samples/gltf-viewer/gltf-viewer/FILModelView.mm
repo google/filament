@@ -82,6 +82,7 @@ const float kSensitivity = 100.0f;
     Manipulator<float>* _manipulator;
     TextureProvider* _stbDecoder;
     TextureProvider* _ktxDecoder;
+    TextureProvider* _webpDecoder;
 
     FilamentAsset* _asset;
 
@@ -135,9 +136,19 @@ const float kSensitivity = 100.0f;
     _resourceLoader = new ResourceLoader({.engine = _engine, .normalizeSkinningWeights = true});
     _stbDecoder = createStbProvider(_engine);
     _ktxDecoder = createKtx2Provider(_engine);
+    if (isWebpSupported()) {
+        _webpDecoder = createWebpProvider(_engine);
+    }
+    else {
+        _webpDecoder = nullptr;
+    }
+
     _resourceLoader->addTextureProvider("image/png", _stbDecoder);
     _resourceLoader->addTextureProvider("image/jpeg", _stbDecoder);
     _resourceLoader->addTextureProvider("image/ktx2", _ktxDecoder);
+    if (_webpDecoder) {
+        _resourceLoader->addTextureProvider("image/webp", _webpDecoder);
+    }
 
     _manipulator =
             Manipulator<float>::Builder().orbitHomePosition(0.0f, 0.0f, 4.0f).build(Mode::ORBIT);
@@ -285,6 +296,7 @@ const float kSensitivity = 100.0f;
     delete _manipulator;
     delete _stbDecoder;
     delete _ktxDecoder;
+    delete _webpDecoder;
 
     _engine->destroy(_swapChain);
     _engine->destroy(_view);

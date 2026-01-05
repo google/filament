@@ -22,7 +22,7 @@
 #include "PostProcessManager.h"
 #include "RendererUtils.h"
 #include "RenderPass.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/Engine.h"
 #include "details/Fence.h"
@@ -99,7 +99,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
         mUserEpoch(engine.getEngineEpoch()),
-        mResourceAllocator(std::make_unique<ResourceAllocator>(
+        mResourceAllocator(std::make_unique<TextureCache>(
                 engine.getSharedResourceAllocatorDisposer(),
                 engine.getConfig(),
                 engine.getDriverApi()))
@@ -824,6 +824,16 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         xvp.bottom = int32_t(guardBand);
     }
 
+    // The taaCameraInfo is the taa-jittered cameraInfo. It must be used for the color pass.
+    // TODO: what's unclear is whether it should be used for other passes (e.g. SSR, DoF,
+    //       structure). For now it's only used for the color pass, but should revisit.
+    auto taaCameraInfo = cameraInfo;
+    if (UTILS_UNLIKELY(taaOptions.enabled)) {
+        // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
+        ppm.TaaJitterCamera(svp, taaOptions, view.getFrameHistory(),
+                &FrameHistoryEntry::taa, &taaCameraInfo);
+    }
+
     /*
      * Frame graph
      */
@@ -842,7 +852,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
      */
 
     auto [bias, derivativeScale] = prepareUpscaler(scale, taaOptions, dsrOptions);
-    view.prepare(engine, driver, rootArenaScope, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
+    view.prepare(engine, driver, rootArenaScope, svp, taaCameraInfo, getShaderUserTime(), needsAlphaChannel);
     view.prepareLodBias(bias, derivativeScale);
     view.prepareSSAO(aoOptions);
     view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
@@ -1056,18 +1066,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 });
     }
 
-    // Store this frame's camera projection in the frame history.
-    // TODO: We do this after we're configured the structure and ssao passes;
-    //       but I'm not 100% sure this should be done before or after.
-    if (UTILS_UNLIKELY(taaOptions.enabled)) {
-        // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
-        ppm.TaaJitterCamera(svp, taaOptions, view.getFrameHistory(),
-                &FrameHistoryEntry::taa, &cameraInfo);
-
-        // this just re-set the color pass UBO content
-        view.prepareCamera(engine, cameraInfo);
-    }
-
     // --------------------------------------------------------------------------------------------
     // SSAO pass
 
@@ -1121,6 +1119,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 } else if (colorGradingConfig.customResolve) {
                     ppm.customResolvePrepareSubpass(driver,
                             PostProcessManager::CustomResolveOp::COMPRESS);
+                }
+
+                if (view.getChannelDepthClearMask().any()) {
+                    ppm.clearAncillaryBuffersPrepare(driver);
                 }
 
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
@@ -1250,10 +1252,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         //       subpass) here because it's more convenient.
         colorPassOutput.linearColor =
                 ppm.customResolveUncompressPass(fg, colorPassOutput.linearColor);
-    }
-
-    if (view.getChannelDepthClearMask().any()) {
-        ppm.clearAncillaryBuffersPrepare(driver);
     }
 
     // export the color buffer if screen-space reflections are enabled

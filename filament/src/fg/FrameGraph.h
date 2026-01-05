@@ -46,11 +46,12 @@ namespace filament::fgviewer {
 
 namespace filament {
 
-class ResourceAllocatorInterface;
+class TextureCacheInterface;
 
 class FrameGraphPassExecutor;
 class PassNode;
 class ResourceNode;
+struct ResourceCreationContext;
 class VirtualResource;
 
 class FrameGraph {
@@ -231,7 +232,7 @@ public:
         PROTECTED,
     };
 
-    explicit FrameGraph(ResourceAllocatorInterface& resourceAllocator,
+    explicit FrameGraph(TextureCacheInterface& resourceAllocator,
             Mode mode = Mode::UNPROTECTED);
     FrameGraph(FrameGraph const&) = delete;
     FrameGraph& operator=(FrameGraph const&) = delete;
@@ -453,10 +454,11 @@ private:
     friend class PassNode;
     friend class ResourceNode;
     friend class RenderPassNode;
+    friend struct ResourceCreationContext;
 
     LinearAllocatorArena& getArena() noexcept { return mArena; }
     DependencyGraph& getGraph() noexcept { return mGraph; }
-    ResourceAllocatorInterface& getResourceAllocator() noexcept { return mResourceAllocator; }
+    TextureCacheInterface& getTextureCache() noexcept { return mResourceAllocator; }
 
     struct ResourceSlot {
         using Version = FrameGraphHandle::Version;
@@ -534,7 +536,7 @@ private:
     void destroyInternal() noexcept;
 
     Blackboard mBlackboard;
-    ResourceAllocatorInterface& mResourceAllocator;
+    TextureCacheInterface& mResourceAllocator;
     LinearAllocatorArena mArena;
     DependencyGraph mGraph;
     const Mode mMode;

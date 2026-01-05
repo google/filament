@@ -194,6 +194,7 @@ Material* UbershaderProvider::getMaterial(const MaterialKey& config) const {
     requirements.features["Specular"] = config.hasSpecular;
     requirements.features["SpecularTexture"] = config.hasSpecularTexture;
     requirements.features["SpecularColorTexture"] = config.hasSpecularColorTexture;
+    requirements.features["Dispersion"] = config.hasDispersion;
 
     if (Material* mat = mMaterials.getMaterial(requirements); mat != nullptr) {
         return mat;
@@ -379,6 +380,10 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
 
     if (material->hasParameter("specularStrength")) {
         mi->setParameter("specularStrength", 1.0f);
+    }
+
+    if (material->hasParameter("dispersion")) {
+        mi->setParameter("dispersion", 0.0f);
     }
 
     return mi;

@@ -79,8 +79,8 @@ public:
             backend::RenderPassParams params;
         } backend;
 
-        void devirtualize(FrameGraph& fg, ResourceAllocatorInterface& resourceAllocator) noexcept;
-        void destroy(ResourceAllocatorInterface& resourceAllocator) const noexcept;
+        void devirtualize(FrameGraph& fg, TextureCacheInterface& textureCache) noexcept;
+        void destroy(TextureCacheInterface& textureCache) const noexcept;
     };
 
     RenderPassNode(FrameGraph& fg, const char* name, FrameGraphPassBase* base) noexcept;
