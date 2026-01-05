@@ -267,8 +267,6 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
         eglDupNativeFenceFDANDROID =
                 PFNEGLDUPNATIVEFENCEFDANDROIDPROC(eglGetProcAddress(
                         "eglDupNativeFenceFDANDROID"));
-    } else {
-        LOG(ERROR) << "EGL_ANDROID_native_fence_sync not supported!";
     }
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
