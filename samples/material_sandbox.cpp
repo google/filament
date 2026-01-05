@@ -395,6 +395,7 @@ static filament::MaterialInstance* updateInstances(
                     Color::absorptionAtDistance(color, params.distance));
             materialInstance->setParameter("ior", params.ior);
             materialInstance->setParameter("transmission", params.transmission);
+            materialInstance->setParameter("dispersion", params.dispersion);
             materialInstance->setParameter("thickness", params.thickness);
         }
     }
@@ -571,6 +572,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                 if (hasRefraction) {
                     ImGui::SliderFloat("IOR", &params.ior, 1.0f, 3.0f);
                     ImGui::SliderFloat("Transmission", &params.transmission, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Dispersion", &params.dispersion, 0.0f, 5.0f);
                     ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
                     ImGui::ColorEdit3("Transmittance", &params.transmittanceColor.r);
                     ImGui::SliderFloat("Distance", &params.distance, 0.0f, 4.0f);

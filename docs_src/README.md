@@ -49,7 +49,7 @@ to perform a number of URL replacements in addition to the copy. These replaceme
 described in [`docs_src/build/duplicates.json`].
 
 ### Core concept docs
-The primary design of Filament as a phyiscally-based renderer and details of its materials
+The primary design of Filament as a physically-based renderer and details of its materials
 system are described in `Filament.md.html` and `Materials.md.html`, respectively. These two
 documents are written in [`markdeep`]. To embed them into our book, we
  1. Convert the markdeep into html

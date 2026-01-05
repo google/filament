@@ -333,14 +333,18 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         scene->addEntity(g_light);
     }
 
+
+    // FIXME: we need a better way to set the defaults.
+    if (g_material->hasParameter("baseColor")) {
+        g_materialInstance->setParameter("baseColor", float3{ 1, 1, 1 });
+    }
+
     for (const auto& p : g_parameters) {
         g_materialInstance->setParameter(p.name.c_str(), p.start);
     }
 
-    if (!g_skyboxOn) {
-        auto ibl = FilamentApp::get().getIBL();
-        if (ibl) ibl->getSkybox()->setLayerMask(0xff, 0x00);
-    } else {
+    auto ibl = FilamentApp::get().getIBL();
+    if (!ibl || !g_skyboxOn) {
         g_skybox = Skybox::Builder().color({
                 ((g_clearColor >> 16) & 0xFF) / 255.0f,
                 ((g_clearColor >>  8) & 0xFF) / 255.0f,

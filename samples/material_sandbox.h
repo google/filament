@@ -131,6 +131,7 @@ struct SandboxParameters {
     float specularAntiAliasingVariance = 0.0f;
     float specularAntiAliasingThreshold = 0.0f;
     float transmission = 1.0f;
+    float dispersion = 0.0f;
     float distance = 1.0f;
     float ior = 1.5;
     float emissiveExposureWeight = 1.0f;
