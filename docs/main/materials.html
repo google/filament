@@ -458,7 +458,7 @@ The type and range of each property is described in <a href="#table_standardprop
     vertex. <code>microThickness</code> represent the thickness of the thin layer of an object, and can
     generally be provided as a constant value. For example, a 1mm thin hollow sphere of radius 1m,
     would have a <code>thickness</code> of 1 and a <code>microThickness</code> of 0.001. Dispersion controls the angular
-    separation of colors transmitting through a volume, and can be set by a contant value.
+    separation of colors transmitting through a volume, and can be set by a constant value.
     Currently <code>thickness</code> and <code>dispersion</code> are not used when <code>refractionType</code> is set to <code>thin</code>.</div>
 </p>
 <a class="target" name="basecolor">&nbsp;</a><a class="target" name="materialmodels/litmodel/basecolor">&nbsp;</a><a class="target" name="toc3.1.1">&nbsp;</a><h3 id="base-color"><a class="header" href="#base-color">Base color</a></h3>
@@ -949,6 +949,9 @@ Its value is specified as 20/Abbe number. When the value is zero, no dispersion 
 <tr><td style="text-align:right"> Water </td><td style="text-align:center"> 55 </td><td style="text-align:left"> 0.36 </td></tr>
 <tr><td style="text-align:right"> Crown Glass </td><td style="text-align:center"> 59 </td><td style="text-align:left"> 0.33 </td></tr>
 </table><center><div class="tablecaption"><a class="target" name="table_commonmatdispersion">&nbsp;</a><b style="font-style:normal;">Table&nbsp;7:</b> Dispersion of common materials</div></center></div>
+</p><p>
+<center><div class="image" style=""><a href="../images/materials/dispersion.png" target="_blank"><img class="markdeep" src="../images/materials/dispersion.png" /></a><center><span class="imagecaption"><a class="target" name="figure_dispersionproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;28:</b> <code>dispersion</code> varying from 0.0
+(left) to 5.0 (right)</span></center></div></center>
 </p>
 <a class="target" name="subsurfacemodel">&nbsp;</a><a class="target" name="materialmodels/subsurfacemodel">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2 id="subsurface-model"><a class="header" href="#subsurface-model">Subsurface model</a></h2>
 <a class="target" name="thickness">&nbsp;</a><a class="target" name="materialmodels/subsurfacemodel/thickness">&nbsp;</a><a class="target" name="toc3.2.1">&nbsp;</a><h3 id="thickness"><a class="header" href="#thickness">Thickness</a></h3>
@@ -963,22 +966,22 @@ a softer specular lob with a large falloff and the presence of fuzz lighting, ca
 forward/backward scattering. Some fabrics also exhibit two-tone specular colors
 (velvets for instance).</p>
 </p><p>
-<a href="#figure_materialcloth">Figure&nbsp;28</a> shows how the standard material model fails to capture the appearance of a
+<a href="#figure_materialcloth">Figure&nbsp;29</a> shows how the standard material model fails to capture the appearance of a
 sample of denim fabric. The surface appears rigid (almost plastic-like), more similar to a tarp
 than a piece of clothing. This figure also shows how important the softer specular lobe caused by
 absorption and scattering is to the faithful recreation of the fabric.
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_cloth.png" target="_blank"><img class="markdeep" src="../images/screenshot_cloth.png" /></a><center><span class="imagecaption"><a class="target" name="figure_materialcloth">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;28:</b> Comparison of denim fabric rendered using the standard model
+<center><div class="image" style=""><a href="../images/screenshot_cloth.png" target="_blank"><img class="markdeep" src="../images/screenshot_cloth.png" /></a><center><span class="imagecaption"><a class="target" name="figure_materialcloth">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;29:</b> Comparison of denim fabric rendered using the standard model
 (left) and the cloth model (right)</span></center></div></center>
 </p><p>
-Velvet is an interesting use case for a cloth material model. As shown in <a href="#figure_materialvelvet">figure&nbsp;29</a>
+Velvet is an interesting use case for a cloth material model. As shown in <a href="#figure_materialvelvet">figure&nbsp;30</a>
 this type of fabric exhibits strong rim lighting due to forward and backward scattering. These
 scattering events are caused by fibers standing straight at the surface of the fabric. When the
 incident light comes from the direction opposite to the view direction, the fibers will forward
 scatter the light. Similarly, when the incident light from the same direction as the view
 direction, the fibers will scatter the light backward.
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_cloth_velvet.png" target="_blank"><img class="markdeep" src="../images/screenshot_cloth_velvet.png" /></a><center><span class="imagecaption"><a class="target" name="figure_materialvelvet">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;29:</b> Velvet fabric showcasing forward and
+<center><div class="image" style=""><a href="../images/screenshot_cloth_velvet.png" target="_blank"><img class="markdeep" src="../images/screenshot_cloth_velvet.png" /></a><center><span class="imagecaption"><a class="target" name="figure_materialvelvet">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;30:</b> Velvet fabric showcasing forward and
 backward scattering</span></center></div></center>
 </p><p>
 It is important to note that there are types of fabrics that are still best modeled by hard surface
@@ -1021,10 +1024,10 @@ or set the sheen color to the luminance of the base color.
 better control over the appearance of cloth and gives give the ability to create
 two-tone specular materials.</p>
 </p><p>
-The effect of <code>sheenColor</code> is shown in <a href="#figure_materialclothsheen">figure&nbsp;30</a>
+The effect of <code>sheenColor</code> is shown in <a href="#figure_materialclothsheen">figure&nbsp;31</a>
 (click on the image to see a larger version).
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_cloth_sheen.png" target="_blank"><img class="markdeep" src="../images/screenshot_cloth_sheen.png" /></a><center><span class="imagecaption"><a class="target" name="figure_materialclothsheen">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;30:</b> Blue fabric without (left) and with (right) sheen</span></center></div></center>
+<center><div class="image" style=""><a href="../images/screenshot_cloth_sheen.png" target="_blank"><img class="markdeep" src="../images/screenshot_cloth_sheen.png" /></a><center><span class="imagecaption"><a class="target" name="figure_materialclothsheen">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;31:</b> Blue fabric without (left) and with (right) sheen</span></center></div></center>
 </p>
 <a class="target" name="subsurfacecolor">&nbsp;</a><a class="target" name="materialmodels/clothmodel/subsurfacecolor">&nbsp;</a><a class="target" name="toc3.3.2">&nbsp;</a><h3 id="subsurface-color-1"><a class="header" href="#subsurface-color-1">Subsurface color</a></h3>
 <p>
@@ -1034,10 +1037,10 @@ useful to create softer fabrics.</p>
 </p><p>
 <div class="admonition warning">The cloth material model is more expensive to compute when the <code>subsurfaceColor</code> property is used.</div>
 </p><p>
-The effect of <code>subsurfaceColor</code> is shown in <a href="#figure_materialclothsubsurface">figure&nbsp;31</a>
+The effect of <code>subsurfaceColor</code> is shown in <a href="#figure_materialclothsubsurface">figure&nbsp;32</a>
 (click on the image to see a larger version).
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_cloth_subsurface.png" target="_blank"><img class="markdeep" src="../images/screenshot_cloth_subsurface.png" /></a><center><span class="imagecaption"><a class="target" name="figure_materialclothsubsurface">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;31:</b> White cloth (left column) vs white cloth with
+<center><div class="image" style=""><a href="../images/screenshot_cloth_subsurface.png" target="_blank"><img class="markdeep" src="../images/screenshot_cloth_subsurface.png" /></a><center><span class="imagecaption"><a class="target" name="figure_materialclothsubsurface">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;32:</b> White cloth (left column) vs white cloth with
 brown subsurface scatting (right)</span></center></div></center>
 </p>
 <a class="target" name="unlitmodel">&nbsp;</a><a class="target" name="materialmodels/unlitmodel">&nbsp;</a><a class="target" name="toc3.4">&nbsp;</a><h2 id="unlit-model"><a class="header" href="#unlit-model">Unlit model</a></h2>
@@ -1064,10 +1067,10 @@ The type and range of each property is described in <a href="#table_unlitpropert
 The value of <code>postLightingColor</code> is blended with the sum of <code>emissive</code> and <code>baseColor</code> according to
 the blending mode specified by the <code>postLightingBlending</code> material option.
 </p><p>
-<a href="#figure_materialunlit">Figure&nbsp;32</a> shows an example of the unlit material model
+<a href="#figure_materialunlit">Figure&nbsp;33</a> shows an example of the unlit material model
 (click on the image to see a larger version).
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_unlit.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_unlit.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_materialunlit">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;32:</b> The unlit model is used to render debug information</span></center></div></center>
+<center><div class="image" style=""><a href="../images/screenshot_unlit.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_unlit.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_materialunlit">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;33:</b> The unlit model is used to render debug information</span></center></div></center>
 </p>
 <a class="target" name="specularglossiness">&nbsp;</a><a class="target" name="materialmodels/specularglossiness">&nbsp;</a><a class="target" name="toc3.5">&nbsp;</a><h2 id="specular-glossiness"><a class="header" href="#specular-glossiness">Specular glossiness</a></h2>
 <p>
@@ -1721,27 +1724,27 @@ non-shader data.</p>
 </p></dd></dl>The three possible transparency modes are:
 </p><p>
 <ul>
-<li class="minus"><code>default</code>: the transparent object is rendered normally (as seen in <a href="#figure_transparencydefault">figure&nbsp;33</a>),
+<li class="minus"><code>default</code>: the transparent object is rendered normally (as seen in <a href="#figure_transparencydefault">figure&nbsp;34</a>),
    honoring the <code>culling</code> mode, etc.
 </li>
 <li class="minus"><code>twoPassesOneSide</code>: the transparent object is first rendered in the depth buffer, then again in
   the color buffer, honoring the <code>culling</code> mode. This effectively renders only half of the
-  transparent object as shown in <a href="#figure_transparencytwopassesoneside">figure&nbsp;34</a>.
+  transparent object as shown in <a href="#figure_transparencytwopassesoneside">figure&nbsp;35</a>.
 </li>
 <li class="minus"><code>twoPassesTwoSides</code>: the transparent object is rendered twice in the color buffer: first with its
   back faces, then with its front faces. This mode lets you render both set of faces while reducing
-  or eliminating sorting issues, as shown in <a href="#figure_transparencytwopassestwosides">figure&nbsp;35</a>.
+  or eliminating sorting issues, as shown in <a href="#figure_transparencytwopassestwosides">figure&nbsp;36</a>.
   <code>twoPassesTwoSides</code> can be combined with <code>doubleSided</code> for better effect.</li></ul>
 </p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    transparency <span class="hljs-punctuation">:</span> twoPassesOneSide</span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
-<center><div class="image" style=""><a href="../images/screenshot_transparency_default.png" target="_blank"><img class="markdeep" src="../images/screenshot_transparency_default.png" /></a><center><span class="imagecaption"><a class="target" name="figure_transparencydefault">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;33:</b> This double sided model shows the type of sorting issues transparent
+<center><div class="image" style=""><a href="../images/screenshot_transparency_default.png" target="_blank"><img class="markdeep" src="../images/screenshot_transparency_default.png" /></a><center><span class="imagecaption"><a class="target" name="figure_transparencydefault">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;34:</b> This double sided model shows the type of sorting issues transparent
 objects can be subject to in <code>default</code> mode</span></center></div></center>
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_twopasses_oneside.png" target="_blank"><img class="markdeep" src="../images/screenshot_twopasses_oneside.png" /></a><center><span class="imagecaption"><a class="target" name="figure_transparencytwopassesoneside">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;34:</b> In <code>twoPassesOneSide</code> mode, only one set of faces is visible
+<center><div class="image" style=""><a href="../images/screenshot_twopasses_oneside.png" target="_blank"><img class="markdeep" src="../images/screenshot_twopasses_oneside.png" /></a><center><span class="imagecaption"><a class="target" name="figure_transparencytwopassesoneside">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;35:</b> In <code>twoPassesOneSide</code> mode, only one set of faces is visible
 and correctly sorted</span></center></div></center>
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_twopasses_twosides.png" target="_blank"><img class="markdeep" src="../images/screenshot_twopasses_twosides.png" /></a><center><span class="imagecaption"><a class="target" name="figure_transparencytwopassestwosides">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;35:</b> In <code>twoPassesTwoSides</code> mode, both set of faces are visible
+<center><div class="image" style=""><a href="../images/screenshot_twopasses_twosides.png" target="_blank"><img class="markdeep" src="../images/screenshot_twopasses_twosides.png" /></a><center><span class="imagecaption"><a class="target" name="figure_transparencytwopassestwosides">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;36:</b> In <code>twoPassesTwoSides</code> mode, both set of faces are visible
 and sorting issues are minimized or eliminated</span></center></div></center>
 </p>
 <a class="target" name="blendingandtransparency:maskthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:maskthreshold">&nbsp;</a><a class="target" name="toc4.2.22">&nbsp;</a><h3 id="blending-and-transparency-maskthreshold"><a class="header" href="#blending-and-transparency-maskthreshold">Blending and transparency: maskThreshold</a></h3>
@@ -1919,7 +1922,7 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 <span class="line">        material.baseColor = texture(materialParams_baseColor<span class="hljs-punctuation">,</span> getUV0());</span>
 <span class="line">    <span class="hljs-punctuation">}</span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
-<center><div class="image" style=""><a href="../images/screenshot_transparent_shadows.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_transparent_shadows.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_transparentshadow">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;36:</b> Objects rendered with transparent shadows and blurry VSM with a
+<center><div class="image" style=""><a href="../images/screenshot_transparent_shadows.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_transparent_shadows.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_transparentshadow">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;37:</b> Objects rendered with transparent shadows and blurry VSM with a
 radius of 4. Model <a href="https://sketchfab.com/3d-models/bottle-of-water-48fd4f6e90d84d89b5740ee78587d0ff">Bottle of Water</a>
 by <a href="https://sketchfab.com/person-x">T-Art</a>.</span></center></div></center>
 </p>
@@ -1929,12 +1932,12 @@ by <a href="https://sketchfab.com/person-x">T-Art</a>.</span></center></div></ce
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>true</code>.
 </p></dd><dt>Description</dt><dd><p>     When adding a clear coat layer, the change in index of refraction (IoR) is taken into account
      to modify the specular color of the base layer. This appears to darken <code>baseColor</code>. When this
-     effect is disabled, <code>baseColor</code> is left unmodified. See <a href="#figure_clearcoatiorchange">figure&nbsp;37</a> for an
+     effect is disabled, <code>baseColor</code> is left unmodified. See <a href="#figure_clearcoatiorchange">figure&nbsp;38</a> for an
      example of how this property can affect a red metallic base layer.
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    clearCoatIorChange <span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
-<center><div class="image" style=""><a href="../images/screenshot_clear_coat_ior_change.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_clear_coat_ior_change.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_clearcoatiorchange">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;37:</b> The same rough metallic ball with a clear coat layer rendered
+<center><div class="image" style=""><a href="../images/screenshot_clear_coat_ior_change.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_clear_coat_ior_change.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_clearcoatiorchange">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;38:</b> The same rough metallic ball with a clear coat layer rendered
 with <code>clearCoatIorChange</code> enabled (left) and disabled
 (right).</span></center></div></center>
 </p>
@@ -1945,17 +1948,17 @@ with <code>clearCoatIorChange</code> enabled (left) and disabled
 </p></dd><dt>Description</dt><dd><p>     Multi-bounce ambient occlusion takes into account interreflections when applying ambient
      occlusion to image-based lighting. Turning this feature on avoids over-darkening occluded
      areas. It also takes the surface color into account to generate colored ambient occlusion.
-     <a href="#figure_multibounceao">Figure&nbsp;38</a> compares the ambient occlusion term of a surface with and without
+     <a href="#figure_multibounceao">Figure&nbsp;39</a> compares the ambient occlusion term of a surface with and without
      multi-bounce ambient occlusion. Notice how multi-bounce ambient occlusion introduces color
-     in the occluded areas. <a href="#figure_multibounceaoanimated">Figure&nbsp;39</a> toggles between multi-bounce ambient
+     in the occluded areas. <a href="#figure_multibounceaoanimated">Figure&nbsp;40</a> toggles between multi-bounce ambient
      occlusion on and off on a lit brick material to highlight the effects of this property.
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    multiBounceAmbientOcclusion <span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
-<center><div class="image" style=""><a href="../images/screenshot_multi_bounce_ao.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_multi_bounce_ao.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_multibounceao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;38:</b> Brick texture amient occlusion map rendered with multi-bounce ambient
+<center><div class="image" style=""><a href="../images/screenshot_multi_bounce_ao.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_multi_bounce_ao.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_multibounceao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;39:</b> Brick texture amient occlusion map rendered with multi-bounce ambient
 occclusion enabled (left) and disabled (right).</span></center></div></center>
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_multi_bounce_ao.gif" target="_blank"><img class="markdeep" src="../images/screenshot_multi_bounce_ao.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_multibounceaoanimated">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;39:</b> Brick texture rendered with multi-bounce ambient
+<center><div class="image" style=""><a href="../images/screenshot_multi_bounce_ao.gif" target="_blank"><img class="markdeep" src="../images/screenshot_multi_bounce_ao.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_multibounceaoanimated">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;40:</b> Brick texture rendered with multi-bounce ambient
 occclusion enabled and disabled.</span></center></div></center>
 </p>
 <a class="target" name="lighting:specularambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&nbsp;</a><a class="target" name="toc4.2.36">&nbsp;</a><h3 id="lighting-specularambientocclusion"><a class="header" href="#lighting-specularambientocclusion">Lighting: specularAmbientOcclusion</a></h3>
@@ -1967,14 +1970,14 @@ occclusion enabled and disabled.</span></center></div></center>
 </p></dd><dt>Description</dt><dd><p>     Static ambient occlusion maps and dynamic ambient occlusion (SSAO, etc.) apply to diffuse
      indirect lighting. When setting this property to other than <code>none</code>, a new ambient occlusion
      term is derived from the surface roughness and applied to specular indirect lighting.
-     This effect helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&nbsp;40</a>.
+     This effect helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&nbsp;41</a>.
      When this value is set to <code>simple</code>, Filament uses a cheap but approximate method of computing
      the specular ambient occlusion term. If this value is set to <code>bentNormals</code>, Filament will use
      a much more accurate but much more expensive method.
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    specularAmbientOcclusion <span class="hljs-punctuation">:</span> simple</span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
-<center><div class="image" style=""><a href="../images/screenshot_specular_ao.gif" target="_blank"><img class="markdeep" src="../images/screenshot_specular_ao.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_specularao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;40:</b> Comparison of specular ambient occlusion on and off. The effect is
+<center><div class="image" style=""><a href="../images/screenshot_specular_ao.gif" target="_blank"><img class="markdeep" src="../images/screenshot_specular_ao.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_specularao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;41:</b> Comparison of specular ambient occlusion on and off. The effect is
 particularly visible under the hose.</span></center></div></center>
 </p>
 <a class="target" name="anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="toc4.2.37">&nbsp;</a><h3 id="anti-aliasing-specularantialiasing"><a class="header" href="#anti-aliasing-specularantialiasing">Anti-aliasing: specularAntiAliasing</a></h3>
@@ -2337,9 +2340,9 @@ masking are handled outside of this function and must therefore be ignored.
 <span class="line">        <span class="hljs-keyword">return</span> shadingData.diffuseColor * light * toon;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre><p>
-The result can be seen in <a href="#figure_toonshading">figure&nbsp;41</a>.
+The result can be seen in <a href="#figure_toonshading">figure&nbsp;42</a>.
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_toon_shading.png" target="_blank"><img class="markdeep" src="../images/screenshot_toon_shading.png" /></a><center><span class="imagecaption"><a class="target" name="figure_toonshading">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;41:</b> simple toon shading implemented with custom
+<center><div class="image" style=""><a href="../images/screenshot_toon_shading.png" target="_blank"><img class="markdeep" src="../images/screenshot_toon_shading.png" /></a><center><span class="imagecaption"><a class="target" name="figure_toonshading">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;42:</b> simple toon shading implemented with custom
 surface shading</span></center></div></center>
 </p>
 <a class="target" name="shaderpublicapis">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis">&nbsp;</a><a class="target" name="toc4.5">&nbsp;</a><h2 id="shader-public-apis"><a class="header" href="#shader-public-apis">Shader public APIs</a></h2>
