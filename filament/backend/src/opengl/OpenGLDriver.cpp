@@ -2879,7 +2879,7 @@ bool OpenGLDriver::isDepthClampSupported() {
     return getContext().ext.EXT_depth_clamp;
 }
 
-bool OpenGLDriver::isAsynchronousOperationSupported() {
+bool OpenGLDriver::isAsynchronousModeEnabled() {
     return getJobQueue() != nullptr;
 }
 

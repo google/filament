@@ -1529,9 +1529,7 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
 
 bool FEngine::isAsynchronousModeEnabled() const noexcept {
     DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
-    return features.backend.enable_asynchronous_operation &&
-            mConfig.asynchronousMode != AsynchronousMode::NONE &&
-            driver.isAsynchronousOperationSupported();
+    return driver.isAsynchronousModeEnabled();
 }
 
 #if defined(__EMSCRIPTEN__)

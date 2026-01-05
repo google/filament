@@ -1520,7 +1520,7 @@ bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
 }
 
-bool VulkanDriver::isAsynchronousOperationSupported() {
+bool VulkanDriver::isAsynchronousModeEnabled() {
     return false;
 }
 

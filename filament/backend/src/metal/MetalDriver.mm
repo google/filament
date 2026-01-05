@@ -1297,7 +1297,7 @@ bool MetalDriver::isDepthClampSupported() {
     return mContext->supportsDepthClamp;
 }
 
-bool MetalDriver::isAsynchronousOperationSupported() {
+bool MetalDriver::isAsynchronousModeEnabled() {
     return false;
 }
 

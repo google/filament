@@ -250,7 +250,7 @@ bool NoopDriver::isDepthClampSupported() {
     return false;
 }
 
-bool NoopDriver::isAsynchronousOperationSupported() {
+bool NoopDriver::isAsynchronousModeEnabled() {
     return false;
 }
 

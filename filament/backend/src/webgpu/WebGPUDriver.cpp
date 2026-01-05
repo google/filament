@@ -873,7 +873,7 @@ bool WebGPUDriver::isDepthClampSupported() {
     return false;
 }
 
-bool WebGPUDriver::isAsynchronousOperationSupported() {
+bool WebGPUDriver::isAsynchronousModeEnabled() {
     return false;
 }
 
