@@ -2533,9 +2533,10 @@ static float4 getVignetteParameters(VignetteOptions const& options,
 }
 
 void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
-        const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-        VignetteOptions const& vignetteOptions, uint32_t const width, uint32_t const height) noexcept {
-
+        FColorGrading const* colorGrading,
+        ColorGradingConfig const& colorGradingConfig,
+        VignetteOptions const& vignetteOptions,
+        uint32_t const width, uint32_t const height) noexcept {
     auto& material = getPostProcessMaterial("colorGradingAsSubpass");
     FMaterialInstance const* const mi =
             configureColorGradingMaterial(material, colorGrading, colorGradingConfig,
@@ -2569,12 +2570,11 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp const op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
-    auto ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
+    auto const ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.customResolve = fixedIndex;
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver, getUboManager());
-    material.getMaterial(mEngine);
 }
 
 void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
@@ -2627,7 +2627,6 @@ void PostProcessManager::clearAncillaryBuffersPrepare(DriverApi& driver) noexcep
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.clearDepth = fixedIndex;
     mi->commit(driver, getUboManager());
-    material.getMaterial(mEngine);
 }
 
 void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
