@@ -1527,9 +1527,9 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 
-bool FEngine::isAsynchronousOperationSupported() const noexcept {
-    return features.backend.enable_asynchronous_operation &&
-        mConfig.asynchronousMode != AsynchronousMode::NONE;
+bool FEngine::isAsynchronousModeEnabled() const noexcept {
+    DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
+    return driver.isAsynchronousModeEnabled();
 }
 
 #if defined(__EMSCRIPTEN__)

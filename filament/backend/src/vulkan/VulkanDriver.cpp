@@ -1520,6 +1520,10 @@ bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
 }
 
+bool VulkanDriver::isAsynchronousModeEnabled() {
+    return false;
+}
+
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU: {

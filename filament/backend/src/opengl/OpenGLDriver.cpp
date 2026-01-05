@@ -2902,6 +2902,10 @@ bool OpenGLDriver::isDepthClampSupported() {
     return getContext().ext.EXT_depth_clamp;
 }
 
+bool OpenGLDriver::isAsynchronousModeEnabled() {
+    return getJobQueue() != nullptr;
+}
+
 bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
