@@ -127,7 +127,7 @@ public:
     }
 
     inline bool isDynamicRenderingSupported() const noexcept {
-        return mDynamicRenderingSupported;
+        return mDynamicRenderingFeatures.dynamicRendering == VK_TRUE;
     }
 
     inline bool isMultiviewEnabled() const noexcept {
@@ -192,6 +192,9 @@ private:
     VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
     };
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR mDynamicRenderingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+    };
     VkPhysicalDevicePortabilitySubsetFeaturesKHR mPortabilitySubsetFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
         // By default, on platforms where we don't have portability subset, then this feature must
@@ -206,7 +209,6 @@ private:
     // device and instance.
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
-    bool mDynamicRenderingSupported = false;
     bool mIsUnifiedMemoryArchitecture = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;

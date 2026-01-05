@@ -288,7 +288,8 @@ public:
 
         /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
-         * Currently only honored by the GL and Metal backends.
+         * Currently only honored by the GL and Metal backends, and the Vulkan backend
+         * when some experimental features are enabled.
          */
         bool disableParallelShaderCompile = false;
 
@@ -347,8 +348,7 @@ public:
          * When the following device extensions are available:
          *      - VK_KHR_dynamic_rendering
          *      - VK_EXT_vertex_input_dynamic_state
-         * Only if the selected implementation of VulkanPlatform returns true for
-         * VulkanPlatform::isPipelineCachePrewarmingDeviceSupported() for the current device.
+         * Should be enabled only for devices where it has been shown this is effective.
          */
         bool vulkanEnableAsyncPipelineCachePrewarming = false;
 

@@ -230,6 +230,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
         VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
         VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+        // Required for dynamic rendering, enable this too.
+        VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME,
+
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
 #endif
@@ -624,16 +627,22 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // TODO: Add support of VK_KHR_global_priority with `driverConfig.gpuContextPriority`
     // in VulkanPlatform::createDriver.
 
-    bool requestPortabilitySubsetImageView2DOn3DImage = false;
+    MiscDeviceFeatures requestedFeatures {};
+
+    if (setContains(deviceExts, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
+        requestedFeatures.dynamicRendering =
+                context.mDynamicRenderingFeatures.dynamicRendering == VK_TRUE;
+    }
+
     if (setContains(deviceExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
-        requestPortabilitySubsetImageView2DOn3DImage =
+        requestedFeatures.imageView2Don3DImage =
                 context.mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
     }
 
     if (mImpl->mDevice == VK_NULL_HANDLE) {
         createLogicalDeviceAndQueues(deviceExts, context.mPhysicalDeviceFeatures.features,
                 context.mPhysicalDeviceVk11Features, context.mProtectedMemorySupported,
-                requestPortabilitySubsetImageView2DOn3DImage);
+                requestedFeatures);
     }
 
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
@@ -903,6 +912,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     chainStruct(&context.mPhysicalDeviceFeatures, &queryProtectedMemoryFeatures);
     chainStruct(&context.mPhysicalDeviceFeatures, &context.mPhysicalDeviceVk11Features);
 
+    if (setContains(deviceExts, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mDynamicRenderingFeatures);
+    }
+
     if (setContains(deviceExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
         // We are on a non-conformant vulkan implementation so we need to ascertain if the features
         // we need are available.
@@ -921,8 +934,6 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
                 setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported =
                 setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        context.mDynamicRenderingSupported =
-                setContains(deviceExts, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
         context.mPipelineCreationFeedbackSupported =
                 setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
         context.mVertexInputDynamicStateSupported =
@@ -931,9 +942,6 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsSupported = scontext->debugUtilsSupported;
         context.mDebugMarkersSupported = scontext->debugMarkersSupported;
-        context.mDynamicRenderingSupported = scontext->dynamicRenderingSupported;
-        context.mPipelineCreationFeedbackSupported = scontext->pipelineCreationFeedbackSupported;
-        context.mVertexInputDynamicStateSupported = scontext->vertexInputDynamicStateSupported;
     }
 
     // Pass along relevant driver config (feature flags)
@@ -976,7 +984,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExtensions,
         VkPhysicalDeviceFeatures const& features,
         VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
-        bool requestImageView2DOn3DImage) noexcept {
+        MiscDeviceFeatures const& requestedFeatures) noexcept {
 
     // Identify and select all the required queues
     mImpl->mGraphicsQueueFamilyIndex =
@@ -1045,10 +1053,18 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     deviceCreateInfo.enabledExtensionCount = (uint32_t) requestExtensions.size();
     deviceCreateInfo.ppEnabledExtensionNames = requestExtensions.data();
 
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRendering = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+        .dynamicRendering = requestedFeatures.dynamicRendering ? VK_TRUE : VK_FALSE,
+    };
+    if (setContains(deviceExtensions, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
+        chainStruct(&deviceCreateInfo, &dynamicRendering);
+    }
+
     VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
         .imageViewFormatSwizzle = VK_TRUE,
-        .imageView2DOn3DImage = requestImageView2DOn3DImage ? VK_TRUE : VK_FALSE,
+        .imageView2DOn3DImage = requestedFeatures.imageView2Don3DImage ? VK_TRUE : VK_FALSE,
         .mutableComparisonSamplers = VK_TRUE,
     };
     if (setContains(deviceExtensions, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
