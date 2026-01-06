@@ -350,8 +350,9 @@ size_t Engine::getRenderTargetCount() const noexcept {
 }
 
 AsyncCallId Engine::runCommandAsync(Invocable<void()>&& command, CallbackHandler* handler,
-        Invocable<void()>&& onComplete) {
-    return downcast(this)->runCommandAsync(std::move(command), handler, std::move(onComplete));
+        AsyncCallbackType onComplete, void* user) {
+    return downcast(this)->runCommandAsync(std::move(command), handler, std::move(onComplete),
+            user);
 }
 
 bool Engine::cancelAsyncCall(AsyncCallId const id) {
