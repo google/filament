@@ -107,7 +107,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
         .handle = createPipeline(mPipelineRequirements),
         .lastUsed = mCurrentTime,
     };
-    assert_invariant(cacheEntry.handle != nullptr && "Pipeline handle is nullptr");
+    assert_invariant(cacheEntry.handle != VK_NULL_HANDLE && "Pipeline handle is nullptr");
     return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
@@ -306,7 +306,7 @@ VkPipeline VulkanPipelineCache::createPipeline(const PipelineKey& key) noexcept 
     assert_invariant(error == VK_SUCCESS);
     if (error != VK_SUCCESS) {
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
-        return nullptr;
+        return VK_NULL_HANDLE;
     }
     return pipeline;
 }
