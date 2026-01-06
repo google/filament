@@ -108,7 +108,7 @@ public:
             utils::EntityInstance<RenderableManager>,   // RENDERABLE_INSTANCE
             math::mat4f,                                // WORLD_TRANSFORM
             FRenderableManager::Visibility,             // VISIBILITY_STATE
-            FRenderableManager::Skinning,               // SKINNING_DATA
+            FRenderableManager::Skinning,               // SKINNING_STATE
             FRenderableManager::SkinningBindingInfo,    // SKINNING_BUFFER
             FRenderableManager::MorphingBindingInfo,    // MORPHING_BUFFER
             FRenderableManager::InstancesInfo,          // INSTANCES
