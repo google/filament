@@ -17,10 +17,11 @@
 #ifndef TNT_FILAMENT_DETAILS_BUFFERALLOCATOR_H
 #define TNT_FILAMENT_DETAILS_BUFFERALLOCATOR_H
 
+#include <utils/FixedCapacityVector.h>
+
 #include <cstdint>
-#include <list>
 #include <map>
-#include <unordered_map>
+
 
 namespace filament {
 
@@ -41,7 +42,7 @@ public:
     static constexpr AllocationId REALLOCATION_REQUIRED = ~0u;
 
     struct Slot {
-        const allocation_size_t offset;       // 4 bytes
+        allocation_size_t offset;             // 4 bytes
         allocation_size_t slotSize;           // 4 bytes
         bool isAllocated;                     // 1 byte
         char padding[3];                      // 3 bytes
@@ -66,21 +67,16 @@ public:
             allocation_size_t size) noexcept;
 
     // Call it when MaterialInstance gives up the ownership of the allocation.
-    // We don't release the slot immediately in this function even if it is not being used,
-    // the release is centralized in releaseFreeSlots().
+    // The slot is released and potential merging is performed immediately.
     void retire(AllocationId id);
 
     // Increments the GPU read-lock.
     void acquireGpu(AllocationId id);
 
     // Decrements the GPU read-lock.
-    // We don't release the slot immediately in this function even if it is not being used,
-    // the release is centralized in releaseFreeSlots().
+    // If the count reaches zero and the slot is not allocated, it is released and merged
+    // immediately.
     void releaseGpu(AllocationId id);
-
-    // Traverse all slots and free all slots that are not being used by both CPU and GPU.
-    // Perform the merge at the same time.
-    void releaseFreeSlots();
 
     // Resets the allocator to its initial state with a new total size.
     // All existing allocations are cleared.
@@ -106,19 +102,18 @@ private:
     // Having an internal node type holding the base slot node and additional information.
     struct InternalSlotNode {
         Slot slot;
-        std::list<InternalSlotNode>::iterator slotPoolIterator;
         std::multimap<allocation_size_t, InternalSlotNode*>::iterator freeListIterator;
-        std::unordered_map<allocation_size_t, InternalSlotNode*>::iterator offsetMapIterator;
     };
 
-    [[nodiscard]] InternalSlotNode* getNodeById(AllocationId id) const noexcept;
+    [[nodiscard]] InternalSlotNode* getNodeById(AllocationId id);
+    [[nodiscard]] const InternalSlotNode* getNodeById(AllocationId id) const;
 
-    bool mHasPendingFrees = false;
+    void freeSlot(InternalSlotNode* node);
+
     allocation_size_t mTotalSize;
     const allocation_size_t mSlotSize; // Size of a single slot in bytes
-    std::list<InternalSlotNode> mSlotPool; // All slots, including both allocated and freed
-    std::multimap</*slot size*/allocation_size_t, InternalSlotNode*> mFreeList;
-    std::unordered_map</*slot offset*/allocation_size_t, InternalSlotNode*> mOffsetMap;
+    utils::FixedCapacityVector<InternalSlotNode> mNodes;
+    std::multimap</*slot size*/ allocation_size_t, InternalSlotNode*> mFreeList;
 };
 
 } // namespace filament

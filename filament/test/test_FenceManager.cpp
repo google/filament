@@ -25,6 +25,8 @@
 #include "private/backend/CommandStream.h"
 #include "private/backend/Driver.h"
 
+#include <unordered_set>
+
 namespace {
 
 using namespace filament;
