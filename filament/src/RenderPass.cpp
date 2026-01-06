@@ -555,6 +555,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
+    auto const* const UTILS_RESTRICT soaSkinningData    = soa.data<FScene::SKINNING_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
     auto const* const UTILS_RESTRICT soaSkinning        = soa.data<FScene::SKINNING_BUFFER>();
     auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
@@ -610,8 +611,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
         // calculate the per-primitive face winding order inversion
         bool const inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
-        bool const hasMorphing = soaVisibility[i].morphing;
-        bool const hasSkinning = soaVisibility[i].skinning;
+        bool const hasMorphing = soaSkinningData[i].morphing;
+        bool const hasSkinning = soaSkinningData[i].skinning;
         bool const hasSkinningOrMorphing = hasSkinning || hasMorphing;
 
         // if we are already an SSR variant, the SRE bit is already set

@@ -82,6 +82,7 @@ public:
         RENDERABLE_INSTANCE,    //   4 | instance of the Renderable component
         WORLD_TRANSFORM,        //  16 | instance of the Transform component
         VISIBILITY_STATE,       //   2 | visibility data of the component
+        SKINNING_STATE,         //   1 | skinning data of the component
         SKINNING_BUFFER,        //   8 | bones uniform buffer handle, offset, indices and weights
         MORPHING_BUFFER,        //  16 | weights uniform buffer handle, count, morph targets
         INSTANCES,              //  16 | instancing info for this Renderable
@@ -107,6 +108,7 @@ public:
             utils::EntityInstance<RenderableManager>,   // RENDERABLE_INSTANCE
             math::mat4f,                                // WORLD_TRANSFORM
             FRenderableManager::Visibility,             // VISIBILITY_STATE
+            FRenderableManager::Skinning,               // SKINNING_DATA
             FRenderableManager::SkinningBindingInfo,    // SKINNING_BUFFER
             FRenderableManager::MorphingBindingInfo,    // MORPHING_BUFFER
             FRenderableManager::InstancesInfo,          // INSTANCES
