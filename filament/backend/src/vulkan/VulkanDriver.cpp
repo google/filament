@@ -804,21 +804,23 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
 
     // If async prewarming is enabled, let's find the proper layout and build the pipeline.
     VulkanDescriptorSetLayout::DescriptorSetLayoutArray vkLayouts {};
-    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; ++i) {
-        if (!program.getDescriptorSetLayouts()[i].has_value()) {
-            continue;
-        }
-        DescriptorSetLayout layoutDescription = *program.getDescriptorSetLayouts()[i];
+    for (const auto& layoutBinding : program.getDescriptorSetLayouts()) {
+        DescriptorSetLayout layoutDescription = layoutBinding.layout;
         auto layoutHandle = mResourceManager.allocHandle<VulkanDescriptorSetLayout>();
         auto layout = mDescriptorSetLayoutCache.createLayout(layoutHandle, std::move(layoutDescription));
-        vkLayouts[i] = layout->getVkLayout();
+        vkLayouts[layoutBinding.set] = layout->getVkLayout();
+    }
+
+    StereoscopicType stereoscopicType = mStereoscopicType;
+    if (stereoscopicType == StereoscopicType::MULTIVIEW && !program.isMultiview()) {
+        stereoscopicType = StereoscopicType::NONE;
     }
 
     VkPipelineLayout layout = mPipelineLayoutCache.getLayout(vkLayouts, vprogram);
     mPipelineCache.asyncPrewarmCache(
         *vprogram.get(),
         layout,
-        mStereoscopicType,
+        stereoscopicType,
         mStereoscopicEyeCount,
         program.getPriorityQueue());
 }
@@ -1826,7 +1828,7 @@ void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
         if (mContext.shouldUsePipelineCachePrewarming()) {
-            mPipelineCache.notifyCachePrewarmComplete(handler, callback, user);
+            mPipelineCache.addCachePrewarmCallback(handler, callback, user);
         } else {
             scheduleCallback(handler, user, callback);
         }

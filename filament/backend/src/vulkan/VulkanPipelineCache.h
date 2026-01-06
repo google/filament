@@ -105,15 +105,15 @@ public:
     // on the implementation of the driver on the current device; it's expected to work
     // on devices with VK_EXT_vertex_input_dynamic_state and VK_KHR_dynamic_rendering.
     void asyncPrewarmCache(const VulkanProgram& program, VkPipelineLayout layout,
-        StereoscopicType stereoscopicType, uint8_t stereoscopicViewCount,
-        CompilerPriorityQueue priority);
+                           StereoscopicType stereoscopicType, uint8_t stereoscopicViewCount,
+                           CompilerPriorityQueue priority);
 
     // Notifies the callback once all in-flight async cache prewarm jobs are complete.
     // This typically signals that it is safe to use a material at draw time without
     // hitching.
-    void notifyCachePrewarmComplete(CallbackHandler* handler,
-                                    const CallbackHandler::Callback callback,
-                                    void* user);
+    void addCachePrewarmCallback(CallbackHandler* handler,
+                                 const CallbackHandler::Callback callback,
+                                 void* user);
 
     // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
     void bindPipeline(VulkanCommandBuffer* commands);

@@ -176,8 +176,11 @@ void VulkanPipelineCache::asyncPrewarmCache(const VulkanProgram& program,
     CallbackManager::Handle cmh = mCallbackManager.get();
     auto token = std::make_shared<ProgramToken>();
     mCompilerThreadPool.queue(priority, token, [this, key, dynamicOptions, cmh]() mutable {
-        createPipeline(key, dynamicOptions);
+        VkPipeline pipeline = createPipeline(key, dynamicOptions);
         mCallbackManager.put(cmh);
+        // We don't actually need this pipeline, we just wanted to force the driver to cache
+        // the pipeline's information.
+        vkDestroyPipeline(mDevice, pipeline, VKALLOC);
     });
 }
 
@@ -210,7 +213,6 @@ VkPipeline VulkanPipelineCache::createPipeline(
     VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT];
     VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];
     if (!dynamicOptions.useDynamicVertexInputState) {
-        // Expand our size-optimized structs into the proper Vk structs.
         uint32_t numVertexAttribs = 0;
         uint32_t numVertexBuffers = 0;
 
@@ -243,17 +245,19 @@ VkPipeline VulkanPipelineCache::createPipeline(
 
     // Note - if we ever add more possible states, we should call `reserve()`
     // on this vector.
-    std::vector<VkDynamicState> enabledDynamicStates = {
+    constexpr size_t maxDynamicStates = 3;
+    size_t numDynamicStates = 2;
+    VkDynamicState enabledDynamicStates[maxDynamicStates] = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR,
     };
     if (dynamicOptions.useDynamicVertexInputState) {
-        enabledDynamicStates.push_back(VK_DYNAMIC_STATE_VERTEX_INPUT_EXT);
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_VERTEX_INPUT_EXT;
     }
     VkPipelineDynamicStateCreateInfo dynamicState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = static_cast<uint32_t>(enabledDynamicStates.size()),
-        .pDynamicStates = enabledDynamicStates.data(),
+        .dynamicStateCount = static_cast<uint32_t>(numDynamicStates),
+        .pDynamicStates = enabledDynamicStates,
     };
 
     auto const& raster = key.rasterState;
@@ -439,9 +443,9 @@ void VulkanPipelineCache::bindVertexArray(VkVertexInputAttributeDescription cons
     }
 }
 
-void VulkanPipelineCache::notifyCachePrewarmComplete(CallbackHandler* handler,
-                                                     const CallbackHandler::Callback callback,
-                                                     void* user) {
+void VulkanPipelineCache::addCachePrewarmCallback(CallbackHandler* handler,
+                                                  const CallbackHandler::Callback callback,
+                                                  void* user) {
     if (callback) {
         mCallbackManager.setCallback(handler, callback, user);
     }
