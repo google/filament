@@ -43,7 +43,7 @@ io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
 }
 
 utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out, ShaderStage stage,
-        MaterialInfo const& material, filament::Variant v) const {
+        MaterialInfo const& material, filament::Variant v, uint32_t apiLevel) const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
             // Vulkan requires version 310 or higher
@@ -385,6 +385,10 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             generateDefine(out, "textureCubeLod", "textureLod");
         }
     }
+
+    // Api level enforcement.
+    generateDefine(out, "CLIENT_MATERIAL_API_LEVEL", apiLevel);
+    generateDefine(out, "UNSTABLE_MATERIAL_API_LEVEL", filament::UNSTABLE_MATERIAL_API_LEVEL);
 
     out << "\n";
     return out;

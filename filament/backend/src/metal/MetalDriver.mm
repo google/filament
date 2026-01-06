@@ -1297,6 +1297,10 @@ bool MetalDriver::isDepthClampSupported() {
     return mContext->supportsDepthClamp;
 }
 
+bool MetalDriver::isAsynchronousModeEnabled() {
+    return false;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:

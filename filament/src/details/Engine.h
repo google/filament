@@ -216,7 +216,7 @@ public:
         return getDriver().isStereoSupported();
     }
 
-    bool isAsynchronousOperationSupported() const noexcept;
+    bool isAsynchronousModeEnabled() const noexcept;
 
     static size_t getMaxStereoscopicEyes() noexcept {
         return CONFIG_MAX_STEREOSCOPIC_EYES;
@@ -783,6 +783,10 @@ public:
                 bool assert_native_window_is_valid = false;
             } opengl;
             struct {
+                // In certain GPU drivers, graphics pipelines are cached based on a subset of their
+                // parameters. In those cases, we can create fake pipelines ahead of time to ensure
+                // a cache hit when creating graphics pipelines at draw time, eliminating hitching.
+                bool enable_pipeline_cache_prewarming = false;
                 // On Unified Memory Architecture device, it is possible to bypass using the staging
                 // buffer. This is an experimental feature that still needs to be implemented fully
                 // before it can be fully enabled.
@@ -837,6 +841,9 @@ public:
             { "engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4",
               "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
               &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
+            { "backend.vulkan.enable_pipeline_cache_prewarming",
+              "Enables an experimental approach to parallel shader compilation on Vulkan.",
+              &features.backend.vulkan.enable_pipeline_cache_prewarming, false },
             { "backend.vulkan.enable_staging_buffer_bypass",
               "vulkan: enable a staging bypass logic for unified memory architecture.",
               &features.backend.vulkan.enable_staging_buffer_bypass, false },
