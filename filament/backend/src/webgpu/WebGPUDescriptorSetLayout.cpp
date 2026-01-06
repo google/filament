@@ -73,15 +73,15 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     }
 
     const unsigned int samplerCount =
-            std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
-                return DescriptorSetLayoutBinding::isSampler(fEntry.type);
+            std::count_if(layout.descriptors.begin(), layout.descriptors.end(), [](auto& fEntry) {
+                return DescriptorSetLayoutDescriptor::isSampler(fEntry.type);
             });
 
     std::vector<wgpu::BindGroupLayoutEntry> wEntries;
-    wEntries.reserve(layout.bindings.size() + samplerCount);
+    wEntries.reserve(layout.descriptors.size() + samplerCount);
     mBindGroupEntries.reserve(wEntries.capacity());
 
-    for (auto fEntry: layout.bindings) {
+    for (auto fEntry: layout.descriptors) {
         auto& wEntry = wEntries.emplace_back();
         auto& entryInfo = mBindGroupEntries.emplace_back();
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
@@ -198,13 +198,13 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     FWGPU_LOGD << "WebGPUDescriptorSetLayout:";
     FWGPU_LOGD << "  label: " << label;
     FWGPU_LOGD << "  wgpu::BindGroupLayout handle: " << mLayout.Get();
-    FWGPU_LOGD << "  Filament bindings (" << layout.bindings.size() << "):";
-    for (DescriptorSetLayoutBinding const& layoutBinding: layout.bindings) {
-        FWGPU_LOGD << "    binding:" << +layoutBinding.binding
-                   << " type:" << filamentDescriptorTypeToString(layoutBinding.type)
-                   << " stageFlags:" << filamentStageFlagsToString(layoutBinding.stageFlags)
-                   << " flags:" << filamentDescriptorFlagsToString(layoutBinding.flags)
-                   << " count:" << layoutBinding.count;
+    FWGPU_LOGD << "  Filament bindings (" << layout.descriptors.size() << "):";
+    for (DescriptorSetLayoutDescriptor const& descriptor: layout.descriptors) {
+        FWGPU_LOGD << "    binding:" << +descriptor.binding
+                   << " type:" << filamentDescriptorTypeToString(descriptor.type)
+                   << " stageFlags:" << filamentStageFlagsToString(descriptor.stageFlags)
+                   << " flags:" << filamentDescriptorFlagsToString(descriptor.flags)
+                   << " count:" << descriptor.count;
     }
 #endif
 }
