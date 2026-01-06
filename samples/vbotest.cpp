@@ -16,9 +16,11 @@
 
 #include "common/arguments.h"
 
+#include <filament/Camera.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
@@ -56,7 +58,6 @@ int main(int argc, char** argv) {
 
     App app;
     auto setup = [&app, &vbo](Engine* engine, View* view, Scene* scene) {
-
         // Populate vertex buffer.
         app.vb = VertexBuffer::Builder().vertexCount(3).bufferCount(1)
                 .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 8)
@@ -95,7 +96,22 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().run(config, setup, cleanup);
+    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+        constexpr float ZOOM = 1.5f;
+        const uint32_t w = view->getViewport().width;
+        const uint32_t h = view->getViewport().height;
+        const float aspect = (float) w / h;
+        app.cam->setProjection(Camera::Projection::ORTHO,
+            -aspect * ZOOM, aspect * ZOOM,
+            -ZOOM, ZOOM, 0, 1);
+    });
+
+    FilamentApp::get().run(config, setup, cleanup, FilamentApp::ImGuiCallback(),
+            [](Engine*, View*, Scene*, Renderer* renderer) {
+                Renderer::ClearOptions options;
+                options.clear = true;
+                renderer->setClearOptions(options);
+            });
 
     return 0;
 }
