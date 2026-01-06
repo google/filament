@@ -19,6 +19,7 @@
 #include "fg/details/ResourceCreationContext.h"
 
 #include <fg/FrameGraphDummyLink.h>
+#include <fg/FrameGraphTexture.h>
 
 #include <utils/StaticString.h>
 
@@ -29,19 +30,38 @@
 
 namespace filament {
 
+// Helper to check if T::create(Args...) exists
+template<typename T, typename... Args>
+struct check_create {
+    template<typename U>
+    static auto test(int) -> decltype(
+        std::declval<U&>().create(std::declval<Args>()...),
+        std::true_type{});
+    template<typename>
+    static std::false_type test(...);
+    static constexpr bool value = decltype(test<T>(0))::value;
+};
+
+template<typename T, typename... Args>
+inline constexpr bool check_create_v = check_create<T, Args...>::value;
+
 // A type-trait to check if a resource is a "backend" resource, i.e. if it has a
 // create() method that takes a DriverApi& as its first parameter.
-template<typename T, typename = void>
-struct is_backend_resource : std::false_type {};
-
 template<typename T>
-struct is_backend_resource<T, std::void_t<decltype(
-        std::declval<T&>().create(
-                std::declval<backend::DriverApi&>(),
-                std::declval<utils::StaticString>(),
-                std::declval<typename T::Descriptor const&>(),
-                std::declval<typename T::Usage>())
-)>> : std::true_type {};
+struct is_backend_resource : std::bool_constant<
+            check_create_v<T,
+                backend::DriverApi&,
+                utils::StaticString,
+                typename T::Descriptor const&,
+                typename T::Usage> ||
+            check_create_v<T,
+                backend::DriverApi&,
+                utils::StaticString,
+                typename T::Descriptor const&> ||
+            check_create_v<T,
+                backend::DriverApi&,
+                typename T::Descriptor const&>> {
+};
 
 template<typename T>
 inline constexpr bool is_backend_resource_v = is_backend_resource<T>::value;
@@ -64,12 +84,37 @@ struct ResourceAllocator {
             T::Descriptor const& desc, T::Usage usage) {
         if constexpr (is_backend_resource_v<T>) {
             // This is a backend resource, pass the driver.
-            resource.create(context.driver, std::move(name), desc, usage);
+            if constexpr (check_create_v<T,
+                    backend::DriverApi&,
+                    utils::StaticString,
+                    typename T::Descriptor const&,
+                    typename T::Usage>) {
+                resource.create(context.driver, name, desc, usage);
+            } else if constexpr (check_create_v<T,
+                    backend::DriverApi&,
+                    utils::StaticString,
+                    typename T::Descriptor const&>) {
+                resource.create(context.driver, name, desc);
+            } else {
+                resource.create(context.driver, desc);
+            }
         } else {
             // This is a generic resource, call the simple version.
-            resource.create(std::move(name), desc, usage);
+            if constexpr (check_create_v<T,
+                    utils::StaticString,
+                    typename T::Descriptor const&,
+                    typename T::Usage>) {
+                resource.create(name, desc, usage);
+            } else if constexpr (check_create_v<T,
+                    utils::StaticString,
+                    typename T::Descriptor const&>) {
+                resource.create(name, desc);
+            } else {
+                resource.create(desc);
+            }
         }
     }
+
     static void destroy(T& resource, ResourceCreationContext const& context) {
         if constexpr (is_backend_resource_v<T>) {
             // This is a backend resource, pass the driver.
@@ -96,7 +141,7 @@ struct ResourceAllocator<FrameGraphTexture> {
             // FIXME: I think we should restrict this to attachments and blit destinations only
             usage |= FrameGraphTexture::Usage::PROTECTED;
         }
-        resource.create(context.getTextureCache(), std::move(name), desc, usage);
+        resource.create(context.getTextureCache(), name, desc, usage);
     }
 
     static void destroy(FrameGraphTexture& resource, ResourceCreationContext const& context) {
