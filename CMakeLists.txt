@@ -976,6 +976,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
     add_subdirectory(${TOOLS}/uberz)
+    add_subdirectory(${TOOLS}/specgen)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)

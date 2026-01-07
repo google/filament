@@ -1057,10 +1057,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     builder.declareRenderPass("Picking Resolve Target", {
                             .attachments = { .color = { data.picking }}
                     });
+                    // This pass' output is the result of the picking query (via readPixels),
+                    // which exists outside the FrameGraph. So it needs to declare a side effect.
                     builder.sideEffect();
                 },
-                [=, &view](FrameGraphResources const& resources,
-                        auto const&, DriverApi& driver) mutable {
+                [=, &view](FrameGraphResources const& resources, auto&, DriverApi& driver) mutable {
                     auto [target, params] = resources.getRenderPassInfo();
                     view.executePickingQueries(driver, target, scale * aoOptions.resolution);
                 });
@@ -1108,9 +1109,12 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }();
 
     // a non-drawing pass to prepare everything that need to be before the color passes execute
-    fg.addTrivialSideEffectPass("Prepare Color Passes",
-            [colorGradingConfig, colorGrading, colorBufferDesc, vignetteOptions,
-                &js, &view, &ppm](DriverApi& driver) {
+    fg.addPass<FrameGraph::Empty>("Prepare Color Passes",
+            [](FrameGraph::Builder& builder) {
+                // FIXME: use a dummy resource instead
+                builder.sideEffect();
+            },
+            [=, &js, &view, &ppm](auto&, auto&, DriverApi& driver) {
                 // prepare color grading as subpass material
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
@@ -1132,7 +1136,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     view.commitFroxels(driver);
                 }
             });
-
 
     // --------------------------------------------------------------------------------------------
     // Color passes
@@ -1270,8 +1273,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
                     // we can't use colorPassOutput here because it could be tonemapped
                     data.history = builder.sample(colorPassOutput.linearColor); // FIXME: an access must be declared for detach(), why?
-                }, [&view, projection](FrameGraphResources const& resources, auto const& data,
-                        DriverApi&) {
+                }, [&view, projection](FrameGraphResources const& resources, auto const& data) {
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
                     current.ssr.projection = projection;

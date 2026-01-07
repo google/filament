@@ -276,23 +276,24 @@ public:
      * @return          A reference to a Pass object
      */
     template<typename Data, typename Setup, typename Execute>
-    FrameGraphPass<Data>& addPass(const char* name, Setup setup, Execute&& execute);
-
-    template<typename Data, typename Setup>
-    FrameGraphPass<Data>& addPass(const char* name, Setup setup);
+    auto& addPass(const char* name, Setup setup, Execute&& execute);
 
     /**
-     * Adds a simple execute-only pass with side-effect. Use with caution as such a pass is never
-     * culled.
+     * Add a setup only pass to the frame graph.
      *
-     * @tparam Execute  A lambda of type [](DriverApi&)
+     * @tparam Data     A user-defined structure containing this pass data
+     * @tparam Setup    A lambda of type [](Builder&, Data&).
      * @param name      A name for this pass. Used for debugging only.
-     * @param execute   lambda called asynchronously from FrameGraph::execute(),
-     *                  where immediate drawing commands can be issued.
-     *                  Captures must be done by copy.
+     * @param setup     lambda called synchronously, used to declare which resources or
+     *                  sub-resources.
+     * @return
      */
-    template<typename Execute>
-    void addTrivialSideEffectPass(const char* name, Execute&& execute);
+    template<typename Data, typename Setup>
+    auto& addPass(const char* name, Setup&& setup) {
+        return addPass<Data>(name, std::forward<Setup>(setup),
+            [](FrameGraphResources const&, auto const&, backend::DriverApi&) {
+            });
+    }
 
     /**
      * Allocates concrete resources and culls unreferenced passes.
@@ -549,37 +550,22 @@ private:
 };
 
 template<typename Data, typename Setup, typename Execute>
-FrameGraphPass<Data>& FrameGraph::addPass(char const* name, Setup setup, Execute&& execute) {
+auto& FrameGraph::addPass(char const* name, Setup setup, Execute&& execute) {
     static_assert(sizeof(Execute) < 2048, "Execute() lambda is capturing too much data.");
 
     // create the FrameGraph pass
-    auto* const pass = mArena.make<FrameGraphPassConcrete<Data, Execute>>(std::forward<Execute>(execute));
+    auto* const pass = mArena.make<FrameGraphPass<Data, Execute>>(std::forward<Execute>(execute));
 
     Builder builder(addPassInternal(name, pass));
-    setup(builder, const_cast<Data&>(pass->getData()));
+
+    if constexpr (std::is_invocable_v<Setup, Builder&, Data&>) {
+        setup(builder, const_cast<Data&>(pass->getData()));
+    } else if constexpr (std::is_invocable_v<Setup, Builder&>) {
+        setup(builder);
+    }
 
     // return a reference to the pass to the user
     return *pass;
-}
-
-template<typename Data, typename Setup>
-FrameGraphPass<Data>& FrameGraph::addPass(char const* name, Setup setup) {
-    // create the FrameGraph pass without an execute stage
-    auto* const pass = mArena.make<FrameGraphPass<Data>>();
-
-    Builder builder(addPassInternal(name, pass));
-    setup(builder, const_cast<Data&>(pass->getData()));
-
-    // return a reference to the pass to the user
-    return *pass;
-}
-
-template<typename Execute>
-void FrameGraph::addTrivialSideEffectPass(char const* name, Execute&& execute) {
-    addPass<Empty>(name, [](Builder& builder, auto&) { builder.sideEffect(); },
-            [execute](FrameGraphResources const&, auto const&, backend::DriverApi& driver) {
-                execute(driver);
-            });
 }
 
 template<typename RESOURCE>
