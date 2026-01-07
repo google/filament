@@ -63,6 +63,7 @@ if (TNT_DEV)
             test_BufferAllocator.cpp
             test_BufferAllocatorStress.cpp
             test_CircularQueue.cpp
+            test_compact.cpp
             test_FenceManager.cpp
             test_UboManager.cpp
             filament_test_exposure.cpp

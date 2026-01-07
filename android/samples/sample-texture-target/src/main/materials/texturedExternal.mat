@@ -1,0 +1,20 @@
+material {
+    name : textured,
+    shadingModel : unlit,
+    parameters : [
+        {
+            type : samplerExternal,
+            name : texture
+        }
+    ],
+    requires: [
+        uv0
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_texture, uvToRenderTargetUV(getUV0()));
+    }
+}

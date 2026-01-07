@@ -206,6 +206,7 @@ private:
     bool const mIsSRGBSwapChainSupported;
     bool const mIsMSAASwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
+    backend::AsynchronousMode const mAsynchronousMode;
 
     // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the
     // data to process it at call time. So we store it and process it during updateStreams.

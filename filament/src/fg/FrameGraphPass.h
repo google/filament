@@ -23,6 +23,8 @@
 
 #include <utils/Allocator.h>
 
+#include <type_traits>
+
 namespace filament {
 
 class FrameGraphPassExecutor {
@@ -53,42 +55,34 @@ public:
     ~FrameGraphPassBase() noexcept override;
 };
 
-template<typename Data>
-class FrameGraphPass : public FrameGraphPassBase {
+template<typename Data, typename Execute>
+class FrameGraphPass final : public FrameGraphPassBase {
     friend class FrameGraph;
 
     // allow our allocators to instantiate us
     template<typename, typename, typename, typename>
     friend class utils::Arena;
 
-    void execute(FrameGraphResources const&, backend::DriverApi&) noexcept override {}
+    explicit FrameGraphPass(Execute&& execute) noexcept
+            : mExecute(std::move(execute)) {
+    }
 
-protected:
-    FrameGraphPass() = default;
+    void execute(FrameGraphResources const& resources,
+            backend::DriverApi& driver) noexcept override {
+        // execute can omit the DriverApi parameter
+        if constexpr (std::is_invocable_v<Execute, FrameGraphResources const&, Data&>) {
+            mExecute(resources, mData);
+        } else {
+            mExecute(resources, mData, driver);
+        }
+    }
+
     Data mData;
+    Execute mExecute;
 
 public:
     Data const& getData() const noexcept { return mData; }
     Data const* operator->() const { return &mData; }
-};
-
-template<typename Data, typename Execute>
-class FrameGraphPassConcrete : public FrameGraphPass<Data> {
-    friend class FrameGraph;
-
-    // allow our allocators to instantiate us
-    template<typename, typename, typename, typename>
-    friend class utils::Arena;
-
-    explicit FrameGraphPassConcrete(Execute&& execute) noexcept
-            : mExecute(std::move(execute)) {
-    }
-
-    void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept final {
-        mExecute(resources, this->mData, driver);
-    }
-
-    Execute mExecute;
 };
 
 } // namespace filament

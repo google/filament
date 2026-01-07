@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANPIPELINECACHE_H
 #define TNT_FILAMENT_BACKEND_VULKANPIPELINECACHE_H
 
+#include "CallbackManager.h"
+#include "CompilerThreadPool.h"
 #include "VulkanCommands.h"
 
 #include <backend/DriverEnums.h>
@@ -86,14 +88,30 @@ public:
 
     static_assert(sizeof(RasterState) == 16, "RasterState must not have implicit padding.");
 
-    VulkanPipelineCache(VkDevice device, VulkanContext const& context);
+    /**
+     * Creates a new instance of a pipeline cache for graphics pipelines.
+     *
+     * @param driver The driver this is being instantiated for. This is used only for construction of
+     *               the callback manager, which references the driver for scheduling callbacks.
+     * @param device The device that the pipelines will be created and run on.
+     * @param context Information about the current instance of Vulkan, such as supported extensions,
+     *                and enabled features.
+     */
+    VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context);
 
-    void bindLayout(VkPipelineLayout layout) noexcept;
+    // Loads a fake pipeline into memory on a separate thread, with the intent of
+    // preloading the Vulkan cache with enough information to have a cache hit when
+    // compiling the pipeline on the main thread at draw time. This is very dependent
+    // on the implementation of the driver on the current device; it's expected to work
+    // on devices with VK_EXT_vertex_input_dynamic_state and VK_KHR_dynamic_rendering.
+    void asyncPreloadCache(fvkmemory::resource_ptr<VulkanProgram> program,
+                           VkPipelineLayout layout);
 
     // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
     void bindPipeline(VulkanCommandBuffer* commands);
 
     // Each of the following methods are fast and do not make Vulkan calls.
+    void bindLayout(VkPipelineLayout layout) noexcept;
     void bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept;
     void bindRasterState(RasterState const& rasterState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
@@ -196,7 +214,7 @@ private:
     PipelineMap mPipelines;
 
     // These helpers all return unstable pointers that should not be stored.
-    PipelineCacheEntry* createPipeline() noexcept;
+    VkPipeline createPipeline(const PipelineKey& key) noexcept;
 
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
@@ -210,6 +228,14 @@ private:
 
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
+
+    // Thread pool that allows us to "prewarm" the pipeline cache, reducing draw-time
+    // pipeline compilation time.
+    CompilerThreadPool mCompilerThreadPool;
+
+    // Callback manager that allows us to notify the frontend when a set of pipelines have
+    // been prewarmed, signifying that it is safe to compile pipelines at draw time.
+    CallbackManager mCallbackManager;
 
     [[maybe_unused]] VulkanContext const& mContext;
 };

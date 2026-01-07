@@ -24,7 +24,7 @@
 #include "FrameInfo.h"
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 #include "ShadowMap.h"
 #include "ShadowMapManager.h"
 

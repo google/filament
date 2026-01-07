@@ -599,7 +599,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 passBuilder.variant(structureVariant);
                 passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SSAO);
 
-                RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                RenderPass pass{ passBuilder.build(mEngine) };
+                pass.finalize(mEngine, driver);
                 auto const out = resources.getRenderPassInfo();
                 driver.beginRenderPass(out.target, out.params);
                 pass.getExecutor().execute(mEngine, driver);
@@ -710,7 +711,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
                         passBuilder.variant(pickingVariant);
                         passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::DEPTH);
 
-                        RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                        RenderPass pass{ passBuilder.build(mEngine) };
+                        pass.finalize(mEngine, driver);
                         driver.beginRenderPass(target, params);
                         pass.getExecutor().execute(mEngine, driver);
                         driver.endRenderPass();
@@ -808,7 +810,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // generate all our drawing commands, except blended objects.
                 passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
 
-                RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                RenderPass pass{ passBuilder.build(mEngine) };
+                pass.finalize(mEngine, driver);
                 driver.beginRenderPass(out.target, out.params);
                 pass.getExecutor().execute(mEngine, driver);
                 driver.endRenderPass();
@@ -2530,11 +2533,12 @@ static float4 getVignetteParameters(VignetteOptions const& options,
 }
 
 void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
-        const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-        VignetteOptions const& vignetteOptions, uint32_t const width, uint32_t const height) noexcept {
-
+        FColorGrading const* colorGrading,
+        ColorGradingConfig const& colorGradingConfig,
+        VignetteOptions const& vignetteOptions,
+        uint32_t const width, uint32_t const height) noexcept {
     auto& material = getPostProcessMaterial("colorGradingAsSubpass");
-    FMaterialInstance* const mi =
+    FMaterialInstance const* const mi =
             configureColorGradingMaterial(material, colorGrading, colorGradingConfig,
                     vignetteOptions, width, height);
     mi->commit(driver, getUboManager());
@@ -2566,12 +2570,11 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp const op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
-    auto ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
+    auto const ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.customResolve = fixedIndex;
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver, getUboManager());
-    material.getMaterial(mEngine);
 }
 
 void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
@@ -2624,7 +2627,6 @@ void PostProcessManager::clearAncillaryBuffersPrepare(DriverApi& driver) noexcep
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.clearDepth = fixedIndex;
     mi->commit(driver, getUboManager());
-    material.getMaterial(mEngine);
 }
 
 void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
@@ -3152,7 +3154,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 // an "import".
                 builder.sideEffect();
                 data.color = builder.sample(history); // FIXME: an access must be declared for detach(), why?
-            }, [&current](FrameGraphResources const& resources, auto const& data, auto&) {
+            }, [&current](FrameGraphResources const& resources, auto const& data) {
                 resources.detach(data.color, &current.color, &current.desc);
             });
 
@@ -3803,7 +3805,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 
     auto const& depthMipmapPass = fg.addPass<VsmMipData>("VSM Generate Mipmap Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                utils::StaticString name = builder.getName(input);
+                StaticString const name = builder.getName(input);
                 data.in = builder.sample(input);
 
                 auto out = builder.createSubresource(data.in, "Mip level", {

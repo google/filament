@@ -22,7 +22,7 @@
 #include "PostProcessManager.h"
 #include "RendererUtils.h"
 #include "RenderPass.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/Engine.h"
 #include "details/Fence.h"
@@ -99,7 +99,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
         mUserEpoch(engine.getEngineEpoch()),
-        mResourceAllocator(std::make_unique<ResourceAllocator>(
+        mResourceAllocator(std::make_unique<TextureCache>(
                 engine.getSharedResourceAllocatorDisposer(),
                 engine.getConfig(),
                 engine.getDriverApi()))
@@ -824,6 +824,16 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         xvp.bottom = int32_t(guardBand);
     }
 
+    // The taaCameraInfo is the taa-jittered cameraInfo. It must be used for the color pass.
+    // TODO: what's unclear is whether it should be used for other passes (e.g. SSR, DoF,
+    //       structure). For now it's only used for the color pass, but should revisit.
+    auto taaCameraInfo = cameraInfo;
+    if (UTILS_UNLIKELY(taaOptions.enabled)) {
+        // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
+        ppm.TaaJitterCamera(svp, taaOptions, view.getFrameHistory(),
+                &FrameHistoryEntry::taa, &taaCameraInfo);
+    }
+
     /*
      * Frame graph
      */
@@ -842,7 +852,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
      */
 
     auto [bias, derivativeScale] = prepareUpscaler(scale, taaOptions, dsrOptions);
-    view.prepare(engine, driver, rootArenaScope, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
+    view.prepare(engine, driver, rootArenaScope, svp, taaCameraInfo, getShaderUserTime(), needsAlphaChannel);
     view.prepareLodBias(bias, derivativeScale);
     view.prepareSSAO(aoOptions);
     view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
@@ -1047,25 +1057,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     builder.declareRenderPass("Picking Resolve Target", {
                             .attachments = { .color = { data.picking }}
                     });
+                    // This pass' output is the result of the picking query (via readPixels),
+                    // which exists outside the FrameGraph. So it needs to declare a side effect.
                     builder.sideEffect();
                 },
-                [=, &view](FrameGraphResources const& resources,
-                        auto const&, DriverApi& driver) mutable {
+                [=, &view](FrameGraphResources const& resources, auto&, DriverApi& driver) mutable {
                     auto [target, params] = resources.getRenderPassInfo();
                     view.executePickingQueries(driver, target, scale * aoOptions.resolution);
                 });
-    }
-
-    // Store this frame's camera projection in the frame history.
-    // TODO: We do this after we're configured the structure and ssao passes;
-    //       but I'm not 100% sure this should be done before or after.
-    if (UTILS_UNLIKELY(taaOptions.enabled)) {
-        // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
-        ppm.TaaJitterCamera(svp, taaOptions, view.getFrameHistory(),
-                &FrameHistoryEntry::taa, &cameraInfo);
-
-        // this just re-set the color pass UBO content
-        view.prepareCamera(engine, cameraInfo);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -1091,6 +1090,52 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     reflections, ssrConfig.reflection, false, ssrConfig);
         }
     }
+
+    // --------------------------------------------------------------------------------------------
+    // Prepare Color passes
+
+    FrameGraphTexture::Descriptor const colorBufferDesc = [&] {
+        FrameGraphTexture::Descriptor desc{
+            .width = config.physicalViewport.width,
+            .height = config.physicalViewport.height,
+            .format = config.hdrFormat
+        };
+        // Set the depth to the number of layers if we're rendering multiview.
+        if (isRenderingMultiview) {
+            desc.depth = engine.getConfig().stereoscopicEyeCount;
+            desc.type = SamplerType::SAMPLER_2D_ARRAY;
+        }
+        return desc;
+    }();
+
+    // a non-drawing pass to prepare everything that need to be before the color passes execute
+    fg.addPass<FrameGraph::Empty>("Prepare Color Passes",
+            [](FrameGraph::Builder& builder) {
+                // FIXME: use a dummy resource instead
+                builder.sideEffect();
+            },
+            [=, &js, &view, &ppm](auto&, auto&, DriverApi& driver) {
+                // prepare color grading as subpass material
+                if (colorGradingConfig.asSubpass) {
+                    ppm.colorGradingPrepareSubpass(driver,
+                            colorGrading, colorGradingConfig, vignetteOptions,
+                            colorBufferDesc.width, colorBufferDesc.height);
+                } else if (colorGradingConfig.customResolve) {
+                    ppm.customResolvePrepareSubpass(driver,
+                            PostProcessManager::CustomResolveOp::COMPRESS);
+                }
+
+                if (view.getChannelDepthClearMask().any()) {
+                    ppm.clearAncillaryBuffersPrepare(driver);
+                }
+
+                // We use a framegraph pass to wait for froxelization to finish (so it can be done
+                // in parallel with .compile()
+                if (auto sync = view.getFroxelizerSync()) {
+                    js.waitAndRelease(sync);
+                    view.commitFroxels(driver);
+                }
+            });
 
     // --------------------------------------------------------------------------------------------
     // Color passes
@@ -1150,7 +1195,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 
     // create the pass, which generates all its commands (this is a heavy operation)
-    RenderPass const pass{ passBuilder.build(engine, driver) };
+    RenderPass const pass{ passBuilder.build(engine) };
 
     // now that we have the commands we can figure out if we have refraction commands
     auto* const firstRefractionCommand = [&view](RenderPass const& pass) {
@@ -1178,39 +1223,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // the scissor viewport during construction
     const_cast<RenderPass&>(pass).setScissorViewport(useIntermediateBuffer ? xvp : vp);
 
-    FrameGraphTexture::Descriptor colorBufferDesc = {
-            .width = config.physicalViewport.width,
-            .height = config.physicalViewport.height,
-            .format = config.hdrFormat
-    };
-
-    // Set the depth to the number of layers if we're rendering multiview.
-    if (isRenderingMultiview) {
-        colorBufferDesc.depth = engine.getConfig().stereoscopicEyeCount;
-        colorBufferDesc.type = SamplerType::SAMPLER_2D_ARRAY;
-    }
-
-    // a non-drawing pass to prepare everything that need to be before the color passes execute
-    fg.addTrivialSideEffectPass("Prepare Color Passes",
-            [=, &js, &view, &ppm](DriverApi& driver) {
-                // prepare color grading as subpass material
-                if (colorGradingConfig.asSubpass) {
-                    ppm.colorGradingPrepareSubpass(driver,
-                            colorGrading, colorGradingConfig, vignetteOptions,
-                            colorBufferDesc.width, colorBufferDesc.height);
-                } else if (colorGradingConfig.customResolve) {
-                    ppm.customResolvePrepareSubpass(driver,
-                            PostProcessManager::CustomResolveOp::COMPRESS);
-                }
-
-                // We use a framegraph pass to wait for froxelization to finish (so it can be done
-                // in parallel with .compile()
-                if (auto sync = view.getFroxelizerSync()) {
-                    js.waitAndRelease(sync);
-                    view.commitFroxels(driver);
-                }
-            }
-    );
+    const_cast<RenderPass&>(pass).finalize(engine, driver);
 
     // the color pass itself + color-grading as subpass if needed
     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view, {
@@ -1244,10 +1257,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 ppm.customResolveUncompressPass(fg, colorPassOutput.linearColor);
     }
 
-    if (view.getChannelDepthClearMask().any()) {
-        ppm.clearAncillaryBuffersPrepare(driver);
-    }
-
     // export the color buffer if screen-space reflections are enabled
     if (ssReflectionsOptions.enabled) {
         struct ExportSSRHistoryData {
@@ -1264,8 +1273,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
                     // we can't use colorPassOutput here because it could be tonemapped
                     data.history = builder.sample(colorPassOutput.linearColor); // FIXME: an access must be declared for detach(), why?
-                }, [&view, projection](FrameGraphResources const& resources, auto const& data,
-                        DriverApi&) {
+                }, [&view, projection](FrameGraphResources const& resources, auto const& data) {
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
                     current.ssr.projection = projection;

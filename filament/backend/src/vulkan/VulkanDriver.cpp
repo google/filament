@@ -217,7 +217,8 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         Platform::DriverConfig const& driverConfig)
-    : mPlatform(platform),
+    : DriverBase(driverConfig),
+      mPlatform(platform),
       mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck,
               driverConfig.disableHeapHandleTags),
       // Note that we always create the default rendertarget before createDefaultRenderTarget(). We
@@ -233,7 +234,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
       mPipelineLayoutCache(mPlatform->getDevice()),
-      mPipelineCache(mPlatform->getDevice(), mContext),
+      mPipelineCache(*this, mPlatform->getDevice(), mContext),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
       mBufferCache(mContext, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
@@ -249,7 +250,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mStreamedImageManager(&mExternalImageManager),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mIsMSAASwapChainSupported(false), // TODO: support MSAA swapchain
-      mStereoscopicType(driverConfig.stereoscopicType) {
+      mStereoscopicType(driverConfig.stereoscopicType),
+      mAsynchronousMode(driverConfig.asynchronousMode) {
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
@@ -601,6 +603,12 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType ele
     mResourceManager.associateHandle(ibh.getId(), std::move(tag));
 }
 
+void VulkanDriver::createIndexBufferAsyncR(Handle<HwIndexBuffer> ibh, ElementType elementType,
+        uint32_t indexCount, BufferUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (!ibh) {
         return;
@@ -617,6 +625,12 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
             mStagePool, mBufferCache, byteCount, bindingType, usage);
     bo.inc();
     mResourceManager.associateHandle(boh.getId(), std::move(tag));
+}
+
+void VulkanDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t byteCount,
+        BufferObjectBinding bindingType, BufferUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
@@ -646,6 +660,13 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     mResourceManager.associateHandle(th.getId(), std::move(tag));
 }
 
+void VulkanDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
+        void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
         uint8_t baseLevel, uint8_t levelCount, utils::ImmutableCString&& tag) {
     auto src = resource_ptr<VulkanTexture>::cast(&mResourceManager, srch);
@@ -666,6 +687,13 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, src, swizzle);
     texture.inc();
     mResourceManager.associateHandle(th.getId(), std::move(tag));
+}
+
+void VulkanDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::SamplerType target,
@@ -737,6 +765,16 @@ void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, utils::ImmutableCString&& tag) {
+    // not supported in this backend
+    assert_invariant(false && "Not supported in Vulkan backend");
+    mResourceManager.associateHandle(th.getId(), std::move(tag));
+}
+
+void VulkanDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t id,
+        SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
+        void* user, utils::ImmutableCString&& tag) {
     // not supported in this backend
     assert_invariant(false && "Not supported in Vulkan backend");
     mResourceManager.associateHandle(th.getId(), std::move(tag));
@@ -1000,11 +1038,23 @@ Handle<HwIndexBuffer> VulkanDriver::createIndexBufferS() noexcept {
     return mResourceManager.allocHandle<VulkanIndexBuffer>();
 }
 
+Handle<HwIndexBuffer> VulkanDriver::createIndexBufferAsyncS() noexcept {
+    return mResourceManager.allocHandle<VulkanIndexBuffer>();
+}
+
 Handle<HwBufferObject> VulkanDriver::createBufferObjectS() noexcept {
     return mResourceManager.allocHandle<VulkanBufferObject>();
 }
 
+Handle<HwBufferObject> VulkanDriver::createBufferObjectAsyncS() noexcept {
+    return mResourceManager.allocHandle<VulkanBufferObject>();
+}
+
 Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureAsyncS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
 
@@ -1013,6 +1063,10 @@ Handle<HwTexture> VulkanDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureViewSwizzleS() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureViewSwizzleAsyncS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
 
@@ -1030,6 +1084,30 @@ Handle<HwTexture> VulkanDriver::createTextureExternalImagePlaneS() noexcept {
 
 Handle<HwTexture> VulkanDriver::importTextureS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::importTextureAsyncS() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+AsyncCallId VulkanDriver::update3DImageAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId VulkanDriver::setVertexBufferObjectAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId VulkanDriver::updateBufferObjectAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId VulkanDriver::updateIndexBufferAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
 }
 
 Handle<HwRenderPrimitive> VulkanDriver::createRenderPrimitiveS() noexcept {
@@ -1088,6 +1166,11 @@ Handle<HwDescriptorSet> VulkanDriver::createDescriptorSetS() noexcept {
 
 MemoryMappedBufferHandle VulkanDriver::mapBufferS() noexcept {
     return mResourceManager.allocHandle<VulkanMemoryMappedBuffer>();
+}
+
+AsyncCallId VulkanDriver::queueCommandAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
 }
 
 void VulkanDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
@@ -1417,7 +1500,7 @@ bool VulkanDriver::isStereoSupported() {
 }
 
 bool VulkanDriver::isParallelShaderCompileSupported() {
-    return false;
+    return mContext.shouldUsePipelineCachePrewarming();
 }
 
 bool VulkanDriver::isDepthStencilResolveSupported() {
@@ -1435,6 +1518,10 @@ bool VulkanDriver::isProtectedTexturesSupported() { return isProtectedContentSup
 
 bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
+}
+
+bool VulkanDriver::isAsynchronousModeEnabled() {
+    return false;
 }
 
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -1545,6 +1632,12 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     vb->setBuffer(bo, index);
 }
 
+void VulkanDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
+        uint32_t index, Handle<HwBufferObject> boh, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     VulkanCommandBuffer& commands = mCommands.get();
@@ -1553,6 +1646,12 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
+}
+
+void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
+        BufferDescriptor&& p, uint32_t byteOffset, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
@@ -1565,6 +1664,12 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
     bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
+}
+
+void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
+        BufferDescriptor&& bd, uint32_t byteOffset, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
@@ -1592,6 +1697,13 @@ void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     texture->updateImage(data, width, height, depth, xoffset, yoffset, zoffset, level);
     scheduleDestroy(std::move(data));
+}
+
+void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
+        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t width,
+        uint32_t height, uint32_t depth, PixelBufferDescriptor&& data, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
@@ -2400,6 +2512,16 @@ void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     mQueryManager.endQuery(&(mCommands.get()), vtq);
+}
+
+void VulkanDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,
+        CallbackHandler* handler, CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
+}
+
+bool VulkanDriver::cancelAsyncJob(AsyncCallId jobId) {
+    // TODO: implement this.
+    return false;
 }
 
 void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {

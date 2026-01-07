@@ -16,7 +16,7 @@
 
 #include "details/Engine.h"
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/BufferObject.h"
 #include "details/Camera.h"
@@ -349,6 +349,15 @@ size_t Engine::getRenderTargetCount() const noexcept {
     return downcast(this)->getRenderTargetCount();
 }
 
+AsyncCallId Engine::runCommandAsync(Invocable<void()>&& command, CallbackHandler* handler,
+        AsyncCallbackType onComplete, void* user) {
+    return downcast(this)->runCommandAsync(std::move(command), handler, std::move(onComplete),
+            user);
+}
+
+bool Engine::cancelAsyncCall(AsyncCallId const id) {
+    return downcast(this)->cancelAsyncCall(id);
+}
 
 void Engine::flushAndWait() {
     downcast(this)->flushAndWait();
@@ -455,8 +464,8 @@ bool Engine::isStereoSupported(StereoscopicType) const noexcept {
     return downcast(this)->isStereoSupported();
 }
 
-bool Engine::isAsynchronousOperationSupported() const noexcept {
-    return downcast(this)->isAsynchronousOperationSupported();
+bool Engine::isAsynchronousModeEnabled() const noexcept {
+    return downcast(this)->isAsynchronousModeEnabled();
 }
 
 size_t Engine::getMaxStereoscopicEyes() noexcept {

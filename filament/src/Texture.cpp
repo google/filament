@@ -58,6 +58,16 @@ void Texture::setImage(Engine& engine, size_t const level,
     downcast(this)->setImage(downcast(engine), level, std::move(buffer), faceOffsets);
 }
 
+backend::AsyncCallId Texture::setImageAsync(Engine& engine, size_t const level,
+        uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
+        uint32_t const width, uint32_t const height, uint32_t const depth,
+        PixelBufferDescriptor&& buffer, backend::CallbackHandler* handler,
+        AsyncCallbackType callback, void* user) const {
+    return downcast(this)->setImageAsync(downcast(engine),
+            level, xoffset, yoffset, zoffset, width, height, depth, std::move(buffer),
+            handler, std::move(callback), user);
+}
+
 void Texture::setExternalImage(Engine& engine, ExternalImageHandleRef image) noexcept {
     downcast(this)->setExternalImage(downcast(engine), image);
 }
@@ -76,6 +86,10 @@ void Texture::setExternalStream(Engine& engine, Stream* stream) noexcept {
 
 void Texture::generateMipmaps(Engine& engine) const noexcept {
     downcast(this)->generateMipmaps(downcast(engine));
+}
+
+bool Texture::isCreationComplete() const noexcept {
+    return downcast(this)->isCreationComplete();
 }
 
 bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat const format) noexcept {

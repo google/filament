@@ -161,7 +161,7 @@ The type and range of each property is described in table [standardPropertiesTyp
     vertex. `microThickness` represent the thickness of the thin layer of an object, and can
     generally be provided as a constant value. For example, a 1mm thin hollow sphere of radius 1m,
     would have a `thickness` of 1 and a `microThickness` of 0.001. Dispersion controls the angular
-    separation of colors transmitting through a volume, and can be set by a contant value.
+    separation of colors transmitting through a volume, and can be set by a constant value.
     Currently `thickness` and `dispersion` are not used when `refractionType` is set to `thin`.
 
 ### Base color
@@ -670,6 +670,9 @@ Diamond                    | 55                 | 0.36
 Water                      | 55                 | 0.36
 Crown Glass                | 59                 | 0.33
 [Table [commonMatDispersion]: Dispersion of common materials]
+
+![Figure [dispersionProperty]: `dispersion` varying from 0.0
+(left) to 5.0 (right)](images/materials/dispersion.png)
 
 ## Subsurface model
 
@@ -2477,9 +2480,9 @@ type aliases:
 **uint2**                        | uvec2        |  A vector of 2 unsigned integers
 **uint3**                        | uvec3        |  A vector of 3 unsigned integers
 **uint4**                        | uvec4        |  A vector of 4 unsigned integers
-**float2**                       | float2       |  A vector of 2 floats
-**float3**                       | float3       |  A vector of 3 floats
-**float4**                       | float4       |  A vector of 4 floats
+**float2**                       | vec2         |  A vector of 2 floats
+**float3**                       | vec3         |  A vector of 3 floats
+**float4**                       | vec4         |  A vector of 4 floats
 **float4x4**                     | mat4         |  A 4x4 float matrix
 **float3x3**                     | mat3         |  A 3x3 float matrix
 

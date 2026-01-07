@@ -146,15 +146,22 @@ void App::setupMesh() {
     });
     auto stbDecoder = filament::gltfio::createStbProvider(engine);
     auto ktxDecoder = filament::gltfio::createKtx2Provider(engine);
+    filament::gltfio::TextureProvider* webpDecoder = nullptr;
 
     resourceLoader->addTextureProvider("image/png", stbDecoder);
     resourceLoader->addTextureProvider("image/jpeg", stbDecoder);
     resourceLoader->addTextureProvider("image/ktx2", ktxDecoder);
+    if (filament::gltfio::isWebpSupported()) {
+        webpDecoder = filament::gltfio::createWebpProvider(engine);
+        resourceLoader->addTextureProvider("image/webp", webpDecoder);
+    }
+
     resourceLoader->loadResources(app.asset);
 
     delete resourceLoader;
     delete stbDecoder;
     delete ktxDecoder;
+    delete webpDecoder;
 
     scene->addEntities(app.asset->getEntities(), app.asset->getEntityCount());
 }

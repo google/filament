@@ -287,8 +287,8 @@ utils::Status MaterialParser::parseMaterialAsJSON(const char* buffer, size_t siz
 
     JsonishParser parser(jlexer.getLexemes());
     std::unique_ptr<JsonishObject> json = parser.parse();
-    if (json == nullptr) {
-        return utils::Status::internal("Could not parse JSON material file");
+    if (json == nullptr || !parser.getParseStatus().isOk()) {
+        return parser.getParseStatus();
     }
 
     for (auto& entry : json->getEntries()) {

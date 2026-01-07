@@ -100,18 +100,18 @@ inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
 using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
 BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
     BitmaskGroup mask;
-    for (auto const& binding: layout.bindings) {
-        switch (binding.type) {
+    for (auto const& descriptor: layout.descriptors) {
+        switch (descriptor.type) {
             case DescriptorType::UNIFORM_BUFFER: {
-                if ((binding.flags & DescriptorFlags::DYNAMIC_OFFSET) != DescriptorFlags::NONE) {
-                    fromStageFlags(binding.stageFlags, binding.binding, mask.dynamicUbo);
+                if ((descriptor.flags & DescriptorFlags::DYNAMIC_OFFSET) != DescriptorFlags::NONE) {
+                    fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.dynamicUbo);
                 } else {
-                    fromStageFlags(binding.stageFlags, binding.binding, mask.ubo);
+                    fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.ubo);
                 }
                 break;
             }
             case DescriptorType::SAMPLER_EXTERNAL:
-                fromStageFlags(binding.stageFlags, binding.binding, mask.externalSampler);
+                fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.externalSampler);
                 UTILS_FALLTHROUGH;
 
             case DescriptorType::SAMPLER_2D_FLOAT:
@@ -139,11 +139,11 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
             case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
             case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
             case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT: {
-                fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
+                fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.sampler);
                 break;
             }
             case DescriptorType::INPUT_ATTACHMENT: {
-                fromStageFlags(binding.stageFlags, binding.binding, mask.inputAttachment);
+                fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.inputAttachment);
                 break;
             }
             case DescriptorType::SHADER_STORAGE_BUFFER:
@@ -682,7 +682,7 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
 VulkanBufferObject::VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
         VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage)
-    : HwBufferObject(byteCount),
+    : HwBufferObject(byteCount, false),
       bindingType(bindingType),
       mBuffer(context, allocator, stagePool, bufferCache, getBufferObjectBinding(bindingType),
               usage, byteCount) {}

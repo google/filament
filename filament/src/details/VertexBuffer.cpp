@@ -16,6 +16,7 @@
 
 #include "details/VertexBuffer.h"
 
+#include "details/AsyncHelpers.h"
 #include "details/BufferObject.h"
 #include "details/Engine.h"
 
@@ -70,6 +71,10 @@ struct VertexBuffer::BuilderDetails {
     uint8_t mBufferCount = 0;
     bool mBufferObjectsEnabled = false;
     bool mAdvancedSkinningEnabled = false; // TODO: use bits to save memory
+    bool mAsynchronous = false;
+    CallbackHandler* mAsyncCreationHandler = nullptr;
+    std::function<void(VertexBuffer* UTILS_NONNULL, void* UTILS_NULLABLE)> mAsyncCreationCallback;
+    void* mAsyncCreationUserData = nullptr;
 };
 
 using BuilderType = VertexBuffer;
@@ -152,6 +157,15 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(utils::StaticString const& na
     return BuilderNameMixin::name(name);
 }
 
+VertexBuffer::Builder& VertexBuffer::Builder::async(CallbackHandler* handler,
+        AsyncCallbackType callback, void* user) noexcept {
+    mImpl->mAsynchronous = true;
+    mImpl->mAsyncCreationHandler = handler;
+    mImpl->mAsyncCreationCallback = std::move(callback);
+    mImpl->mAsyncCreationUserData = user;
+    return *this;
+}
+
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
     FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
@@ -221,6 +235,9 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
                 << "Vertex buffer uses to many buffers (" << mImpl->mBufferCount << ")";
     }
 
+    FILAMENT_CHECK_PRECONDITION(!mImpl->mAsynchronous || engine.isAsynchronousModeEnabled())
+            << "Engine not configured for async operations";
+
     return downcast(engine).createVertexBuffer(*this);
 }
 
@@ -280,6 +297,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
     mVertexBufferInfoHandle = engine.getVertexBufferInfoFactory().create(driver,
             mBufferCount, mDeclaredAttributes.count(), mAttributes);
 
+    // This function call doesn't allocate GPU memory, so the `async` version is not needed.
     mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle,
             utils::ImmutableCString{ builder.getName() });
 
@@ -314,16 +332,56 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
         updateBufferSize(BONE_WEIGHTS);
     }
 
-    // create buffers
-    for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
-        if (bufferSizes[i] == 0 || mBufferObjects[i]) {
-            continue;
+    if (builder->mAsynchronous) {
+        // Copy the callback instead of moving it because moving would leave the builder with an
+        // empty completion callback. If the builder were emptied, users would need to call `async`
+        // again to reuse the builder for an additional new object.
+        auto copiedCompletionCallback = builder->mAsyncCreationCallback;
+
+        using VertexBufferCountdownCallbackHandler = CountdownCallbackHandler<VertexBuffer>;
+        auto* cdHandler = VertexBufferCountdownCallbackHandler::make(
+                /* handler */ builder->mAsyncCreationHandler,
+                /* userCallback */ std::move(copiedCompletionCallback),
+                /* userParam1 */ this,
+                /* userParam2 */ builder->mAsyncCreationUserData,
+                /* onCountdownComplete */ [this]() {
+                    // `std::memory_order_relaxed` should be sufficient because no other variables
+                    // need to be visible to other threads in a strict sequence.
+                    mCreationComplete.store(true, std::memory_order_relaxed);
+                },
+                /* driver */ &engine.getDriver());
+
+        // create buffers (asynchronous)
+        for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
+            if (bufferSizes[i] == 0 || mBufferObjects[i]) {
+                continue;
+            }
+            BufferObjectHandle const bo = driver.createBufferObjectAsync(bufferSizes[i],
+                    BufferObjectBinding::VERTEX, BufferUsage::STATIC, cdHandler,
+                    &VertexBufferCountdownCallbackHandler::countdownCallback, cdHandler,
+                    utils::ImmutableCString{ builder.getName() });
+            cdHandler->increaseCountdown();
+            driver.setVertexBufferObjectAsync(mHandle, i, bo, cdHandler,
+                    &VertexBufferCountdownCallbackHandler::countdownCallback, cdHandler);
+            cdHandler->increaseCountdown();
+            mBufferObjects[i] = bo;
         }
-        BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
-                BufferObjectBinding::VERTEX, BufferUsage::STATIC,
-                utils::ImmutableCString{ builder.getName() });
-        driver.setVertexBufferObject(mHandle, i, bo);
-        mBufferObjects[i] = bo;
+    } else {
+        // create buffers
+        for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
+            if (bufferSizes[i] == 0 || mBufferObjects[i]) {
+                continue;
+            }
+            BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
+                    BufferObjectBinding::VERTEX, BufferUsage::STATIC,
+                    utils::ImmutableCString{ builder.getName() });
+            driver.setVertexBufferObject(mHandle, i, bo);
+            mBufferObjects[i] = bo;
+        }
+        // In regular (non-asynchronous) mode, we know creation is complete as soon as all
+        // creation-relevant API calls are recorded into the command stream, because subsequent API
+        // calls will always be invoked after that (even including asynchronous version of APIs).
+        mCreationComplete.store(true, std::memory_order_relaxed);
     }
 }
 
@@ -344,13 +402,10 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
 
 void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t const bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t const byteOffset) {
-
     FILAMENT_CHECK_PRECONDITION(!mBufferObjectsEnabled)
             << "buffer objects enabled, use setBufferObjectAt() instead";
-
     FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
             << "bufferIndex must be < bufferCount";
-
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
         << "byteOffset must be a multiple of 4";
 
@@ -358,16 +413,29 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t const bufferIndex,
             std::move(buffer), byteOffset);
 }
 
+AsyncCallId FVertexBuffer::setBufferAtAsync(FEngine& engine, uint8_t const bufferIndex,
+        backend::BufferDescriptor&& buffer, uint32_t const byteOffset, CallbackHandler* handler,
+        AsyncCallbackType callback, void* user) {
+    FILAMENT_CHECK_PRECONDITION(!mBufferObjectsEnabled)
+            << "buffer objects enabled, use setBufferObjectAt() instead";
+    FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
+            << "bufferIndex must be < bufferCount";
+    FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
+        << "byteOffset must be a multiple of 4";
+
+    using VertexBufferCallbackAdapter = CallbackAdapter<VertexBuffer>;
+    auto* const cbWrapper = VertexBufferCallbackAdapter::make(std::move(callback), this, user);
+    return engine.getDriverApi().updateBufferObjectAsync(mBufferObjects[bufferIndex],
+            std::move(buffer), byteOffset, handler, &VertexBufferCallbackAdapter::func, cbWrapper);
+}
+
 void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex,
         FBufferObject const * bufferObject) {
-
     FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled)
             << "buffer objects disabled, use setBufferAt() instead";
-
     FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
             << "bufferObject binding type must be VERTEX but is "
             << to_string(bufferObject->getBindingType());
-
     FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
             << "bufferIndex must be < bufferCount";
 
@@ -376,6 +444,30 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex
     // store handle to recreate VertexBuffer in the case extra bone indices and weights definition
     // used only in buffer object mode
     mBufferObjects[bufferIndex] = hwBufferObject;
+}
+
+AsyncCallId FVertexBuffer::setBufferObjectAtAsync(FEngine& engine, uint8_t const bufferIndex,
+        FBufferObject const * bufferObject, CallbackHandler* handler, AsyncCallbackType callback,
+        void* user) {
+    FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled)
+            << "buffer objects disabled, use setBufferAt() instead";
+    FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
+            << "bufferObject binding type must be VERTEX but is "
+            << to_string(bufferObject->getBindingType());
+    FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
+            << "bufferIndex must be < bufferCount";
+
+    auto const hwBufferObject = bufferObject->getHwHandle();
+
+    using VertexBufferCallbackAdapter = CallbackAdapter<VertexBuffer>;
+    auto* const cbWrapper = VertexBufferCallbackAdapter::make(std::move(callback), this, user);
+    AsyncCallId id = engine.getDriverApi().setVertexBufferObjectAsync(mHandle, bufferIndex,
+            hwBufferObject, handler, &VertexBufferCallbackAdapter::func, cbWrapper);
+
+    // store handle to recreate VertexBuffer in the case extra bone indices and weights definition
+    // used only in buffer object mode
+    mBufferObjects[bufferIndex] = hwBufferObject;
+    return id;
 }
 
 void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
