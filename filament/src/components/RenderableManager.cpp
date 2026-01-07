@@ -70,7 +70,7 @@ using namespace utils;
 namespace filament {
 namespace {
 
-static RenderableManager::Builder::MorphType morphTargetBufferToBuildType(
+RenderableManager::Builder::MorphType morphTargetBufferToBuildType(
         const MorphTargetBuffer* const buffer, size_t const morphTargetCount) {
     using MorphType = RenderableManager::Builder::MorphType;
     if (!buffer || morphTargetCount == 0) {

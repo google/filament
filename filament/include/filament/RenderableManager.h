@@ -166,7 +166,8 @@ public:
         };
 
         /**
-         * Type of morphing for a Renderable
+         * Type of morphing for a Renderable.
+         * This usually acts as a bitmask of multiple types.
          */
         enum class MorphType : uint8_t {
             NONE = 0,

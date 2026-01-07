@@ -143,6 +143,8 @@ public:
          * Note: Unlike `withPositions` or `withTangents`, this does NOT allocate any internal
          * storage. You are responsible for managing the morph data texture.
          *
+         * Custom morphing can be used together with automatic position and/or tangent morphing.
+         *
          * @param enable true to enable, false to disable. Default is false.
          * @return A reference to this Builder for chaining calls.
          */

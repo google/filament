@@ -55,8 +55,15 @@ public:
 
     void setTangentsAt(FEngine& engine, size_t targetIndex,
             math::short4 const* tangents, size_t count, size_t offset);
-    bool hasPositions() const noexcept;
-    bool hasTangents() const noexcept;
+
+    bool hasPositions() const noexcept {
+        return bool(mPbHandle);
+    }
+
+    bool hasTangents() const noexcept {
+        return bool(mTbHandle);
+    }
+
     bool isCustomMorphingEnabled() const noexcept {
         return mEnableCustomMorphing;
     }

@@ -152,8 +152,7 @@ void skinNormalTangent(inout vec3 n, inout vec3 t, const uvec4 ids, const vec4 w
 
 #define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
 
-vec4 getMorphedValue(highp sampler2DArray data) {
-    vec4 delta = vec4(0.0);
+void morphData2(inout vec2 v, highp sampler2DArray data) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
     ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     int c = object_uniforms_morphTargetCount;
@@ -161,22 +160,35 @@ vec4 getMorphedValue(highp sampler2DArray data) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
             texcoord.z = i;
-            delta += w * texelFetch(data, texcoord, 0);
+            v += w * texelFetch(data, texcoord, 0).xy;
         }
     }
-    return delta;
-}
-
-void morphData4(inout vec4 v, highp sampler2DArray data) {
-    v += getMorphedValue(data);
 }
 
 void morphData3(inout vec3 v, highp sampler2DArray data) {
-    v += getMorphedValue(data).xyz;
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int c = object_uniforms_morphTargetCount;
+    for (int i = 0; i < c; ++i) {
+        float w = morphingUniforms.weights[i][0];
+        if (w != 0.0) {
+            texcoord.z = i;
+            v += w * texelFetch(data, texcoord, 0).xyz;
+        }
+    }
 }
 
-void morphData2(inout vec2 v, highp sampler2DArray data) {
-    v += getMorphedValue(data).xy;
+void morphData4(inout vec4 v, highp sampler2DArray data) {
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int c = object_uniforms_morphTargetCount;
+    for (int i = 0; i < c; ++i) {
+        float w = morphingUniforms.weights[i][0];
+        if (w != 0.0) {
+            texcoord.z = i;
+            v += w * texelFetch(data, texcoord, 0);
+        }
+    }
 }
 
 void morphPosition(inout vec4 p) {
@@ -186,7 +198,7 @@ void morphPosition(inout vec4 p) {
     pos += morphingUniforms.weights[2] * mesh_custom2;
     pos += morphingUniforms.weights[3] * mesh_custom3;
 #else
-    morphData3(p.xyz, sampler1_positions);
+    morphData4(p, sampler1_positions);
 #endif
 }
 

@@ -178,7 +178,9 @@ void FMorphTargetBuffer::terminate(FEngine& engine) {
 
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetIndex,
         float3 const* positions, size_t const count, size_t const offset) {
-    FILAMENT_CHECK_PRECONDITION(mPbHandle) << "setPositionsAt() called on a MorphTargetBuffer without a position buffer. Use withPositions(true) in the Builder.";
+    FILAMENT_CHECK_PRECONDITION(mPbHandle)
+            << "setPositionsAt() called on a MorphTargetBuffer without a position buffer. Use "
+               "withPositions(true) in the Builder.";
     if (!mPbHandle) {
         return;
     }
@@ -206,7 +208,9 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
 
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetIndex,
         float4 const* positions, size_t const count, size_t const offset) {
-    FILAMENT_CHECK_PRECONDITION(mPbHandle) << "setPositionsAt() called on a MorphTargetBuffer without a position buffer. Use withPositions(true) in the Builder.";
+    FILAMENT_CHECK_PRECONDITION(mPbHandle)
+            << "setPositionsAt() called on a MorphTargetBuffer without a position buffer. Use "
+               "withPositions(true) in the Builder.";
     if (!mPbHandle) {
         return;
     }
@@ -233,7 +237,9 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
 
 void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t const targetIndex,
         short4 const* tangents, size_t const count, size_t const offset) {
-    FILAMENT_CHECK_PRECONDITION(mTbHandle) << "setTangentsAt() called on a MorphTargetBuffer without a tangent buffer. Use withTangents(true) in the Builder.";
+    FILAMENT_CHECK_PRECONDITION(mTbHandle)
+            << "setTangentsAt() called on a MorphTargetBuffer without a tangent buffer. Use "
+               "withTangents(true) in the Builder.";
     if (!mTbHandle) {
         return;
     }
@@ -256,14 +262,6 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t const targetIndex
             Texture::Format::RGBA_INTEGER, Texture::Type::SHORT,
             (char const*)out, sizeof(short4), targetIndex,
             count, offset);
-}
-
-bool FMorphTargetBuffer::hasPositions() const noexcept {
-    return bool(mPbHandle);
-}
-
-bool FMorphTargetBuffer::hasTangents() const noexcept {
-    return bool(mTbHandle);
 }
 
 UTILS_NOINLINE

@@ -818,7 +818,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                         +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
                         engine.getZeroTexture(), {});
 
-                if (UTILS_UNLIKELY(skinning.handle)) {
+                if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
                     descriptorSet.setBuffer(layout,
                             +PerRenderableBindingPoints::BONES_UNIFORMS,
                             skinning.handle, 0, sizeof(PerRenderableBoneUib));
@@ -826,14 +826,12 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                     descriptorSet.setSampler(layout,
                             +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
                             skinning.boneIndicesAndWeightHandle, {});
-                }
 
-                if (UTILS_UNLIKELY(morphing.handle)) {
-                    const auto* mtb = morphing.morphTargetBuffer;
                     descriptorSet.setBuffer(layout,
                             +PerRenderableBindingPoints::MORPHING_UNIFORMS,
                             morphing.handle, 0, sizeof(PerRenderableMorphingUib));
 
+                    const auto* mtb = morphing.morphTargetBuffer;
                     if (mtb->hasPositions()) {
                         descriptorSet.setSampler(layout,
                                 +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
