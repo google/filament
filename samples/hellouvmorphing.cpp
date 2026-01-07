@@ -31,6 +31,7 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
+#include <filament/Viewport.h>
 
 #include <utils/EntityManager.h>
 #include <utils/Path.h>
@@ -73,6 +74,8 @@ struct App {
     std::vector<Vertex> vertices;
     std::vector<uint16_t> indices;
     std::vector<float2> uvMorphData;
+    std::vector<float4> posMorphData;
+    bool posMorphing = false;
 };
 
 static constexpr int GRID_SIZE = 20;
@@ -80,15 +83,15 @@ static constexpr float GRID_SCALE = 2.0f;
 
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
-    std::string usage(
-            "HELLOUVMORPHING renders a quad with uv morphing\n"
-            "Usage:\n"
-            "    HELLOUVMORPHING [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "API_USAGE"
-    );
+    std::string usage("HELLOUVMORPHING renders a quad with uv morphing\n"
+                      "Usage:\n"
+                      "    HELLOUVMORPHING [options]\n"
+                      "Options:\n"
+                      "   --help, -h\n"
+                      "       Prints this message\n"
+                      "   --positions, -p\n"
+                      "       Enable position morphing\n\n"
+                      "API_USAGE");
     const std::string from("HELLOUVMORPHING");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
@@ -101,12 +104,10 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const struct option OPTIONS[] = {
-        { "help", no_argument,       nullptr, 'h' },
-        { "api",  required_argument, nullptr, 'a' },
-        { nullptr, 0,                nullptr, 0 }
-    };
+    static constexpr const char* OPTSTR = "ha:p";
+    static const struct option OPTIONS[] = { { "help", no_argument, nullptr, 'h' },
+        { "api", required_argument, nullptr, 'a' }, { "positions", no_argument, nullptr, 'p' },
+        { nullptr, 0, nullptr, 0 } };
     int opt;
     int option_index = 0;
     while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
@@ -118,6 +119,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 exit(0);
             case 'a':
                 app->config.backend = samples::parseArgumentsForBackend(arg);
+                break;
+            case 'p':
+                app->posMorphing = true;
                 break;
         }
     }
@@ -143,7 +147,8 @@ int main(int argc, char** argv) {
                 float u = (float) x / (GRID_SIZE - 1);
                 float v = (float) y / (GRID_SIZE - 1);
                 float px = (u * 2.0f - 1.0f) * GRID_SCALE;
-                float py = (v * 2.0f - 1.0f) * GRID_SCALE;
+                float yScale = app.posMorphing ? 1.0f : GRID_SCALE;
+                float py = (v * 2.0f - 1.0f) * yScale;
                 app.vertices.push_back({ { px, py, 0.0f }, { u, v } });
             }
         }
@@ -260,9 +265,23 @@ int main(int argc, char** argv) {
         app.mtb = MorphTargetBuffer::Builder()
                           .vertexCount(app.vertices.size())
                           .count(1)
-                          .withPositions(true)
+                          .withPositions(app.posMorphing)
                           .enableCustomMorphing(true)
                           .build(*engine);
+
+        if (app.posMorphing) {
+            // Generate position morph deltas
+            app.posMorphData.reserve(app.vertices.size());
+            for (const auto& v: app.vertices) {
+                // Morph to square (GRID_SCALE)
+                float targetPy = (v.uv.y * 2.0f - 1.0f) * GRID_SCALE;
+                float currentPy = v.position.y;
+                float deltaY = targetPy - currentPy;
+                // W must be 0 for deltas
+                app.posMorphData.push_back({ 0, deltaY, 0, 0.0f });
+            }
+            app.mtb->setPositionsAt(*engine, 0, app.posMorphData.data(), app.posMorphData.size());
+        }
 
         app.renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
