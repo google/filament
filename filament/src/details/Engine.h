@@ -425,7 +425,7 @@ public:
     size_t getRenderTargetCount() const noexcept;
 
     AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
-            backend::CallbackHandler* handler, AsyncCallbackType onComplete, void* user);
+            backend::CallbackHandler* handler, AsyncCompletionCallback onComplete, void* user);
     bool cancelAsyncCall(AsyncCallId id);
 
     void destroy(utils::Entity e);

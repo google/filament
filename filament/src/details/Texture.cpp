@@ -166,7 +166,7 @@ Texture::Builder& Texture::Builder::name(StaticString const& name) noexcept {
 
 Texture::Builder& Texture::Builder::async(
         CallbackHandler* handler,
-        AsyncCallbackType callback,
+        AsyncCompletionCallback callback,
         void* user) noexcept {
     mImpl->mAsynchronous = true;
     mImpl->mAsyncCreationHandler = handler;
@@ -636,7 +636,7 @@ void FTexture::setImage(FEngine& engine, size_t const level,
 AsyncCallId FTexture::setImageAsync(FEngine& engine, size_t const level,
         uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
         uint32_t const width, uint32_t const height, uint32_t const depth,
-        PixelBufferDescriptor&& p, CallbackHandler* handler, AsyncCallbackType callback,
+        PixelBufferDescriptor&& p, CallbackHandler* handler, AsyncCompletionCallback callback,
         void* user) const {
 
     // We skip the isCreationComplete() check for asynchronous APIs because they are designed to

@@ -66,14 +66,15 @@ public:
 
     AsyncCallId setBufferAtAsync(FEngine& engine, uint8_t bufferIndex,
             backend::BufferDescriptor&& buffer, uint32_t byteOffset,
-            backend::CallbackHandler* handler, AsyncCallbackType callback, void* user = nullptr);
+            backend::CallbackHandler* handler, AsyncCompletionCallback callback,
+            void* user = nullptr);
 
     void setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
             FBufferObject const * bufferObject);
 
     AsyncCallId setBufferObjectAtAsync(FEngine& engine, uint8_t bufferIndex,
             FBufferObject const * bufferObject, backend::CallbackHandler* handler,
-            AsyncCallbackType callback, void* user = nullptr);
+            AsyncCompletionCallback callback, void* user = nullptr);
 
     void updateBoneIndicesAndWeights(FEngine& engine, std::unique_ptr<uint16_t[]> skinJoints,
                                         std::unique_ptr<float[]> skinWeights);
