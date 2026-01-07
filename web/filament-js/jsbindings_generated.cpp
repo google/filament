@@ -138,6 +138,7 @@ value_object<View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOption
     .field("filterHistory", &View::TemporalAntiAliasingOptions::filterHistory)
     .field("filterInput", &View::TemporalAntiAliasingOptions::filterInput)
     .field("useYCoCg", &View::TemporalAntiAliasingOptions::useYCoCg)
+    .field("hdr", &View::TemporalAntiAliasingOptions::hdr)
     .field("boxType", &View::TemporalAntiAliasingOptions::boxType)
     .field("boxClipping", &View::TemporalAntiAliasingOptions::boxClipping)
     .field("jitterPattern", &View::TemporalAntiAliasingOptions::jitterPattern)
