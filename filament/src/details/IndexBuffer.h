@@ -43,7 +43,7 @@ public:
     void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
     AsyncCallId setBufferAsync(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset,
-            backend::CallbackHandler* handler, AsyncCallbackType callback, void* user);
+            backend::CallbackHandler* handler, AsyncCompletionCallback callback, void* user);
 
     bool isCreationComplete() const noexcept { return mCreationComplete.load(std::memory_order_relaxed); }
 

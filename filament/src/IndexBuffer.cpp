@@ -26,8 +26,8 @@ void IndexBuffer::setBuffer(Engine& engine,
 }
 
 backend::AsyncCallId IndexBuffer::setBufferAsync(Engine& engine, BufferDescriptor&& buffer,
-            uint32_t byteOffset, backend::CallbackHandler* handler, AsyncCallbackType callback,
-            void* user) {
+            uint32_t byteOffset, backend::CallbackHandler* handler,
+            AsyncCompletionCallback callback, void* user) {
     return downcast(this)->setBufferAsync(downcast(engine), std::move(buffer), byteOffset,
             handler, std::move(callback), user);
 }

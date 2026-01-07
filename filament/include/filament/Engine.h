@@ -194,7 +194,7 @@ public:
     using Driver = backend::Driver;
     using GpuContextPriority = backend::Platform::GpuContextPriority;
     using AsynchronousMode = backend::AsynchronousMode;
-    using AsyncCallbackType = std::function<void(void* UTILS_NULLABLE)>;
+    using AsyncCompletionCallback = std::function<void(void* UTILS_NULLABLE)>;
     using AsyncCallId = backend::AsyncCallId;
 
     /**
@@ -1056,7 +1056,7 @@ public:
      * @return A unique identifier for the asynchronous call.
      */
     AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
-            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCallbackType onComplete,
+            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCompletionCallback onComplete,
             void* UTILS_NULLABLE user = nullptr);
 
     /**

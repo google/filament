@@ -62,7 +62,7 @@ backend::AsyncCallId Texture::setImageAsync(Engine& engine, size_t const level,
         uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         PixelBufferDescriptor&& buffer, backend::CallbackHandler* handler,
-        AsyncCallbackType callback, void* user) const {
+        AsyncCompletionCallback callback, void* user) const {
     return downcast(this)->setImageAsync(downcast(engine),
             level, xoffset, yoffset, zoffset, width, height, depth, std::move(buffer),
             handler, std::move(callback), user);

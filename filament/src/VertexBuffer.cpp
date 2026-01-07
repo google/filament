@@ -31,7 +31,7 @@ void VertexBuffer::setBufferAt(Engine& engine, uint8_t const bufferIndex,
 
 backend::AsyncCallId VertexBuffer::setBufferAtAsync(Engine& engine, uint8_t const bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t const byteOffset,
-        backend::CallbackHandler* handler, AsyncCallbackType callback, void* user) {
+        backend::CallbackHandler* handler, AsyncCompletionCallback callback, void* user) {
     return downcast(this)->setBufferAtAsync(downcast(engine), bufferIndex, std::move(buffer), byteOffset,
             handler, std::move(callback), user);
 }
@@ -43,7 +43,7 @@ void VertexBuffer::setBufferObjectAt(Engine& engine, uint8_t const bufferIndex,
 
 backend::AsyncCallId VertexBuffer::setBufferObjectAtAsync(Engine& engine, uint8_t const bufferIndex,
         BufferObject const* bufferObject, backend::CallbackHandler* handler,
-        AsyncCallbackType callback, void* user) {
+        AsyncCompletionCallback callback, void* user) {
     return downcast(this)->setBufferObjectAtAsync(downcast(engine), bufferIndex,
             downcast(bufferObject), handler, std::move(callback), user);
 }

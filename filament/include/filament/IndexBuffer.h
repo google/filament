@@ -52,7 +52,8 @@ class UTILS_PUBLIC IndexBuffer : public FilamentAPI {
 
 public:
     using BufferDescriptor = backend::BufferDescriptor;
-    using AsyncCallbackType = std::function<void(IndexBuffer* UTILS_NONNULL, void* UTILS_NULLABLE)>;
+    using AsyncCompletionCallback =
+            std::function<void(IndexBuffer* UTILS_NONNULL, void* UTILS_NULLABLE)>;
     using AsyncCallId = backend::AsyncCallId;
 
     /**
@@ -134,7 +135,7 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& async(backend::CallbackHandler* UTILS_NULLABLE handler,
-                AsyncCallbackType callback = nullptr,
+                AsyncCompletionCallback callback = nullptr,
                 void* UTILS_NULLABLE user = nullptr) noexcept;
 
         /**
@@ -189,7 +190,7 @@ public:
      * @return       An ID that the caller can use to cancel the operation.
      */
     AsyncCallId setBufferAsync(Engine& engine, BufferDescriptor&& buffer, uint32_t byteOffset,
-            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCallbackType callback,
+            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCompletionCallback callback,
             void* UTILS_NULLABLE user = nullptr);
 
     /**

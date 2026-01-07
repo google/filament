@@ -62,7 +62,8 @@ class UTILS_PUBLIC VertexBuffer : public FilamentAPI {
 public:
     using AttributeType = backend::ElementType;
     using BufferDescriptor = backend::BufferDescriptor;
-    using AsyncCallbackType = std::function<void(VertexBuffer* UTILS_NONNULL, void* UTILS_NULLABLE)>;
+    using AsyncCompletionCallback =
+            std::function<void(VertexBuffer* UTILS_NONNULL, void* UTILS_NULLABLE)>;
     using AsyncCallId = backend::AsyncCallId;
 
 
@@ -210,7 +211,7 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& async(backend::CallbackHandler* UTILS_NULLABLE handler,
-                AsyncCallbackType callback = nullptr,
+                AsyncCompletionCallback callback = nullptr,
                 void* UTILS_NULLABLE user = nullptr) noexcept;
 
         /**
@@ -281,7 +282,7 @@ public:
      */
     AsyncCallId setBufferAtAsync(Engine& engine, uint8_t bufferIndex, BufferDescriptor&& buffer,
             uint32_t byteOffset, backend::CallbackHandler* UTILS_NULLABLE handler,
-            AsyncCallbackType callback, void* UTILS_NULLABLE user = nullptr);
+            AsyncCompletionCallback callback, void* UTILS_NULLABLE user = nullptr);
 
     /**
      * Swaps in the given buffer object.
@@ -321,7 +322,7 @@ public:
     AsyncCallId setBufferObjectAtAsync(Engine& engine, uint8_t bufferIndex,
             BufferObject const*  UTILS_NONNULL bufferObject,
             backend::CallbackHandler* UTILS_NULLABLE handler,
-            AsyncCallbackType callback, void* UTILS_NULLABLE user = nullptr);
+            AsyncCompletionCallback callback, void* UTILS_NULLABLE user = nullptr);
 
     /**
      * This non-blocking method checks if the resource has finished creation. If the resource
