@@ -132,6 +132,8 @@ private:
     // Flush the current command buffer and reset the pipeline state.
     void endCommandRecording();
 
+    void acquireNextSwapchainImage();
+
     VulkanPlatform* mPlatform = nullptr;
     fvkmemory::ResourceManager mResourceManager;
 
@@ -159,7 +161,6 @@ private:
     VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;
     VulkanStreamedImageManager mStreamedImageManager;
-
 
     // This maps a VulkanSwapchain to a native swapchain. VulkanSwapchain should have a copy of the
     // Platform::Swapchain pointer, but queryFrameTimestamps() and queryCompositorTiming() are
