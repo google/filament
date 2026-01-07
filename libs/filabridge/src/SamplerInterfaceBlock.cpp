@@ -152,12 +152,12 @@ SamplerInterfaceBlock::SamplerInfoList SamplerInterfaceBlock::filterSamplerList(
             std::remove_if(list.begin(), list.end(),
                     [&](auto const& entry) {
                         auto pos = std::find_if(
-                                descriptorSetLayout.bindings.begin(),
-                                descriptorSetLayout.bindings.end(),
+                                descriptorSetLayout.descriptors.begin(),
+                                descriptorSetLayout.descriptors.end(),
                                 [&entry](const auto& item) {
                                     return item.binding == entry.binding;
                                 });
-                        return pos == descriptorSetLayout.bindings.end();
+                        return pos == descriptorSetLayout.descriptors.end();
                     }), list.end());
 
     return list;

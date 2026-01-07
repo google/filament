@@ -1441,7 +1441,7 @@ void MetalFence::cancel() {
 MetalDescriptorSetLayout::MetalDescriptorSetLayout(DescriptorSetLayout&& l) noexcept
     : mLayout(std::move(l)) {
     size_t dynamicBindings = 0;
-    for (const auto& binding : mLayout.bindings) {
+    for (const auto& binding : mLayout.descriptors) {
         if (any(binding.flags & DescriptorFlags::DYNAMIC_OFFSET)) {
             dynamicBindings++;
         }

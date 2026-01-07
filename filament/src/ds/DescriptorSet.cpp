@@ -159,8 +159,8 @@ void DescriptorSet::setBuffer(DescriptorSetLayout const& layout,
         backend::Handle<backend::HwBufferObject> boh, uint32_t const offset, uint32_t const size) {
 
     // Validate it's the right kind of descriptor
-    using DSLB = backend::DescriptorSetLayoutBinding;
-    FILAMENT_CHECK_PRECONDITION(DSLB::isBuffer(layout.getDescriptorType(binding)))
+    using DSLD = backend::DescriptorSetLayoutDescriptor;
+    FILAMENT_CHECK_PRECONDITION(DSLD::isBuffer(layout.getDescriptorType(binding)))
             << "descriptor " << +binding << "is not a buffer";
 
     auto& buffer = mDescriptors[binding].buffer;
@@ -179,11 +179,11 @@ void DescriptorSet::setSampler(
         backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) {
 
     using namespace backend;
-    using DSLB = DescriptorSetLayoutBinding;
+    using DSLD = DescriptorSetLayoutDescriptor;
 
     // Validate it's the right kind of descriptor
     auto type = layout.getDescriptorType(binding);
-    FILAMENT_CHECK_PRECONDITION(DSLB::isSampler(type))
+    FILAMENT_CHECK_PRECONDITION(DSLD::isSampler(type))
             << "descriptor " << +binding << " is not a sampler";
 
     FILAMENT_CHECK_PRECONDITION(
