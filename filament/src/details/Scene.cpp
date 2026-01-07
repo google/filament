@@ -240,8 +240,8 @@ void FScene::prepare(JobSystem& js,
             //sceneData.elementAt<UBO>(index)                 = {}; // not needed here
             sceneData.elementAt<USER_DATA>(index)           = scale;
 
-            auto skinning = rcm.getSkinning(ri);
-            sceneData.elementAt<SKINNING_STATE>(index) = skinning;
+
+            sceneData.elementAt<SKINNING_STATE>(index) = rcm.getSkinning(ri);
         }
     };
 
