@@ -24,7 +24,6 @@
 #include <backend/DriverEnums.h>
 
 #include <array>
-#include <optional>
 #include <tuple>
 #include <utility>
 #include <variant>

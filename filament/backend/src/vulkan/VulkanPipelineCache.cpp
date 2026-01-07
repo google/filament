@@ -243,8 +243,6 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .scissorCount = 1,
     };
 
-    // Note - if we ever add more possible states, we should call `reserve()`
-    // on this vector.
     constexpr size_t maxDynamicStates = 3;
     size_t numDynamicStates = 2;
     VkDynamicState enabledDynamicStates[maxDynamicStates] = {
