@@ -40,17 +40,17 @@ using namespace backend;
 
 size_t HwDescriptorSetLayoutFactory::Parameters::hash() const noexcept {
     return hash::murmurSlow(
-            reinterpret_cast<uint8_t const *>(dsl.bindings.data()),
-            dsl.bindings.size() * sizeof(DescriptorSetLayoutBinding),
+            reinterpret_cast<uint8_t const *>(dsl.descriptors.data()),
+            dsl.descriptors.size() * sizeof(DescriptorSetLayoutDescriptor),
             42);
 }
 
 bool operator==(HwDescriptorSetLayoutFactory::Parameters const& lhs,
         HwDescriptorSetLayoutFactory::Parameters const& rhs) noexcept {
-    return (lhs.dsl.bindings.size() == rhs.dsl.bindings.size()) &&
+    return (lhs.dsl.descriptors.size() == rhs.dsl.descriptors.size()) &&
            std::equal(
-                   lhs.dsl.bindings.begin(), lhs.dsl.bindings.end(),
-                   rhs.dsl.bindings.begin());
+                   lhs.dsl.descriptors.begin(), lhs.dsl.descriptors.end(),
+                   rhs.dsl.descriptors.begin());
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ void HwDescriptorSetLayoutFactory::terminate(DriverApi&) noexcept {
 auto HwDescriptorSetLayoutFactory::create(DriverApi& driver,
         DescriptorSetLayout dsl) noexcept -> Handle {
 
-    std::sort(dsl.bindings.begin(), dsl.bindings.end(),
+    std::sort(dsl.descriptors.begin(), dsl.descriptors.end(),
             [](auto&& lhs, auto&& rhs) {
         return lhs.binding < rhs.binding;
     });

@@ -494,8 +494,8 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
             std::pair{ DescriptorSetBindingPoints::PER_VIEW,
                     this->perViewDescriptorSetLayoutDescription }}) {
         Program::DescriptorBindingsInfo& descriptors = programDescriptorBindings[+bindingPoint];
-        descriptors.reserve(dsl.bindings.size());
-        for (auto const& entry: dsl.bindings) {
+        descriptors.reserve(dsl.descriptors.size());
+        for (auto const& entry: dsl.descriptors) {
             auto const& name = descriptor_sets::getDescriptorName(bindingPoint, entry.binding);
             descriptors.push_back({ name, entry.type, entry.binding });
         }
