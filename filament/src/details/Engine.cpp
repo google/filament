@@ -1449,10 +1449,10 @@ size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.si
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
 AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
-        CallbackHandler* handler, AsyncCallbackType onComplete, void* user) {
+        CallbackHandler* handler, AsyncCompletionCallback onComplete, void* user) {
 
     struct RunCommandAsyncCallback {
-        AsyncCallbackType userCallback;
+        AsyncCompletionCallback userCallback;
         void* userParam;
         static void func(void* wrappedData) {
             auto* const data = static_cast<RunCommandAsyncCallback*>(wrappedData);

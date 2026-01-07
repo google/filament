@@ -90,7 +90,8 @@ public:
     using Swizzle = backend::TextureSwizzle;                         //!< Texture swizzle
     using ExternalImageHandle = backend::Platform::ExternalImageHandle;
     using ExternalImageHandleRef = backend::Platform::ExternalImageHandleRef;
-    using AsyncCallbackType = std::function<void(Texture* UTILS_NONNULL, void* UTILS_NULLABLE)>;
+    using AsyncCompletionCallback =
+            std::function<void(Texture* UTILS_NONNULL, void* UTILS_NULLABLE)>;
     using AsyncCallId = backend::AsyncCallId;
 
     /** @return Whether a backend supports a particular format. */
@@ -288,7 +289,7 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& async(backend::CallbackHandler* UTILS_NULLABLE handler,
-                AsyncCallbackType callback = nullptr,
+                AsyncCompletionCallback callback = nullptr,
                 void* UTILS_NULLABLE user = nullptr) noexcept;
 
         /**
@@ -506,7 +507,7 @@ public:
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& buffer,
             backend::CallbackHandler* UTILS_NULLABLE handler,
-            AsyncCallbackType callback,
+            AsyncCompletionCallback callback,
             void* UTILS_NULLABLE user = nullptr) const;
 
     /**
@@ -517,10 +518,10 @@ public:
      *              uint32_t width, uint32_t height, uint32_t depth,
      *              PixelBufferDescriptor&& buffer,
      *              backend::CallbackHandler* UTILS_NULLABLE handler,
-     *              AsyncCallbackType callback, void* user)
+     *              AsyncCompletionCallback callback, void* user)
      */
     AsyncCallId setImageAsync(Engine& engine, size_t level, PixelBufferDescriptor&& buffer,
-            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCallbackType callback,
+            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCompletionCallback callback,
             void* UTILS_NULLABLE user = nullptr) const {
         return setImageAsync(engine, level, 0, 0, 0,
             uint32_t(getWidth(level)), uint32_t(getHeight(level)), 1, std::move(buffer),
@@ -535,13 +536,13 @@ public:
      *              uint32_t width, uint32_t height, uint32_t depth,
      *              PixelBufferDescriptor&& buffer,
      *              backend::CallbackHandler* UTILS_NULLABLE handler,
-     *              AsyncCallbackType callback, void* user)
+     *              AsyncCompletionCallback callback, void* user)
      */
     AsyncCallId setImageAsync(Engine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             PixelBufferDescriptor&& buffer,
             backend::CallbackHandler* UTILS_NULLABLE handler,
-            AsyncCallbackType callback,
+            AsyncCompletionCallback callback,
             void* UTILS_NULLABLE user = nullptr) const {
         return setImageAsync(engine, level, xoffset, yoffset, 0, width, height, 1, std::move(buffer),
             handler, std::move(callback), user);
