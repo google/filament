@@ -27,6 +27,7 @@
 #include <utils/Invocable.h>
 #include <utils/Slice.h>
 
+#include <functional>
 #include <initializer_list>
 #include <optional>
 
