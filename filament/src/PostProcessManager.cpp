@@ -3154,7 +3154,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 // an "import".
                 builder.sideEffect();
                 data.color = builder.sample(history); // FIXME: an access must be declared for detach(), why?
-            }, [&current](FrameGraphResources const& resources, auto const& data, auto&) {
+            }, [&current](FrameGraphResources const& resources, auto const& data) {
                 resources.detach(data.color, &current.color, &current.desc);
             });
 
@@ -3805,7 +3805,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 
     auto const& depthMipmapPass = fg.addPass<VsmMipData>("VSM Generate Mipmap Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                utils::StaticString name = builder.getName(input);
+                StaticString const name = builder.getName(input);
                 data.in = builder.sample(input);
 
                 auto out = builder.createSubresource(data.in, "Mip level", {
