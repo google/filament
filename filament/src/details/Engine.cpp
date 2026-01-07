@@ -1449,20 +1449,22 @@ size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.si
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
 AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
-        CallbackHandler* handler, Invocable<void()>&& onComplete) {
+        CallbackHandler* handler, AsyncCallbackType onComplete, void* user) {
 
     struct RunCommandAsyncCallback {
-        Invocable<void()> f;
-        static void func(void* user) {
-            auto* const c = static_cast<RunCommandAsyncCallback*>(user);
-            c->f();
-            delete c;
+        AsyncCallbackType userCallback;
+        void* userParam;
+        static void func(void* wrappedData) {
+            auto* const data = static_cast<RunCommandAsyncCallback*>(wrappedData);
+            data->userCallback(data->userParam);
+            delete data;
         }
     };
-    auto* const user = new(std::nothrow) RunCommandAsyncCallback{ std::move(onComplete) };
+    auto* const wrappedData = new(std::nothrow) RunCommandAsyncCallback{
+            std::move(onComplete), user };
 
     return getDriverApi().queueCommandAsync(std::move(command), handler, &RunCommandAsyncCallback::func,
-            user);
+            wrappedData);
 }
 
 bool FEngine::cancelAsyncCall(AsyncCallId const id) {

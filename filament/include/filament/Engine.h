@@ -27,6 +27,7 @@
 #include <utils/Invocable.h>
 #include <utils/Slice.h>
 
+#include <functional>
 #include <initializer_list>
 #include <optional>
 
@@ -193,6 +194,7 @@ public:
     using Driver = backend::Driver;
     using GpuContextPriority = backend::Platform::GpuContextPriority;
     using AsynchronousMode = backend::AsynchronousMode;
+    using AsyncCallbackType = std::function<void(void* UTILS_NULLABLE)>;
     using AsyncCallId = backend::AsyncCallId;
 
     /**
@@ -1047,14 +1049,15 @@ public:
      * calling async method will cause the program to terminate.
      *
      * @param command The custom command to be executed.
-     * @param onComplete The callback function that runs once the command has finished.
      * @param handler The handler from which `onComplete` is invoked. If null, it's called from the
      * main thread.
+     * @param onComplete The callback function that runs once the command has finished.
+     * @param user    The custom data that will be passed as an argument to the `onComplete`.
      * @return A unique identifier for the asynchronous call.
      */
     AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
-            backend::CallbackHandler* UTILS_NULLABLE handler,
-            utils::Invocable<void()>&& onComplete);
+            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCallbackType onComplete,
+            void* UTILS_NULLABLE user = nullptr);
 
     /**
      * Cancel the pending asynchronous call pointed to by `id`, which is retrieved whenever you
