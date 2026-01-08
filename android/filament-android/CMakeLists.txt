@@ -134,6 +134,7 @@ target_include_directories(filament-jni PRIVATE
         ../../filament/backend/include
         ../../third_party/robin-map
         ../../third_party/perfetto
+        ../../libs/bluevk/include
         ../../libs/utils/include)
 
 # Ordering is significant in the following list. The PRIVATE qualifier prevents transitive deps.
@@ -167,3 +168,9 @@ target_link_libraries(filament-jni
 
 # Force a relink when the version script is changed:
 set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    add_definitions(-DFILAMENT_SUPPORTS_VULKAN=1)
+else()
+    add_definitions(-DFILAMENT_SUPPORTS_VULKAN=0)
+endif()

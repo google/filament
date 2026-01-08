@@ -335,13 +335,25 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUVertexBufferInfo.h
     )
     if (WIN32)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformWindows.h
+            src/webgpu/platform/WebGPUPlatformWindows.cpp
+        )
     elseif (LINUX)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformLinux.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformLinux.h
+            src/webgpu/platform/WebGPUPlatformLinux.cpp
+        )
     elseif (APPLE OR IOS)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformApple.mm)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformApple.h
+            src/webgpu/platform/WebGPUPlatformApple.mm
+        )
     elseif (ANDROID)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformAndroid.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformAndroid.h
+            src/webgpu/platform/WebGPUPlatformAndroid.cpp
+        )
     endif()
 
     if (TNT_DEV)

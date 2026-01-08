@@ -70,9 +70,10 @@ if (TNT_DEV)
             filament_bimap_test.cpp
             filament_framegraph_test.cpp
             filament_test.cpp
+            filament_test_material.cpp
             ${RESGEN_SOURCE})
 
-    target_link_libraries(test_${TARGET} PRIVATE filament gtest)
+    target_link_libraries(test_${TARGET} PRIVATE filamat filament gtest)
     target_compile_options(test_${TARGET} PRIVATE ${COMPILER_FLAGS})
     target_include_directories(test_${TARGET} PRIVATE ${RESOURCE_DIR})
     set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
@@ -92,15 +93,7 @@ endif()
 add_executable(test_material_parser
         filament_test_material_parser.cpp
         ${RESGEN_SOURCE})
-target_link_libraries(test_material_parser PRIVATE filament gtest)
+target_link_libraries(test_material_parser PRIVATE filamat filament gtest)
 target_compile_options(test_material_parser PRIVATE ${COMPILER_FLAGS})
 target_include_directories(test_material_parser PRIVATE ${RESOURCE_DIR})
 set_target_properties(test_material_parser PROPERTIES FOLDER Tests)
-
-add_executable(test_material
-        filament_test_material.cpp
-        ${RESGEN_SOURCE})
-target_link_libraries(test_material PRIVATE filamat filament gtest)
-target_compile_options(test_material PRIVATE ${COMPILER_FLAGS})
-target_include_directories(test_material PRIVATE ${RESOURCE_DIR})
-set_target_properties(test_material PROPERTIES FOLDER Tests)

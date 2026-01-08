@@ -77,6 +77,9 @@ struct MaterialInputs {
 #if defined(MATERIAL_HAS_TRANSMISSION)
     float transmission;
 #endif
+#if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
+    float dispersion;
+#endif
 #if defined(MATERIAL_HAS_IOR)
     float ior;
 #endif
@@ -177,6 +180,9 @@ void initMaterial(out MaterialInputs material) {
 #endif
 #if defined(MATERIAL_HAS_TRANSMISSION)
     material.transmission = 1.0;
+#endif
+#if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
+    material.dispersion = 0.0f;
 #endif
 #if defined(MATERIAL_HAS_IOR)
     material.ior = 1.5;
