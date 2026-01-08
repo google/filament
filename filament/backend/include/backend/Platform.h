@@ -320,6 +320,12 @@ public:
          */
         StereoscopicType stereoscopicType = StereoscopicType::NONE;
 
+        /*
+         * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
+         * between 1 and Engine::getMaxStereoscopicEyes() (inclusive).
+         */
+        uint8_t stereoscopicEyeCount = 2;
+
         /**
          * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
          * This is only supported for:

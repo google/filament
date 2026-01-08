@@ -251,6 +251,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mIsMSAASwapChainSupported(false), // TODO: support MSAA swapchain
       mStereoscopicType(driverConfig.stereoscopicType),
+      mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
       mAsynchronousMode(driverConfig.asynchronousMode) {
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -796,6 +797,32 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
             program);
     vprogram.inc();
     mResourceManager.associateHandle(ph.getId(), std::move(tag));
+
+    if (!mContext.shouldUsePipelineCachePrewarming()) {
+        return;
+    }
+
+    // If async prewarming is enabled, let's find the proper layout and build the pipeline.
+    VulkanDescriptorSetLayout::DescriptorSetLayoutArray vkLayouts {};
+    for (const auto& layoutBinding : program.getDescriptorSetLayouts()) {
+        DescriptorSetLayout layoutDescription = layoutBinding.layout;
+        auto layoutHandle = mResourceManager.allocHandle<VulkanDescriptorSetLayout>();
+        auto layout = mDescriptorSetLayoutCache.createLayout(layoutHandle, std::move(layoutDescription));
+        vkLayouts[layoutBinding.set] = layout->getVkLayout();
+    }
+
+    StereoscopicType stereoscopicType = mStereoscopicType;
+    if (stereoscopicType == StereoscopicType::MULTIVIEW && !program.isMultiview()) {
+        stereoscopicType = StereoscopicType::NONE;
+    }
+
+    VkPipelineLayout layout = mPipelineLayoutCache.getLayout(vkLayouts, vprogram);
+    mPipelineCache.asyncPrewarmCache(
+        *vprogram.get(),
+        layout,
+        stereoscopicType,
+        mStereoscopicEyeCount,
+        program.getPriorityQueue());
 }
 
 void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
@@ -1800,7 +1827,11 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
 void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
-        scheduleCallback(handler, user, callback);
+        if (mContext.shouldUsePipelineCachePrewarming()) {
+            mPipelineCache.addCachePrewarmCallback(handler, callback, user);
+        } else {
+            scheduleCallback(handler, user, callback);
+        }
     }
 }
 
