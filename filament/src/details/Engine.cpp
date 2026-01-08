@@ -17,7 +17,7 @@
 #include "details/Engine.h"
 
 #include "MaterialParser.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 #include "RenderPrimitive.h"
 
 #include "details/BufferObject.h"
@@ -55,6 +55,7 @@
 
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
+#include <utils/CString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
@@ -109,11 +110,14 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
         .forceGLES2Context = instance->getConfig().forceGLES2Context,
         .stereoscopicType = instance->getConfig().stereoscopicType,
+        .stereoscopicEyeCount = instance->getConfig().stereoscopicEyeCount,
         .assertNativeWindowIsValid =
                 instance->features.backend.opengl.assert_native_window_is_valid,
         .metalDisablePanicOnDrawableFailure =
                 instance->getConfig().metalDisablePanicOnDrawableFailure,
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
+        .vulkanEnableAsyncPipelineCachePrewarming =
+                instance->features.backend.vulkan.enable_pipeline_cache_prewarming,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
         .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?
@@ -132,7 +136,7 @@ struct Engine::BuilderDetails {
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
-    std::unordered_map<std::string_view, bool> mFeatureFlags;
+    std::unordered_map<CString, bool> mFeatureFlags;
 
     static Config validateConfig(Config config) noexcept;
 };
@@ -283,7 +287,7 @@ FEngine::FEngine(Builder const& builder) :
 
     // update all the features flags specified in the builder
     for (auto const& feature : builder->mFeatureFlags) {
-        auto* const p = getFeatureFlagPtr(feature.first, true);
+        auto* const p = getFeatureFlagPtr(feature.first.c_str_safe(), true);
         if (p) {
             *p = feature.second;
         }
@@ -341,7 +345,7 @@ void FEngine::init() {
     LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
 
 
-    mResourceAllocatorDisposer = std::make_shared<ResourceAllocatorDisposer>(driverApi);
+    mResourceAllocatorDisposer = std::make_shared<TextureCacheDisposer>(driverApi);
 
     mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)
@@ -1445,6 +1449,29 @@ size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
 size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
+AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
+        CallbackHandler* handler, AsyncCompletionCallback onComplete, void* user) {
+
+    struct RunCommandAsyncCallback {
+        AsyncCompletionCallback userCallback;
+        void* userParam;
+        static void func(void* wrappedData) {
+            auto* const data = static_cast<RunCommandAsyncCallback*>(wrappedData);
+            data->userCallback(data->userParam);
+            delete data;
+        }
+    };
+    auto* const wrappedData = new(std::nothrow) RunCommandAsyncCallback{
+            std::move(onComplete), user };
+
+    return getDriverApi().queueCommandAsync(std::move(command), handler, &RunCommandAsyncCallback::func,
+            wrappedData);
+}
+
+bool FEngine::cancelAsyncCall(AsyncCallId const id) {
+    return getDriver().cancelAsyncJob(id);
+}
+
 size_t FEngine::getMaxShadowMapCount() const noexcept {
     return features.engine.shadows.use_shadow_atlas ?
         CONFIG_MAX_SHADOWMAPS : CONFIG_MAX_SHADOW_LAYERS;
@@ -1505,9 +1532,9 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 
-bool FEngine::isAsynchronousOperationSupported() const noexcept {
-    return features.backend.enable_asynchronous_operation &&
-        mConfig.asynchronousMode != AsynchronousMode::NONE;
+bool FEngine::isAsynchronousModeEnabled() const noexcept {
+    DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
+    return driver.isAsynchronousModeEnabled();
 }
 
 #if defined(__EMSCRIPTEN__)
@@ -1589,7 +1616,7 @@ Engine::Builder& Engine::Builder::paused(bool const paused) noexcept {
 }
 
 Engine::Builder& Engine::Builder::feature(char const* name, bool const value) noexcept {
-    mImpl->mFeatureFlags[name] = value;
+    mImpl->mFeatureFlags.emplace(name, value);
     return *this;
 }
 

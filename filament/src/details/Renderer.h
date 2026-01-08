@@ -54,7 +54,7 @@
 
 namespace filament {
 
-class ResourceAllocator;
+class TextureCache;
 
 namespace backend {
 class Driver;
@@ -225,7 +225,7 @@ private:
     tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
     std::function<void()> mBeginFrameInternal;
     uint64_t mVsyncSteadyClockTimeNano = 0;
-    std::unique_ptr<ResourceAllocator> mResourceAllocator{};
+    std::unique_ptr<TextureCache> mResourceAllocator{};
 };
 
 FILAMENT_DOWNCAST(Renderer)

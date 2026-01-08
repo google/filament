@@ -489,16 +489,15 @@ struct MultiSampleAntiAliasingOptions {
  * @see setTemporalAntiAliasingOptions()
  */
 struct TemporalAntiAliasingOptions {
-    float filterWidth = 1.0f;   //!< reconstruction filter width typically between 1 (sharper) and 2 (smoother)
+    float filterWidth = 1.0f;   //!< @deprecated has no effect.
     float feedback = 0.12f;     //!< history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
     float lodBias = -1.0f;      //!< texturing lod bias (typically -1 or -2)
     float sharpness = 0.0f;     //!< post-TAA sharpen, especially useful when upscaling is true.
     bool enabled = false;       //!< enables or disables temporal anti-aliasing
-    bool upscaling = false;     //!< 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+    float upscaling = 1.0f;     //!< Upscaling factor. Disables Dynamic Resolution. [BETA]
 
     enum class BoxType : uint8_t {
         AABB,           //!< use an AABB neighborhood
-        VARIANCE,       //!< use the variance of the neighborhood (not recommended)
         AABB_VARIANCE   //!< use both AABB and variance
     };
 
@@ -519,6 +518,7 @@ struct TemporalAntiAliasingOptions {
     bool filterHistory = true;      //!< whether to filter the history buffer
     bool filterInput = true;        //!< whether to apply the reconstruction filter to the input
     bool useYCoCg = false;          //!< whether to use the YcoCg color-space for history rejection
+    bool hdr = true;                //!< set to true for HDR content
     BoxType boxType = BoxType::AABB;            //!< type of color gamut box
     BoxClipping boxClipping = BoxClipping::ACCURATE;     //!< clipping algorithm
     JitterPattern jitterPattern = JitterPattern::HALTON_23_X16; //! Jitter Pattern

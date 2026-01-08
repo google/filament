@@ -57,7 +57,7 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/JobSystem.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
 #include <utils/compiler.h>
@@ -771,7 +771,7 @@ bool MaterialBuilder::findProperties(backend::ShaderStage const type,
             semanticCodeGenParams.targetLanguage,
             semanticCodeGenParams.shaderModel)) {
         if (mPrintShaders) {
-            slog.e << shaderCodeAllProperties << io::endl;
+            LOG(ERROR) << shaderCodeAllProperties;
         }
         return false;
     }
@@ -834,7 +834,7 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
         }
     }
     if (!success && mPrintShaders) {
-        slog.e << shaderCode << io::endl;
+        LOG(ERROR) << shaderCode;
     }
     return success;
 }
@@ -879,7 +879,7 @@ static void showErrorMessage(const char* materialName, filament::Variant const v
             break;
     }
 
-    slog.e
+    LOG(ERROR)
             << "Error in \"" << materialName << "\""
             << ", Variant 0x" << io::hex << +variant.key
             << ", " << targetApiString
@@ -980,15 +980,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 if (v.stage == ShaderStage::VERTEX) {
                     shader = sg.createSurfaceVertexProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
-                            info, v.variant, mInterpolation, mVertexDomain);
+                            info, v.variant, mInterpolation, mVertexDomain, mApiLevel);
                 } else if (v.stage == ShaderStage::FRAGMENT) {
                     shader = sg.createSurfaceFragmentProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
-                            info, v.variant, mInterpolation, mVariantFilter);
+                            info, v.variant, mInterpolation, mVariantFilter, mApiLevel);
                 } else if (v.stage == ShaderStage::COMPUTE) {
                     shader = sg.createSurfaceComputeProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
-                            info);
+                            info, mApiLevel);
                 }
 
                 // Write the variant to a file.
@@ -1047,7 +1047,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                                      featureLevel, shader);
                     cancelJobs = true;
                     if (mPrintShaders) {
-                        slog.e << shader << io::endl;
+                        LOG(ERROR) << shader;
                     }
                     return;
                 }
@@ -1257,9 +1257,14 @@ MaterialBuilder& MaterialBuilder::materialSource(std::string_view source) noexce
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::setApiLevel(uint32_t apiLevel) noexcept {
+    mApiLevel = apiLevel;
+    return *this;
+}
+
 Package MaterialBuilder::build(JobSystem& jobSystem) {
     if (materialBuilderClients == 0) {
-        slog.e << "Error: MaterialBuilder::init() must be called before build()." << io::endl;
+        LOG(ERROR) << "Error: MaterialBuilder::init() must be called before build().";
         // Return an empty package to signal a failure to build the material.
 error:
         return Package::invalidPackage();
@@ -1281,7 +1286,7 @@ error:
         if (mRequiredAttributes[COLOR] &&
             !mVariables[int(Variable::CUSTOM4)].name.empty()) {
             // both the color attribute and the custom4 variable are present, that's not supported
-            slog.e << "Error: when the 'color' attribute is required 'Variable::CUSTOM4' is not supported." << io::endl;
+            LOG(ERROR) << "Error: when the 'color' attribute is required 'Variable::CUSTOM4' is not supported.";
             goto error;
         }
     }
@@ -1289,7 +1294,13 @@ error:
     // TODO: maybe check MaterialDomain::COMPUTE has outputs
 
     if (mCustomSurfaceShading && mShading != Shading::LIT) {
-        slog.e << "Error: customSurfaceShading can only be used with lit materials." << io::endl;
+        LOG(ERROR) << "Error: customSurfaceShading can only be used with lit materials.";
+        goto error;
+    }
+
+    if (mApiLevel < 1 || mApiLevel > filament::UNSTABLE_MATERIAL_API_LEVEL) {
+        LOG(ERROR) << "Error: api level can't be set below 1 or above unstable material level(" <<
+                filament::UNSTABLE_MATERIAL_API_LEVEL << ")";
         goto error;
     }
 
@@ -1405,10 +1416,9 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         auto const& samplers = sib.getSamplerInfoList();
         auto const* stage = to_string(sib.getStageFlags());
         for (auto const& sampler: samplers) {
-            slog.e << "\"" << sampler.name.c_str() << "\" "
+            LOG(ERROR) << "\"" << sampler.name.c_str() << "\" "
                    << Enums::toString(sampler.type).c_str() << " " << stage << '\n';
         }
-        flush(slog.e);
     };
 
     auto userSamplerCount = info.sib.getSize();
@@ -1422,9 +1432,9 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         case FeatureLevel::FEATURE_LEVEL_0:
             // TODO: check FEATURE_LEVEL_0 features (e.g. unlit only, no texture arrays, etc...)
             if (info.isLit) {
-                slog.e << "Error: material \"" << mMaterialName.c_str()
+                LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
-                       << " and is not 'unlit'." << io::endl;
+                       << " and is not 'unlit'.";
                 return false;
             }
             return true;
@@ -1451,10 +1461,10 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
             }
 
             if (userSamplerCount > maxTextureCount - textureUsedByFilamentCount) {
-                slog.e << "Error: material \"" << mMaterialName.c_str()
+                LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
                        << " and is using more than " << maxTextureCount - textureUsedByFilamentCount
-                       << " samplers." << io::endl;
+                       << " samplers.";
                 logSamplerOverflow(info.sib);
                 return false;
             }
@@ -1464,9 +1474,9 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
                     [](const SamplerInfo& sampler) {
                         return sampler.type == SamplerType::SAMPLER_CUBEMAP_ARRAY;
                     })) {
-                slog.e << "Error: material \"" << mMaterialName.c_str()
+                LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
-                       << " and uses a samplerCubemapArray." << io::endl;
+                       << " and uses a samplerCubemapArray.";
                 logSamplerOverflow(info.sib);
                 return false;
             }
@@ -1476,9 +1486,9 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
             // TODO: we need constants somewhere for these values
             // TODO: 16 is artificially low for now, until we have a better idea of what we want
             if (userSamplerCount > 16) {
-                slog.e << "Error: material \"" << mMaterialName.c_str()
+                LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
-                       << " and is using more than 16 samplers" << io::endl;
+                       << " and is using more than 16 samplers";
                 logSamplerOverflow(info.sib);
                 return false;
             }
@@ -1522,15 +1532,15 @@ std::string MaterialBuilder::peek(backend::ShaderStage const stage,
         case ShaderStage::VERTEX:
             return sg.createSurfaceVertexProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    params.featureLevel, info, {}, mInterpolation, mVertexDomain);
+                    params.featureLevel, info, {}, mInterpolation, mVertexDomain, mApiLevel);
         case ShaderStage::FRAGMENT:
             return sg.createSurfaceFragmentProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    params.featureLevel, info, {}, mInterpolation, mVariantFilter);
+                    params.featureLevel, info, {}, mInterpolation, mVariantFilter, mApiLevel);
         case ShaderStage::COMPUTE:
             return sg.createSurfaceComputeProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    params.featureLevel, info);
+                    params.featureLevel, info, mApiLevel);
     }
     return {};
 }

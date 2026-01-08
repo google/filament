@@ -366,7 +366,13 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
     inline bool isSwapChain() const { return !mOffscreen; }
     inline bool isProtected() const { return mProtected; }
 
-    void bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain);
+    void bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain);
+
+    void releaseSwapchain();
+
+    bool isSwapchainBound() const {
+        return isSwapChain() && mInfo->colors[0];
+    }
 
     void emitBarriersBeginRenderPass(VulkanCommandBuffer& commands);
 
@@ -470,7 +476,7 @@ struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
     VulkanIndexBuffer(VulkanContext const& context, VmaAllocator allocator,
             VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint8_t elementSize,
             uint32_t indexCount)
-        : HwIndexBuffer(elementSize, indexCount),
+        : HwIndexBuffer(elementSize, indexCount, false),
           indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
           mBuffer(context, allocator, stagePool, bufferCache, VulkanBufferBinding::INDEX,
                   BufferUsage::STATIC, elementSize * indexCount) {}

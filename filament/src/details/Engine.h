@@ -40,7 +40,6 @@
 #include "details/ColorGrading.h"
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
-#include "details/IndexBuffer.h"
 #include "details/InstanceBuffer.h"
 #include "details/MorphTargetBuffer.h"
 #include "details/RenderTarget.h"
@@ -63,6 +62,7 @@
 #include <filament/Stream.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
+#include <filament/IndexBuffer.h>
 
 #include <backend/DriverEnums.h>
 
@@ -113,7 +113,7 @@ namespace filament {
 
 class Renderer;
 class MaterialParser;
-class ResourceAllocatorDisposer;
+class TextureCacheDisposer;
 
 namespace backend {
 class Driver;
@@ -128,7 +128,7 @@ class FSwapChain;
 class FSync;
 class FView;
 
-class ResourceAllocator;
+class TextureCache;
 
 /*
  * Concrete implementation of the Engine interface. This keeps track of all hardware resources
@@ -216,7 +216,7 @@ public:
         return getDriver().isStereoSupported();
     }
 
-    bool isAsynchronousOperationSupported() const noexcept;
+    bool isAsynchronousModeEnabled() const noexcept;
 
     static size_t getMaxStereoscopicEyes() noexcept {
         return CONFIG_MAX_STEREOSCOPIC_EYES;
@@ -300,12 +300,12 @@ public:
         return getDriver().getShaderLanguages(preferredLanguage);
     }
 
-    ResourceAllocatorDisposer& getResourceAllocatorDisposer() noexcept {
+    TextureCacheDisposer& getResourceAllocatorDisposer() noexcept {
         assert_invariant(mResourceAllocatorDisposer);
         return *mResourceAllocatorDisposer;
     }
 
-    std::shared_ptr<ResourceAllocatorDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
+    std::shared_ptr<TextureCacheDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
         return mResourceAllocatorDisposer;
     }
 
@@ -423,6 +423,10 @@ public:
     size_t getSkyboxeCount() const noexcept;
     size_t getColorGradingCount() const noexcept;
     size_t getRenderTargetCount() const noexcept;
+
+    AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
+            backend::CallbackHandler* handler, AsyncCompletionCallback onComplete, void* user);
+    bool cancelAsyncCall(AsyncCallId id);
 
     void destroy(utils::Entity e);
 
@@ -612,7 +616,7 @@ private:
     FTransformManager mTransformManager;
     FLightManager mLightManager;
     FCameraManager mCameraManager;
-    std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
+    std::shared_ptr<TextureCacheDisposer> mResourceAllocatorDisposer;
     mutable MaterialCache mMaterialCache;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
     HwDescriptorSetLayoutFactory mHwDescriptorSetLayoutFactory;
@@ -779,6 +783,10 @@ public:
                 bool assert_native_window_is_valid = false;
             } opengl;
             struct {
+                // In certain GPU drivers, graphics pipelines are cached based on a subset of their
+                // parameters. In those cases, we can create fake pipelines ahead of time to ensure
+                // a cache hit when creating graphics pipelines at draw time, eliminating hitching.
+                bool enable_pipeline_cache_prewarming = false;
                 // On Unified Memory Architecture device, it is possible to bypass using the staging
                 // buffer. This is an experimental feature that still needs to be implemented fully
                 // before it can be fully enabled.
@@ -799,22 +807,22 @@ public:
     std::array<FeatureFlag, sizeof(features)> const mFeatures{{
             { "backend.disable_parallel_shader_compile",
               "Disable parallel shader compilation in GL and Metal backends.",
-              &features.backend.disable_parallel_shader_compile, true },
+              &features.backend.disable_parallel_shader_compile },
             { "backend.disable_amortized_shader_compile",
               "Disable amortized shader compilation in GL backend.",
-              &features.backend.disable_amortized_shader_compile, true },
+              &features.backend.disable_amortized_shader_compile },
             { "backend.disable_handle_use_after_free_check",
               "Disable Handle<> use-after-free checks.",
-              &features.backend.disable_handle_use_after_free_check, true },
+              &features.backend.disable_handle_use_after_free_check },
             { "backend.disable_heap_handle_tags",
               "Disable Handle<> tags for heap-allocated handles.",
-              &features.backend.disable_heap_handle_tags, true },
+              &features.backend.disable_heap_handle_tags },
             { "backend.enable_asynchronous_operation",
               "Enable asynchronous operation for resource management.",
-              &features.backend.enable_asynchronous_operation, true },
+              &features.backend.enable_asynchronous_operation },
             { "backend.opengl.assert_native_window_is_valid",
               "Asserts that the ANativeWindow is valid when rendering starts.",
-              &features.backend.opengl.assert_native_window_is_valid, true },
+              &features.backend.opengl.assert_native_window_is_valid },
             { "engine.color_grading.use_1d_lut",
               "Uses a 1D LUT for color grading.",
               &features.engine.color_grading.use_1d_lut, false },
@@ -833,6 +841,9 @@ public:
             { "engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4",
               "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
               &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
+            { "backend.vulkan.enable_pipeline_cache_prewarming",
+              "Enables an experimental approach to parallel shader compilation on Vulkan.",
+              &features.backend.vulkan.enable_pipeline_cache_prewarming, false },
             { "backend.vulkan.enable_staging_buffer_bypass",
               "vulkan: enable a staging bypass logic for unified memory architecture.",
               &features.backend.vulkan.enable_staging_buffer_bypass, false },
@@ -847,10 +858,10 @@ public:
               &features.material.check_crc32_after_loading, false },
             { "material.enable_material_instance_uniform_batching",
               "Make all MaterialInstances share a common large uniform buffer and use sub-allocations within it.",
-              &features.material.enable_material_instance_uniform_batching, false },
+              &features.material.enable_material_instance_uniform_batching },
             { "engine.frame_info.disable_gpu_complete_metric",
               "Disable Renderer::FrameInfo::gpuFrameComplete reporting",
-              &features.engine.frame_info.disable_gpu_frame_complete_metric, false },
+              &features.engine.frame_info.disable_gpu_frame_complete_metric },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

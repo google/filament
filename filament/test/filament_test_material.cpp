@@ -131,3 +131,39 @@ TEST(Material, MaterialWithoutSourceMaterialReturnsEmptySource) {
     engine->destroy(material);
     Engine::destroy(engine);
 }
+
+TEST(Material, MaterialSettingValidApiLevelReturnsAnValidPackage) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.setApiLevel(filament::RELEASED_MATERIAL_API_LEVEL);
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    builder.init();
+    builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
+    result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Engine::destroy(engine);
+}
+
+TEST(Material, MaterialSettingInvalidApiLevelReturnsAnInvalidPackage) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    // Set the API level higher than unstable, which is illegal.
+    builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL + 1);
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_FALSE(result.isValid());
+
+    builder.init();
+    // Set the API level lower than the minimum.
+    builder.setApiLevel(0);
+    result = builder.build(engine->getJobSystem());
+    ASSERT_FALSE(result.isValid());
+
+    Engine::destroy(engine);
+}

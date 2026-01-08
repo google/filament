@@ -599,7 +599,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 passBuilder.variant(structureVariant);
                 passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SSAO);
 
-                RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                RenderPass pass{ passBuilder.build(mEngine) };
+                pass.finalize(mEngine, driver);
                 auto const out = resources.getRenderPassInfo();
                 driver.beginRenderPass(out.target, out.params);
                 pass.getExecutor().execute(mEngine, driver);
@@ -710,7 +711,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
                         passBuilder.variant(pickingVariant);
                         passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::DEPTH);
 
-                        RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                        RenderPass pass{ passBuilder.build(mEngine) };
+                        pass.finalize(mEngine, driver);
                         driver.beginRenderPass(target, params);
                         pass.getExecutor().execute(mEngine, driver);
                         driver.endRenderPass();
@@ -808,7 +810,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // generate all our drawing commands, except blended objects.
                 passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
 
-                RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                RenderPass pass{ passBuilder.build(mEngine) };
+                pass.finalize(mEngine, driver);
                 driver.beginRenderPass(out.target, out.params);
                 pass.getExecutor().execute(mEngine, driver);
                 driver.endRenderPass();
@@ -2530,11 +2533,12 @@ static float4 getVignetteParameters(VignetteOptions const& options,
 }
 
 void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
-        const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-        VignetteOptions const& vignetteOptions, uint32_t const width, uint32_t const height) noexcept {
-
+        FColorGrading const* colorGrading,
+        ColorGradingConfig const& colorGradingConfig,
+        VignetteOptions const& vignetteOptions,
+        uint32_t const width, uint32_t const height) noexcept {
     auto& material = getPostProcessMaterial("colorGradingAsSubpass");
-    FMaterialInstance* const mi =
+    FMaterialInstance const* const mi =
             configureColorGradingMaterial(material, colorGrading, colorGradingConfig,
                     vignetteOptions, width, height);
     mi->commit(driver, getUboManager());
@@ -2566,12 +2570,11 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp const op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
-    auto ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
+    auto const ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.customResolve = fixedIndex;
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver, getUboManager());
-    material.getMaterial(mEngine);
 }
 
 void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
@@ -2624,7 +2627,6 @@ void PostProcessManager::clearAncillaryBuffersPrepare(DriverApi& driver) noexcep
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.clearDepth = fixedIndex;
     mi->commit(driver, getUboManager());
-    material.getMaterial(mEngine);
 }
 
 void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
@@ -2909,11 +2911,12 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine);
     bool dirty = false;
 
-    setConstantParameter(ma, "upscaling", taaOptions.upscaling, dirty);
+    setConstantParameter(ma, "upscaling", taaOptions.upscaling > 1.0f, dirty);
     setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection, dirty);
     setConstantParameter(ma, "filterHistory", taaOptions.filterHistory, dirty);
     setConstantParameter(ma, "filterInput", taaOptions.filterInput, dirty);
     setConstantParameter(ma, "useYCoCg", taaOptions.useYCoCg, dirty);
+    setConstantParameter(ma, "hdr", taaOptions.hdr, dirty);
     setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering, dirty);
     setConstantParameter(ma, "boxType", int32_t(taaOptions.boxType), dirty);
     setConstantParameter(ma, "boxClipping", int32_t(taaOptions.boxClipping), dirty);
@@ -2982,6 +2985,8 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphId<FrameGraphTexture> const depth,
+        filament::Viewport const& xvp,
+        filament::Viewport const& vp,
         FrameHistory& frameHistory,
         FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
         TemporalAntiAliasingOptions const& taaOptions,
@@ -3011,9 +3016,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     auto const& taaPass = fg.addPass<TAAData>("TAA",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto desc = fg.getDescriptor(input);
-                if (taaOptions.upscaling) {
-                    desc.width *= 2;
-                    desc.height *= 2;
+                if (taaOptions.upscaling > 1.0f) {
+                    desc.width  *= taaOptions.upscaling;
+                    desc.height *= taaOptions.upscaling;
                 }
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
@@ -3045,55 +3050,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         0, 0, 0,  1
                 }};
 
-                constexpr float2 sampleOffsets[9] = {
-                        { -1.0f, -1.0f }, {  0.0f, -1.0f }, {  1.0f, -1.0f }, { -1.0f,  0.0f },
-                        {  0.0f,  0.0f },
-                        {  1.0f,  0.0f }, { -1.0f,  1.0f }, {  0.0f,  1.0f }, {  1.0f,  1.0f },
-                };
-
-                constexpr float2 subSampleOffsets[4] = {
-                        { -0.25f,  0.25f },
-                        {  0.25f,  0.25f },
-                        {  0.25f, -0.25f },
-                        { -0.25f, -0.25f }
-                };
-
-                UTILS_UNUSED
-                auto const lanczos = [](float const x, float const a) -> float {
-                    if (x <= std::numeric_limits<float>::epsilon()) {
-                        return 1.0f;
-                    }
-                    if (std::abs(x) <= a) {
-                        return (a * std::sin(f::PI * x) * std::sin(f::PI * x / a))
-                               / ((f::PI * f::PI) * (x * x));
-                    }
-                    return 0.0f;
-                };
-
-                float const filterWidth = std::clamp(taaOptions.filterWidth, 1.0f, 2.0f);
-                float4 sum = 0.0;
-                float4 weights[9];
-
-                // this doesn't get vectorized (probably because of exp()), so don't bother
-                // unrolling it.
-                UTILS_NOUNROLL
-                for (size_t i = 0; i < 9; i++) {
-                    float2 const o = sampleOffsets[i];
-                    for (size_t j = 0; j < 4; j++) {
-                        float2 const subPixelOffset = taaOptions.upscaling ? subSampleOffsets[j] : float2{ 0 };
-                        float2 const d = (o - (current.jitter - subPixelOffset)) / filterWidth;
-                        weights[i][j] = lanczos(length(d), filterWidth);
-                    }
-                    sum += weights[i];
-                }
-                for (auto& w : weights) {
-                    w /= sum;
-                }
-
                 auto out = resources.getRenderPassInfo();
-                auto color = resources.getTexture(data.color);
-                auto depth = resources.getTexture(data.depth);
-                auto history = resources.getTexture(data.history);
+
+                auto const color = resources.getTexture(data.color);
+                auto const depth = resources.getTexture(data.depth);
+                auto const history = resources.getTexture(data.history);
+
+                auto const& colorDesc = resources.getDescriptor(data.color);
+                auto const& historyDesc = resources.getDescriptor(data.history);
+
                 auto const& material = getPostProcessMaterial("taa");
 
                 PostProcessVariant const variant = colorGradingConfig.translucent ?
@@ -3104,16 +3069,36 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 FMaterialInstance* mi = getMaterialInstance(ma);
                 mi->setParameter("color",  color, SamplerParams{});  // nearest
                 mi->setParameter("depth",  depth, SamplerParams{});  // nearest
-                mi->setParameter("alpha", taaOptions.feedback);
                 mi->setParameter("history", history, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
-                mi->setParameter("filterWeights",  weights, 9);
-                mi->setParameter("jitter",  current.jitter);
+                mi->setParameter("alpha", taaOptions.feedback);
+
+                // jitter is negated here because the material wants the sample jitter offset
+                // not the projection matrix offset
+                mi->setParameter("jitter",  -current.jitter);
+                mi->setParameter("scale",  taaOptions.upscaling);
+
                 mi->setParameter("reprojection",
                         mat4f{ historyProjection * inverse(current.projection) } *
                         normalizedToClip);
+
+                mi->setParameter("colorViewport",
+                        float4{
+                            float(xvp.left)     / colorDesc.width,
+                            float(xvp.bottom)   / colorDesc.height,
+                            float(xvp.width)    / colorDesc.width,
+                            float(xvp.height)   / colorDesc.height,
+                        });
+
+                mi->setParameter("colorResolution",
+                        float4{ colorDesc.width, colorDesc.height,
+                        1.0f / colorDesc.width, 1.0f / colorDesc.height });
+
+                mi->setParameter("historyResolution",
+                        float4{ historyDesc.width, historyDesc.height,
+                        1.0f / historyDesc.width, 1.0f / historyDesc.height });
 
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
@@ -3152,7 +3137,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 // an "import".
                 builder.sideEffect();
                 data.color = builder.sample(history); // FIXME: an access must be declared for detach(), why?
-            }, [&current](FrameGraphResources const& resources, auto const& data, auto&) {
+            }, [&current](FrameGraphResources const& resources, auto const& data) {
                 resources.detach(data.color, &current.color, &current.desc);
             });
 
@@ -3803,7 +3788,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 
     auto const& depthMipmapPass = fg.addPass<VsmMipData>("VSM Generate Mipmap Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                utils::StaticString name = builder.getName(input);
+                StaticString const name = builder.getName(input);
                 data.in = builder.sample(input);
 
                 auto out = builder.createSubresource(data.in, "Mip level", {

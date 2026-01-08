@@ -56,7 +56,7 @@ GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle ds
 
     // We have allocated enough storage for all descriptors. Now allocate the empty descriptor
     // themselves.
-    for (auto const& entry : layout->bindings) {
+    for (auto const& entry : layout->descriptors) {
         size_t const index = entry.binding;
 
         // now we'll initialize the alternative for each way we can handle this descriptor.
@@ -372,10 +372,10 @@ void GLDescriptorSet::validate(HandleAllocatorGL& allocator,
 
         UTILS_UNUSED_IN_RELEASE
         bool const pipelineLayoutMatchesDescriptorSetLayout = std::equal(
-                dsl->bindings.begin(), dsl->bindings.end(),
-                cur->bindings.begin(),
-                [](DescriptorSetLayoutBinding const& lhs,
-                        DescriptorSetLayoutBinding const& rhs) {
+                dsl->descriptors.begin(), dsl->descriptors.end(),
+                cur->descriptors.begin(),
+                [](DescriptorSetLayoutDescriptor const& lhs,
+                        DescriptorSetLayoutDescriptor const& rhs) {
                     return lhs.type == rhs.type &&
                            lhs.stageFlags == rhs.stageFlags &&
                            lhs.binding == rhs.binding &&

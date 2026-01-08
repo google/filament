@@ -107,7 +107,7 @@ const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
 void FFilamentAsset::addTextureBinding(MaterialInstance* materialInstance,
         const char* parameterName, const cgltf_texture* srcTexture,
         TextureProvider::TextureFlags flags) {
-    if (!srcTexture->image && !srcTexture->basisu_image) {
+    if (!srcTexture->image && !srcTexture->basisu_image && !srcTexture->webp_image) {
 #ifndef NDEBUG
         slog.w << "Texture is missing image (" << srcTexture->name << ")." << io::endl;
 #endif

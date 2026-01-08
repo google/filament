@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANPIPELINECACHE_H
 #define TNT_FILAMENT_BACKEND_VULKANPIPELINECACHE_H
 
+#include "CallbackManager.h"
+#include "CompilerThreadPool.h"
 #include "VulkanCommands.h"
 
 #include <backend/DriverEnums.h>
@@ -86,14 +88,38 @@ public:
 
     static_assert(sizeof(RasterState) == 16, "RasterState must not have implicit padding.");
 
-    VulkanPipelineCache(VkDevice device, VulkanContext const& context);
+    /**
+     * Creates a new instance of a pipeline cache for graphics pipelines.
+     *
+     * @param driver The driver this is being instantiated for. This is used only for construction of
+     *               the callback manager, which references the driver for scheduling callbacks.
+     * @param device The device that the pipelines will be created and run on.
+     * @param context Information about the current instance of Vulkan, such as supported extensions,
+     *                and enabled features.
+     */
+    VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context);
 
-    void bindLayout(VkPipelineLayout layout) noexcept;
+    // Loads a fake pipeline into memory on a separate thread, with the intent of
+    // preloading the Vulkan cache with enough information to have a cache hit when
+    // compiling the pipeline on the main thread at draw time. This is very dependent
+    // on the implementation of the driver on the current device; it's expected to work
+    // on devices with VK_EXT_vertex_input_dynamic_state and VK_KHR_dynamic_rendering.
+    void asyncPrewarmCache(const VulkanProgram& program, VkPipelineLayout layout,
+                           StereoscopicType stereoscopicType, uint8_t stereoscopicViewCount,
+                           CompilerPriorityQueue priority);
+
+    // Notifies the callback once all in-flight async cache prewarm jobs are complete.
+    // This typically signals that it is safe to use a material at draw time without
+    // hitching.
+    void addCachePrewarmCallback(CallbackHandler* handler,
+                                 const CallbackHandler::Callback callback,
+                                 void* user);
 
     // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
     void bindPipeline(VulkanCommandBuffer* commands);
 
     // Each of the following methods are fast and do not make Vulkan calls.
+    void bindLayout(VkPipelineLayout layout) noexcept;
     void bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept;
     void bindRasterState(RasterState const& rasterState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
@@ -164,6 +190,19 @@ private:
         VkPipelineLayout layout;                                                  //  8   : 304
     };
 
+    // Provides information about any dynamic state that should be used in creation of the
+    // pipeline (if supported).
+    struct PipelineDynamicOptions {
+        // Requires `VK_EXT_vertex_input_dynamic_state` to enable.
+        bool useDynamicVertexInputState = false;
+        // Requires `VK_KHR_dynamic_rendering` to enable.
+        bool useDynamicRenderPasses = false;
+        // Only used if `useDynamicRenderPasses` is true.
+        StereoscopicType stereoscopicType = StereoscopicType::NONE;
+        // Only used if `stereoscopicType` is `StereoscopicType::MULTIVIEW`.
+        uint8_t stereoscopicViewCount = 2;
+    };
+
     static_assert(sizeof(PipelineKey) == 312, "PipelineKey must not have implicit padding.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;
@@ -195,8 +234,15 @@ private:
 
     PipelineMap mPipelines;
 
+    // Creates a pipeline, with all optional dynamic pipeline states diabled.
+    // Note - because PipelineDynamicOptions is defined within VulkanPipelineCache,
+    // we cannot define the function with a default arg for it explicitly.
+    inline VkPipeline createPipeline(const PipelineKey& key) noexcept {
+        return createPipeline(key, {});
+    }
+
     // These helpers all return unstable pointers that should not be stored.
-    PipelineCacheEntry* createPipeline() noexcept;
+    VkPipeline createPipeline(const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions) noexcept;
 
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
@@ -210,6 +256,14 @@ private:
 
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
+
+    // Thread pool that allows us to "prewarm" the pipeline cache, reducing draw-time
+    // pipeline compilation time.
+    CompilerThreadPool mCompilerThreadPool;
+
+    // Callback manager that allows us to notify the frontend when a set of pipelines have
+    // been prewarmed, signifying that it is safe to compile pipelines at draw time.
+    CallbackManager mCallbackManager;
 
     [[maybe_unused]] VulkanContext const& mContext;
 };

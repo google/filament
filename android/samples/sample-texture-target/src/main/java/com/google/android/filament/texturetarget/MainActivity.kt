@@ -76,11 +76,16 @@ class MainActivity : Activity() {
     private var texture: Texture? = null
     private var renderTarget: RenderTarget? = null
 
+    private var useExternalTexture = true
+
     private lateinit var offscreenView: View
     private lateinit var offscreenCamera: Camera
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // To use set this flag with adb, run
+        // adb shell am start -n com.google.android.filament.texturetarget/.MainActivity --ez useExternalTexture false
+        useExternalTexture = intent.getBooleanExtra("useExternalTexture", true)
         surfaceView = SurfaceView(this)
         setContentView(surfaceView)
         choreographer = Choreographer.getInstance()
@@ -173,8 +178,15 @@ class MainActivity : Activity() {
         readUncompressedAsset("materials/baked_color.filamat").let {
             triangleMaterial = Material.Builder().payload(it, it.remaining()).build(engine)
         }
-        readUncompressedAsset("materials/textured.filamat").let {
-            texturedMaterial = Material.Builder().payload(it, it.remaining()).build(engine)
+
+        if (useExternalTexture) {
+            readUncompressedAsset("materials/texturedExternal.filamat").let {
+                texturedMaterial = Material.Builder().payload(it, it.remaining()).build(engine)
+            }
+        } else {
+            readUncompressedAsset("materials/textured.filamat").let {
+                texturedMaterial = Material.Builder().payload(it, it.remaining()).build(engine)
+            }
         }
     }
 
@@ -385,33 +397,41 @@ class MainActivity : Activity() {
             texture?.let { engine.destroyTexture(it) }
             hardwareBuffer?.close()
 
-            // Create a new render target.
-            hardwareBuffer = HardwareBuffer.create(width, height,
-                HardwareBuffer.RGBA_8888, 1,
-                HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE or HardwareBuffer.USAGE_GPU_COLOR_OUTPUT)
+            if (useExternalTexture) {
+                // Create a new render target.
+                hardwareBuffer = HardwareBuffer.create(width, height,
+                    HardwareBuffer.RGBA_8888, 1,
+                    HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE or HardwareBuffer.USAGE_GPU_COLOR_OUTPUT)
 
-            texture = Texture.Builder()
-                .width(width)
-                .height(height)
-                .usage(Texture.Usage.COLOR_ATTACHMENT or Texture.Usage.SAMPLEABLE)
-                .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-                .format(Texture.InternalFormat.RGBA8)
-                .external()
-                .build(engine)
+                texture = Texture.Builder()
+                    .width(width)
+                    .height(height)
+                    .usage(Texture.Usage.COLOR_ATTACHMENT or Texture.Usage.SAMPLEABLE)
+                    .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
+                    .format(Texture.InternalFormat.RGBA8)
+                    .external()
+                    .build(engine)
 
-            texture!!.setExternalImage(engine, hardwareBuffer!!)
+                texture!!.setExternalImage(engine, hardwareBuffer!!)
+            } else {
+                texture = Texture.Builder()
+                    .width(width)
+                    .height(height)
+                    .levels(1)
+                    .usage(Texture.Usage.COLOR_ATTACHMENT or Texture.Usage.SAMPLEABLE)
+                    .format(Texture.InternalFormat.RGBA8)
+                    .build(engine)
+            }
 
             renderTarget = RenderTarget.Builder()
                 .texture(RenderTarget.AttachmentPoint.COLOR, texture!!)
                 .build(engine)
 
             offscreenView.renderTarget = renderTarget
-
             // Set the texture on the quad material.
             texturedMaterial.defaultInstance.setParameter("texture", texture!!,
                 TextureSampler(TextureSampler.MinFilter.LINEAR, TextureSampler.MagFilter.LINEAR,
-                    TextureSampler.WrapMode.CLAMP_TO_EDGE))
-
+                               TextureSampler.WrapMode.CLAMP_TO_EDGE))
             FilamentHelper.synchronizePendingFrames(engine)
         }
     }
