@@ -180,7 +180,12 @@ void VulkanPipelineCache::asyncPrewarmCache(const VulkanProgram& program,
         mCallbackManager.put(cmh);
         // We don't actually need this pipeline, we just wanted to force the driver to cache
         // the pipeline's information.
-        vkDestroyPipeline(mDevice, pipeline, VKALLOC);
+        if (pipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(mDevice, pipeline, VKALLOC);
+        } else {
+            FVK_LOGW << "Failed to create a pipeline during prewarming, draw-time pipeline "
+                        "creation may fail.";
+        }
     });
 }
 

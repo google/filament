@@ -22,8 +22,9 @@
 
 #include "vulkan/memory/ResourcePointer.h"
 
+#include <vector>
+
 #include <utils/bitset.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
 
@@ -90,6 +91,19 @@ public:
         return selectMemoryType(mMemoryProperties, types, reqs);
     }
 
+    /**
+     * For pipeline cache prewarming, if external samplers are present, we need to build
+     * the fake pipeline using the proper formats specified. Since there's no way to
+     * get these at material build time, we allow the app to register them before
+     * creating materials.
+     *
+     * @param format The format, containing the external format value which should be
+     *               extracted from an AHardwareBuffer.
+     */
+    inline void addPipelineCachePrewarmExternalFormat(const VulkanPlatform::ExternalYcbcrFormat& format) {
+        mPipelineCachePrewarmExternalFormats.push_back(format);
+    }
+
     inline fvkutils::VkFormatList const& getAttachmentDepthStencilFormats() const {
         return mDepthStencilFormats;
     }
@@ -104,6 +118,18 @@ public:
 
     inline uint32_t getPhysicalDeviceVendorId() const noexcept {
         return mPhysicalDeviceProperties.properties.vendorID;
+    }
+
+    /**
+     * Fetches a list of pre-registered external formats for prewarming the Vulkan
+     * pipeline cache.
+     *
+     * @return A list containing an external format number, YCbCr color model conversion,
+     *         and YCbCr color range.
+     */
+    inline const std::vector<VulkanPlatform::ExternalYcbcrFormat>&
+    getPipelineCachePrewarmExternalFormats() const noexcept {
+        return mPipelineCachePrewarmExternalFormats;
     }
 
     inline VkExternalFenceHandleTypeFlags getFenceExportFlags() const noexcept {
@@ -222,6 +248,8 @@ private:
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;
+
+    std::vector<VulkanPlatform::ExternalYcbcrFormat> mPipelineCachePrewarmExternalFormats;
 
     // For convenience so that VulkanPlatform can initialize the private fields.
     friend class VulkanPlatform;

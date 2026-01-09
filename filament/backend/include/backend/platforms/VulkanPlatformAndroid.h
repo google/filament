@@ -81,7 +81,6 @@ public:
     bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
             FrameTimestamps* outFrameTimestamps) const noexcept override;
 
-
 protected:
     ExtensionSet getSwapchainInstanceExtensions() const override;
 
