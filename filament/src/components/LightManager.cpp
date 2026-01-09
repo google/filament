@@ -22,6 +22,7 @@
 #include "utils/ostream.h"
 
 #include <filament/LightManager.h>
+#include <filament/Texture.h>
 
 #include <utils/Logger.h>
 #include <utils/compiler.h>
@@ -63,6 +64,7 @@ struct LightManager::BuilderDetails {
     float mSunHaloSize = 10.0f;
     float mSunHaloFalloff = 80.0f;
     ShadowOptions mShadowOptions;
+    Texture* mLightCookie = nullptr;
 
     explicit BuilderDetails(Type const type) noexcept : mType(type) { }
     // this is only needed for the explicit instantiation below
@@ -150,6 +152,11 @@ LightManager::Builder& LightManager::Builder::sunHaloFalloff(float const haloFal
     return *this;
 }
 
+LightManager::Builder& LightManager::Builder::lightCookie(Texture* texture) noexcept {
+    mImpl->mLightCookie = texture;
+    return *this;
+}
+
 LightManager::Builder& LightManager::Builder::lightChannel(unsigned int const channel, bool const enable) noexcept {
     if (channel < 8) {
         const uint8_t mask = 1u << channel;
@@ -212,6 +219,7 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
         setSunAngularRadius(i, builder->mSunAngle);
         setSunHaloSize(i, builder->mSunHaloSize);
         setSunHaloFalloff(i, builder->mSunHaloFalloff);
+        setLightCookie(i, builder->mLightCookie);
     }
 }
 
@@ -414,6 +422,12 @@ void FLightManager::setSunHaloSize(Instance const i, float const haloSize) noexc
 void FLightManager::setSunHaloFalloff(Instance const i, float const haloFalloff) noexcept {
     if (i && isSunLight(i)) {
         mManager[i].sunHaloFalloff = haloFalloff;
+    }
+}
+
+void FLightManager::setLightCookie(Instance const i, Texture* texture) noexcept {
+    if (i && (isSpotLight(i) || isPointLight(i))) {
+        mManager[i].cookieTexture = texture;
     }
 }
 

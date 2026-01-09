@@ -32,6 +32,7 @@ namespace filament {
 
 class FEngine;
 class FScene;
+class Texture;
 
 class FLightManager : public LightManager {
 public:
@@ -115,8 +116,13 @@ public:
     UTILS_NOINLINE void setSunAngularRadius(Instance i, float angularRadius) noexcept;
     UTILS_NOINLINE void setSunHaloSize(Instance i, float haloSize) noexcept;
     UTILS_NOINLINE void setSunHaloFalloff(Instance i, float haloFalloff) noexcept;
+    UTILS_NOINLINE void setLightCookie(Instance i, Texture* texture) noexcept;
 
     UTILS_NOINLINE bool getLightChannel(Instance i, unsigned int channel) const noexcept;
+
+    Texture* getLightCookie(Instance const i) const noexcept {
+        return mManager[i].cookieTexture;
+    }
 
     LightType const& getLightType(Instance const i) const noexcept {
         return mManager[i].lightType;
@@ -256,9 +262,10 @@ private:
         INTENSITY,
         FALLOFF,
         CHANNELS,
+        COOKIE_TEXTURE,     // light cookie texture for spot/point lights
     };
 
-    using Base = utils::SingleInstanceComponentManager<  // 120 bytes
+    using Base = utils::SingleInstanceComponentManager<  // 128 bytes
             LightType,      //  1
             math::float3,   // 12
             math::float3,   // 12
@@ -270,7 +277,8 @@ private:
             float,          //  4
             float,          //  4
             float,          //  4
-            uint8_t         //  1
+            uint8_t,        //  1
+            Texture*        //  8
     >;
 
     struct Sim : public Base {
@@ -297,6 +305,7 @@ private:
                 Field<INTENSITY>            intensity;
                 Field<FALLOFF>              squaredFallOffInv;
                 Field<CHANNELS>             channels;
+                Field<COOKIE_TEXTURE>       cookieTexture;
             };
         };
 

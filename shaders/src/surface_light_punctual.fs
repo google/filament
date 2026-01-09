@@ -166,6 +166,14 @@ Light getLight(const uint lightIndex) {
     if (light.lightType == LIGHT_TYPE_SPOT) {
         light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
     }
+    
+    // TODO: Light Cookie Support
+    // When cookie texture is available (encoded in data[3][0] as texture index),
+    // sample the cookie texture and modulate light.colorIntensity:
+    // - For spot lights: compute UV from light projection
+    // - For point lights: compute UV from normalized direction
+    // vec3 cookieColor = texture(sampler2D(lightCookieTextures[cookieIndex], lightCookieSampler), cookieUV).rgb;
+    // light.colorIntensity.rgb *= cookieColor;
 #endif
     return light;
 }

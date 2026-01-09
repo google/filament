@@ -39,6 +39,7 @@ namespace filament {
 class Engine;
 class FEngine;
 class FLightManager;
+class Texture;
 
 /**
  * LightManager allows to create a light source in the scene, such as a sun or street lights.
@@ -650,6 +651,21 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& sunHaloFalloff(float haloFalloff) noexcept;
+
+        /**
+         * Sets a light cookie texture for spot and point lights.
+         * The cookie texture modulates the light's color and intensity based on direction.
+         * For spot lights, the texture is projected along the light direction.
+         * For point lights, the texture is sampled based on the light direction.
+         *
+         * @param texture Pointer to a 2D Texture to use as the light cookie.
+         *                Pass nullptr to disable the light cookie.
+         *
+         * @return This Builder, for chaining calls.
+         *
+         * @note The light cookie is ignored for directional lights (Type.DIRECTIONAL or Type.SUN)
+         */
+        Builder& lightCookie(Texture* UTILS_NULLABLE texture) noexcept;
 
         enum Result { Error = -1, Success = 0  };
 
