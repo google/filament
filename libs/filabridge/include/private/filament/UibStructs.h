@@ -237,7 +237,7 @@ struct PerRenderableData {
     static uint32_t packFlagsChannels(
             bool skinning, uint8_t morphing, bool contactShadows, bool hasInstanceBuffer,
             uint8_t channels) noexcept {
-        uint32_t morphingFlags = uint32_t(morphing) << 9;
+        const uint32_t morphingFlags = uint32_t(morphing) << 9;
 
         return (skinning              ? 0x100 : 0) |
                morphingFlags                       |

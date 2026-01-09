@@ -181,9 +181,6 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
     FILAMENT_CHECK_PRECONDITION(mPbHandle)
             << "setPositionsAt() called on a MorphTargetBuffer without a position buffer. Use "
                "withPositions(true) in the Builder.";
-    if (!mPbHandle) {
-        return;
-    }
 
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
@@ -211,9 +208,6 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
     FILAMENT_CHECK_PRECONDITION(mPbHandle)
             << "setPositionsAt() called on a MorphTargetBuffer without a position buffer. Use "
                "withPositions(true) in the Builder.";
-    if (!mPbHandle) {
-        return;
-    }
 
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << mVertexCount
@@ -240,9 +234,6 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t const targetIndex
     FILAMENT_CHECK_PRECONDITION(mTbHandle)
             << "setTangentsAt() called on a MorphTargetBuffer without a tangent buffer. Use "
                "withTangents(true) in the Builder.";
-    if (!mTbHandle) {
-        return;
-    }
 
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << mVertexCount
