@@ -100,7 +100,7 @@ public:
      * @param format The format, containing the external format value which should be
      *               extracted from an AHardwareBuffer.
      */
-    inline void addPipelineCachePrewarmExternalFormat(const VulkanPlatform::ExternalYcbcrFormat& format) noexcept {
+    inline void addPipelineCachePrewarmExternalFormat(const VulkanPlatform::ExternalYcbcrFormat& format) {
         mPipelineCachePrewarmExternalFormats.push_back(format);
     }
 
