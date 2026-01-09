@@ -151,6 +151,28 @@ static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
     cbData->cb(cbData->sync, cbData->userData);
 };
 
+/**
+ * Shorthand for converting a description for an external YCbCr format used for
+ * pipeline cache prewarming to the params for the actual YCbCr conversion.
+ */
+inline VulkanYcbcrConversionCache::Params getYcbcrConversionParams(const VulkanPlatform::ExternalYcbcrFormat& format) {
+    return VulkanYcbcrConversionCache::Params {
+        .conversion = {
+            .ycbcrModel = fvkutils::getYcbcrModelConversionFilament(format.ycbcrModelConversion),
+            .r = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_R, 0),
+            .g = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_G, 1),
+            .b = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_B, 2),
+            .a = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_A, 3),
+            .ycbcrRange = fvkutils::getYcbcrRangeFilament(format.ycbcrRange),
+            .xChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+            .yChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+            .chromaFilter = SamplerMagFilter::NEAREST,
+        },
+        .format = VK_FORMAT_UNDEFINED,
+        .externalFormat = format.externalFormat,
+    };
+}
+
 }// anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -838,27 +860,13 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
 
     // If we have external samplers, let's do this again with the external samplers
     // specified.
-    for (const auto& format : mPlatform->getCachePrewarmExternalFormats()) {
+    for (const auto& format : mContext.getPipelineCachePrewarmExternalFormats()) {
         // The values that seem to matter in terms of cache hits here are the model conversion,
         // and model range. We need some value for externalFormat that is known to support that
         // pair of values, but we need not find every possible externalFormat. As we test on
         // more devices, this may change.
-        VulkanYcbcrConversionCache::Params ycbcrConversion {
-            .conversion = {
-                .ycbcrModel = fvkutils::getYcbcrModelConversionFilament(format.ycbcrModelConversion),
-                .r = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_R, 0),
-                .g = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_G, 1),
-                .b = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_B, 2),
-                .a = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_A, 3),
-                .ycbcrRange = fvkutils::getYcbcrRangeFilament(format.ycbcrRange),
-                .xChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
-                .yChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
-                .chromaFilter = SamplerMagFilter::NEAREST,
-            },
-            .format = VK_FORMAT_UNDEFINED,
-            .externalFormat = format.externalFormat,
-        };
-        VkSamplerYcbcrConversion vkConversion = mYcbcrConversionCache.getConversion(ycbcrConversion);
+        VkSamplerYcbcrConversion vkConversion = mYcbcrConversionCache.getConversion(
+            getYcbcrConversionParams(format));
         VkSampler externalSampler = mSamplerCache.getSampler({.sampler = {}, .conversion = vkConversion});
 
         // Update all layouts to use the external samplers.
