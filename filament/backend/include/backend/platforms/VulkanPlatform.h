@@ -28,6 +28,7 @@
 #include <utils/Hash.h>
 #include <utils/PrivateImplementation.h>
 
+#include <cstring>
 #include <cstddef>
 #include <functional>
 #include <string>
@@ -61,8 +62,15 @@ public:
             return std::hash<std::string>{}(s.data());
         }
     };
+    // Note: utils::CString::operator== has an edge case that breaks for the extension set.
+    // Instead, we'll provide our own comparator.
+    struct ExtensionEqualFn {
+        bool operator()(utils::CString const& a, utils::CString const& b) const noexcept {
+            return strcmp(a.c_str(), b.c_str()) == 0;
+        }
+    };
     // Utility for managing device or instance extensions during initialization.
-    using ExtensionSet = std::unordered_set<utils::CString, ExtensionHashFn>;
+    using ExtensionSet = std::unordered_set<utils::CString, ExtensionHashFn, ExtensionEqualFn>;
 
     /**
      * A collection of handles to objects and metadata that comprises a Vulkan context. The client

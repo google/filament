@@ -263,7 +263,9 @@ std::pair<float, float2> FRenderer::prepareUpscaler(float2 const scale,
     if (taaOptions.enabled) {
         bias += taaOptions.lodBias;
         if (taaOptions.upscaling) {
-            derivativesScale = 0.5f;
+            if (taaOptions.upscaling > 1.0f) {
+                derivativesScale = 1.0f / taaOptions.upscaling;
+            }
         }
     }
     return { bias, derivativesScale };
@@ -688,13 +690,13 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         // This configures post-process materials by setting constant parameters
         if (taaOptions.enabled) {
             ppm.configureTemporalAntiAliasingMaterial(taaOptions);
-            if (taaOptions.upscaling) {
+            if (taaOptions.upscaling > 1.0f) {
                 // for now TAA upscaling is incompatible with regular dsr
                 dsrOptions.enabled = false;
                 // also, upscaling doesn't work well with quater-resolution SSAO
                 aoOptions.resolution = 1.0;
                 // Currently we only support a fixed TAA upscaling ratio
-                scale = 0.5f;
+                scale = 1.0f / taaOptions.upscaling;
             }
         }
     }
@@ -781,14 +783,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         //       Without post-processing, we usually draw directly into
         //       the SwapChain, and we might want to keep it this way.
 
-        auto round = [](uint32_t const x) {
+        auto ceil16 = [](uint32_t const x) {
             constexpr uint32_t rounding = 16u;
             return (x + (rounding - 1u)) & ~(rounding - 1u);
         };
 
         // compute the new rendering width and height, multiple of 16.
-        const float width  = float(round(svp.width )) + 2.0f * guardBand;
-        const float height = float(round(svp.height)) + 2.0f * guardBand;
+        const float width  = float(ceil16(svp.width )) + 2.0f * guardBand;
+        const float height = float(ceil16(svp.height)) + 2.0f * guardBand;
 
         // scale the field-of-view up, so it covers exactly the extra pixels
         const float3 clipSpaceScaling{
@@ -1309,16 +1311,26 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, depth, view.getFrameHistory(), &FrameHistoryEntry::taa,
+        input = ppm.taa(fg, input, depth, xvp, vp,
+                view.getFrameHistory(), &FrameHistoryEntry::taa,
                 taaOptions, colorGradingConfig);
-        if (taaOptions.upscaling) {
+        if (taaOptions.upscaling > 1.0f) {
             scale = 1.0f;
             scaled = false;
+
+            // xvp = vp;
+            // xvp.left = xvp.bottom = 0;
+            // svp = xvp;
+
             UTILS_UNUSED_IN_RELEASE auto const& inputDesc = fg.getDescriptor(input);
             svp.width = inputDesc.width;
             svp.height = inputDesc.height;
-            xvp.width *= 2;
-            xvp.height *= 2;
+            // FIXME: this rounds xvp incorrectly
+
+            xvp.left   *= taaOptions.upscaling;
+            xvp.bottom *= taaOptions.upscaling;
+            xvp.width  *= taaOptions.upscaling;
+            xvp.height *= taaOptions.upscaling;
         }
     }
 

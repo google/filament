@@ -39,7 +39,7 @@ struct IndexBuffer::BuilderDetails {
     IndexType mIndexType = IndexType::UINT;
     bool mAsynchronous = false;
     backend::CallbackHandler* mAsyncCreationHandler = nullptr;
-    AsyncCallbackType mAsyncCreationCallback;
+    AsyncCompletionCallback mAsyncCreationCallback;
     void* mAsyncCreationUserData = nullptr;
 };
 
@@ -70,7 +70,7 @@ IndexBuffer::Builder& IndexBuffer::Builder::name(utils::StaticString const& name
 }
 
 IndexBuffer::Builder& IndexBuffer::Builder::async(backend::CallbackHandler* handler,
-        AsyncCallbackType callback, void* user) noexcept {
+        AsyncCompletionCallback callback, void* user) noexcept {
     mImpl->mAsynchronous = true;
     mImpl->mAsyncCreationHandler = handler;
     mImpl->mAsyncCreationCallback = std::move(callback);
@@ -151,8 +151,8 @@ void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_
 }
 
 backend::AsyncCallId FIndexBuffer::setBufferAsync(FEngine& engine, BufferDescriptor&& buffer,
-            uint32_t byteOffset, backend::CallbackHandler* handler, AsyncCallbackType callback,
-            void* user) {
+            uint32_t byteOffset, backend::CallbackHandler* handler,
+            AsyncCompletionCallback callback, void* user) {
 
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
             << "byteOffset must be a multiple of 4";

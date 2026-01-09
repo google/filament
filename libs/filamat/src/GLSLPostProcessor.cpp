@@ -127,23 +127,23 @@ DescriptorSetLayout getPerMaterialDescriptorSet(SamplerInterfaceBlock const& sib
     auto const& samplers = sib.getSamplerInfoList();
 
     DescriptorSetLayout layout;
-    layout.bindings.reserve(1 + samplers.size());
+    layout.descriptors.reserve(1 + samplers.size());
 
-    layout.bindings.push_back(DescriptorSetLayoutBinding{ DescriptorType::UNIFORM_BUFFER,
+    layout.descriptors.push_back(DescriptorSetLayoutDescriptor{ DescriptorType::UNIFORM_BUFFER,
         ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
         +PerMaterialBindingPoints::MATERIAL_PARAMS, DescriptorFlags::DYNAMIC_OFFSET, 0 });
 
     for (auto const& sampler: samplers) {
-        DescriptorSetLayoutBinding layoutBinding{
+        DescriptorSetLayoutDescriptor descriptor{
             DescriptorType::SAMPLER_EXTERNAL,
             sampler.stages, sampler.binding,
             DescriptorFlags::NONE,
             0
         };
         if (sampler.type != SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
-            layoutBinding.type = descriptor_sets::getDescriptorType(sampler.type, sampler.format);
+            descriptor.type = descriptor_sets::getDescriptorType(sampler.type, sampler.format);
         }
-        layout.bindings.push_back(layoutBinding);
+        layout.descriptors.push_back(descriptor);
     }
 
     return layout;
@@ -204,16 +204,16 @@ static void collectDescriptorsForSet(DescriptorSetBindingPoints set,
         return descriptor_sets::getDescriptorName(set, binding);
     };
 
-    for (auto const& layoutBinding : descriptorSetLayout.bindings) {
-        descriptor_binding_t binding = layoutBinding.binding;
+    for (auto const& descriptor : descriptorSetLayout.descriptors) {
+        descriptor_binding_t binding = descriptor.binding;
         auto name = getDescriptorName(binding);
-        if (DescriptorSetLayoutBinding::isSampler(layoutBinding.type)) {
+        if (DescriptorSetLayoutDescriptor::isSampler(descriptor.type)) {
             auto const pos = std::find_if(descriptorSetSamplerList.begin(), descriptorSetSamplerList.end(),
                     [&](const auto& entry) { return entry.binding == binding; });
             assert_invariant(pos != descriptorSetSamplerList.end());
-            descriptors.emplace_back(name, layoutBinding, *pos);
+            descriptors.emplace_back(name, descriptor, *pos);
         } else {
-            descriptors.emplace_back(name, layoutBinding, std::nullopt);
+            descriptors.emplace_back(name, descriptor, std::nullopt);
         }
     }
 
@@ -240,7 +240,7 @@ static void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) noexc
         printf("[DS] info (%s) = [\n", getName(setIndex));
         for (auto const& descriptor : descriptors) {
             auto const& [name, info, sampler] = descriptor;
-        if (DescriptorSetLayoutBinding::isSampler(info.type)) {
+        if (DescriptorSetLayoutDescriptor::isSampler(info.type)) {
                 assert_invariant(sampler.has_value());
                 printf("    {name = %s, binding = %d, type = %.*s, count = %d, stage = %s, flags = "
                        "%s, samplerType = %s}",

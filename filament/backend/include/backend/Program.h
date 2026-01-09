@@ -50,8 +50,13 @@ public:
         descriptor_binding_t binding;
     };
 
+    struct DescriptorSetLayoutBinding {
+        descriptor_set_t set;
+        DescriptorSetLayout layout;
+    };
+
     using SpecializationConstant = std::variant<int32_t, float, bool>;
-    using DescriptorSetLayoutArray = std::array<DescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT>;
+    using DescriptorSetLayoutArray = utils::FixedCapacityVector<DescriptorSetLayoutBinding>;
 
     struct Uniform { // For ES2 support
         utils::CString name;    // full qualified name of the uniform field
@@ -150,7 +155,10 @@ public:
 
     inline Program& descriptorLayout(backend::descriptor_set_t set,
             DescriptorSetLayout descriptorLayout) noexcept {
-        mDescriptorLayouts[set] = std::move(descriptorLayout);
+        mDescriptorLayouts.push_back({
+            .set = set,
+            .layout = std::move(descriptorLayout),
+        });
         return *this;
     }
 
@@ -189,7 +197,8 @@ private:
 
     // Descriptions for descriptor set layouts that may be used for this Program, which
     // can be useful for attempting to compile the pipeline ahead of time.
-    DescriptorSetLayoutArray mDescriptorLayouts;
+    DescriptorSetLayoutArray mDescriptorLayouts =
+        DescriptorSetLayoutArray::with_capacity(MAX_DESCRIPTOR_SET_COUNT);
 
     // For ES2 support only
     AttributesInfo mAttributes;

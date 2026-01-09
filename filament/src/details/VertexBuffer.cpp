@@ -158,7 +158,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(utils::StaticString const& na
 }
 
 VertexBuffer::Builder& VertexBuffer::Builder::async(CallbackHandler* handler,
-        AsyncCallbackType callback, void* user) noexcept {
+        AsyncCompletionCallback callback, void* user) noexcept {
     mImpl->mAsynchronous = true;
     mImpl->mAsyncCreationHandler = handler;
     mImpl->mAsyncCreationCallback = std::move(callback);
@@ -415,7 +415,7 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t const bufferIndex,
 
 AsyncCallId FVertexBuffer::setBufferAtAsync(FEngine& engine, uint8_t const bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t const byteOffset, CallbackHandler* handler,
-        AsyncCallbackType callback, void* user) {
+        AsyncCompletionCallback callback, void* user) {
     FILAMENT_CHECK_PRECONDITION(!mBufferObjectsEnabled)
             << "buffer objects enabled, use setBufferObjectAt() instead";
     FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
@@ -447,8 +447,8 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex
 }
 
 AsyncCallId FVertexBuffer::setBufferObjectAtAsync(FEngine& engine, uint8_t const bufferIndex,
-        FBufferObject const * bufferObject, CallbackHandler* handler, AsyncCallbackType callback,
-        void* user) {
+        FBufferObject const * bufferObject, CallbackHandler* handler,
+        AsyncCompletionCallback callback, void* user) {
     FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled)
             << "buffer objects disabled, use setBufferAt() instead";
     FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
