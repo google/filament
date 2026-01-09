@@ -53,3 +53,15 @@ highp int getInstanceIndex() {
     return logical_instance_index;
 }
 #endif
+
+#if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+/** @public-api */
+highp mat4 getWorldFromModelMatrix() {
+    return object_uniforms_worldFromModelMatrix;
+}
+
+/** @public-api */
+highp mat3 getWorldFromModelNormalMatrix() {
+    return object_uniforms_worldFromModelNormalMatrix;
+}
+#endif

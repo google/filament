@@ -2,6 +2,7 @@
 // Uniforms access
 //------------------------------------------------------------------------------
 
+#if CLIENT_MATERIAL_API_LEVEL < UNSTABLE_MATERIAL_API_LEVEL
 /** @public-api */
 mat4 getWorldFromModelMatrix() {
     return object_uniforms_worldFromModelMatrix;
@@ -11,6 +12,7 @@ mat4 getWorldFromModelMatrix() {
 mat3 getWorldFromModelNormalMatrix() {
     return object_uniforms_worldFromModelNormalMatrix;
 }
+#endif
 
 /** sort-of public */
 float getObjectUserData() {
