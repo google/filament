@@ -499,7 +499,7 @@ using descriptor_set_t = uint8_t;
 
 using descriptor_binding_t = uint8_t;
 
-struct DescriptorSetLayoutBinding {
+struct DescriptorSetLayoutDescriptor {
     static bool isSampler(DescriptorType type) noexcept {
         return int(type) <= int(DescriptorType::SAMPLER_EXTERNAL);
     }
@@ -513,8 +513,8 @@ struct DescriptorSetLayoutBinding {
     DescriptorFlags flags = DescriptorFlags::NONE;
     uint16_t count = 0;
 
-    friend bool operator==(DescriptorSetLayoutBinding const& lhs,
-            DescriptorSetLayoutBinding const& rhs) noexcept {
+    friend bool operator==(DescriptorSetLayoutDescriptor const& lhs,
+            DescriptorSetLayoutDescriptor const& rhs) noexcept {
         return lhs.type == rhs.type &&
                lhs.flags == rhs.flags &&
                lhs.count == rhs.count &&
@@ -1385,7 +1385,7 @@ static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
 
 struct DescriptorSetLayout {
     std::variant<utils::StaticString, utils::CString, std::monostate> label;
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
+    utils::FixedCapacityVector<DescriptorSetLayoutDescriptor> descriptors;
 };
 
 //! blending equation function

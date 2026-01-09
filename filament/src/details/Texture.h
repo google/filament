@@ -71,7 +71,7 @@ public:
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& buffer, backend::CallbackHandler* handler,
-            AsyncCallbackType callback, void* user) const;
+            AsyncCompletionCallback callback, void* user) const;
 
     void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
     void setExternalImage(FEngine& engine, void* image) noexcept;

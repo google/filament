@@ -717,7 +717,6 @@ static void gui(filament::Engine* engine, filament::View*) {
             if (params.taaOptions.enabled) {
                 ImGui::Indent();
                 ImGui::SliderFloat("feedback", &params.taaOptions.feedback, 0.0f, 1.0f);
-                ImGui::SliderFloat("filter", &params.taaOptions.filterWidth, 0.02f, 2.0f);
                 ImGui::Unindent();
             }
             ImGui::Checkbox("FXAA", &params.fxaa);

@@ -251,6 +251,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mIsMSAASwapChainSupported(false), // TODO: support MSAA swapchain
       mStereoscopicType(driverConfig.stereoscopicType),
+      mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
       mAsynchronousMode(driverConfig.asynchronousMode) {
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -796,6 +797,32 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
             program);
     vprogram.inc();
     mResourceManager.associateHandle(ph.getId(), std::move(tag));
+
+    if (!mContext.shouldUsePipelineCachePrewarming()) {
+        return;
+    }
+
+    // If async prewarming is enabled, let's find the proper layout and build the pipeline.
+    VulkanDescriptorSetLayout::DescriptorSetLayoutArray vkLayouts {};
+    for (const auto& layoutBinding : program.getDescriptorSetLayouts()) {
+        DescriptorSetLayout layoutDescription = layoutBinding.layout;
+        auto layoutHandle = mResourceManager.allocHandle<VulkanDescriptorSetLayout>();
+        auto layout = mDescriptorSetLayoutCache.createLayout(layoutHandle, std::move(layoutDescription));
+        vkLayouts[layoutBinding.set] = layout->getVkLayout();
+    }
+
+    StereoscopicType stereoscopicType = mStereoscopicType;
+    if (stereoscopicType == StereoscopicType::MULTIVIEW && !program.isMultiview()) {
+        stereoscopicType = StereoscopicType::NONE;
+    }
+
+    VkPipelineLayout layout = mPipelineLayoutCache.getLayout(vkLayouts, vprogram);
+    mPipelineCache.asyncPrewarmCache(
+        *vprogram.get(),
+        layout,
+        stereoscopicType,
+        mStereoscopicEyeCount,
+        program.getPriorityQueue());
 }
 
 void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
@@ -810,7 +837,7 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, utils:
     assert_invariant(mDefaultRenderTarget); // Default render target should already exist.
 
     auto renderTarget = resource_ptr<VulkanRenderTarget>::make(&mResourceManager, rth,
-            std::move(std::move(*mDefaultRenderTarget.get())));
+            std::move(*mDefaultRenderTarget.get()));
 
     mDefaultRenderTarget = renderTarget;
     mResourceManager.associateHandle(rth.getId(), std::move(tag));
@@ -1800,7 +1827,11 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
 void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
-        scheduleCallback(handler, user, callback);
+        if (mContext.shouldUsePipelineCachePrewarming()) {
+            mPipelineCache.addCachePrewarmCallback(handler, callback, user);
+        } else {
+            scheduleCallback(handler, user, callback);
+        }
     }
 }
 
@@ -1808,9 +1839,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     FVK_SYSTRACE_SCOPE();
 
     auto rt = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, rth);
-    VkExtent2D const extent = rt->getExtent();
-
-    assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
 
     VulkanCommandBuffer* commandBuffer = rt->isProtected() ?
            &mCommands.getProtected() : &mCommands.get();
@@ -1825,8 +1853,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         if (sc->isFirstRenderPass()) {
             discardStart |= TargetBufferFlags::COLOR;
             sc->markFirstRenderPass();
+            acquireNextSwapchainImage();
         }
     }
+
+    // Note that retrieving the extent must come after the acquireNextSwapchainImage() above;
+    // otherwise it might be 0.
+    VkExtent2D const extent = rt->getExtent();
+
+    assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     if (rt->hasDepth()) {
@@ -2038,20 +2073,13 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
             "Vulkan driver does not support distinct draw/read swap chains.");
 
+    // Before we can render into the new swapchain, we need to make sure the default render target
+    // releases its old bound swapchain image.
+    mDefaultRenderTarget->releaseSwapchain();
+
     resource_ptr<VulkanSwapChain> swapChain =
             resource_ptr<VulkanSwapChain>::cast(&mResourceManager, drawSch);
     mCurrentSwapChain = swapChain;
-
-    bool resized = false;
-    swapChain->acquire(resized);
-
-    if (resized) {
-        mFramebufferCache.resetFramebuffers();
-    }
-
-    if (UTILS_LIKELY(mDefaultRenderTarget)) {
-        mDefaultRenderTarget->bindToSwapChain(swapChain);
-    }
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {
@@ -2221,6 +2249,14 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 
     auto dstTarget = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, dst);
     auto srcTarget = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, src);
+
+    // This is a valid use of the api.  We need to make sure that the swapchain image has been
+    // acquired and associated with the default render target. It's okay to call
+    // acquireNextSwapchainImage() even if a swapchain image has already been bound to the default
+    // render target.
+    if (dstTarget == mDefaultRenderTarget) {
+        acquireNextSwapchainImage();
+    }
 
     VkFilter const vkfilter = (filter == SamplerMagFilter::NEAREST) ?
             VK_FILTER_NEAREST : VK_FILTER_LINEAR;
@@ -2551,6 +2587,25 @@ void VulkanDriver::endCommandRecording() {
     mCommands.flush();
     mPipelineCache.resetBoundPipeline();
     mDescriptorSetCache.resetCachedState();
+}
+
+void VulkanDriver::acquireNextSwapchainImage() {
+    assert_invariant(mCurrentSwapChain);
+    assert_invariant(mDefaultRenderTarget);
+
+    // Swapchain has already been bound to the default render target.  We just return.
+    if (mDefaultRenderTarget->isSwapchainBound()) {
+        return;
+    }
+
+    bool resized = false;
+    mCurrentSwapChain->acquire(resized);
+    if (resized) {
+        mFramebufferCache.resetFramebuffers();
+    }
+    // Note that ordering this after the above lines is necessary since we set the swapchain image
+    // to the render target in bindSwapChain().
+    mDefaultRenderTarget->bindSwapChain(mCurrentSwapChain);
 }
 
 // explicit instantiation of the Dispatcher

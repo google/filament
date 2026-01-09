@@ -110,6 +110,7 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
         .forceGLES2Context = instance->getConfig().forceGLES2Context,
         .stereoscopicType = instance->getConfig().stereoscopicType,
+        .stereoscopicEyeCount = instance->getConfig().stereoscopicEyeCount,
         .assertNativeWindowIsValid =
                 instance->features.backend.opengl.assert_native_window_is_valid,
         .metalDisablePanicOnDrawableFailure =
@@ -1449,10 +1450,10 @@ size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.si
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
 AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
-        CallbackHandler* handler, AsyncCallbackType onComplete, void* user) {
+        CallbackHandler* handler, AsyncCompletionCallback onComplete, void* user) {
 
     struct RunCommandAsyncCallback {
-        AsyncCallbackType userCallback;
+        AsyncCompletionCallback userCallback;
         void* userParam;
         static void func(void* wrappedData) {
             auto* const data = static_cast<RunCommandAsyncCallback*>(wrappedData);

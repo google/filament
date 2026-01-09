@@ -104,8 +104,16 @@ public:
     // compiling the pipeline on the main thread at draw time. This is very dependent
     // on the implementation of the driver on the current device; it's expected to work
     // on devices with VK_EXT_vertex_input_dynamic_state and VK_KHR_dynamic_rendering.
-    void asyncPreloadCache(fvkmemory::resource_ptr<VulkanProgram> program,
-                           VkPipelineLayout layout);
+    void asyncPrewarmCache(const VulkanProgram& program, VkPipelineLayout layout,
+                           StereoscopicType stereoscopicType, uint8_t stereoscopicViewCount,
+                           CompilerPriorityQueue priority);
+
+    // Notifies the callback once all in-flight async cache prewarm jobs are complete.
+    // This typically signals that it is safe to use a material at draw time without
+    // hitching.
+    void addCachePrewarmCallback(CallbackHandler* handler,
+                                 const CallbackHandler::Callback callback,
+                                 void* user);
 
     // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
     void bindPipeline(VulkanCommandBuffer* commands);
@@ -182,6 +190,19 @@ private:
         VkPipelineLayout layout;                                                  //  8   : 304
     };
 
+    // Provides information about any dynamic state that should be used in creation of the
+    // pipeline (if supported).
+    struct PipelineDynamicOptions {
+        // Requires `VK_EXT_vertex_input_dynamic_state` to enable.
+        bool useDynamicVertexInputState = false;
+        // Requires `VK_KHR_dynamic_rendering` to enable.
+        bool useDynamicRenderPasses = false;
+        // Only used if `useDynamicRenderPasses` is true.
+        StereoscopicType stereoscopicType = StereoscopicType::NONE;
+        // Only used if `stereoscopicType` is `StereoscopicType::MULTIVIEW`.
+        uint8_t stereoscopicViewCount = 2;
+    };
+
     static_assert(sizeof(PipelineKey) == 312, "PipelineKey must not have implicit padding.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;
@@ -213,8 +234,15 @@ private:
 
     PipelineMap mPipelines;
 
+    // Creates a pipeline, with all optional dynamic pipeline states diabled.
+    // Note - because PipelineDynamicOptions is defined within VulkanPipelineCache,
+    // we cannot define the function with a default arg for it explicitly.
+    inline VkPipeline createPipeline(const PipelineKey& key) noexcept {
+        return createPipeline(key, {});
+    }
+
     // These helpers all return unstable pointers that should not be stored.
-    VkPipeline createPipeline(const PipelineKey& key) noexcept;
+    VkPipeline createPipeline(const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions) noexcept;
 
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
