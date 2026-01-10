@@ -50,7 +50,6 @@ void FrameSkipper::terminate(DriverApi& driver) noexcept {
 bool FrameSkipper::shouldRenderFrame(DriverApi& driver) const noexcept {
 
     if (UTILS_UNLIKELY(mFrameToSkip)) {
-        mFrameToSkip--;
         return false;
     }
 
@@ -86,7 +85,7 @@ void FrameSkipper::submitFrame(DriverApi& driver) noexcept {
     fences[last] = driver.createFence();
 }
 
-void FrameSkipper::skipNextFrames(size_t frameCount) const noexcept {
+void FrameSkipper::skipNextFrames(size_t frameCount) noexcept {
     frameCount = std::min(frameCount, size_t(std::numeric_limits<decltype(mFrameToSkip)>::max()));
     mFrameToSkip = uint16_t(frameCount);
 }

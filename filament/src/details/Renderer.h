@@ -83,7 +83,7 @@ public:
 
     void resetUserTime();
 
-    void skipNextFrames(size_t frameCount) const noexcept {
+    void skipNextFrames(size_t frameCount) noexcept {
         mFrameSkipper.skipNextFrames(frameCount);
     }
 
@@ -226,6 +226,7 @@ private:
     std::function<void()> mBeginFrameInternal;
     uint64_t mVsyncSteadyClockTimeNano = 0;
     std::unique_ptr<TextureCache> mResourceAllocator{};
+    mutable int64_t mLastFrameId = -1;
 };
 
 FILAMENT_DOWNCAST(Renderer)

@@ -107,7 +107,7 @@ public:
         time_point_ns presentDeadline;      //!< deadline for queuing a frame [ns]
         duration_ns displayPresentInterval; //!< display refresh rate [ns]
         duration_ns compositionToPresentLatency; //!< time between the start of composition and the expected present time [ns]
-        time_point_ns expectedPresentTime;  //!< system's expected presentation time since epoch [ns]
+        duration_ns expectedPresentLatency; //!< system's expected presentation time since epoch [ns]
     };
 
     /**
@@ -668,7 +668,7 @@ public:
      * Requests the next frameCount frames to be skipped. For Debugging.
      * @param frameCount number of frames to skip.
      */
-    void skipNextFrames(size_t frameCount) const noexcept;
+    void skipNextFrames(size_t frameCount) noexcept;
 
     /**
      * Remainder count of frame to be skipped
