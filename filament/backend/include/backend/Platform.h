@@ -31,6 +31,10 @@
 #include <memory>
 #include <mutex>
 
+namespace utils {
+class FeatureFlagManager;
+}
+
 namespace filament::backend {
 
 class CallbackHandler;
@@ -278,6 +282,11 @@ public:
     };
 
     struct DriverConfig {
+        /**
+         * Reference to the system's FeatureFlagManager. Can be nullptr.
+         */
+        utils::FeatureFlagManager const * UTILS_NULLABLE featureFlagManager = nullptr;
+
         /**
          * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
          * Driver clamps to valid values.

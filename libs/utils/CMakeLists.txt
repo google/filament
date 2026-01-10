@@ -73,6 +73,7 @@ set(SRCS
         src/CyclicBarrier.cpp
         src/EntityManager.cpp
         src/EntityManagerImpl.h
+        src/FeatureFlagManager.cpp
         src/FixedCapacityVectorBase.cpp
         src/ImmutableCString.cpp
         src/Invocable.cpp
