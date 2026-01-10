@@ -1094,10 +1094,10 @@ UTILS_NOINLINE
     }
     return R"(
 // https://graphics.stanford.edu/%7Eseander/bithacks.html
-highp uint bitCount(highp uint value) {
+int bitCount(highp uint value) {
     value = value - ((value >> 1u) & 0x55555555u);
     value = (value & 0x33333333u) + ((value >> 2u) & 0x33333333u);
-    return ((value + (value >> 4u) & 0xF0F0F0Fu) * 0x1010101u) >> 24u;
+    return int(((value + (value >> 4u) & 0xF0F0F0Fu) * 0x1010101u) >> 24u);
 }
 )"sv;
 }
