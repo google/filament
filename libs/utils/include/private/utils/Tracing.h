@@ -42,7 +42,7 @@
 #define FILAMENT_TRACING_FRAME_ID(category, frame)
 #define FILAMENT_TRACING_NAME_BEGIN(category, name)
 #define FILAMENT_TRACING_NAME_END(category)
-#define FILAMENT_TRACING_CALL(category)
+#define FILAMENT_TRACING_CALL(category, ...)
 #define FILAMENT_TRACING_ASYNC_BEGIN(category, name, cookie)
 #define FILAMENT_TRACING_ASYNC_END(category, name, cookie)
 #define FILAMENT_TRACING_VALUE(category, name, val)
