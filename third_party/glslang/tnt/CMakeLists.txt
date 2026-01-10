@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.19)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if(IOS)
+    # glslang requires iOS 13.0+
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0")
+endif()
+
 # Adhere to GNU filesystem layout conventions
 include(GNUInstallDirs)
 

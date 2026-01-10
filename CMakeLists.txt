@@ -10,6 +10,7 @@ cmake_minimum_required(VERSION 3.22.1)
 # ==================================================================================================
 # Toolchain configuration
 # ==================================================================================================
+# On iOS, the deployment target is set inside third_party/clang/ios.cmake
 if (APPLE AND NOT IOS)
     # This must be set before project() is called
     set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "")
@@ -578,7 +579,7 @@ if (FILAMENT_SUPPORTS_METAL)
 endif()
 
 # Building filamat increases build times and isn't required for web, so turn it off by default.
-if (NOT WEBGL AND NOT IOS)
+if (NOT WEBGL)
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" ON)
 else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
