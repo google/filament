@@ -31,10 +31,29 @@
 namespace filament {
 
 /**
- * MorphTargetBuffer is used to hold morphing data (positions and tangents).
+ * A container for vertex morphing data that supports both automatic and manual morphing.
  *
- * Both positions and tangents are required.
+ * MorphTargetBuffer operates in a hybrid model depending on the attribute being morphed:
  *
+ * 1.  Automatic for Built-ins (positions/tangents):
+ *     Enable via `withPositions(true)` or `withTangents(true)`. The MorphTargetBuffer will
+ *     allocate internal storage and hold the data for these attributes, which you upload
+ *     via `setPositionsAt()` or `setTangentsAt()`. The framework automatically applies
+ *     the morphing logic in the vertex shader.
+ *
+ * 2.  Manual for Custom Data (e.g., UVs, colors):
+ *     The MorphTargetBuffer does NOT hold data for custom targets. The user is responsible
+ *     for the full data pipeline:
+ *     - Create and manage a separate `Texture` to hold the morph target data (offsets).
+ *     - In the material, declare a `sampler2d_array` parameter.
+ *     - Bind the `Texture` to the material instance.
+ *     - In the vertex shader, manually call `morphData2`, `morphData3`, or `morphData4`
+ *       with the custom sampler to apply the morphing.
+ *
+ * A MorphTargetBuffer object must be associated with a Renderable via
+ * `RenderableManager::Builder::morphing()` to enable the morphing pipeline for all cases.
+ *
+ * @see RenderableManager
  */
 class UTILS_PUBLIC MorphTargetBuffer : public FilamentAPI {
     struct BuilderDetails;
@@ -92,6 +111,46 @@ public:
         Builder& name(utils::StaticString const& name) noexcept;
 
         /**
+         * Enables and allocates the built-in buffer for position morphing.
+         *
+         * If enabled, `setPositionsAt` can be called to set the position data for each target.
+         * The vertex position will be morphed automatically without any further actions.
+         *
+         * @param enable true to enable, false to disable. Default is true.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& withPositions(bool enable = true) noexcept;
+
+        /**
+         * Enables and allocates the built-in buffer for tangent/normal morphing.
+         *
+         * If enabled, `setTangentsAt` can be called to set the tangent data for each target.
+         * The vertex position will be morphed automatically without any further actions.
+         *
+         * @param enable true to enable, false to disable. Default is true.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& withTangents(bool enable = true) noexcept;
+
+        /**
+         * Enables the custom morphing pipeline.
+         *
+         * When enabled, the `morphData2`, `morphData3`, and `morphData4` helper functions are
+         * available in the vertex shader. You must provide a 2D array texture containing the morph
+         * deltas, bind it to a `sampler2DArray` uniform, and call the appropriate `morphData`
+         * function to apply the morphing to your custom attributes.
+         *
+         * Note: Unlike `withPositions` or `withTangents`, this does NOT allocate any internal
+         * storage. You are responsible for managing the morph data texture.
+         *
+         * Custom morphing can be used together with automatic position and/or tangent morphing.
+         *
+         * @param enable true to enable, false to disable. Default is false.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& enableCustomMorphing(bool enable) noexcept;
+
+        /**
          * Creates the MorphTargetBuffer object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this MorphTargetBuffer with.
@@ -110,16 +169,14 @@ public:
     /**
      * Updates positions for the given morph target.
      *
+     * This method can only be called if the MorphTargetBuffer was built with `withPositions(true)`.
      * This is equivalent to the float4 method, but uses 1.0 for the 4th component.
-     *
-     * Both positions and tangents must be provided.
      *
      * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
      * @param positions pointer to at least "count" positions
      * @param count number of float3 vectors in positions
-     * @param offset offset into the target buffer, expressed as a number of float4 vectors
-     * @see setTangentsAt
+     * @param offset offset into the target buffer, expressed as a number of float3 vectors
      */
     void setPositionsAt(Engine& engine, size_t targetIndex,
             math::float3 const* UTILS_NONNULL positions, size_t count, size_t offset = 0);
@@ -127,14 +184,13 @@ public:
     /**
      * Updates positions for the given morph target.
      *
-     * Both positions and tangents must be provided.
+     * This method can only be called if the MorphTargetBuffer was built with `withPositions(true)`.
      *
      * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
      * @param positions pointer to at least "count" positions
      * @param count number of float4 vectors in positions
      * @param offset offset into the target buffer, expressed as a number of float4 vectors
-     * @see setTangentsAt
      */
     void setPositionsAt(Engine& engine, size_t targetIndex,
             math::float4 const* UTILS_NONNULL positions, size_t count, size_t offset = 0);
@@ -142,6 +198,7 @@ public:
     /**
      * Updates tangents for the given morph target.
      *
+     * This method can only be called if the MorphTargetBuffer was built with `withTangents(true)`.
      * These quaternions must be represented as signed shorts, where real numbers in the [-1,+1]
      * range multiplied by 32767.
      *
@@ -150,7 +207,6 @@ public:
      * @param tangents pointer to at least "count" tangents
      * @param count number of short4 quaternions in tangents
      * @param offset offset into the target buffer, expressed as a number of short4 vectors
-     * @see setPositionsAt
      */
     void setTangentsAt(Engine& engine, size_t targetIndex,
             math::short4 const* UTILS_NONNULL tangents, size_t count, size_t offset = 0);
@@ -166,6 +222,24 @@ public:
      * @return The number of targets the MorphTargetBuffer holds.
      */
     size_t getCount() const noexcept;
+
+    /**
+     * Returns true if this MorphTargetBuffer has a position buffer.
+     * @see Builder::withPositions
+     */
+    bool hasPositions() const noexcept;
+
+    /**
+     * Returns true if this MorphTargetBuffer has a tangent buffer.
+     * @see Builder::withTangents
+     */
+    bool hasTangents() const noexcept;
+
+    /**
+     * Returns true if custom morphing is enabled
+     * @see Builder::enableCustomMorphing
+     */
+    bool isCustomMorphingEnabled() const noexcept;
 
 protected:
     // prevent heap allocation

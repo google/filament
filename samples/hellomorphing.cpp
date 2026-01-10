@@ -169,6 +169,8 @@ int main(int argc, char** argv) {
                 .build(*engine);
 
         app.mt1 = MorphTargetBuffer::Builder()
+            .withPositions(true)
+            .withTangents(true)
             .vertexCount(9 * 2)
             .count(3)
             .build(*engine);
