@@ -56,7 +56,8 @@ enum class PerViewBindingPoints : uint8_t  {
     SSAO            =  9,   // variable, RGB8 {AO, [depth]}
     SSR             = 10,   // variable, 2d array, RGB_11_11_10, mipmapped
     SSR_HISTORY     = 10,   // variable, 2d texture, RGB_11_11_10
-    FOG             = 11    // variable, user defined, CUBEMAP
+    FOG             = 11,   // variable, user defined, CUBEMAP
+    LIGHT_COOKIES   = 12    // light cookies texture array
 };
 
 enum class PerRenderableBindingPoints : uint8_t  {

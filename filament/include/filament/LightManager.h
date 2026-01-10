@@ -651,6 +651,13 @@ public:
          */
         Builder& sunHaloFalloff(float haloFalloff) noexcept;
 
+        /**
+         * Sets a cookie for this light.
+         * @param cookie A pointer to a Texture object to be used as a cookie.
+         * @return This Builder, for chaining calls.
+         */
+        Builder& cookie(Texture* cookie) noexcept;
+
         enum Result { Error = -1, Success = 0  };
 
         /**
@@ -947,10 +954,23 @@ public:
      * sets the shadow-map options for a given light
      * @param i     Instance of the component obtained from getInstance().
      * @param options  A ShadowOption structure
-     */
-    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept;
+         void setShadowOptions(Instance i, ShadowOptions const& options) noexcept;
 
     /**
+     * Sets a cookie for this light.
+     * @param i      Instance of the component obtained from getInstance().
+     * @param cookie A pointer to a Texture object to be used as a cookie.
+     */
+    void setCookie(Instance i, Texture* cookie) noexcept;
+
+    /**
+     * Returns the cookie associated with this light.
+     * @param i      Instance of the component obtained from getInstance().
+     * @return       A pointer to the Texture object used as a cookie, or nullptr if none.
+     */
+    Texture* getCookie(Instance i) const noexcept;
+
+private:**
      * Whether this Light casts shadows (disabled by default)
      *
      * @param i     Instance of the component obtained from getInstance().

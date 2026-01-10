@@ -379,6 +379,13 @@ void ColorPassDescriptorSet::prepareDynamicLights(Froxelizer& froxelizer, bool c
     s.enableFroxelViz = enableFroxelViz;
 }
 
+void ColorPassDescriptorSet::prepareLightCookies(TextureHandle texture) noexcept {
+    setSampler(+PerViewBindingPoints::LIGHT_COOKIES, texture, SamplerParams{
+            .filterMag = SamplerMagFilter::LINEAR,
+            .filterMin = SamplerMinFilter::LINEAR
+    });
+}
+
 void ColorPassDescriptorSet::prepareShadowMapping(BufferObjectHandle shadowUniforms) noexcept {
     setBuffer(+PerViewBindingPoints::SHADOWS, shadowUniforms, 0, sizeof(ShadowUib));
 }
