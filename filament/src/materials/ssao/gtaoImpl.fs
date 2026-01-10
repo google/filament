@@ -82,11 +82,11 @@ float calculateHorizonCos(highp vec3 sampleDelta, highp vec3 viewDir, float hori
 
 // https://cdrinmatane.github.io/posts/ssaovb-code/
 // https://github.com/cdrinmatane/SSRT3/blob/main/HDRP/Shaders/Resources/SSRTCS.compute
-uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfield) {
-    uint startHorizonInt = uint(minHorizon * float(SECTOR_COUNT));
-    uint angleHorizonInt = uint(ceil(saturate(maxHorizon-minHorizon) * float(SECTOR_COUNT)));
-    uint angleHorizonBitfield = angleHorizonInt > 0u ? (0xFFFFFFFFu >> (SECTOR_COUNT-angleHorizonInt)) : 0u;
-    uint currentOccludedBitfield = angleHorizonBitfield << startHorizonInt;
+highp uint updateSectors(float minHorizon, float maxHorizon, highp uint globalOccludedBitfield) {
+    highp uint startHorizonInt = uint(minHorizon * float(SECTOR_COUNT));
+    highp uint angleHorizonInt = uint(ceil(saturate(maxHorizon-minHorizon) * float(SECTOR_COUNT)));
+    highp uint angleHorizonBitfield = angleHorizonInt > 0u ? (0xFFFFFFFFu >> (SECTOR_COUNT-angleHorizonInt)) : 0u;
+    highp uint currentOccludedBitfield = angleHorizonBitfield << startHorizonInt;
     return globalOccludedBitfield | currentOccludedBitfield;
 }
 
@@ -96,8 +96,8 @@ uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfie
 // for each slice. This bitmask flags whether each sector is occluded or not,
 // which enables surfaces to be modeled with constant thickness, overcoming the limitation
 // of treating them as a simple height field.
-uint calculateVisibilityMask(highp vec3 deltaPos, highp vec3 viewDir, float samplingDirection,
-    uint globalOccludedBitfield, float n, highp vec3 origin) {
+highp uint calculateVisibilityMask(highp vec3 deltaPos, highp vec3 viewDir, float samplingDirection,
+    highp uint globalOccludedBitfield, float n, highp vec3 origin) {
     vec2 frontBackHorizon;
     float linearThicknessMultiplier = materialConstants_linearThickness
         ? saturate(origin.z * materialParams.invFarPlane) * 100.0
@@ -164,7 +164,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         float horizonCos1 = -1.0;
 
         // This is only used in bitmask mode
-        uint globalOccludedBitfield = 0u;
+        highp uint globalOccludedBitfield = 0u;
 
         for (float j = 0.0; j < materialParams.stepsPerSlice; j += 1.0) {
             // At least move 1 pixel forward in the screen-space
