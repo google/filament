@@ -31,8 +31,9 @@ struct PerViewSib {
     static constexpr size_t SSR            = 4;     // variable, RGB_11_11_10, mipmapped
     static constexpr size_t STRUCTURE      = 5;     // variable, DEPTH
     static constexpr size_t FOG            = 6;     // variable, user defined, CUBEMAP
+    static constexpr size_t LIGHT_COOKIES  = 7;     // light cookies texture array
 
-    static constexpr size_t SAMPLER_COUNT  = 7;
+    static constexpr size_t SAMPLER_COUNT  = 8;
 };
 
 struct PerRenderPrimitiveMorphingSib {

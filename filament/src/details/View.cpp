@@ -482,6 +482,8 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
 
     if (hasDynamicLighting()) {
         scene->prepareDynamicLights(cameraInfo, mLightUbh);
+        // TODO: collect cookie textures and create/update the texture array
+        getColorPassDescriptorSet().prepareLightCookies(engine.getZeroTextureArray());
     }
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT

@@ -120,6 +120,8 @@ public:
 
     void prepareDynamicLights(Froxelizer& froxelizer, bool enableFroxelViz) noexcept;
 
+    void prepareLightCookies(TextureHandle texture) noexcept;
+
     void prepareShadowVSM(TextureHandle texture,
             VsmShadowOptions const& options) noexcept;
 

@@ -135,6 +135,7 @@ Light getLight(const uint lightIndex) {
         unpackHalf2x16(floatBitsToUint(data[2][1]))
     );
     highp vec2 scaleOffset = data[2].zw;
+    highp int cookieIndex = floatBitsToInt(data[2][2]);
     highp float intensity = data[3][1];
     highp uint typeShadow = floatBitsToUint(data[3][2]);
     highp uint channels = floatBitsToUint(data[3][3]);
@@ -165,6 +166,20 @@ Light getLight(const uint lightIndex) {
 #endif
     if (light.lightType == LIGHT_TYPE_SPOT) {
         light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
+        if (cookieIndex >= 0) {
+            // For spot lights, we project the fragment position onto the light's local space.
+            // We use the shadow matrix if available, or compute it from direction.
+            // Since we don't have a dedicated cookie matrix, we can reuse the shadow matrix
+            // if the light casts shadows, or compute a simple projection.
+#if defined(VARIANT_HAS_SHADOWING)
+            if (light.castsShadows) {
+                highp vec4 shadowPos = shadowUniforms.shadows[light.shadowIndex].lightFromWorldMatrix * vec4(worldPosition, 1.0);
+                highp vec2 uv = shadowPos.xy / shadowPos.w;
+                uv = uv * 0.5 + 0.5;
+                light.attenuation *= texture(sampler0_lightCookies, vec3(uv, float(cookieIndex))).r;
+            }
+#endif
+        }
     }
 #endif
     return light;

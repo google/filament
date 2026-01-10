@@ -272,7 +272,7 @@ struct LightsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float reserved1;                  // 0
     math::half4 colorIES;             // { half3(col),  IES index   }
     math::float2 spotScaleOffset;     // { scale, offset }
-    float reserved3;                  // 0
+    int32_t cookieIndex;              // cookie index
     float intensity;                  // float
     uint32_t typeShadow;              // 0x00.00.ii.ct (t: 0=point, 1=spot, c:contact, ii: index)
     uint32_t channels;                // 0x000c00ll (ll: light channels, c: caster)
