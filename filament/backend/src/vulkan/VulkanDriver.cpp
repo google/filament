@@ -151,6 +151,28 @@ static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
     cbData->cb(cbData->sync, cbData->userData);
 };
 
+/**
+ * Shorthand for converting a description for an external YCbCr format used for
+ * pipeline cache prewarming to the params for the actual YCbCr conversion.
+ */
+inline VulkanYcbcrConversionCache::Params getYcbcrConversionParams(const VulkanPlatform::ExternalYcbcrFormat& format) {
+    return VulkanYcbcrConversionCache::Params {
+        .conversion = {
+            .ycbcrModel = fvkutils::getYcbcrModelConversionFilament(format.ycbcrModelConversion),
+            .r = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_R, 0),
+            .g = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_G, 1),
+            .b = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_B, 2),
+            .a = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_A, 3),
+            .ycbcrRange = fvkutils::getYcbcrRangeFilament(format.ycbcrRange),
+            .xChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+            .yChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+            .chromaFilter = SamplerMagFilter::NEAREST,
+        },
+        .format = VK_FORMAT_UNDEFINED,
+        .externalFormat = format.externalFormat,
+    };
+}
+
 }// anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -803,12 +825,18 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
     }
 
     // If async prewarming is enabled, let's find the proper layout and build the pipeline.
+    std::array<resource_ptr<VulkanDescriptorSetLayout>, MAX_DESCRIPTOR_SET_COUNT> layouts {};
     VulkanDescriptorSetLayout::DescriptorSetLayoutArray vkLayouts {};
+    bool hasExternalSamplers = false;
     for (const auto& layoutBinding : program.getDescriptorSetLayouts()) {
         DescriptorSetLayout layoutDescription = layoutBinding.layout;
         auto layoutHandle = mResourceManager.allocHandle<VulkanDescriptorSetLayout>();
         auto layout = mDescriptorSetLayoutCache.createLayout(layoutHandle, std::move(layoutDescription));
+        layouts[layoutBinding.set] = layout;
         vkLayouts[layoutBinding.set] = layout->getVkLayout();
+        if (layout->bitmask.externalSampler.count() > 0) {
+            hasExternalSamplers = true;
+        }
     }
 
     StereoscopicType stereoscopicType = mStereoscopicType;
@@ -816,13 +844,51 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
         stereoscopicType = StereoscopicType::NONE;
     }
 
-    VkPipelineLayout layout = mPipelineLayoutCache.getLayout(vkLayouts, vprogram);
+    // Base case - build the pipeline without any external samplers.
     mPipelineCache.asyncPrewarmCache(
         *vprogram.get(),
-        layout,
+        mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
         stereoscopicType,
         mStereoscopicEyeCount,
         program.getPriorityQueue());
+
+    if (!hasExternalSamplers) {
+        return;
+    }
+
+    // If we have external samplers, let's do this again with the external samplers
+    // specified.
+    for (const auto& format : mContext.getPipelineCachePrewarmExternalFormats()) {
+        // The values that seem to matter in terms of cache hits here are the model conversion,
+        // and model range. We need some value for externalFormat that is known to support that
+        // pair of values, but we need not find every possible externalFormat. As we test on
+        // more devices, this may change.
+        VkSamplerYcbcrConversion vkConversion = mYcbcrConversionCache.getConversion(
+            getYcbcrConversionParams(format));
+        VkSampler externalSampler = mSamplerCache.getSampler({.sampler = {}, .conversion = vkConversion});
+
+        // Update all layouts to use the external samplers.
+        for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; ++i) {
+            if (!layouts[i]) {
+                continue;
+            }
+
+            // For cache prewarming, we don't need every single possible combination of external sampler
+            // formats. It seems to be enough, in practicce, to simply run through a list of the types of
+            // samplers that *might* appear. As long as the real pipeline is close enough to something that
+            // the driver has seen before, we are able to get a cache hit.
+            utils::FixedCapacityVector<VkSampler> externalSamplers (layouts[i]->bitmask.externalSampler.count(), externalSampler);
+            vkLayouts[i] = mDescriptorSetLayoutCache.getVkLayout(
+                layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
+        }
+
+        mPipelineCache.asyncPrewarmCache(
+            *vprogram.get(),
+            mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
+            stereoscopicType,
+            mStereoscopicEyeCount,
+            program.getPriorityQueue());
+    }
 }
 
 void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
