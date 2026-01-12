@@ -399,7 +399,8 @@ public:
      * @param width     Width of the sub-region to update.
      * @param height    Height of the sub-region to update.
      * @param depth     Depth of the sub-region to update.
-     * @param buffer    Client-side buffer containing the image to set.
+     * @param buffer    Client-side buffer containing the image to set. The driver will invoke
+     *                  the callback associated with this buffer when the data has been consumed.
      *
      * @attention \p engine must be the instance passed to Builder::build()
      * @attention \p level must be less than getLevels().
