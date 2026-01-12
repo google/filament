@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- engine: "native" Streams are officially deprecated. Use "acquired" streams instead.
