@@ -852,6 +852,10 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
         mStereoscopicEyeCount,
         program.getPriorityQueue());
 
+    if (!hasExternalSamplers) {
+        return;
+    }
+
     // If we have external samplers, let's do this again with the external samplers
     // specified.
     for (const auto& format : mContext.getPipelineCachePrewarmExternalFormats()) {
