@@ -40,7 +40,7 @@ PERFETTO_USE_CATEGORIES_FROM_NAMESPACE(tracing);
 #define FILAMENT_TRACING_FRAME_ID(category, frame)
 #define FILAMENT_TRACING_NAME_BEGIN(category, name)
 #define FILAMENT_TRACING_NAME_END(category)
-#define FILAMENT_TRACING_CALL(category)
+#define FILAMENT_TRACING_CALL(category, ...)
 #define FILAMENT_TRACING_ASYNC_BEGIN(category, name, cookie)
 #define FILAMENT_TRACING_ASYNC_END(category, name, cookie)
 #define FILAMENT_TRACING_VALUE(category, name, val)
@@ -50,9 +50,9 @@ PERFETTO_USE_CATEGORIES_FROM_NAMESPACE(tracing);
 #define FILAMENT_TRACING_ENABLE(category)
 #define FILAMENT_TRACING_CONTEXT(category)
 
-#define FILAMENT_TRACING_CALL(category) \
+#define FILAMENT_TRACING_CALL(category, ...) \
     auto constexpr FILAMENT_FILAMENT_TRACING_FUNCTION = perfetto::StaticString(__FUNCTION__); \
-    TRACE_EVENT(category, FILAMENT_FILAMENT_TRACING_FUNCTION)
+    TRACE_EVENT(category, FILAMENT_FILAMENT_TRACING_FUNCTION, ##__VA_ARGS__)
 
 #define FILAMENT_TRACING_NAME(category, name) TRACE_EVENT(category, nullptr,               \
         [&](perfetto::EventContext ctx) {                               \

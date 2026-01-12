@@ -254,8 +254,14 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         mPushConstants.reserve(totalConstantCount);
         mPushConstantFragmentStageOffset = vertexConstants.size();
         auto const transformAndAdd = [&](Program::PushConstant const& constant) {
-            GLint const loc = glGetUniformLocation(program, constant.name.c_str());
-            mPushConstants.push_back({loc, constant.type});
+            if (!constant.name.empty()) {
+                GLint const loc = glGetUniformLocation(program, constant.name.c_str());
+                mPushConstants.push_back({loc, constant.type});
+            } else {
+                // If the constant is not named, then we assume it will not be referenced in this
+                // program.
+                mPushConstants.push_back({ -1, constant.type });
+            }
         };
         std::for_each(vertexConstants.cbegin(), vertexConstants.cend(), transformAndAdd);
         std::for_each(fragmentConstants.cbegin(), fragmentConstants.cend(), transformAndAdd);
