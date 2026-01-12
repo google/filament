@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#if !defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__) && defined(__GLIBC__)
+#if !defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__) && !(defined(__linux__) && !defined(__GLIBC__))
 #include <execinfo.h>
 #define HAS_EXECINFO 1
 #else
