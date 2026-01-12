@@ -844,19 +844,13 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
         stereoscopicType = StereoscopicType::NONE;
     }
 
-    // If there are no external samplers, that's it! We have enough to compile the
-    // fake pipeline at this point. If there are, though, this is unnecessary - there
-    // MUST be some external samplers defined. In that case, we'll go on to start
-    // instantiating the YCbCr conversions for them.
-    if (!hasExternalSamplers) {
-        mPipelineCache.asyncPrewarmCache(
-            *vprogram.get(),
-            mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
-            stereoscopicType,
-            mStereoscopicEyeCount,
-            program.getPriorityQueue());
-        return;
-    }
+    // Base case - build the pipeline without any external samplers.
+    mPipelineCache.asyncPrewarmCache(
+        *vprogram.get(),
+        mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
+        stereoscopicType,
+        mStereoscopicEyeCount,
+        program.getPriorityQueue());
 
     // If we have external samplers, let's do this again with the external samplers
     // specified.
