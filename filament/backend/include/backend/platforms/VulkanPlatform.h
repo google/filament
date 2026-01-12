@@ -56,6 +56,16 @@ struct VulkanCmdFence;
  */
 class VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
+    /**
+     * Encapsulates information required to instantiate a known external format,
+     * typically for the purpose of preloading a pipeline cache for materials using
+     * external formats for samplers.
+     */
+    struct ExternalYcbcrFormat {
+        uint64_t externalFormat;
+        VkSamplerYcbcrModelConversion ycbcrModelConversion;
+        VkSamplerYcbcrRange ycbcrRange;
+    };
 
     struct ExtensionHashFn {
         std::size_t operator()(utils::CString const& s) const noexcept {
@@ -500,6 +510,17 @@ protected:
      * Query if transient attachments are supported by the backend.
      */
     bool isTransientAttachmentSupported() const noexcept;
+
+    /**
+     * For pipeline cache prewarming, if external samplers are present, we need to build
+     * the fake pipeline using the proper formats specified. Since there's no way to
+     * get these at material build time, we allow the app to register them before
+     * creating materials.
+     *
+     * @param format The format, containing the external format value which should be
+     *               extracted from an AHardwareBuffer.
+     */
+    void registerPipelineCachePrewarmExternalFormat(const ExternalYcbcrFormat& format) noexcept;
 
 private:
     /**
