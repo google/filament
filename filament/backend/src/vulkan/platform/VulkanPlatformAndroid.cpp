@@ -27,6 +27,7 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 
 #include <bluevk/BlueVK.h>
@@ -542,8 +543,14 @@ bool VulkanPlatformAndroid::queryCompositorTiming(SwapChain const* swapchain,
     //        the choreographer's callback can happen before (good) or after (bad) us.
     //        This problem is mitigated by storing the latency instead of the deadline,
     //        because it generally is constant frame to frame.
-    outCompositorTiming->expectedPresentLatency =
-            preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
+    if (UTILS_LIKELY(preferredTimeline.expectedPresentTime > preferredTimeline.frameTime)) {
+        // latency can never be negative, let's be safe
+        outCompositorTiming->expectedPresentLatency =
+                preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
+    } else {
+        // fake a reasonable value (33ms)
+        outCompositorTiming->expectedPresentLatency = 33'000'000;
+    }
     outCompositorTiming->compositeDeadline = CompositorTiming::INVALID;
     outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
     outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;
