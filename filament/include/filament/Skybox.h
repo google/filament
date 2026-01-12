@@ -136,7 +136,7 @@ public:
          * priority (7) such that the Skybox is always rendered after the opaque objects,
          * to reduce overdraw when depth culling is enabled.
          *
-         * @param priority clamped to the range [0..7], defaults to 4; 7 is lowest priority
+         * @param priority clamped to the range [0..7], defaults to 7; 7 is lowest priority
          *                 (rendered last).
          *
          * @return Builder reference for chaining calls.
