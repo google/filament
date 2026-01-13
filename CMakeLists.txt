@@ -382,7 +382,7 @@ if (LINUX)
             link_libraries(libc++.a)
             link_libraries(libc++abi.a)
         else()
-            set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} -static")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
         endif()
     endif()
 
