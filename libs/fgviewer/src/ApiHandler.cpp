@@ -49,6 +49,9 @@ auto const error = [](int line, std::string const& uri) {
 
 } // anonymous
 
+ApiHandler::ApiHandler(DebugServer* server) : mServer(server) {
+}
+
 bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
     struct mg_request_info const* request = mg_get_request_info(conn);
     std::string const& uri = request->local_uri;
@@ -89,6 +92,35 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
         }
         mg_printf(conn, kSuccessHeader.data(), "application/json");
         mg_printf(conn, "{ %s }", writer.getJsonString());
+        return true;
+    }
+
+    return error(__LINE__, uri);
+}
+
+bool ApiHandler::handlePost(CivetServer* server, struct mg_connection* conn) {
+    struct mg_request_info const* request = mg_get_request_info(conn);
+    std::string const& uri = request->local_uri;
+
+    utils::CString resourceName;
+    char resourceNameStr[1024] = {};
+    if (mg_get_var(request->query_string, strlen(request->query_string), "resource", resourceNameStr, sizeof(resourceNameStr)) > 0) {
+        resourceName = resourceNameStr;
+    } else {
+        return error(__LINE__, uri);
+    }
+
+    if (uri.find("/api/monitor/start") == 0) {
+        utils::slog.i << "[fgviewer] API: start monitoring " << resourceName.c_str() << utils::io::endl;
+        mServer->startMonitoring(resourceName);
+        mg_printf(conn, kSuccessHeader.data(), "text/plain");
+        return true;
+    }
+
+    if (uri.find("/api/monitor/stop") == 0) {
+        utils::slog.i << "[fgviewer] API: stop monitoring " << resourceName.c_str() << utils::io::endl;
+        mServer->stopMonitoring(resourceName);
+        mg_printf(conn, kSuccessHeader.data(), "text/plain");
         return true;
     }
 

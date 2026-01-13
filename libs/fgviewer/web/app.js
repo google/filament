@@ -15,8 +15,6 @@
 */
 
 import {LitElement, html, css, unsafeCSS, nothing} from "https://unpkg.com/lit@2.8.0?module";
-import { graphviz } from "https://cdn.skypack.dev/d3-graphviz@5.1.0";
-import * as d3 from "https://cdn.skypack.dev/d3@7";
 
 const kUntitledPlaceholder = "Untitled View";
 
@@ -199,6 +197,7 @@ class FrameGraphSidePanel extends LitElement {
             selectedFrameGraph: {type: String, attribute: 'selected-framegraph'},
             selectedResourceId: {type: Number, attribute: 'selected-resource'},
             viewMode: {type: String, attribute: 'view-mode'},
+            monitoredImages: {type: Object, attribute: false},
 
             database: {type: Object, state: true},
             framegraphs: {type: Array, state: true},
@@ -239,6 +238,16 @@ class FrameGraphSidePanel extends LitElement {
     _handleViewModeClick(mode) {
         this.dispatchEvent(new CustomEvent('change-view-mode', {
             detail: mode,
+            bubbles: true,
+            composed: true
+        }));
+    }
+
+    _handleMonitorChange(e, resourceName) {
+        const eventName = e.target.checked ? 'start-monitoring' : 'stop-monitoring';
+        console.log(`[fgviewer-ui] Checkbox changed for ${resourceName}. Dispatching ${eventName}`);
+        this.dispatchEvent(new CustomEvent(eventName, {
+            detail: resourceName,
             bubbles: true,
             composed: true
         }));
@@ -297,6 +306,10 @@ class FrameGraphSidePanel extends LitElement {
             if (!currentResource)
                 return nothing;
 
+            const resourceName = currentResource.name;
+            const imageUrl = this.monitoredImages ? this.monitoredImages[resourceName] : null;
+            const isMonitored = this.monitoredImages && this.monitoredImages.hasOwnProperty(resourceName);
+
             return html`
                 <menu-section title="${title}">
                     <div class="resource-content">
@@ -315,6 +328,19 @@ class FrameGraphSidePanel extends LitElement {
                             </ul>
                         </div>
                     ` : ''}
+                    <div class="resource-content" style="margin-top: 10px; border-top: 1px solid #444; padding-top: 10px;">
+                        <label>
+                            <input type="checkbox"
+                                   .checked="${isMonitored}"
+                                   @change="${(e) => this._handleMonitorChange(e, resourceName)}">
+                            Monitor Texture
+                        </label>
+                        ${imageUrl ? html`
+                            <div style="margin-top: 10px;">
+                                <img src="${imageUrl}" style="max-width: 100%; border: 1px solid #ccc;">
+                            </div>
+                        ` : nothing}
+                    </div>
                 </menu-section>
             `;
         };
@@ -692,6 +718,14 @@ class FrameGraphViewer extends LitElement {
                 }
         );
 
+        connectWebSocket((resourceName, imageUrl) => {
+            // Revoke old URL to avoid memory leaks
+            if (this.monitoredImages[resourceName]) {
+                URL.revokeObjectURL(this.monitoredImages[resourceName]);
+            }
+            this.monitoredImages = { ...this.monitoredImages, [resourceName]: imageUrl };
+        });
+
         let framegraphs = await fetchFrameGraphs();
         this.database = framegraphs;
     }
@@ -709,6 +743,7 @@ class FrameGraphViewer extends LitElement {
         this.selectedFrameGraph = null;
         this.selectedResourceId = -1;
         this.viewMode = VIEW_MODE_TABLE;
+        this.monitoredImages = {};
         this.init();
 
         this.addEventListener('select-framegraph',
@@ -728,6 +763,25 @@ class FrameGraphViewer extends LitElement {
                 this.viewMode = ev.detail;
             }
         );
+
+        this.addEventListener('start-monitoring', (ev) => {
+            const resourceName = ev.detail;
+            console.log(`[fgviewer-app] Received start-monitoring for ${resourceName}. Calling API.`);
+            startMonitoring(resourceName);
+            // Optimistically mark as monitored (with null image initially)
+            this.monitoredImages = { ...this.monitoredImages, [resourceName]: null };
+            console.log('[fgviewer-app] monitoredImages updated:', this.monitoredImages);
+        });
+
+        this.addEventListener('stop-monitoring', (ev) => {
+            const resourceName = ev.detail;
+            console.log(`[fgviewer-app] Received stop-monitoring for ${resourceName}. Calling API.`);
+            stopMonitoring(resourceName);
+            const newImages = { ...this.monitoredImages };
+            delete newImages[resourceName];
+            this.monitoredImages = newImages;
+            console.log('[fgviewer-app] monitoredImages updated:', this.monitoredImages);
+        });
     }
 
     static get properties() {
@@ -737,6 +791,7 @@ class FrameGraphViewer extends LitElement {
             selectedFrameGraph: {type: String, state: true},
             selectedResourceId: {type: Number, state: true},
             viewMode: {type: String, state: true},
+            monitoredImages: {type: Object, state: true},
         }
     }
 
@@ -756,7 +811,8 @@ class FrameGraphViewer extends LitElement {
                 ?connected="${this.connected}"
                 selected-framegraph="${this.selectedFrameGraph}"
                 selected-resource="${this.selectedResourceId}"
-                view-mode="${this.viewMode}">
+                view-mode="${this.viewMode}"
+                .monitoredImages="${this.monitoredImages}">
             </framegraph-sidepanel>
             
             <framegraph-table id="table"

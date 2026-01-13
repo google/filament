@@ -55,6 +55,7 @@
 namespace filament {
 
 class TextureCache;
+class Blackboard;
 
 namespace backend {
 class Driver;
@@ -198,6 +199,9 @@ private:
 
     void renderInternal(FView const* view, bool flush);
     void renderJob(RootArenaScope& rootArenaScope, FView& view);
+#if FILAMENT_ENABLE_FGVIEWER
+    void readPixels(FrameGraph& fg, Blackboard& blackboard);
+#endif
 
     static std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
             TemporalAntiAliasingOptions const& taaOptions,

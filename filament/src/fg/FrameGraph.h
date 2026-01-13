@@ -27,6 +27,7 @@
 
 #include "fg/details/DependencyGraph.h"
 #include "fg/details/Resource.h"
+#include "fg/details/ResourceCreationContext.h"
 #include "fg/details/Utilities.h"
 
 #include "backend/DriverApiForward.h"
@@ -35,6 +36,8 @@
 #include <backend/Handle.h>
 
 #include <functional>
+
+#include <utils/Log.h>
 
 #if FILAMENT_ENABLE_FGVIEWER
 #include <fgviewer/FrameGraphInfo.h>
@@ -448,7 +451,20 @@ public:
      * Export a fgviewer::FrameGraphInfo for current graph.
      * Note that this function should be called after FrameGraph::compile().
      */
+#if FILAMENT_ENABLE_FGVIEWER
     fgviewer::FrameGraphInfo getFrameGraphInfo(const char *viewName) const;
+
+    /**
+     * Retrieve a texture handle by its name. This is used for debugging/visualization tools.
+     * @param name Name of the resource
+     * @return Handle to the texture, or an uninitialized handle if not found.
+     */
+    FrameGraphId<FrameGraphTexture> getTextureByName(const char* name) const;
+#else
+    fgviewer::FrameGraphInfo getFrameGraphInfo(const char*) const {
+        return fgviewer::FrameGraphInfo();
+    }
+#endif
 
 private:
     friend class FrameGraphResources;
@@ -673,4 +689,4 @@ extern template FrameGraphId<FrameGraphTexture> FrameGraph::forwardResource(
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG_FRAMEGRAPH_H
+#endif // TNT_FILAMENT_FG_FRAMEGRAPH_H

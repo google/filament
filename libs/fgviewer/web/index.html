@@ -14,6 +14,14 @@
     }
   </style>
   <script src="api.js"></script>
+  <!-- 
+    We load d3 and d3-graphviz via script tags instead of ESM imports in app.js.
+    This is because d3-graphviz relies on viz.js (WASM), and loading it purely via 
+    ESM from CDNs often fails to locate the WASM file or handle the worker correctly.
+  -->
+  <script src="//d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/@hpcc-js/wasm@2.20.0/dist/index.min.js"></script>
+  <script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
 </head>
 <body>
 <script src="app.js" type="module"></script>

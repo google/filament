@@ -135,6 +135,7 @@ class TextureCache;
  * for a given context.
  */
 class FEngine : public Engine {
+    friend class FRenderer;
 public:
     void* operator new(std::size_t const size) noexcept {
         return utils::aligned_alloc(size, alignof(FEngine));
@@ -572,6 +573,12 @@ public:
 
     backend::Driver& getDriver() const noexcept { return *mDriver; }
 
+#if FILAMENT_ENABLE_FGVIEWER
+    void requestTextureReadback(utils::CString const& name,
+            std::function<void(fgviewer::DebugServer::PixelBuffer, uint32_t, uint32_t,
+                    fgviewer::DebugServer::PixelDataFormat)>&& callback);
+#endif
+
 private:
     explicit FEngine(Builder const& builder);
     void init();
@@ -702,6 +709,17 @@ private:
     std::thread::id mMainThreadId{};
 
     bool mInitialized = false;
+
+#if FILAMENT_ENABLE_FGVIEWER
+    struct ReadbackRequest {
+        using Callback = std::function<void(fgviewer::DebugServer::PixelBuffer, uint32_t, uint32_t,
+                fgviewer::DebugServer::PixelDataFormat)>;
+        utils::CString name;
+        Callback callback;
+    };
+    utils::Mutex mReadbackRequestsMutex;
+    std::vector<ReadbackRequest> mReadbackRequests;
+#endif
 
     // Creation parameters
     Config mConfig;

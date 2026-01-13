@@ -41,6 +41,50 @@ async function fetchFrameGraph(fgid) {
     return fgInfo;
 }
 
+async function startMonitoring(resourceName) {
+    await fetch(`api/monitor/start?resource=${resourceName}`, { method: 'POST' });
+}
+
+async function stopMonitoring(resourceName) {
+    await fetch(`api/monitor/stop?resource=${resourceName}`, { method: 'POST' });
+}
+
+function connectWebSocket(onImageReceived) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    socket.binaryType = 'arraybuffer';
+
+    socket.onopen = () => {
+        console.log('WebSocket connected to /ws');
+    };
+
+    socket.onmessage = async (event) => {
+        const bytes = new Uint8Array(event.data);
+        const nullTerminatorIndex = bytes.indexOf(0);
+        if (nullTerminatorIndex !== -1) {
+            const resourceName = new TextDecoder().decode(bytes.slice(0, nullTerminatorIndex));
+            console.log(`[fgviewer] ------- Total bytes received for "${resourceName}" (${bytes.length} bytes, null index=${nullTerminatorIndex})`);                       const pngData = bytes.slice(nullTerminatorIndex + 1);
+            console.log(`[fgviewer] Received image for "${resourceName}" -- (${pngData.length} bytes)`);
+            const blob = new Blob([pngData], { type: 'image/png' });
+            const url = URL.createObjectURL(blob);
+            onImageReceived(resourceName, url);
+        } else {
+            console.warn('[fgviewer] Received WebSocket message without null terminator.');
+        }
+    };
+
+    socket.onclose = () => {
+        console.log('WebSocket disconnected. Retrying in 5s...');
+        setTimeout(() => connectWebSocket(onImageReceived), 5000);
+    };
+
+    socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+
+    return socket;
+}
+
 const STATUS_LOOP_TIMEOUT = 3000;
 
 const STATUS_CONNECTED = 1;

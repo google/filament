@@ -19,13 +19,17 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
+#include <cstdint>
 #include <cstring>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <math/scalar.h>
+#include <math/half.h>
 
 #include <utils/debug.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
 
 namespace filament {
 namespace backend {
@@ -76,7 +80,7 @@ public:
         }
     }
 
-    // Converts a n-channel image of UBYTE, INT, UINT, or FLOAT to a different type.
+    // Converts a n-channel image of UBYTE, INT, UINT, HALF, or FLOAT to a different type.
     template<typename dstComponentType, typename srcComponentType>
     static void reshapeImage(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
             size_t srcBytesPerRow,
@@ -91,6 +95,8 @@ public:
         UTILS_ASSUME(minChannelCount <= 4);
         dest += (dstRowOffset * dstBytesPerRow);
         const int inds[4] = { swizzle ? 2 : 0, 1, swizzle ? 0 : 2, 3 };
+
+        utils::slog.e <<"dstMaxValue=" << +dstMaxValue << utils::io::endl;
         for (size_t row = 0; row < height; ++row) {
             const srcComponentType* in = (const srcComponentType*) src;
             dstComponentType* out = (dstComponentType*)dest + (dstColumnOffset * dstChannelCount);
@@ -119,6 +125,7 @@ public:
     static bool reshapeImage(PixelBufferDescriptor* UTILS_RESTRICT dst, PixelDataType srcType,
             uint32_t srcChannelCount,  const uint8_t* UTILS_RESTRICT srcBytes, int srcBytesPerRow,
             int width, int height, bool swizzle) {
+        using namespace utils;
         size_t dstChannelCount;
         switch (dst->format) {
             case PixelDataFormat::R_INTEGER: dstChannelCount = 1; break;
@@ -129,7 +136,9 @@ public:
             case PixelDataFormat::RG: dstChannelCount = 2; break;
             case PixelDataFormat::RGB: dstChannelCount = 3; break;
             case PixelDataFormat::RGBA: dstChannelCount = 4; break;
-            default: return false;
+            default:
+                slog.e << "DataReshaper: unsupported dst->format: " << (int)dst->format << io::endl;
+                return false;
         }
         void (*reshaper)(uint8_t* dest, const uint8_t* src, size_t srcBytesPerRow,
                 size_t srcChannelCount,
@@ -155,7 +164,10 @@ public:
                     case FLOAT: reshaper = reshapeImage<uint8_t, float>; break;
                     case INT: reshaper = reshapeImage<uint8_t, int32_t>; break;
                     case UINT: reshaper = reshapeImage<uint8_t, uint32_t>; break;
-                    default: return false;
+                    case HALF: reshaper = reshapeImage<uint8_t, math::half>; break;
+                    default:
+                        slog.e << "DataReshaper: UBYTE dst, unsupported srcType: " << (int)srcType << io::endl;
+                        return false;
                 }
                 break;
             case FLOAT:
@@ -164,7 +176,9 @@ public:
                     case FLOAT: reshaper = reshapeImage<float, float>; break;
                     case INT: reshaper = reshapeImage<float, int32_t>; break;
                     case UINT: reshaper = reshapeImage<float, uint32_t>; break;
-                    default: return false;
+                    default:
+                        slog.e << "DataReshaper: FLOAT dst, unsupported srcType: " << (int)srcType << io::endl;
+                        return false;
                 }
                 break;
             case INT:
@@ -173,7 +187,9 @@ public:
                     case FLOAT: reshaper = reshapeImage<int32_t, float>; break;
                     case INT: reshaper = reshapeImage<int32_t, int32_t>; break;
                     case UINT: reshaper = reshapeImage<int32_t, uint32_t>; break;
-                    default: return false;
+                    default:
+                        slog.e << "DataReshaper: INT dst, unsupported srcType: " << (int)srcType << io::endl;
+                        return false;
                 }
                 break;
             case UINT:
@@ -182,16 +198,21 @@ public:
                     case FLOAT: reshaper = reshapeImage<uint32_t, float>; break;
                     case INT: reshaper = reshapeImage<uint32_t, int32_t>; break;
                     case UINT: reshaper = reshapeImage<uint32_t, uint32_t>; break;
-                    default: return false;
+                    default:
+                        slog.e << "DataReshaper: UINT dst, unsupported srcType: " << (int)srcType << io::endl;
+                        return false;
                 }
                 break;
             case HALF:
                 switch (srcType) {
                     case HALF: reshaper = copyImage; break;
-                    default: return false;
+                    default:
+                        slog.e << "DataReshaper: HALF dst, unsupported srcType: " << (int)srcType << io::endl;
+                        return false;
                 }
                 break;
             default:
+                slog.e << "DataReshaper: unsupported dst->type: " << (int)dst->type << io::endl;
                 return false;
         }
         uint8_t* dstBytes = (uint8_t*) dst->buffer;
@@ -200,6 +221,7 @@ public:
         reshaper(dstBytes, srcBytes, srcBytesPerRow, srcChannelCount,
                 dst->top, dst->left, dstBytesPerRow,
                 dstChannelCount, width, height, swizzle);
+
         return true;
     }
 };
@@ -209,6 +231,7 @@ template<> inline int32_t getMaxValue() { return 0x7fffffff; }
 template<> inline uint32_t getMaxValue() { return 0xffffffff; }
 template<> inline uint16_t getMaxValue() { return 0x3c00; } // 0x3c00 is 1.0 in half-float.
 template<> inline uint8_t getMaxValue() { return 0xff; }
+template<> inline math::half getMaxValue() { return math::half(1.0f); }
 
 } // namespace backend
 } // namespace filament

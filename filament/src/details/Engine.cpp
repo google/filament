@@ -858,7 +858,13 @@ int FEngine::loop() {
 #endif
     if (fgviewerPortString != nullptr) {
         const int fgviewerPort = atoi(fgviewerPortString);
-        debug.fgviewerServer = new fgviewer::DebugServer(fgviewerPort);
+        debug.fgviewerServer = new fgviewer::DebugServer(fgviewerPort,
+                fgviewer::DebugServer::ReadbackRequest([this](utils::CString name,
+                        std::function<void(fgviewer::DebugServer::PixelBuffer,
+                                uint32_t, uint32_t,
+                                fgviewer::DebugServer::PixelDataFormat)> callback) {
+                    requestTextureReadback(name, std::move(callback));
+                }));
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
@@ -1677,5 +1683,14 @@ Engine::Config Engine::BuilderDetails::validateConfig(Config config) noexcept {
 
     return config;
 }
+
+#if FILAMENT_ENABLE_FGVIEWER
+void FEngine::requestTextureReadback(const CString& name,
+        std::function<void(fgviewer::DebugServer::PixelBuffer, uint32_t, uint32_t,
+                fgviewer::DebugServer::PixelDataFormat)>&& callback) {
+    std::unique_lock<utils::Mutex> lock(mReadbackRequestsMutex);
+    mReadbackRequests.emplace_back(ReadbackRequest{ name, std::move(callback) });
+}
+#endif
 
 } // namespace filament

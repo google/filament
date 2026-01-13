@@ -18,12 +18,19 @@
 #include <fgviewer/FrameGraphInfo.h>
 
 #include "ApiHandler.h"
+#include "WebSocketHandler.h"
 
 #include <CivetServer.h>
+
 
 #include <utils/Log.h>
 #include <utils/Mutex.h>
 #include <utils/ostream.h>
+
+#include <vector>
+#include <fstream>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 
 #include <mutex>
 #include <string>
@@ -32,7 +39,7 @@
 
 // If set to 0, this serves HTML from a resgen resource. Use 1 only during local development, which
 // serves files directly from the source code tree.
-#define SERVE_FROM_SOURCE_TREE 0
+#define SERVE_FROM_SOURCE_TREE 1
 
 #if SERVE_FROM_SOURCE_TREE
 
@@ -104,7 +111,8 @@ private:
     DebugServer* mServer;
 };
 
-DebugServer::DebugServer(int port) {
+DebugServer::DebugServer(int port, ReadbackRequest&& readbackRequester)
+        : mReadbackRequester(std::move(readbackRequester)) {
 #if !SERVE_FROM_SOURCE_TREE
     ASSET_MAP["/index.html"] = {
         .mime = "text/html",
@@ -143,8 +151,10 @@ DebugServer::DebugServer(int port) {
 
     mFileHandler = new FileRequestHandler(this);
     mApiHandler = new ApiHandler(this);
+    mWebSocketHandler = new WebSocketHandler(this);
 
     mServer->addHandler("/api", mApiHandler);
+    mServer->addWebSocketHandler("/ws", mWebSocketHandler);
     mServer->addHandler("", mFileHandler);
 
     slog.i << "[fgviewer] DebugServer listening at http://localhost:" << port << io::endl;
@@ -155,6 +165,7 @@ DebugServer::~DebugServer() {
 
     delete mFileHandler;
     delete mApiHandler;
+    delete mWebSocketHandler;
     delete mServer;
 }
 
@@ -187,6 +198,126 @@ void DebugServer::update(ViewHandle h, FrameGraphInfo info) {
     mViews.erase(h);
     mViews.emplace(h, std::move(info));
     mApiHandler->updateFrameGraph(h);
+}
+
+void DebugServer::startMonitoring(const utils::CString& resourceName) {
+    slog.i << "[fgviewer] DebugServer: adding " << resourceName.c_str_safe() << " to monitored list." << io::endl;
+    std::unique_lock<utils::Mutex> lock(mMonitoredResourcesMutex);
+    mMonitoredResources.insert(resourceName);
+}
+
+void DebugServer::stopMonitoring(const utils::CString& resourceName) {
+    slog.i << "[fgviewer] DebugServer: removing " << resourceName.c_str_safe() << " from monitored list." << io::endl;
+    std::unique_lock<utils::Mutex> lock(mMonitoredResourcesMutex);
+    mMonitoredResources.erase(resourceName);
+}
+
+void DebugServer::broadcast(const char* data, size_t len) {
+    mWebSocketHandler->broadcast(data, len);
+}
+
+void DebugServer::tick() {
+    static constexpr uint32_t UPDATE_INTERVAL = 100; // Update every 30 frames
+
+    mFrameCount++;
+    if (mFrameCount % UPDATE_INTERVAL != 0) {
+        return;
+    }
+
+    std::unique_lock<utils::Mutex> lock(mMonitoredResourcesMutex);
+    if (mMonitoredResources.empty()) {
+        return;
+    }
+
+    // Cycle through monitored resources
+    auto it = mMonitoredResources.begin();
+    std::advance(it, mCurrentMonitoredResourceIndex % mMonitoredResources.size());
+    utils::CString resourceToUpdate = *it;
+
+    slog.i << "[fgviewer] DebugServer: tick triggering readback for " << resourceToUpdate.c_str_safe() << io::endl;
+
+    mCurrentMonitoredResourceIndex++;
+
+    // Request readback from the engine
+    mReadbackRequester(resourceToUpdate, 
+        [this, resourceName = std::move(resourceToUpdate)](PixelBuffer pixelBuffer, uint32_t width, uint32_t height, PixelDataFormat format) {
+            // Encode to PNG and broadcast
+            if (pixelBuffer.empty()) {
+                slog.w << "[fgviewer] Readback for " << resourceName.c_str_safe() << " failed or returned empty buffer." << io::endl;
+                return;
+            }
+
+            // For simplicity, convert all to RGBA UBYTE for PNG. More robust format handling
+            // would be needed for a production system.
+            PixelBuffer rgbaBuffer;
+            rgbaBuffer.resize(width * height * 4);
+
+            // Simple conversion, assuming incoming is RGBA UBYTE for now, needs real conversion
+            // based on `format` if different formats are supported.
+            // For float textures (e.g., R32F, RGBA16F), a more complex tonemapping or scaling
+            // would be required before saving to 8-bit PNG.
+            // For now, if it's not RGBA UBYTE, we'll just copy, which might result in weird images.
+            if (format == Format::RGBA &&
+                pixelBuffer.size() == width * height * 4) {
+                std::copy(pixelBuffer.begin(), pixelBuffer.end(), rgbaBuffer.begin());
+            } else if (format == Format::RGB &&
+                       pixelBuffer.size() == width * height * 3) {
+                // Convert RGB to RGBA
+                for (size_t i = 0; i < width * height; ++i) {
+                    rgbaBuffer[i * 4 + 0] = pixelBuffer[i * 3 + 0];
+                    rgbaBuffer[i * 4 + 1] = pixelBuffer[i * 3 + 1];
+                    rgbaBuffer[i * 4 + 2] = pixelBuffer[i * 3 + 2];
+                    rgbaBuffer[i * 4 + 3] = 255; // Alpha
+                }
+            } else {
+                // Fallback for unsupported formats or if dimensions mismatch, fill with red.
+                slog.w << "[fgviewer] Unsupported pixel format or size mismatch for PNG conversion: "
+                       << (int)format << ", size: " << pixelBuffer.size() << io::endl;
+                std::fill(rgbaBuffer.begin(), rgbaBuffer.end(), 255);
+            }
+
+            PixelBuffer pngData;
+            auto stb_write_to_vector = [](void* context, void* data, int size) {
+                auto* buffer = static_cast<PixelBuffer*>(context);
+                buffer->insert(buffer->end(), static_cast<uint8_t*>(data),
+                               static_cast<uint8_t*>(data) + size);
+            };
+
+            int success = stbi_write_png_to_func(stb_write_to_vector, &pngData, (int)width, (int)height, 4, rgbaBuffer.data(), (int)width * 4);
+            slog.i << "[fgviewer] stbi_write_png_to_func result: " << success << " (bytes: " << pngData.size() << ")" << io::endl;
+
+            utils::slog.e << "pixel=" << (void*) pixelBuffer.data() << utils::io::endl;
+//            auto x = pixelBuffer.data();
+//            for (size_t i = 0; i < 16; ++i) {
+//                utils::slog.e << "[" << i << "]=" << (int) x[i] << utils::io::endl;
+//            }
+
+
+            if (success && !pngData.empty()) {
+                char const* actualName = resourceName.c_str_safe();
+                size_t actualNameLen = strlen(actualName);
+                {
+                    std::ofstream debugFile("/tmp/filament_debug.png", std::ios::binary);
+                    if (debugFile.is_open()) {
+                        debugFile.write(reinterpret_cast<const char*>(pngData.data()), pngData.size());
+                        debugFile.close();
+                        slog.i << "[fgviewer] Wrote PNG to /tmp/filament_debug.png" << io::endl;
+                    }
+                }
+                // Prefix with resource name + null terminator to identify the texture on the client side
+                std::vector<uint8_t> message;
+                message.reserve(actualNameLen + 1 + pngData.size());
+                message.insert(message.end(), (uint8_t*)actualName, (uint8_t*)actualName + actualNameLen);
+                message.push_back('\0');
+                message.insert(message.end(), pngData.begin(), pngData.end());
+                utils::slog.e << "sending bytes=" << message.size() <<
+                        " resource-size="<< actualNameLen <<  utils::io::endl;
+                mWebSocketHandler->broadcast((const char*)message.data(), message.size());
+            } else {
+                slog.e << "[fgviewer] Failed to encode PNG for " << resourceName.c_str_safe() << io::endl;
+            }
+        }
+    );
 }
 
 } // namespace filament::fgviewer

@@ -37,6 +37,7 @@
 #include "fg/FrameGraphResources.h"
 #include "fg/FrameGraphTexture.h"
 
+#include <mutex>
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
@@ -60,6 +61,7 @@
 #include <utils/Allocator.h>
 #include <utils/bitset.h>
 #include <utils/JobSystem.h>
+#include <utils/Log.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/compiler.h>
@@ -1490,12 +1492,18 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     fg.forwardResource(fgViewRenderTarget, input);
 
+#if FILAMENT_ENABLE_FGVIEWER
+    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
+    if (UTILS_LIKELY(fgviewerServer)) {
+        readPixels(fg, blackboard);
+    }
+#endif
+
     fg.present(fgViewRenderTarget);
 
     fg.compile();
 
 #if FILAMENT_ENABLE_FGVIEWER
-    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
     if (UTILS_LIKELY(fgviewerServer)) {
         fgviewerServer->update(view.getViewHandle(), fg.getFrameGraphInfo(view.getName()));
     }
@@ -1507,10 +1515,91 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     fg.execute(driver);
 
+#if FILAMENT_ENABLE_FGVIEWER
+    if (UTILS_LIKELY(fgviewerServer)) {
+        fgviewerServer->tick();
+    }
+#endif
+
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);
 
     recordHighWatermark(commandArena.getListener().getHighWatermark());
 }
+
+#if FILAMENT_ENABLE_FGVIEWER
+
+void FRenderer::readPixels(FrameGraph& fg, Blackboard& blackboard) {
+
+    FEngine& engine = mEngine;
+    std::vector<FEngine::ReadbackRequest> requests;
+
+    { // scope for lock
+        std::unique_lock<utils::Mutex> lock(engine.mReadbackRequestsMutex);
+        requests = std::move(engine.mReadbackRequests);
+        engine.mReadbackRequests.clear();
+    }
+
+    for (auto& request : requests) {
+        FrameGraphId<FrameGraphTexture> fgTexture = fg.getTextureByName(request.name.c_str());
+        if (!fgTexture.isInitialized()) {
+            slog.w << "[fgviewer] Requested texture \"" << request.name.c_str_safe()
+                   << "\" not found in FrameGraph." << io::endl;
+            continue;
+        }
+
+        struct ReadbackPassData {
+            FrameGraphId<FrameGraphTexture> texture;
+        };
+        fg.addPass<ReadbackPassData>(
+                "Readback Pass",
+                [&](FrameGraph::Builder& builder, ReadbackPassData& data) {
+                    data.texture = builder.read(fgTexture, FrameGraphTexture::Usage::SAMPLEABLE);
+                    builder.sideEffect(); // Ensure this pass is not culled
+                },
+                [request = std::move(request)](FrameGraphResources const& resources,
+                        ReadbackPassData const& data, DriverApi& d) {
+                    const FrameGraphTexture::Descriptor& desc =
+                            resources.getDescriptor(data.texture);
+
+                    backend::PixelBufferDescriptor::PixelDataFormat format =
+                            PixelBufferDescriptor::PixelDataFormat::RGBA;
+                    backend::PixelBufferDescriptor::PixelDataType type =
+                            PixelBufferDescriptor::PixelDataType::UBYTE;
+                    fgviewer::DebugServer::PixelDataFormat targetFormat =
+                            fgviewer::DebugServer::Format::RGBA;
+                    const size_t bufferSize = desc.width * desc.height * 4;
+
+                    fgviewer::DebugServer::PixelBuffer pixelBuffer(bufferSize);
+                    void* bufferData = pixelBuffer.data();
+
+                    struct UserData {
+                        size_t width;
+                        size_t height;
+                        fgviewer::DebugServer::PixelDataFormat targetFormat;
+                        FEngine::ReadbackRequest::Callback callback;
+                        fgviewer::DebugServer::PixelBuffer pixelBuffer;
+                    };
+
+                    PixelBufferDescriptor pbd(
+                            bufferData, bufferSize, format, type, 1, 0, 0, 0, 0,
+                            [](void* buffer, size_t size, void* user) {
+                                std::unique_ptr<UserData> d {static_cast<UserData*>(user)};
+                                auto& callback = d->callback;
+                                callback(std::move(d->pixelBuffer), d->width, d->height, d->targetFormat);
+                            },
+                            new UserData{ desc.width, desc.height, targetFormat,
+                                std::move(request.callback), std::move(pixelBuffer) });
+
+                    MRT color(resources.getTexture(data.texture), 0, 0);
+                    Handle<HwRenderTarget> rt = d.createRenderTarget(TargetBufferFlags::COLOR0,
+                            desc.width, desc.height, 1, 1, color, {}, {});
+
+                    d.readPixels(rt, 0, 0, desc.width, desc.height, std::move(pbd));
+                    d.destroyRenderTarget(rt);
+                });
+    }
+}
+#endif
 
 } // namespace filament

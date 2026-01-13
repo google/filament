@@ -582,6 +582,21 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
 #endif
 }
 
+#if FILAMENT_ENABLE_FGVIEWER
+FrameGraphId<FrameGraphTexture> FrameGraph::getTextureByName(const char* name) const {
+    for (size_t i = 0; i < mResourceSlots.size(); ++i) {
+        const auto& slot = mResourceSlots[i];
+        const VirtualResource* resource = mResources[slot.rid];
+        if (strcmp(resource->name.data(), name) == 0) {
+            FrameGraphHandle handle((FrameGraphHandle::Index)i);
+            handle.version = slot.version;
+            return FrameGraphId<FrameGraphTexture>(handle);
+        }
+    }
+    return {};
+}
+#endif
+
 
 // ------------------------------------------------------------------------------------------------
 

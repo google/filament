@@ -20,10 +20,10 @@ set(PUBLIC_HDRS
 
 set(SRCS
     src/ApiHandler.cpp
-    src/ApiHandler.h
     src/DebugServer.cpp
     src/FrameGraphInfo.cpp
     src/JsonWriter.cpp
+    src/WebSocketHandler.cpp
 )
 
 # ==================================================================================================
@@ -68,6 +68,7 @@ target_link_libraries(${TARGET} PUBLIC
         civetweb
         fgviewer_resources
         utils
+        stb
 )
 
 target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)

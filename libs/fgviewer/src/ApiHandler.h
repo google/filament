@@ -34,13 +34,11 @@ struct FrameGraphInfo;
 //
 class ApiHandler : public CivetHandler {
 public:
-    explicit ApiHandler(DebugServer* server)
-        : mServer(server) {}
-    ~ApiHandler() = default;
+    explicit ApiHandler(DebugServer* server);
+    bool handleGet(CivetServer* server, struct mg_connection* conn) override;
+    bool handlePost(CivetServer *server, struct mg_connection *conn) override;
 
-    bool handleGet(CivetServer* server, struct mg_connection* conn);
-
-    void updateFrameGraph(ViewHandle view_handle);
+    void updateFrameGraph(uint32_t viewId);
 
 private:
     const FrameGraphInfo* getFrameGraphInfo(struct mg_request_info const* request);
