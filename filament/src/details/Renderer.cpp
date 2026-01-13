@@ -309,10 +309,10 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
 
     // Run GC
     JobSystem& js = engine.getJobSystem();
-    auto *rootJob = js.setRootJob(js.createJob());
-    js.run(jobs::createJob(js, nullptr, &FEngine::gcManagers, &engine)); // gc all component managers
+    auto *rootJob = js.createJob();
+    js.run(jobs::createJob(js, rootJob, &FEngine::gcManagers, &engine)); // gc all component managers
     if (engine.isAsynchronousModeEnabled()) {
-        js.run(jobs::createJob(js, nullptr, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
+        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
     }
     js.runAndWait(rootJob);
 
@@ -517,10 +517,10 @@ void FRenderer::endFrame() {
 
     // Run GC
     JobSystem& js = engine.getJobSystem();
-    auto *rootJob = js.setRootJob(js.createJob());
-    js.run(jobs::createJob(js, nullptr, &FEngine::gcManagers, &engine)); // gc all component managers
+    auto *rootJob = js.createJob();
+    js.run(jobs::createJob(js, rootJob, &FEngine::gcManagers, &engine)); // gc all component managers
     if (engine.isAsynchronousModeEnabled()) {
-        js.run(jobs::createJob(js, nullptr, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
+        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
     }
     js.runAndWait(rootJob);
 }

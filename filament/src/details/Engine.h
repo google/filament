@@ -587,18 +587,10 @@ private:
     bool isValid(const T* ptr, ResourceList<T> const& list) const;
 
     template<typename T>
-    bool terminateAndDestroy(const T* p, ResourceList<T>& list);
+    bool terminateAndDestroy(const T* ptr, ResourceList<T>& list);
 
     template<typename T, typename Lock>
     bool terminateAndDestroyLocked(Lock& lock, const T* p, ResourceList<T>& list);
-
-    // For asynchronous objects, terminate the backend resources immediately as they are no longer
-    // referenced. However, we defer the destruction of the frontend object.
-    // Reason: The creation process is still active (which is why this method is called) and holds a
-    // reference to the frontend object to set `mCreationComplete` to true (see FTexture::FTexture).
-    // Deleting it now may cause a crash, so we wait until creation completes.
-    template<typename T>
-    void terminateAndDeferAsyncObjectDestruction(const T* p, ResourceList<T>& list);
 
     template<typename T>
     void cleanupResourceList(ResourceList<T>&& list);

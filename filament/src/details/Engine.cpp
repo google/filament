@@ -1161,11 +1161,18 @@ bool FEngine::isValid(const T* ptr, ResourceList<T> const& list) const {
     return l.find(ptr) != l.end();
 }
 
+template <typename T, typename = void>
+struct HasIsCreationComplete : std::false_type {};
+
+template <typename T>
+struct HasIsCreationComplete<T, std::void_t<decltype(std::declval<T>().isCreationComplete())>>
+        : std::true_type {};
+
 template<typename T>
 UTILS_ALWAYS_INLINE
-bool FEngine::terminateAndDestroy(const T* p, ResourceList<T>& list) {
-    if (p == nullptr) return true;
-    bool const success = list.remove(p);
+bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
+    if (ptr == nullptr) return true;
+    bool const success = list.remove(ptr);
 
 #if UTILS_HAS_RTTI
     auto typeName = CallStack::typeName<T>();
@@ -1175,9 +1182,40 @@ bool FEngine::terminateAndDestroy(const T* p, ResourceList<T>& list) {
 #endif
 
     if (ASSERT_PRECONDITION_NON_FATAL(success,
-            "Object %s at %p doesn't exist (double free?)", typeNameCStr, p)) {
-        const_cast<T*>(p)->terminate(*this);
-        mHeapAllocator.destroy(const_cast<T*>(p));
+            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr)) {
+
+        T* p = const_cast<T*>(ptr);
+
+        if constexpr (HasIsCreationComplete<T>::value) {
+            // The presence of 'isCreationComplete' in type T implies it supports asynchronous
+            // creation. For these asynchronous objects, we can terminate the backend resources
+            // immediately as they are no longer referenced. However, we defer the destruction of
+            // the frontend object if it's still being loaded.
+            // Reason: The creation process is still active and holds a reference to the frontend
+            // object to set `mCreationComplete` to true (see FTexture::FTexture). Deleting it now
+            // may cause a crash, so we wait until creation completes.
+
+            // Terminate the backend resource immediately as they're unnecessary from this point.
+            p->terminate(*this);
+
+            if (p->isCreationComplete()) {
+                mHeapAllocator.destroy(p);
+            } else {
+                // We defer the destruction of the frontend object until the creation process
+                // completes. This ensures the object remains valid while the creation process still
+                // holds references to it.
+                mDeferredAsyncObjectDestruction.push_back([this, p]() {
+                    if (!p->isCreationComplete()) {
+                        return false;
+                    }
+                    mHeapAllocator.destroy(p);
+                    return true;
+                });
+            }
+        } else {
+            p->terminate(*this);
+            mHeapAllocator.destroy(p);
+        }
     }
     return success;
 }
@@ -1205,36 +1243,6 @@ bool FEngine::terminateAndDestroyLocked(Lock& lock, const T* p, ResourceList<T>&
     return success;
 }
 
-template<typename T>
-UTILS_NOINLINE
-void FEngine::terminateAndDeferAsyncObjectDestruction(const T* p, ResourceList<T>& list) {
-    bool const success = list.remove(p);
-
-#if UTILS_HAS_RTTI
-    auto typeName = CallStack::typeName<T>();
-    const char * const typeNameCStr = typeName.c_str();
-#else
-    const char * const typeNameCStr = "<no-rtti>";
-#endif
-
-    if (ASSERT_PRECONDITION_NON_FATAL(success,
-        "Object %s at %p doesn't exist (double free?)", typeNameCStr, p)) {
-        // Terminate the backend resource immediately as they're unnecessary from this point.
-        const_cast<T*>(p)->terminate(*this);
-
-        // We defer the destruction of the frontend object until the creation process completes.
-        // This ensures the object remains valid while the creation process still holds references
-        // to it.
-        mDeferredAsyncObjectDestruction.push_back([this, p=const_cast<T*>(p)]() {
-            if (!p->isCreationComplete()) {
-                return false;
-            }
-            mHeapAllocator.destroy(p);
-            return true;
-        });
-    }
-}
-
 // -----------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
@@ -1244,19 +1252,11 @@ bool FEngine::destroy(const FBufferObject* p) {
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FVertexBuffer* p) {
-    if (p && !p->isCreationComplete()) {
-        terminateAndDeferAsyncObjectDestruction(p, mVertexBuffers);
-        return true;
-    }
     return terminateAndDestroy(p, mVertexBuffers);
 }
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FIndexBuffer* p) {
-    if (p && !p->isCreationComplete()) {
-        terminateAndDeferAsyncObjectDestruction(p, mIndexBuffers);
-        return true;
-    }
     return terminateAndDestroy(p, mIndexBuffers);
 }
 
@@ -1292,10 +1292,6 @@ bool FEngine::destroy(const FColorGrading* p) {
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FTexture* p) {
-    if (p && !p->isCreationComplete()) {
-        terminateAndDeferAsyncObjectDestruction(p, mTextures);
-        return true;
-    }
     return terminateAndDestroy(p, mTextures);
 }
 
