@@ -238,11 +238,9 @@ protected:
     void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
     void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
-#if UTILS_HAS_THREADING
     // Stops the `ServiceThread`. This method is called during destruction but may be called
     // explicitly if earlier shutdown is needed. This method is idempotent.
     void stopServiceThread() noexcept;
-#endif
 
 private:
     const Platform::DriverConfig mDriverConfig;
@@ -250,13 +248,11 @@ private:
     std::mutex mPurgeLock;
     std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks;
 
-#if UTILS_HAS_THREADING
     std::thread mServiceThread;
     std::mutex mServiceThreadLock;
     std::condition_variable mServiceThreadCondition;
     std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue;
     bool mExitRequested = false;
-#endif
 };
 
 
