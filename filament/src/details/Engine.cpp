@@ -720,12 +720,11 @@ void FEngine::shutdown() {
     mJobSystem.emancipate();
 }
 
-void FEngine::prepare() {
+void FEngine::prepare(DriverApi& driver) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.
-    DriverApi& driver = getDriverApi();
     const bool useUboBatching = isUboBatchingEnabled();
 
     if (useUboBatching) {
@@ -746,7 +745,7 @@ void FEngine::prepare() {
 
     if (useUboBatching) {
         assert_invariant(mUboManager != nullptr);
-        getUboManager()->finishBeginFrame(getDriverApi());
+        getUboManager()->finishBeginFrame(driver);
     }
 
     mMaterials.forEach([](FMaterial* material) {

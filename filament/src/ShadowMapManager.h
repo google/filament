@@ -123,10 +123,10 @@ public:
 
     // Updates all the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
-    ShadowTechnique update(Builder const& builder,
-            FEngine& engine, FView& view,
-            CameraInfo const& cameraInfo,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
+    ShadowTechnique update(backend::DriverApi& driver,
+            Builder const& builder, FEngine& engine,
+            FView& view,
+            CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
 
     // Renders all the shadow maps.
     FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg,
@@ -238,6 +238,7 @@ private:
     bool const mIsDepthClampSupported;
     bool mInitialized = false;
     bool mFeatureShadowAllocator = false;
+    bool mDisableBlitIntoTextureArray = false;
 
     ShadowMap& getShadowMap(size_t const index) noexcept {
         assert_invariant(index < mShadowMapCache.size());

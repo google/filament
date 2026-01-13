@@ -13,21 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "MaterialDefinition.h"
 
 #include "Froxelizer.h"
 #include "MaterialParser.h"
 
-#include <backend/DriverEnums.h>
-
 #include <ds/ColorPassDescriptorSet.h>
 
 #include <details/Engine.h>
 
+#include <private/filament/EngineEnums.h>
+#include <private/filament/DescriptorSets.h>
 #include <private/filament/PushConstantInfo.h>
 
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
+
+#include <string_view>
+#include <utils/CString.h>
+#include <utils/bitset.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/compiler.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
+
+#include <algorithm>
+#include <iterator>
+#include <memory>
+#include <utility>
+
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
 
 namespace filament {
 
@@ -83,7 +103,7 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         uint32_t parsedCrc32 = 0;
         parser->getMaterialCrc32(&parsedCrc32);
 
-        uint32_t expectedCrc32 = parser->computeCrc32();
+        uint32_t const expectedCrc32 = parser->computeCrc32();
 
         if (parsedCrc32 != expectedCrc32) {
             CString name;
@@ -131,9 +151,9 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
                 CString name;
                 parser->getName(&name);
                 LOG(WARNING) << "The stereoscopic type in the compiled material '"
-                             << name.c_str_safe() << "' is " << (int) materialStereoscopicType
+                             << name.c_str_safe() << "' is " << int(materialStereoscopicType)
                              << ", which is not compatible with the engine's setting "
-                             << (int) engineStereoscopicType << ".";
+                             << int(engineStereoscopicType) << ".";
             }
         }
     }
@@ -168,16 +188,16 @@ void MaterialDefinition::processMain() {
         uint8_t level = 1;
         mMaterialParser->getFeatureLevel(&level);
         assert_invariant(level <= 3);
-        FeatureLevel featureLevel = FeatureLevel::FEATURE_LEVEL_1;
+        FeatureLevel result = FeatureLevel::FEATURE_LEVEL_1;
         switch (FeatureLevel(level)) {
             case FeatureLevel::FEATURE_LEVEL_0:
             case FeatureLevel::FEATURE_LEVEL_1:
             case FeatureLevel::FEATURE_LEVEL_2:
             case FeatureLevel::FEATURE_LEVEL_3:
-                featureLevel = FeatureLevel(level);
+                result = FeatureLevel(level);
                 break;
         }
-        return featureLevel;
+        return result;
     }();
 
     UTILS_UNUSED_IN_RELEASE bool success;
@@ -346,6 +366,8 @@ void MaterialDefinition::processBlendingMode() {
 }
 
 void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
     // Older materials won't have a constants chunk, but that's okay.
     mMaterialParser->getConstants(&materialConstants);
 
@@ -364,18 +386,18 @@ void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
 
     specializationConstants
             [+ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND] =
-                    engine.getDriverApi().isWorkaroundNeeded(
+                    driver.isWorkaroundNeeded(
                             Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
 
     specializationConstants[+ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION] =
-            engine.getDriverApi().isWorkaroundNeeded(Workaround::EMULATE_SRGB_SWAPCHAIN);
+            driver.isWorkaroundNeeded(Workaround::EMULATE_SRGB_SWAPCHAIN);
 
     // The 16u below denotes the 16 bytes in a uvec4, which is how the froxel buffer is stored.
     specializationConstants[+ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT] =
-            int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
+            int(Froxelizer::getFroxelBufferByteCount(driver) / 16u);
 
     specializationConstants[+ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS] =
-            engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);
+            driver.isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);
 
     specializationConstants[+ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP] =
             engine.debug.shadowmap.debug_directional_shadowmap;
@@ -393,7 +415,7 @@ void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
     specializationConstants[+ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD] = 0;
 
     specializationConstants[+ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT] =
-            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
+            int(Froxelizer::getFroxelRecordBufferByteCount(driver) / 16u);
 
     // Initialize the rest of the reserved constants with a dummy value.
     for (size_t i = CONFIG_NEXT_RESERVED_SPEC_CONSTANT; i < CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
@@ -426,23 +448,21 @@ void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
 }
 
 void MaterialDefinition::processPushConstants() {
-    FixedCapacityVector<Program::PushConstant>& vertexConstants =
-            pushConstants[uint8_t(ShaderStage::VERTEX)];
-    FixedCapacityVector<Program::PushConstant>& fragmentConstants =
-            pushConstants[uint8_t(ShaderStage::FRAGMENT)];
+    FixedCapacityVector<Program::PushConstant>& vertexConstants = pushConstants[uint8_t(ShaderStage::VERTEX)];
+    FixedCapacityVector<Program::PushConstant>& fragmentConstants = pushConstants[uint8_t(ShaderStage::FRAGMENT)];
 
     CString structVarName;
-    FixedCapacityVector<MaterialPushConstant> pushConstants;
-    mMaterialParser->getPushConstants(&structVarName, &pushConstants);
+    FixedCapacityVector<MaterialPushConstant> allPushConstants;
+    mMaterialParser->getPushConstants(&structVarName, &allPushConstants);
 
-    vertexConstants.reserve(pushConstants.size());
-    fragmentConstants.reserve(pushConstants.size());
+    vertexConstants.reserve(allPushConstants.size());
+    fragmentConstants.reserve(allPushConstants.size());
 
     constexpr size_t MAX_NAME_LEN = 60;
     char buf[MAX_NAME_LEN];
     uint8_t vertexCount = 0, fragmentCount = 0;
 
-    std::for_each(pushConstants.cbegin(), pushConstants.cend(),
+    std::for_each(allPushConstants.cbegin(), allPushConstants.cend(),
             [&](MaterialPushConstant const& constant) {
                 snprintf(buf, sizeof(buf), "%s.%s", structVarName.c_str(), constant.name.c_str());
 
@@ -462,6 +482,9 @@ void MaterialDefinition::processPushConstants() {
 }
 
 void MaterialDefinition::processDescriptorSets(FEngine& engine) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    auto& descriptorSetLayoutFactory = engine.getDescriptorSetLayoutFactory();
+
     UTILS_UNUSED_IN_RELEASE bool success;
 
     success = mMaterialParser->getDescriptorBindings(&programDescriptorBindings);
@@ -496,22 +519,22 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
         Program::DescriptorBindingsInfo& descriptors = programDescriptorBindings[+bindingPoint];
         descriptors.reserve(dsl.descriptors.size());
         for (auto const& entry: dsl.descriptors) {
-            auto const& name = descriptor_sets::getDescriptorName(bindingPoint, entry.binding);
-            descriptors.push_back({ name, entry.type, entry.binding });
+            auto const& descriptorName = descriptor_sets::getDescriptorName(bindingPoint, entry.binding);
+            descriptors.push_back({ descriptorName, entry.type, entry.binding });
         }
     }
 
     this->descriptorSetLayout = {
-            engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), this->descriptorSetLayoutDescription };
+            descriptorSetLayoutFactory, driver,
+            this->descriptorSetLayoutDescription };
 
     this->perViewDescriptorSetLayout = {
-            engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), this->perViewDescriptorSetLayoutDescription };
+            descriptorSetLayoutFactory, driver,
+            this->perViewDescriptorSetLayoutDescription };
 
     this->perViewDescriptorSetLayoutVsm = {
-            engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), this->perViewDescriptorSetLayoutVsmDescription };
+            descriptorSetLayoutFactory, driver,
+            this->perViewDescriptorSetLayoutVsmDescription };
 }
 
 } // namespace filament

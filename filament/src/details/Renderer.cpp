@@ -97,7 +97,11 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrTranslucent(TextureFormat::RGBA16F),
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),
+        mFeatureLevel(FeatureLevel::FEATURE_LEVEL_0),
         mIsRGB8Supported(false),
+        mIsFrameBufferFetchSupported(false),
+        mIsFrameBufferFetchMultiSampleSupported(false),
+        mIsAutoDepthResolveSupported(false),
         mUserEpoch(engine.getEngineEpoch()),
         mResourceAllocator(std::make_unique<TextureCache>(
                 engine.getSharedResourceAllocatorDisposer(),
@@ -132,7 +136,11 @@ FRenderer::FRenderer(FEngine& engine) :
 
     DriverApi& driver = engine.getDriverApi();
 
+    mFeatureLevel = driver.getFeatureLevel();
     mIsRGB8Supported = driver.isRenderTargetFormatSupported(TextureFormat::RGB8);
+    mIsFrameBufferFetchSupported = driver.isFrameBufferFetchSupported();
+    mIsFrameBufferFetchMultiSampleSupported = driver.isFrameBufferFetchMultiSampleSupported();
+    mIsAutoDepthResolveSupported = driver.isAutoDepthResolveSupported();
 
     // our default HDR translucent format, fallback to LDR if not supported by the backend
     if (!driver.isRenderTargetFormatSupported(TextureFormat::RGBA16F)) {
@@ -398,7 +406,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         }, mFrameId, appVsync);
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
-        engine.prepare();
+        engine.prepare(driver);
     };
 
     if (mFrameSkipper.shouldRenderFrame(driver)) {
@@ -566,9 +574,10 @@ void FRenderer::renderStandaloneView(FView const* view) {
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
         FEngine& engine = mEngine;
-        engine.prepare();
-
         FEngine::DriverApi& driver = engine.getDriverApi();
+
+        engine.prepare(driver);
+
         driver.beginFrame(
                 steady_clock::now().time_since_epoch().count(),
                 mDisplayInfo.refreshRate == 0.0 ? 0 : int64_t(
@@ -577,7 +586,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
         // because we don't have a "present" call, we use flush so the driver can submit
         // the command buffer; we do this before driver.endFrame() to mimic what would
         // happen with Renderer::beginFrame/endFrame.
-        renderInternal(view, true);
+        renderInternal(driver, view, true);
 
         engine.submitFrame();
 
@@ -585,7 +594,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
 
         // engine.flush() has already been called by renderInternal(), but we need an extra one
         // for endFrame() above. This operation in actually not too heavy, it just kicks the
-        // driver thread, which is mostlikely already running.
+        // driver thread, which is most likely already running.
         engine.flush();
     }
 }
@@ -604,11 +613,11 @@ void FRenderer::render(FView const* view) {
     assert_invariant(mSwapChain);
 
     if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
-        renderInternal(view, false);
+        renderInternal(mEngine.getDriverApi(), view, false);
     }
 }
 
-void FRenderer::renderInternal(FView const* view, bool flush) {
+void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool flush) {
     FEngine& engine = mEngine;
 
     FILAMENT_CHECK_PRECONDITION(!view->hasPostProcessPass() ||
@@ -623,10 +632,10 @@ void FRenderer::renderInternal(FView const* view, bool flush) {
     auto *rootJob = js.setRootJob(js.createJob());
 
     // execute the render pass
-    renderJob(rootArenaScope, const_cast<FView&>(*view));
+    renderJob(driver, rootArenaScope, const_cast<FView&>(*view));
 
     if (flush) {
-        engine.getDriverApi().flush();
+        driver.flush();
     }
 
     // make sure to flush the command buffer
@@ -636,10 +645,9 @@ void FRenderer::renderInternal(FView const* view, bool flush) {
     js.runAndWait(rootJob);
 }
 
-void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
+void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FView& view) {
     FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
-    FEngine::DriverApi& driver = engine.getDriverApi();
     PostProcessManager& ppm = engine.getPostProcessManager();
     ppm.resetForRender();
     ppm.setFrameUniforms(driver, view.getFrameUniforms());
@@ -689,7 +697,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     } else {
         // This configures post-process materials by setting constant parameters
         if (taaOptions.enabled) {
-            ppm.configureTemporalAntiAliasingMaterial(taaOptions);
+            ppm.configureTemporalAntiAliasingMaterial(driver, taaOptions);
             if (taaOptions.upscaling > 1.0f) {
                 // for now TAA upscaling is incompatible with regular dsr
                 dsrOptions.enabled = false;
@@ -724,11 +732,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
                     isSubpassPossible &&
-                    driver.isFrameBufferFetchSupported() &&
+                    mIsFrameBufferFetchSupported &&
                     !engine.debug.renderer.disable_subpasses,
             .customResolve =
                     msaaSampleCount > 1 &&
-                    driver.isFrameBufferFetchMultiSampleSupported() &&
+                    mIsFrameBufferFetchMultiSampleSupported &&
                     msaaOptions.customResolve &&
                     hasColorGrading &&
                     !engine.debug.renderer.disable_subpasses,
@@ -1007,7 +1015,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             .hasContactShadows = scene.hasContactShadows(),
             // at this point we don't know if we have refraction, but that's handled later
             .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled,
-            .enabledStencilBuffer = view.isStencilBufferEnabled()
+            .enabledStencilBuffer = view.isStencilBufferEnabled(),
+            .featureLevel = mFeatureLevel,
+            .isAutoDepthResolveSupported = mIsAutoDepthResolveSupported
     };
 
     /*
@@ -1197,7 +1207,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 
     // create the pass, which generates all its commands (this is a heavy operation)
-    RenderPass const pass{ passBuilder.build(engine) };
+    RenderPass const pass{ passBuilder.build(engine, driver) };
 
     // now that we have the commands we can figure out if we have refraction commands
     auto* const firstRefractionCommand = [&view](RenderPass const& pass) {
@@ -1243,10 +1253,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                         .shadows = blackboard.get<FrameGraphTexture>("shadows"),
                         .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                         .ssr = ssrConfig.ssr,
-                        .structure = structure
-                },
-                config, ssrConfig, colorGradingConfigForColor,
-                pass, firstRefractionCommand);
+                .structure = structure
+            }, config, ssrConfig, colorGradingConfigForColor,
+             pass, firstRefractionCommand);
     }
 
     if (colorGradingConfig.customResolve) {
