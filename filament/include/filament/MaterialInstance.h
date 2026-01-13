@@ -42,6 +42,13 @@ class TextureSampler;
 class UniformBuffer;
 class BufferInterfaceBlock;
 
+/**
+ * A MaterialInstance represents a specific instance of a Material.
+ *
+ * While a Material defines the shader code and the set of parameters, a MaterialInstance
+ * holds the specific values for those parameters.
+ *
+ */
 class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
     template<size_t N>
     using StringLiteralHelper = const char[N];
@@ -111,6 +118,13 @@ public:
 
     /**
      * Set a uniform by name
+     *
+     * Supported types:
+     * - float, float2, float3, float4
+     * - int, int2, int3, int4
+     * - uint, uint2, uint3, uint4
+     * - bool, bool2, bool3, bool4
+     * - mat3f, mat4f
      *
      * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
      * @param nameLength    Length in `char` of the name parameter.

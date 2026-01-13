@@ -106,7 +106,7 @@ public:
     /**
      * Adds an Entity to the Scene.
      *
-     * @param entity The entity is ignored if it doesn't have a Renderable or Light component.
+     * @param entity The entity is ignored for rendering purposes if it doesn't have a Renderable or Light component.
      *
      * \attention
      *  A given Entity object can only be added once to a Scene.
