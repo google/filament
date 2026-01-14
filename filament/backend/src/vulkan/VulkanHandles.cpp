@@ -265,24 +265,31 @@ void VulkanDescriptorSet::addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycle
 
 PushConstantDescription::PushConstantDescription(backend::Program const& program) {
     mRangeCount = 0;
-    for (auto stage : { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
+    uint32_t offset = 0;
+
+    // The range is laid out so that the vertex constants are defined as the first set of bytes,
+    // followed by fragment and compute. This means we need to keep track of the offset for each
+    // stage. We do the bookeeping in mDescriptions.
+    for (auto stage: { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
         auto const& constants = program.getPushConstants(stage);
         if (constants.empty()) {
             continue;
         }
 
+        auto& description = mDescriptions[(uint8_t) stage];
         // We store the type of the constant for type-checking when writing.
-        auto& types = mTypes[(uint8_t) stage];
-        types.reserve(constants.size());
-        std::for_each(constants.cbegin(), constants.cend(), [&types] (Program::PushConstant t) {
-            types.push_back(t.type);
-        });
+        description.types.reserve(constants.size());
+        std::for_each(constants.cbegin(), constants.cend(),
+                [&description](Program::PushConstant t) { description.types.push_back(t.type); });
 
+        uint32_t const constantsSize = (uint32_t) constants.size() * ENTRY_SIZE;
         mRanges[mRangeCount++] = {
             .stageFlags = getVkStage(stage),
-            .offset = 0,
-            .size = (uint32_t) constants.size() * ENTRY_SIZE,
+            .offset = offset,
+            .size = constantsSize,
         };
+        description.offset = offset;
+        offset += constantsSize;
     }
 }
 
@@ -290,7 +297,10 @@ void PushConstantDescription::write(VkCommandBuffer cmdbuf, VkPipelineLayout lay
         backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
 
     uint32_t binaryValue = 0;
-    UTILS_UNUSED_IN_RELEASE auto const& types = mTypes[(uint8_t) stage];
+    auto const& description = mDescriptions[(uint8_t) stage];
+    UTILS_UNUSED_IN_RELEASE auto const& types = description.types;
+    uint32_t const offset = description.offset;
+
     if (std::holds_alternative<bool>(value)) {
         assert_invariant(types[index] == ConstantType::BOOL);
         bool const bval = std::get<bool>(value);
@@ -304,7 +314,8 @@ void PushConstantDescription::write(VkCommandBuffer cmdbuf, VkPipelineLayout lay
         int const ival = std::get<int>(value);
         binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
     }
-    vkCmdPushConstants(cmdbuf, layout, getVkStage(stage), index * ENTRY_SIZE, ENTRY_SIZE,
+
+    vkCmdPushConstants(cmdbuf, layout, getVkStage(stage), offset + index * ENTRY_SIZE, ENTRY_SIZE,
             &binaryValue);
 }
 
