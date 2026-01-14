@@ -287,8 +287,10 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
 
     inline void writePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
             backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-        // It's possible that we don't have the layout yet. But, we don't want to "forget"
-        // about the push constant! We can flush the constants later, once the layout is set.
+        // It's possible that we don't have the layout yet. When external samplers are used, bindPipeline()
+        // in VulkanDriver returns early, without binding a layout. If that happens, the layout is not
+        // set until draw time. Any push constants that are written during that time should be saved for
+        // later, and flushed when the layout is set.
         if (layout != VK_NULL_HANDLE) {
             mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
         } else {
