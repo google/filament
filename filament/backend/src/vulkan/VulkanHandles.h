@@ -262,14 +262,13 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
     VulkanProgram(VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();
 
-    inline void flushPushConstants(VkPipelineLayout layout) {
-        // At this point, we really ought to have a VkPipelineLayout.
-        assert_invariant(layout != VK_NULL_HANDLE);
-        for (const auto& c : mQueuedPushConstants) {
-            mInfo->pushConstantDescription.write(c.cmdbuf, layout, c.stage, c.index, c.value);
-        }
-        mQueuedPushConstants.clear();
-    }
+    /**
+     * Writes out any queued push constants using the provided VkPipelineLayout.
+     *
+     * @param layout The layout that is to be used along with these push constants,
+     *               in the next draw call.
+     */
+    void flushPushConstants(VkPipelineLayout layout);
 
     inline VkShaderModule getVertexShader() const {
         return mInfo->shaders[0];
