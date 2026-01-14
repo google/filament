@@ -217,7 +217,7 @@ public:
         /**
          * Specify the type of geometry for this renderable. DYNAMIC geometry has no restriction,
          * STATIC_BOUNDS geometry means that both the bounds and the world-space transform of the
-         * the renderable are immutable.
+         * renderable are immutable.
          * STATIC geometry has the same restrictions as STATIC_BOUNDS, but in addition disallows
          * skinning, morphing and changing the VertexBuffer or IndexBuffer in any way.
          * @param type type of geometry.

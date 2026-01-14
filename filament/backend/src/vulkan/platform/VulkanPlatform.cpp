@@ -798,6 +798,11 @@ bool VulkanPlatform::isTransientAttachmentSupported() const noexcept {
     return mImpl->mContext.isLazilyAllocatedMemorySupported();
 }
 
+void VulkanPlatform::registerPipelineCachePrewarmExternalFormat(
+        const ExternalYcbcrFormat& format) noexcept {
+    mImpl->mContext.addPipelineCachePrewarmExternalFormat(format);
+}
+
 VkInstance VulkanPlatform::createVkInstance(const VkInstanceCreateInfo& createInfo) noexcept {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(&createInfo, VKALLOC, &instance);
