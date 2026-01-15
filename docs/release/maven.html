@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Contribute - Filament</title>
+        <title>Maven - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,62 +158,71 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="how-to-become-a-contributor-and-submit-your-own-code"><a class="header" href="#how-to-become-a-contributor-and-submit-your-own-code">How to become a contributor and submit your own code</a></h1>
-<h2 id="contributor-license-agreement"><a class="header" href="#contributor-license-agreement">Contributor License Agreement</a></h2>
-<p>Contributions to this project must be accompanied by a Contributor License
-Agreement. You (or your employer) retain the copyright to your contribution;
-this simply gives us permission to use and redistribute your contributions as
-part of the project. Head over to <a href="https://cla.developers.google.com/">https://cla.developers.google.com/</a> to see
-your current agreements on file or to sign a new one.</p>
-<p>You generally only need to submit a CLA once, so if you've already submitted one
-(even if it was for a different project), you probably don't need to do it
-again.</p>
-<h2 id="contributing-a-patch"><a class="header" href="#contributing-a-patch">Contributing A Patch</a></h2>
-<ol>
-<li>Submit an issue describing your proposed change to the repo in question.</li>
-<li>The repo owner will respond to your issue promptly.</li>
-<li>If your proposed change is accepted, and you haven't already done so, sign a
-Contributor License Agreement (see details above).</li>
-<li>Fork the desired repo, develop and test your code changes.</li>
-<li>Ensure that your code adheres to the existing style in the sample to which
-you are contributing. Refer to <a href="code_style.html">CodeStyle.md</a> for the recommended coding
-standards for this project.</li>
-<li>Ensure that your code has an appropriate set of unit tests which all pass.</li>
-<li>Submit a pull request.</li>
-</ol>
-<h2 id="code-style"><a class="header" href="#code-style">Code Style</a></h2>
-<p>See <a href="code_style.html">CODE_STYLE.md</a></p>
-<h2 id="code-reviews"><a class="header" href="#code-reviews">Code reviews</a></h2>
-<p>All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult
-<a href="https://help.github.com/articles/about-pull-requests/">GitHub Help</a> for more
-information on using pull requests.</p>
-<h2 id="community-guidelines"><a class="header" href="#community-guidelines">Community Guidelines</a></h2>
-<p>This project follows
-<a href="https://opensource.google.com/conduct/">Google's Open Source Community Guidelines</a>.</p>
-<h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
-<p>One of our design goals is that Filament itself should have no dependencies or as few dependencies
-as possible. The current external dependencies of the runtime library include:</p>
-<ul>
-<li>STL</li>
-<li>robin-map (header only library)</li>
-</ul>
-<p>When building with Vulkan enabled, we have a few additional small dependencies:</p>
-<ul>
-<li>vkmemalloc</li>
-<li>smol-v</li>
-</ul>
-<p>Host tools (such as <code>matc</code> or <code>cmgen</code>) can use external dependencies freely.</p>
+                        <h1 id="maven-release"><a class="header" href="#maven-release">Maven Release</a></h1>
+<h2 id="register-for-a-sonatype-account"><a class="header" href="#register-for-a-sonatype-account">Register for a Sonatype Account</a></h2>
+<p>First, you'll need to register for a Sonatype account at the <a href="https://central.sonatype.org/register/central-portal/">Central
+Portal</a>.</p>
+<p>To publish under the <code>com.google.android</code> namespace, you'll also need to email
+<code>central-support@sonatype.com</code> with your account information to request access.</p>
+<p>Then, generate a user token through the Sonatype website. Navigate to
+<a href="https://central.sonatype.com/usertoken">https://central.sonatype.com/usertoken</a>
+and select <strong>Generate User Token</strong>.</p>
+<p>Finally, add the generated token credentials to <code>~/.gradle/gradle.properties</code>. (Note: these are
+different from the credentials used to log into your Sonatype account):</p>
+<pre><code class="language-gradle"># Generated Sonatype token
+sonatypeUsername=&lt;username&gt;
+sonatypePassword=&lt;password&gt;
+</code></pre>
+<hr />
+<h2 id="signing-key"><a class="header" href="#signing-key">Signing Key</a></h2>
+<p>All release artifacts must be signed. You'll need to create an OpenPGP key pair. See Gradle's
+documentation on <a href="https://docs.gradle.org/current/userguide/signing_plugin.html#sec:signatory_credentials">Signatory
+credentials</a>
+for instructions.</p>
+<p>Update <code>~/.gradle/gradle.properties</code> with your new key's credentials:</p>
+<pre><code class="language-gradle">signing.keyId=&lt;key id&gt;
+signing.password=&lt;key password&gt;
+signing.secretKeyRingFile=&lt;secret key ring file&gt;
+</code></pre>
+<hr />
+<h2 id="build-the-android-release"><a class="header" href="#build-the-android-release">Build the Android Release</a></h2>
+<p>Make sure <code>JAVA_HOME</code> is set correctly. For example:</p>
+<pre><code class="language-bash">export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+./build.sh -C -i -p android release
+</code></pre>
+<hr />
+<h2 id="publish-to-sonatype"><a class="header" href="#publish-to-sonatype">Publish to Sonatype</a></h2>
+<h3 id="a-note-on-the-legacy-staging-service"><a class="header" href="#a-note-on-the-legacy-staging-service">A Note on the Legacy Staging Service</a></h3>
+<p>Previously, Filament was published to Maven via OSSRH (Open Source Software Repository Hosting). In
+2025, this service was <a href="https://central.sonatype.org/pages/ossrh-eol/">sunsetted</a>. Now, we use
+Sonatype's <a href="https://central.sonatype.org/">Central Publisher Portal</a>.</p>
+<p>The new Central Publisher Portal does not officially support Gradle. However, Sonatype provides a
+staging API compatibility service, which works with Filament's Gradle setup.</p>
+<hr />
+<h3 id="1-upload-to-the-staging-api-compatibility-service"><a class="header" href="#1-upload-to-the-staging-api-compatibility-service">1. Upload to the Staging API Compatibility Service</a></h3>
+<pre><code class="language-bash">cd android
+./gradlew publishToSonatype
+</code></pre>
+<h3 id="2-move-the-repository-to-the-central-publisher-portal"><a class="header" href="#2-move-the-repository-to-the-central-publisher-portal">2. Move the Repository to the Central Publisher Portal</a></h3>
+<p>We have a script to automate this. It reads the <code>sonatypeUsername</code> and <code>sonatypePassword</code> from your
+<code>~/.gradle/gradle.properties</code> file.</p>
+<pre><code class="language-bash">python3 build/common/close-sonatype-staging-repository.py
+</code></pre>
+<h3 id="3-publish-the-release-on-sonatype"><a class="header" href="#3-publish-the-release-on-sonatype">3. Publish the Release on Sonatype</a></h3>
+<p>Navigate to <a href="https://central.sonatype.com/publishing/deployments">Maven Central Repository Deployments</a>.</p>
+<p>Here, you should see a new deployment with a <strong>Validated</strong> status and all your artifacts listed. Click
+the <strong>Publish</strong> button to publish the artifacts. It typically takes around 5 minutes after clicking
+<strong>Publish</strong> for the artifacts to go live.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../build/windows_android.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../release/cocoapods.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../dup/code_style.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../release/guide.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -223,11 +232,11 @@ as possible. The current external dependencies of the runtime library include:</
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../build/windows_android.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../release/cocoapods.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../dup/code_style.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../release/guide.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
