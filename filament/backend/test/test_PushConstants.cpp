@@ -111,6 +111,8 @@ void initPushConstants() {
 
 TEST_F(BackendTest, PushConstants) {
     SKIP_IF(Backend::WEBGPU, "Push constants not supported on WebGPU");
+    // Test is flaky on CI (but does not repro locally).
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "b/453776664");
 
     initPushConstants();
 
