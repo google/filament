@@ -290,6 +290,9 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
         mVsyncSteadyClockTimeNano = 0;
     }
 
+    mFrameId++;
+    FILAMENT_TRACING_FRAME_ID(FILAMENT_TRACING_CATEGORY_FILAMENT, mFrameId);
+
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
 
@@ -307,48 +310,77 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     // Run the component managers' GC
     auto& js = engine.getJobSystem();
     js.runAndWait(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+
+    mFrameSkipper.frameSkipped();
 }
 
 bool FRenderer::shouldRenderFrame() const noexcept {
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
-    return mFrameSkipper.shouldRenderFrame(driver);
+    bool const renderFrame = mFrameSkipper.shouldRenderFrame(driver);
+    if (renderFrame && engine.features.engine.skip_frame_when_cpu_ahead_of_display) {
+        // see if we have another reason to skip
+        auto history = mFrameInfoManager.getFrameInfoHistory();
+        for (size_t i = 0, c = history.size(); i < c; i++) {
+            FrameInfo const& info = history[i];
+            if (int32_t(info.frameId - mLastFrameId) <= 0) {
+                continue;
+            }
+            if (info.expectedPresentLatency < 0 || info.displayPresent < 0) {
+                continue;
+            }
+
+            // this frame's presentation latency (time from vsync to display)
+            auto const presentLatency = info.displayPresent - info.vsync;
+
+            // The maximum latency we allow. we choose the expected presentation latency + one whole frame, this
+            // is because be default the expected presentation latency is the shorted possible, and is usually almost
+            // impossible to achieve, so we aim for an extra frame. The system is typically configured to allow this
+            // (on Android), i.e. it has enough intermediary buffers.
+            // TODO: the "expectedPresentLatency" should come from the user, and if they use the choreographer APIs
+            //       on Android, it will be set to that. Of course, we need an abstraction. This code assumes
+            //       the caller selected the default timeline.
+            auto const maximumLatencyAllowed = info.expectedPresentLatency + info.displayPresentInterval;
+
+            // if we took a whole extra frame more than the maximum latency allowed, we need to skip a frame.
+            // we use a whole frame because in practice the presentLatency will straddle around the
+            // maximumLatency, and the latency "unit" is displayPresentInterval.
+            if (presentLatency - maximumLatencyAllowed >= info.displayPresentInterval) {
+                // Keep for debugging
+                // LOG(INFO) << "skip frame " << mFrameId
+                //     << " because of frame " << info.frameId << " (" << (info.frameId - mFrameId) << ")"
+                //     << ", displayPresentInterval=" << info.displayPresentInterval
+                //     << ", expectedPresentLatency=" << info.expectedPresentLatency
+                //     << ", maximumLatencyAllowed=" << maximumLatencyAllowed
+                //     << ", latency=" << presentLatency
+                //     << ", missed=" << presentLatency - maximumLatencyAllowed
+                //     ;
+                return false;
+            }
+            break;
+        }
+    }
+    return renderFrame;
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 
-    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-
-#if 0 && defined(__ANDROID__)
-    char scratch[PROP_VALUE_MAX + 1];
-    int length = __system_property_get("debug.filament.protected", scratch);
-    if (swapChain && length > 0) {
-        uint64_t flags = swapChain->getFlags();
-        bool value = bool(atoi(scratch));
-        if (value) {
-            flags |= SwapChain::CONFIG_PROTECTED_CONTENT;
-        } else {
-            flags &= ~SwapChain::CONFIG_PROTECTED_CONTENT;
-        }
-        swapChain->recreateWithNewFlags(mEngine, flags);
-    }
-#endif
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT, "frameId", (mFrameId + 1));
 
     if (!vsyncSteadyClockTimeNano) {
         vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
         mVsyncSteadyClockTimeNano = 0;
     }
 
+    mFrameId++;
+    FILAMENT_TRACING_FRAME_ID(FILAMENT_TRACING_CATEGORY_FILAMENT, mFrameId);
+
     // get the timestamp as soon as possible
     using namespace std::chrono;
     const steady_clock::time_point now{ steady_clock::now() };
     const steady_clock::time_point userVsync{ steady_clock::duration(vsyncSteadyClockTimeNano) };
     const time_point appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
-
-    mFrameId++;
-
-    FILAMENT_TRACING_FRAME_ID(FILAMENT_TRACING_CATEGORY_FILAMENT, mFrameId);
 
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -409,7 +441,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         engine.prepare(driver);
     };
 
-    if (mFrameSkipper.shouldRenderFrame(driver)) {
+    if (shouldRenderFrame()) {
         // if beginFrame() returns true, we are expecting a call to endFrame(),
         // so do the beginFrame work right now, instead of requiring a call to render()
         beginFrameInternal();
@@ -427,6 +459,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     // we need to flush in this case, to make sure the tick() call is executed at some point
     engine.flush();
 
+    // we cannot detect more until we reach at least this frame
+    mLastFrameId = mFrameId;
+    mFrameSkipper.frameSkipped();
     return false;
 }
 
