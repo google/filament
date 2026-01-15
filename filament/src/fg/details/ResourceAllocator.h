@@ -81,7 +81,7 @@ template <typename T>
 struct ResourceAllocator {
     static void create(T& resource, ResourceCreationContext const& context,
             utils::StaticString name,
-            T::Descriptor const& desc, T::Usage usage) {
+            typename T::Descriptor const& desc, typename T::Usage usage) {
         if constexpr (is_backend_resource_v<T>) {
             // This is a backend resource, pass the driver.
             if constexpr (check_create_v<T,

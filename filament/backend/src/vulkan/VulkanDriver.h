@@ -205,6 +205,7 @@ private:
 
     bool const mIsSRGBSwapChainSupported;
     bool const mIsMSAASwapChainSupported;
+    bool const mAcquireSwapChainInMakeCurrent;
     backend::StereoscopicType const mStereoscopicType;
     uint8_t const mStereoscopicEyeCount;
     backend::AsynchronousMode const mAsynchronousMode;
