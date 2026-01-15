@@ -82,6 +82,8 @@ public:
                 // buffer. This is an experimental feature that still needs to be implemented fully
                 // before it can be fully enabled.
                 bool enable_staging_buffer_bypass = false;
+                // A client requires that swapchain be acquired in makeCurrent() (b/476144715).
+                bool enable_acquire_swapchain_in_make_current = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_amortized_shader_compile = true;
