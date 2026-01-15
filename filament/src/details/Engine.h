@@ -455,7 +455,7 @@ public:
         return mPlatform->pumpEvents();
     }
 
-    void prepare();
+    void prepare(backend::DriverApi& driver);
     void gc();
     void submitFrame();
 

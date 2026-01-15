@@ -416,11 +416,12 @@ public:
 private:
     friend class FRenderer;
     friend class RenderPassBuilder;
-    RenderPass(FEngine const& engine, RenderPassBuilder const& builder) noexcept;
+    friend class RenderPassBuilder;
+    RenderPass(FEngine const& engine, backend::DriverApi& driver, RenderPassBuilder const& builder) noexcept;
 
     // This is the main function of this class, this appends commands to the pass using
     // the current camera, geometry and flags set. This can be called multiple times if needed.
-    void appendCommands(FEngine const& engine,
+    void appendCommands(FEngine const& engine, backend::DriverApi& driver,
             utils::Slice<Command> commands,
             utils::Range<uint32_t> visibleRenderables,
             CommandTypeFlags commandTypeFlags,
@@ -580,7 +581,7 @@ public:
             uint32_t order,
             const RenderPass::Executor::CustomCommandFn& command);
 
-    RenderPass build(FEngine const& engine) const;
+    RenderPass build(FEngine const& engine, backend::DriverApi& driver) const;
 };
 
 
