@@ -1,12 +1,12 @@
 Pod::Spec.new do |spec|
   spec.name = "Filament"
-  spec.version = "1.68.3"
+  spec.version = "1.68.4"
   spec.license = { :type => "Apache 2.0", :file => "LICENSE" }
   spec.homepage = "https://google.github.io/filament"
   spec.authors = "Google LLC."
   spec.summary = "Filament is a real-time physically based rendering engine for Android, iOS, Windows, Linux, macOS, and WASM/WebGL."
   spec.platform = :ios, "11.0"
-  spec.source = { :http => "https://github.com/google/filament/releases/download/v1.68.3/filament-v1.68.3-ios.tgz" }
+  spec.source = { :http => "https://github.com/google/filament/releases/download/v1.68.4/filament-v1.68.4-ios.tgz" }
 
   spec.libraries = 'c++'
 
