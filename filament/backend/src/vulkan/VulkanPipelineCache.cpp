@@ -126,14 +126,16 @@ void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     }
 }
 
-void VulkanPipelineCache::asyncPrewarmCache(const VulkanProgram& program,
+void VulkanPipelineCache::asyncPrewarmCache(
+        resource_ptr<VulkanProgram> vprogram,
         VkPipelineLayout layout,
         StereoscopicType stereoscopicType,
-        uint8_t stereoscopicViewCount, CompilerPriorityQueue priority) {
+        uint8_t stereoscopicViewCount,
+        CompilerPriorityQueue priority) {
     PipelineKey key {
         .shaders = {
-            program.getVertexShader(),
-            program.getFragmentShader(),
+            vprogram->getVertexShader(),
+            vprogram->getFragmentShader(),
         },
         // We're using dynamic rendering, so this should be empty.
         .renderPass = VK_NULL_HANDLE,
@@ -175,7 +177,10 @@ void VulkanPipelineCache::asyncPrewarmCache(const VulkanProgram& program,
 
     CallbackManager::Handle cmh = mCallbackManager.get();
     auto token = std::make_shared<ProgramToken>();
-    mCompilerThreadPool.queue(priority, token, [this, key, dynamicOptions, cmh]() mutable {
+    // Note: we keep a ref to vprogram in this lambda so that the shader modules don't get
+    // destroyed before we call createPipeline(). This is rare enough that we are ok with
+    // occasionally creating pipelines for destroyed materials.
+    mCompilerThreadPool.queue(priority, token, [this, vprogram, key, dynamicOptions, cmh]() mutable {
         VkPipeline pipeline = createPipeline(key, dynamicOptions);
         mCallbackManager.put(cmh);
         // We don't actually need this pipeline, we just wanted to force the driver to cache
