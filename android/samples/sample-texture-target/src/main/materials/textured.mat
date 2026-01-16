@@ -3,7 +3,7 @@ material {
     shadingModel : unlit,
     parameters : [
         {
-            type : samplerExternal,
+            type : sampler2d,
             name : texture
         }
     ],
@@ -15,6 +15,6 @@ material {
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        material.baseColor = texture(materialParams_texture, getUV0());
+        material.baseColor = texture(materialParams_texture, uvToRenderTargetUV(getUV0()));
     }
 }

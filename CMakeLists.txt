@@ -473,7 +473,7 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
 
 if (FILAMENT_ENABLE_COVERAGE)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping -Wno-pass-failed")
 endif()
 
 # Disable the stack check for macOS to workaround a known issue in clang 11.0.0.
@@ -561,6 +561,10 @@ endif()
 
 if (FILAMENT_SUPPORTS_WEBGPU)
     add_definitions(-DFILAMENT_SUPPORTS_WEBGPU)
+endif()
+
+if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
+    add_definitions(-DFILAMENT_SUPPORTS_WEBP_TEXTURES)
 endif()
 
 # Build with Metal support on non-WebGL Apple platforms.
@@ -915,7 +919,6 @@ endif()
 
 if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
     add_subdirectory(${EXTERNAL}/libwebp/tnt)
-    add_definitions(-DFILAMENT_SUPPORTS_WEBP_TEXTURES)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
@@ -973,6 +976,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
     add_subdirectory(${TOOLS}/uberz)
+    add_subdirectory(${TOOLS}/specgen)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)

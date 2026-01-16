@@ -717,7 +717,6 @@ std::ostream& operator<<(std::ostream& out, const MultiSampleAntiAliasingOptions
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions::BoxType* out) {
     if (0 == compare(tokens[i], jsonChunk, "AABB")) { *out = TemporalAntiAliasingOptions::BoxType::AABB; }
-    else if (0 == compare(tokens[i], jsonChunk, "VARIANCE")) { *out = TemporalAntiAliasingOptions::BoxType::VARIANCE; }
     else if (0 == compare(tokens[i], jsonChunk, "AABB_VARIANCE")) { *out = TemporalAntiAliasingOptions::BoxType::AABB_VARIANCE; }
     else {
         slog.w << "Invalid TemporalAntiAliasingOptions::BoxType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
@@ -728,7 +727,6 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
 std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::BoxType in) {
     switch (in) {
         case TemporalAntiAliasingOptions::BoxType::AABB: return out << "\"AABB\"";
-        case TemporalAntiAliasingOptions::BoxType::VARIANCE: return out << "\"VARIANCE\"";
         case TemporalAntiAliasingOptions::BoxType::AABB_VARIANCE: return out << "\"AABB_VARIANCE\"";
     }
     return out << "\"INVALID\"";
@@ -800,6 +798,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
             i = parse(tokens, i + 1, jsonChunk, &out->filterInput);
         } else if (compare(tok, jsonChunk, "useYCoCg") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->useYCoCg);
+        } else if (compare(tok, jsonChunk, "hdr") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->hdr);
         } else if (compare(tok, jsonChunk, "boxType") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->boxType);
         } else if (compare(tok, jsonChunk, "boxClipping") == 0) {
@@ -831,10 +831,11 @@ std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& i
         << "\"lodBias\": " << (in.lodBias) << ",\n"
         << "\"sharpness\": " << (in.sharpness) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
-        << "\"upscaling\": " << to_string(in.upscaling) << ",\n"
+        << "\"upscaling\": " << (in.upscaling) << ",\n"
         << "\"filterHistory\": " << to_string(in.filterHistory) << ",\n"
         << "\"filterInput\": " << to_string(in.filterInput) << ",\n"
         << "\"useYCoCg\": " << to_string(in.useYCoCg) << ",\n"
+        << "\"hdr\": " << to_string(in.hdr) << ",\n"
         << "\"boxType\": " << (in.boxType) << ",\n"
         << "\"boxClipping\": " << (in.boxClipping) << ",\n"
         << "\"jitterPattern\": " << (in.jitterPattern) << ",\n"

@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.68.4
+
+- gltfio: Add optional support for webp textures (EXT_texture_webp), controlled via FILAMENT_SUPPORTS_WEBP_TEXTURES cmake option
+
 ## v1.68.3
 
 - materials: added support for the glTF `KHR_materials_dispersion` extension, which adds dispersion for refractive objects

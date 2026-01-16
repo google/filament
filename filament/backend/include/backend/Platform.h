@@ -288,7 +288,8 @@ public:
 
         /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
-         * Currently only honored by the GL and Metal backends.
+         * Currently only honored by the GL and Metal backends, and the Vulkan backend
+         * when some experimental features are enabled.
          */
         bool disableParallelShaderCompile = false;
 
@@ -319,6 +320,12 @@ public:
          */
         StereoscopicType stereoscopicType = StereoscopicType::NONE;
 
+        /*
+         * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
+         * between 1 and Engine::getMaxStereoscopicEyes() (inclusive).
+         */
+        uint8_t stereoscopicEyeCount = 2;
+
         /**
          * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
          * This is only supported for:
@@ -339,6 +346,17 @@ public:
          *      - PlatformEGL
          */
         GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
+
+        /**
+         * Enables asynchronous pipeline cache preloading, if supported on this device.
+         * This is only supported for:
+         *      - VulkanPlatform
+         * When the following device extensions are available:
+         *      - VK_KHR_dynamic_rendering
+         *      - VK_EXT_vertex_input_dynamic_state
+         * Should be enabled only for devices where it has been shown this is effective.
+         */
+        bool vulkanEnableAsyncPipelineCachePrewarming = false;
 
         /**
          * Bypass the staging buffer because the device is of Unified Memory Architecture.

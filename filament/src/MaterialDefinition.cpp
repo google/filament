@@ -467,8 +467,7 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
     success = mMaterialParser->getDescriptorBindings(&programDescriptorBindings);
     assert_invariant(success);
 
-    backend::DescriptorSetLayout descriptorSetLayout;
-    success = mMaterialParser->getDescriptorSetLayout(&descriptorSetLayout);
+    success = mMaterialParser->getDescriptorSetLayout(&this->descriptorSetLayoutDescription);
     assert_invariant(success);
 
     // get the PER_VIEW descriptor binding info
@@ -477,26 +476,26 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
             refractionMode == RefractionMode::SCREEN_SPACE;
     bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
 
-    auto perViewDescriptorSetLayout = descriptor_sets::getPerViewDescriptorSetLayout(
+    this->perViewDescriptorSetLayoutDescription = descriptor_sets::getPerViewDescriptorSetLayout(
             materialDomain, isLit, isSSR, hasFog, false);
 
-    auto perViewDescriptorSetLayoutVsm = descriptor_sets::getPerViewDescriptorSetLayout(
+    this->perViewDescriptorSetLayoutVsmDescription = descriptor_sets::getPerViewDescriptorSetLayout(
             materialDomain, isLit, isSSR, hasFog, true);
 
     // set the labels
-    descriptorSetLayout.label = CString{ name }.append("_perMat");
-    perViewDescriptorSetLayout.label = CString{ name }.append("_perView");
-    perViewDescriptorSetLayoutVsm.label = CString{ name }.append("_perViewVsm");
+    this->descriptorSetLayoutDescription.label = CString{ name }.append("_perMat");
+    this->perViewDescriptorSetLayoutDescription.label = CString{ name }.append("_perView");
+    this->perViewDescriptorSetLayoutVsmDescription.label = CString{ name }.append("_perViewVsm");
 
     // get the PER_RENDERABLE and PER_VIEW descriptor binding info
-    for (auto&& [bindingPoint, descriptorSetLayout] : {
+    for (auto&& [bindingPoint, dsl] : {
             std::pair{ DescriptorSetBindingPoints::PER_RENDERABLE,
                     descriptor_sets::getPerRenderableLayout() },
             std::pair{ DescriptorSetBindingPoints::PER_VIEW,
-                    perViewDescriptorSetLayout }}) {
+                    this->perViewDescriptorSetLayoutDescription }}) {
         Program::DescriptorBindingsInfo& descriptors = programDescriptorBindings[+bindingPoint];
-        descriptors.reserve(descriptorSetLayout.bindings.size());
-        for (auto const& entry: descriptorSetLayout.bindings) {
+        descriptors.reserve(dsl.descriptors.size());
+        for (auto const& entry: dsl.descriptors) {
             auto const& name = descriptor_sets::getDescriptorName(bindingPoint, entry.binding);
             descriptors.push_back({ name, entry.type, entry.binding });
         }
@@ -504,15 +503,15 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
 
     this->descriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), std::move(descriptorSetLayout) };
+            engine.getDriverApi(), this->descriptorSetLayoutDescription };
 
     this->perViewDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), std::move(perViewDescriptorSetLayout) };
+            engine.getDriverApi(), this->perViewDescriptorSetLayoutDescription };
 
     this->perViewDescriptorSetLayoutVsm = {
             engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), std::move(perViewDescriptorSetLayoutVsm) };
+            engine.getDriverApi(), this->perViewDescriptorSetLayoutVsmDescription };
 }
 
 } // namespace filament

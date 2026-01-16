@@ -496,9 +496,11 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         }
 
         // we want a feature level violation to be a hard error (exception if enabled, or crash)
+        int activeFeatureLevel = static_cast<int>(engine.getActiveFeatureLevel());
         FILAMENT_CHECK_PRECONDITION(downcast(engine).hasFeatureLevel(material->getFeatureLevel()))
                 << "Material \"" << material->getName().c_str_safe() << "\" has feature level "
-                << (uint8_t)material->getFeatureLevel() << " which is not supported by this Engine";
+                << static_cast<int>(material->getFeatureLevel())
+                << " which is not supported by this Engine: " << activeFeatureLevel;
 
         // reject invalid geometry parameters
         FILAMENT_CHECK_PRECONDITION(entry.offset + entry.count <= entry.indices->getIndexCount())

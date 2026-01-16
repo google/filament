@@ -151,6 +151,28 @@ static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
     cbData->cb(cbData->sync, cbData->userData);
 };
 
+/**
+ * Shorthand for converting a description for an external YCbCr format used for
+ * pipeline cache prewarming to the params for the actual YCbCr conversion.
+ */
+inline VulkanYcbcrConversionCache::Params getYcbcrConversionParams(const VulkanPlatform::ExternalYcbcrFormat& format) {
+    return VulkanYcbcrConversionCache::Params {
+        .conversion = {
+            .ycbcrModel = fvkutils::getYcbcrModelConversionFilament(format.ycbcrModelConversion),
+            .r = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_R, 0),
+            .g = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_G, 1),
+            .b = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_B, 2),
+            .a = fvkutils::getSwizzleFilament(VK_COMPONENT_SWIZZLE_A, 3),
+            .ycbcrRange = fvkutils::getYcbcrRangeFilament(format.ycbcrRange),
+            .xChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+            .yChromaOffset = fvkutils::getChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+            .chromaFilter = SamplerMagFilter::NEAREST,
+        },
+        .format = VK_FORMAT_UNDEFINED,
+        .externalFormat = format.externalFormat,
+    };
+}
+
 }// anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -217,7 +239,8 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         Platform::DriverConfig const& driverConfig)
-    : mPlatform(platform),
+    : DriverBase(driverConfig),
+      mPlatform(platform),
       mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck,
               driverConfig.disableHeapHandleTags),
       // Note that we always create the default rendertarget before createDefaultRenderTarget(). We
@@ -233,7 +256,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
       mPipelineLayoutCache(mPlatform->getDevice()),
-      mPipelineCache(mPlatform->getDevice(), mContext),
+      mPipelineCache(*this, mPlatform->getDevice(), mContext),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
       mBufferCache(mContext, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
@@ -249,7 +272,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mStreamedImageManager(&mExternalImageManager),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mIsMSAASwapChainSupported(false), // TODO: support MSAA swapchain
-      mStereoscopicType(driverConfig.stereoscopicType) {
+      mStereoscopicType(driverConfig.stereoscopicType),
+      mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
+      mAsynchronousMode(driverConfig.asynchronousMode) {
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
@@ -601,6 +626,12 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType ele
     mResourceManager.associateHandle(ibh.getId(), std::move(tag));
 }
 
+void VulkanDriver::createIndexBufferAsyncR(Handle<HwIndexBuffer> ibh, ElementType elementType,
+        uint32_t indexCount, BufferUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (!ibh) {
         return;
@@ -617,6 +648,12 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
             mStagePool, mBufferCache, byteCount, bindingType, usage);
     bo.inc();
     mResourceManager.associateHandle(boh.getId(), std::move(tag));
+}
+
+void VulkanDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t byteCount,
+        BufferObjectBinding bindingType, BufferUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
@@ -646,6 +683,13 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     mResourceManager.associateHandle(th.getId(), std::move(tag));
 }
 
+void VulkanDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
+        void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
         uint8_t baseLevel, uint8_t levelCount, utils::ImmutableCString&& tag) {
     auto src = resource_ptr<VulkanTexture>::cast(&mResourceManager, srch);
@@ -666,6 +710,13 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, src, swizzle);
     texture.inc();
     mResourceManager.associateHandle(th.getId(), std::move(tag));
+}
+
+void VulkanDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::SamplerType target,
@@ -742,6 +793,16 @@ void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     mResourceManager.associateHandle(th.getId(), std::move(tag));
 }
 
+void VulkanDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t id,
+        SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
+        void* user, utils::ImmutableCString&& tag) {
+    // not supported in this backend
+    assert_invariant(false && "Not supported in Vulkan backend");
+    mResourceManager.associateHandle(th.getId(), std::move(tag));
+}
+
 void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
     if (!th) {
         return;
@@ -758,6 +819,76 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
             program);
     vprogram.inc();
     mResourceManager.associateHandle(ph.getId(), std::move(tag));
+
+    if (!mContext.shouldUsePipelineCachePrewarming()) {
+        return;
+    }
+
+    // If async prewarming is enabled, let's find the proper layout and build the pipeline.
+    std::array<resource_ptr<VulkanDescriptorSetLayout>, MAX_DESCRIPTOR_SET_COUNT> layouts {};
+    VulkanDescriptorSetLayout::DescriptorSetLayoutArray vkLayouts {};
+    bool hasExternalSamplers = false;
+    for (const auto& layoutBinding : program.getDescriptorSetLayouts()) {
+        DescriptorSetLayout layoutDescription = layoutBinding.layout;
+        auto layoutHandle = mResourceManager.allocHandle<VulkanDescriptorSetLayout>();
+        auto layout = mDescriptorSetLayoutCache.createLayout(layoutHandle, std::move(layoutDescription));
+        layouts[layoutBinding.set] = layout;
+        vkLayouts[layoutBinding.set] = layout->getVkLayout();
+        if (layout->bitmask.externalSampler.count() > 0) {
+            hasExternalSamplers = true;
+        }
+    }
+
+    StereoscopicType stereoscopicType = mStereoscopicType;
+    if (stereoscopicType == StereoscopicType::MULTIVIEW && !program.isMultiview()) {
+        stereoscopicType = StereoscopicType::NONE;
+    }
+
+    // Base case - build the pipeline without any external samplers.
+    mPipelineCache.asyncPrewarmCache(
+        *vprogram.get(),
+        mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
+        stereoscopicType,
+        mStereoscopicEyeCount,
+        program.getPriorityQueue());
+
+    if (!hasExternalSamplers) {
+        return;
+    }
+
+    // If we have external samplers, let's do this again with the external samplers
+    // specified.
+    for (const auto& format : mContext.getPipelineCachePrewarmExternalFormats()) {
+        // The values that seem to matter in terms of cache hits here are the model conversion,
+        // and model range. We need some value for externalFormat that is known to support that
+        // pair of values, but we need not find every possible externalFormat. As we test on
+        // more devices, this may change.
+        VkSamplerYcbcrConversion vkConversion = mYcbcrConversionCache.getConversion(
+            getYcbcrConversionParams(format));
+        VkSampler externalSampler = mSamplerCache.getSampler({.sampler = {}, .conversion = vkConversion});
+
+        // Update all layouts to use the external samplers.
+        for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; ++i) {
+            if (!layouts[i]) {
+                continue;
+            }
+
+            // For cache prewarming, we don't need every single possible combination of external sampler
+            // formats. It seems to be enough, in practicce, to simply run through a list of the types of
+            // samplers that *might* appear. As long as the real pipeline is close enough to something that
+            // the driver has seen before, we are able to get a cache hit.
+            utils::FixedCapacityVector<VkSampler> externalSamplers (layouts[i]->bitmask.externalSampler.count(), externalSampler);
+            vkLayouts[i] = mDescriptorSetLayoutCache.getVkLayout(
+                layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
+        }
+
+        mPipelineCache.asyncPrewarmCache(
+            *vprogram.get(),
+            mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
+            stereoscopicType,
+            mStereoscopicEyeCount,
+            program.getPriorityQueue());
+    }
 }
 
 void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
@@ -772,7 +903,7 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, utils:
     assert_invariant(mDefaultRenderTarget); // Default render target should already exist.
 
     auto renderTarget = resource_ptr<VulkanRenderTarget>::make(&mResourceManager, rth,
-            std::move(std::move(*mDefaultRenderTarget.get())));
+            std::move(*mDefaultRenderTarget.get()));
 
     mDefaultRenderTarget = renderTarget;
     mResourceManager.associateHandle(rth.getId(), std::move(tag));
@@ -1000,11 +1131,23 @@ Handle<HwIndexBuffer> VulkanDriver::createIndexBufferS() noexcept {
     return mResourceManager.allocHandle<VulkanIndexBuffer>();
 }
 
+Handle<HwIndexBuffer> VulkanDriver::createIndexBufferAsyncS() noexcept {
+    return mResourceManager.allocHandle<VulkanIndexBuffer>();
+}
+
 Handle<HwBufferObject> VulkanDriver::createBufferObjectS() noexcept {
     return mResourceManager.allocHandle<VulkanBufferObject>();
 }
 
+Handle<HwBufferObject> VulkanDriver::createBufferObjectAsyncS() noexcept {
+    return mResourceManager.allocHandle<VulkanBufferObject>();
+}
+
 Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureAsyncS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
 
@@ -1013,6 +1156,10 @@ Handle<HwTexture> VulkanDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureViewSwizzleS() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureViewSwizzleAsyncS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
 
@@ -1030,6 +1177,30 @@ Handle<HwTexture> VulkanDriver::createTextureExternalImagePlaneS() noexcept {
 
 Handle<HwTexture> VulkanDriver::importTextureS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::importTextureAsyncS() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+AsyncCallId VulkanDriver::update3DImageAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId VulkanDriver::setVertexBufferObjectAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId VulkanDriver::updateBufferObjectAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId VulkanDriver::updateIndexBufferAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
 }
 
 Handle<HwRenderPrimitive> VulkanDriver::createRenderPrimitiveS() noexcept {
@@ -1088,6 +1259,11 @@ Handle<HwDescriptorSet> VulkanDriver::createDescriptorSetS() noexcept {
 
 MemoryMappedBufferHandle VulkanDriver::mapBufferS() noexcept {
     return mResourceManager.allocHandle<VulkanMemoryMappedBuffer>();
+}
+
+AsyncCallId VulkanDriver::queueCommandAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
 }
 
 void VulkanDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
@@ -1417,7 +1593,7 @@ bool VulkanDriver::isStereoSupported() {
 }
 
 bool VulkanDriver::isParallelShaderCompileSupported() {
-    return false;
+    return mContext.shouldUsePipelineCachePrewarming();
 }
 
 bool VulkanDriver::isDepthStencilResolveSupported() {
@@ -1435,6 +1611,10 @@ bool VulkanDriver::isProtectedTexturesSupported() { return isProtectedContentSup
 
 bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
+}
+
+bool VulkanDriver::isAsynchronousModeEnabled() {
+    return false;
 }
 
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -1545,6 +1725,12 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     vb->setBuffer(bo, index);
 }
 
+void VulkanDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
+        uint32_t index, Handle<HwBufferObject> boh, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     VulkanCommandBuffer& commands = mCommands.get();
@@ -1553,6 +1739,12 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
+}
+
+void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
+        BufferDescriptor&& p, uint32_t byteOffset, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
@@ -1565,6 +1757,12 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
     bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
+}
+
+void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
+        BufferDescriptor&& bd, uint32_t byteOffset, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
@@ -1592,6 +1790,13 @@ void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     texture->updateImage(data, width, height, depth, xoffset, yoffset, zoffset, level);
     scheduleDestroy(std::move(data));
+}
+
+void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
+        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t width,
+        uint32_t height, uint32_t depth, PixelBufferDescriptor&& data, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
@@ -1688,7 +1893,11 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
 void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
-        scheduleCallback(handler, user, callback);
+        if (mContext.shouldUsePipelineCachePrewarming()) {
+            mPipelineCache.addCachePrewarmCallback(handler, callback, user);
+        } else {
+            scheduleCallback(handler, user, callback);
+        }
     }
 }
 
@@ -1696,9 +1905,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     FVK_SYSTRACE_SCOPE();
 
     auto rt = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, rth);
-    VkExtent2D const extent = rt->getExtent();
-
-    assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
 
     VulkanCommandBuffer* commandBuffer = rt->isProtected() ?
            &mCommands.getProtected() : &mCommands.get();
@@ -1713,8 +1919,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         if (sc->isFirstRenderPass()) {
             discardStart |= TargetBufferFlags::COLOR;
             sc->markFirstRenderPass();
+            acquireNextSwapchainImage();
         }
     }
+
+    // Note that retrieving the extent must come after the acquireNextSwapchainImage() above;
+    // otherwise it might be 0.
+    VkExtent2D const extent = rt->getExtent();
+
+    assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     if (rt->hasDepth()) {
@@ -1926,20 +2139,13 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
             "Vulkan driver does not support distinct draw/read swap chains.");
 
+    // Before we can render into the new swapchain, we need to make sure the default render target
+    // releases its old bound swapchain image.
+    mDefaultRenderTarget->releaseSwapchain();
+
     resource_ptr<VulkanSwapChain> swapChain =
             resource_ptr<VulkanSwapChain>::cast(&mResourceManager, drawSch);
     mCurrentSwapChain = swapChain;
-
-    bool resized = false;
-    swapChain->acquire(resized);
-
-    if (resized) {
-        mFramebufferCache.resetFramebuffers();
-    }
-
-    if (UTILS_LIKELY(mDefaultRenderTarget)) {
-        mDefaultRenderTarget->bindToSwapChain(swapChain);
-    }
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {
@@ -2109,6 +2315,14 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 
     auto dstTarget = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, dst);
     auto srcTarget = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, src);
+
+    // This is a valid use of the api.  We need to make sure that the swapchain image has been
+    // acquired and associated with the default render target. It's okay to call
+    // acquireNextSwapchainImage() even if a swapchain image has already been bound to the default
+    // render target.
+    if (dstTarget == mDefaultRenderTarget) {
+        acquireNextSwapchainImage();
+    }
 
     VkFilter const vkfilter = (filter == SamplerMagFilter::NEAREST) ?
             VK_FILTER_NEAREST : VK_FILTER_LINEAR;
@@ -2397,6 +2611,16 @@ void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     mQueryManager.endQuery(&(mCommands.get()), vtq);
 }
 
+void VulkanDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,
+        CallbackHandler* handler, CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
+}
+
+bool VulkanDriver::cancelAsyncJob(AsyncCallId jobId) {
+    // TODO: implement this.
+    return false;
+}
+
 void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
     DriverBase::debugCommandBegin(cmds, synchronous, methodName);
 #ifndef NDEBUG
@@ -2429,6 +2653,25 @@ void VulkanDriver::endCommandRecording() {
     mCommands.flush();
     mPipelineCache.resetBoundPipeline();
     mDescriptorSetCache.resetCachedState();
+}
+
+void VulkanDriver::acquireNextSwapchainImage() {
+    assert_invariant(mCurrentSwapChain);
+    assert_invariant(mDefaultRenderTarget);
+
+    // Swapchain has already been bound to the default render target.  We just return.
+    if (mDefaultRenderTarget->isSwapchainBound()) {
+        return;
+    }
+
+    bool resized = false;
+    mCurrentSwapChain->acquire(resized);
+    if (resized) {
+        mFramebufferCache.resetFramebuffers();
+    }
+    // Note that ordering this after the above lines is necessary since we set the swapchain image
+    // to the render target in bindSwapChain().
+    mDefaultRenderTarget->bindSwapChain(mCurrentSwapChain);
 }
 
 // explicit instantiation of the Dispatcher

@@ -35,3 +35,6 @@ VolumeThicknessTexture = unsupported
 Specular = unsupported
 SpecularTexture = unsupported
 SpecularColorTexture = unsupported
+
+# KHR_materials_dispersion Features
+Dispersion = unsupported

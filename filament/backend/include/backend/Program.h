@@ -50,7 +50,13 @@ public:
         descriptor_binding_t binding;
     };
 
+    struct DescriptorSetLayoutBinding {
+        descriptor_set_t set;
+        DescriptorSetLayout layout;
+    };
+
     using SpecializationConstant = std::variant<int32_t, float, bool>;
+    using DescriptorSetLayoutArray = utils::FixedCapacityVector<DescriptorSetLayoutBinding>;
 
     struct Uniform { // For ES2 support
         utils::CString name;    // full qualified name of the uniform field
@@ -147,6 +153,19 @@ public:
         return mDescriptorBindings;
     }
 
+    inline Program& descriptorLayout(backend::descriptor_set_t set,
+            DescriptorSetLayout descriptorLayout) noexcept {
+        mDescriptorLayouts.push_back({
+            .set = set,
+            .layout = std::move(descriptorLayout),
+        });
+        return *this;
+    }
+
+    const DescriptorSetLayoutArray& getDescriptorSetLayouts() const noexcept {
+        return mDescriptorLayouts;
+    }
+
     utils::FixedCapacityVector<PushConstant> const& getPushConstants(
             ShaderStage stage) const noexcept {
         return mPushConstants[static_cast<uint8_t>(stage)];
@@ -175,6 +194,11 @@ private:
     SpecializationConstantsInfo mSpecializationConstants;
     std::array<utils::FixedCapacityVector<PushConstant>, SHADER_TYPE_COUNT> mPushConstants;
     DescriptorSetInfo mDescriptorBindings;
+
+    // Descriptions for descriptor set layouts that may be used for this Program, which
+    // can be useful for attempting to compile the pipeline ahead of time.
+    DescriptorSetLayoutArray mDescriptorLayouts =
+        DescriptorSetLayoutArray::with_capacity(MAX_DESCRIPTOR_SET_COUNT);
 
     // For ES2 support only
     AttributesInfo mAttributes;

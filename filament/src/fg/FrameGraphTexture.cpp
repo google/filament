@@ -16,36 +16,32 @@
 
 #include "fg/FrameGraphTexture.h"
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include <utils/StaticString.h>
 
+#include <array>
 #include <algorithm>
 
 namespace filament {
 
-void FrameGraphTexture::create(ResourceAllocatorInterface& resourceAllocator,
+void FrameGraphTexture::create(TextureCacheInterface& textureCache,
         utils::StaticString const name,
-        Descriptor const& descriptor, Usage usage,
-        bool const useProtectedMemory) noexcept {
-    if (useProtectedMemory) {
-        // FIXME: I think we should restrict this to attachments and blit destinations only
-        usage |= Usage::PROTECTED;
-    }
-    std::array<backend::TextureSwizzle, 4> swizzle = {
+        Descriptor const& descriptor, Usage usage) noexcept {
+    std::array const swizzle = {
             descriptor.swizzle.r,
             descriptor.swizzle.g,
             descriptor.swizzle.b,
             descriptor.swizzle.a };
-    handle = resourceAllocator.createTexture(name,
+    handle = textureCache.createTexture(name,
             descriptor.type, descriptor.levels, descriptor.format, descriptor.samples,
             descriptor.width, descriptor.height, descriptor.depth,
             swizzle, usage);
 }
 
-void FrameGraphTexture::destroy(ResourceAllocatorInterface& resourceAllocator) noexcept {
+void FrameGraphTexture::destroy(TextureCacheInterface& textureCache) noexcept {
     if (handle) {
-        resourceAllocator.destroyTexture(handle);
+        textureCache.destroyTexture(handle);
         handle.clear();
     }
 }

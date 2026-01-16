@@ -10,6 +10,6 @@ sortedcontainers==2.4.0
 trio==0.31.0
 trio-websocket==0.12.2
 typing_extensions==4.15.0
-urllib3==2.6.0
+urllib3==2.6.3
 websocket-client==1.9.0
 wsproto==1.2.0

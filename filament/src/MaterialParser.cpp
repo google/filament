@@ -792,7 +792,7 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
     if (!unflattener.read(&descriptorCount)) {
         return false;
     }
-    auto& descriptors = container->bindings;
+    auto& descriptors = container->descriptors;
     descriptors.reserve(descriptorCount);
     for (size_t i = 0; i < descriptorCount; i++) {
         uint8_t type;

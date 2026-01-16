@@ -26,8 +26,10 @@
 #include <filament/Texture.h>
 
 #include <utils/compiler.h>
+#include <utils/Invocable.h>
 
 #include <array>
+#include <atomic>
 #include <cmath>
 
 #include <stddef.h>
@@ -45,7 +47,7 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    backend::Handle<backend::HwTexture> getHwHandle() const noexcept { return mHandle; }
+    backend::Handle<backend::HwTexture> getHwHandle() const noexcept;
     backend::Handle<backend::HwTexture> getHwHandleForSampling() const noexcept;
 
     size_t getWidth(size_t level = 0) const noexcept;
@@ -65,6 +67,12 @@ public:
     void setImage(FEngine& engine, size_t level,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const;
 
+    AsyncCallId setImageAsync(FEngine& engine, size_t level,
+            uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth,
+            PixelBufferDescriptor&& buffer, backend::CallbackHandler* handler,
+            AsyncCompletionCallback callback, void* user) const;
+
     void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
     void setExternalImage(FEngine& engine, void* image) noexcept;
     void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
@@ -77,6 +85,8 @@ public:
     bool isCubemap() const noexcept { return mTarget == Sampler::SAMPLER_CUBEMAP; }
 
     FStream const* getStream() const noexcept { return mStream; }
+
+    bool isCreationComplete() const noexcept { return mCreationComplete.load(std::memory_order_relaxed); }
 
     /*
      * Utilities
@@ -158,6 +168,12 @@ private:
     static backend::Handle<backend::HwTexture> createPlaceholderTexture(
             backend::DriverApi& driver) noexcept;
 
+    // Common methods
+    void setImageCommon(FEngine& engine, size_t level,
+            uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth,
+            const PixelBufferDescriptor& buffer) const;
+
     backend::Handle<backend::HwTexture> mHandle;
     mutable backend::Handle<backend::HwTexture> mHandleForSampling;
     backend::DriverApi* mDriver = nullptr; // this is only needed for getHwHandleForSampling()
@@ -188,6 +204,11 @@ private:
     bool mTextureIsSwizzled : 1;
 
     FStream* mStream = nullptr; // only needed for streaming textures
+
+    // This field is set to true when the creation process is complete. This is especially useful
+    // asynchronous creation. If we can guarantee that this field is only referenced by the main
+    // thread, we don't have to use atomic here.
+    std::atomic_bool mCreationComplete{ false };
 };
 
 FILAMENT_DOWNCAST(Texture)

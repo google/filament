@@ -510,7 +510,7 @@ class MetalDescriptorSetLayout : public HwDescriptorSetLayout {
 public:
     MetalDescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;
 
-    const auto& getBindings() const noexcept { return mLayout.bindings; }
+    const auto& getBindings() const noexcept { return mLayout.descriptors; }
 
     size_t getDynamicOffsetCount() const noexcept { return mDynamicOffsetCount; }
 

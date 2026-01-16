@@ -99,7 +99,7 @@ bool MaterialCompiler::run(const matp::Config& config) {
     }
 
     if (config.getIncludeSourceMaterial()) {
-        builder.materialSource(buffer.get());
+        builder.materialSource(std::string_view(buffer.get(), size));
     }
 
     // If we're reflecting parameters, the MaterialParser will have handled it inside of parse().

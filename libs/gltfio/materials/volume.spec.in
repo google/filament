@@ -31,3 +31,6 @@ VolumeThicknessTexture=optional
 Specular=optional
 SpecularTexture=optional
 SpecularColorTexture=unsupported
+
+# KHR_materials_dispersion Features
+Dispersion=optional

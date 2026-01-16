@@ -109,6 +109,7 @@ struct App {
     gltfio::ResourceLoader* resourceLoader = nullptr;
     gltfio::TextureProvider* stbDecoder = nullptr;
     gltfio::TextureProvider* ktxDecoder = nullptr;
+    gltfio::TextureProvider* webpDecoder = nullptr;
     bool recomputeAabb = false;
 
     bool actualSize = false;
@@ -699,6 +700,12 @@ int main(int argc, char** argv) {
             app.resourceLoader->addTextureProvider("image/png", app.stbDecoder);
             app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
             app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
+            if (isWebpSupported()) {
+                app.webpDecoder = createWebpProvider(app.engine);
+                app.resourceLoader->addTextureProvider("image/webp", app.webpDecoder);
+            } else {
+                app.webpDecoder = nullptr;
+            }
         } else {
             app.resourceLoader->setConfiguration(configuration);
         }
@@ -1061,6 +1068,7 @@ int main(int argc, char** argv) {
         delete app.resourceLoader;
         delete app.stbDecoder;
         delete app.ktxDecoder;
+        delete app.webpDecoder;
         delete app.automationSpec;
         delete app.automationEngine;
 

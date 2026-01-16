@@ -24,7 +24,7 @@ namespace test {
 using namespace filament::backend;
 
 Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup(cleanup) {
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> kLayouts(config.uniforms.size());
+    utils::FixedCapacityVector<DescriptorSetLayoutDescriptor> kLayouts(config.uniforms.size());
     for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
         kLayouts[i] = {
                 config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER),
@@ -59,7 +59,7 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
 
     if (!kLayouts.empty()) {
         mDescriptorSetLayout = cleanup.add(
-                api.createDescriptorSetLayout(DescriptorSetLayout{ .bindings = kLayouts }));
+                api.createDescriptorSetLayout(DescriptorSetLayout{ .descriptors = kLayouts }));
     }
 }
 
