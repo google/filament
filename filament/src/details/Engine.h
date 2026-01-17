@@ -456,7 +456,8 @@ public:
     }
 
     void prepare(backend::DriverApi& driver);
-    void gc();
+    void gcManagers();
+    void gcDeferredAsyncObjectDestruction();
     void submitFrame();
 
     using ShaderContent = utils::FixedCapacityVector<uint8_t>;
@@ -586,7 +587,7 @@ private:
     bool isValid(const T* ptr, ResourceList<T> const& list) const;
 
     template<typename T>
-    bool terminateAndDestroy(const T* p, ResourceList<T>& list);
+    bool terminateAndDestroy(const T* ptr, ResourceList<T>& list);
 
     template<typename T, typename Lock>
     bool terminateAndDestroyLocked(Lock& lock, const T* p, ResourceList<T>& list);
@@ -707,6 +708,8 @@ private:
 
     // Creation parameters
     Config mConfig;
+
+    std::vector<std::function<bool()>> mDeferredAsyncObjectDestruction;
 
 public:
     // These are the debug properties used by FDebug.
