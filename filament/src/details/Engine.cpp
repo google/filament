@@ -1199,6 +1199,8 @@ bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
             p->terminate(*this);
 
             if (p->isCreationComplete()) {
+                // If creation is complete, we free the frontend object immediately. Note that in
+                // regular (non-async) mode, the `isCreationComplete` method always return true.
                 mHeapAllocator.destroy(p);
             } else {
                 // We defer the destruction of the frontend object until the creation process
