@@ -61,7 +61,8 @@ enum class ToneMapping : uint8_t {
     AGX           = 4,
     GENERIC       = 5,
     PBR_NEUTRAL   = 6,
-    DISPLAY_RANGE = 7,
+    GT7           = 7,
+    DISPLAY_RANGE = 8,
 };
 
 using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;

@@ -88,6 +88,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ToneMapp
     else if (0 == compare(tokens[i], jsonChunk, "AGX")) { *out = ToneMapping::AGX; }
     else if (0 == compare(tokens[i], jsonChunk, "GENERIC")) { *out = ToneMapping::GENERIC; }
     else if (0 == compare(tokens[i], jsonChunk, "PBR_NEUTRAL")) { *out = ToneMapping::PBR_NEUTRAL; }
+    else if (0 == compare(tokens[i], jsonChunk, "GT7")) { *out = ToneMapping::GT7; }
     else if (0 == compare(tokens[i], jsonChunk, "DISPLAY_RANGE")) { *out = ToneMapping::DISPLAY_RANGE; }
     else {
         slog.w << "Invalid ToneMapping: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
@@ -722,6 +723,7 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
                 settings.genericToneMapper.hdrMax
         );
         case ToneMapping::PBR_NEUTRAL: return new PBRNeutralToneMapper;
+        case ToneMapping::GT7: return new GT7ToneMapper;
         case ToneMapping::DISPLAY_RANGE: return new DisplayRangeToneMapper;
     }
 }
@@ -773,6 +775,7 @@ static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
         case ToneMapping::AGX: return out << "\"AGX\"";
         case ToneMapping::GENERIC: return out << "\"GENERIC\"";
         case ToneMapping::PBR_NEUTRAL: return out << "\"PBR_NEUTRAL\"";
+        case ToneMapping::GT7: return out << "\"GT7\"";
         case ToneMapping::DISPLAY_RANGE: return out << "\"DISPLAY_RANGE\"";
     }
     return out << "\"INVALID\"";
