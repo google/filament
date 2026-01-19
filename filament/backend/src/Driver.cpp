@@ -51,39 +51,39 @@ namespace filament::backend {
 
 DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
     : mDriverConfig(driverConfig) {
-    if constexpr (UTILS_HAS_THREADING) {
-        // This thread services user callbacks
-        mServiceThread = std::thread([this]() {
-            JobSystem::setThreadName("ServiceThread");
-            do {
-                auto& serviceThreadCondition = mServiceThreadCondition;
-                auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
+#if UTILS_HAS_THREADING
+    // This thread services user callbacks
+    mServiceThread = std::thread([this]() {
+        JobSystem::setThreadName("ServiceThread");
+        do {
+            auto& serviceThreadCondition = mServiceThreadCondition;
+            auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
 
-                // wait for some callbacks to dispatch
-                std::unique_lock<std::mutex> lock(mServiceThreadLock);
-                while (serviceThreadCallbackQueue.empty() && !mExitRequested) {
-                    serviceThreadCondition.wait(lock);
-                }
-                if (mExitRequested) {
-                    break;
-                }
-                // move the callbacks to a temporary vector
-                auto callbacks(std::move(serviceThreadCallbackQueue));
-                lock.unlock();
-                // and make sure to call them without our lock held
-                for (auto[handler, callback, user]: callbacks) {
-                    handler->post(user, callback);
-                }
-            } while (true);
-        });
-    }
+            // wait for some callbacks to dispatch
+            std::unique_lock<std::mutex> lock(mServiceThreadLock);
+            while (serviceThreadCallbackQueue.empty() && !mExitRequested) {
+                serviceThreadCondition.wait(lock);
+            }
+            if (mExitRequested) {
+                break;
+            }
+            // move the callbacks to a temporary vector
+            auto callbacks(std::move(serviceThreadCallbackQueue));
+            lock.unlock();
+            // and make sure to call them without our lock held
+            for (auto[handler, callback, user]: callbacks) {
+                handler->post(user, callback);
+            }
+        } while (true);
+    });
+#endif
 }
 
 DriverBase::~DriverBase() noexcept {
     assert_invariant(mCallbacks.empty());
-    if constexpr (UTILS_HAS_THREADING) {
-        stopServiceThread();
-    }
+#if UTILS_HAS_THREADING
+    stopServiceThread();
+#endif
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -107,11 +107,14 @@ void DriverBase::CallbackData::release(CallbackData* data) {
 
 
 void DriverBase::scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) {
-    if (handler && UTILS_HAS_THREADING) {
+#if UTILS_HAS_THREADING
+    if (handler) {
         std::lock_guard<std::mutex> const lock(mServiceThreadLock);
         mServiceThreadCallbackQueue.emplace_back(handler, callback, user);
         mServiceThreadCondition.notify_one();
-    } else {
+    } else
+#endif
+    {
         std::lock_guard<std::mutex> const lock(mPurgeLock);
         mCallbacks.emplace_back(user, callback);
     }

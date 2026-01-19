@@ -390,9 +390,9 @@ void OpenGLDriver::terminate() {
     if (getJobWorker()) {
         getJobWorker()->terminate();
     }
-    if constexpr (UTILS_HAS_THREADING) {
-        stopServiceThread();
-    }
+#if UTILS_HAS_THREADING
+    stopServiceThread();
+#endif
 
     mContext.terminate();
     mPlatform.terminate();
