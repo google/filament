@@ -142,8 +142,10 @@ class FrameGraphSidePanel extends LitElement {
                 height: 100%;
                 max-width: 250px;
                 min-width: 250px;
-                padding: 10px 20px;
                 overflow-y: auto;
+            }
+            .container {
+                padding: 10px 20px;
             }
             .title {
                 color: white;
@@ -346,6 +348,51 @@ class FrameGraphSidePanel extends LitElement {
 
 customElements.define("framegraph-sidepanel", FrameGraphSidePanel);
 
+class TooltipElement extends LitElement {
+    static get styles() {
+        return css`
+            :host {
+                position: fixed;
+                background-color: #333;
+                color: #fff;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                pointer-events: none;
+                z-index: 10000;
+                display: none;
+                white-space: nowrap;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+            :host([visible]) {
+                display: block;
+            }
+        `;
+    }
+
+    static get properties() {
+        return {
+            text: {type: String},
+            visible: {type: Boolean, reflect: true},
+            x: {type: Number},
+            y: {type: Number}
+        };
+    }
+
+    updated(changedProps) {
+        if (changedProps.has('x') || changedProps.has('y')) {
+            // Offset slightly so cursor doesn't cover it
+            this.style.left = `${this.x + 10}px`;
+            this.style.top = `${this.y + 10}px`;
+        }
+    }
+
+    render() {
+        return html`${this.text}`;
+    }
+}
+customElements.define('tooltip-element', TooltipElement);
+
 class FrameGraphTable extends LitElement {
     static get styles() {
         return css`
@@ -410,6 +457,10 @@ class FrameGraphTable extends LitElement {
         return {
             frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
             selectedResourceId: {type: Number, attribute: 'selected-resource'},
+            tooltipText: {type: String, state: true},
+            tooltipVisible: {type: Boolean, state: true},
+            tooltipX: {type: Number, state: true},
+            tooltipY: {type: Number, state: true}
         };
     }
 
@@ -419,6 +470,27 @@ class FrameGraphTable extends LitElement {
         this.selectedResourceId = -1;
         this.expandedResourceSet = new Set();
         this.subresourceToParent = {};
+        this._hoverTimeout = null;
+    }
+
+    _handleCellMouseEnter(e, text) {
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+        }
+        this._hoverTimeout = setTimeout(() => {
+            this.tooltipText = text;
+            this.tooltipVisible = text && text.length > 0;
+            this.tooltipX = e.clientX;
+            this.tooltipY = e.clientY;
+        }, 500); // 500ms delay
+    }
+
+    _handleCellMouseLeave() {
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+            this._hoverTimeout = null;
+        }
+        this.tooltipVisible = false;
     }
 
     _getRowGridTemplateColumnsStyle(numColumns) {
@@ -501,8 +573,17 @@ class FrameGraphTable extends LitElement {
                   `border-left:${borderStyle};border-top:${borderStyle};` +
                   (lastPass ? `border-right:${borderStyle};` : '') +
                   (lastRow ? `border-bottom:${borderStyle};` : '');
+
+            let tooltip = '';
+            if (type === RESOURCE_USAGE_TYPE_READ) tooltip = 'Read';
+            else if (type === RESOURCE_USAGE_TYPE_WRITE) tooltip = 'Write';
+            else if (type === RESOURCE_USAGE_TYPE_READ_WRITE) tooltip = 'Read-Write';
+            else if (type === RESOURCE_USAGE_TYPE_NO_ACCESS) tooltip = 'No Access';
+
             return html`
-                <div class="grid-cell" style="${style}">
+                <div class="grid-cell" style="${style}"
+                     @mouseenter="${(e) => this._handleCellMouseEnter(e, tooltip)}"
+                     @mouseleave="${this._handleCellMouseLeave}">
                 &nbsp;
                 </div>`;
         });
@@ -594,6 +675,12 @@ class FrameGraphTable extends LitElement {
                 </div>
                 ${this._renderResourceRows(resources, allPasses)}
             </div>
+            <tooltip-element
+                .text="${this.tooltipText}"
+                ?visible="${this.tooltipVisible}"
+                .x="${this.tooltipX}"
+                .y="${this.tooltipY}">
+            </tooltip-element>
         `;
     }
 }
