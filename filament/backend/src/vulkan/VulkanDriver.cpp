@@ -851,7 +851,7 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
 
     // Base case - build the pipeline without any external samplers.
     mPipelineCache.asyncPrewarmCache(
-        *vprogram.get(),
+        vprogram,
         mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
         stereoscopicType,
         mStereoscopicEyeCount,
@@ -888,7 +888,7 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
         }
 
         mPipelineCache.asyncPrewarmCache(
-            *vprogram.get(),
+            vprogram,
             mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
             stereoscopicType,
             mStereoscopicEyeCount,
