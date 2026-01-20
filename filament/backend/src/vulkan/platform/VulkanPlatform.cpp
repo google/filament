@@ -232,6 +232,7 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
         VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
         // Required for dynamic rendering, enable this too.
         VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME,
+        VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME,
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
@@ -485,6 +486,22 @@ bool hasUnifiedMemoryArchitecture(VkPhysicalDeviceMemoryProperties memoryPropert
     return true;
 }
 
+VkQueueGlobalPriorityKHR getVkQueueGlobalPriority(
+    Platform::GpuContextPriority priority) {
+  switch (priority) {
+    case Platform::GpuContextPriority::LOW:
+      return VK_QUEUE_GLOBAL_PRIORITY_LOW_KHR;
+    case Platform::GpuContextPriority::MEDIUM:
+      return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
+    case Platform::GpuContextPriority::HIGH:
+      return VK_QUEUE_GLOBAL_PRIORITY_HIGH_KHR;
+    case Platform::GpuContextPriority::REALTIME:
+      return VK_QUEUE_GLOBAL_PRIORITY_REALTIME_KHR;
+    case Platform::GpuContextPriority::DEFAULT:
+      return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
+  }
+}
+
 }// anonymous namespace
 
 using SwapChainPtr = VulkanPlatform::SwapChainPtr;
@@ -624,9 +641,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         }
     }
 
-    // TODO: Add support of VK_KHR_global_priority with `driverConfig.gpuContextPriority`
-    // in VulkanPlatform::createDriver.
-
     MiscDeviceFeatures requestedFeatures {};
 
     if (setContains(deviceExts, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
@@ -637,6 +651,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     if (setContains(deviceExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
         requestedFeatures.imageView2Don3DImage =
                 context.mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
+    }
+
+    if (context.mGlobalPrioritySupported) {
+        requestedFeatures.gpuContextPriority = driverConfig.gpuContextPriority;
     }
 
     if (mImpl->mDevice == VK_NULL_HANDLE) {
@@ -927,6 +945,13 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         chainStruct(&context.mPhysicalDeviceFeatures, &context.mPortabilitySubsetFeatures);
     }
 
+    VkPhysicalDeviceGlobalPriorityQueryFeaturesKHR globalPriorityFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GLOBAL_PRIORITY_QUERY_FEATURES_KHR,
+    };
+    if (setContains(deviceExts, VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME)) {
+        chainStruct(&context.mPhysicalDeviceFeatures, &globalPriorityFeatures);
+    }
+
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
     // physicalDeviceFeatures.
     vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
@@ -943,6 +968,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
                 setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
         context.mVertexInputDynamicStateSupported =
                 setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
+        context.mGlobalPrioritySupported = globalPriorityFeatures.globalPriorityQuery == VK_TRUE;
     } else {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsSupported = scontext->debugUtilsSupported;
@@ -1015,9 +1041,18 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     for (auto const& ext: deviceExtensions) {
         requestExtensions.push_back(ext.data());
     }
+
+    bool const requiresGpuPriority =
+            requestedFeatures.gpuContextPriority != Platform::GpuContextPriority::DEFAULT;
+    VkDeviceQueueGlobalPriorityCreateInfoKHR queuePriorityCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_KHR,
+        .globalPriority = getVkQueueGlobalPriority(requestedFeatures.gpuContextPriority),
+    };
+
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[2] = {};
     deviceQueueCreateInfo[0] = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .pNext = requiresGpuPriority ? &queuePriorityCreateInfo : nullptr,
         .queueFamilyIndex = mImpl->mGraphicsQueueFamilyIndex,
         .queueCount = 1,
         .pQueuePriorities = &queuePriority[0],
@@ -1093,6 +1128,14 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     if (hasProtectedQueue) {
         // Enable protected memory, if requested.
         chainStruct(&deviceCreateInfo, &protectedMemory);
+    }
+
+    VkPhysicalDeviceGlobalPriorityQueryFeaturesKHR globalPriority = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GLOBAL_PRIORITY_QUERY_FEATURES_KHR,
+        .globalPriorityQuery = VK_TRUE,
+    };
+    if (requiresGpuPriority) {
+        chainStruct(&deviceCreateInfo, &globalPriority);
     }
 
     mImpl->mDevice = createVkDevice(deviceCreateInfo);
