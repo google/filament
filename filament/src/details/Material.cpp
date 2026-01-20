@@ -301,15 +301,15 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     }
 }
 
-Handle<HwProgram> FMaterial::prepareProgramSlow(Variant const variant,
+Handle<HwProgram> FMaterial::prepareProgramSlow(DriverApi& driver, Variant const variant,
         CompilerPriorityQueue const priorityQueue) const noexcept {
     if (isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = mEngine.getDefaultMaterial();
         FILAMENT_CHECK_PRECONDITION(defaultMaterial);
         return mCachedPrograms[variant.key] =
-                defaultMaterial->prepareProgram(variant, priorityQueue);
+                defaultMaterial->prepareProgram(driver, variant, priorityQueue);
     }
-    return mCachedPrograms[variant.key] = mDefinition.prepareProgram(mEngine,
+    return mCachedPrograms[variant.key] = mDefinition.prepareProgram(mEngine, driver,
             getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
 }
 
