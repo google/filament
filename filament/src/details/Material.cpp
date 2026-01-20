@@ -239,24 +239,6 @@ void FMaterial::terminate(FEngine& engine) {
             mSpecializationConstants);
 }
 
-backend::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayoutDescription(
-        Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
-    if (mDefinition.materialDomain == MaterialDomain::SURFACE) {
-        if (Variant::isValidDepthVariant(variant)) {
-            // Use the layout description used to create the per view depth variant layout.
-            return descriptor_sets::getDepthVariantLayout();
-        }
-        if (Variant::isSSRVariant(variant)) {
-            // Use the layout description used to create the per view SSR variant layout.
-            return descriptor_sets::getSsrVariantLayout();
-        }
-    }
-    if (useVsmDescriptorSetLayout) {
-        return mDefinition.perViewDescriptorSetLayoutVsmDescription;
-    }
-    return mDefinition.perViewDescriptorSetLayoutDescription;
-}
-
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
         Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
     if (mDefinition.materialDomain == MaterialDomain::SURFACE) {
@@ -273,17 +255,6 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
         return mDefinition.perViewDescriptorSetLayoutVsm;
     }
     return mDefinition.perViewDescriptorSetLayout;
-}
-
-backend::DescriptorSetLayout const& FMaterial::getDescriptorSetLayoutDescription(Variant variant)
-        const noexcept {
-    if (!isSharedVariant(variant)) {
-        return mDefinition.descriptorSetLayoutDescription;
-    }
-    if (UTILS_UNLIKELY(!mDefaultMaterial)) {
-        return mDefinition.descriptorSetLayoutDescription;
-    }
-    return mDefaultMaterial->getDescriptorSetLayoutDescription();
 }
 
 void FMaterial::compile(CompilerPriorityQueue const priority,

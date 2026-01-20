@@ -354,11 +354,7 @@ private:
 
     void createAndCacheProgram(backend::DriverApi& driver, backend::Program&& p, Variant variant) const noexcept;
 
-    backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
-            Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
 
-    backend::DescriptorSetLayout const& getDescriptorSetLayoutDescription(
-            Variant variant = {}) const noexcept;
 
     inline bool isSharedVariant(Variant const variant) const {
         return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&

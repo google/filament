@@ -645,9 +645,26 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
             this->perViewDescriptorSetLayoutVsmDescription };
 }
 
+backend::DescriptorSetLayout const& MaterialDefinition::getPerViewDescriptorSetLayoutDescription(
+        Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
+    if (materialDomain == MaterialDomain::SURFACE) {
+        if (Variant::isValidDepthVariant(variant)) {
+            // Use the layout description used to create the per view depth variant layout.
+            return descriptor_sets::getDepthVariantLayout();
+        }
+        if (Variant::isSSRVariant(variant)) {
+            // Use the layout description used to create the per view SSR variant layout.
+            return descriptor_sets::getSsrVariantLayout();
+        }
+    }
+    if (useVsmDescriptorSetLayout) {
+        return perViewDescriptorSetLayoutVsmDescription;
+    }
+    return perViewDescriptorSetLayoutDescription;
+}
 
-Handle<HwProgram> MaterialDefinition::compileProgram(FEngine& engine,
-        MaterialParser const& parser,
+Handle<HwProgram> MaterialDefinition::compileProgram(
+        FEngine& engine, MaterialParser const& parser,
         ProgramSpecialization const& specialization,
         backend::CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(engine.hasFeatureLevel(featureLevel));
@@ -666,20 +683,20 @@ Handle<HwProgram> MaterialDefinition::compileProgram(FEngine& engine,
     }
     pb.priorityQueue(priorityQueue);
 
-    // TODO(exv): uncomment this
-    // // Set descriptor sets for the program.
-    // // Note: right now, we're going to assume VSM is disabled. In the future, we may
-    // // want to provide both to the backend, so that both can be built.
-    // pb.descriptorLayout(+DescriptorSetBindingPoints::PER_VIEW,
-    //         getPerViewDescriptorSetLayoutDescription(engine, specialization.variant,
-    //                 Variant::isVSMVariant(specialization.variant)));
-    // pb.descriptorLayout(+DescriptorSetBindingPoints::PER_RENDERABLE,
-    //     descriptor_sets::getPerRenderableLayout());
-    // pb.descriptorLayout(+DescriptorSetBindingPoints::PER_MATERIAL,
-    //     getDescriptorSetLayoutDescription(specialization.variant));
+    // Set descriptor sets for the program.
+    // Note: right now, we're going to assume VSM is disabled. In the future, we
+    // may want to provide both to the backend, so that both can be built.
+    pb.descriptorLayout(+DescriptorSetBindingPoints::PER_VIEW,
+            getPerViewDescriptorSetLayoutDescription(
+                    specialization.variant,
+                    Variant::isVSMVariant(specialization.variant)));
+    pb.descriptorLayout(+DescriptorSetBindingPoints::PER_RENDERABLE,
+            descriptor_sets::getPerRenderableLayout());
+    pb.descriptorLayout(
+            +DescriptorSetBindingPoints::PER_MATERIAL, descriptorSetLayoutDescription);
 
-    auto const program = engine.getDriverApi().createProgram(std::move(pb),
-            ImmutableCString{ name.c_str_safe() });
+    auto const program = engine.getDriverApi().createProgram(
+            std::move(pb), ImmutableCString{name.c_str_safe()});
     assert_invariant(program);
     return program;
 }
