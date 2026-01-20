@@ -540,6 +540,11 @@ private:
          * to be created from a 3d VkImage.
          */
         bool imageView2Don3DImage;
+
+        /**
+         * Desired global priority value for all VkQueue at a system level.
+         */
+        Platform::GpuContextPriority gpuContextPriority = Platform::GpuContextPriority::DEFAULT;
     };
 
     void createInstance(ExtensionSet const& requiredExts) noexcept;
