@@ -207,6 +207,10 @@ public:
                isDynamicRenderingSupported();
     }
 
+    inline bool isGlobalPrioritySupported() const noexcept {
+        return mGlobalPrioritySupported;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
@@ -240,6 +244,7 @@ private:
     bool mPipelineCreationFeedbackSupported = false;
     bool mProtectedMemorySupported = false;
     bool mVertexInputDynamicStateSupported = false;
+    bool mGlobalPrioritySupported = false;
 
     // These are options that can be enabled or disabled at an application level.
     bool mAsyncPipelineCachePrewarmingEnabled = false;
