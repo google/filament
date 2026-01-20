@@ -92,6 +92,9 @@ struct MaterialDefinition {
     bool hasVariant(Variant const variant,
             backend::ShaderModel const sm, bool isStereoSupported) const noexcept;
 
+    backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
+            Variant const variant, bool useVsmDescriptorSetLayout) const noexcept;
+
     // Keep track of the definitions of the descriptor set layouts, as these
     // may be used by some backends in parallel compilation of programs.
     backend::DescriptorSetLayout perViewDescriptorSetLayoutDescription;
