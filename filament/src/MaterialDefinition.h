@@ -17,6 +17,7 @@
 #define TNT_FILAMENT_MATERIALDEFINITION_H
 
 #include "ProgramSpecialization.h"
+#include "backend/DriverApiForward.h"
 
 #include <private/filament/Variant.h>
 #include <private/filament/BufferInterfaceBlock.h>
@@ -68,7 +69,7 @@ struct MaterialDefinition {
     //
     // Must be called outside of backend render pass.
     // Must be called before Material::getProgram().
-    backend::Handle<backend::HwProgram> prepareProgram(FEngine& engine,
+    backend::Handle<backend::HwProgram> prepareProgram(FEngine& engine, backend::DriverApi& driver,
             MaterialParser const& parser, ProgramSpecialization const& specialization,
             backend::CompilerPriorityQueue priorityQueue) const;
 

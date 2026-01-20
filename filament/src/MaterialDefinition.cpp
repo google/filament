@@ -800,11 +800,10 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
     return program;
 }
 
-Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, MaterialParser const& parser,
-        ProgramSpecialization const& specialization,
+Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, DriverApi& driver,
+        MaterialParser const& parser, ProgramSpecialization const& specialization,
         backend::CompilerPriorityQueue priorityQueue) const {
-    if (!hasVariant(specialization.variant, engine.getShaderModel(),
-                engine.getDriverApi().isStereoSupported())) {
+    if (!hasVariant(specialization.variant, engine.getShaderModel(), driver.isStereoSupported())) {
         return {};
     }
     if (parser == *mMaterialParser) {
