@@ -3,6 +3,7 @@ include ':filament-android'
 include ':filamat-android'
 include ':gltfio-android'
 include ':filament-utils-android'
+include ':filament-tools'
 
 // Samples
 include ':samples:sample-gltf-viewer'
