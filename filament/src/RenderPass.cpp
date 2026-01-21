@@ -638,7 +638,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         } else if constexpr (isDepthPass) {
             cmd.key = uint64_t(Pass::DEPTH);
             cmd.key |= uint64_t(CustomCommand::PASS);
-            cmd.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
             cmd.info.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmd.info.rasterState.inverseFrontFaces = inverseFrontFaces;
         }
@@ -773,12 +772,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                             (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) ?
                             SamplerCompareFunc::GE : cmd.info.rasterState.depthFunc;
                 } else {
-                    // color pass:
-                    // This will bucket objects by Z, front-to-back and then sort by material
-                    // in each buckets. We use the top 10 bits of the distance, which
-                    // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
+                    // opaque object are not z-sorted, because it's counter-productive on all modern
+                    // mobile GPUs.
                     cmd.key &= ~Z_BUCKET_MASK;
-                    cmd.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
                 }
 
                 *curr = cmd;

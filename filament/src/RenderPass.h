@@ -83,7 +83,7 @@ public:
      *   DEPTH command (b00)
      *   |  3|1| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
      *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
-     *   |CCC|0|00|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
+     *   |CCC|0|00|01|00|0|ppp|00|000000|0000000000|          material-id           |
      *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
      *   | correctness        |      optimizations (truncation allowed)             |
      *
@@ -91,8 +91,8 @@ public:
      *   COLOR (b01) and REFRACT (b10) commands
      *   |  3|1| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
      *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
-     *   |CCC|0|01|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
-     *   |CCC|0|10|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
+     *   |CCC|0|01|01|00|a|ppp|00|000000|0000000000|          material-id           |
+     *   |CCC|0|10|01|00|a|ppp|00|000000|0000000000|          material-id           | refraction
      *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
      *   | correctness        |      optimizations (truncation allowed)             |
      *
