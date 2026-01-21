@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-if(IOS)
-    # filamat depends on glslang, which requires iOS 13.0+
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0")
-endif()
+include(${EXTERNAL}/clang/usage_ios_13.cmake)
 
 project(filamat)
 
