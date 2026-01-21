@@ -3,6 +3,7 @@ material {
     requires : [uv0],
     shadingModel : unlit,
     culling: none,
+    apiLevel: 2,
     parameters : [
         {
             type : sampler2d,
