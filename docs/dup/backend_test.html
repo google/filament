@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>matinfo - Filament</title>
+        <title>backend - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,22 +158,59 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="matinfo"><a class="header" href="#matinfo">matinfo</a></h1>
-<p><code>matinfo</code> lists the content of a compiled material as output by <code>matc</code>. This tool is meant to be
-used for debug purpose only.</p>
-<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
-<pre><code class="language-shell">matinfo [options] &lt;material file&gt;
-</code></pre>
+                        <h1 id="backend-unit-tests"><a class="header" href="#backend-unit-tests">Backend Unit Tests</a></h1>
+<p>These are tests that ensure the Filament backend is working properly on various operating systems
+and graphics backends.</p>
+<p>The majority of these tests generate images that are then compared against a known golden image.</p>
+<h2 id="running-with-a-specific-graphics-library"><a class="header" href="#running-with-a-specific-graphics-library">Running with a specific graphics library</a></h2>
+<p>Run with <code>-a&lt;backend&gt;</code> to run with a specific backend, such as <code>-avulkan</code> for vulkan or <code>-ametal</code>
+for metal.</p>
+<h2 id="image-comparisons"><a class="header" href="#image-comparisons">Image comparisons</a></h2>
+<p>The expected images are stored as PNG files in the <code>expected_images</code> subdirectory of the test source
+code. When cmake is run it will copy this directory to the build output creating
+<code>images/expected_images</code> inside the same directory as the unit test binary.</p>
+<p>The unit tests will then write their resulting images into <code>images/actual_images</code> in order to make
+the tests easier to debug.</p>
+<p>If an image comparison test fails, it writes a diff image to <code>images/diff_images</code> where each pixel of the diff is white (255,255,255) if the comparison for the corresponding pixel succeeds and black (0,0,0) of the comparison for the corresponding pixel fails.</p>
+<h3 id="python-utility-for-updating-golden-images-and-comparing-results"><a class="header" href="#python-utility-for-updating-golden-images-and-comparing-results">Python utility for updating golden images and comparing results</a></h3>
+<p>Inside the unit test source code directory there is a python script called
+<code>move_actual_images_to_expected.py</code>.
+It will display the actual and expected images side-by-side and copy the actual image into the
+source tree's <code>expected_images</code> directory if the user approves the change.</p>
+<h4 id="directories"><a class="header" href="#directories">Directories</a></h4>
+<p>The <code>-r</code> flag is required and should be the directory where the test binary is.</p>
+<p>If not running the script from the directory it's in, <code>-s</code> should be the source code's
+<code>expected_images</code> directory.</p>
+<h4 id="configuring-comparemove-behavior"><a class="header" href="#configuring-comparemove-behavior">Configuring compare/move behavior</a></h4>
+<p>The <code>-c</code> flag has the tool display the actual and expected images side-by-side. By default it
+does this by opening both with the OS's default behavior. <code>-p</code> can be used to specify a different
+terminal program.</p>
+<p>The <code>-m</code> flag has the tool move the actual image to overwrite the expected image in the source
+tree. If the images are also being compared then the move will only happen if the user approves the
+change.</p>
+<p>After updating the expected images, cmake will need to be run again to copy them to the binary's
+directory. Also, currently some platforms can't load images to compare and so have the hash
+hardcoded into the test source code, so for now those need to be updated by running the test and
+copying the value manually.</p>
+<h4 id="picking-which-tests-to-compare"><a class="header" href="#picking-which-tests-to-compare">Picking which tests to compare</a></h4>
+<p>The <code>-x</code> flag causes the tool to check the <code>test_detail.xml</code> file and only process the images who
+failed a comparison. <code>--gtest_output=xml</code> needs to be passed to the test binary to generate this
+file.</p>
+<p>The <code>-t</code> argument takes a list of images to compare, provided as the file name without the <code>.png</code>
+suffix.</p>
+<h2 id="unsupported-tests"><a class="header" href="#unsupported-tests">Unsupported tests</a></h2>
+<p>If a test depends on a feature that is unsupported by the current environment, it will start with
+the <code>SKIP_IF</code> macro. This will cause the test to not be run.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dup/filamesh.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../notes/tests.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../dup/mipgen.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dup/test_ci_backend.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -183,11 +220,11 @@ used for debug purpose only.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dup/filamesh.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../notes/tests.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../dup/mipgen.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dup/test_ci_backend.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
