@@ -24,6 +24,12 @@
 
 namespace utils {
 
+/**
+ * An Entity is a handle to an object in the Entity Component System (ECS).
+ *
+ * Entities are created by the EntityManager and can be associated with various components
+ * (e.g., Renderable, Transform, Light) to define their behavior and properties.
+ */
 class UTILS_PUBLIC Entity {
 public:
     // this can be used to create an array of to-be-filled entities (see create())

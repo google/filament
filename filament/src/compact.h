@@ -83,7 +83,7 @@ static Iterator compact(Iterator first, Iterator last,
     auto dst = runBegin;
     auto src = runBegin;
 
-    using value_type = std::iterator_traits<Iterator>::value_type;
+    using value_type = typename std::iterator_traits<Iterator>::value_type;
 
     while (src != last) {
         // Find the end of the current run.

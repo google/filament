@@ -311,7 +311,7 @@ public:
 
     /** Sets an additional matrix that scales the projection matrix.
      *
-     * This is useful to adjust the aspect ratio of the camera independent from its projection.
+     * This is useful to adjust the aspect ratio of the camera independent of its projection.
      * First, pass an aspect of 1.0 to setProjection. Then set the scaling with the desired aspect
      * ratio:
      *

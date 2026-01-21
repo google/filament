@@ -382,9 +382,18 @@ void OpenGLDriver::terminate() {
     delete mCurrentPushConstants;
     mCurrentPushConstants = nullptr;
 
+    // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
+    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
+    // thread (due to no user handler) during this process are handled later by `Driver::purge`
+    // within `FEngine::shutdown`.
     if (getJobWorker()) {
         getJobWorker()->terminate();
     }
+    if constexpr (UTILS_HAS_THREADING) {
+        stopServiceThread();
+    }
+
     mContext.terminate();
     mPlatform.terminate();
 }
@@ -437,7 +446,8 @@ void OpenGLDriver::setPushConstant(ShaderStage const stage, uint8_t const index,
     if (std::holds_alternative<bool>(value)) {
         assert_invariant(type == ConstantType::BOOL);
         bool const bval = std::get<bool>(value);
-        glUniform1i(location, bval ? 1 : 0);
+        // This must be the 'ui' version of glUniform1 due to a crash on M-series macbooks.
+        glUniform1ui(location, bval ? 1 : 0);
     } else if (std::holds_alternative<float>(value)) {
         assert_invariant(type == ConstantType::FLOAT);
         float const fval = std::get<float>(value);

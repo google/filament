@@ -245,7 +245,13 @@ struct PushConstantDescription {
 private:
     static constexpr uint32_t ENTRY_SIZE = sizeof(uint32_t);
 
-    utils::FixedCapacityVector<backend::ConstantType> mTypes[Program::SHADER_TYPE_COUNT];
+    struct ConstantDescription {
+        utils::FixedCapacityVector<backend::ConstantType> types;
+        uint32_t offset = 0;
+    };
+
+    // Describes the constants in each shader stage.
+    ConstantDescription mDescriptions[Program::SHADER_TYPE_COUNT];
     VkPushConstantRange mRanges[Program::SHADER_TYPE_COUNT];
     uint32_t mRangeCount;
 };

@@ -1,6 +1,7 @@
 # Rendering Difference Test
 
-This tool is a collections of scripts to run `gltf_viewer` and produce headless renderings.
+This tool (`/test/renderdiff`) is a collections of scripts to run `gltf_viewer` and produce headless
+renderings.
 
 This is mainly useful for continuous integration where GPUs are generally not available on cloud
 machines. To perform software rasterization, these scripts are centered around [Mesa]'s
@@ -104,7 +105,7 @@ it in the following fashion
   ```
 - In the commit message of your working branch on `filament`, add the following line
   ```
-  RDIFF_BBRANCH=my-pr-branch-golden
+  RDIFF_BRANCH=my-pr-branch-golden
   ```
 
 Doing the above has multiple effects:

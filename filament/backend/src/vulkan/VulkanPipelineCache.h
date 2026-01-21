@@ -104,7 +104,7 @@ public:
     // compiling the pipeline on the main thread at draw time. This is very dependent
     // on the implementation of the driver on the current device; it's expected to work
     // on devices with VK_EXT_vertex_input_dynamic_state and VK_KHR_dynamic_rendering.
-    void asyncPrewarmCache(const VulkanProgram& program, VkPipelineLayout layout,
+    void asyncPrewarmCache(resource_ptr<VulkanProgram> vprogram, VkPipelineLayout layout,
                            StereoscopicType stereoscopicType, uint8_t stereoscopicViewCount,
                            CompilerPriorityQueue priority);
 

@@ -395,8 +395,10 @@ bool FView::isSkyboxVisible() const noexcept {
     return skybox != nullptr && (skybox->getLayerMask() & mVisibleLayers);
 }
 
-void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
-        FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept {
+void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
+        FScene::RenderableSoa& renderableData,
+        FScene::LightSoa const& lightData,
+        CameraInfo const& cameraInfo) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     mHasShadowing = false;
@@ -405,7 +407,7 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         return;
     }
 
-    auto& lcm = engine.getLightManager();
+    auto const& lcm = engine.getLightManager();
 
     ShadowMapManager::Builder builder;
 
@@ -462,8 +464,8 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
 
     if (builder.hasShadowMaps()) {
         ShadowMapManager::createIfNeeded(engine, mShadowMapManager);
-        auto const shadowTechnique = mShadowMapManager->update(builder, engine, *this,
-                cameraInfo, renderableData, lightData);
+        auto const shadowTechnique = mShadowMapManager->update(driver, builder, engine,
+                *this, cameraInfo, renderableData, lightData);
 
         mHasShadowing = any(shadowTechnique);
         mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
@@ -686,7 +688,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         setFroxelizerSync(froxelizeLightsJob);
 
-        prepareShadowing(engine, renderableData, lightData, cameraInfo);
+        prepareShadowing(engine, driver, renderableData, lightData, cameraInfo);
 
         /*
          * Partition the SoA so that renderables are partitioned w.r.t their visibility into the

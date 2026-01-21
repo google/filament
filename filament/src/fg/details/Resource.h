@@ -128,11 +128,11 @@ protected:
  */
 template<typename RESOURCE>
 class Resource : public VirtualResource {
-    using Usage = RESOURCE::Usage;
+    using Usage = typename RESOURCE::Usage;
 
 public:
-    using Descriptor = RESOURCE::Descriptor;
-    using SubResourceDescriptor = RESOURCE::SubResourceDescriptor;
+    using Descriptor = typename RESOURCE::Descriptor;
+    using SubResourceDescriptor = typename RESOURCE::SubResourceDescriptor;
 
     // valid only after devirtualize() has been called
     RESOURCE resource{};
@@ -269,8 +269,8 @@ protected:
 template<typename RESOURCE>
 class ImportedResource : public Resource<RESOURCE> {
 public:
-    using Descriptor = RESOURCE::Descriptor;
-    using Usage = RESOURCE::Usage;
+    using Descriptor = typename RESOURCE::Descriptor;
+    using Usage = typename RESOURCE::Usage;
 
     UTILS_NOINLINE
     ImportedResource(utils::StaticString name, Descriptor const& desc, Usage usage, RESOURCE const& rsrc) noexcept

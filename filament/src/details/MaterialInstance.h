@@ -45,6 +45,7 @@
 #include <limits>
 #include <mutex>
 #include <string_view>
+#include <variant>
 
 #include <stddef.h>
 #include <stdint.h>

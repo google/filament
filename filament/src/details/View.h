@@ -163,8 +163,8 @@ public:
             const Viewport& physicalViewport,
             const Viewport& logicalViewport) const noexcept;
 
-    void prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
-            FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
+    void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
+            FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
     void prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;

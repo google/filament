@@ -16,9 +16,11 @@
 
 #include "common/arguments.h"
 
+#include <filament/Camera.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
@@ -43,6 +45,16 @@ struct App {
 static constexpr filament::math::float2 POSITIONS[] { {.5, 0}, {-.5, .5}, {-.5, -.5} };
 static constexpr uint32_t COLORS[] { 0xffff0000u, 0xff00ff00u, 0xff0000ffu };
 static constexpr uint16_t TRIANGLE_INDICES[] { 0, 1, 2 };
+static constexpr float ZOOM = 1.5f;
+
+static void setCameraProjection(App* app, View* view) {
+    const uint32_t w = view->getViewport().width;
+    const uint32_t h = view->getViewport().height;
+    const float aspect = (float) w / h;
+    app->cam->setProjection(Camera::Projection::ORTHO,
+        -aspect * ZOOM, aspect * ZOOM,
+        -ZOOM, ZOOM, 0, 1);
+}
 
 int main(int argc, char** argv) {
     Config config;
@@ -56,7 +68,6 @@ int main(int argc, char** argv) {
 
     App app;
     auto setup = [&app, &vbo](Engine* engine, View* view, Scene* scene) {
-
         // Populate vertex buffer.
         app.vb = VertexBuffer::Builder().vertexCount(3).bufferCount(1)
                 .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 8)
@@ -84,6 +95,7 @@ int main(int argc, char** argv) {
         // Replace the FilamentApp camera with identity.
         app.camera = utils::EntityManager::get().create();
         view->setCamera(app.cam = engine->createCamera(app.camera));
+        setCameraProjection(&app, view);
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
@@ -95,7 +107,16 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().run(config, setup, cleanup);
+    FilamentApp::get().resize([&app](Engine* engine, View* view) {
+        setCameraProjection(&app, view);
+    });
+
+    FilamentApp::get().run(config, setup, cleanup, FilamentApp::ImGuiCallback(),
+            [](Engine*, View*, Scene*, Renderer* renderer) {
+                Renderer::ClearOptions options;
+                options.clear = true;
+                renderer->setClearOptions(options);
+            });
 
     return 0;
 }

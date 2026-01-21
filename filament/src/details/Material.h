@@ -134,11 +134,11 @@ public:
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
-    void prepareProgram(Variant const variant,
+    void prepareProgram(backend::DriverApi& driver, Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
         // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
         if (UTILS_UNLIKELY(!isCached(variant))) {
-            prepareProgramSlow(variant, priorityQueue);
+            prepareProgramSlow(driver, variant, priorityQueue);
         }
     }
 
@@ -292,11 +292,11 @@ private:
     MaterialParser const& getMaterialParser() const noexcept;
 
     bool hasVariant(Variant variant) const noexcept;
-    void prepareProgramSlow(Variant variant,
+    void prepareProgramSlow(backend::DriverApi& driver, Variant variant,
             CompilerPriorityQueue priorityQueue) const noexcept;
-    void getSurfaceProgramSlow(Variant variant,
+    void getSurfaceProgramSlow(backend::DriverApi& driver, Variant variant,
             CompilerPriorityQueue priorityQueue) const noexcept;
-    void getPostProcessProgramSlow(Variant variant,
+    void getPostProcessProgramSlow(backend::DriverApi& driver, Variant variant,
             CompilerPriorityQueue priorityQueue) const noexcept;
     backend::Program getProgramWithVariants(Variant variant,
             Variant vertexVariant, Variant fragmentVariant) const;
@@ -304,9 +304,9 @@ private:
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>
             processSpecializationConstants(Builder const& builder);
 
-    void precacheDepthVariants(FEngine& engine);
+    void precacheDepthVariants(backend::DriverApi& driver);
 
-    void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
+    void createAndCacheProgram(backend::DriverApi& driver, backend::Program&& p, Variant variant) const noexcept;
 
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
             Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
@@ -325,6 +325,11 @@ private:
     bool mIsDefaultMaterial = false;
 
     bool mUseUboBatching = false;
+    bool mIsStereoSupported = false;
+    bool mIsParallelShaderCompileSupported = false;
+    bool mDepthPrecacheDisabled = false;
+
+    FMaterial const* mDefaultMaterial = nullptr;
 
     // reserve some space to construct the default material instance
     mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;

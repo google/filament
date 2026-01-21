@@ -173,6 +173,8 @@ struct HwTimerQuery : public HwBase {
 
 /*
  * Base class of all Driver implementations
+ * If multithreading is supported, this class creates a `ServiceThread` responsible for executing
+ * user handlers.
  */
 
 class DriverBase : public Driver {
@@ -235,6 +237,10 @@ protected:
 
     void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
     void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+
+    // Stops the `ServiceThread`. This method is called during destruction but may be called
+    // explicitly if earlier shutdown is needed. This method is idempotent.
+    void stopServiceThread() noexcept;
 
 private:
     const Platform::DriverConfig mDriverConfig;

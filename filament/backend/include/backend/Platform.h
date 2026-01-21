@@ -31,6 +31,10 @@
 #include <memory>
 #include <mutex>
 
+namespace utils {
+class FeatureFlagManager;
+}
+
 namespace filament::backend {
 
 class CallbackHandler;
@@ -105,16 +109,16 @@ public:
         using duration_ns = int64_t;
         static constexpr time_point_ns INVALID = -1;    //!< value not supported
         /**
+         * The time delta [ns] between subsequent composition events.
+         */
+        duration_ns compositeInterval;
+
+        /**
          * The timestamp [ns] since epoch of the next time the compositor will begin composition.
          * This is effectively the deadline for when the compositor must receive a newly queued
          * frame.
          */
         time_point_ns compositeDeadline;
-
-        /**
-         * The time delta [ns] between subsequent composition events.
-         */
-        duration_ns compositeInterval;
 
         /**
          * The time delta [ns] between the start of composition and the expected present time of
@@ -123,22 +127,9 @@ public:
         duration_ns compositeToPresentLatency;
 
         /**
-         * The timestamp [ns] since epoch of the system's expected presentation time.
-         * INVALID if not supported.
+         * Expected latency [ns] of frame presentation relative to vsync.
          */
-        time_point_ns expectedPresentTime;
-
-        /**
-         * The timestamp [ns] since epoch of the current frame's start (i.e. vsync)
-         * INVALID if not supported.
-         */
-        time_point_ns frameTime;
-
-        /**
-         * The timestamp [ns] since epoch of the current frame's deadline
-         * INVALID if not supported.
-         */
-        time_point_ns frameTimelineDeadline;
+        duration_ns expectedPresentLatency;
     };
 
     struct FrameTimestamps {
@@ -278,6 +269,11 @@ public:
     };
 
     struct DriverConfig {
+        /**
+         * Reference to the system's FeatureFlagManager. Can be nullptr.
+         */
+        utils::FeatureFlagManager const * UTILS_NULLABLE featureFlagManager = nullptr;
+
         /**
          * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
          * Driver clamps to valid values.

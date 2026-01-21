@@ -367,14 +367,22 @@ endif()
 
 if (LINUX)
     option(USE_STATIC_LIBCXX "Link against the static runtime libraries." ON)
+
+    # Add this step to support both glibc-based Linux distributions (e.g., Ubuntu, Debian)
+    # and musl-based distributions (e.g., Alpine).
+    include(CheckSymbolExists)
+    check_symbol_exists(__GLIBC__ "features.h" CLANG_WITH_GLIBC)
+
     if (${USE_STATIC_LIBCXX})
         if (FILAMENT_USING_GCC)
             link_libraries("-static-libgcc -static-libstdc++")
-        else ()
+        elseif (CLANG_WITH_GLIBC)
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
             link_libraries("-static-libgcc -static-libstdc++")
             link_libraries(libc++.a)
             link_libraries(libc++abi.a)
+        else()
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
         endif()
     endif()
 
