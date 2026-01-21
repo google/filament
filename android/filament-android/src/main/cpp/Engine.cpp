@@ -18,6 +18,7 @@
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
@@ -208,6 +209,14 @@ Java_com_google_android_filament_Engine_nDestroySkinningBuffer(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nDestroyMorphTargetBuffer(JNIEnv*, jclass,
+                jlong nativeEngine, jlong nativeMorphTargetBuffer) {
+    Engine* engine = (Engine*) nativeEngine;
+    MorphTargetBuffer* mtb = (MorphTargetBuffer*) nativeMorphTargetBuffer;
+    return engine->destroy(mtb);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Engine_nDestroyIndirectLight(JNIEnv*, jclass,
         jlong nativeEngine, jlong nativeIndirectLight) {
     Engine* engine = (Engine*) nativeEngine;
@@ -326,6 +335,13 @@ Java_com_google_android_filament_Engine_nIsValidSkinningBuffer(JNIEnv*, jclass,
         jlong nativeEngine, jlong nativeSkinningBuffer) {
     Engine* engine = (Engine *)nativeEngine;
     return (jboolean)engine->isValid((SkinningBuffer*)nativeSkinningBuffer);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidMorphTargetBuffer(JNIEnv*, jclass,
+                jlong nativeEngine, jlong nativeMorphTargetBuffer) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean) engine->isValid((MorphTargetBuffer*) nativeMorphTargetBuffer);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

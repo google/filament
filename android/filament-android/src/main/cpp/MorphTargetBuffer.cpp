@@ -58,6 +58,27 @@ Java_com_google_android_filament_MorphTargetBuffer_nBuilderCount(JNIEnv*, jclass
     builder->count((size_t) count);
 }
 
+extern "C" JNIEXPORT void JNICALL
+        Java_com_google_android_filament_MorphTargetBuffer_nBuilderWithPositions(JNIEnv*, jclass,
+                jlong nativeBuilder, jboolean enabled) {
+    MorphTargetBuffer::Builder* builder = (MorphTargetBuffer::Builder*) nativeBuilder;
+    builder->withPositions(enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
+        Java_com_google_android_filament_MorphTargetBuffer_nBuilderWithTangents(JNIEnv*, jclass,
+                jlong nativeBuilder, jboolean enabled) {
+    MorphTargetBuffer::Builder* builder = (MorphTargetBuffer::Builder*) nativeBuilder;
+    builder->withTangents(enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
+        Java_com_google_android_filament_MorphTargetBuffer_nBuilderEnableCustomMorphing(JNIEnv*,
+                jclass, jlong nativeBuilder, jboolean enabled) {
+    MorphTargetBuffer::Builder* builder = (MorphTargetBuffer::Builder*) nativeBuilder;
+    builder->enableCustomMorphing(enabled);
+}
+
 extern "C"
 JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_MorphTargetBuffer_nBuilderBuild(JNIEnv*, jclass,
@@ -111,4 +132,25 @@ Java_com_google_android_filament_MorphTargetBuffer_nGetCount(JNIEnv*, jclass,
         jlong nativeObject) {
     MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeObject;
     return (jint)morphTargetBuffer->getCount();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+        Java_com_google_android_filament_MorphTargetBuffer_nHasPositions(JNIEnv*, jclass,
+                jlong nativeObject) {
+    MorphTargetBuffer* morphTargetBuffer = (MorphTargetBuffer*) nativeObject;
+    return (jboolean) morphTargetBuffer->hasPositions();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+        Java_com_google_android_filament_MorphTargetBuffer_nHasTangents(JNIEnv*, jclass,
+                jlong nativeObject) {
+    MorphTargetBuffer* morphTargetBuffer = (MorphTargetBuffer*) nativeObject;
+    return (jboolean) morphTargetBuffer->hasTangents();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+        Java_com_google_android_filament_MorphTargetBuffer_nIsCustomMorphingEnabled(JNIEnv*, jclass,
+                jlong nativeObject) {
+    MorphTargetBuffer* morphTargetBuffer = (MorphTargetBuffer*) nativeObject;
+    return (jboolean) morphTargetBuffer->isCustomMorphingEnabled();
 }
