@@ -193,14 +193,7 @@ void morphData4(inout vec4 v, highp sampler2DArray data) {
 }
 
 void morphPosition(inout vec4 p) {
-#if defined(LEGACY_MORPHING)
-    pos += morphingUniforms.weights[0] * mesh_custom0;
-    pos += morphingUniforms.weights[1] * mesh_custom1;
-    pos += morphingUniforms.weights[2] * mesh_custom2;
-    pos += morphingUniforms.weights[3] * mesh_custom3;
-#else
     morphData4(p, sampler1_positions);
-#endif
 }
 #else
 void morphPosition(inout vec4 p) {
