@@ -83,7 +83,7 @@ public:
 
     void resetUserTime();
 
-    void skipNextFrames(size_t frameCount) const noexcept {
+    void skipNextFrames(size_t frameCount) noexcept {
         mFrameSkipper.skipNextFrames(frameCount);
     }
 
@@ -196,8 +196,8 @@ private:
         return mCommandsHighWatermark;
     }
 
-    void renderInternal(FView const* view, bool flush);
-    void renderJob(RootArenaScope& rootArenaScope, FView& view);
+    void renderInternal(backend::DriverApi& driver, FView const* view, bool flush);
+    void renderJob(backend::DriverApi& driver, RootArenaScope& rootArenaScope, FView& view);
 
     static std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
             TemporalAntiAliasingOptions const& taaOptions,
@@ -214,7 +214,11 @@ private:
     backend::TextureFormat mHdrTranslucent;
     backend::TextureFormat mHdrQualityMedium;
     backend::TextureFormat mHdrQualityHigh;
+    backend::FeatureLevel mFeatureLevel;
     bool mIsRGB8Supported : 1;
+    bool mIsFrameBufferFetchSupported : 1;
+    bool mIsFrameBufferFetchMultiSampleSupported : 1;
+    bool mIsAutoDepthResolveSupported : 1;
     Epoch mUserEpoch;
     math::float4 mShaderUserTime{};
     DisplayInfo mDisplayInfo;
@@ -226,6 +230,7 @@ private:
     std::function<void()> mBeginFrameInternal;
     uint64_t mVsyncSteadyClockTimeNano = 0;
     std::unique_ptr<TextureCache> mResourceAllocator{};
+    int64_t mLastFrameId = -1;
 };
 
 FILAMENT_DOWNCAST(Renderer)

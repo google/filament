@@ -166,6 +166,17 @@ public:
         };
 
         /**
+         * Type of morphing for a Renderable.
+         * This usually acts as a bitmask of multiple types.
+         */
+        enum class MorphType : uint8_t {
+            NONE = 0,
+            POSITION = 1,
+            TANGENT = 2,
+            CUSTOM = 4
+        };
+
+        /**
          * Creates a builder for renderable components.
          *
          * @param count the number of primitives that will be supplied to the builder
@@ -217,7 +228,7 @@ public:
         /**
          * Specify the type of geometry for this renderable. DYNAMIC geometry has no restriction,
          * STATIC_BOUNDS geometry means that both the bounds and the world-space transform of the
-         * the renderable are immutable.
+         * renderable are immutable.
          * STATIC geometry has the same restrictions as STATIC_BOUNDS, but in addition disallows
          * skinning, morphing and changing the VertexBuffer or IndexBuffer in any way.
          * @param type type of geometry.

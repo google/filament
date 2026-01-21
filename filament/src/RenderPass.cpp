@@ -84,9 +84,9 @@ RenderPassBuilder& RenderPassBuilder::customCommand(
     return *this;
 }
 
-RenderPass RenderPassBuilder::build(FEngine const& engine) const {
+RenderPass RenderPassBuilder::build(FEngine const& engine, backend::DriverApi& driver) const {
     assert_invariant(mRenderableSoa);
-    return RenderPass{ engine, *this };
+    return RenderPass{ engine, driver, *this };
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ void RenderPass::DescriptorSetHandleDeleter::operator()(DescriptorSetHandle hand
 
 // ------------------------------------------------------------------------------------------------
 
-RenderPass::RenderPass(FEngine const& engine,
+RenderPass::RenderPass(FEngine const& engine, backend::DriverApi& driver,
         RenderPassBuilder const& builder) noexcept
         : mRenderableSoa(*builder.mRenderableSoa),
           mColorPassDescriptorSet(builder.mColorPassDescriptorSet) {
@@ -139,7 +139,7 @@ RenderPass::RenderPass(FEngine const& engine,
         }
     }
 
-    appendCommands(engine, { commandBegin, commandCount },
+    appendCommands(engine, driver, { commandBegin, commandCount },
             builder.mVisibleRenderables,
             builder.mCommandTypeFlags,
             builder.mFlags,
@@ -182,7 +182,7 @@ RenderPass::Command* RenderPass::resize(Arena& arena, Command* const last) noexc
     return last;
 }
 
-void RenderPass::appendCommands(FEngine const& engine,
+void RenderPass::appendCommands(FEngine const& engine, backend::DriverApi& driver,
         Slice<Command> commands,
         Range<uint32_t> const visibleRenderables,
         CommandTypeFlags const commandTypeFlags,
@@ -244,7 +244,7 @@ void RenderPass::appendCommands(FEngine const& engine,
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
             auto ma = first->info.mi->getMaterial();
-            ma->prepareProgram(first->info.materialVariant, CompilerPriorityQueue::CRITICAL);
+            ma->prepareProgram(driver, first->info.materialVariant, CompilerPriorityQueue::CRITICAL);
         }
     }
 }
@@ -611,7 +611,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
         // calculate the per-primitive face winding order inversion
         bool const inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
-        bool const hasMorphing = soaSkinningData[i].morphing;
+        bool const hasMorphing = soaSkinningData[i].morphType != RenderableManager::Builder::MorphType::NONE;
         bool const hasSkinning = soaSkinningData[i].skinning;
         bool const hasSkinningOrMorphing = hasSkinning || hasMorphing;
 

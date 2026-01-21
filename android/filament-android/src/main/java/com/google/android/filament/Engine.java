@@ -944,6 +944,15 @@ public class Engine {
      * @param object Object to check for validity
      * @return returns true if the specified object is valid.
      */
+    public boolean isValidMorphTargetBuffer(@NonNull MorphTargetBuffer object) {
+        return nIsValidMorphTargetBuffer(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
     public boolean isValidIndirectLight(@NonNull IndirectLight object) {
         return nIsValidIndirectLight(getNativeObject(), object.getNativeObject());
     }
@@ -1190,6 +1199,15 @@ public class Engine {
     public void destroySkinningBuffer(@NonNull SkinningBuffer skinningBuffer) {
         assertDestroy(nDestroySkinningBuffer(getNativeObject(), skinningBuffer.getNativeObject()));
         skinningBuffer.clearNativeObject();
+    }
+
+    /**
+     * Destroys a {@link MorphTargetBuffer} and frees all its associated resources.
+     * @param morphTargetBuffer the {@link MorphTargetBuffer} to destroy
+     */
+    public void destroyMorphTargetBuffer(@NonNull MorphTargetBuffer morphTargetBuffer) {
+        assertDestroy(nDestroyMorphTargetBuffer(getNativeObject(), morphTargetBuffer.getNativeObject()));
+        morphTargetBuffer.clearNativeObject();
     }
 
     /**
@@ -1483,6 +1501,7 @@ public class Engine {
     private static native boolean nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);
     private static native boolean nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);
     private static native boolean nDestroySkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
+    private static native boolean nDestroyMorphTargetBuffer(long nativeEngine, long nativeMorphTargetBuffer);
     private static native boolean nDestroyIndirectLight(long nativeEngine, long nativeIndirectLight);
     private static native boolean nDestroyMaterial(long nativeEngine, long nativeMaterial);
     private static native boolean nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);
@@ -1499,6 +1518,7 @@ public class Engine {
     private static native boolean nIsValidIndexBuffer(long nativeEngine, long nativeIndexBuffer);
     private static native boolean nIsValidVertexBuffer(long nativeEngine, long nativeVertexBuffer);
     private static native boolean nIsValidSkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
+    private static native boolean nIsValidMorphTargetBuffer(long nativeEngine, long nativeMorphTargetBuffer);
     private static native boolean nIsValidIndirectLight(long nativeEngine, long nativeIndirectLight);
     private static native boolean nIsValidMaterial(long nativeEngine, long nativeMaterial);
     private static native boolean nIsValidMaterialInstance(long nativeEngine, long nativeMaterial, long nativeMaterialInstance);

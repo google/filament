@@ -17,6 +17,14 @@
 #ifndef TNT_FILAMENT_BACKEND_CALLBACKHANDLER_H
 #define TNT_FILAMENT_BACKEND_CALLBACKHANDLER_H
 
+#ifdef __clang__
+#pragma clang diagnostic push
+// Disable the weak-vtables warning because we need the destructor to be inlined in the headers. It
+// is not optimal (for build), but we have clients that compile their libraries (filament) and app
+// in different rtti settings.
+#pragma clang diagnostic ignored "-Wweak-vtables"
+#endif
+
 namespace filament::backend {
 
 /**
@@ -64,9 +72,13 @@ public:
     virtual void post(void* user, Callback callback) = 0;
 
 protected:
-    virtual ~CallbackHandler();
+    virtual ~CallbackHandler() = default;
 };
 
 } // namespace filament::backend
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #endif // TNT_FILAMENT_BACKEND_CALLBACKHANDLER_H

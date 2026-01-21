@@ -72,7 +72,13 @@ void main() {
 static const char* const triangleFs = R"(#version 450 core
 
 layout(push_constant) uniform Constants {
+#if defined(TARGET_VULKAN_ENVIRONMENT)
+    // offset here accounts for the size of the push constants in the vertex stage.  Vulkan has one
+    // block of memory for all stages to share.
+    layout(offset=16) float red;
+#else
     float red;
+#endif
     bool padding;       // test correct bool padding
     float green;
     float blue;
@@ -104,8 +110,9 @@ void initPushConstants() {
 }
 
 TEST_F(BackendTest, PushConstants) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "see b/453776664");
     SKIP_IF(Backend::WEBGPU, "Push constants not supported on WebGPU");
+    // Test is flaky on CI (but does not repro locally).
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "b/453776664");
 
     initPushConstants();
 

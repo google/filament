@@ -110,7 +110,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
-                const bool canAutoResolveDepth = engine.getDriverApi().isAutoDepthResolveSupported();
+                const bool canAutoResolveDepth = config.isAutoDepthResolveSupported;
 
                 FrameGraphTexture::Usage depthStencilUsage = FrameGraphTexture::Usage::DEPTH_ATTACHMENT;
 
@@ -124,7 +124,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                             utils::StaticString{"Depth Buffer"};
 
                     bool const isES2 =
-                            engine.getDriverApi().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
+                            config.featureLevel == FeatureLevel::FEATURE_LEVEL_0;
 
                     TextureFormat const stencilFormat = isES2 ?
                             TextureFormat::DEPTH24_STENCIL8 : TextureFormat::DEPTH32F_STENCIL8;

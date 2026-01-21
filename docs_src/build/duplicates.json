@@ -49,6 +49,9 @@
     "libs/fgviewer/README.md": {
         "dest": "dup/fgviewer.md"
     },
+    "ios/CocoaPods/README.md": {
+        "dest": "release/cocoapods.md"
+    },
     "tools/normal-blending/README.md": {
         "dest": "dup/normal_blending.md"
     },
@@ -83,9 +86,12 @@
         "dest": "dup/docs.md"
     },
     "test/renderdiff/README.md": {
-        "dest": "dup/renderdiff.md",
+        "dest": "dup/test_renderdiff.md",
         "link_transforms": {
             "docs/images/": "../images/"
         }
+    },
+    "test/backend/README.md": {
+        "dest": "dup/test_backend.md"
     }
 }

@@ -79,6 +79,7 @@ static void process_GOOGLE_cpp_style_line_directive(OpenGLContext const& context
 static void process_OVR_multiview2(OpenGLContext const& context, int32_t eyeCount, char* source,
         size_t len) noexcept;
 static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
+static std::string_view process_countBits(OpenGLContext& context) noexcept;
 static std::array<std::string_view, 3> splitShaderSource(std::string_view source);
 
 // ------------------------------------------------------------------------------------------------
@@ -779,6 +780,7 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
 
             // add support for ARB_shading_language_packing if needed
             auto const packingFunctions = process_ARB_shading_language_packing(context);
+            auto const countBitsFunctions = process_countBits(context);
 
             // split shader source, so we can insert the specialization constants and the packing
             // functions
@@ -789,10 +791,10 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
                 version = "#version 310 es\n";
             }
 
-            std::array<std::string_view, 5> sources = {
+            std::array<std::string_view, 6> sources = {
                 version, prolog,
                 { specializationConstantString.data(), specializationConstantString.size() },
-                packingFunctions,
+                packingFunctions, countBitsFunctions,
                 { body.data(), body.size() - 1 } // null-terminated
             };
 
@@ -803,8 +805,8 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
                     [](std::string_view s) { return !s.empty(); });
             size_t const count = std::distance(sources.begin(), partitionPoint);
 
-            std::array<const char*, 5> shaderStrings;
-            std::array<GLint, 5> lengths;
+            std::array<const char*, 6> shaderStrings;
+            std::array<GLint, 6> lengths;
             for (size_t j = 0; j < count; j++) {
                 shaderStrings[j] = sources[j].data();
                 lengths[j] = GLint(sources[j].size());
@@ -1084,6 +1086,22 @@ UTILS_NOINLINE
         }
     }
 }
+
+/* static */ std::string_view process_countBits(OpenGLContext& context) noexcept {
+    using namespace std::literals;
+    if (context.isAtLeastGL<4, 0>() || context.isAtLeastGLES<3, 1>()) {
+        return ""sv;
+    }
+    return R"(
+// https://graphics.stanford.edu/%7Eseander/bithacks.html
+int bitCount(highp uint value) {
+    value = value - ((value >> 1u) & 0x55555555u);
+    value = (value & 0x33333333u) + ((value >> 2u) & 0x33333333u);
+    return int(((value + (value >> 4u) & 0xF0F0F0Fu) * 0x1010101u) >> 24u);
+}
+)"sv;
+}
+
 
 // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 (appeared in 4.2) and
 // macOS doesn't support GL_ARB_shading_language_packing
