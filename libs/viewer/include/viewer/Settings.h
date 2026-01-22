@@ -17,11 +17,13 @@
 #ifndef VIEWER_SETTINGS_H
 #define VIEWER_SETTINGS_H
 
+#include <filament/Camera.h>
 #include <filament/ColorGrading.h>
 #include <filament/ColorSpace.h>
 #include <filament/IndirectLight.h>
 #include <filament/LightManager.h>
 #include <filament/MaterialInstance.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/View.h>
 
@@ -49,9 +51,18 @@ struct DynamicLightingSettings;
 struct MaterialSettings;
 struct Settings;
 struct ViewSettings;
+struct ColorGradingSettings;
+struct DynamicLightingSettings;
+struct MaterialSettings;
+struct Settings;
+struct ViewSettings;
 struct LightSettings;
 struct ViewerOptions;
 struct DebugOptions;
+struct CameraSettings;
+struct AnimationSettings;
+struct RenderSettings;
+struct LightDefinition;
 
 enum class ToneMapping : uint8_t {
     LINEAR        = 0,
@@ -81,6 +92,8 @@ using VsmShadowOptions = filament::View::VsmShadowOptions;
 using GuardBandOptions = filament::View::GuardBandOptions;
 using StereoscopicOptions = filament::View::StereoscopicOptions;
 using LightManager = filament::LightManager;
+using CameraProjection = filament::Camera::Projection;
+using BlendMode = filament::BlendMode;
 
 // These functions push all editable property values to their respective Filament objects.
 void applySettings(Engine* engine, const ViewSettings& settings, View* dest);
@@ -91,6 +104,8 @@ void applySettings(Engine* engine, const ViewerOptions& settings, Camera* camera
         Renderer* renderer);
 void applySettings(Engine* engine, const DebugOptions& settings,
         Renderer* renderer);
+void applySettings(Engine* engine, const CameraSettings& settings, Camera* camera,
+        double aspectRatio = 0.0);
 
 // Creates a new ColorGrading object based on the given settings.
 UTILS_PUBLIC
@@ -203,6 +218,9 @@ struct ViewSettings {
     ColorGradingSettings colorGrading;
     DynamicLightingSettings dynamicLighting;
     FogSettings fogSettings;
+    BlendMode blendMode = BlendMode::OPAQUE;
+    bool stencilBufferEnabled = false;
+    uint8_t visibleLayers = 0x01;
 };
 
 template <typename T>
@@ -216,35 +234,68 @@ struct MaterialSettings {
     MaterialProperty<math::float4> float4[MAX_COUNT];
 };
 
-struct LightSettings {
-    bool enableShadows = true;
-    bool enableSunlight = true;
+struct LightDefinition {
+    LightManager::Type type = LightManager::Type::POINT;
+    math::float3 position = { 0.0f, 0.0f, 0.0f };
+    math::float3 direction = { 0.0f, -1.0f, 0.0f };
+    math::float3 color = { 1.0f, 1.0f, 1.0f };
+    float intensity = 0.0f;
+    float falloff = 0.0f;
+    float spotInner = 0.0f;
+    float spotOuter = 0.0f;
+    float sunHaloSize = 10.0f;
+    float sunHaloFalloff = 80.0f;
+    float sunAngularRadius = 1.9f;
+    bool castShadows = false;
     LightManager::ShadowOptions shadowOptions;
+};
+
+struct LightSettings {
+    bool enableShadows = true;  // Global toggle to enabling/disabling shadows
+    bool enableSunlight = true;
     SoftShadowOptions softShadowOptions;
-    float sunlightIntensity = 100000.0f;
-    float sunlightHaloSize = 10.0f;
-    float sunlightHaloFalloff = 80.0f;
-    float sunlightAngularRadius = 1.9f;
-    math::float3 sunlightDirection = {0.6, -1.0, -0.8};
-    math::float3 sunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
     float iblIntensity = 30000.0f;
     float iblRotation = 0.0f;
+    LightDefinition sunlight;
+    std::vector<LightDefinition> lights;
+};
+
+struct CameraSettings {
+    math::float3 center = { 0.0f, 0.0f, 0.0f };
+    math::float3 lookAt = { 0.0f, 0.0f, -1.0f };
+    math::float3 up = { 0.0f, 1.0f, 0.0f };
+    float horizontalFov = 0.0f; // degrees, if 0 use focal length
+    float near = 0.1f;
+    float far = 100.0f;
+    float focalLength = 28.0f; // mm, if 0 use fov
+    float aperture = 16.0f;
+    float shutterSpeed = 125.0f;
+    float sensitivity = 100.0f; // ISO
+    float focusDistance = 10.0f;
+    float eyeOcularDistance = 0.0f;
+    float eyeToeIn = 0.0f;
+    CameraProjection projection = CameraProjection::PERSPECTIVE;
+    bool enabled = false;
+    math::float2 scaling = { 1.0, 1.0 };
+    math::float2 shift = { 0.0, 0.0 };
+};
+
+struct AnimationSettings {
+    bool enabled = false;
+    float time = -1.0f;
+    float speed = 1.0f;
+};
+
+struct RenderSettings {
+    Renderer::ClearOptions clearOptions = {};
+    Renderer::FrameRateOptions frameRateOptions = {};
 };
 
 struct ViewerOptions {
-    float cameraAperture = 16.0f;
-    float cameraSpeed = 125.0f;
-    float cameraISO = 100.0f;
-    float cameraNear = 0.1f;
-    float cameraFar = 100.0f;
-    float cameraEyeOcularDistance = 0.0f;
-    float cameraEyeToeIn = 0.0f;
     float groundShadowStrength = 0.75f;
     bool groundPlaneEnabled = false;
     bool skyboxEnabled = true;
     sRGBColor backgroundColor = { 0.0f };
-    float cameraFocalLength = 28.0f;
-    float cameraFocusDistance = 10.0f;
     bool autoScaleEnabled = true;
     bool autoInstancingEnabled = false;
 };
@@ -258,6 +309,9 @@ struct Settings {
     MaterialSettings material;
     LightSettings lighting;
     ViewerOptions viewer;
+    CameraSettings camera;
+    AnimationSettings animation;
+    RenderSettings render;
     DebugOptions debug;
 };
 

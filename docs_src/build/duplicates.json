@@ -49,6 +49,9 @@
     "libs/fgviewer/README.md": {
         "dest": "dup/fgviewer.md"
     },
+    "libs/viewer/README.md": {
+        "dest": "dup/viewer.md"
+    },
     "ios/CocoaPods/README.md": {
         "dest": "release/cocoapods.md"
     },
