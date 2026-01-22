@@ -38,12 +38,16 @@
 #include <filament/Engine.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/CallbackHandler.h>
 
 #include <utils/compiler.h>
+#include <utils/Invocable.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
 
 #include <chrono>
+#include <optional>
+#include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -363,7 +367,7 @@ void Engine::flushAndWait() {
     downcast(this)->flushAndWait();
 }
 
-bool Engine::flushAndWait(uint64_t timeout) {
+bool Engine::flushAndWait(uint64_t const timeout) {
     return downcast(this)->flushAndWait(timeout);
 }
 

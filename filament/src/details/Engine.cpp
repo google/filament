@@ -39,19 +39,20 @@
 #include "details/VertexBuffer.h"
 #include "details/View.h"
 
-#include <filament/ColorGrading.h>
-#include <filament/Engine.h>
-#include <filament/MaterialEnums.h>
-
 #include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
 #include <private/backend/PlatformFactory.h>
 
-#include <backend/DriverEnums.h>
-
+#include <private/utils/FeatureFlagManager.h>
 #include <private/utils/Tracing.h>
+
+#include <filament/ColorGrading.h>
+#include <filament/Engine.h>
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
@@ -60,6 +61,7 @@
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
+#include <utils/Slice.h>
 #include <utils/ThreadUtils.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -98,8 +100,9 @@ using namespace filaflat;
 
 namespace {
 
-backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
-    Platform::DriverConfig driverConfig {
+Platform::DriverConfig getDriverConfig(FEngine* instance) {
+    Platform::DriverConfig const driverConfig {
+        .featureFlagManager = instance,
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
         .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
@@ -274,24 +277,25 @@ FEngine::FEngine(Builder const& builder) :
         mMainThreadId(ThreadUtils::getThreadId()),
         mConfig(builder->mConfig)
 {
+    // update all the features flags specified in the builder
+    for (auto const& [feature, value] : builder->mFeatureFlags) {
+        auto* const p = getFeatureFlagPtr(feature.c_str_safe(), true);
+        if (p) {
+            *p = value;
+        }
+    }
+
+
     // update a feature flag from Engine::Config if the flag is not specified in the Builder
     auto const featureFlagsBackwardCompatibility =
             [this, &builder](std::string_view const name, bool const value) {
-        if (builder->mFeatureFlags.find(name) == builder->mFeatureFlags.end()) {
+        if (builder->mFeatureFlags.find(utils::CString(name)) == builder->mFeatureFlags.end()) {
             auto* const p = getFeatureFlagPtr(name, true);
             if (p) {
                 *p = value;
             }
         }
     };
-
-    // update all the features flags specified in the builder
-    for (auto const& feature : builder->mFeatureFlags) {
-        auto* const p = getFeatureFlagPtr(feature.first.c_str_safe(), true);
-        if (p) {
-            *p = feature.second;
-        }
-    }
 
     // update "old" feature flags that were specified in Engine::Config
     featureFlagsBackwardCompatibility("backend.disable_parallel_shader_compile",
@@ -716,12 +720,11 @@ void FEngine::shutdown() {
     mJobSystem.emancipate();
 }
 
-void FEngine::prepare() {
+void FEngine::prepare(DriverApi& driver) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.
-    DriverApi& driver = getDriverApi();
     const bool useUboBatching = isUboBatchingEnabled();
 
     if (useUboBatching) {
@@ -731,7 +734,7 @@ void FEngine::prepare() {
 
     UboManager* uboManager = mUboManager;
     for (auto& materialInstanceList: mMaterialInstances) {
-        materialInstanceList.second.forEach([&driver, uboManager](FMaterialInstance* item) {
+        materialInstanceList.second.forEach([&driver, uboManager](FMaterialInstance const* item) {
             // post-process materials instances must be commited explicitly because their
             // parameters are typically not set at this point in time.
             if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
@@ -742,7 +745,7 @@ void FEngine::prepare() {
 
     if (useUboBatching) {
         assert_invariant(mUboManager != nullptr);
-        getUboManager()->finishBeginFrame(getDriverApi());
+        getUboManager()->finishBeginFrame(driver);
     }
 
     mMaterials.forEach([](FMaterial* material) {
@@ -1456,7 +1459,7 @@ AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
         AsyncCompletionCallback userCallback;
         void* userParam;
         static void func(void* wrappedData) {
-            auto* const data = static_cast<RunCommandAsyncCallback*>(wrappedData);
+            auto const* const data = static_cast<RunCommandAsyncCallback*>(wrappedData);
             data->userCallback(data->userParam);
             delete data;
         }
@@ -1550,30 +1553,26 @@ void FEngine::unprotected() noexcept {
     mUnprotectedDummySwapchain->makeCurrent(getDriverApi());
 }
 
-bool FEngine::setFeatureFlag(char const* name, bool const value) const noexcept {
-    auto* const p = getFeatureFlagPtr(name);
-    if (p) {
-        *p = value;
-    }
-    return p != nullptr;
+Slice<const Engine::FeatureFlag> FEngine::getFeatureFlags() const noexcept {
+    // Engine::FeatureFlag and FeatureFlagManager::FeatureFlag are the same type
+    Slice const r{ FeatureFlagManager::getFeatureFlags() };
+    Slice const result{
+        reinterpret_cast<Engine::FeatureFlag const*>(r.data()),
+        r.size()
+    };
+    return result;
+}
+
+bool FEngine::setFeatureFlag(char const* name, bool const value) noexcept {
+    return FeatureFlagManager::setFeatureFlag(name, value);
 }
 
 std::optional<bool> FEngine::getFeatureFlag(char const* name) const noexcept {
-    auto* const p = getFeatureFlagPtr(name, true);
-    if (p) {
-        return *p;
-    }
-    return std::nullopt;
+    return FeatureFlagManager::getFeatureFlag(name);
 }
 
 bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant) const noexcept {
-    auto pos = std::find_if(mFeatures.begin(), mFeatures.end(),
-            [name](FeatureFlag const& entry) {
-                return name == entry.name;
-            });
-
-    return (pos != mFeatures.end() && (!pos->constant || allowConstant)) ?
-           const_cast<bool*>(pos->value) : nullptr;
+    return FeatureFlagManager::getFeatureFlagPtr(name, allowConstant);
 }
 
 // ------------------------------------------------------------------------------------------------

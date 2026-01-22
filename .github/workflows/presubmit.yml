@@ -1,4 +1,4 @@
-name: Presubmit
+name: 'Presubmit CI'
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
       - uses: ./.github/actions/mac-prereq
       - name: Run build script
         run: |
-          cd build/mac && printf "y" | ./build.sh presubmit
+          cd build/mac && printf "y" | ./build.sh presubmit-with-test
       - name: Test material parser
         run: |
           out/cmake-release/filament/test/test_material_parser

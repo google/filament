@@ -41,6 +41,7 @@
 #include <utils/CString.h>
 #include <utils/ImmutableCString.h>
 #include <utils/Panic.h>
+#include <private/utils/FeatureFlagManager.h>
 
 #ifndef NDEBUG
 #include <set>  // For VulkanDriver::debugCommandBegin
@@ -272,6 +273,10 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mStreamedImageManager(&mExternalImageManager),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mIsMSAASwapChainSupported(false), // TODO: support MSAA swapchain
+      mAcquireSwapChainInMakeCurrent(
+              driverConfig.featureFlagManager ?
+              driverConfig.featureFlagManager->features.backend.vulkan.enable_acquire_swapchain_in_make_current :
+              false),
       mStereoscopicType(driverConfig.stereoscopicType),
       mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
       mAsynchronousMode(driverConfig.asynchronousMode) {
@@ -846,7 +851,7 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
 
     // Base case - build the pipeline without any external samplers.
     mPipelineCache.asyncPrewarmCache(
-        *vprogram.get(),
+        vprogram,
         mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
         stereoscopicType,
         mStereoscopicEyeCount,
@@ -883,7 +888,7 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
         }
 
         mPipelineCache.asyncPrewarmCache(
-            *vprogram.get(),
+            vprogram,
             mPipelineLayoutCache.getLayout(vkLayouts, vprogram),
             stereoscopicType,
             mStereoscopicEyeCount,
@@ -2146,6 +2151,10 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     resource_ptr<VulkanSwapChain> swapChain =
             resource_ptr<VulkanSwapChain>::cast(&mResourceManager, drawSch);
     mCurrentSwapChain = swapChain;
+
+    if (mAcquireSwapChainInMakeCurrent) {
+        acquireNextSwapchainImage();
+    }
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {
