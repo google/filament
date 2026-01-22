@@ -81,7 +81,7 @@ constexpr inline size_t variant_count(bool lit) noexcept {
     size_t count = 0;
     for (size_t i = 0; i < VARIANT_COUNT; i++) {
         Variant variant(i);
-        if (!Variant::isValid(variant)) {
+        if (!Variant::isValidStandardVariant(variant)) {
             continue;
         }
         variant = Variant::filterVariant(variant, lit);
@@ -110,7 +110,7 @@ constexpr auto get_variants() noexcept {
     size_t count = 0;
     for (size_t i = 0; i < VARIANT_COUNT; i++) {
         Variant variant(i);
-        if (Variant::isReserved(variant)) {
+        if (!Variant::isValidStandardVariant(variant)) {
             continue;
         }
         variant = Variant::filterVariant(variant, LIT);
