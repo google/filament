@@ -116,7 +116,7 @@ int PerformanceHintManager::Session::reportActualWorkDuration(
         int64_t actualDurationNanos) noexcept {
     if (__builtin_available(android __ANDROID_API_T__, *)) {
         if (UTILS_LIKELY(mImpl->mSession)) {
-            return APerformanceHint_updateTargetWorkDuration(mImpl->mSession, actualDurationNanos);
+            return APerformanceHint_reportActualWorkDuration(mImpl->mSession, actualDurationNanos);
         }
     }
     return -1;
