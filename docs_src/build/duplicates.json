@@ -82,16 +82,22 @@
     "tools/specular-color/README.md": {
         "dest": "dup/specular_color.md"
     },
+    "tools/specgen/README.md": {
+        "dest": "dup/specgen.md"
+    },
     "docs_src/README.md": {
         "dest": "dup/docs.md"
     },
     "test/renderdiff/README.md": {
-        "dest": "dup/test_renderdiff.md",
+        "dest": "dup/test_ci_renderdiff.md",
         "link_transforms": {
             "docs/images/": "../images/"
         }
     },
     "test/backend/README.md": {
-        "dest": "dup/test_backend.md"
+        "dest": "dup/test_ci_backend.md"
+    },
+    "filament/backend/test/README.md": {
+        "dest": "dup/backend_test.md"
     }
 }

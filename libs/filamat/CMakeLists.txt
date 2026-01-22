@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
+
+include(${EXTERNAL}/clang/usage_ios_13.cmake)
+
 project(filamat)
 
 set(TARGET         filamat)
