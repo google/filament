@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.69.0
+
+- engine: Support custom attributes morphing, and allow for omitting position and/or normal data. [⚠️ **Recompile Materials**]
+
 ## v1.68.5
 
 - engine: "native" Streams are officially deprecated. Use "acquired" streams instead.
