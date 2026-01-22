@@ -195,10 +195,8 @@ public:
         updateActiveProgramsForMatdbg(variant);
 #endif
         backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
-        if (UTILS_LIKELY(program)) {
-            return program;
-        }
-        return getProgramSlow(variant);
+        assert_invariant(program);
+        return program;
     }
 
     // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
@@ -344,17 +342,12 @@ private:
             Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept;
 
-    [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgramSlow(Variant const variant) const noexcept;
-
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>
             processSpecializationConstants(Builder const& builder);
 
     void precacheDepthVariants(backend::DriverApi& driver);
 
     void createAndCacheProgram(backend::DriverApi& driver, backend::Program&& p, Variant variant) const noexcept;
-
-
 
     inline bool isSharedVariant(Variant const variant) const {
         return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&

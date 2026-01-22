@@ -306,27 +306,15 @@ Handle<HwProgram> FMaterial::prepareProgramSlow(DriverApi& driver, Variant const
     if (isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = mEngine.getDefaultMaterial();
         FILAMENT_CHECK_PRECONDITION(defaultMaterial);
+        Handle<HwProgram> program = defaultMaterial->mCachedPrograms[variant.key];
+        if (program) {
+            return mCachedPrograms[variant.key] = program;
+        }
         return mCachedPrograms[variant.key] =
                 defaultMaterial->prepareProgram(driver, variant, priorityQueue);
     }
     return mCachedPrograms[variant.key] = mDefinition.prepareProgram(mEngine, driver,
             getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
-}
-
-[[nodiscard]]
-Handle<HwProgram> FMaterial::getProgramSlow(Variant const variant) const noexcept {
-    if (isSharedVariant(variant)) {
-        FMaterial const* defaultMaterial = mEngine.getDefaultMaterial();
-        FILAMENT_CHECK_PRECONDITION(defaultMaterial);
-        return mCachedPrograms[variant.key] = defaultMaterial->getProgram(variant);
-    }
-#if FILAMENT_ENABLE_MATDBG
-    if (mEditedMaterialParser) {
-        PANIC_PRECONDITION("Program for edited material was not prepared with prepareProgram()");
-    }
-#endif
-    return mCachedPrograms[variant.key] =
-            mEngine.getMaterialCache().getProgramCache().get(getProgramSpecialization(variant));
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
