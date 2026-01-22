@@ -24,6 +24,7 @@ package com.google.android.filament;
  *   <li>ACESLegacyToneMapper</li>
  *   <li>FilmicToneMapper</li>
  *   <li>PBRNeutralToneMapper</li>
+ *   <li>GT7ToneMapper</li>
  * </ul>
  * <li>Debug/validation tone mapping operators</li>
  * <ul>
@@ -108,6 +109,19 @@ public class ToneMapper {
     public static class PBRNeutralToneMapper extends ToneMapper {
         public PBRNeutralToneMapper() {
             super(nCreatePBRNeutralToneMapper());
+        }
+    }
+
+    /**
+     * Gran Turismo 7 tone mapping operator. This tone mapper was designed
+     * to preserve the appearance of materials across lighting conditions while
+     * avoiding artifacts in the highlights in high dynamic range conditions.
+     * This tone mapper targets an SDR paper white value of 250 nits, with a
+     * reference luminance of 100 cd/m^2 (a value of 1.0 in the HDR framebuffer).
+     */
+    public static class GT7ToneMapper extends ToneMapper {
+        public GT7ToneMapper() {
+            super(nCreateGT7ToneMapper());
         }
     }
 
@@ -244,6 +258,7 @@ public class ToneMapper {
     private static native long nCreateACESLegacyToneMapper();
     private static native long nCreateFilmicToneMapper();
     private static native long nCreatePBRNeutralToneMapper();
+    private static native long nCreateGT7ToneMapper();
     private static native long nCreateAgxToneMapper(int look);
     private static native long nCreateGenericToneMapper(
             float contrast, float midGrayIn, float midGrayOut, float hdrMax);

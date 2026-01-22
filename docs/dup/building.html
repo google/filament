@@ -158,8 +158,8 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h2 id="building-filament"><a class="header" href="#building-filament">Building Filament</a></h2>
-<h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h3>
+                        <h1 id="building-filament"><a class="header" href="#building-filament">Building Filament</a></h1>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <p>To build Filament, you must first install the following tools:</p>
 <ul>
 <li>CMake 3.22.1 (or more recent)</li>
@@ -175,14 +175,14 @@ section below.</p>
 <li>Android NDK 25.1 or higher</li>
 <li>Java 17</li>
 </ul>
-<h3 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h3>
+<h2 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h2>
 <p>To build Filament for Android, make sure the environment variable <code>ANDROID_HOME</code> points to the
 location of your Android SDK.</p>
 <p>When building for WebGL, you'll also need to set <code>EMSDK</code>. See <a href="#webassembly">WebAssembly</a>.</p>
 <h3 id="ide"><a class="header" href="#ide">IDE</a></h3>
 <p>We recommend using CLion to develop for Filament. Simply open the root directory's CMakeLists.txt
 in CLion to obtain a usable project.</p>
-<h3 id="easy-build"><a class="header" href="#easy-build">Easy build</a></h3>
+<h2 id="easy-build"><a class="header" href="#easy-build">Easy build</a></h2>
 <p>Once the required OS specific dependencies listed below are installed, you can use the script
 located in <code>build.sh</code> to build Filament easily on macOS and Linux.</p>
 <p>This script can be invoked from anywhere and will produce build artifacts in the <code>out/</code> directory
@@ -206,7 +206,7 @@ The script offers more features described by executing <code>build.sh -h</code>.
 <li><code>-t</code>: <a href="https://google.github.io/filament/dup/fgviewer.html"><code>fgviewer</code></a></li>
 <li><code>-b</code> and <code>-y</code>: <a href="https://google.github.io/filament/notes/asan_ubsan.html">ASAN/UBSAN builds</a></li>
 </ul>
-<h3 id="filament-specific-cmake-options"><a class="header" href="#filament-specific-cmake-options">Filament-specific CMake Options</a></h3>
+<h2 id="filament-specific-cmake-options"><a class="header" href="#filament-specific-cmake-options">Filament-specific CMake Options</a></h2>
 <p>The following CMake options are boolean options specific to Filament:</p>
 <ul>
 <li><code>FILAMENT_ENABLE_LTO</code>:           Enable link-time optimizations if supported by the compiler</li>
@@ -223,7 +223,7 @@ The script offers more features described by executing <code>build.sh -h</code>.
 cmake . -DOPTION=ON       # Replace OPTION with the option name, set to ON / OFF
 </code></pre>
 <p>Options can also be set with the CMake GUI.</p>
-<h3 id="linux"><a class="header" href="#linux">Linux</a></h3>
+<h2 id="linux"><a class="header" href="#linux">Linux</a></h2>
 <p>Make sure you've installed the following dependencies:</p>
 <ul>
 <li><code>clang-16</code> or higher</li>
@@ -265,7 +265,7 @@ update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 <pre><code class="language-shell">ninja
 </code></pre>
 <p>This will build Filament, its tests and samples, and various host tools.</p>
-<h3 id="macos"><a class="header" href="#macos">macOS</a></h3>
+<h2 id="macos"><a class="header" href="#macos">macOS</a></h2>
 <p>To compile Filament you must have the most recent version of Xcode installed and you need to
 make sure the command line tools are setup by running:</p>
 <pre><code class="language-shell">xcode-select --install
@@ -278,14 +278,14 @@ cd out/cmake-release
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ninja
 </code></pre>
-<h3 id="ios"><a class="header" href="#ios">iOS</a></h3>
+<h2 id="ios"><a class="header" href="#ios">iOS</a></h2>
 <p>The easiest way to build Filament for iOS is to use <code>build.sh</code> and the
 <code>-p ios</code> flag. For instance to build the debug target:</p>
 <pre><code class="language-shell">./build.sh -p ios debug
 </code></pre>
 <p>See <a href="./ios/samples/README.html">ios/samples/README.md</a> for more information.</p>
-<h3 id="windows"><a class="header" href="#windows">Windows</a></h3>
-<h4 id="building-on-windows-with-visual-studio-2019-or-later"><a class="header" href="#building-on-windows-with-visual-studio-2019-or-later">Building on Windows with Visual Studio 2019 or later</a></h4>
+<h2 id="windows"><a class="header" href="#windows">Windows</a></h2>
+<h3 id="building-on-windows-with-visual-studio-2019-or-later"><a class="header" href="#building-on-windows-with-visual-studio-2019-or-later">Building on Windows with Visual Studio 2019 or later</a></h3>
 <p>Install the following components:</p>
 <ul>
 <li><a href="https://www.visualstudio.com/downloads">Visual Studio 2019 or later</a></li>
@@ -314,7 +314,7 @@ target in the <em>Solution Explorer</em> and choose <em>Build</em> to build a sp
 <code>out</code> folder run the following command.</p>
 <pre><code class="language-bat">cmake --build . --target gltf_viewer --config Release
 </code></pre>
-<h3 id="android"><a class="header" href="#android">Android</a></h3>
+<h2 id="android"><a class="header" href="#android">Android</a></h2>
 <p>Before building Filament for Android, make sure to build Filament for your host. Some of the
 host tools are required to successfully build for Android.</p>
 <p>Filament can be built for the following architectures:</p>
@@ -327,11 +327,11 @@ host tools are required to successfully build for Android.</p>
 <p>Note that the main target is the ARM 64-bit target. Our implementation is optimized first and
 foremost for <code>arm64-v8a</code>.</p>
 <p>To build Android on Windows machines, see <a href="android/Windows.html">android/Windows.md</a>.</p>
-<h4 id="important-sdk-location"><a class="header" href="#important-sdk-location">Important: SDK location</a></h4>
+<h3 id="important-sdk-location"><a class="header" href="#important-sdk-location">Important: SDK location</a></h3>
 <p>Either ensure your <code>ANDROID_HOME</code> environment variable is set or make sure the root project
 contains a <code>local.properties</code> file with the <code>sdk.dir</code> property pointing to your installation of
 the Android SDK.</p>
-<h4 id="easy-android-build"><a class="header" href="#easy-android-build">Easy Android build</a></h4>
+<h3 id="easy-android-build"><a class="header" href="#easy-android-build">Easy Android build</a></h3>
 <p>The easiest way to build Filament for Android is to use <code>build.sh</code> and the
 <code>-p android</code> flag. For instance to build the release target:</p>
 <pre><code class="language-shell">./build.sh -p android release
@@ -341,7 +341,7 @@ the Android SDK.</p>
 </code></pre>
 <p>The output APK can be found in <code>android/samples/sample-hello-triangle/build/outputs/apk/release/sample-hello-triangle-release-unsigned.apk</code></p>
 <p>Run <code>build.sh -h</code> for more information.</p>
-<h4 id="android-studio"><a class="header" href="#android-studio">Android Studio</a></h4>
+<h3 id="android-studio"><a class="header" href="#android-studio">Android Studio</a></h3>
 <p>You must use the latest stable release of Android Studio.</p>
 <p>The Android build of filament is separated into java/kotlin client APIs, a layer of jni bindings
 that bridges java/kotlin with native code, and Filament and other component code that have been compiled
@@ -362,7 +362,7 @@ By doing so, Android Studio will automatically try to compile the app only for t
 device's architecture. So if you are targeting a new Pixel phone, make sure that the step above
 (compiling the library) is targeting ARM 64-bit (<code>-q arm64-v8a</code> ), and if you are running the app on
 an emulator on a Linux machine with an x86 64-bit chipset, you would indicate (<code>-q x86_64</code>) in the above step.</p>
-<h4 id="manual-builds"><a class="header" href="#manual-builds">Manual builds</a></h4>
+<h3 id="manual-builds"><a class="header" href="#manual-builds">Manual builds</a></h3>
 <p>Invoke CMake in a build directory of your choice, inside of filament's directory. The commands
 below show how to build Filament for ARM 64-bit (<code>aarch64</code>).</p>
 <pre><code class="language-shell">mkdir out/android-build-release-aarch64
@@ -379,7 +379,7 @@ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-aarch64-linux-androi
 <p>This will generate Filament's Android binaries in <code>out/android-release</code>. This location is important
 to build the Android Studio projects located in <code>filament/android</code>. After install, the library
 binaries should be found in <code>out/android-release/filament/lib/arm64-v8a</code>.</p>
-<h4 id="aar"><a class="header" href="#aar">AAR</a></h4>
+<h3 id="aar"><a class="header" href="#aar">AAR</a></h3>
 <p>Before you attempt to build the AAR, make sure you've compiled and installed the native libraries
 as explained in the sections above. You must have the following ABIs built in
 <code>out/android-release/filament/lib/</code>:</p>
@@ -405,7 +405,7 @@ AAR.</p>
 </code></pre>
 <p>The <code>-Pcom.google.android.filament.dist-dir</code> can be used to specify a different installation
 directory (it must match the CMake install prefix used in the previous steps).</p>
-<h4 id="using-filaments-aar"><a class="header" href="#using-filaments-aar">Using Filament's AAR</a></h4>
+<h3 id="using-filaments-aar"><a class="header" href="#using-filaments-aar">Using Filament's AAR</a></h3>
 <p>Create a new module in your project and select <em>Import .JAR or .AAR Package</em> when prompted. Make
 sure to add the newly created module as a dependency to your application.</p>
 <p>If you do not wish to include all supported ABIs, make sure to create the appropriate flavors in
@@ -441,7 +441,7 @@ productFlavors {
     }
 }
 </code></pre>
-<h3 id="webassembly"><a class="header" href="#webassembly">WebAssembly</a></h3>
+<h2 id="webassembly"><a class="header" href="#webassembly">WebAssembly</a></h2>
 <p>The core Filament library can be cross-compiled to WebAssembly from either macOS or Linux. To get
 started, follow the instructions for building Filament on your platform (<a href="#macos">macOS</a> or
 <a href="#linux">linux</a>), which will ensure you have the proper dependencies installed.</p>

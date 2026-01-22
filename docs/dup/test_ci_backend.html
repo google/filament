@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>matinfo - Filament</title>
+        <title>CI: backend - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,22 +158,34 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="matinfo"><a class="header" href="#matinfo">matinfo</a></h1>
-<p><code>matinfo</code> lists the content of a compiled material as output by <code>matc</code>. This tool is meant to be
-used for debug purpose only.</p>
-<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
-<pre><code class="language-shell">matinfo [options] &lt;material file&gt;
-</code></pre>
+                        <h1 id="backend-tests"><a class="header" href="#backend-tests">Backend Tests</a></h1>
+<p>This directory (<code>/test/backend</code>) contains scripts to run Filament's backend tests using a software
+rasterizer (Mesa). This is useful for running tests in a continuous integration environment where a
+GPU might not be available.</p>
+<p>The <code>test.sh</code> script will:</p>
+<ol>
+<li>Build Mesa if needed.</li>
+<li>Build the backend tests.</li>
+<li>Run the tests using the OpenGL and Vulkan backends with Mesa.</li>
+</ol>
+<h2 id="flags"><a class="header" href="#flags">Flags</a></h2>
+<p>The <code>test.sh</code> script accepts the following flags:</p>
+<ul>
+<li><code>--gtest_filter</code>: Filters the tests that are run. This is passed directly to the underlying
+gtest executable.</li>
+<li><code>--backend</code>: Specifies which backend to test. Can be <code>opengl</code>, <code>vulkan</code>, or a comma-separated
+list (e.g., <code>opengl,vulkan</code>). Defaults to both.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dup/filamesh.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../dup/backend_test.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../dup/mipgen.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dup/test_ci_renderdiff.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -183,11 +195,11 @@ used for debug purpose only.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dup/filamesh.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../dup/backend_test.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../dup/mipgen.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dup/test_ci_renderdiff.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
