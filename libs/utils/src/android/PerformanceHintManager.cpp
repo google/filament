@@ -39,13 +39,18 @@ struct PerformanceHintManager::SessionDetails {
     APerformanceHintSession* mSession = nullptr;
 };
 
-PerformanceHintManager::PerformanceHintManager() noexcept {
+PerformanceHintManager::PerformanceHintManager() noexcept = default;
+
+PerformanceHintManager::~PerformanceHintManager() noexcept = default;
+
+void PerformanceHintManager::init() {
     if (__builtin_available(android __ANDROID_API_T__, *)) {
         mImpl->mManager = APerformanceHint_getManager();
     }
 }
 
-PerformanceHintManager::~PerformanceHintManager() noexcept = default;
+void PerformanceHintManager::terminate() {
+}
 
 bool PerformanceHintManager::isSupported() noexcept {
     if (__builtin_available(android __ANDROID_API_T__, *)) {

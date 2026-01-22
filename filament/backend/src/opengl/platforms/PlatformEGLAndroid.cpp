@@ -119,18 +119,6 @@ struct PlatformEGLAndroid::AndroidDetails {
 
 // ---------------------------------------------------------------------------------------------
 
-PlatformEGLAndroid::InitializeJvmForPerformanceManagerIfNeeded::InitializeJvmForPerformanceManagerIfNeeded() {
-    // PerformanceHintManager() needs the calling thread to be a Java thread; so we need
-    // to attach this thread to the JVM before we initialize PerformanceHintManager.
-    // This should be done in PerformanceHintManager(), but libutils doesn't have access to
-    // VirtualMachineEnv.
-    if (PerformanceHintManager::isSupported()) {
-        (void)VirtualMachineEnv::get().getEnvironment();
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
-
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         : mExternalStreamManager(ExternalStreamManagerAndroid::create()),
           mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
@@ -145,6 +133,7 @@ PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
 }
 
 void PlatformEGLAndroid::terminate() noexcept {
+    mPerformanceHintManager.terminate();
     mAndroidDetails.androidFrameCallback.terminate();
     ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
     PlatformEGL::terminate();
@@ -222,6 +211,14 @@ void PlatformEGLAndroid::preCommit() noexcept {
 
 Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
         const DriverConfig& driverConfig) {
+
+    // PerformanceHintManager() needs the calling thread to be a Java thread; so we need
+    // to attach this thread to the JVM before we initialize PerformanceHintManager.
+    if (PerformanceHintManager::isSupported()) {
+        (void)VirtualMachineEnv::get().getEnvironment();
+    }
+
+    mPerformanceHintManager.init();
 
     // the refresh rate default value doesn't matter, we change it later
     int32_t const tid = gettid();
