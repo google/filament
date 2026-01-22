@@ -64,6 +64,8 @@ public:
 
     bool isInitialized() const noexcept { return index != UNINITIALIZED; }
 
+    uint16_t getIndex() const noexcept { return index; }
+
     operator bool() const noexcept { return isInitialized(); }
 
     void clear() noexcept { index = UNINITIALIZED; version = 0; }

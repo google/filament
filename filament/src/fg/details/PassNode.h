@@ -23,8 +23,11 @@
 #include "fg/FrameGraphRenderPass.h"
 
 #include "backend/DriverApiForward.h"
-
 #include <backend/TargetBufferInfo.h>
+
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/FrameGraphInfo.h>
+#endif
 
 #include <cstdint>
 #include <unordered_set>
@@ -60,6 +63,12 @@ public:
     virtual void resolve() noexcept = 0;
     utils::CString graphvizifyEdgeColor() const noexcept override;
 
+#if FILAMENT_ENABLE_FGVIEWER
+    virtual std::vector<fgviewer::FrameGraphInfo::Pass::RenderTargetInfo>
+            getRenderTargetInfo() const noexcept {
+        return {};
+    }
+#endif
     Vector<VirtualResource*> devirtualize;         // resources we need to create before executing
     Vector<VirtualResource*> destroy;              // resources we need to destroy after executing
 };
@@ -93,6 +102,7 @@ public:
             utils::StaticString name, FrameGraphRenderPass::Descriptor const& descriptor);
 
     RenderPassData const* getRenderPassData(uint32_t id) const noexcept;
+    size_t getRenderTargetCount() const noexcept { return mRenderTargetData.size(); }
 
 private:
     // virtuals from DependencyGraph::Node
@@ -100,6 +110,10 @@ private:
     utils::CString graphvizify() const noexcept override;
     void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept override;
     void resolve() noexcept override;
+#if FILAMENT_ENABLE_FGVIEWER
+    std::vector<fgviewer::FrameGraphInfo::Pass::RenderTargetInfo>
+            getRenderTargetInfo() const noexcept override;
+#endif
 
     // constants
     const char* const mName = nullptr;

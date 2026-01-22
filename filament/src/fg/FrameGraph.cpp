@@ -522,8 +522,8 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
                 continue;
             writes.push_back(resourceNode->resourceHandle.index);
         }
-        passes.emplace_back(utils::CString(pass->getName()),
-            std::move(reads), std::move(writes));
+        passes.emplace_back(pass->getId(), utils::CString(pass->getName()),
+            std::move(reads), std::move(writes), pass->getRenderTargetInfo());
     }
 
     std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
