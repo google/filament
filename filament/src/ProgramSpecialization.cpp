@@ -21,7 +21,7 @@ namespace filament {
 
 size_t ProgramSpecialization::hash() const noexcept {
     size_t seed = 0;
-    utils::hash::combine_fast(seed, programCacheId);
+    utils::hash::combine_fast(seed, materialCrc32);
     utils::hash::combine_fast(seed, variant.key);
     utils::hash::combine_fast(seed, specializationConstants.hash());
     return seed;
@@ -31,7 +31,7 @@ bool ProgramSpecialization::operator==(ProgramSpecialization const& rhs) const n
     if (this == &rhs) {
         return true;
     }
-    return programCacheId == rhs.programCacheId && variant == rhs.variant &&
+    return materialCrc32 == rhs.materialCrc32 && variant == rhs.variant &&
             specializationConstants == rhs.specializationConstants;
 }
 
