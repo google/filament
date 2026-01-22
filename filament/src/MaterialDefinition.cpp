@@ -806,7 +806,7 @@ Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, DriverApi&
     if (!hasVariant(specialization.variant, engine.getShaderModel(), driver.isStereoSupported())) {
         return {};
     }
-    if (parser == *mMaterialParser) {
+    if (engine.features.backend.enable_program_cache && parser == *mMaterialParser) {
         Handle<HwProgram>* program = engine.getMaterialCache().getProgramCache().get(specialization,
                 [this, &engine, &parser, &specialization, priorityQueue]() {
                     return compileProgram(engine, parser, specialization, priorityQueue);
@@ -814,11 +814,7 @@ Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, DriverApi&
         assert_invariant(*program);
         return *program;
     } else {
-#if FILAMENT_ENABLE_MATDBG
         return compileProgram(engine, parser, specialization, priorityQueue);
-#else
-        PANIC_PRECONDITION("Attempted to prepare programs with an invalid MaterialParser");
-#endif
     }
 }
 
@@ -827,16 +823,12 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
         MaterialParser const& parser,
         utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
         bool isDefaultMaterial) const {
-    if (parser == *mMaterialParser) {
+    if (engine.features.backend.enable_program_cache && parser == *mMaterialParser) {
         acquireProgramsImpl<true>(engine, programCache, *this, parser, specializationConstants,
                 isDefaultMaterial);
     } else {
-#if FILAMENT_ENABLE_MATDBG
         acquireProgramsImpl<false>(engine, programCache, *this, parser, specializationConstants,
                 isDefaultMaterial);
-#else
-        PANIC_PRECONDITION("Attempted to prepare programs with an invalid MaterialParser");
-#endif
     }
 }
 
@@ -844,16 +836,12 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
         utils::Slice<Handle<HwProgram>> programCache, MaterialParser const& parser,
         utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
         bool isDefaultMaterial) const {
-    if (parser == *mMaterialParser) {
+    if (engine.features.backend.enable_program_cache && parser == *mMaterialParser) {
         releaseProgramsImpl<true>(engine, programCache, *this, specializationConstants,
                 isDefaultMaterial);
     } else {
-#if FILAMENT_ENABLE_MATDBG
         releaseProgramsImpl<false>(engine, programCache, *this, specializationConstants,
                 isDefaultMaterial);
-#else
-        PANIC_PRECONDITION("Attempted to release programs with an invalid MaterialParser");
-#endif
     }
 }
 
