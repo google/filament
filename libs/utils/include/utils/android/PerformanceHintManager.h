@@ -55,9 +55,14 @@ public:
         int reportActualWorkDuration(int64_t actualDurationNanos) noexcept;
     };
 
-    // caveat: This must be called on a Java thread
     PerformanceHintManager() noexcept;
     ~PerformanceHintManager() noexcept;
+
+    // caveat: This must be called on a Java thread
+    void init();
+
+    // caveat: This must be called on the same thread as init
+    void terminate();
 
     // Whether PerformanceHintManager APIs are supported (which doesn't mean PerformanceHintManager
     // itself is, use isValid()).
