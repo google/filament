@@ -365,7 +365,7 @@ BufferInterfaceBlock::FieldInfo const* FMaterial::reflect(
 
 ProgramSpecialization FMaterial::getProgramSpecialization(Variant const variant) const noexcept {
     return ProgramSpecialization {
-        .programCacheId = mDefinition.cacheId,
+        .materialCrc32 = mDefinition.getMaterialParser().getCrc32(),
         .variant = variant,
         .specializationConstants = mSpecializationConstants,
     };

@@ -57,7 +57,7 @@ void acquireProgramsImpl(FEngine& engine, utils::Slice<Handle<HwProgram>> progra
     bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
 
     ProgramSpecialization specialization = {
-        .programCacheId = definition.cacheId,
+        .materialCrc32 = definition.getMaterialParser().getCrc32(),
         .specializationConstants = specializationConstants,
     };
 
@@ -121,7 +121,7 @@ void releaseProgramsImpl(FEngine& engine, utils::Slice<Handle<HwProgram>> progra
     bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
 
     ProgramSpecialization specialization = {
-        .programCacheId = definition.cacheId,
+        .materialCrc32 = definition.getMaterialParser().getCrc32(),
         .specializationConstants = specializationConstants,
     };
 

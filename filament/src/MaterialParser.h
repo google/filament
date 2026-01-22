@@ -74,6 +74,8 @@ public:
     uint32_t computeCrc32() const noexcept;
     // Return the cached computed CRC32 or the CRC32 built into the material file if one exists.
     std::optional<uint32_t> getPrecomputedCrc32() const noexcept;
+    // Return the CRC32 of the material.
+    uint32_t getCrc32() const noexcept;
 
     backend::ShaderLanguage getShaderLanguage() const noexcept;
 
