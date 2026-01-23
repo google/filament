@@ -20,6 +20,8 @@ class SimulatedSkybox {
     this.shimmerControl = [0.0, 20.0, 0.1];
     this.cloudControl = [0.0, 0.1, 8000.0, 0.0];
     this.cloudControl2 = [0.0, 0.0, 0.0, 0.0];
+    this.waterControl = [50.0, 1.0, 1.0, 4.0]; // x=Strength, y=Speed, z=DerivativeTrick, w=Octaves
+    this.starControl = [1.0, 1.0]; // x=Density (0-1), y=Enabled (0-1)
     this.planetRadius = 6360.0;
 
     // Sun Halo
@@ -204,12 +206,26 @@ class SimulatedSkybox {
     this.updateCoefficients();
   }
 
+  setWaterControl(strength, speed, derivativeTrick, octaves) {
+    this.waterControl[0] = Math.max(0.0, strength);
+    this.waterControl[1] = Math.max(0.0, speed);
+    this.waterControl[2] = derivativeTrick;
+    this.waterControl[3] = Math.max(1.0, Math.min(8.0, octaves));
+    this.updateCoefficients();
+  }
+
+  setStarControl(density, enabled) {
+    this.starControl[0] = Math.max(0.0, Math.min(1.0, density));
+    this.starControl[1] = enabled ? 1.0 : 0.0;
+    this.updateCoefficients();
+  }
+
   updateCoefficients() {
     if (!this.materialInstance) {
       console.warn("updateCoefficients called before material loaded");
       return;
     }
-    console.log("Updating coefficients...");
+
 
     // 1. Rayleigh Coefficients
     const F_PI = Math.PI;
@@ -287,6 +303,8 @@ class SimulatedSkybox {
     this.materialInstance.setFloat4Parameter('shimmerControl', new Float32Array(shimmerUniform));
     this.materialInstance.setFloat4Parameter('cloudControl', new Float32Array(cloudUniform));
     this.materialInstance.setFloat4Parameter('cloudControl2', new Float32Array(this.cloudControl2));
+    this.materialInstance.setFloat4Parameter('waterControl', new Float32Array(this.waterControl));
+    this.materialInstance.setFloat2Parameter('starControl', new Float32Array(this.starControl));
 
     this.materialInstance.setFloatParameter('sunIntensity', physicalSunIntensity);
   }
