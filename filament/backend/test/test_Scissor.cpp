@@ -32,7 +32,7 @@ using namespace filament;
 using namespace filament::backend;
 
 TEST_F(BackendTest, ScissorViewportRegion) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
+    // SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     auto& api = getDriverApi();
 
     constexpr int kSrcTexWidth = 1024;
@@ -84,7 +84,11 @@ TEST_F(BackendTest, ScissorViewportRegion) {
                 kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
                 TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT TEXTURE_USAGE_READ_PIXELS));
         Handle<HwTexture> depthTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
-                TextureFormat::DEPTH16, 1, 512, 512, 1, TextureUsage::DEPTH_ATTACHMENT));
+                TextureFormat::DEPTH16, 1, 512, 512, 1, TextureUsage::SAMPLEABLE | TextureUsage::DEPTH_ATTACHMENT));
+        // Handle<HwTexture> srcTexture = addCleanup(
+        //         api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, 512, 512, 1,
+        //                 TextureUsage::SAMPLEABLE |
+        //                         TextureUsage::COLOR_ATTACHMENT TEXTURE_USAGE_READ_PIXELS));
 
         // Render into the bottom-left quarter of the texture.
         Viewport srcRect = {
@@ -103,8 +107,11 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         // We purposely set the render target width and height to smaller than the texture, to check
         // that this case is handled correctly.
         Handle<HwRenderTarget> rt = addCleanup(api.createRenderTarget(
-                TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1,
-                1, { srcTexture, kSrcLevel, 0 }, { depthTexture, 0, 0 }, {}));
+                TargetBufferFlags::COLOR, kSrcRtHeight, kSrcRtHeight,
+                1, 1, { srcTexture, kSrcLevel, 0 }, {}, {}));
+
+        // Handle<HwRenderTarget> rt = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR, 512,
+        //         512, 1, 1, { srcTexture, 0, 0 }, {depthTexture, 0, 0}, {}));
 
         TrianglePrimitive triangle(api);
 
@@ -129,6 +136,8 @@ TEST_F(BackendTest, ScissorViewportRegion) {
 
         EXPECT_IMAGE(rt,
                 ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
+        // EXPECT_IMAGE(rt,
+        //         ScreenshotParams(1024, 1024, "scissor", 15842520));
 
         api.commit(swapChain);
         api.endFrame(0);

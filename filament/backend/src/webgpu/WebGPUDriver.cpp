@@ -1472,6 +1472,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
     const auto srcTarget{ handleCast<WebGPURenderTarget>(sourceRenderTargetHandle) };
     assert_invariant(srcTarget);
 
+    uint32_t srcMipLevel = 0;
     wgpu::Texture srcTexture{ nullptr };
     if (srcTarget->isDefaultRenderTarget()) {
         assert_invariant(mSwapChain);
@@ -1482,6 +1483,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         // TODO we are currently assuming the first attachment is the desired texture.
         if (colorAttachmentInfos[0].handle) {
             auto texture = handleCast<WebGPUTexture>(colorAttachmentInfos[0].handle);
+            srcMipLevel = colorAttachmentInfos[0].level;
             if (texture) {
                 srcTexture = texture->getTexture();
             }
@@ -1494,15 +1496,21 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         return;
     }
     const uint32_t srcWidth {srcTexture.GetWidth()};
-    const uint32_t srcHeight{srcTexture.GetHeight()};
+    const uint32_t srcHeight {srcTexture.GetHeight()};
+    const uint32_t srcMipLevelCount {srcTexture.GetMipLevelCount()};
+
+    const uint32_t mipLevelImageScale = 1 << srcMipLevel;
+    const uint32_t mipLeveledSrcWidth = srcWidth / mipLevelImageScale;
+    const uint32_t mipLeveledSrcHeight = srcHeight / mipLevelImageScale;
+    assert_invariant(mipLeveledSrcWidth > 0 && mipLeveledSrcHeight > 0);
 
     // Clamp read region to texture bounds
-    if (UTILS_UNLIKELY(x >= srcWidth || y >= srcHeight)) {
+    if (UTILS_UNLIKELY(x >= mipLeveledSrcWidth || y >= mipLeveledSrcHeight)) {
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
-    auto actualWidth{ std::min(width, srcWidth - x) };
-    auto actualHeight{ std::min(height, srcHeight - y)};
+    auto actualWidth{ std::min(width, mipLeveledSrcWidth - x) };
+    auto actualHeight{ std::min(height, mipLeveledSrcHeight - y)};
     if (UTILS_UNLIKELY(actualWidth == 0 || actualHeight == 0)) {
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
@@ -1526,6 +1534,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
     // If the source format is different from the destination (e.g. BGRA vs RGBA),
     // we need to perform a conversion using an intermediate blit.
     if (conversionNecessary(srcFormat, dstFormat, pixelBufferDescriptor.type)) {
+        // TODO: check if the blit process here is correct when mipmap level > 0
         const wgpu::TextureDescriptor stagingDescriptor{
                 .label = "readpixels_staging_texture",
                 .usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::RenderAttachment,
@@ -1536,7 +1545,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
                         .depthOrArrayLayers = 1,
                 },
                 .format = dstFormat,
-                .mipLevelCount = 1,
+                .mipLevelCount = srcMipLevelCount,
                 .sampleCount = srcTexture.GetSampleCount(),
         };
         stagingTexture = mDevice.CreateTexture(&stagingDescriptor);
@@ -1586,12 +1595,11 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
 
     // WebGPU's texture coordinates for copies are top-left, but Filament's y-coordinate is
     // bottom-left. We must flip the y-coordinate relative to the texture we are reading from.
-    const uint32_t textureHeight{ textureToReadFrom.GetHeight() };
-    const uint32_t flippedY{ textureHeight - readY - actualHeight };
+    const uint32_t flippedY{ mipLeveledSrcHeight - readY - actualHeight };
 
     const wgpu::TexelCopyTextureInfo source{
             .texture = textureToReadFrom, // Read from the original or intermediate texture
-            .mipLevel = 0,
+            .mipLevel = srcMipLevel,
             .origin = {.x = readX, .y = flippedY, .z = 0,},
     };
     const wgpu::TexelCopyBufferInfo destination{
