@@ -41,6 +41,12 @@ class App {
     this.view.setColorGrading(this.colorGrading);
     this.view.setPostProcessingEnabled(true); // Essential for tone mapping
 
+    // Bloom
+    this.view.setBloomOptions({
+      enabled: false,
+      lenseFlare: false
+    });
+
     // Clear color is not really visible behind skybox, but black is standard
     this.renderer.setClearOptions({ clearColor: [0.0, 0.0, 0.0, 1.0], clear: true });
 
@@ -198,11 +204,64 @@ class App {
     cloudFolder.add(cParams, 'speed', 0.0, 200.0).onChange(v => sky.setCloudControl(cParams.coverage, cParams.density, cParams.height, v));
     cloudFolder.add(cParams, 'evolution', 0.0, 2.0).onChange(v => sky.setCloudShapeEvolution(v));
 
+    const waterFolder = gui.addFolder('Water');
+    const wParams = {
+      derivativeTrick: true,
+      strength: 50.0,
+      speed: 1.0,
+      octaves: 4.0
+    };
+    // Initialize defaults
+    sky.setWaterControl(50.0, 1.0, 1.0, 4.0); // 1.0 = Derivative Trick On, 4 octaves
+
+    const updateWater = () => {
+      sky.setWaterControl(wParams.strength, wParams.speed, wParams.derivativeTrick ? 1.0 : 0.0, wParams.octaves);
+    };
+
+    waterFolder.add(wParams, 'derivativeTrick').name('Derivative Trick').onChange(updateWater);
+    waterFolder.add(wParams, 'strength', 10.0, 100.0).onChange(updateWater);
+    waterFolder.add(wParams, 'speed', 0.0, 5.0).onChange(updateWater);
+    waterFolder.add(wParams, 'octaves', 1, 8, 1).name('Octaves').onChange(updateWater);
+    waterFolder.close();
+
+    const starFolder = gui.addFolder('Stars');
+    const sParams = {
+      enabled: true,
+      density: 1.0
+    };
+    // Initialize defaults (Density 1.0, Enabled True)
+    sky.setStarControl(1.0, true);
+
+    const updateStars = () => {
+      sky.setStarControl(sParams.density, sParams.enabled);
+    };
+
+    starFolder.add(sParams, 'enabled').name('Enabled').onChange(updateStars);
+    starFolder.add(sParams, 'density', 0.0, 1.0).name('Density').onChange(updateStars);
+    starFolder.close();
+
     const camFolder = gui.addFolder('Camera');
     camFolder.add(this.params, 'focalLength', 8.0, 300.0).name('Focal Length').onChange(() => this.updateCameraProjection());
     camFolder.add(this.params, 'aperture', 1.4, 32.0).onChange(() => this.updateCameraExposure());
     camFolder.add(this.params, 'shutterSpeed', 1.0, 1000.0).onChange(() => this.updateCameraExposure());
     camFolder.add(this.params, 'iso', 50.0, 3200.0).onChange(() => this.updateCameraExposure());
+
+    const bloomFolder = camFolder.addFolder('Bloom');
+    const bParams = {
+      enabled: false,
+      lensFlare: false
+    };
+
+    const updateBloom = () => {
+      this.view.setBloomOptions({
+        enabled: bParams.enabled,
+        lensFlare: bParams.lensFlare
+      });
+    };
+
+    bloomFolder.add(bParams, 'enabled').onChange(updateBloom);
+    bloomFolder.add(bParams, 'lensFlare').onChange(updateBloom);
+    bloomFolder.close();
 
     // Collapse folders by default
     sunDisk.close();
