@@ -74,6 +74,11 @@ public:
 
     // Used to change specialization constants at runtime internally by Filament.
     //
+    // Call Material::getSpecializationConstantsBuilder() to return an instance of
+    // SpecializationConstantsBuilder. The lifetime of this object must not exceed the lifetime of
+    // the corresponding Material. After spec constants are changed with calls to set(), apply the
+    // changes to the original Material via setSpecializationConstants().
+    //
     // It would be nice to reuse Builder for this, but Builder allocates an entire map and asserts
     // if specified constants don't exist. In constrast, SpecializationConstantsBuilder is
     // copy-on-write and allows non-existent specialization constants to be named.

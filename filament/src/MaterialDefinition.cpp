@@ -806,7 +806,7 @@ Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, DriverApi&
     if (!hasVariant(specialization.variant, engine.getShaderModel(), driver.isStereoSupported())) {
         return {};
     }
-    if (UTILS_LIKELY(engine.features.backend.enable_program_cache && parser == *mMaterialParser)) {
+    if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
         Handle<HwProgram>* program = engine.getMaterialCache().getProgramCache().get(specialization,
                 [this, &engine, &parser, &specialization, priorityQueue]() {
                     return compileProgram(engine, parser, specialization, priorityQueue);
@@ -823,7 +823,7 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
         MaterialParser const& parser,
         utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
         bool isDefaultMaterial) const {
-    if (UTILS_LIKELY(engine.features.backend.enable_program_cache && parser == *mMaterialParser)) {
+    if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
         acquireProgramsImpl<true>(engine, programCache, *this, parser, specializationConstants,
                 isDefaultMaterial);
     } else {
@@ -836,7 +836,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
         utils::Slice<Handle<HwProgram>> programCache, MaterialParser const& parser,
         utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
         bool isDefaultMaterial) const {
-    if (UTILS_LIKELY(engine.features.backend.enable_program_cache && parser == *mMaterialParser)) {
+    if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
         releaseProgramsImpl<true>(engine, programCache, *this, specializationConstants,
                 isDefaultMaterial);
     } else {

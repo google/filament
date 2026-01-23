@@ -38,6 +38,8 @@ class Material;
 class MaterialCache {
     // A newtype around a material parser used as a key for the material cache. The material file's
     // CRC32 is used as the hash function.
+    //
+    // See mDefinitions.
     struct MaterialKey {
         struct Hash {
             size_t operator()(MaterialKey const& x) const noexcept;
@@ -75,6 +77,9 @@ private:
     // TODO: investigate using custom allocators for the below data structures?
 
     // We use unique_ptr here because we need these pointers to be stable.
+    //
+    // Each MaterialKey points to its value's MaterialParser. We take care to not expose this
+    // lifetime concern to the clients of MaterialCache.
     utils::RefCountedMap<MaterialKey, std::unique_ptr<MaterialDefinition>, MaterialKey::Hash>
             mDefinitions;
 
