@@ -2553,6 +2553,11 @@ void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
         VkPipelineLayout const pipelineLayout = mPipelineLayoutCache.getLayout(vklayouts, program);
         if (pipelineLayout != mPipelineState.pipelineLayout) {
             bindPipelineImpl(bundle.pipelineState, pipelineLayout, bundle.descriptorSetMask);
+            // Any push constants received while the layout was null were not written out. They were
+            // added to a list of pending constants, so we'll flush them now.
+            // Further push constant updates after the pipeline is bound will immediately set
+            // the constants because the layout is non-null (see VulkanProgram::writePushConstant).
+            program->flushPushConstants(pipelineLayout);
         }
         mPipelineState.bindInDraw.first = false;
     }

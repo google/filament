@@ -940,31 +940,32 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
 
         // Maximum space occupied in the CircularBuffer by a single `Command`. This must be
         // reevaluated when the inner loop below adds DriverApi commands or when we change the
-        // CommandStream protocol. Currently, the maximum is 248 bytes.
+        // CommandStream protocol. Currently, the maximum is 272 bytes.
         // The batch size is calculated by adding the size of all commands that can possibly be
         // emitted per draw call:
         constexpr size_t maxCommandSizeInBytes =
                 sizeof(COMMAND_TYPE(scissor)) +
                 sizeof(COMMAND_TYPE(bindDescriptorSet)) +
-                sizeof(COMMAND_TYPE(bindDescriptorSet)) +
+                sizeof(COMMAND_TYPE(bindDescriptorSet)) + backend::CustomCommand::align(sizeof(NoopCommand) + 4) +
                 sizeof(COMMAND_TYPE(bindPipeline)) +
                 sizeof(COMMAND_TYPE(bindRenderPrimitive)) +
                 sizeof(COMMAND_TYPE(bindDescriptorSet)) + backend::CustomCommand::align(sizeof(NoopCommand) + 8) +
                 sizeof(COMMAND_TYPE(setPushConstant)) +
                 sizeof(COMMAND_TYPE(draw2));
 
+        // Add 20% margin for safety
+        constexpr size_t safeCommandSizeInBytes = maxCommandSizeInBytes + (maxCommandSizeInBytes / 5);
 
         // Number of Commands that can be issued and guaranteed to fit in the current
-        // CircularBuffer allocation. In practice, we'll have tons of headroom especially if
-        // skinning and morphing aren't used. With a 2 MiB buffer (the default) a batch is
-        // 6553 commands (i.e. draw calls).
-        size_t const batchCommandCount = capacity / maxCommandSizeInBytes;
+        // CircularBuffer allocation. With a 2 MiB buffer (the default) a batch is
+        // 6432 commands (i.e. draw calls).
+        size_t const batchCommandCount = capacity / safeCommandSizeInBytes;
         while(first != last) {
             Command const* const batchLast = std::min(first + batchCommandCount, last);
 
             // actual number of commands we need to write (can be smaller than batchCommandCount)
             size_t const commandCount = batchLast - first;
-            size_t const commandSizeInBytes = commandCount * maxCommandSizeInBytes;
+            size_t const commandSizeInBytes = commandCount * safeCommandSizeInBytes;
 
             // check we have enough capacity to write these commandCount commands, if not,
             // request a new CircularBuffer allocation of `capacity` bytes.

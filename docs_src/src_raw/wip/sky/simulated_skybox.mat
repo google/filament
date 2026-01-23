@@ -1,0 +1,909 @@
+material {
+    name : SimulatedSkybox,
+    parameters : [
+        {
+           type : float3,
+           name : sunDirection
+        },
+        {
+           type : float3,
+           name : sunDirection2
+        },
+        {
+           type : float3,
+           name : depthR,
+           precision : high
+        },
+        {
+           type : float3,
+           name : depthM,
+           precision : high
+        },
+        {
+           type : float2,
+           name : miePhaseParams, // x=(1+g^2), y=(-2*g)
+           precision : high
+        },
+        {
+           type : float,
+           name : sunIntensity,
+           precision : high
+        },
+        {
+           type : float,
+           name : contrast,
+           precision : high
+        },
+        {
+           type : float3,
+           name : nightColor,
+           precision : high
+        },
+        {
+           type : float3,
+           name : ozone,
+           precision : high
+        },
+        {
+           type : float4,
+           name : multiScatParams, // xyz=MultiScatteringColor, w=HorizonGlow
+           precision : high
+        },
+        {
+            type : float4,
+            name : sunHalo, // x=Size, y=Limb, z=Intensity, w=Enabled
+            precision : high
+        },
+        {
+            type : float4,
+            name : shimmerControl, // x=Strength, y=Frequency, z=MaskHeight, w=PlanetRadius
+            precision : high
+        },
+        {
+            type : float4,
+            name : cloudControl, // x=Coverage, y=Density, z=QuadraticConst, w=WindSpeed
+            precision : high
+        },
+        {
+            type : float4,
+            name : cloudControl2, // x=EvolutionSpeed
+            precision : high
+        },
+        {
+           type : float,
+           name : sunIntensity2,
+           precision : high
+        },
+        {
+            type : float4,
+            name : sunHalo2, // x=Size, y=Limb, z=Intensity, w=Enabled
+            precision : high
+        },
+        {
+            type : float4,
+            name : waterControl, // x=Strength, y=Speed, z=DerivativeTrick, w=Octaves
+            precision : high
+        },
+        {
+            type : float2,
+            name : starControl, // x=Density, y=Enabled
+            precision : high
+        }
+    ],
+    variables : [
+         eyeDirection
+    ],
+    vertexDomain : device,
+    depthWrite : false,
+    shadingModel : unlit,
+    culling: none
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // This code is taken from computeWorldPosition and assumes the vertex domain is 'device'.
+        highp vec4 p = getPosition();
+        // GL convention to inverted DX convention
+        p.z = p.z * -0.5 + 0.5;
+        highp vec4 worldPosition = getWorldFromClipMatrix() * p;
+        // Getting the true world position would require dividing by w, but since this is a skybox
+        // at inifinity, this results in very large numbers for material.eyeDirection.
+        // Since the eyeDirection is only used as a direction vector in the fragment shader, we can
+        // skip that step to improve precision.
+        material.eyeDirection.xyz = worldPosition.xyz;
+    }
+}
+
+fragment {
+    // ------------------------------------------------------------------------
+    // Analytic Rayleigh and Mie Scattering (Physics Based)
+    // Derived from:
+    // - Hoffman & Preetham (2002): "Real-time Light-Atmosphere Interactions"
+    // - Henyey & Greenstein (1941): "Diffuse radiation in the galaxy" (Mie Phase)
+    // - Kasten & Young (1989): "Revised optical air mass tables" (Air Mass)
+    // - "Simulated Sky" / Three.js (Sky.js): Empirical adjustments for aesthetics
+    // ------------------------------------------------------------------------
+
+    #define PI 3.14159265359
+
+    void dummy() {} // squash editor syntax highlighting bugs
+
+    // Rayleigh Phase Function: Scattering distribution for small particles (air molecules)
+    // Lord Rayleigh (1871)
+    // Normalized to integrate to 4*PI (Boosting brightness by factor PI vs standard 1-normalization)
+    highp float rayleighPhase(highp float cosTheta) {
+        const highp float THREE_SIXTEENTH = (3.0 / 16.0);
+        return THREE_SIXTEENTH * (1.0 + cosTheta * cosTheta);
+    }
+
+    // Henyey-Greenstein Phase Function (Mie)
+    // Henyey & Greenstein (1941)
+    // Controls the forward scattering peak (sun halo) via anisotropy parameter 'g'
+    // Optimized: params.x = (1 + g^2), params.y = (-2 * g)
+    highp float hgPhase(highp float cosTheta, highp vec2 params) {
+        const highp float ONE_FOURTH = (1.0 / 4.0);
+        // Recover (1 - g^2) => 2.0 - (1 + g^2)
+        highp float oneMinusG2 = 2.0 - params.x;
+        highp float inverse = 1.0 / pow(params.x + params.y * cosTheta, 1.5);
+        return ONE_FOURTH * (oneMinusG2 * inverse);
+    }
+
+    // --- Noise Functions for Clouds ---
+    highp float hash13(highp vec3 p3) {
+        p3  = fract(p3 * .1031);
+        p3 += dot(p3, p3.yzx + 33.33);
+        return fract((p3.x + p3.y) * p3.z);
+    }
+
+    highp float noise(highp vec3 p) {
+        highp vec3 i = floor(p);
+        highp vec3 f = fract(p);
+        // Cubic Hermite Interpolation
+        highp vec3 u = f*f*(3.0-2.0*f);
+        return mix(mix(mix(hash13(i + vec3(0,0,0)), hash13(i + vec3(1,0,0)), u.x),
+                       mix(hash13(i + vec3(0,1,0)), hash13(i + vec3(1,1,0)), u.x), u.y),
+                   mix(mix(hash13(i + vec3(0,0,1)), hash13(i + vec3(1,0,1)), u.x),
+                       mix(hash13(i + vec3(0,1,1)), hash13(i + vec3(1,1,1)), u.x), u.y), u.z);
+    }
+    
+    // Fractal Brownian Motion (4 Octaves)
+    highp float fbm(highp vec3 p) {
+        highp float total = 0.0;
+        highp float amplitude = 0.5;
+        for (int i = 0; i < 4; i++) {
+            total += noise(p) * amplitude;
+            p *= 2.02; // Lacunarity
+            p += 100.0; // Shift to avoid artifacts
+            amplitude *= 0.5; // Gain
+        }
+        return total;
+    }
+
+    highp float fbm(highp vec3 p, int octaves) {
+        highp float total = 0.0;
+        highp float amplitude = 0.5;
+        for (int i = 0; i < 8; i++) {
+            if (i >= octaves) break;
+            total += noise(p) * amplitude;
+            p *= 2.02;
+            p += 100.0;
+            amplitude *= 0.5;
+        }
+        return total;
+    }
+
+    // Ray-Sphere Intersection
+    // Returns distance to intersection or -1.0 if none.
+    // Re = Planet Radius.
+    // C = Re^2 - (Re + height)^2 (Precalculated on CPU for precision).
+    highp float raySphereIntersect(highp vec3 rd, highp float Re, highp float C) {
+        // Ray Origin is (0, Re, 0) relative to Planet Center (0, 0, 0)
+        // We solve |(0, Re, 0) + t*rd|^2 = Rm^2
+        // |O + tD|^2 = R^2
+        // t^2 + 2t(O.D) + (O^2 - R^2) = 0
+        // a=1, b=2(O.D), c = O^2 - R^2 = C
+        // Reduced quadratic: t = -b' +/- sqrt(b'^2 - c) where b' = O.D
+        
+        highp float b = Re * rd.y; // dot(vec3(0, Re, 0), rd)
+        highp float disc = b*b - C;
+        
+        if (disc < 0.0) return -1.0;
+        
+        // t = -b + sqrt(disc)
+        return -b + sqrt(disc);
+    }
+
+    // ------------------------------------------------------------------------
+    // Atmospheric Heat Shimmer (Mirage)
+    // ------------------------------------------------------------------------
+    // Simulates heat convection turbulence near the horizon (e.g., hot desert road effect).
+    //
+    // PHYSICS:
+    // Heat rising from the ground creates pockets of varying air density (refractive index).
+    // This bends light rays, causing a visual "shimmer" or displacement.
+    //
+    // IMPLEMENTATION:
+    // - Perturbs the view vector `V.y` using interleaved sine waves.
+    // - Uses World Space `V` so the noise is stable under camera rotation.
+    // - Masked to only affect the horizon line.
+    //
+    // PARAMETERS:
+    // @param V            Normalized World View Vector (modified in place).
+    // @param strength     Max vertical displacement amplitude. (e.g. 0.002).
+    // @param freq         Ripple frequency/density. (e.g. 20.0).
+    // @param maskHeight   Horizon mask height (0.0 to 1.0). (e.g. 0.1).
+    // ------------------------------------------------------------------------
+    float applyHeatShimmer(inout highp vec3 V, highp float strength, highp float freq, highp float maskHeight) {
+        if (strength <= 0.0) return 0.0;
+
+        // Mask: Strongest at horizon (0.0), fades out by maskHeight.
+        highp float mask = 1.0 - smoothstep(0.0, maskHeight, abs(V.y));
+        
+        if (mask > 0.0) {
+            // Use FBM for organic turbulence (rising heat waves)
+            highp float time = getUserTime().x;
+            // Animate upward (y) and slightly drift (x)
+            highp vec3 p = vec3(V.x * freq, V.y * freq + time * 2.0, time * 0.5);
+            
+            // We use a cheap noise or FBM. Since we have FBM:
+            // Use fewer octaves for performance if possible, but 4 is fine.
+            highp float distortion = fbm(p);
+            
+            // Remap noise from [0, 1] to [-1, 1] for perturbation
+            distortion = distortion * 2.0 - 1.0;
+                              
+            // Apply vertical perturbation
+            V.y += distortion * strength * mask * 0.1;
+            V = normalize(V);
+        }
+        return mask;
+    }
+
+    // ------------------------------------------------------------------------
+    // Analytic Sky Model (Rayleigh + Mie + Ozone)
+    // ------------------------------------------------------------------------
+    // Computes the scattering and transmittance of the atmosphere along the view ray.
+    //
+    // PHYSICS:
+    // - Rayleigh: Scattering by air molecules (Blue sky). High frequency (lambda^-4).
+    // - Mie: Scattering by aerosols/dust (White haze). Low frequency (lambda^-1.3).
+    // - Ozone: Absorption layer (Pink sunset). Absorbs green light.
+    // - Optical Mass: Approximation of path length through spherical atmosphere.
+    //
+    // OUTPUTS:
+    // @param V             Normalized View Vector.
+    // @param L             Normalized Sun Vector.
+    // @param sunIntensity  Sun Illuminance (Lux).
+    // @param depthR        Rayleigh Optical Depth (Precalculated).
+    // @param depthM        Mie Optical Depth (Precalculated).
+    // @param ozone         Ozone Absorption (Precalculated).
+    // @param msFactors     Multi-Scattering factors (Rayleigh, Mie, Glow).
+    // @param mieG          Mie Phase Anisotropy.
+    // @param outTransmittance  Output: Atmospheric Transmittance (0..1) along V.
+    // @return              Output: In-Scattered Radiance (The sky color).
+    // ------------------------------------------------------------------------
+    highp vec3 getAtmosphere(highp vec3 V, highp vec3 L, highp float sunIntensity,
+                             highp vec3 depthR, highp vec3 depthM, highp vec3 ozone,
+                             highp vec4 multiScatParams, highp vec2 mieParams,
+                             out highp vec3 outTransmittance) {
+        
+        highp float cosTheta = dot(V, L);
+
+        // 1. Phase Functions
+        // "Golden Hour" Hack (Three.js Sky.js):
+        // Remapping cosTheta from [-1, 1] to [0, 1] breaks the symmetry of Rayleigh scattering.
+        highp float rPhase = rayleighPhase(cosTheta * 0.5 + 0.5);
+        highp float mPhase = hgPhase(cosTheta, mieParams);
+
+        // 2. Optical Depth (Air Mass)
+        // Kasten and Young (1989) - Relative Air Mass Model
+        highp float zenithCos = clamp(V.y, 0.0, 1.0);
+        highp float zenithAngle = acos(zenithCos);
+        highp float zenithAngleDeg = zenithAngle * (180.0 / PI);
+        highp float opticalMass = 1.0 / (zenithCos + 0.15 * pow(93.885 - zenithAngleDeg, -1.253));
+
+        // 3. Extinction & Transmittance
+        highp vec3 totalExtinction = depthR + depthM + ozone;
+        highp vec3 extinction = totalExtinction * opticalMass;
+        outTransmittance = exp(-extinction);
+
+        // 4. In-Scattering
+        // Approximate Multi-Scattering (Isotropic Fill) precomputed in C++.
+        highp vec3 multiScattering = multiScatParams.xyz;
+
+        highp vec3 scatteringTerm = (depthR * rPhase) + (depthM * mPhase) + multiScattering;
+        highp vec3 extinctionTerm = max(vec3(1e-6), totalExtinction);
+
+        // Equilibrium Radiance (Source Function)
+        highp vec3 inScattering = sunIntensity * (scatteringTerm / extinctionTerm);
+
+        // Single-Scattering Integral: L = L_inf * (1 - exp(-opticalDepth))
+        highp vec3 sunLight = inScattering * (1.0 - outTransmittance);
+
+        // 5. Horizon "Glow" Mix (Artistic Hack)
+        // multiScatParams.w contains the Horizon Glow Strength
+        // Uses Sun Elevation (L.y) to only activate during golden hour/twilight.
+        mediump float horizonMix = saturate(pow(1.0 - L.y, 5.0)) * multiScatParams.w;
+        highp vec3 horizonGlow = sqrt(inScattering * outTransmittance);
+        sunLight *= mix(vec3(1.0), horizonGlow, horizonMix);
+
+    return sunLight;
+    }
+
+    // ------------------------------------------------------------------------
+    // Secondary Sun Scattering (Simplified)
+    // ------------------------------------------------------------------------
+    // Computes in-scattering for a second light source, reusing precomputed optical depths.
+    // Skips multi-scattering (ambient) for performance, providing only direct beams/glow.
+    //
+    // @param V             Normalized View Vector.
+    // @param L             Normalized Sun Vector.
+    // @param sunIntensity  Sun Illuminance.
+    // @param depthR        Rayleigh Optical Depth.
+    // @param depthM        Mie Optical Depth.
+    // @param ozone         Ozone Absorption.
+    // @param mieParams     Mie Phase Params.
+    // @param transmittance Precomputed Atmospheric Transmittance.
+    // @return              In-Scattered Radiance.
+    // ------------------------------------------------------------------------
+    highp vec3 getSecondarySunScattering(highp vec3 V, highp vec3 L, highp float sunIntensity,
+                                         highp vec3 depthR, highp vec3 depthM, highp vec3 ozone,
+                                         highp vec2 miePhaseParams, highp vec3 transmittance) {
+        highp float cosTheta = dot(V, L);
+        
+        // Phase Functions
+        highp float rPhase = rayleighPhase(cosTheta * 0.5 + 0.5);
+        highp float mPhase = hgPhase(cosTheta, miePhaseParams);
+        
+        // Scattering
+        highp vec3 scatteringTerm = (depthR * rPhase) + (depthM * mPhase);
+        highp vec3 totalExtinction = depthR + depthM + ozone;
+        highp vec3 extinctionTerm = max(vec3(1e-6), totalExtinction);
+        
+        highp vec3 inScattering = sunIntensity * (scatteringTerm / extinctionTerm);
+        return inScattering * (1.0 - transmittance);
+    }
+
+    // ------------------------------------------------------------------------
+    // Physical Sun Disk
+    // ------------------------------------------------------------------------
+    // Renders the Solar Photosphere with limb darkening.
+    //
+    // PHYSICS:
+    // - The sun is not a point light; it has an angular size (~0.53 deg).
+    // - Limb Darkening: The sun is darker at the edges (limbs) because we see cooler outer layers.
+    // - Drawn "Behind" the atmosphere, so it is attenuated by Transmittance.
+    //
+    // PARAMETERS:
+    // @param V            Normalized View Vector.
+    // @param L            Normalized Sun Vector.
+    // @param sunParams    x=CosRadius, y=LimbDarkening, z=IntensityBoost, w=Enabled.
+    // @param sunIntensity Peak Sun Illuminance (Lux).
+    // @param transmittance Atmospheric Transmittance (0..1).
+    // @return             Radiance of the sun disk (if visible and enabled).
+    // ------------------------------------------------------------------------
+    highp vec3 getSunDisk(highp vec3 V, highp vec3 L, highp vec4 sunParams, 
+                          highp float sunIntensity, highp vec3 transmittance) {
+        
+        highp float sunCosRadius = sunParams.x;
+        highp float limbDarkening = sunParams.y;
+        highp float sunDiskIntensity = sunParams.z;
+        bool sunEnabled = sunParams.w > 0.5;
+
+        highp float cosTheta = dot(V, L);
+        
+        // Robust edge detection for small angles using (1 - cos)
+        highp float dist = 1.0 - cosTheta;
+        highp float diskRadius = max(1e-6, 1.0 - sunCosRadius);
+        
+        // AA Edge: smoothstep from radius to radius+epsilon
+        // We invert it because we want 1.0 inside (dist < radius)
+        highp float sunDiskProfile = 1.0 - smoothstep(diskRadius, diskRadius + 0.00002, dist);
+
+        if (sunEnabled && sunDiskProfile > 0.0) {
+             // Limb Darkening approximation: mu = sqrt(1 - (r/R)^2)
+             // dist/diskRadius is approx (r/R)^2 for small angles
+             highp float relativeDist = min(1.0, dist / diskRadius);
+             highp float mu = sqrt(1.0 - relativeDist);
+             
+             // Avoid pow(0, 0) which causes NaNs
+             highp float limbFactor = (limbDarkening < 1e-4) ? 1.0 : pow(mu, limbDarkening);
+             
+             // Direct Sun Light (Radiance)
+             // SunIntensity * Transmittance -> Physical Sun Color
+             // SunDiskIntensity -> Artistic Boost to punch through Mie halo
+             return sunIntensity * transmittance * limbFactor * sunDiskIntensity * sunDiskProfile;
+        }
+        
+        return vec3(0.0);
+    }
+
+    // ------------------------------------------------------------------------
+    // Procedural Cirrus Clouds
+    // ------------------------------------------------------------------------
+    // Renders a thin layer of high-altitude clouds (Cirrus) using 3D Noise.
+    //
+    // IMPLEMENTATION:
+    // - Modeled as a spherical shell at a specific altitude.
+    // - Ray-Sphere intersection determines UV layout and distance.
+    // - Animated using 3D FBM (Fractal Brownian Motion) for shape evolution + Wind drift.
+    // - Lighting includes Silver Lining (HG Phase) and Atmospheric Extinction.
+    //
+    // PARAMETERS:
+    // @param background   Current Sky Color (to be blended with).
+    // @param V            Normalized View Vector.
+    // @param L            Normalized Sun Vector.
+    // @param control      x=Coverage, y=Density, z=QuadraticConst(C), w=WindSpeed.
+    // @param control2     x=EvolutionSpeed.
+    // @param geometry     w=PlanetRadius (Re).
+    // @param sunIntensity Sun Illuminance.
+    // @param transmittance Atmospheric Transmittance (Cloud Color Tint).
+    // @return             Sky color composed with clouds.
+    // ------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // Procedural Cirrus Clouds
+    // ------------------------------------------------------------------------
+    // Renders a thin layer of high-altitude clouds (Cirrus) using 3D Noise.
+    //
+    // PARAMETERS:
+    // @param V            .
+    // @param L            .
+    // @param control      .
+    // @param control2     .
+    // @param geometry     .
+    // @param sunIntensity .
+    // @param transmittance.
+    // @param outDensity   Output: Cloud Density (0..1).
+    // @return             Cloud Lit Color (pre-multiplied by density? No, just lit color).
+    // ------------------------------------------------------------------------
+    highp vec3 getCloudLayer(highp vec3 V, highp vec3 L,
+                             highp vec4 control, highp vec4 control2, highp vec4 geometry,
+                             highp float sunIntensity, highp vec3 transmittance,
+                             out highp float outDensity) {
+        
+        outDensity = 0.0;
+        highp float cloudCoverage = control.x;
+        
+        // Clip clouds below the horizon (Earth occlusion)
+        // Simple check V.y > 0.0 is sufficient for skybox provided camera is near ground.
+        if (cloudCoverage > 0.0 && V.y > 0.0) {
+            highp float Re = geometry.w;
+            highp float intersectC = control.z;
+            highp float distToCloud = raySphereIntersect(V, Re, intersectC);
+            
+            if (distToCloud > 0.0) {
+                 highp vec3 p = V * distToCloud;
+                 highp float speed = control.w;
+                 highp float morphSpeed = control2.x;
+                 highp float time = getUserTime().x;
+                 
+                 // UV Mapping (Planar projected onto sphere cap is sufficient for skybox)
+                 // Scale factor 0.05 km^-1
+                 highp vec2 uv = (p.xz * 0.05) + vec2(time * speed * 2.0, 0.0);
+                 
+                 // 3D Noise for Morphing
+                 highp float noiseVal = fbm(vec3(uv, time * morphSpeed));
+                 
+                 // Remap noise based on coverage. 
+                 // Coverage 0.5 -> threshold 0.5. Coverage 1.0 -> threshold 0.0.
+                 highp float threshold = 1.0 - cloudCoverage;
+                 highp float cloudDensity = smoothstep(threshold, threshold + 0.3, noiseVal);
+                 
+                 if (cloudDensity > 0.0) {
+                     cloudDensity *= control.y; // Global Density Scalar
+                     cloudDensity = clamp(cloudDensity, 0.0, 1.0);
+                     outDensity = cloudDensity;
+                     
+                     // Cloud Lighting
+                     // Silver Lining: Strong forward scattering (Fixed g=0.9 for clouds)
+                     highp float cosTheta = dot(V, L);
+                     // We need separate params for cloud silver lining (g=0.9).
+                     // 1 + 0.9^2 = 1.81. -2*0.9 = -1.8.
+                     
+                     // Attenuation (Beer's Law)
+                     // Thick clouds block light.
+                     // 20.0 is an artistic extinction coefficient.
+                     highp float extinction = exp(-cloudDensity * 20.0);
+                     
+                     highp float silver = hgPhase(cosTheta, vec2(1.81, -1.8)) * 40.0 * extinction;
+                     
+                     // Ambient/Diffuse term. 
+                     // We allow some ambient light to pass through even thick clouds (0.05 min)
+                     // so they don't look like black holes.
+                     highp float ambient = 0.1 + 0.4 * extinction;
+                     
+                     // Diffuse term (Sun Color) + Silver Lining
+                     highp vec3 cloudLight = sunIntensity * transmittance * (ambient + silver);
+
+                     // Mix based on density
+                     highp float volumetric = control2.y;
+                     highp float shading = 1.0;
+                     
+                     if (volumetric > 0.5) {
+                         // Gradient Lighting (Fake Volumetric Bump)
+                         highp float gradX = dFdx(cloudDensity);
+                         highp float gradY = dFdy(cloudDensity);
+                         // Smaller Z = Steeper Bumps.
+                         // dFdx(density) is typically small (e.g. 0.001).
+                         // We want Normal to have significant X/Y component.
+                         highp vec3 N = normalize(vec3(-gradX, -gradY, 0.001)); 
+
+                         // Screen Space Sun Direction
+                         highp vec3 sRight = normalize(dFdx(V));
+                         highp vec3 sUp    = normalize(dFdy(V));
+                         highp vec3 L_screen = vec3(dot(L, sRight), dot(L, sUp), 0.5);
+                         L_screen = normalize(L_screen);
+
+                         shading = dot(N, L_screen);
+                         // Increase contrast: Darker shadows
+                         // dot is [-1, 1]. Map to [0.3, 1.0]
+                         shading = mix(0.3, 1.0, shading * 0.5 + 0.5);
+                         
+                         // Darken thick parts (Beer's Law approximation)
+                         // Aggressively darken center of clouds
+                         shading *= (1.0 - cloudDensity * 0.7);
+                     }
+
+                     return cloudLight * shading;
+                 }
+            }
+        }
+        return vec3(0.0);
+    }
+
+
+    // ------------------------------------------------------------------------
+    // Dynamic Tone Mapping
+    // ------------------------------------------------------------------------
+    // Applies a contrast curve that varies with sun elevation.
+    //
+    // PROBLEM:
+    // Default linear/gamma tone mapping can make sunsets look washing out.
+    // Real eyes accept much higher dynamic range at twilight.
+    //
+    // SOLUTION:
+    // - Zenith (Noon): Linear gamma (Exponent 1.0). Physically accurate.
+    // - Horizon (Sunset): High contrast (Exponent > 1.0). Crushes shadows, boosts color.
+    //
+    // @param color     Input HDR color.
+    // @param L         Normalized Sun Vector.
+    // @param contrast  Maximum contrast exponent (at horizon). e.g. 1.5.
+    // @return          Tone mapped color.
+    // ------------------------------------------------------------------------
+    highp vec3 applyDynamicToneMapping(highp vec3 color, highp vec3 L, highp float contrast) {
+        float c = saturate(L.y);
+        // Exponent blends from 'contrast' (at L.y=0) to 1.0 (at L.y=1)
+        float exponent = mix(contrast, 1.0, sqrt(c));
+        return pow(max(vec3(0.0), color), vec3(exponent));
+    }
+
+    // ------------------------------------------------------------------------
+    // Procedural Water Surface
+    // ------------------------------------------------------------------------
+    // Simulates an infinite ocean plane at y=0 using screen-space derivatives for normals.
+    //
+    // FEATURES:
+    // - Projected grid for infinite surface.
+    // - Screen-space wave normal reconstruction (no geometry required).
+    // - Fresnel reflection of Atmosphere, Sun, and Clouds.
+    // - Specular highlights (Blinn-Phong).
+    //
+    // PARAMETERS:
+    // @param V            Normalized View Vector.
+    // @param L            Normalized Sun Vector.
+    // @param sunIntensity Sun Illuminance.
+    // @param depthR       Rayleigh Optical Depth.
+    // @param depthM       Mie Optical Depth.
+    // @param ozone        Ozone Absorption.
+    // @param multiScatParams Multi-Scattering Params.
+    // @param miePhaseParams Mie Phase Params.
+    // @param sunHalo      Sun Halo Params.
+    // @param cloudControl Cloud Control Params.
+    // @param cloudControl2 Cloud Evolution Params.
+    // @param shimmerControl Shimmer Control (w component used as PlanetRadius for clouds).
+    // @param waterControl Water Control (x=Strength, y=Speed, z=DerivativeTrick).
+    // @return             Water surface color.
+    // ------------------------------------------------------------------------
+    // 3D Noise for Stars
+    highp float hash31(highp vec3 p) {
+        p = fract(p * 0.1031);
+        p += dot(p, p.yzx + 33.33);
+        return fract((p.x + p.y) * p.z);
+    }
+
+    highp float getStars(highp vec3 V, highp float density) {
+        // Simple procedural stars
+        // We use view vector direction to tile the sky
+        // Higher frequency = smaller stars
+        highp float frequency = 300.0; 
+        highp vec3 p = floor(V * frequency);
+        
+        highp float h = hash31(p);
+        
+        // Threshold for stars (very sparse)
+        // param density: 0.0 (none) to 1.0 (max)
+        // Default threshold was 0.995 (0.5% stars)
+        // We map density 0.0 -> 1.0 threshold (no stars)
+        //        density 1.0 -> 0.990 threshold (1.0% stars)
+        highp float threshold = 1.0 - (0.001 + density * 0.009);
+
+        highp float star = 0.0;
+        if (h > threshold) {
+            // Random brightness
+            highp float brightness = (h - threshold) / (1.0 - threshold);
+            star = brightness * 15.0; // Reduced from 50.0 to 15.0
+        }
+        return star;
+    }
+
+    // New helper to handle Star Compositing (Fade, Rotation, Occlusion)
+    highp vec3 getStarLayer(highp vec3 V, highp vec3 L, highp float cloudDensity, highp vec3 transmittance, highp vec2 starControl) {
+         // starControl.x = Density, .y = Enabled
+         if (starControl.y < 0.5) return vec3(0.0);
+
+         // 1. Fade by Sun Elevation
+         // Start appearing sooner (when sun is still slightly up), but stay dim.
+         // 0.10 (5.7 deg up) -> 0.0
+         // -0.20 (11.5 deg down) -> 1.0
+         highp float starFade = 1.0 - smoothstep(-0.20, 0.10, L.y);
+         starFade *= starFade;
+         
+         if (starFade <= 0.0) return vec3(0.0);
+
+         // 2. Rotate to break grid alignment
+         highp vec3 rotV = vec3(
+             dot(V, vec3(0.6, 0.8, 0.0)),
+             dot(V, vec3(-0.8, 0.6, 0.0)),
+             V.z
+         );
+         
+         highp float starVal = getStars(rotV, starControl.x);
+         if (starVal <= 0.0) return vec3(0.0);
+
+         // 3. Cloud Occlusion (Aggressive)
+         highp float cloudOcclusion = 1.0 - smoothstep(0.0, 1.0, pow(cloudDensity, 0.1));
+         
+         return vec3(starVal) * transmittance * starFade * cloudOcclusion * 0.1;
+    }
+
+    // ------------------------------------------------------------------------
+    // Procedural Water Surface
+    // ------------------------------------------------------------------------
+    // Simulates an infinite ocean plane at y=0 using screen-space derivatives for normals.
+    //
+    // FEATURES:
+    // - Projected grid for infinite surface.
+    // - Screen-space wave normal reconstruction (no geometry required).
+    // - Fresnel reflection of Atmosphere, Sun, and Clouds.
+    // - Specular highlights (Blinn-Phong).
+    //
+    // PARAMETERS:
+    // @param V            Normalized View Vector.
+    // @param L            Normalized Sun Vector.
+    // @param sunIntensity Sun Illuminance.
+    // @param depthR       Rayleigh Optical Depth.
+    // @param depthM       Mie Optical Depth.
+    // @param ozone        Ozone Absorption.
+    // @param multiScatParams Multi-Scattering Params.
+    // @param miePhaseParams Mie Phase Params.
+    // @param sunHalo      Sun Halo Params.
+    // @param cloudControl Cloud Control Params.
+    // @param cloudControl2 Cloud Evolution Params.
+    // @param shimmerControl Shimmer Control (w component used as PlanetRadius for clouds).
+    // @param waterControl Water Control (x=Strength, y=Speed, z=DerivativeTrick).
+    // @return             Water surface color.
+    // ------------------------------------------------------------------------
+    highp vec3 getWaterColor(highp vec3 V, highp vec3 L, 
+                             highp float sunIntensity,
+                             highp vec3 depthR, highp vec3 depthM, highp vec3 ozone,
+                             highp vec4 multiScatParams, highp vec2 miePhaseParams,
+                             highp vec4 sunHalo,
+                             highp vec4 cloudControl, highp vec4 cloudControl2,
+                             highp vec4 shimmerControl, highp vec4 waterControl) {
+
+        // Project to plane y=0
+        highp float t = -10.0 / min(V.y, -0.0002); // Reduced clamp to minimize "wall" artifact
+        highp vec2 uv = V.xz * t * 0.05;
+        
+        highp float time = getUserTime().x;
+        highp float speed = waterControl.y;
+        uv += vec2(time * 0.5 * speed, time * 0.2 * speed);
+
+        // Wave Normal
+        // Use screen-space derivatives to compute world-space normal perturbation
+        // Wave Normal
+        // Use screen-space derivatives to compute world-space normal perturbation
+        int octaves = int(max(1.0, waterControl.w));
+        highp float h = fbm(vec3(uv, time * 0.1 * speed), octaves);
+        
+        // Reconstruct screen-space basis in world space
+        // highp vec3 sRight = normalize(dFdx(V)); // Moved inside block
+        // highp vec3 sUp    = normalize(dFdy(V)); // Moved inside block
+        
+        // Perturb normal based on height gradient
+        // If h increases in screen-X direction, normal tilts against sRight.
+        // Fade out perturbation near horizon (V.y -> 0) to reduce aliasing
+        highp float horizonFade = smoothstep(0.0, 0.5, abs(V.y));
+        highp float strength = waterControl.x;
+        
+        highp vec3 N_perturb;
+        
+        // Derivative Trick Toggle
+        if (waterControl.z > 0.5) {
+             // Screen-Space Derivatives (Fast, 1 tap)
+             // Reconstruct screen-space basis in world space
+             // If h increases in screen-X direction, normal tilts against sRight.
+             highp vec3 sRight = normalize(dFdx(V));
+             highp vec3 sUp    = normalize(dFdy(V));
+             N_perturb = (sRight * dFdx(h) + sUp * dFdy(h)) * strength * horizonFade; 
+        } else {
+             // Finite Difference (Standard, 3 taps)
+             // More expensive but analytically correct in world space (independent of view resolution/derivatives)
+             float eps = 0.02; // Epsilon for gradient
+             vec3 p = vec3(uv, time * 0.1 * speed);
+             float hx = fbm(p + vec3(eps, 0.0, 0.0), octaves);
+             float hy = fbm(p + vec3(0.0, eps, 0.0), octaves);
+             
+             // Gradient
+              float dx = (hx - h) / eps;
+              float dy = (hy - h) / eps;
+              
+              // Construct World Space Perturbation
+              // Gradient (dx, dy) acts on XZ plane.
+              // Normal = normalize(-dx, 1, -dy).
+              // We want N_perturb to SUBTRACT from (0,1,0).
+              // N_water = normalize(Up - Perturb).
+              // So Perturb = (dx, 0, dy).
+              // Note: Strength needs to be calibrated to match derivative trick roughly, or just raw.
+              // Derivative trick Strength was ~50.0.
+              // Here dx/dy are raw noise slopes.
+              // Reduced to 0.002 to match visual range of derivative trick and prevent black artifacts.
+              N_perturb = vec3(dx, 0.0, dy) * (strength * 0.002) * horizonFade;
+        } 
+        
+        highp vec3 N_water = normalize(vec3(0.0, 1.0, 0.0) - N_perturb);
+        
+        // Reflection
+        highp vec3 R = reflect(V, N_water);
+        
+        highp vec3 transRefl;
+        highp vec3 reflection = getAtmosphere(R, L, sunIntensity,
+                                              depthR, depthM, 
+                                              ozone, multiScatParams, 
+                                              miePhaseParams,
+                                              transRefl);
+        
+        // Clouds in reflection
+        highp float reflCloudDensity;
+        highp vec3 reflCloudLayer = getCloudLayer(R, L, materialParams.cloudControl, materialParams.cloudControl2,
+                                                  materialParams.shimmerControl, materialParams.sunIntensity, transRefl,
+                                                  reflCloudDensity);
+        
+        // Add Stars to Reflection
+        // Use helper with Reflection Vector and Reflection Cloud Density
+        // Horizon Mask: Fade out star reflections that are deep in the water (high R.y)
+        // Restricted to very close to horizon (0.0 to 0.1) as requested.
+        highp float rHorizonMask = 1.0 - smoothstep(0.0, 0.1, R.y);
+        
+        if (rHorizonMask > 0.0) {
+             reflection += getStarLayer(R, L, reflCloudDensity, transRefl, materialParams.starControl) * rHorizonMask;
+        }
+
+        // Add Sun Disk to reflection (Occluded)
+        highp float reflSunAccess = 1.0 - smoothstep(0.0, 0.7, reflCloudDensity * 1.5);
+        reflection += getSunDisk(R, L, sunHalo, sunIntensity, transRefl) * reflSunAccess;
+        
+        // Apply clouds to reflection
+        reflection = mix(reflection, reflCloudLayer, reflCloudDensity);
+                
+        // Fresnel
+        highp float F0 = 0.02; // Water
+        highp float cosTheta = clamp(dot(-V, N_water), 0.0, 1.0);
+        highp float F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+        
+        highp vec3 deepColor = vec3(0.0, 0.005, 0.02); // Deep blue/black
+
+        highp vec3 waterColor = mix(deepColor, reflection, F);
+                
+        return waterColor;
+    }
+
+
+
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        highp vec3 V = normalize(variable_eyeDirection.xyz);
+        highp vec3 L = normalize(materialParams.sunDirection);
+
+        // 1. Heat Shimmer
+        // Fade out as sun rises (Strongest at horizon, zero at 30 degrees up)
+        highp float sunFade = 1.0 - smoothstep(0.0, 0.5, abs(L.y));
+        highp float shimmerIntensity = applyHeatShimmer(V, materialParams.shimmerControl.x * sunFade, 
+                            materialParams.shimmerControl.y, 
+                            materialParams.shimmerControl.z);
+
+        // 2. Atmospheric Scattering
+        highp vec3 transmittance;
+        highp vec3 inScatter1 = getAtmosphere(V, L, materialParams.sunIntensity,
+                                              materialParams.depthR, materialParams.depthM, 
+                                              materialParams.ozone, materialParams.multiScatParams, 
+                                              materialParams.miePhaseParams,
+                                              transmittance);
+
+
+        // Sun 2 (Optional)
+        // We reuse the same Transmittance (view dependent) and Phase params.
+        // We do NOT add extra Multi-Scattering (Ambient) for the second sun to save cost/complexity.
+        // It contributes Direct In-Scattering (Beams/Glow) only.
+        highp vec3 inScatter2 = vec3(0.0);
+        if (materialParams.sunHalo2.w > 0.5) {
+            highp vec3 L2 = normalize(materialParams.sunDirection2);
+            inScatter2 = getSecondarySunScattering(V, L2,
+                                                   materialParams.sunIntensity2,
+                                                   materialParams.depthR,
+                                                   materialParams.depthM,
+                                                   materialParams.ozone,
+                                                   materialParams.miePhaseParams,
+                                                   transmittance);
+        }
+
+        highp vec3 finalColor = inScatter1 + inScatter2;
+
+        // 5. Procedural Clouds
+        highp float cloudDensity;
+        highp vec3 cloudLayer = getCloudLayer(V, L, 
+                                              materialParams.cloudControl, 
+                                              materialParams.cloudControl2,
+                                              materialParams.shimmerControl, // reusing w=PlanetRadius
+                                              materialParams.sunIntensity, 
+                                              transmittance,
+                                              cloudDensity);
+
+        // Add Stars
+        // Stars are at infinity.
+        // Use helper function.
+        finalColor += getStarLayer(V, L, cloudDensity, transmittance, materialParams.starControl);
+        
+        // 3. Sun Disks - Occluded by clouds
+        // Sun Access is (1.0 - cloudDensity) but arguably non-linear for sharp disk
+        highp float sunAccess = 1.0 - smoothstep(0.0, 0.7, cloudDensity * 1.5);
+        
+        finalColor += getSunDisk(V, L, materialParams.sunHalo, 
+                                 materialParams.sunIntensity, transmittance) * sunAccess;
+                                 
+        if (materialParams.sunHalo2.w > 0.5) {
+             highp vec3 L2 = normalize(materialParams.sunDirection2);
+             // Note: Ideally we should compute cloud density for L2 direction if clouds are 3D... 
+             // But here we use V direction clouds (view-based).
+             // Since clouds are in front of everything, this is correct for view-based occlusion.
+             finalColor += getSunDisk(V, L2, materialParams.sunHalo2, 
+                                      materialParams.sunIntensity2, transmittance) * sunAccess;
+        }
+
+        // 4. Night Sky Offset
+        finalColor += materialParams.nightColor;
+
+        // 5. Apply Clouds
+        finalColor = mix(finalColor, cloudLayer, cloudDensity);
+
+        // 6. Dynamic Tone Mapping
+        finalColor = applyDynamicToneMapping(finalColor, L, materialParams.contrast);
+
+        if (V.y < 0.0) {
+            finalColor = getWaterColor(V, L, materialParams.sunIntensity,
+                                       materialParams.depthR, materialParams.depthM, 
+                                       materialParams.ozone, materialParams.multiScatParams, 
+                                       materialParams.miePhaseParams,
+                                       materialParams.sunHalo,
+                                       materialParams.cloudControl, materialParams.cloudControl2,
+                                       materialParams.shimmerControl,
+                                       materialParams.waterControl);
+            finalColor = applyDynamicToneMapping(finalColor, L, materialParams.contrast);
+        }
+
+        material.baseColor = vec4(finalColor, 1.0);
+    }
+}
+
+

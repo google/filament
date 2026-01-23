@@ -387,6 +387,15 @@ VulkanProgram::~VulkanProgram() {
     delete mInfo;
 }
 
+void VulkanProgram::flushPushConstants(VkPipelineLayout layout) {
+    // At this point, we really ought to have a VkPipelineLayout.
+    assert_invariant(layout != VK_NULL_HANDLE);
+    for (const auto& c : mQueuedPushConstants) {
+        mInfo->pushConstantDescription.write(c.cmdbuf, layout, c.stage, c.index, c.value);
+    }
+    mQueuedPushConstants.clear();
+}
+
 // Creates a special "default" render target (i.e. associated with the swap chain)
 VulkanRenderTarget::VulkanRenderTarget()
     : HwRenderTarget(0, 0),

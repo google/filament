@@ -28,10 +28,12 @@ const REGULAR_FONT_SIZE = 12;
 // Constants for color operations
 const READ_COLOR = '#aee1a6';
 const WRITE_COLOR = '#df8e8e';
-const NO_ACCESS_COLOR = '#d8dde754';
+const NO_ACCESS_COLOR = '#bcbcbc';
 const READ_WRITE_COLOR = '#ffeb99';
 const DEFAULT_COLOR = '#ffffff';
 const SUBRESOURCE_COLOR = '#d3d3d3';
+
+const SELECTED_ROW_COLUMN_COLOR = "rgba(180,210,240,.35)";
 
 // Constants for view mode toggle
 const VIEW_TOGGLE_INACTIVE_COLOR = '#292929';
@@ -200,6 +202,13 @@ class FrameGraphSidePanel extends LitElement {
                 background-color: ${this.connected ? VIEW_TOGGLE_SELECTED_COLOR:VIEW_TOGGLE_INACTIVE_COLOR};
                 font-weight: bold;
             }
+            .resource-link:hover {
+                text-decoration: underline;
+            }
+            .render-target-resource {
+                display: flex;
+                flex-direction: row;
+            }
         `;
     }
 
@@ -208,6 +217,7 @@ class FrameGraphSidePanel extends LitElement {
             connected: {type: Boolean, attribute: 'connected'},
             selectedFrameGraph: {type: String, attribute: 'selected-framegraph'},
             selectedResourceId: {type: Number, attribute: 'selected-resource'},
+            selectedPassIndex: {type: Number, attribute: 'selected-pass'},
             viewMode: {type: String, attribute: 'view-mode'},
 
             database: {type: Object, state: true},
@@ -222,6 +232,7 @@ class FrameGraphSidePanel extends LitElement {
         this.database = {};
         this.viewMode = VIEW_MODE_TABLE;
         this.selectedFrameGraph = '';
+        this.selectedPassIndex = -1;
     }
 
     updated(props) {
@@ -274,6 +285,32 @@ class FrameGraphSidePanel extends LitElement {
         return null;
     }
 
+    _findCurrentPass() {
+        if (!this.selectedFrameGraph || this.selectedPassIndex === -1 ||
+                this.selectedPassIndex === undefined) {
+            return null;
+        }
+        const passes = this.database[this.selectedFrameGraph]?.passes;
+        return passes ? passes[this.selectedPassIndex] : null;
+    }
+
+    _handleResourceLinkClick(ev, id) {
+        ev.stopPropagation();
+        this.dispatchEvent(new CustomEvent('select-resource', {
+            detail: id,
+            bubbles: true,
+            composed: true
+        }));
+    }
+
+    _formatResourceId(id) {
+        const resources = this.database[this.selectedFrameGraph]?.resources;
+        const resource = resources ? resources[id] : null;
+        const label = resource ? `${resource.name} [${id}]` : `[${id}]`;
+        return html`<span class="resource-link" style="cursor: pointer;"
+            @click="${(e) => this._handleResourceLinkClick(e, id)}">${label}</span>`;
+    }
+
     render() {
         const renderFrameGraphs = (title) => {
             if (!this.framegraphs.length)
@@ -316,10 +353,8 @@ class FrameGraphSidePanel extends LitElement {
             return html`
                 <menu-section title="${title}">
                     <div class="resource-content">
-                        <div><b>Name:</b> ${currentResource.name}</div>
-                    </div>
-                    <div class="resource-content">
-                        <div><b>ID:</b> ${currentResource.id}</div>
+                        <div><b>Name:</b> ${currentResource.name}
+                            <b>[ID=${currentResource.id}]</b></div>
                     </div>
                     ${currentResource.properties.length > 0 ? html`
                         <div class="resource-content">
@@ -335,12 +370,76 @@ class FrameGraphSidePanel extends LitElement {
             `;
         };
 
+        const renderPassDetails = (title) => {
+            const currentPass = this._findCurrentPass();
+            if (!currentPass) return nothing;
+
+            const renderRenderTarget = (rt, index) => {
+                const resourceFlags = {}; // id -> { name, flags: [] }
+
+                const processList = (list, flagName) => {
+                    if (!list) return;
+                    for (const att of list) {
+                        if (!resourceFlags[att.id]) {
+                            resourceFlags[att.id] = { name: att.name, id: att.id, flags: [] };
+                        }
+                        resourceFlags[att.id].flags.push(flagName);
+                    }
+                };
+
+                processList(rt.discardStart, "Discard Start");
+                processList(rt.discardEnd, "Discard End");
+                processList(rt.clear, "Clear");
+
+                const resources = Object.values(resourceFlags);
+                if (resources.length === 0) return nothing;
+
+                return html`
+                    <div class="resource-content render-target-resource"
+                         style="margin-top: 5px; border-top: 1px dashed #6f6f6f;">
+                        <div>(${index})</div>
+                        <ul style="margin:0;padding-inline-start:25px">
+                            ${resources.map(res => html`
+                                <li>
+                                    ${this._formatResourceId(res.id)}: ${res.flags.join(", ")}
+                                </li>
+                            `)}
+                        </ul>
+                    </div>
+                `;
+            };
+
+            const joinResources = (ids) => {
+              return ids.map((id, i) => html`
+                  <li>${this._formatResourceId(id)}</li>`);
+            };
+
+            return html`
+                <menu-section title="${title}">
+                     <div class="resource-content">
+                        <div><b>Name:</b> ${currentPass.name} <b>[ID=${currentPass.id}]</b></div>
+                    </div>
+                    ${currentPass.reads.length > 0 ? html`
+                    <div class="resource-content">
+                        <div><b>Reads:</b> </div>
+                        <ul style="margin: 4px 0;">
+                            ${joinResources(currentPass.reads)}
+                        </ul>
+                    </div>` : nothing}
+                    ${currentPass.renderTargets && currentPass.renderTargets.length > 0 ?
+                        html`<div><b>Writes (Render Targets):</b></div>
+                        ${currentPass.renderTargets.map((rt, i) => renderRenderTarget(rt, i))}` : nothing}
+                </menu-section>
+            `;
+        };
+
         return html`
             <style>${this.dynamicStyle()}</style>
             <div class="container">
                 <div class="title">fgviewer</div>
                 ${renderFrameGraphs("Views") ?? nothing}
                 ${renderResourceDetails("Resource Details") ?? nothing}
+                ${renderPassDetails("Pass Details") ?? nothing}
             </div>
         `;
     }
@@ -439,6 +538,7 @@ class FrameGraphTable extends LitElement {
             }
             .selected {
                 text-decoration: underline;
+                font-weight: bold;
             }
             .sticky-col {
                 text-align: right;
@@ -457,6 +557,7 @@ class FrameGraphTable extends LitElement {
         return {
             frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
             selectedResourceId: {type: Number, attribute: 'selected-resource'},
+            selectedPassIndex: {type: Number, attribute: 'selected-pass'},
             tooltipText: {type: String, state: true},
             tooltipVisible: {type: Boolean, state: true},
             tooltipX: {type: Number, state: true},
@@ -468,6 +569,7 @@ class FrameGraphTable extends LitElement {
         super();
         this.frameGraphData = null;
         this.selectedResourceId = -1;
+        this.selectedPassIndex = -1;
         this.expandedResourceSet = new Set();
         this.subresourceToParent = {};
         this._hoverTimeout = null;
@@ -494,7 +596,7 @@ class FrameGraphTable extends LitElement {
     }
 
     _getRowGridTemplateColumnsStyle(numColumns) {
-      let out = '165px ';
+      let out = '185px ';
       const oneCol = '35px ';
       for (let i = 0; i < numColumns; i++) {
         out += oneCol;
@@ -517,15 +619,23 @@ class FrameGraphTable extends LitElement {
             }
             this.requestUpdate();
         }
+
+        if (props.has('selectedResourceId')) {
+            const parentId = this.subresourceToParent[this.selectedResourceId];
+            if (parentId && !this.expandedResourceSet.has(parentId)) {
+                this.expandedResourceSet.add(parentId);
+                this.requestUpdate();
+            }
+        }
     }
 
-    _getCellColor(type) {
+    _getCellColor(type, defaultColor) {
         return {
             [RESOURCE_USAGE_TYPE_READ]: READ_COLOR,
             [RESOURCE_USAGE_TYPE_WRITE]: WRITE_COLOR,
             [RESOURCE_USAGE_TYPE_NO_ACCESS]: NO_ACCESS_COLOR,
             [RESOURCE_USAGE_TYPE_READ_WRITE]: READ_WRITE_COLOR
-        }[type] || DEFAULT_COLOR;
+        }[type] || defaultColor;
     }
 
     _toggleCollapse(resourceId) {
@@ -549,9 +659,10 @@ class FrameGraphTable extends LitElement {
     _renderResourceUsage(allPasses, resourceIds, defaultColor, lastRow) {
         const passLen = allPasses.length;
         return allPasses.map((passData, index) => {
+            const isSelectedPass = index === this.selectedPassIndex;
             const isRead = resourceIds.some(resourceId => passData?.reads.includes(resourceId));
             const isWrite = resourceIds.some(resourceId => passData?.writes.includes(resourceId));
-            let type = null;
+            let restype = null;
 
             const hasUsed = (passData) => {
                 return resourceIds.some(resourceId =>
@@ -561,24 +672,25 @@ class FrameGraphTable extends LitElement {
             const hasBeenUsedBefore = allPasses.slice(0, index).some(hasUsed);
             const willBeUsedLater = allPasses.slice(index + 1).some(hasUsed);
 
-            if (isRead && isWrite) type = RESOURCE_USAGE_TYPE_READ_WRITE;
-            else if (isRead) type = RESOURCE_USAGE_TYPE_READ;
-            else if (isWrite) type = RESOURCE_USAGE_TYPE_WRITE;
-            else if (hasBeenUsedBefore && willBeUsedLater) type = RESOURCE_USAGE_TYPE_NO_ACCESS;
+            if (isRead && isWrite) restype = RESOURCE_USAGE_TYPE_READ_WRITE;
+            else if (isRead) restype = RESOURCE_USAGE_TYPE_READ;
+            else if (isWrite) restype = RESOURCE_USAGE_TYPE_WRITE;
+            else if (hasBeenUsedBefore && willBeUsedLater) restype = RESOURCE_USAGE_TYPE_NO_ACCESS;
 
             const lastPass = index == passLen - 1;
             const borderStyle = '1px solid #a5a5a5';
-            const bgColor = this._getCellColor(type, defaultColor);
+            const bgColor = isSelectedPass ? this._getCellColor(restype, SELECTED_ROW_COLUMN_COLOR)
+                                           : this._getCellColor(restype, defaultColor);
             const style = `background-color:${bgColor};` +
-                  `border-left:${borderStyle};border-top:${borderStyle};` +
-                  (lastPass ? `border-right:${borderStyle};` : '') +
-                  (lastRow ? `border-bottom:${borderStyle};` : '');
+                          `border-left:${borderStyle};border-top:${borderStyle};` +
+                          (lastPass ? `border-right:${borderStyle};` : '') +
+                          (lastRow ? `border-bottom:${borderStyle};` : '');
 
             let tooltip = '';
-            if (type === RESOURCE_USAGE_TYPE_READ) tooltip = 'Read';
-            else if (type === RESOURCE_USAGE_TYPE_WRITE) tooltip = 'Write';
-            else if (type === RESOURCE_USAGE_TYPE_READ_WRITE) tooltip = 'Read-Write';
-            else if (type === RESOURCE_USAGE_TYPE_NO_ACCESS) tooltip = 'No Access';
+            if (restype === RESOURCE_USAGE_TYPE_READ) tooltip = 'Read';
+            else if (restype === RESOURCE_USAGE_TYPE_WRITE) tooltip = 'Write';
+            else if (restype === RESOURCE_USAGE_TYPE_READ_WRITE) tooltip = 'Read-Write';
+            else if (restype === RESOURCE_USAGE_TYPE_NO_ACCESS) tooltip = 'No Access';
 
             return html`
                 <div class="grid-cell" style="${style}"
@@ -635,9 +747,11 @@ class FrameGraphTable extends LitElement {
             groupColorStyle = "border-right:5px solid " + COLORS[colorIndex];
         }
 
+        const isSelectedResource = resource.id === this.selectedResourceId;
         const onClickResource = () => this._handleResourceClick(resource.id);
-        const selectedStyle = resource.id === this.selectedResourceId ? "selected" : "";
+        const selectedStyle = isSelectedResource ? "selected" : "";
         const rowStyle = this._getRowGridTemplateColumnsStyle(allPasses.length);
+        const defaultColor = isSelectedResource ? SELECTED_ROW_COLUMN_COLOR : DEFAULT_COLOR;
         return html`
             <div class="grid-row" id="resource-${resource.id}" style="${rowStyle}">
                 <div class="grid-cell sticky-col resource ${selectedStyle}" style="${groupColorStyle}"
@@ -652,9 +766,17 @@ class FrameGraphTable extends LitElement {
                     ${resource.name}
                     ${hasSubresources && !isExpanded ? html`(${subresourceIds.length})` : nothing}
                 </div>
-                ${this._renderResourceUsage(allPasses, resourceIds, DEFAULT_COLOR, lastRow)}
+                ${this._renderResourceUsage(allPasses, resourceIds, defaultColor, lastRow)}
             </div>
         `;
+    }
+
+    _handlePassClick(index) {
+        this.dispatchEvent(new CustomEvent('select-pass', {
+            detail: index,
+            bubbles: true,
+            composed: true
+        }));
     }
 
     render() {
@@ -670,8 +792,14 @@ class FrameGraphTable extends LitElement {
                 <div class="grid-row" style="${rowStyle}">
                     <div class="grid-cell" style="${colStyle}">
                     </div>
-                    ${allPasses.map(pass => html`<div class="grid-cell" style="border:1px solid rgba(0,0,0,0)">
-                              <div class="pass-cell">${pass.name}</div></div>`)}
+                    ${allPasses.map((pass, index) => {
+                        const isSelected = index === this.selectedPassIndex;
+                        const gclass = isSelected ? "grid-cell selected" : "grid-cell";
+                        const pclass = isSelected ? "pass-cell selected" : "pass-cell";
+                        return html`<div class="${gclass}" style="border:1px solid rgba(0,0,0,0); cursor: pointer;"
+                                         @click="${() => this._handlePassClick(index)}">
+                              <div class="${pclass}">${pass.name}</div></div>`;
+                    })}
                 </div>
                 ${this._renderResourceRows(resources, allPasses)}
             </div>
@@ -819,6 +947,7 @@ class FrameGraphViewer extends LitElement {
         this.database = {};
         this.selectedFrameGraph = null;
         this.selectedResourceId = -1;
+        this.selectedPassIndex = -1;
         this.viewMode = VIEW_MODE_TABLE;
         this.init();
 
@@ -830,7 +959,13 @@ class FrameGraphViewer extends LitElement {
 
         this.addEventListener('select-resource',
             (ev) => {
-                this.selectedResourceId = ev.detail;
+                this.selectedResourceId = this.selectedResourceId === ev.detail ? -1 : ev.detail;
+            }
+        );
+
+        this.addEventListener('select-pass',
+            (ev) => {
+                this.selectedPassIndex = this.selectedPassIndex === ev.detail ? -1 : ev.detail;
             }
         );
 
@@ -847,6 +982,7 @@ class FrameGraphViewer extends LitElement {
             database: {type: Object, state: true},
             selectedFrameGraph: {type: String, state: true},
             selectedResourceId: {type: Number, state: true},
+            selectedPassIndex: {type: Number, state: true},
             viewMode: {type: String, state: true},
         }
     }
@@ -867,6 +1003,7 @@ class FrameGraphViewer extends LitElement {
                 ?connected="${this.connected}"
                 selected-framegraph="${this.selectedFrameGraph}"
                 selected-resource="${this.selectedResourceId}"
+                selected-pass="${this.selectedPassIndex}"
                 view-mode="${this.viewMode}">
             </framegraph-sidepanel>
 
@@ -874,7 +1011,8 @@ class FrameGraphViewer extends LitElement {
                 style="display: ${this.viewMode === VIEW_MODE_TABLE ? 'block' : 'none'};"
                 ?connected="${this.connected}"
                 selected-framegraph="${this.selectedFrameGraph}"
-                selected-resource="${this.selectedResourceId}">
+                selected-resource="${this.selectedResourceId}"
+                selected-pass="${this.selectedPassIndex}">
             </framegraph-table>
 
             <graphviz-view id="graphviz"

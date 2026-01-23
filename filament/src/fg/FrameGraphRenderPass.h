@@ -39,6 +39,11 @@ struct FrameGraphRenderPass {
         FrameGraphId<FrameGraphTexture> stencil;
 
         FrameGraphId<FrameGraphTexture>& operator[](size_t index) noexcept {
+            return const_cast<FrameGraphId<FrameGraphTexture>&>(
+                    static_cast<const Attachments*>(this)->operator[](index));
+        }
+
+        FrameGraphId<FrameGraphTexture> const& operator[](size_t index) const noexcept {
             assert_invariant(index < ATTACHMENT_COUNT);
             if (index < backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT) {
                 return color[index];

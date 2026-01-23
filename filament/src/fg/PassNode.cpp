@@ -175,7 +175,8 @@ void RenderPassNode::resolve() noexcept {
                     rt.backend.params.flags.discardStart |= target;
                 }
                 VirtualResource* pResource = mFrameGraph.getResource(rt.descriptor.attachments[i]);
-                Resource<FrameGraphTexture>* pTextureResource = static_cast<Resource<FrameGraphTexture>*>(pResource);
+                Resource<FrameGraphTexture>* pTextureResource =
+                        static_cast<Resource<FrameGraphTexture>*>(pResource);
 
                 pImportedRenderTarget = pImportedRenderTarget ?
                         pImportedRenderTarget : pResource->asImportedRenderTarget();
@@ -331,6 +332,52 @@ utils::CString RenderPassNode::graphvizify() const noexcept {
     return {};
 #endif
 }
+
+#if FILAMENT_ENABLE_FGVIEWER
+using RenderTargetInfo = fgviewer::FrameGraphInfo::Pass::RenderTargetInfo;
+using AttachmentInfo = fgviewer::FrameGraphInfo::Pass::AttachmentInfo;
+std::vector<RenderTargetInfo> RenderPassNode::getRenderTargetInfo() const noexcept {
+    using namespace backend;
+    std::vector<RenderTargetInfo> info;
+    info.reserve(mRenderTargetData.size());
+
+    for (auto const& rt: mRenderTargetData) {
+        RenderTargetInfo rtInfo;
+
+        auto extractAttachmentInfo = [&](TargetBufferFlags flags,
+                                             std::vector<AttachmentInfo>& list) {
+            for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; ++i) {
+                TargetBufferFlags mask = getTargetBufferFlagsAt(i);
+                if (any(flags & mask)) {
+                    FrameGraphHandle handle = rt.descriptor.attachments[i];
+                    if (handle) {
+                        const char* name = nullptr;
+                        if (i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT) name = "color";
+                        else if (i == MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT)
+                            name = "depth";
+                        else if (i == MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1)
+                            name = "stencil";
+
+                        utils::CString slotName(name);
+                        if (i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT) {
+                            slotName += utils::to_string(i);
+                        }
+
+                        list.push_back({ slotName, handle.getIndex() });
+                    }
+                }
+            }
+        };
+
+        extractAttachmentInfo(rt.backend.params.flags.discardStart, rtInfo.discardStart);
+        extractAttachmentInfo(rt.backend.params.flags.discardEnd, rtInfo.discardEnd);
+        extractAttachmentInfo(rt.backend.params.flags.clear, rtInfo.clear);
+
+        info.push_back(std::move(rtInfo));
+    }
+    return info;
+}
+#endif
 
 // ------------------------------------------------------------------------------------------------
 

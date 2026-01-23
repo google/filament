@@ -39,14 +39,29 @@ public:
     bool operator==(const FrameGraphInfo& rhs) const;
 
     struct Pass {
-        Pass(utils::CString name, std::vector<ResourceId> reads,
-             std::vector<ResourceId> writes);
+        struct AttachmentInfo {
+            utils::CString name;
+            ResourceId id;
+            bool operator==(const AttachmentInfo& rhs) const;
+        };
+
+        struct RenderTargetInfo {
+            std::vector<AttachmentInfo> discardStart;
+            std::vector<AttachmentInfo> discardEnd;
+            std::vector<AttachmentInfo> clear;
+            bool operator==(const RenderTargetInfo& rhs) const;
+        };
+
+        Pass(uint32_t id, utils::CString name, std::vector<ResourceId> reads,
+             std::vector<ResourceId> writes, std::vector<RenderTargetInfo> renderTargets = {});
 
         bool operator==(const Pass& rhs) const;
 
+        uint32_t id;
         utils::CString name;
         std::vector<ResourceId> reads;
         std::vector<ResourceId> writes;
+        std::vector<RenderTargetInfo> renderTargets;
     };
 
     struct Resource {

@@ -53,6 +53,11 @@ Java_com_google_android_filament_ToneMapper_nCreatePBRNeutralToneMapper(JNIEnv*,
 }
 
 extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_ToneMapper_nCreateGT7ToneMapper(JNIEnv*, jclass) {
+    return (jlong) new GT7ToneMapper();
+}
+
+extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_ToneMapper_nCreateAgxToneMapper(JNIEnv*, jclass, jint look) {
     return (jlong) new AgxToneMapper(AgxToneMapper::AgxLook(look));
 }

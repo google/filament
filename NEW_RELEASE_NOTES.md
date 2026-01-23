@@ -6,4 +6,3 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-- engine: Support custom attributes morphing, and allow for omitting position and/or normal data. [⚠️ **Recompile Materials**]
