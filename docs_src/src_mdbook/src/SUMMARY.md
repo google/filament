@@ -41,7 +41,6 @@
     - [gltfio](./dup/gltfio.md)
     - [iblprefilter](./dup/iblprefilter.md)
     - [matdbg](./dup/matdbg.md)
-    - [viewer](./dup/viewer.md)
     - [uberz](./dup/uberz.md)
   - [Tools](./notes/tools.md)
     - [beamsplitter](./dup/beamsplitter.md)

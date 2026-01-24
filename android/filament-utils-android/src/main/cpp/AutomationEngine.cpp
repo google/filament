@@ -159,48 +159,35 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nGetViewerOptions(JNIEnv* env, jclass,
         jlong nativeObject, jobject result) {
     AutomationEngine* automation = (AutomationEngine*) nativeObject;
-    const auto& settings = automation->getSettings();
-    const auto& options = settings.viewer;
+    auto options = automation->getViewerOptions();
 
     const jclass klass = env->GetObjectClass(result);
 
+    const jfieldID cameraAperture = env->GetFieldID(klass, "cameraAperture", "F");
+    const jfieldID cameraSpeed = env->GetFieldID(klass, "cameraSpeed", "F");
+    const jfieldID cameraISO = env->GetFieldID(klass, "cameraISO", "F");
+    const jfieldID cameraNear = env->GetFieldID(klass, "cameraNear", "F");
+    const jfieldID cameraFar = env->GetFieldID(klass, "cameraFar", "F");
     const jfieldID groundShadowStrength = env->GetFieldID(klass, "groundShadowStrength", "F");
     const jfieldID groundPlaneEnabled = env->GetFieldID(klass, "groundPlaneEnabled", "Z");
     const jfieldID skyboxEnabled = env->GetFieldID(klass, "skyboxEnabled", "Z");
+    const jfieldID cameraFocalLength = env->GetFieldID(klass, "cameraFocalLength", "F");
+    const jfieldID cameraFocusDistance = env->GetFieldID(klass, "cameraFocusDistance", "F");
     const jfieldID autoScaleEnabled = env->GetFieldID(klass, "autoScaleEnabled", "Z");
     const jfieldID autoInstancingEnabled = env->GetFieldID(klass, "autoInstancingEnabled", "Z");
 
+    env->SetFloatField(result, cameraAperture, options.cameraAperture);
+    env->SetFloatField(result, cameraSpeed, options.cameraSpeed);
+    env->SetFloatField(result, cameraISO, options.cameraISO);
+    env->SetFloatField(result, cameraNear, options.cameraNear);
+    env->SetFloatField(result, cameraFar, options.cameraFar);
     env->SetFloatField(result, groundShadowStrength, options.groundShadowStrength);
     env->SetBooleanField(result, groundPlaneEnabled, options.groundPlaneEnabled);
     env->SetBooleanField(result, skyboxEnabled, options.skyboxEnabled);
+    env->SetFloatField(result, cameraFocalLength, options.cameraFocalLength);
+    env->SetFloatField(result, cameraFocusDistance, options.cameraFocusDistance);
     env->SetBooleanField(result, autoScaleEnabled, options.autoScaleEnabled);
     env->SetBooleanField(result, autoInstancingEnabled, options.autoInstancingEnabled);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_AutomationEngine_nGetCameraSettings(JNIEnv* env, jclass,
-        jlong nativeObject, jobject result) {
-    AutomationEngine* automation = (AutomationEngine*) nativeObject;
-    const auto& settings = automation->getSettings();
-    const auto& camera = settings.camera;
-
-    const jclass klass = env->GetObjectClass(result);
-
-    const jfieldID aperture = env->GetFieldID(klass, "aperture", "F");
-    const jfieldID shutterSpeed = env->GetFieldID(klass, "shutterSpeed", "F");
-    const jfieldID sensitivity = env->GetFieldID(klass, "sensitivity", "F");
-    const jfieldID near = env->GetFieldID(klass, "near", "F");
-    const jfieldID far = env->GetFieldID(klass, "far", "F");
-    const jfieldID focalLength = env->GetFieldID(klass, "focalLength", "F");
-    const jfieldID focusDistance = env->GetFieldID(klass, "focusDistance", "F");
-
-    env->SetFloatField(result, aperture, camera.aperture);
-    env->SetFloatField(result, shutterSpeed, camera.shutterSpeed);
-    env->SetFloatField(result, sensitivity, camera.sensitivity);
-    env->SetFloatField(result, near, camera.near);
-    env->SetFloatField(result, far, camera.far);
-    env->SetFloatField(result, focalLength, camera.focalLength);
-    env->SetFloatField(result, focusDistance, camera.focusDistance);
 }
 
 extern "C" JNIEXPORT jlong JNICALL

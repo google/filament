@@ -20,13 +20,8 @@
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
-#include <filament/LightManager.h>
 #include <filament/Renderer.h>
-#include <filament/Scene.h>
-#include <filament/TransformManager.h>
 #include <filament/Viewport.h>
-
-#include <utils/EntityManager.h>
 
 #include <backend/PixelBufferDescriptor.h>
 
@@ -203,21 +198,10 @@ void AutomationEngine::applySettings(Engine* engine, const char* json, size_t js
     }
     viewer::applySettings(engine, mSettings->lighting, content.indirectLight, content.sunlight,
             content.assetLights, content.assetLightCount, content.lightManager, content.scene, content.view);
-    updateCustomLights(engine, mSettings->lighting.lights, content.scene);
-
     Camera* camera = &content.view->getCamera();
     Skybox* skybox = content.scene->getSkybox();
     viewer::applySettings(engine, mSettings->viewer, camera, skybox, content.renderer);
     viewer::applySettings(engine, mSettings->debug, content.renderer);
-
-    // Apply CameraSettings
-    double const aspect = (double) content.view->getViewport().width /
-                          (double) content.view->getViewport().height;
-    viewer::applySettings(engine, mSettings->camera, camera, aspect);
-
-    // Apply RenderSettings
-    content.renderer->setClearOptions(mSettings->render.clearOptions);
-    content.renderer->setFrameRateOptions(mSettings->render.frameRateOptions);
 }
 
 ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
@@ -233,6 +217,14 @@ ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
 }
 
 ViewerOptions AutomationEngine::getViewerOptions() const {
+    ViewerOptions options = mSettings->viewer;
+    const auto dofOptions = mSettings->view.dof;
+    if (dofOptions.enabled) {
+        options.cameraFocalLength = Camera::computeEffectiveFocalLength(
+                options.cameraFocalLength / 1000.0,
+                std::max(0.1f, options.cameraFocusDistance)) * 1000.0;
+
+    }
     return mSettings->viewer;
 }
 
@@ -245,20 +237,6 @@ void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float 
         for (size_t i = 0; i < content.materialCount; i++) {
             viewer::applySettings(engine, mSettings->material, content.materials[i]);
         }
-        viewer::applySettings(engine, mSettings->lighting, content.indirectLight, content.sunlight,
-                content.assetLights, content.assetLightCount, content.lightManager, content.scene,
-                content.view);
-        updateCustomLights(engine, mSettings->lighting.lights, content.scene);
-
-        // Apply CameraSettings
-        double const aspect = (double) content.view->getViewport().width /
-                              (double) content.view->getViewport().height;
-        viewer::applySettings(engine, mSettings->camera, &content.view->getCamera(), aspect);
-
-        // Apply RenderSettings
-        content.renderer->setClearOptions(mSettings->render.clearOptions);
-        content.renderer->setFrameRateOptions(mSettings->render.frameRateOptions);
-
         if (mOptions.verbose) {
             utils::slog.i << "Running test " << mCurrentTest << utils::io::endl;
         }
@@ -285,7 +263,7 @@ void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float 
 
     const bool isLastTest = mCurrentTest == mSpec->size() - 1;
 
-    int const digits = (int) log10((double) mSpec->size()) + 1;
+    const int digits = (int) log10 ((double) mSpec->size()) + 1;
     std::ostringstream stringStream;
     stringStream << mSpec->getName(mCurrentTest)
             << std::setfill('0') << std::setw(digits) << mCurrentTest;
@@ -316,52 +294,6 @@ void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float 
 
 const char* AutomationEngine::getStatusMessage() const {
     return gStatus.c_str();
-}
-
-void AutomationEngine::updateCustomLights(Engine* engine,
-        const std::vector<LightDefinition>& lights, Scene* scene) {
-    auto& em = utils::EntityManager::get();
-    LightManager* lm = &engine->getLightManager();
-
-    // Destroy old lights
-    for (auto entity: mCustomLights) {
-        lm->destroy(entity);
-        scene->remove(entity);
-        em.destroy(entity);
-    }
-    mCustomLights.clear();
-
-    if (lights.empty()) {
-        return;
-    }
-
-    // Create new lights
-    mCustomLights.resize(lights.size());
-    em.create(mCustomLights.size(), mCustomLights.data());
-
-    for (size_t i = 0; i < lights.size(); ++i) {
-        const auto& def = lights[i];
-        LightManager::Builder builder(def.type);
-        builder.color(def.color)
-                .intensity(def.intensity)
-                .position(def.position)
-                .direction(def.direction)
-                .falloff(def.falloff)
-                .spotLightCone(def.spotInner, def.spotOuter)
-                .castShadows(def.castShadows)
-                .sunHaloSize(def.sunHaloSize)
-                .sunHaloFalloff(def.sunHaloFalloff)
-                .sunAngularRadius(def.sunAngularRadius)
-                .build(*engine, mCustomLights[i]);
-
-        // Shadow options must be set on the instance after creation
-        auto instance = lm->getInstance(mCustomLights[i]);
-        if (instance) {
-            lm->setShadowOptions(instance, def.shadowOptions);
-        }
-
-        scene->addEntity(mCustomLights[i]);
-    }
 }
 
 } // namespace viewer

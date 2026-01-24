@@ -274,7 +274,7 @@ const float kToastDelayDuration = 2.0f;
             self.modelView.engine, message->buffer, message->bufferByteCount, content);
     ColorGrading* const colorGrading = _automation->getColorGrading(self.modelView.engine);
     self.modelView.view->setColorGrading(colorGrading);
-    self.modelView.cameraFocalLength = _automation->getSettings().camera.focalLength;
+    self.modelView.cameraFocalLength = _automation->getViewerOptions().cameraFocalLength;
 }
 
 - (void)loadGlb:(viewer::ReceivedMessage const*)message {

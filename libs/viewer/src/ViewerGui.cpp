@@ -429,13 +429,13 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
 
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
-        .color(mSettings.lighting.sunlight.color)
-        .intensity(mSettings.lighting.sunlight.intensity)
-        .direction(normalize(mSettings.lighting.sunlight.direction))
+        .color(mSettings.lighting.sunlightColor)
+        .intensity(mSettings.lighting.sunlightIntensity)
+        .direction(normalize(mSettings.lighting.sunlightDirection))
         .castShadows(true)
-        .sunAngularRadius(mSettings.lighting.sunlight.sunAngularRadius)
-        .sunHaloSize(mSettings.lighting.sunlight.sunHaloSize)
-        .sunHaloFalloff(mSettings.lighting.sunlight.sunHaloFalloff)
+        .sunAngularRadius(mSettings.lighting.sunlightAngularRadius)
+        .sunHaloSize(mSettings.lighting.sunlightHaloSize)
+        .sunHaloFalloff(mSettings.lighting.sunlightHaloFalloff)
         .build(*engine, mSunlight);
     if (mSettings.lighting.enableSunlight) {
         mScene->addEntity(mSunlight);
@@ -510,9 +510,9 @@ void ViewerGui::setIndirectLight(filament::IndirectLight* ibl,
         bool const dIsValid = std::none_of(std::begin(d.v), std::end(d.v), is_not_a_number);
         bool const cIsValid = std::none_of(std::begin(c.v), std::end(c.v), is_not_a_number);
         if (dIsValid && cIsValid) {
-            mSettings.lighting.sunlight.direction = d;
-            mSettings.lighting.sunlight.color = c.rgb;
-            mSettings.lighting.sunlight.intensity = c[3] * ibl->getIntensity();
+            mSettings.lighting.sunlightDirection = d;
+            mSettings.lighting.sunlightColor = c.rgb;
+            mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
         }
     }
 }
@@ -945,31 +945,31 @@ void ViewerGui::updateUserInterface() {
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
-            ImGui::SliderFloat("Sun intensity", &light.sunlight.intensity, 0.0f, 150000.0f);
-            ImGui::SliderFloat("Halo size", &light.sunlight.sunHaloSize, 1.01f, 40.0f);
-            ImGui::SliderFloat("Halo falloff", &light.sunlight.sunHaloFalloff, 4.0f, 1024.0f);
-            ImGui::SliderFloat("Sun radius", &light.sunlight.sunAngularRadius, 0.1f, 10.0f);
-            ImGuiExt::DirectionWidget("Sun direction", light.sunlight.direction.v);
-            ImGui::SliderFloat("Shadow Far", &light.sunlight.shadowOptions.shadowFar, 0.0f,
-                    mSettings.camera.far);
+            ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 0.0f, 150000.0f);
+            ImGui::SliderFloat("Halo size", &light.sunlightHaloSize, 1.01f, 40.0f);
+            ImGui::SliderFloat("Halo falloff", &light.sunlightHaloFalloff, 4.0f, 1024.0f);
+            ImGui::SliderFloat("Sun radius", &light.sunlightAngularRadius, 0.1f, 10.0f);
+            ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
+            ImGui::SliderFloat("Shadow Far", &light.shadowOptions.shadowFar, 0.0f,
+                    mSettings.viewer.cameraFar);
 
             if (ImGui::CollapsingHeader("Shadow direction")) {
-                float3 shadowDirection = light.sunlight.shadowOptions.transform * light.sunlight.direction;
+                float3 shadowDirection = light.shadowOptions.transform * light.sunlightDirection;
                 ImGuiExt::DirectionWidget("Shadow direction", shadowDirection.v);
-                light.sunlight.shadowOptions.transform = normalize(quatf{
-                        cross(light.sunlight.direction, shadowDirection),
-                        sqrt(length2(light.sunlight.direction) * length2(shadowDirection))
-                        + dot(light.sunlight.direction, shadowDirection)
+                light.shadowOptions.transform = normalize(quatf{
+                        cross(light.sunlightDirection, shadowDirection),
+                        sqrt(length2(light.sunlightDirection) * length2(shadowDirection))
+                        + dot(light.sunlightDirection, shadowDirection)
                 });
             }
         }
         if (ImGui::CollapsingHeader("Shadows")) {
             ImGui::Checkbox("Enable shadows", &light.enableShadows);
-            int mapSize = light.sunlight.shadowOptions.mapSize;
+            int mapSize = light.shadowOptions.mapSize;
             ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024);
-            light.sunlight.shadowOptions.mapSize = mapSize;
-            ImGui::Checkbox("Stable Shadows", &light.sunlight.shadowOptions.stable);
-            ImGui::Checkbox("Enable LiSPSM", &light.sunlight.shadowOptions.lispsm);
+            light.shadowOptions.mapSize = mapSize;
+            ImGui::Checkbox("Stable Shadows", &light.shadowOptions.stable);
+            ImGui::Checkbox("Enable LiSPSM", &light.shadowOptions.lispsm);
 
             int shadowType = (int)mSettings.view.shadowType;
             ImGui::Combo("Shadow type", &shadowType, "PCF\0VSM\0DPCF\0PCSS\0PCFd\0\0");
@@ -977,7 +977,7 @@ void ViewerGui::updateUserInterface() {
 
             if (mSettings.view.shadowType == ShadowType::VSM) {
                 ImGui::Checkbox("High precision", &mSettings.view.vsmShadowOptions.highPrecision);
-                ImGui::Checkbox("ELVSM", &mSettings.lighting.sunlight.shadowOptions.vsm.elvsm);
+                ImGui::Checkbox("ELVSM", &mSettings.lighting.shadowOptions.vsm.elvsm);
                 char label[32];
                 snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
                 ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
@@ -989,7 +989,7 @@ void ViewerGui::updateUserInterface() {
                 ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
                 mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
                 ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
-                ImGui::SliderFloat("VSM blur", &light.sunlight.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
+                ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
 
                 // These are not very useful in practice (defaults are good), but we keep them here for debugging
                 //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
@@ -1000,15 +1000,15 @@ void ViewerGui::updateUserInterface() {
                 ImGui::SliderFloat("Penumbra Ratio scale", &light.softShadowOptions.penumbraRatioScale, 1.0f, 100.0f);
             }
 
-            int shadowCascades = light.sunlight.shadowOptions.shadowCascades;
+            int shadowCascades = light.shadowOptions.shadowCascades;
             ImGui::SliderInt("Cascades", &shadowCascades, 1, 4);
             ImGui::Checkbox("Debug cascades",
                     debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
-            ImGui::Checkbox("Enable contact shadows", &light.sunlight.shadowOptions.screenSpaceContactShadows);
-            ImGui::SliderFloat("Split pos 0", &light.sunlight.shadowOptions.cascadeSplitPositions[0], 0.0f, 1.0f);
-            ImGui::SliderFloat("Split pos 1", &light.sunlight.shadowOptions.cascadeSplitPositions[1], 0.0f, 1.0f);
-            ImGui::SliderFloat("Split pos 2", &light.sunlight.shadowOptions.cascadeSplitPositions[2], 0.0f, 1.0f);
-            light.sunlight.shadowOptions.shadowCascades = shadowCascades;
+            ImGui::Checkbox("Enable contact shadows", &light.shadowOptions.screenSpaceContactShadows);
+            ImGui::SliderFloat("Split pos 0", &light.shadowOptions.cascadeSplitPositions[0], 0.0f, 1.0f);
+            ImGui::SliderFloat("Split pos 1", &light.shadowOptions.cascadeSplitPositions[1], 0.0f, 1.0f);
+            ImGui::SliderFloat("Split pos 2", &light.shadowOptions.cascadeSplitPositions[2], 0.0f, 1.0f);
+            light.shadowOptions.shadowCascades = shadowCascades;
         }
         ImGui::Unindent();
     }
@@ -1083,12 +1083,12 @@ void ViewerGui::updateUserInterface() {
     if (ImGui::CollapsingHeader("Camera")) {
         ImGui::Indent();
 
-        ImGui::SliderFloat("Focal length (mm)", &mSettings.camera.focalLength, 16.0f, 90.0f);
-        ImGui::SliderFloat("Aperture", &mSettings.camera.aperture, 1.0f, 32.0f);
-        ImGui::SliderFloat("Speed (1/s)", &mSettings.camera.shutterSpeed, 1000.0f, 1.0f);
-        ImGui::SliderFloat("ISO", &mSettings.camera.sensitivity, 25.0f, 6400.0f);
-        ImGui::SliderFloat("Near", &mSettings.camera.near, 0.001f, 1.0f);
-        ImGui::SliderFloat("Far", &mSettings.camera.far, 1.0f, 10000.0f);
+        ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength, 16.0f, 90.0f);
+        ImGui::SliderFloat("Aperture", &mSettings.viewer.cameraAperture, 1.0f, 32.0f);
+        ImGui::SliderFloat("Speed (1/s)", &mSettings.viewer.cameraSpeed, 1000.0f, 1.0f);
+        ImGui::SliderFloat("ISO", &mSettings.viewer.cameraISO, 25.0f, 6400.0f);
+        ImGui::SliderFloat("Near", &mSettings.viewer.cameraNear, 0.001f, 1.0f);
+        ImGui::SliderFloat("Far", &mSettings.viewer.cameraFar, 1.0f, 10000.0f);
 
         if (ImGui::CollapsingHeader("DoF")) {
             bool dofMedian = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
@@ -1097,7 +1097,7 @@ void ViewerGui::updateUserInterface() {
             if (!dofRingCount) dofRingCount = 5;
             if (!dofMaxCoC) dofMaxCoC = 32;
             ImGui::Checkbox("Enabled##dofEnabled", &mSettings.view.dof.enabled);
-            ImGui::SliderFloat("Focus distance", &mSettings.camera.focusDistance, 0.0f, 30.0f);
+            ImGui::SliderFloat("Focus distance", &mSettings.viewer.cameraFocusDistance, 0.0f, 30.0f);
             ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
             ImGui::SliderFloat("CoC aspect-ratio", &mSettings.view.dof.cocAspectRatio, 0.25f, 4.0f);
             ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
@@ -1162,11 +1162,12 @@ void ViewerGui::updateUserInterface() {
                 debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
         ImGui::Unindent();
 #endif
-        ImGui::SliderFloat("Ocular distance", &mSettings.camera.eyeOcularDistance, 0.0f, 1.0f);
+        ImGui::SliderFloat("Ocular distance",
+            &mSettings.viewer.cameraEyeOcularDistance, 0.0f, 1.0f);
 
-        float toeInDegrees = mSettings.camera.eyeToeIn / f::PI * 180.0f;
+        float toeInDegrees = mSettings.viewer.cameraEyeToeIn / f::PI * 180.0f;
         ImGui::SliderFloat("Toe in", &toeInDegrees, 0.0f, 30.0, "%.3f°");
-        mSettings.camera.eyeToeIn = toeInDegrees / 180.0f * f::PI;
+        mSettings.viewer.cameraEyeToeIn = toeInDegrees / 180.0f * f::PI;
 
         ImGui::Unindent();
 #endif
@@ -1184,9 +1185,6 @@ void ViewerGui::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mEngine, mSettings.view, mView);
-    double const aspect =
-            (double) mView->getViewport().width / (double) mView->getViewport().height;
-    applySettings(mEngine, mSettings.camera, &mView->getCamera(), aspect);
 
     auto lights = utils::FixedCapacityVector<utils::Entity>::with_capacity(mScene->getEntityCount());
     mScene->forEach([&](utils::Entity entity) {

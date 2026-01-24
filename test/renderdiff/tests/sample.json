@@ -12,7 +12,7 @@
             "models": ["lucy", "DamagedHelmet"],      // [optional] Base name for the gltf file used in the test.  For
                                                       //     example, source files are lucy.glb and DamagedHelmet.gltf
             "rendering": {                            // [required] Rendering settings used in the test. The json format
-                "camera.focusDistance": 0,            //     is taken from AutomationSpec in libs/viewer
+                "viewer.cameraFocusDistance": 0,      //     is taken from AutomationSpec in libs/viewer
                 "view.postProcessingEnabled": true
             }
         }
