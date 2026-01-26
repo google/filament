@@ -47,7 +47,7 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
     {
         "name": "vieweropts",
         "base": {
-            "viewer.cameraFocusDistance": 0.1
+            "camera.focusDistance": 0.1
         }
     },
     {
@@ -59,7 +59,7 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
             "view.taa.enabled": [false, true],
             "view.antiAliasing": ["NONE", "FXAA"],
             "view.ssao.enabled": [false, true],
-            "view.screenSpaceReflections.enabled": [false, true]
+            "view.screenSpaceReflections.enabled": [false, true],
             "view.bloom.enabled": [false, true],
             "view.dof.enabled": [false, true],
             "view.guardBand.enabled": [false, true]
@@ -89,10 +89,20 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, std::str
     return i + 1;
 }
 
+static int skip(jsmntok_t const* tokens, int i) {
+    int size = tokens[i].size;
+    i++;
+    for (int j = 0; j < size; ++j) {
+        i = skip(tokens, i);
+    }
+    return i;
+}
+
 static int parseBaseSettings(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
-    for (int j = 0; j < size; ++j, i += 2) {
+    for (int j = 0; j < size; ++j) {
+        // Current token is Key
         std::stringstream dk(STR(tokens[i], jsonChunk));
         std::string token;
         std::string prefix;
@@ -103,6 +113,8 @@ static int parseBaseSettings(jsmntok_t const* tokens, int i, const char* jsonChu
             prefix += "{ \"" + token + "\": ";
             depth++;
         }
+
+        // Next token is Value
         std::string json = prefix + STR(tokens[i + 1], jsonChunk);
         for (int d = 0; d < depth; d++) {  json += " } "; }
         if (VERBOSE) {
@@ -112,6 +124,11 @@ static int parseBaseSettings(jsmntok_t const* tokens, int i, const char* jsonChu
         // Now that we have a complete JSON string, apply this property change.
         JsonSerializer serializer;
         serializer.readJson(json.c_str(), json.size(), out);
+
+        // Advance past Key
+        i++;
+        // Advance past Value (recursively)
+        i = skip(tokens, i);
     }
     return i;
 }

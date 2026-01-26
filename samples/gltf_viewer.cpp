@@ -781,7 +781,7 @@ int main(int argc, char** argv) {
                                            ? AutomationEngine::Options::ExportFormat::PPM
                                            : AutomationEngine::Options::ExportFormat::TIFF;
             app.automationEngine->setOptions(options);
-            app.viewer->stopAnimation();
+            app.viewer->getSettings().animation.enabled = false;
         }
 
         if (!app.settingsFile.empty()) {
@@ -1084,7 +1084,16 @@ int main(int argc, char** argv) {
         // Gradually add renderables to the scene as their textures become ready.
         app.viewer->populateScene();
 
-        app.viewer->applyAnimation(now);
+        auto const& animSettings = app.viewer->getSettings().animation;
+        if (animSettings.enabled) {
+            double animTime = now;
+            if (animSettings.time >= 0.0f) {
+                animTime = animSettings.time;
+            } else {
+                animTime *= animSettings.speed;
+            }
+            app.viewer->applyAnimation(animTime);
+        }
     };
 
     auto resize = [&app](Engine*, View* view) {
@@ -1116,13 +1125,21 @@ int main(int argc, char** argv) {
 
         // Note that this focal length might be different from the slider value because the
         // automation engine applies Camera::computeEffectiveFocalLength when DoF is enabled.
-        FilamentApp::get().setCameraFocalLength(viewerOptions.cameraFocalLength);
-        FilamentApp::get().setCameraNearFar(viewerOptions.cameraNear, viewerOptions.cameraFar);
+        float focalLength = app.viewer->getSettings().camera.focalLength;
+        float const focusDistance = app.viewer->getSettings().camera.focusDistance;
+        if (app.viewer->getSettings().view.dof.enabled) {
+            focalLength = Camera::computeEffectiveFocalLength(focalLength / 1000.0,
+                                  std::max(0.1f, focusDistance)) *
+                          1000.0;
+        }
+        FilamentApp::get().setCameraFocalLength(focalLength);
+        FilamentApp::get().setCameraNearFar(app.viewer->getSettings().camera.near,
+                app.viewer->getSettings().camera.far);
 
-        const size_t cameraCount = app.asset->getCameraEntityCount();
+        size_t const cameraCount = app.asset->getCameraEntityCount();
         view->setCamera(app.mainCamera);
 
-        const int currentCamera = app.viewer->getCurrentCamera();
+        int const currentCamera = app.viewer->getCurrentCamera();
         if (currentCamera > 0 && currentCamera <= cameraCount) {
             const utils::Entity* cameras = app.asset->getCameraEntities();
             Camera* camera = engine->getCameraComponent(cameras[currentCamera - 1]);
@@ -1150,8 +1167,11 @@ int main(int argc, char** argv) {
         Camera& camera = view->getCamera();
         Skybox* skybox = scene->getSkybox();
         applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
+        double const aspect =
+                (double) view->getViewport().width / (double) view->getViewport().height;
+        applySettings(engine, app.viewer->getSettings().camera, &camera, aspect);
 
-        // FIMXE: This applySettings() is done here instead of in AutomationEngine.cpp because
+        // FIXME: This applySettings() is done here instead of in AutomationEngine.cpp because
         // we need access to the Renderer, which AutomationEngine does not provide.
         applySettings(engine, app.viewer->getSettings().debug, renderer);
 
@@ -1183,7 +1203,7 @@ int main(int argc, char** argv) {
         }
     };
 
-    auto postRender = [&app](Engine* engine, View* view, Scene*, Renderer* renderer) {
+    auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
         if (app.screenshot) {
             std::ostringstream stringStream;
             stringStream << "screenshot" << std::setfill('0') << std::setw(2) << +app.screenshotSeq;
@@ -1202,6 +1222,12 @@ int main(int argc, char** argv) {
             .renderer = renderer,
             .materials = app.instance->getMaterialInstances(),
             .materialCount = app.instance->getMaterialInstanceCount(),
+            .lightManager = &engine->getLightManager(),
+            .scene = scene,
+            .indirectLight = app.viewer->getIndirectLight(),
+            .sunlight = app.viewer->getSunlight(),
+            .assetLights = app.asset->getLightEntities(),
+            .assetLightCount = app.asset->getLightEntityCount(),
         };
         app.automationEngine->tick(engine, content, ImGui::GetIO().DeltaTime);
     };
