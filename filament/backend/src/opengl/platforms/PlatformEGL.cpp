@@ -125,18 +125,19 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
     EGLint major, minor;
     EGLBoolean initialized = false;
 
-    EGLDeviceEXT eglDevices[kMaxNumEGLDevices];
-    EGLint numDevices;
     PFNEGLQUERYDEVICESEXTPROC const eglQueryDevicesEXT =
         PFNEGLQUERYDEVICESEXTPROC(eglGetProcAddress("eglQueryDevicesEXT"));
     PFNEGLGETPLATFORMDISPLAYEXTPROC const getPlatformDisplay =
         PFNEGLGETPLATFORMDISPLAYEXTPROC(eglGetProcAddress("eglGetPlatformDisplay"));
 
-    if (eglQueryDevicesEXT != nullptr) {
-        eglQueryDevicesEXT(kMaxNumEGLDevices, eglDevices, &numDevices);
-        for (int i = 0; i < numDevices && !initialized; ++i) {
-            mEGLDisplay = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, eglDevices[i], nullptr);
-            initialized = eglInitialize(mEGLDisplay, &major, &minor);
+    if (eglQueryDevicesEXT != nullptr && getPlatformDisplay != nullptr) {
+        EGLint numDevices = 0;
+        EGLDeviceEXT eglDevices[kMaxNumEGLDevices];
+        if (eglQueryDevicesEXT(kMaxNumEGLDevices, eglDevices, &numDevices)) {
+            for (int i = 0; i < numDevices && !initialized; ++i) {
+                mEGLDisplay = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, eglDevices[i], nullptr);
+                initialized = eglInitialize(mEGLDisplay, &major, &minor);
+            }
         }
     }
 
