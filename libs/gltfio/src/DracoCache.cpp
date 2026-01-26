@@ -22,6 +22,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
+#include <utils/Panic.h>
 
 #if GLTFIO_DRACO_SUPPORTED
 
@@ -73,7 +74,7 @@ UTILS_UNUSED_IN_RELEASE static int getNumComponents(cgltf_type ctype) {
 // Allocates and populates the given buffer view with indices from the given Draco mesh.
 template<typename T>
 static void convertFaces(cgltf_accessor* target, const draco::Mesh* mesh) {
-    assert(target->stride == sizeof(T));
+    FILAMENT_CHECK_PRECONDITION(target->stride == sizeof(T));
 
     const cgltf_size size = mesh->num_faces() * 3 * sizeof(T);
     cgltf_buffer_view* view = target->buffer_view;
@@ -93,8 +94,8 @@ static void convertFaces(cgltf_accessor* target, const draco::Mesh* mesh) {
 template<typename T>
 static void convertAttribs(cgltf_accessor* target, const draco::PointAttribute* attr, uint32_t n) {
     const int8_t ncomps = attr->num_components();
-    assert(ncomps <= 4 && ncomps == getNumComponents(target->type));
-    assert(target->stride == attr->num_components() * sizeof(T));
+    FILAMENT_CHECK_PRECONDITION(ncomps <= 4 && ncomps == getNumComponents(target->type));
+    FILAMENT_CHECK_PRECONDITION(target->stride == attr->num_components() * sizeof(T));
 
     const uint32_t size = target->stride * n;
     cgltf_buffer_view* view = target->buffer_view;
