@@ -94,18 +94,21 @@ public class AutomationEngine {
      * Allows remote control for the viewer.
      */
     public static class ViewerOptions {
-        public float cameraAperture = 16.0f;
-        public float cameraSpeed = 125.0f;
-        public float cameraISO = 100.0f;
-        public float cameraNear = 0.1f;
-        public float cameraFar = 100.0f;
         public float groundShadowStrength = 0.75f;
         public boolean groundPlaneEnabled = false;
         public boolean skyboxEnabled = true;
-        public float cameraFocalLength = 28.0f;
-        public float cameraFocusDistance = 0.0f;
         public boolean autoScaleEnabled = true;
         public boolean autoInstancingEnabled = false;
+    }
+
+    public static class CameraSettings {
+        public float aperture = 16.0f;
+        public float shutterSpeed = 125.0f;
+        public float sensitivity = 100.0f;
+        public float near = 0.1f;
+        public float far = 100.0f;
+        public float focalLength = 28.0f;
+        public float focusDistance = 10.0f;
     }
 
     /**
@@ -229,6 +232,13 @@ public class AutomationEngine {
         return result;
     }
 
+    @NonNull
+    public CameraSettings getCameraSettings() {
+        CameraSettings result = new CameraSettings();
+        nGetCameraSettings(mNativeObject, result);
+        return result;
+    }
+
     /**
      * Gets a color grading object that corresponds to the latest settings.
      *
@@ -280,6 +290,7 @@ public class AutomationEngine {
             long[] materials, long ibl, int sunlight, int[] assetLights, long lightManager,
             long scene, long renderer);
     private static native void nGetViewerOptions(long nativeObject, Object result);
+    private static native void nGetCameraSettings(long nativeObject, Object result);
     private static native long nGetColorGrading(long nativeObject, long nativeEngine);
     private static native void nSignalBatchMode(long nativeObject);
     private static native void nStopRunning(long nativeObject);
