@@ -120,25 +120,30 @@ bool PlatformEGL::isOpenGL() const noexcept {
 PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
 
 Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) {
-    mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
+    static constexpr int kMaxNumEGLDevices = 32;
 
     EGLint major, minor;
-    EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);
+    EGLBoolean initialized = false;
+
+    EGLDeviceEXT eglDevices[kMaxNumEGLDevices];
+    EGLint numDevices;
+    PFNEGLQUERYDEVICESEXTPROC const eglQueryDevicesEXT =
+        PFNEGLQUERYDEVICESEXTPROC(eglGetProcAddress("eglQueryDevicesEXT"));
+    PFNEGLGETPLATFORMDISPLAYEXTPROC const getPlatformDisplay =
+        PFNEGLGETPLATFORMDISPLAYEXTPROC(eglGetProcAddress("eglGetPlatformDisplay"));
+
+    if (eglQueryDevicesEXT != nullptr) {
+        eglQueryDevicesEXT(kMaxNumEGLDevices, eglDevices, &numDevices);
+        for (int i = 0; i < numDevices && !initialized; ++i) {
+            mEGLDisplay = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, eglDevices[i], nullptr);
+            initialized = eglInitialize(mEGLDisplay, &major, &minor);
+        }
+    }
 
     if (!initialized) {
-        EGLDeviceEXT eglDevice;
-        EGLint numDevices;
-        PFNEGLQUERYDEVICESEXTPROC const eglQueryDevicesEXT =
-                PFNEGLQUERYDEVICESEXTPROC(eglGetProcAddress("eglQueryDevicesEXT"));
-        if (eglQueryDevicesEXT != nullptr) {
-            eglQueryDevicesEXT(1, &eglDevice, &numDevices);
-            if(auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
-                    eglGetProcAddress("eglGetPlatformDisplay"))) {
-                mEGLDisplay = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, eglDevice, nullptr);
-                initialized = eglInitialize(mEGLDisplay, &major, &minor);
-            }
-        }
+        mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+        assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
+        initialized = eglInitialize(mEGLDisplay, &major, &minor);
     }
 
     if (UTILS_UNLIKELY(!initialized)) {
