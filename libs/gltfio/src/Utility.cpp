@@ -23,10 +23,13 @@
 #include <private/utils/Tracing.h>
 
 #include <utils/Log.h>
+#include <utils/Panic.h>
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 #include <meshoptimizer.h>
+
+#include <limits>
 
 namespace filament::gltfio::utility {
 
@@ -93,6 +96,12 @@ void decodeMeshoptCompression(cgltf_data* data) {
         const uint8_t* source = (const uint8_t*) compression->buffer->data;
         assert_invariant(source);
         source += compression->offset;
+
+        size_t const theoreticalMaxCount = std::numeric_limits<size_t>::max() / compression->stride;
+        FILAMENT_CHECK_PRECONDITION(compression->count <= theoreticalMaxCount)
+                << "gltfio: meshopt decompression exceeds maximum count of " << theoreticalMaxCount
+                << " (actual=" << compression->count << ") given stride of " << compression->stride
+                << ".";
 
         // This memory is freed by cgltf.
         void* destination = malloc(compression->count * compression->stride);
