@@ -231,6 +231,9 @@ public:
 
     int getCurrentCamera() const { return mCurrentCamera; }
 
+    utils::Entity getSunlight() const { return mSunlight; }
+    IndirectLight* getIndirectLight() const { return mIndirectLight; }
+
 private:
     using SceneMask = gltfio::NodeManager::SceneMask;
 

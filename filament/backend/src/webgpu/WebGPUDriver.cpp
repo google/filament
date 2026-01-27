@@ -2151,23 +2151,35 @@ wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& f
 }
 
 MemoryMappedBufferHandle WebGPUDriver::mapBufferS() noexcept {
-    // TODO: MetalDriver::mapBufferS
-    return {};
+    return allocHandle<WebGPUMemoryMappedBuffer>();
 }
 
 void WebGPUDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
         BufferObjectHandle boh, size_t offset,
         size_t size, MapBufferAccessFlags access, utils::ImmutableCString&& tag) {
-    // TODO: MetalDriver::mapBufferR
+    constructHandle<WebGPUMemoryMappedBuffer>(mmbh, boh, offset, size, access);
+    setDebugTag(mmbh.getId(), std::move(tag));
 }
 
 void WebGPUDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
-    // TODO: MetalDriver::unmapBuffer
+    destructHandle<WebGPUMemoryMappedBuffer>(mmbh);
 }
 
 void WebGPUDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
         BufferDescriptor&& data) {
-    // TODO: MetalDriver::copyToMemoryMappedBuffer
+    auto mmb = handleCast<WebGPUMemoryMappedBuffer>(mmbh);
+    assert_invariant(mmb);
+    assert_invariant(offset + data.size <= mmb->size);
+    assert_invariant(any(mmb->access & MapBufferAccessFlags::WRITE_BIT));
+
+    const size_t absoluteOffset = mmb->offset + offset;
+    auto bo = handleCast<WebGPUBufferObject>(mmb->bufferObject);
+    assert_invariant(bo);
+
+    // TODO: this is a zero-effort implementation of copyToMemoryMappedBuffer(), where we just
+    //       call updateBufferObject().
+    bo->updateGPUBuffer(data, absoluteOffset, mDevice, &mQueueManager, &mStagePool);
+    scheduleDestroy(std::move(data));
 }
 
 void WebGPUDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,

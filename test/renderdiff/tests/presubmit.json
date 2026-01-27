@@ -7,7 +7,7 @@
             "name": "base",
             "models": ["Box", "BoxTextured", "FlightHelmet", "lucy"],
             "rendering": {
-                "viewer.cameraFocalLength": 35.0,
+                "camera.focalLength": 35.0,
                 "view.postProcessingEnabled": true,
                 "view.dithering": "NONE"
             },
@@ -56,7 +56,7 @@
             "description": "transmission",
             "apply_presets": ["base", "transmission_models"],
             "rendering": {
-                "viewer.cameraFocalLength": 52.0
+                "camera.focalLength": 52.0
             }
         },
         {

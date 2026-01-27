@@ -221,3 +221,88 @@ int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+
+static const char* JSON_TEST_CAMERA = R"TXT(
+{
+    "camera": {
+        "aperture": 4.0,
+        "shutterSpeed": 200,
+        "sensitivity": 400,
+        "focalLength": 50,
+        "focusDistance": 5.0,
+        "projection": "ORTHO",
+        "near": 0.5,
+        "far": 1000.0,
+        "scaling": [0.5, 0.6],
+        "shift": [0.1, 0.2]
+    }
+}
+)TXT";
+
+TEST_F(ViewSettingsTest, JsonTestCamera) {
+    JsonSerializer serializer;
+    Settings settings;
+    ASSERT_TRUE(serializer.readJson(JSON_TEST_CAMERA, strlen(JSON_TEST_CAMERA), &settings));
+
+    EXPECT_FLOAT_EQ(settings.camera.aperture, 4.0f);
+    EXPECT_FLOAT_EQ(settings.camera.shutterSpeed, 200.0f);
+    EXPECT_FLOAT_EQ(settings.camera.sensitivity, 400.0f);
+    EXPECT_FLOAT_EQ(settings.camera.focalLength, 50.0f);
+    EXPECT_FLOAT_EQ(settings.camera.focusDistance, 5.0f);
+    EXPECT_EQ(settings.camera.projection, CameraProjection::ORTHO);
+    EXPECT_FLOAT_EQ(settings.camera.near, 0.5f);
+    EXPECT_FLOAT_EQ(settings.camera.far, 1000.0f);
+    EXPECT_FLOAT_EQ(settings.camera.scaling.x, 0.5f);
+    EXPECT_FLOAT_EQ(settings.camera.scaling.y, 0.6f);
+    EXPECT_FLOAT_EQ(settings.camera.shift.x, 0.1f);
+    EXPECT_FLOAT_EQ(settings.camera.shift.y, 0.2f);
+}
+
+static const char* JSON_TEST_LIGHTS = R"TXT(
+{
+    "lighting": {
+        "enableSunlight": false,
+        "lights": [
+            {
+                "type": "POINT",
+                "position": [1.0, 2.0, 3.0],
+                "color": [1.0, 0.0, 0.0],
+                "intensity": 1000.0,
+                "falloff": 5.0,
+                "castShadows": true
+            },
+            {
+                "type": "SPOT",
+                "direction": [0.0, -1.0, 0.0],
+                "spotInner": 0.5,
+                "spotOuter": 0.8
+            }
+        ]
+    }
+}
+)TXT";
+
+TEST_F(ViewSettingsTest, JsonTestLights) {
+    JsonSerializer serializer;
+    Settings settings;
+    ASSERT_TRUE(serializer.readJson(JSON_TEST_LIGHTS, strlen(JSON_TEST_LIGHTS), &settings));
+
+    EXPECT_FALSE(settings.lighting.enableSunlight);
+    ASSERT_EQ(settings.lighting.lights.size(), 2);
+
+    const auto& light0 = settings.lighting.lights[0];
+    EXPECT_EQ(light0.type, LightManager::Type::POINT);
+    EXPECT_FLOAT_EQ(light0.position.x, 1.0f);
+    EXPECT_FLOAT_EQ(light0.position.y, 2.0f);
+    EXPECT_FLOAT_EQ(light0.position.z, 3.0f);
+    EXPECT_FLOAT_EQ(light0.color.r, 1.0f);
+    EXPECT_FLOAT_EQ(light0.intensity, 1000.0f);
+    EXPECT_FLOAT_EQ(light0.falloff, 5.0f);
+    EXPECT_TRUE(light0.castShadows);
+
+    const auto& light1 = settings.lighting.lights[1];
+    EXPECT_EQ(light1.type, LightManager::Type::SPOT);
+    EXPECT_FLOAT_EQ(light1.direction.y, -1.0f);
+    EXPECT_FLOAT_EQ(light1.spotInner, 0.5f);
+    EXPECT_FLOAT_EQ(light1.spotOuter, 0.8f);
+}

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>uberz - Filament</title>
+        <title>viewer - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,89 +158,137 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="uberz"><a class="header" href="#uberz">uberz</a></h1>
-<p>An ubershader archive provides a way to bundle up a set of <code>filamat</code> files along with some metadata
-that conveys which glTF features each material can handle. It is a file that has been compressed
-with <code>zstd</code> and has an <code>.uberz</code> file extension. In uncompressed form, it has the following layout
-(little endian is assumed).</p>
-<pre><code>[u32] magic identifier: UBER
-[u32] simple (unpartitioned) version number for the archive format
-[u64] number of specs
-[u64] byte offset to SPECS
-SPECS:
-foreach spec {
-    [u8] shading model
-    [u8] blending model
-    [u16] number of flags
-    [u32] size in bytes of the filamat blob
-    [u64] byte offset to FLAGLIST for this spec
-    [u64] byte offset to FILAMAT for this spec
-}
-foreach spec {
-    FLAGLIST:
-    foreach flag {
-        [u64] byte offset to FLAGNAME for this spec/flag pair
-        [u64] flag value: 0 = unsupported, 1 = optional, or 2 = required
-    }
-}
-foreach spec {
-    foreach flag {
-        FLAGNAME:
-        [u8...] flag name, including null terminator
-    }
-}
-foreach spec {
-    FILAMAT:
-    [u8...] filamat blob
-}
-</code></pre>
-<p>In the above specification, each "offset" is a number of bytes between the top of the file to the
-given label. These offsets are 64 bits so that they can be replaced with pointers in a C struct,
-which allows the file to be consumed without any parsing. On 32-bit architectures, this still works
-because we can simply ignore the unused padding after every pointer.</p>
-<h1 id="ubershader-spec-files"><a class="header" href="#ubershader-spec-files">Ubershader Spec Files</a></h1>
-<p>An ubershader spec file is a simple text file with a <code>.spec</code> extension. It contains a list of
-key-value pairs conforming to the following grammar. Each key-value pair is either a <em>feature flag</em>
-or a <em>fundamental aspect</em>.</p>
+                        <h1 id="viewer-library"><a class="header" href="#viewer-library">Viewer Library</a></h1>
+<p>The <strong>Viewer Library</strong> (<code>libs/viewer</code>) provides a high-level abstraction for configuring and rendering Filament scenes. It is used by tools like <code>gltf_viewer</code> to load assets, manage settings, and drive the rendering loop.</p>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
 <ul>
-<li>Each feature flag can be <strong>unsupported</strong>, <strong>required</strong>, or <strong>optional</strong>.</li>
-<li>The fundamental aspect of the material cannot be changed, such as the blend mode.</li>
+<li><strong>Settings Management</strong>: Centralized configuration for View, Camera, Lights, and Materials via the <code>Settings</code> struct.</li>
+<li><strong>JSON Serialization</strong>: Full support for loading and saving settings via JSON.</li>
+<li><strong>Automation</strong>: <code>AutomationEngine</code> allows scripting the viewer with a sequence of JSON-based test cases (batch mode).</li>
+<li><strong>GUI Integration</strong>: Built-in support for <code>imgui</code> via <code>ViewerGui</code> and <code>Settings</code> binding.</li>
 </ul>
-<pre><code class="language-eBNF">spec = { [ comment | key_value_pair ] , "\n" } ;
-comment = "#" , { any } ;
-key_value_pair = ( fundamental_aspect | feature_flag ) ;
-fundamental_aspect = ( blending | shading ) ;
-feature_flag = identifier , equals , ("unsupported" | "required" | "optional") ;
-blending = "BlendingMode" , equals ,
-    ( "opaque" | "transparent" | "fade" | "add" | "masked" | "multiply" | "screen" ) ;
-shading = "ShadingModel"  , equals ,
-    ( "lit" | "subsurface" | "cloth" | "unlit" | "specularGlossiness") ;
-equals = [ whitespace ] , "=" , [ whitespace ] ;
-any = ? any character other than newline ? ;
-whitespace = ? sequence of tabs and spaces ? ;
-identifier = ? sequence of alphanumeric characters ? ;
+<h2 id="json-settings-schema"><a class="header" href="#json-settings-schema">JSON Settings Schema</a></h2>
+<p>The viewer settings can be configured using a JSON object. This is used for <code>gltf_viewer --settings</code> or in automation specs.</p>
+<h3 id="root-object"><a class="header" href="#root-object">Root Object</a></h3>
+<p>The root object contains the following categories:</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Key</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><code>view</code></td><td style="text-align: left">Object</td><td style="text-align: left">Post-processing and rendering quality settings.</td></tr>
+<tr><td style="text-align: left"><code>camera</code></td><td style="text-align: left">Object</td><td style="text-align: left"><strong>[NEW]</strong> Explicit camera control (pose, projection, exposure).</td></tr>
+<tr><td style="text-align: left"><code>lighting</code></td><td style="text-align: left">Object</td><td style="text-align: left"><strong>[NEW]</strong> Environment and dynamic light settings.</td></tr>
+<tr><td style="text-align: left"><code>viewer</code></td><td style="text-align: left">Object</td><td style="text-align: left">Global viewer options (skybox, background, scaling).</td></tr>
+<tr><td style="text-align: left"><code>animation</code></td><td style="text-align: left">Object</td><td style="text-align: left"><strong>[NEW]</strong> Animation playback control.</td></tr>
+<tr><td style="text-align: left"><code>material</code></td><td style="text-align: left">Object</td><td style="text-align: left">Material overrides.</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h3 id="camera-settings-camera"><a class="header" href="#camera-settings-camera">Camera Settings (<code>camera</code>)</a></h3>
+<p>Allows explicit control over the camera. If <code>enabled</code> is false, the viewer uses its default orbit camera logic (auto-scaling/centering).</p>
+<pre><code class="language-json">"camera": {
+    "enabled": true,                  // Must be true to use these explicit settings
+    "projection": "PERSPECTIVE",      // "PERSPECTIVE" or "ORTHO"
+    "center": [0, 0, 0],              // World-space look-at point
+    "lookAt": [0, 0, -1],             // World-space eye position (confusingly named 'lookAt' in internal legacy, often 'eye')
+    "up": [0, 1, 0],                  // Up vector
+    "near": 0.1,                      // Near plane
+    "far": 100.0,                     // Far plane
+    "focalLength": 28.0,              // Focal length in mm (Perspective only)
+    "fov": 0.0,                       // Field of view in degrees (overrides focalLength if &gt; 0)
+    "aperture": 16.0,                 // f-stop
+    "shutterSpeed": 125.0,            // 1/seconds
+    "sensitivity": 100.0,             // ISO
+    "focusDistance": 10.0,            // Focus distance in world units
+    "scaling": [1.0, 1.0],            // Custom projection matrix scaling (mostly for Ortho)
+    "shift": [0.0, 0.0]               // Custom projection matrix shift
+}
 </code></pre>
-<p>If a fundamental aspect is missing from the spec, then the loader will assume that the spec can
-handle all possible values for that aspect. For example, we may wish to override the glTF
-blending mode in certain ubershader materials (e.g. materials that support <code>KHR_materials_volume</code>).
-These materials should simply omit the <code>BlendingMode</code> line from the spec.</p>
-<p>If any feature flag is missing from the spec, it implicitly has the value of <code>unsupported</code>. For an
-up-to-date list of recognized feature flags, look at the source for <code>UbershaderProvider::getMaterial</code>.</p>
-<p>If a particular feature flag is set to <code>required</code> for a particular material, then the glTF loader
-will bind that material to a given glTF mesh only if that feature is enabled in the mesh.</p>
-<p>Usually, features are either <code>unsupported</code> or <code>optional</code>. For example, if the ubershader user can
-set <code>normalIndex</code> in the material to <code>-1</code> to signal that they do not have a normal map, then normal
-mapping should be specified as an <code>optional</code> feature of the ubershader.</p>
+<h3 id="lighting-settings-lighting"><a class="header" href="#lighting-settings-lighting">Lighting Settings (<code>lighting</code>)</a></h3>
+<p>Controls the Image Based Lighting (IBL), the Sun, and additional dynamic lights.</p>
+<pre><code class="language-json">"lighting": {
+    "iblIntensity": 30000.0,
+    "iblRotation": 0.0,               // Rotation in degrees
+    "enableSunlight": true,
+    "enableShadows": true,
+    "sunlight": {                     // **[NEW]** Nested sunlight properties
+        "intensity": 100000.0,
+        "color": [0.98, 0.92, 0.89],
+        "direction": [0.6, -1.0, -0.8],
+        "sunHaloSize": 10.0,
+        "sunHaloFalloff": 80.0,
+        "sunAngularRadius": 1.9,
+        "castShadows": true,
+        "shadowOptions": {            // Per-light shadow options
+             "mapSize": 1024,
+             "shadowCascades": 1,
+             "stable": false
+        }
+    },
+    "lights": [                       // **[NEW]** Array of custom lights
+        {
+            "type": "POINT",          // "POINT", "SPOT", "FOCUSED_SPOT", "DIRECTIONAL", "SUN"
+            "position": [0, 2, 0],
+            "color": [1, 0, 0],
+            "intensity": 5000.0,
+            "falloff": 10.0,
+            "castShadows": true,
+            "shadowOptions": { "mapSize": 512 }
+        },
+        {
+            "type": "SPOT",
+            "position": [2, 5, 2],
+            "direction": [0, -1, 0],
+            "spotInner": 0.5,         // Inner cone angle (radians)
+            "spotOuter": 0.8          // Outer cone angle (radians)
+        }
+    ]
+}
+</code></pre>
+<h3 id="view-settings-view"><a class="header" href="#view-settings-view">View Settings (<code>view</code>)</a></h3>
+<p>Standard Filament view settings.</p>
+<pre><code class="language-json">"view": {
+    "postProcessingEnabled": true,
+    "antiAliasing": "FXAA",           // "NONE", "FXAA"
+    "msaa": {
+        "enabled": true,
+        "sampleCount": 4
+    },
+    "ssao": { "enabled": true, ... },
+    "bloom": { "enabled": true, ... },
+    "dof": { "enabled": false, ... },
+    "vignette": { "enabled": false, ... },
+    "colorGrading": {
+        "toneMapping": "ACES_LEGACY", // "LINEAR", "ACES", "FILMIC", "PBR_NEUTRAL", etc.
+        "exposure": 0.0,
+        "gamma": [1.0, 1.0, 1.0]
+    }
+}
+</code></pre>
+<h3 id="viewer-options-viewer"><a class="header" href="#viewer-options-viewer">Viewer Options (<code>viewer</code>)</a></h3>
+<p>General app-level settings.</p>
+<pre><code class="language-json">"viewer": {
+    "skyboxEnabled": true,
+    "backgroundColor": [0, 0, 0],     // Used if skybox is disabled
+    "autoScaleEnabled": true,         // Fit model to unit cube
+    "groundPlaneEnabled": false
+}
+</code></pre>
+<h3 id="animation-settings-animation"><a class="header" href="#animation-settings-animation">Animation Settings (<code>animation</code>)</a></h3>
+<p>Control glTF animation playback.</p>
+<pre><code class="language-json">"animation": {
+    "enabled": true,
+    "speed": 1.0,
+    "time": -1.0                      // If &gt;= 0, forces animation to this specific time (seconds)
+}
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dup/viewer.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../dup/matdbg.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../notes/tools.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dup/uberz.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -250,11 +298,11 @@ mapping should be specified as an <code>optional</code> feature of the ubershade
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dup/viewer.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../dup/matdbg.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../notes/tools.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dup/uberz.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
