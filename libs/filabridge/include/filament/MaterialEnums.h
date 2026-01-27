@@ -28,7 +28,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 68;
+static constexpr size_t MATERIAL_VERSION = 69;
 
 // Those are the api levels that are used in the source material file (.mat)
 //

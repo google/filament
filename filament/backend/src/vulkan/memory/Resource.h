@@ -81,6 +81,8 @@ struct Resource {
         return getTypeEnum<D>() == restype;
     }
 
+    uint32_t getCount() const { return mCount; }
+
 private:
     inline void inc() noexcept {
         mCount++;
