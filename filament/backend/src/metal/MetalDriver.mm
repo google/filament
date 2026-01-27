@@ -1773,6 +1773,12 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     }];
 }
 
+void MetalDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
+        uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
+    // TODO: implement readTexture
+    scheduleDestroy(std::move(p));
+}
+
 void MetalDriver::readBufferSubData(backend::BufferObjectHandle boh,
         uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
     // TODO: implement readBufferSubData
