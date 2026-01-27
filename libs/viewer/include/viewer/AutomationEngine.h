@@ -117,7 +117,7 @@ public:
         Scene* scene;
         IndirectLight* indirectLight;
         utils::Entity sunlight;
-        utils::Entity* assetLights;
+        const utils::Entity* assetLights;
         size_t assetLightCount;
     };
 
@@ -212,6 +212,11 @@ public:
     ViewerOptions getViewerOptions() const;
 
     /**
+     * Gets the current full settings object.
+     */
+    const Settings& getSettings() const { return *mSettings; }
+
+    /**
      * Signals that batch mode can begin. Call this after all meshes and textures finish loading.
      */
     void signalBatchMode() { mBatchModeAllowed = true; }
@@ -264,6 +269,10 @@ private:
     Engine* mColorGradingEngine = nullptr;
     ColorGrading* mColorGrading = nullptr;
     ColorGradingSettings mColorGradingSettings = {};
+    std::vector<utils::Entity> mCustomLights;
+
+    void updateCustomLights(Engine* engine, const std::vector<LightDefinition>& lights,
+            Scene* scene);
 
     size_t mCurrentTest;
     float mElapsedTime;
