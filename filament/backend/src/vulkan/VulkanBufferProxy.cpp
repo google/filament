@@ -31,22 +31,19 @@ namespace filament::backend {
 VulkanBufferProxy::VulkanBufferProxy(VulkanContext const& context, VmaAllocator allocator,
         VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferBinding binding,
         BufferUsage usage, uint32_t numBytes)
-    : mStagingBufferBypassEnabled(context.stagingBufferBypassEnabled()),
-      mAllocator(allocator),
-      mStagePool(stagePool),
-      mBufferCache(bufferCache),
-      mBuffer(mBufferCache.acquire(binding, numBytes)),
-      mLastReadAge(0),
-      mUsage(usage) {}
+        : mStagingBufferBypassEnabled(context.stagingBufferBypassEnabled()),
+          mAllocator(allocator),
+          mStagePool(stagePool),
+          mBufferCache(bufferCache),
+          mBuffer(mBufferCache.acquire(binding, numBytes)),
+          mLastReadAge(0),
+          mUsage(usage) {}
 
 void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
         uint32_t byteOffset, uint32_t numBytes) {
 
-    // This means that we're recording a write into a command buffer without a previous read, so it
-    // should be safe to
-    //   1) Do a direct memcpy in UMA mode
-    //   2) Skip adding a barrier (to protect the write from writing over a read).
-    bool const isAvailable = commands.age() != mLastReadAge;
+    // This means that the buffer is not currently in use by the GPU
+    bool const isAvailable = mBuffer->getCount() == 1;
 
     // Keep track of the VulkanBuffer usage
     commands.acquire(mBuffer);
@@ -79,11 +76,14 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     assert_invariant(stage->memory());
     commands.acquire(stage);
     memcpy(stage->mapping(), cpuData, numBytes);
-    vmaFlushAllocation(mAllocator, stage->memory(), stage->offset(), numBytes);
+
+    // This means that we're recording a write into a command buffer with a previous read, so it
+    // needs to add a barrier (to protect the write from writing over a read).
+    bool const issueBarrier = commands.age() == mLastReadAge;
 
     // If there was a previous read, then we need to make sure the following write is properly
     // synced with the previous read.
-    if (!isAvailable) {
+    if (issueBarrier) {
         VkAccessFlags srcAccess = 0;
         VkPipelineStageFlags srcStage = 0;
         if (getBinding() == VulkanBufferBinding::UNIFORM) {
