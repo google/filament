@@ -40,16 +40,9 @@ bool MaterialCache::MaterialKey::operator==(MaterialKey const& rhs) const noexce
 }
 
 MaterialCache::~MaterialCache() {
-    if (!mDefinitions.empty()) {
-        LOG(WARNING) << "MaterialCache was destroyed but definitions cache wasn't empty";
-    }
-    if (!mPrograms.empty()) {
-        LOG(WARNING) << "MaterialCache was destroyed but program cache wasn't empty";
-    }
-    if (!mSpecializationConstantsInternPool.empty()) {
-        LOG(WARNING) << "MaterialCache was destroyed but specialization constants intern pool "
-                        "wasn't empty";
-    }
+    assert_invariant(mDefinitions.empty());
+    assert_invariant(mPrograms.empty());
+    assert_invariant(mSpecializationConstantsInternPool.empty());
 }
 
 MaterialDefinition* UTILS_NULLABLE MaterialCache::acquireMaterial(FEngine& engine,
