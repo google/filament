@@ -235,12 +235,14 @@ struct PerRenderableData {
     math::float4 reserved[8];
 
     static uint32_t packFlagsChannels(
-            bool skinning, bool morphing, bool contactShadows, bool hasInstanceBuffer,
+            bool skinning, uint8_t morphing, bool contactShadows, bool hasInstanceBuffer,
             uint8_t channels) noexcept {
+        const uint32_t morphingFlags = uint32_t(morphing) << 9;
+
         return (skinning              ? 0x100 : 0) |
-               (morphing              ? 0x200 : 0) |
-               (contactShadows        ? 0x400 : 0) |
-               (hasInstanceBuffer     ? 0x800 : 0) |
+               morphingFlags                       |
+               (contactShadows        ? 0x1000 : 0) |
+               (hasInstanceBuffer     ? 0x2000 : 0) |
                channels;
     }
 };

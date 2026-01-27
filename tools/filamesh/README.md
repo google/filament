@@ -1,4 +1,4 @@
-# Filamesh
+# filamesh
 
 `filamesh` converts any mesh file supported by `assimp` (as configured in this source tree) into a
 custom binary file format. The goal of this binary file format is to allow test applications to

@@ -1,4 +1,4 @@
-# Description
+# gltfio
 
 `gltfio` is a loader library that consumes `gltf` or `glb` content and produces Filament
 objects. For usage details, see the docstring for `AssetLoader`.

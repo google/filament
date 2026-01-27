@@ -43,5 +43,16 @@ size_t MorphTargetBuffer::getCount() const noexcept {
     return downcast(this)->getCount();
 }
 
-} // namespace filament
+bool MorphTargetBuffer::hasPositions() const noexcept {
+    return downcast(this)->hasPositions();
+}
 
+bool MorphTargetBuffer::hasTangents() const noexcept {
+    return downcast(this)->hasTangents();
+}
+
+bool MorphTargetBuffer::isCustomMorphingEnabled() const noexcept {
+    return downcast(this)->isCustomMorphingEnabled();
+}
+
+} // namespace filament

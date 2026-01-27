@@ -1,0 +1,64 @@
+plugins {
+    id "de.undercouch.download" version "5.6.0"
+}
+
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
+
+def tools = ['matc', 'cmgen']
+
+def platforms = [
+    'mac':     [classifier: 'osx-aarch64',    archive: "filament-v${VERSION_NAME}-mac.tgz",     path: { t -> "filament/bin/${t}" }],
+    'linux':   [classifier: 'linux-x86_64',   archive: "filament-v${VERSION_NAME}-linux.tgz",   path: { t -> "filament/bin/${t}" }],
+    'windows': [classifier: 'windows-x86_64', archive: "filament-v${VERSION_NAME}-windows.tgz", path: { t -> "bin/${t}.exe" }]
+]
+
+platforms.each { platform, config ->
+    def platformName = platform.capitalize()
+    def remoteUrl = "https://github.com/google/filament/releases/download/v${VERSION_NAME}/${config.archive}"
+    def downloadFile = file("${buildDir}/downloads/${config.archive}")
+    def extractDir = file("${buildDir}/extracted/filament-v${VERSION_NAME}-${platform}")
+
+    task "downloadRelease${platformName}"(type: Download) {
+        src remoteUrl
+        dest downloadFile
+        overwrite false
+    }
+
+    def extractionTask = task "extractTools${platformName}"(dependsOn: "downloadRelease${platformName}", type: Copy) {
+        group = "setup"
+        from tarTree(resources.gzip(downloadFile))
+
+        // Include specific tools based on platform pattern
+        include tools.collect { tool -> config.path(tool) }
+
+        // Flatten the path so it lands directly in 'into'
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.name)
+        }
+
+        into extractDir
+        includeEmptyDirs = false
+    }
+}
+
+publishing {
+    publications {
+        tools.each { toolName ->
+            create(toolName, MavenPublication) {
+                artifactId = toolName
+
+                platforms.each { platform, config ->
+                    def extractDir = file("${buildDir}/extracted/filament-v${VERSION_NAME}-${platform}")
+                    def archivePath = config.path(toolName)
+                    def exeName = new File(archivePath).name
+
+                    artifact(new File(extractDir, exeName)) {
+                        classifier = config.classifier
+                        extension = "exe"
+                        builtBy tasks.named("extractTools${platform.capitalize()}")
+                    }
+                }
+            }
+        }
+    }
+}

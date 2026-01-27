@@ -154,6 +154,50 @@ void skinNormalTangent(inout vec3 n, inout vec3 t, const uvec4 ids, const vec4 w
 
 #define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
 
+#if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+void morphData2(inout vec2 v, highp sampler2DArray data) {
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int c = object_uniforms_morphTargetCount;
+    for (int i = 0; i < c; ++i) {
+        float w = morphingUniforms.weights[i][0];
+        if (w != 0.0) {
+            texcoord.z = i;
+            v += w * texelFetch(data, texcoord, 0).xy;
+        }
+    }
+}
+
+void morphData3(inout vec3 v, highp sampler2DArray data) {
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int c = object_uniforms_morphTargetCount;
+    for (int i = 0; i < c; ++i) {
+        float w = morphingUniforms.weights[i][0];
+        if (w != 0.0) {
+            texcoord.z = i;
+            v += w * texelFetch(data, texcoord, 0).xyz;
+        }
+    }
+}
+
+void morphData4(inout vec4 v, highp sampler2DArray data) {
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int c = object_uniforms_morphTargetCount;
+    for (int i = 0; i < c; ++i) {
+        float w = morphingUniforms.weights[i][0];
+        if (w != 0.0) {
+            texcoord.z = i;
+            v += w * texelFetch(data, texcoord, 0);
+        }
+    }
+}
+
+void morphPosition(inout vec4 p) {
+    morphData4(p, sampler1_positions);
+}
+#else
 void morphPosition(inout vec4 p) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
     ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
@@ -166,6 +210,7 @@ void morphPosition(inout vec4 p) {
         }
     }
 }
+#endif
 
 void morphNormal(inout vec3 n) {
     vec3 baseNormal = n;
@@ -190,17 +235,16 @@ vec4 getPosition() {
     vec4 pos = mesh_position;
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
-
-    if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0) {
-#if defined(LEGACY_MORPHING)
-        pos += morphingUniforms.weights[0] * mesh_custom0;
-        pos += morphingUniforms.weights[1] * mesh_custom1;
-        pos += morphingUniforms.weights[2] * mesh_custom2;
-        pos += morphingUniforms.weights[3] * mesh_custom3;
-#else
-        morphPosition(pos);
-#endif
-    }
+        if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_MORPHING_POSITION_BIT) != 0) {
+    #if defined(LEGACY_MORPHING)
+            pos += morphingUniforms.weights[0] * mesh_custom0;
+            pos += morphingUniforms.weights[1] * mesh_custom1;
+            pos += morphingUniforms.weights[2] * mesh_custom2;
+            pos += morphingUniforms.weights[3] * mesh_custom3;
+    #else
+            morphPosition(pos);
+    #endif
+        }
 
     if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
         skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);

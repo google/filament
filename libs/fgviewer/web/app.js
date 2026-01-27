@@ -15,8 +15,6 @@
 */
 
 import {LitElement, html, css, unsafeCSS, nothing} from "https://unpkg.com/lit@2.8.0?module";
-import { graphviz } from "https://cdn.skypack.dev/d3-graphviz@5.1.0";
-import * as d3 from "https://cdn.skypack.dev/d3@7";
 
 const kUntitledPlaceholder = "Untitled View";
 
@@ -28,8 +26,8 @@ const BACKGROUND_COLOR = '#5362e5';
 const REGULAR_FONT_SIZE = 12;
 
 // Constants for color operations
-const READ_COLOR = '#3ac224';
-const WRITE_COLOR = '#d43232';
+const READ_COLOR = '#aee1a6';
+const WRITE_COLOR = '#df8e8e';
 const NO_ACCESS_COLOR = '#d8dde754';
 const READ_WRITE_COLOR = '#ffeb99';
 const DEFAULT_COLOR = '#ffffff';
@@ -40,16 +38,28 @@ const VIEW_TOGGLE_INACTIVE_COLOR = '#292929';
 const VIEW_TOGGLE_UNSELECTED_COLOR = '#3f4cbe';
 const VIEW_TOGGLE_SELECTED_COLOR = '#2c3892';
 
-const RESOURCE_USAGE_TYPE_READ = 'read';
-const RESOURCE_USAGE_TYPE_WRITE = 'write';
-const RESOURCE_USAGE_TYPE_NO_ACCESS = 'no-access';
-const RESOURCE_USAGE_TYPE_READ_WRITE = 'read-write';
+const RESOURCE_USAGE_TYPE_READ = 'R';
+const RESOURCE_USAGE_TYPE_WRITE = 'W';
+const RESOURCE_USAGE_TYPE_NO_ACCESS = 'NA';
+const RESOURCE_USAGE_TYPE_READ_WRITE = 'RW';
 
 const IS_SUBRESOURCE_KEY = 'is_subresource_of'
 
 // View mode constants
 const VIEW_MODE_TABLE = 'table';
 const VIEW_MODE_GRAPHVIZ = 'graphviz';
+
+const COLORS = [
+  "#FFB3BA",
+  "#BAFFC9",
+  "#BAE1FF",
+  "#FFDFBA",
+  "#E2C2FF",
+  "#B2F0E8",
+  "#DDCBA4",
+  "#D4F0B2",
+  "#DCD0FF"
+];
 
 class MenuSection extends LitElement {
     static get properties() {
@@ -128,14 +138,14 @@ class FrameGraphSidePanel extends LitElement {
     dynamicStyle() {
         return `
             :host {
-                position: fixed;
                 background: ${this.connected ? BACKGROUND_COLOR : INACTIVE_COLOR};
-                width: 20%;
                 height: 100%;
                 max-width: 250px;
                 min-width: 250px;
-                padding: 10px 20px;
                 overflow-y: auto;
+            }
+            .container {
+                padding: 10px 20px;
             }
             .title {
                 color: white;
@@ -211,6 +221,7 @@ class FrameGraphSidePanel extends LitElement {
         this.framegraphs = [];
         this.database = {};
         this.viewMode = VIEW_MODE_TABLE;
+        this.selectedFrameGraph = '';
     }
 
     updated(props) {
@@ -225,6 +236,10 @@ class FrameGraphSidePanel extends LitElement {
                     : (labelCount[name] = 0, name);
                 return { fgid, name: uniqueName };
             });
+            // Select the 0-th view as default.
+            if (this.selectedFrameGraph.length == 0 && this.framegraphs.length > 0) {
+                this._handleFrameGraphClick(this.framegraphs[0].fgid);
+            }
         }
     }
 
@@ -245,8 +260,9 @@ class FrameGraphSidePanel extends LitElement {
     }
 
     _findCurrentResource() {
-        if (!this.selectedFrameGraph)
+        if (!this.selectedFrameGraph) {
             return null;
+        }
 
         const resources = this.database[this.selectedFrameGraph]?.resources;
         if (resources) {
@@ -332,76 +348,107 @@ class FrameGraphSidePanel extends LitElement {
 
 customElements.define("framegraph-sidepanel", FrameGraphSidePanel);
 
+class TooltipElement extends LitElement {
+    static get styles() {
+        return css`
+            :host {
+                position: fixed;
+                background-color: #333;
+                color: #fff;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                pointer-events: none;
+                z-index: 10000;
+                display: none;
+                white-space: nowrap;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+            :host([visible]) {
+                display: block;
+            }
+        `;
+    }
+
+    static get properties() {
+        return {
+            text: {type: String},
+            visible: {type: Boolean, reflect: true},
+            x: {type: Number},
+            y: {type: Number}
+        };
+    }
+
+    updated(changedProps) {
+        if (changedProps.has('x') || changedProps.has('y')) {
+            // Offset slightly so cursor doesn't cover it
+            this.style.left = `${this.x + 10}px`;
+            this.style.top = `${this.y + 10}px`;
+        }
+    }
+
+    render() {
+        return html`${this.text}`;
+    }
+}
+customElements.define('tooltip-element', TooltipElement);
+
 class FrameGraphTable extends LitElement {
     static get styles() {
         return css`
             :host {
                 display: block;
-                flex-grow: 1;
-                width: 80%;
+                font-size: 12px;
+                margin-top: 100px;
+                margin-left: 20px;
             }
-
-            .table-container {
-                max-height: 100%;
-                max-width: 100%;
-                overflow: auto;
-                border: 1px solid #ddd;
-                margin-left: 300px;
+            .grid-table {
+                display: flex;
+                flex-direction: column;
             }
-
-            .scrollable-table {
-                width: 100%;
-                height: 100%;
-                border-collapse: collapse;
+            .grid-row {
+                display: inline-grid;
+                /* Adjust column widths here (e.g., first column gets 2 parts, others get 1) */
+                grid-template-columns: 2fr 1fr 1fr;
             }
-
+            .grid-cell:first-child {
+            }
+            .grid-cell {
+                padding: 2px;
+                min-height: 25px;
+                position: relative;
+            }
+            .top-row {
+                border: 1px solid rgba(0, 0, 0, 0);
+            }
+            .pass-cell {
+                position: absolute;
+                transform-origin: top left;
+                transform: rotateZ(-45deg);
+                top: 17px;
+                left: 10px;
+                width: 150px;
+            }
             .collapsible {
                 background-color: #f9f9f9;
             }
-
             .toggle-icon {
                 cursor: pointer;
                 margin-right: 5px;
                 user-select: none;
             }
-            .scrollable-table td,
-            .scrollable-table th {
-                padding: 12px;
-                text-align: left;
-                border: 1px solid #ddd;
-            }
-
             .selected {
                 text-decoration: underline;
             }
-
-            .scrollable-table tr {
-                position: sticky;
-                padding: 12px;
-                text-align: left;
-                border: 1px solid #ddd;
-                left: 0;
-                z-index: 1;
-            }
-
             .sticky-col {
-                position: sticky;
-                left: 0;
-                z-index: 1;
+                text-align: right;
+                padding-right: 8px;
             }
-
             .resource:hover {
                 text-decoration: underline;
             }
             .resource {
                 cursor: pointer;
-            }
-            th {
-                min-width: 100px;
-                background-color: #f2f2f2;
-                padding: 12px;
-                text-align: left;
-                border: 1px solid #ddd;
             }
         `;
     }
@@ -410,6 +457,10 @@ class FrameGraphTable extends LitElement {
         return {
             frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
             selectedResourceId: {type: Number, attribute: 'selected-resource'},
+            tooltipText: {type: String, state: true},
+            tooltipVisible: {type: Boolean, state: true},
+            tooltipX: {type: Number, state: true},
+            tooltipY: {type: Number, state: true}
         };
     }
 
@@ -418,10 +469,52 @@ class FrameGraphTable extends LitElement {
         this.frameGraphData = null;
         this.selectedResourceId = -1;
         this.expandedResourceSet = new Set();
+        this.subresourceToParent = {};
+        this._hoverTimeout = null;
+    }
+
+    _handleCellMouseEnter(e, text) {
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+        }
+        this._hoverTimeout = setTimeout(() => {
+            this.tooltipText = text;
+            this.tooltipVisible = text && text.length > 0;
+            this.tooltipX = e.clientX;
+            this.tooltipY = e.clientY;
+        }, 500); // 500ms delay
+    }
+
+    _handleCellMouseLeave() {
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+            this._hoverTimeout = null;
+        }
+        this.tooltipVisible = false;
+    }
+
+    _getRowGridTemplateColumnsStyle(numColumns) {
+      let out = '165px ';
+      const oneCol = '35px ';
+      for (let i = 0; i < numColumns; i++) {
+        out += oneCol;
+      }
+      return `grid-template-columns:${out};`;
     }
 
     updated(props) {
         if (props.has('frameGraphData')) {
+            this.subresourceToParent = {};
+            if (this.frameGraphData && this.frameGraphData.resources) {
+                const resources = Object.values(this.frameGraphData.resources);
+                resources.forEach((subres) => {
+                    resources.forEach((parent) => {
+                        if (this._isSubresourceOfParent(subres, parent.id)) {
+                            this.subresourceToParent[subres.id] = parent.id;
+                        }
+                    });
+                });
+            }
             this.requestUpdate();
         }
     }
@@ -435,12 +528,12 @@ class FrameGraphTable extends LitElement {
         }[type] || DEFAULT_COLOR;
     }
 
-    _toggleCollapse(resourceIndex) {
-        if (this.expandedResourceSet.has(resourceIndex)) {
-            this.expandedResourceSet.delete(resourceIndex);
+    _toggleCollapse(resourceId) {
+        if (this.expandedResourceSet.has(resourceId)) {
+            this.expandedResourceSet.delete(resourceId);
         }
         else {
-            this.expandedResourceSet.add(resourceIndex);
+            this.expandedResourceSet.add(resourceId);
         }
         this.requestUpdate();
     }
@@ -453,7 +546,8 @@ class FrameGraphTable extends LitElement {
         }));
     }
 
-    _renderResourceUsage(allPasses, resourceIds, defaultColor) {
+    _renderResourceUsage(allPasses, resourceIds, defaultColor, lastRow) {
+        const passLen = allPasses.length;
         return allPasses.map((passData, index) => {
             const isRead = resourceIds.some(resourceId => passData?.reads.includes(resourceId));
             const isWrite = resourceIds.some(resourceId => passData?.writes.includes(resourceId));
@@ -472,17 +566,33 @@ class FrameGraphTable extends LitElement {
             else if (isWrite) type = RESOURCE_USAGE_TYPE_WRITE;
             else if (hasBeenUsedBefore && willBeUsedLater) type = RESOURCE_USAGE_TYPE_NO_ACCESS;
 
+            const lastPass = index == passLen - 1;
+            const borderStyle = '1px solid #a5a5a5';
+            const bgColor = this._getCellColor(type, defaultColor);
+            const style = `background-color:${bgColor};` +
+                  `border-left:${borderStyle};border-top:${borderStyle};` +
+                  (lastPass ? `border-right:${borderStyle};` : '') +
+                  (lastRow ? `border-bottom:${borderStyle};` : '');
+
+            let tooltip = '';
+            if (type === RESOURCE_USAGE_TYPE_READ) tooltip = 'Read';
+            else if (type === RESOURCE_USAGE_TYPE_WRITE) tooltip = 'Write';
+            else if (type === RESOURCE_USAGE_TYPE_READ_WRITE) tooltip = 'Read-Write';
+            else if (type === RESOURCE_USAGE_TYPE_NO_ACCESS) tooltip = 'No Access';
+
             return html`
-                <td style="background-color: ${unsafeCSS(this._getCellColor(type, defaultColor))};">
-                    ${type ?? nothing}
-                </td>`;
+                <div class="grid-cell" style="${style}"
+                     @mouseenter="${(e) => this._handleCellMouseEnter(e, tooltip)}"
+                     @mouseleave="${this._handleCellMouseLeave}">
+                &nbsp;
+                </div>`;
         });
     }
 
-    _isSubresourceOfParent(resource, parentResource){
+    _isSubresourceOfParent(resource, parentResourceId){
         return resource.properties?.some(prop =>
                 prop.key === IS_SUBRESOURCE_KEY &&
-                Number(prop.value) === parentResource.id)
+                Number(prop.value) === parentResourceId)
     }
 
     _isSubresource(resource) {
@@ -490,64 +600,61 @@ class FrameGraphTable extends LitElement {
     }
 
     _renderResourceRows(resources, allPasses) {
-        return resources
-            .filter(resource => !this._isSubresource(resource))
-            .map((resource, resourceIndex) => this._renderResourceRow(resource, resourceIndex, resources, allPasses));
+        const isExpandedSubresource = (subres) => {
+            const parentId = this.subresourceToParent[subres.id];
+            return !!parentId && this.expandedResourceSet.has(parentId);
+        }
+        const allRes = resources
+              .filter(resource => (
+                !this._isSubresource(resource) || isExpandedSubresource(resource)
+              ));
+
+        const allResLen = allRes.length;
+        return allRes.map((resource, resourceIndex) =>
+          this._renderResourceRow(
+            resource, resources, allPasses, resourceIndex == allResLen-1));
     }
 
-    _renderResourceRow(resource, resourceIndex, resources, allPasses) {
+    _renderResourceRow(resource, resources, allPasses, lastRow) {
         const subresourceIds = resources
-            .filter(subresource => this._isSubresourceOfParent(subresource, resource))
+            .filter(subresource => this._isSubresourceOfParent(subresource, resource.id))
             .map(subresource => subresource.id);
 
         const hasSubresources = subresourceIds.length > 0;
-        const isExpanded = this.expandedResourceSet.has(resourceIndex);
+        const isExpanded = this.expandedResourceSet.has(resource.id);
         // Show the aggregated resource usage when the subresources are collapsed.
         const resourceIds = isExpanded ? [resource.id]:[resource.id, ...subresourceIds];
 
+        // This will give the parent and expanded-subresources a coloring hint.
+        let groupColorStyle = "";
+        if (!!this.subresourceToParent[resource.id]) {
+            const colorIndex = this.subresourceToParent[resource.id] % COLORS.length;
+            groupColorStyle = "border-right:5px solid " + COLORS[colorIndex];
+        } else if (isExpanded) {
+            const colorIndex = resource.id % COLORS.length;
+            groupColorStyle = "border-right:5px solid " + COLORS[colorIndex];
+        }
+
         const onClickResource = () => this._handleResourceClick(resource.id);
         const selectedStyle = resource.id === this.selectedResourceId ? "selected" : "";
-
+        const rowStyle = this._getRowGridTemplateColumnsStyle(allPasses.length);
         return html`
-            <tr id="resource-${resourceIndex}">
-                <th class="sticky-col resource ${selectedStyle}" @click="${onClickResource}">
+            <div class="grid-row" id="resource-${resource.id}" style="${rowStyle}">
+                <div class="grid-cell sticky-col resource ${selectedStyle}" style="${groupColorStyle}"
+                     @click="${onClickResource}">
                     ${hasSubresources
                         ? html`
                             <span class="toggle-icon"
-                                  @click="${(e) => { e.stopPropagation(); this._toggleCollapse(resourceIndex); }}">
+                                  @click="${(e) => { e.stopPropagation(); this._toggleCollapse(resource.id); }}">
                               ${isExpanded ? '▼' : '▶'}
                             </span>`
                         : nothing}
                     ${resource.name}
                     ${hasSubresources && !isExpanded ? html`(${subresourceIds.length})` : nothing}
-                </th>
-                ${this._renderResourceUsage(allPasses, resourceIds, DEFAULT_COLOR)}
-            </tr>
-            ${isExpanded ? this._renderSubresourceRows(resources, resource, resourceIndex, allPasses) : nothing}
+                </div>
+                ${this._renderResourceUsage(allPasses, resourceIds, DEFAULT_COLOR, lastRow)}
+            </div>
         `;
-    }
-
-
-    _renderSubresourceRows(resources, parentResource, resourceIndex, allPasses) {
-        return resources
-            .filter(subresource => this._isSubresourceOfParent(subresource, parentResource))
-            .map((subresource, subIndex) => this._renderSubresourceRow(subresource, resourceIndex, subIndex, allPasses));
-    }
-
-    _renderSubresourceRow(subresource, resourceIndex, subIndex, allPasses) {
-        const onClickResource = () => this._handleResourceClick(subresource.id);
-        const selectedStyle = subresource.id === this.selectedResourceId ? "selected" : "";
-
-        return html`
-        <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible">
-            <td class="sticky-col resource ${selectedStyle}"
-                @click="${onClickResource}"
-                style="background-color: ${SUBRESOURCE_COLOR}">
-                ${subresource.name}
-            </td>
-            ${this._renderResourceUsage(allPasses, [subresource.id], SUBRESOURCE_COLOR)}
-        </tr>
-    `;
     }
 
     render() {
@@ -556,21 +663,24 @@ class FrameGraphTable extends LitElement {
 
         const allPasses = this.frameGraphData.passes;
         const resources = Object.values(this.frameGraphData.resources);
-
+        const rowStyle = this._getRowGridTemplateColumnsStyle(allPasses.length);
+        const colStyle = "border:1px solid rgba(0,0,0,0)";
         return html`
-            <div class="table-container">
-                <table class="scrollable-table">
-                    <thead>
-                    <tr>
-                        <th class="sticky-col">Resources/Passes</th>
-                        ${allPasses.map(pass => html`<th>${pass.name}</th>`)}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    ${this._renderResourceRows(resources, allPasses)}
-                    </tbody>
-                </table>
+            <div class="grid-table">
+                <div class="grid-row" style="${rowStyle}">
+                    <div class="grid-cell" style="${colStyle}">
+                    </div>
+                    ${allPasses.map(pass => html`<div class="grid-cell" style="border:1px solid rgba(0,0,0,0)">
+                              <div class="pass-cell">${pass.name}</div></div>`)}
+                </div>
+                ${this._renderResourceRows(resources, allPasses)}
             </div>
+            <tooltip-element
+                .text="${this.tooltipText}"
+                ?visible="${this.tooltipVisible}"
+                .x="${this.tooltipX}"
+                .y="${this.tooltipY}">
+            </tooltip-element>
         `;
     }
 }
@@ -593,25 +703,25 @@ class GraphvizView extends LitElement {
                 overflow: auto;
                 background-color: white;
             }
-            
+
             #graph {
                 width: 100%;
                 height: 100%;
             }
         `;
     }
-    
+
     static get properties() {
         return {
             graphvizData: {type: String, state: true},
         };
     }
-    
+
     constructor() {
         super();
         this.graphvizData = '';
     }
-    
+
     updated(changedProps) {
         if (changedProps.has('graphvizData')) {
             this._renderGraphviz();
@@ -638,7 +748,7 @@ class GraphvizView extends LitElement {
             container.innerHTML = `<div class="error">Failed to render graphviz: ${error.message}</div>`;
         }
     }
-    
+
     render() {
         if(!this.graphvizData)
             return nothing;
@@ -660,6 +770,7 @@ class FrameGraphViewer extends LitElement {
                 height: 100%;
                 width: 100%;
                 display: flex;
+                flex-direction: row;
             }
         `;
     }
@@ -671,7 +782,7 @@ class FrameGraphViewer extends LitElement {
     get _framegraphTable() {
         return this.renderRoot.querySelector('#table');
     }
-    
+
     get _graphvizView() {
         return this.renderRoot.querySelector('#graphviz');
     }
@@ -722,7 +833,7 @@ class FrameGraphViewer extends LitElement {
                 this.selectedResourceId = ev.detail;
             }
         );
-        
+
         this.addEventListener('change-view-mode',
             (ev) => {
                 this.viewMode = ev.detail;
@@ -758,14 +869,14 @@ class FrameGraphViewer extends LitElement {
                 selected-resource="${this.selectedResourceId}"
                 view-mode="${this.viewMode}">
             </framegraph-sidepanel>
-            
+
             <framegraph-table id="table"
                 style="display: ${this.viewMode === VIEW_MODE_TABLE ? 'block' : 'none'};"
                 ?connected="${this.connected}"
                 selected-framegraph="${this.selectedFrameGraph}"
                 selected-resource="${this.selectedResourceId}">
             </framegraph-table>
-            
+
             <graphviz-view id="graphviz"
                 style="display: ${this.viewMode === VIEW_MODE_GRAPHVIZ ? 'block' : 'none'};"
                 framegraph-id="${this.selectedFrameGraph}">
