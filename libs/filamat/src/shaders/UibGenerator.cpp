@@ -121,7 +121,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "logicalViewportOffset",  0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 
             { "lodBias",                0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
             { "derivativesScale",       0, Type::FLOAT2                  },
 
             { "oneOverFarMinusNear",    0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
@@ -132,20 +132,20 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "needsAlphaChannel",      0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
 
             // AO
-            { "aoSamplingQualityAndEdgeDistance", 0, Type::FLOAT         },
-            { "aoBentNormals",          0, Type::FLOAT                   },
+            { "aoSamplingQualityAndEdgeDistance", 0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "aoBentNormals",          0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
 
             // ------------------------------------------------------------------------------------
             // Dynamic Lighting [variant: DYN]
             // ------------------------------------------------------------------------------------
             { "zParams",                0, Type::FLOAT4                  },
             { "fParams",                0, Type::UINT3                   },
-            { "lightChannels",          0, Type::INT                     },
-            { "froxelCountXY",          0, Type::FLOAT2                  },
-            { "enableFroxelViz",        0, Type::INT                     },
-            { "dynReserved0",           0, Type::INT                     },
-            { "dynReserved1",           0, Type::INT                     },
-            { "dynReserved2",           0, Type::INT                     },
+            { "lightChannels",          0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "froxelCountXY",          0, Type::FLOAT2,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "enableFroxelViz",        0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "dynReserved0",           0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "dynReserved1",           0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "dynReserved2",           0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
 
             { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
@@ -155,29 +155,29 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // Directional Lighting [variant: DIR]
             // ------------------------------------------------------------------------------------
             { "lightDirection",         0, Type::FLOAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "padding0",               0, Type::FLOAT                   },
+            { "padding0",               0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
             { "lightColorIntensity",    0, Type::FLOAT4, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "sun",                    0, Type::FLOAT4, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
+            { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1 },
 
             // ------------------------------------------------------------------------------------
             // Directional light shadowing [variant: SRE | DIR]
             // ------------------------------------------------------------------------------------
-            { "directionalShadows",       0, Type::INT                      },
-            { "ssContactShadowDistance",  0, Type::FLOAT                    },
+            { "directionalShadows",       0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "ssContactShadowDistance",  0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
 
-            { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH },
-            { "cascades",                  0, Type::INT                     },
-            { "shadowPenumbraRatioScale",  0, Type::FLOAT                   },
-            { "lightFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
+            { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1 },
+            { "cascades",                  0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "shadowPenumbraRatioScale",  0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "lightFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH,  FeatureLevel::FEATURE_LEVEL_1  },
 
             // ------------------------------------------------------------------------------------
             // VSM shadows [variant: VSM]
             // ------------------------------------------------------------------------------------
-            { "vsmExponent",             0, Type::FLOAT                  },
-            { "vsmDepthScale",           0, Type::FLOAT                  },
-            { "vsmLightBleedReduction",  0, Type::FLOAT                  },
-            { "shadowSamplingType",      0, Type::UINT                   },
+            { "vsmExponent",             0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "vsmDepthScale",           0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "vsmLightBleedReduction",  0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "shadowSamplingType",      0, Type::UINT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
 
             // ------------------------------------------------------------------------------------
             // Fog [variant: FOG]
@@ -196,17 +196,17 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogNearOverFarMinusNear", 0, Type::FLOAT, Precision::HIGH },
             { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogLinearParams",         0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH },
+            { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1  },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
             // ------------------------------------------------------------------------------------
-            { "ssrReprojection",         0, Type::MAT4,  Precision::HIGH },
-            { "ssrUvFromViewMatrix",     0, Type::MAT4,  Precision::HIGH },
-            { "ssrThickness",            0, Type::FLOAT                  },
-            { "ssrBias",                 0, Type::FLOAT                  },
-            { "ssrDistance",             0, Type::FLOAT                  },
-            { "ssrStride",               0, Type::FLOAT                  },
+            { "ssrReprojection",         0, Type::MAT4,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1  },
+            { "ssrUvFromViewMatrix",     0, Type::MAT4,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1  },
+            { "ssrThickness",            0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "ssrBias",                 0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "ssrDistance",             0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "ssrStride",               0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
 
             // --------------------------------------------------------------------------------------------
             // user defined global variables
@@ -217,12 +217,12 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // for feature level 0 / es2 usage
             // --------------------------------------------------------------------------------------------
             { "rec709",                  0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "es2Reserved0",            0, Type::FLOAT                  },
-            { "es2Reserved1",            0, Type::FLOAT                  },
-            { "es2Reserved2",            0, Type::FLOAT                  },
+            { "es2Reserved0",            0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "es2Reserved1",            0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "es2Reserved2",            0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
 
             // bring PerViewUib to 2 KiB
-            { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }
+            { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 }
             })
             .build();
 
