@@ -21,7 +21,7 @@ class App {
     // But Filament.init assets are for internal or easy access via assets object if configured?
     // Let's just let SimulatedSkybox fetch it again or use a blob if we wanted.
     // Simpler: Just let SimulatedSkybox fetch it.
-    this.skybox.loadMaterial('assets/simulated_skybox.filamat').then(() => {
+    this.skybox.loadMaterial('assets/simulated_skybox.filamat?v=46').then(() => {
       this.initGUI();
     });
 
@@ -99,6 +99,12 @@ class App {
     const exposure = this.getExposure();
     const preExposedIntensity = this.params.sunIntensity * exposure;
     this.skybox.setSunIntensity(preExposedIntensity);
+
+    // Moon Exposure
+    if (this.mParams) {
+      const preExposedMoon = this.mParams.intensity * exposure;
+      this.skybox.setMoonIntensity(preExposedMoon);
+    }
   }
 
   updateCameraProjection() {
@@ -130,8 +136,8 @@ class App {
 
     const sunFolder = gui.addFolder('Sun');
     // Helper for "Sun Height" cosine slider like C++
-    const sunHeightParam = { height: Math.cos(this.params.sunTheta) };
-    sunFolder.add(sunHeightParam, 'height', -0.2, 1.0).name('Height (Cos)').onChange(v => {
+    this.sunHeightParam = { height: Math.cos(this.params.sunTheta) };
+    sunFolder.add(this.sunHeightParam, 'height', -0.2, 1.0).name('Height (Cos)').onChange(v => {
       this.params.sunTheta = Math.acos(v);
       updateSun();
     });
@@ -139,16 +145,52 @@ class App {
     // Updated: Controls params.sunIntensity and triggers updateSunIntensity
     sunFolder.add(this.params, 'sunIntensity', 0.0, 500000.0).onChange(v => this.updateSunIntensity());
 
+    const moonFolder = gui.addFolder('Moon');
+    this.mParams = {
+      enabled: false,
+      azimuth: 180.0,
+      elevation: 45.0,
+      radius: 0.5,
+
+      intensity: 10.0
+    };
+
+    const updateMoon = () => {
+      const az = this.mParams.azimuth * (Math.PI / 180.0);
+      const el = this.mParams.elevation * (Math.PI / 180.0);
+      const theta = Math.PI / 2.0 - el;
+      const phi = az;
+
+      const x = Math.sin(theta) * Math.cos(phi);
+      const y = Math.cos(theta);
+      const z = Math.sin(theta) * Math.sin(phi);
+
+      sky.setMoonPosition([x, y, z]);
+    };
+
+    // Initial Moon Sync
+    updateMoon();
+    sky.setMoonEnabled(this.mParams.enabled);
+    sky.setMoonRadius(this.mParams.radius);
+    sky.setMoonIntensity(this.mParams.intensity);
+
+    moonFolder.add(this.mParams, 'enabled').name('Enabled').onChange(v => sky.setMoonEnabled(v));
+    moonFolder.add(this.mParams, 'azimuth', 0.0, 360.0).onChange(updateMoon);
+    moonFolder.add(this.mParams, 'elevation', -90.0, 90.0).onChange(updateMoon);
+    moonFolder.add(this.mParams, 'radius', 0.1, 5.0).onChange(v => sky.setMoonRadius(v));
+    moonFolder.add(this.mParams, 'intensity', 0.0, 1000.0).onChange(v => this.updateSunIntensity()); // Reuse update function to apply exposure
+    moonFolder.close();
+
     const sunDisk = sunFolder.addFolder('Disk');
     // We need local proxy for sunRadius due to conversion
-    const diskParams = {
+    this.diskParams = {
       radius: 1.2,
       enabled: true // Enable sun disk
     };
     sky.setSunDiskEnabled(true);
     sky.setSunRadius(1.2);
-    sunDisk.add(diskParams, 'enabled').onChange(v => sky.setSunDiskEnabled(v));
-    sunDisk.add(diskParams, 'radius', 0.0, 5.0).onChange(v => sky.setSunRadius(v));
+    sunDisk.add(this.diskParams, 'enabled').onChange(v => sky.setSunDiskEnabled(v));
+    sunDisk.add(this.diskParams, 'radius', 0.0, 5.0).onChange(v => sky.setSunRadius(v));
     sunDisk.add(sky.sunHalo, 1, 0.0, 2.0).name('Limb Darkening').onChange(v => sky.setSunLimbDarkening(v));
     sunDisk.add(sky.sunHalo, 2, 0.0, 100.0).name('Intensity Boost').onChange(v => sky.setSunDiskIntensity(v));
 
@@ -184,7 +226,7 @@ class App {
     shmFolder.add(sky.shimmerControl, 2, 0.01, 0.5).name('Mask Height').onChange(v => sky.setShimmerControl(sky.shimmerControl[0], sky.shimmerControl[1], v));
 
     const cloudFolder = gui.addFolder('Clouds');
-    const cParams = {
+    this.cParams = {
       volumetrics: sky.cloudControl2[1] > 0.5,
       coverage: 0.4,
       density: 0.02,
@@ -193,19 +235,19 @@ class App {
       evolution: 0.02
     };
     // Apply Cloud Defaults
-    sky.setCloudControl(0.4, 0.02, cParams.height, 50.0);
+    sky.setCloudControl(0.4, 0.02, this.cParams.height, 50.0);
     sky.setCloudShapeEvolution(0.02);
 
-    cloudFolder.add(cParams, 'volumetrics').onChange(v => sky.setCloudVolumetricLighting(v));
-    cloudFolder.add(cParams, 'coverage', 0.0, 1.0).onChange(v => sky.setCloudControl(v, cParams.density, cParams.height, cParams.speed));
-    cloudFolder.add(cParams, 'density', 0.0, 1.0).onChange(v => sky.setCloudControl(cParams.coverage, v, cParams.height, cParams.speed));
-    cloudFolder.add(cParams, 'height', 2000.0, 20000.0).onChange(v => sky.setCloudControl(cParams.coverage, cParams.density, v, cParams.speed));
+    cloudFolder.add(this.cParams, 'volumetrics').onChange(v => sky.setCloudVolumetricLighting(v));
+    cloudFolder.add(this.cParams, 'coverage', 0.0, 1.0).onChange(v => sky.setCloudControl(v, this.cParams.density, this.cParams.height, this.cParams.speed));
+    cloudFolder.add(this.cParams, 'density', 0.0, 1.0).onChange(v => sky.setCloudControl(this.cParams.coverage, v, this.cParams.height, this.cParams.speed));
+    cloudFolder.add(this.cParams, 'height', 2000.0, 20000.0).onChange(v => sky.setCloudControl(this.cParams.coverage, this.cParams.density, v, this.cParams.speed));
     // Reverse speed calc: w = speed * (0.05 / 72.0)
-    cloudFolder.add(cParams, 'speed', 0.0, 200.0).onChange(v => sky.setCloudControl(cParams.coverage, cParams.density, cParams.height, v));
-    cloudFolder.add(cParams, 'evolution', 0.0, 2.0).onChange(v => sky.setCloudShapeEvolution(v));
+    cloudFolder.add(this.cParams, 'speed', 0.0, 200.0).onChange(v => sky.setCloudControl(this.cParams.coverage, this.cParams.density, this.cParams.height, v));
+    cloudFolder.add(this.cParams, 'evolution', 0.0, 2.0).onChange(v => sky.setCloudShapeEvolution(v));
 
     const waterFolder = gui.addFolder('Water');
-    const wParams = {
+    this.wParams = {
       derivativeTrick: true,
       strength: 50.0,
       speed: 1.0,
@@ -215,17 +257,17 @@ class App {
     sky.setWaterControl(50.0, 1.0, 1.0, 4.0); // 1.0 = Derivative Trick On, 4 octaves
 
     const updateWater = () => {
-      sky.setWaterControl(wParams.strength, wParams.speed, wParams.derivativeTrick ? 1.0 : 0.0, wParams.octaves);
+      sky.setWaterControl(this.wParams.strength, this.wParams.speed, this.wParams.derivativeTrick ? 1.0 : 0.0, this.wParams.octaves);
     };
 
-    waterFolder.add(wParams, 'derivativeTrick').name('Derivative Trick').onChange(updateWater);
-    waterFolder.add(wParams, 'strength', 10.0, 100.0).onChange(updateWater);
-    waterFolder.add(wParams, 'speed', 0.0, 5.0).onChange(updateWater);
-    waterFolder.add(wParams, 'octaves', 1, 8, 1).name('Octaves').onChange(updateWater);
+    waterFolder.add(this.wParams, 'derivativeTrick').name('Derivative Trick').onChange(updateWater);
+    waterFolder.add(this.wParams, 'strength', 10.0, 100.0).onChange(updateWater);
+    waterFolder.add(this.wParams, 'speed', 0.0, 5.0).onChange(updateWater);
+    waterFolder.add(this.wParams, 'octaves', 1, 8, 1).name('Octaves').onChange(updateWater);
     waterFolder.close();
 
     const starFolder = gui.addFolder('Stars');
-    const sParams = {
+    this.sParams = {
       enabled: true,
       density: 1.0
     };
@@ -233,11 +275,11 @@ class App {
     sky.setStarControl(1.0, true);
 
     const updateStars = () => {
-      sky.setStarControl(sParams.density, sParams.enabled);
+      sky.setStarControl(this.sParams.density, this.sParams.enabled);
     };
 
-    starFolder.add(sParams, 'enabled').name('Enabled').onChange(updateStars);
-    starFolder.add(sParams, 'density', 0.0, 1.0).name('Density').onChange(updateStars);
+    starFolder.add(this.sParams, 'enabled').name('Enabled').onChange(updateStars);
+    starFolder.add(this.sParams, 'density', 0.0, 1.0).name('Density').onChange(updateStars);
     starFolder.close();
 
     const camFolder = gui.addFolder('Camera');
@@ -247,20 +289,20 @@ class App {
     camFolder.add(this.params, 'iso', 50.0, 3200.0).onChange(() => this.updateCameraExposure());
 
     const bloomFolder = camFolder.addFolder('Bloom');
-    const bParams = {
+    this.bParams = {
       enabled: false,
       lensFlare: false
     };
 
     const updateBloom = () => {
       this.view.setBloomOptions({
-        enabled: bParams.enabled,
-        lensFlare: bParams.lensFlare
+        enabled: this.bParams.enabled,
+        lensFlare: this.bParams.lensFlare
       });
     };
 
-    bloomFolder.add(bParams, 'enabled').onChange(updateBloom);
-    bloomFolder.add(bParams, 'lensFlare').onChange(updateBloom);
+    bloomFolder.add(this.bParams, 'enabled').onChange(updateBloom);
+    bloomFolder.add(this.bParams, 'lensFlare').onChange(updateBloom);
     bloomFolder.close();
 
     // Collapse folders by default
@@ -276,6 +318,205 @@ class App {
     // Initial sync
     updateSun();
     this.updateCameraExposure(); // This will trigger updateSunIntensity too
+
+    // Check URL for config
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('config')) {
+      try {
+        const state = JSON.parse(atob(urlParams.get('config')));
+        this.applyURLState(state);
+        // Update GUI
+        gui.controllers.forEach(c => c.updateDisplay());
+        // Recursive update for folders
+        gui.folders.forEach(f => {
+          f.controllers.forEach(c => c.updateDisplay());
+          // And sub-folders if any (Shimmer/Bloom)
+          f.folders.forEach(sf => sf.controllers.forEach(sc => sc.updateDisplay()));
+        });
+      } catch (e) {
+        console.error("Failed to load config:", e);
+      }
+    }
+
+    const shareParams = {
+      copyUrl: () => {
+        const state = this.getURLState();
+        const str = btoa(JSON.stringify(state));
+        const url = `${window.location.origin}${window.location.pathname}?config=${str}`;
+        navigator.clipboard.writeText(url).then(() => {
+          alert("Configuration URL copied to clipboard!");
+        }).catch(err => {
+          console.error('Could not copy text: ', err);
+          prompt("Copy this URL:", url);
+        });
+      }
+    };
+    gui.add(shareParams, 'copyUrl').name('Share Configuration');
+  }
+
+  getURLState() {
+    // Serialize current state (Minified)
+    // Mapping:
+    // p: params (Camera) -> a:aperture, ss:shutterSpeed, i:iso, st:sunTheta, sp:sunPhi, fl:focalLength, si:sunIntensity
+    // c: cParams (Clouds) -> v:volumetrics, co:coverage, d:density, h:height, s:speed, e:evolution
+    // w: wParams (Water) -> dt:derivativeTrick, st:strength, s:speed, o:octaves
+    // s: sParams (Stars) -> e:enabled, d:density
+    // b: bParams (Bloom) -> e:enabled, lf:lensFlare
+    // k: sky (Skybox) -> t:turbidity, r:rayleigh, mc:mieCoefficient, mg:mieG, o:ozone, ms:msFactors, co:contrast, nc:nightColor, sh:shimmerControl, hl:sunHalo
+
+    const p = this.params;
+    const c = this.cParams;
+    const w = this.wParams;
+    const s = this.sParams;
+    const b = this.bParams;
+    const m = this.mParams;
+    const sk = this.skybox;
+
+    return {
+      p: { a: p.aperture, ss: p.shutterSpeed, i: p.iso, st: p.sunTheta, sp: p.sunPhi, fl: p.focalLength, si: p.sunIntensity },
+      c: { v: c.volumetrics, co: c.coverage, d: c.density, h: c.height, s: c.speed, e: c.evolution },
+      w: { dt: w.derivativeTrick, st: w.strength, s: w.speed, o: w.octaves },
+      s: { e: s.enabled, d: s.density },
+      b: { e: b.enabled, lf: b.lensFlare },
+      m: { e: m.enabled, az: m.azimuth, el: m.elevation, r: m.radius, i: m.intensity },
+      k: {
+        t: sk.turbidity,
+        r: sk.rayleigh,
+        mc: sk.mieCoefficient,
+        mg: sk.mieG,
+        o: sk.ozone,
+        ms: [...sk.msFactors],
+        co: sk.contrast,
+        nc: [...sk.nightColor],
+        sh: [...sk.shimmerControl],
+        hl: [...sk.sunHalo]
+      }
+    };
+  }
+
+  applyURLState(state) {
+    const p = state.p;
+    const c = state.c;
+    const w = state.w;
+    const s = state.s;
+    const b = state.b;
+    const m = state.m;
+    const k = state.k;
+
+    if (p) {
+      if (p.a !== undefined) this.params.aperture = p.a;
+      if (p.ss !== undefined) this.params.shutterSpeed = p.ss;
+      if (p.i !== undefined) this.params.iso = p.i;
+      if (p.st !== undefined) this.params.sunTheta = p.st;
+      if (p.sp !== undefined) this.params.sunPhi = p.sp;
+      if (p.fl !== undefined) this.params.focalLength = p.fl;
+      if (p.si !== undefined) this.params.sunIntensity = p.si;
+    }
+
+    if (c) {
+      if (c.v !== undefined) this.cParams.volumetrics = c.v;
+      if (c.co !== undefined) this.cParams.coverage = c.co;
+      if (c.d !== undefined) this.cParams.density = c.d;
+      if (c.h !== undefined) this.cParams.height = c.h;
+      if (c.s !== undefined) this.cParams.speed = c.s;
+      if (c.e !== undefined) this.cParams.evolution = c.e;
+    }
+
+    if (w) {
+      if (w.dt !== undefined) this.wParams.derivativeTrick = w.dt;
+      if (w.st !== undefined) this.wParams.strength = w.st;
+      if (w.s !== undefined) this.wParams.speed = w.s;
+      if (w.o !== undefined) this.wParams.octaves = w.o;
+    }
+
+    if (s) {
+      if (s.e !== undefined) this.sParams.enabled = s.e;
+      if (s.d !== undefined) this.sParams.density = s.d;
+    }
+
+    if (b) {
+      if (b.e !== undefined) this.bParams.enabled = b.e;
+      if (b.lf !== undefined) this.bParams.lensFlare = b.lf;
+    }
+
+    const sky = this.skybox;
+    if (k) {
+      if (k.t !== undefined) sky.setTurbidity(k.t);
+      if (k.r !== undefined) sky.setRayleigh(k.r);
+      if (k.mc !== undefined) sky.setMieCoefficient(k.mc);
+      if (k.mg !== undefined) sky.setMieG(k.mg);
+      if (k.o !== undefined) sky.setOzone(k.o);
+
+      if (k.ms) { sky.setMultiScattering(k.ms[0], k.ms[1]); sky.setHorizonGlow(k.ms[2]); }
+      if (k.co !== undefined) sky.setContrast(k.co);
+      if (k.nc) sky.setNightColor(k.nc);
+      if (k.sh) sky.setShimmerControl(k.sh[0], k.sh[1], k.sh[2]);
+
+      // Sun Halo
+      const savedHalo = k.hl;
+      if (savedHalo && savedHalo.length === 4) {
+        sky.sunHalo[0] = savedHalo[0];
+        sky.sunHalo[1] = savedHalo[1];
+        sky.sunHalo[2] = savedHalo[2];
+        sky.sunHalo[3] = savedHalo[3];
+
+        // Update derived UI params for Sun Disk
+        const rad = Math.acos(Math.max(-1.0, Math.min(1.0, savedHalo[0])));
+        this.diskParams.radius = rad * (180.0 / Math.PI);
+        this.diskParams.enabled = savedHalo[3] > 0.5;
+      }
+
+      sky.updateCoefficients();
+    }
+
+    // Update derived Sun Height param for UI
+    if (this.sunHeightParam) {
+      this.sunHeightParam.height = Math.cos(this.params.sunTheta);
+    }
+
+    // Apply Local Params via Setters
+    sky.setCloudControl(this.cParams.coverage, this.cParams.density, this.cParams.height, this.cParams.speed);
+    sky.setCloudVolumetricLighting(this.cParams.volumetrics);
+    sky.setCloudShapeEvolution(this.cParams.evolution);
+
+    sky.setWaterControl(this.wParams.strength, this.wParams.speed, this.wParams.derivativeTrick ? 1.0 : 0.0, this.wParams.octaves);
+    sky.setStarControl(this.sParams.density, this.sParams.enabled);
+
+    if (m) {
+      if (m.e !== undefined) this.mParams.enabled = m.e;
+      if (m.az !== undefined) this.mParams.azimuth = m.az;
+      if (m.el !== undefined) this.mParams.elevation = m.el;
+      if (m.r !== undefined) this.mParams.radius = m.r;
+      if (m.i !== undefined) this.mParams.intensity = m.i;
+
+      // Sync Moon
+      const az = this.mParams.azimuth * (Math.PI / 180.0);
+      const el = this.mParams.elevation * (Math.PI / 180.0);
+      const theta = Math.PI / 2.0 - el;
+      const phi = az;
+      const x = Math.sin(theta) * Math.cos(phi);
+      const y = Math.cos(theta);
+      const z = Math.sin(theta) * Math.sin(phi);
+
+      sky.setMoonPosition([x, y, z]);
+      sky.setMoonEnabled(this.mParams.enabled);
+      sky.setMoonRadius(this.mParams.radius);
+      sky.setMoonIntensity(this.mParams.intensity);
+    }
+
+    this.view.setBloomOptions({
+      enabled: this.bParams.enabled,
+      lensFlare: this.bParams.lensFlare
+    });
+
+    // Update Sun Position from Params
+    const theta = this.params.sunTheta;
+    const phi = this.params.sunPhi;
+    const x = Math.sin(theta) * Math.cos(phi);
+    const y = Math.cos(theta);
+    const z = Math.sin(theta) * Math.sin(phi);
+    sky.setSunPosition([x, y, z]);
+    this.updateSunIntensity();
   }
 
   initControls() {
