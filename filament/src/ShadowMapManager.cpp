@@ -1055,11 +1055,11 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
         ShadowMap* pShadowMap) mutable {
         // Allocate shadowmap from our Atlas Allocator
         auto const& options = pShadowMap->getShadowOptions();
-        auto [layer, pos] = allocator.allocate(options->mapSize);
-        assert_invariant(layer >= 0);
-        assert_invariant(!pos.empty());
-        pShadowMap->setAllocation(layer, pos);
-        layersNeeded = std::max(uint8_t(layer + 1), layersNeeded);
+        auto allocation = allocator.allocate(options->mapSize);
+        assert_invariant(allocation.isValid());
+        assert_invariant(!allocation.viewport.empty());
+        pShadowMap->setAllocation(allocation.layer, allocation.viewport);
+        layersNeeded = std::max(uint8_t(allocation.layer + 1), layersNeeded);
     };
 
     std::function const allocateFromTextureArray =
