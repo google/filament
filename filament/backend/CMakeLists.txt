@@ -582,6 +582,7 @@ if (APPLE OR LINUX)
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
+        test/test_ReadTexture.cpp
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
         test/test_JobQueue.cpp

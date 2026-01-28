@@ -23,6 +23,7 @@
 #include "vulkan/utils/Conversion.h"  // getComponentType()
 #include "vulkan/utils/Image.h"
 
+#include <utils/compiler.h>
 #include <utils/Log.h>
 
 using namespace bluevk;
@@ -123,7 +124,18 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         uint32_t const graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
         SelecteMemoryFunction const& selectMemoryFunc,
         OnReadCompleteFunction const& readCompleteFunc) {
+    VulkanAttachment const srcAttachment = srcTarget->getColor0();
+    run(srcAttachment.texture, srcAttachment.level, srcAttachment.layer, x, y, width, height,
+            graphicsQueueFamilyIndex, std::move(pbd), selectMemoryFunc, readCompleteFunc);
+}
+
+void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, uint8_t level,
+        uint16_t layer, uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+        uint32_t graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
+        SelecteMemoryFunction const& selectMemoryFunc,
+        OnReadCompleteFunction const& readCompleteFunc) {
     assert_invariant(mDevice != VK_NULL_HANDLE);
+    assert_invariant(srcTexture);
 
     VkDevice& device = mDevice;
 
@@ -145,8 +157,6 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
 
     VkCommandPool const cmdpool = mCommandPool;
 
-    fvkmemory::resource_ptr<VulkanTexture> srcTexture = srcTarget->getColor0().texture;
-    assert_invariant(srcTexture);
     VkFormat const srcFormat = srcTexture->getVkFormat();
     bool const swizzle
             = srcFormat == VK_FORMAT_B8G8R8A8_UNORM || srcFormat == VK_FORMAT_B8G8R8A8_SRGB;
@@ -171,7 +181,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
 #if FVK_ENABLED(FVK_DEBUG_READ_PIXELS)
     FVK_LOGD << "readPixels created image=" << stagingImage
              << " to copy from image=" << srcTexture->getVkImage()
-             << " src-layout=" << srcTexture->getLayout(0, 0);
+             << " src-layout=" << srcTexture->getLayout(level, layer);
 #endif
 
     VkMemoryRequirements memReqs;
@@ -231,21 +241,27 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         },
     });
 
-    VulkanAttachment const srcAttachment = srcTarget->getColor0();
-    VkImageSubresourceRange const srcRange = srcAttachment.getSubresourceRange();
-    VulkanLayout const srcLayout = srcAttachment.getLayout();
+    VkImageSubresourceRange const srcRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = level,
+        .levelCount = 1,
+        .baseArrayLayer = layer,
+        .layerCount = 1,
+    };
+    VulkanLayout const srcLayout = srcTexture->getLayout(level, layer);
     srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::TRANSFER_SRC);
 
+    uint32_t const mipHeight = std::max(1u, srcTexture->height >> level);
     VkImageCopy const imageCopyRegion = {
         .srcSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = srcAttachment.level,
-            .baseArrayLayer = srcAttachment.layer,
+            .mipLevel = level,
+            .baseArrayLayer = layer,
             .layerCount = 1,
         },
         .srcOffset = {
             .x = (int32_t)x,
-            .y = (int32_t)(srcTarget->getExtent().height - (height + y)),
+            .y = (int32_t)(mipHeight - (height + y)),
         },
         .dstSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -260,12 +276,11 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
 
     // Perform the copy into the staging area. At this point we know that the src
     // layout is TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
-    UTILS_UNUSED_IN_RELEASE VkExtent2D srcExtent = srcAttachment.getExtent2D();
-    assert_invariant(imageCopyRegion.srcOffset.x + imageCopyRegion.extent.width <= srcExtent.width);
-    assert_invariant(
-            imageCopyRegion.srcOffset.y + imageCopyRegion.extent.height <= srcExtent.height);
+    UTILS_UNUSED_IN_RELEASE uint32_t const mipWidth = std::max(1u, srcTexture->width >> level);
+    assert_invariant(imageCopyRegion.srcOffset.x + imageCopyRegion.extent.width <= mipWidth);
+    assert_invariant(imageCopyRegion.srcOffset.y + imageCopyRegion.extent.height <= mipHeight);
 
-    vkCmdCopyImage(cmdbuffer, srcAttachment.getImage(),
+    vkCmdCopyImage(cmdbuffer, srcTexture->getVkImage(),
             fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC), stagingImage,
             fvkutils::getVkLayout(VulkanLayout::TRANSFER_DST), 1, &imageCopyRegion);
 
