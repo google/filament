@@ -142,6 +142,9 @@ FeatureFlagManager::FeatureFlagManager() : mFeatures{{
         { "engine.skip_frame_when_cpu_ahead_of_display",
           "Automatically skip frames when the CPU gets ahead of the display.",
           &features.engine.skip_frame_when_cpu_ahead_of_display },
+        { "material.enable_fog_as_postprocess",
+          "Fog is applied as a separate pass for opaque objects.",
+          &features.material.enable_fog_as_postprocess },
 }} {
     overrideFeatureDefaults({ mFeatures.data(), mFeatures.size() });
 }

@@ -99,6 +99,8 @@ struct Variant {
     static constexpr type_t VSM   = 0x40; // variance shadow maps / sampler type
     static constexpr type_t STE   = 0x80; // instanced stereo
 
+    static constexpr type_t NO_VARIANT         = 0u;
+
     // special variants (variants that use the reserved space)
     static constexpr type_t SPECIAL_SSR   = VSM | SRE; // screen-space reflections variant
 

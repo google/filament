@@ -457,8 +457,12 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
+    ColorPassDescriptorSet& getColorPassDescriptorSet(ShadowType type) const noexcept {
+        return mColorPassDescriptorSet[type == ShadowType::PCF ? 0 : 1];
+    }
+
     ColorPassDescriptorSet& getColorPassDescriptorSet() const noexcept {
-            return mColorPassDescriptorSet[mShadowType == ShadowType::PCF ? 0 : 1];
+        return getColorPassDescriptorSet(mShadowType);
     }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
