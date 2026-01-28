@@ -26,7 +26,14 @@ class SimulatedSkybox {
 
     // Sun Halo
     // x=cos(rad), y=limbDarkening, z=intensity, w=enabled
+    // Sun Halo
+    // x=cos(rad), y=limbDarkening, z=intensity, w=enabled
     this.sunHalo = [Math.cos(0.5 * Math.PI / 180.0), 0.5, 1.0, 1.0];
+
+    // Moon Parameters (Mapped to Secondary Sun)
+    this.moonDirection = [-0.2, 0.8, -0.2]; // Default Moon Pos
+    this.moonIntensity = 5000.0; // Dimmer than sun
+    this.moonHalo = [Math.cos(0.5 * Math.PI / 180.0), 0.0, 1.0, 0.0]; // Disabled by default
 
     this.initEntity();
   }
@@ -220,6 +227,31 @@ class SimulatedSkybox {
     this.updateCoefficients();
   }
 
+  setMoonPosition(direction) {
+    // normalize
+    const len = Math.hypot(direction[0], direction[1], direction[2]);
+    if (len > 0) {
+      this.moonDirection = [direction[0] / len, direction[1] / len, direction[2] / len];
+    }
+    this.updateCoefficients();
+  }
+
+  setMoonIntensity(intensity) {
+    this.moonIntensity = Math.max(0.0, intensity);
+    this.updateCoefficients();
+  }
+
+  setMoonRadius(degrees) {
+    const rad = degrees * (Math.PI / 180.0);
+    this.moonHalo[0] = Math.cos(rad);
+    this.updateCoefficients();
+  }
+
+  setMoonEnabled(enabled) {
+    this.moonHalo[3] = enabled ? 1.0 : 0.0;
+    this.updateCoefficients();
+  }
+
   updateCoefficients() {
     if (!this.materialInstance) {
       console.warn("updateCoefficients called before material loaded");
@@ -307,5 +339,19 @@ class SimulatedSkybox {
     this.materialInstance.setFloat2Parameter('starControl', new Float32Array(this.starControl));
 
     this.materialInstance.setFloatParameter('sunIntensity', physicalSunIntensity);
+
+    // Moon Upload (Secondary Sun)
+    this.materialInstance.setFloat3Parameter('sunDirection2', new Float32Array(this.moonDirection));
+    this.materialInstance.setFloatParameter('sunIntensity2', this.moonIntensity); // No atmospheric fade needed for Moon light source itself? 
+    // Actually, Moon light should also fade near horizon if we wanted realism, but let's keep it simple for now.
+    // Or apply same fade? Moon is outside atmosphere.
+    // Let's apply basic zenith fade to it too? Maybe not.
+
+    // Moon Halo Upload
+    const moonSolidAngle = 2.0 * F_PI * (1.0 - this.moonHalo[0]);
+    const moonRadConv = 1.0 / Math.max(1e-9, moonSolidAngle);
+    const moonHaloUpload = [...this.moonHalo];
+    moonHaloUpload[2] *= moonRadConv;
+    this.materialInstance.setFloat4Parameter('sunHalo2', new Float32Array(moonHaloUpload));
   }
 }

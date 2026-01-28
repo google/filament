@@ -693,11 +693,93 @@ fragment {
     // @param waterControl Water Control (x=Strength, y=Speed, z=DerivativeTrick).
     // @return             Water surface color.
     // ------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // Procedural Moon Disk (Phased)
+    // ------------------------------------------------------------------------
+    // Renders the Moon as a 3D sphere with lighting from the Sun.
+    //
+    // PARAMETERS:
+    // @param V            Normalized View Vector.
+    // @param L_moon       Normalized Moon Vector.
+    // @param L_sun        Normalized Sun Vector.
+    // @param moonParams   x=CosRadius, y=LimbDarkening, z=IntensityBoost, w=Enabled.
+    // @param moonIntensity Peak Moon Illuminance (Lux).
+    // @param transmittance Atmospheric Transmittance (Moon Color Tint).
+    // @return             Radiance of the moon disk.
+    // ------------------------------------------------------------------------
+    highp vec3 getMoonDisk(highp vec3 V, highp vec3 L_moon, highp vec3 L_sun, 
+                           highp vec4 moonParams, highp float moonIntensity, 
+                           highp vec3 transmittance) {
+        
+        highp float moonCosRadius = moonParams.x;
+        // highp float limbDarkening = moonParams.y; // Unused for moon currently, maybe for earthshine?
+        highp float moonDiskIntensity = moonParams.z;
+        bool moonEnabled = moonParams.w > 0.5;
+
+        highp float cosTheta = dot(V, L_moon);
+        highp float dist = 1.0 - cosTheta;
+        highp float diskRadius = max(1e-6, 1.0 - moonCosRadius); // Approx Radius^2 / 2
+        
+        // Soft Edge
+        highp float moonProfile = 1.0 - smoothstep(diskRadius, diskRadius + 0.00002, dist);
+
+        if (moonEnabled && moonProfile > 0.0) {
+             // 1. Reconstruct Sphere Normal
+             // Tangent vector T = V - (V.L)L
+             // This vector T points from the center of the disk towards V, in the disk plane.
+             // Magnitude |T| is the distance from center (sine of angle).
+             // Since we are working with small angles:
+             // T approx V - L_moon.
+             highp vec3 T = V - cosTheta * L_moon;
+             
+             // Normalize T to get radial direction strength
+             // We want N_perp magnitude to be 1.0 at the edge (where |T| ~ sin(angularRadius))
+             // radius in "T space" is sin(acos(moonCosRadius)).
+             highp float sinRadius = sqrt(1.0 - moonCosRadius * moonCosRadius);
+             highp vec3 N_perp = T / sinRadius; 
+             
+             // Parallel component (pointing to viewer)
+             // N_para = -L_moon * sqrt(1 - |N_perp|^2)
+             highp float perpSq = dot(N_perp, N_perp);
+             highp vec3 N_local = vec3(0.0);
+             
+             if (perpSq < 1.0) {
+                 highp float para = sqrt(1.0 - perpSq);
+                 N_local = N_perp - L_moon * para;
+             } else {
+                 // Edge case precision fix
+                 N_local = N_perp; 
+             }
+             
+             highp vec3 N = normalize(N_local);
+             
+             // 2. Compute Phase (Sun Lighting)
+             highp float NdotL = dot(N, L_sun);
+             
+             // Terminator softening (0.1 radian width)
+             highp float phase = smoothstep(-0.05, 0.05, NdotL);
+             
+             // Earthshine (Ambient fill on dark side)
+             // Fake it as a small constant + maybe limb effect?
+             highp float earthshine = 0.02; // 2% brightness on dark side
+             
+             highp float lighting = max(earthshine, phase);
+             
+             // Texture? (Procedural Craters - Future work)
+             // For now just white disk
+             
+             return moonIntensity * transmittance * lighting * moonDiskIntensity * moonProfile;
+        }
+        
+        return vec3(0.0);
+    }
+
     highp vec3 getWaterColor(highp vec3 V, highp vec3 L, 
                              highp float sunIntensity,
                              highp vec3 depthR, highp vec3 depthM, highp vec3 ozone,
                              highp vec4 multiScatParams, highp vec2 miePhaseParams,
                              highp vec4 sunHalo,
+                             highp vec3 L2, highp float sunIntensity2, highp vec4 sunHalo2,
                              highp vec4 cloudControl, highp vec4 cloudControl2,
                              highp vec4 shimmerControl, highp vec4 waterControl) {
 
@@ -793,6 +875,11 @@ fragment {
         highp float reflSunAccess = 1.0 - smoothstep(0.0, 0.7, reflCloudDensity * 1.5);
         reflection += getSunDisk(R, L, sunHalo, sunIntensity, transRefl) * reflSunAccess;
         
+        // Add Moon Disk to reflection
+        if (sunHalo2.w > 0.5) {
+             reflection += getMoonDisk(R, L2, L, sunHalo2, sunIntensity2, transRefl) * reflSunAccess;
+        }
+        
         // Apply clouds to reflection
         reflection = mix(reflection, reflCloudLayer, reflCloudDensity);
                 
@@ -807,6 +894,8 @@ fragment {
                 
         return waterColor;
     }
+
+
 
 
 
@@ -832,13 +921,15 @@ fragment {
                                               transmittance);
 
 
-        // Sun 2 (Optional)
+        // Sun 2 / Moon (Optional)
         // We reuse the same Transmittance (view dependent) and Phase params.
         // We do NOT add extra Multi-Scattering (Ambient) for the second sun to save cost/complexity.
         // It contributes Direct In-Scattering (Beams/Glow) only.
         highp vec3 inScatter2 = vec3(0.0);
+        
+        highp vec3 L2 = normalize(materialParams.sunDirection2);
+        
         if (materialParams.sunHalo2.w > 0.5) {
-            highp vec3 L2 = normalize(materialParams.sunDirection2);
             inScatter2 = getSecondarySunScattering(V, L2,
                                                    materialParams.sunIntensity2,
                                                    materialParams.depthR,
@@ -866,19 +957,15 @@ fragment {
         finalColor += getStarLayer(V, L, cloudDensity, transmittance, materialParams.starControl);
         
         // 3. Sun Disks - Occluded by clouds
-        // Sun Access is (1.0 - cloudDensity) but arguably non-linear for sharp disk
         highp float sunAccess = 1.0 - smoothstep(0.0, 0.7, cloudDensity * 1.5);
         
         finalColor += getSunDisk(V, L, materialParams.sunHalo, 
                                  materialParams.sunIntensity, transmittance) * sunAccess;
                                  
         if (materialParams.sunHalo2.w > 0.5) {
-             highp vec3 L2 = normalize(materialParams.sunDirection2);
-             // Note: Ideally we should compute cloud density for L2 direction if clouds are 3D... 
-             // But here we use V direction clouds (view-based).
-             // Since clouds are in front of everything, this is correct for view-based occlusion.
-             finalColor += getSunDisk(V, L2, materialParams.sunHalo2, 
-                                      materialParams.sunIntensity2, transmittance) * sunAccess;
+             // Pass L (Sun) as the light source for the Moon Phase
+             finalColor += getMoonDisk(V, L2, L, materialParams.sunHalo2, 
+                                       materialParams.sunIntensity2, transmittance) * sunAccess;
         }
 
         // 4. Night Sky Offset
@@ -896,6 +983,7 @@ fragment {
                                        materialParams.ozone, materialParams.multiScatParams, 
                                        materialParams.miePhaseParams,
                                        materialParams.sunHalo,
+                                       L2, materialParams.sunIntensity2, materialParams.sunHalo2,
                                        materialParams.cloudControl, materialParams.cloudControl2,
                                        materialParams.shimmerControl,
                                        materialParams.waterControl);
