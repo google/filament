@@ -583,7 +583,7 @@ public:
 
 template<typename F>
 void traverseAggregate(TIntermNode* root, F&& closure) {
-    AggregateTraverserAdapter adapter(std::forward<std::decay_t<F>>(closure));
+    AggregateTraverserAdapter adapter(std::forward<F>(closure));
     root->traverse(&adapter);
 }
 
