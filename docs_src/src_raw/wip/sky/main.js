@@ -21,7 +21,7 @@ class App {
     // But Filament.init assets are for internal or easy access via assets object if configured?
     // Let's just let SimulatedSkybox fetch it again or use a blob if we wanted.
     // Simpler: Just let SimulatedSkybox fetch it.
-    this.skybox.loadMaterial('assets/simulated_skybox.filamat').then(() => {
+    this.skybox.loadMaterial('assets/simulated_skybox.filamat?v=46').then(() => {
       this.initGUI();
     });
 
@@ -99,6 +99,12 @@ class App {
     const exposure = this.getExposure();
     const preExposedIntensity = this.params.sunIntensity * exposure;
     this.skybox.setSunIntensity(preExposedIntensity);
+
+    // Moon Exposure
+    if (this.mParams) {
+      const preExposedMoon = this.mParams.intensity * exposure;
+      this.skybox.setMoonIntensity(preExposedMoon);
+    }
   }
 
   updateCameraProjection() {
@@ -138,6 +144,42 @@ class App {
     sunFolder.add(this.params, 'sunPhi', 0.0, Math.PI * 2).name('Azimuth').onChange(updateSun);
     // Updated: Controls params.sunIntensity and triggers updateSunIntensity
     sunFolder.add(this.params, 'sunIntensity', 0.0, 500000.0).onChange(v => this.updateSunIntensity());
+
+    const moonFolder = gui.addFolder('Moon');
+    this.mParams = {
+      enabled: false,
+      azimuth: 180.0,
+      elevation: 45.0,
+      radius: 0.5,
+
+      intensity: 10.0
+    };
+
+    const updateMoon = () => {
+      const az = this.mParams.azimuth * (Math.PI / 180.0);
+      const el = this.mParams.elevation * (Math.PI / 180.0);
+      const theta = Math.PI / 2.0 - el;
+      const phi = az;
+
+      const x = Math.sin(theta) * Math.cos(phi);
+      const y = Math.cos(theta);
+      const z = Math.sin(theta) * Math.sin(phi);
+
+      sky.setMoonPosition([x, y, z]);
+    };
+
+    // Initial Moon Sync
+    updateMoon();
+    sky.setMoonEnabled(this.mParams.enabled);
+    sky.setMoonRadius(this.mParams.radius);
+    sky.setMoonIntensity(this.mParams.intensity);
+
+    moonFolder.add(this.mParams, 'enabled').name('Enabled').onChange(v => sky.setMoonEnabled(v));
+    moonFolder.add(this.mParams, 'azimuth', 0.0, 360.0).onChange(updateMoon);
+    moonFolder.add(this.mParams, 'elevation', -90.0, 90.0).onChange(updateMoon);
+    moonFolder.add(this.mParams, 'radius', 0.1, 5.0).onChange(v => sky.setMoonRadius(v));
+    moonFolder.add(this.mParams, 'intensity', 0.0, 1000.0).onChange(v => this.updateSunIntensity()); // Reuse update function to apply exposure
+    moonFolder.close();
 
     const sunDisk = sunFolder.addFolder('Disk');
     // We need local proxy for sunRadius due to conversion
@@ -327,6 +369,7 @@ class App {
     const w = this.wParams;
     const s = this.sParams;
     const b = this.bParams;
+    const m = this.mParams;
     const sk = this.skybox;
 
     return {
@@ -335,6 +378,7 @@ class App {
       w: { dt: w.derivativeTrick, st: w.strength, s: w.speed, o: w.octaves },
       s: { e: s.enabled, d: s.density },
       b: { e: b.enabled, lf: b.lensFlare },
+      m: { e: m.enabled, az: m.azimuth, el: m.elevation, r: m.radius, i: m.intensity },
       k: {
         t: sk.turbidity,
         r: sk.rayleigh,
@@ -356,6 +400,7 @@ class App {
     const w = state.w;
     const s = state.s;
     const b = state.b;
+    const m = state.m;
     const k = state.k;
 
     if (p) {
@@ -436,6 +481,28 @@ class App {
 
     sky.setWaterControl(this.wParams.strength, this.wParams.speed, this.wParams.derivativeTrick ? 1.0 : 0.0, this.wParams.octaves);
     sky.setStarControl(this.sParams.density, this.sParams.enabled);
+
+    if (m) {
+      if (m.e !== undefined) this.mParams.enabled = m.e;
+      if (m.az !== undefined) this.mParams.azimuth = m.az;
+      if (m.el !== undefined) this.mParams.elevation = m.el;
+      if (m.r !== undefined) this.mParams.radius = m.r;
+      if (m.i !== undefined) this.mParams.intensity = m.i;
+
+      // Sync Moon
+      const az = this.mParams.azimuth * (Math.PI / 180.0);
+      const el = this.mParams.elevation * (Math.PI / 180.0);
+      const theta = Math.PI / 2.0 - el;
+      const phi = az;
+      const x = Math.sin(theta) * Math.cos(phi);
+      const y = Math.cos(theta);
+      const z = Math.sin(theta) * Math.sin(phi);
+
+      sky.setMoonPosition([x, y, z]);
+      sky.setMoonEnabled(this.mParams.enabled);
+      sky.setMoonRadius(this.mParams.radius);
+      sky.setMoonIntensity(this.mParams.intensity);
+    }
 
     this.view.setBloomOptions({
       enabled: this.bParams.enabled,
