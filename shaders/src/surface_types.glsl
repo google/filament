@@ -31,7 +31,9 @@ struct PerRenderableData {
     highp int flagsChannels;                   // see packFlags() below (0x00000fll)
     highp int objectId;                        // used for picking
     highp float userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
+#if MATERIAL_FEATURE_LEVEL > 0
     highp vec4 reserved[8];
+#endif
 };
 
 // Bits for flagsChannels
