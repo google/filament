@@ -140,7 +140,6 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
     {
         switch (engine.getConfig().stereoscopicType) {
             case Engine::StereoscopicType::NONE:
-            case Engine::StereoscopicType::INSTANCED:
                 builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
                 break;
             case Engine::StereoscopicType::MULTIVIEW:

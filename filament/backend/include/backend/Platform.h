@@ -206,10 +206,6 @@ public:
          */
         NONE,
         /**
-         * Stereoscopic rendering is performed using instanced rendering technique.
-         */
-        INSTANCED,
-        /**
          * Stereoscopic rendering is performed using the multiview feature from the graphics
          * backend.
          */

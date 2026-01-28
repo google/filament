@@ -7,9 +7,7 @@
  * @public-api
  */
 int getEyeIndex() {
-#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
-    return instance_index % CONFIG_STEREO_EYE_COUNT;
-#elif defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
+#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
 
 #   if defined(TARGET_VULKAN_ENVIRONMENT)
     return int(gl_ViewIndex);

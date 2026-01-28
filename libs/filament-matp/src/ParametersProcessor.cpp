@@ -961,7 +961,6 @@ static utils::Status processGroupSizes(MaterialBuilder& builder, const JsonishVa
 
 static utils::Status processStereoscopicType(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::StereoscopicType> strToEnum{
-            { "instanced", MaterialBuilder::StereoscopicType::INSTANCED },
             { "multiview",  MaterialBuilder::StereoscopicType::MULTIVIEW },
     };
     auto jsonString = value.toJsonString();

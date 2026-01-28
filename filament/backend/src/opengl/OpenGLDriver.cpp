@@ -2872,8 +2872,6 @@ bool OpenGLDriver::isStereoSupported() {
         return false;
     }
     switch (getDriverConfig().stereoscopicType) {
-        case StereoscopicType::INSTANCED:
-            return mContext.ext.EXT_clip_cull_distance;
         case StereoscopicType::MULTIVIEW:
             return mContext.ext.OVR_multiview2;
         case StereoscopicType::NONE:

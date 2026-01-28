@@ -363,12 +363,6 @@ void OpenGLContext::setDefaultState() noexcept {
 #endif
     }
 #endif
-
-    if (ext.EXT_clip_cull_distance
-            && mDriverConfig.stereoscopicType == StereoscopicType::INSTANCED) {
-        glEnable(GL_CLIP_DISTANCE0);
-        glEnable(GL_CLIP_DISTANCE1);
-    }
 }
 
 

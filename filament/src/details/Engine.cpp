@@ -464,7 +464,6 @@ void FEngine::init() {
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         switch (mConfig.stereoscopicType) {
             case StereoscopicType::NONE:
-            case StereoscopicType::INSTANCED:
                 defaultMaterialBuilder.package(
                         MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
                 break;

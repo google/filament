@@ -22,15 +22,6 @@ void main() {
 #   endif
     logical_instance_index = instance_index;
 #endif
-
-#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
-#if !defined(FILAMENT_HAS_FEATURE_INSTANCING)
-#error Instanced stereo not supported at this feature level
-#endif
-    // Calculate the logical instance index, which is the instance index within a single eye.
-    logical_instance_index = instance_index / CONFIG_STEREO_EYE_COUNT;
-#endif
-
     initObjectUniforms();
 
     // Initialize the inputs to sensible default values, see surface_material_inputs.vs
@@ -218,29 +209,6 @@ void main() {
     // this must happen before we compensate for vulkan below
     vertex_position = position;
 
-#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
-    // We're transforming a vertex whose x coordinate is within the range (-w to w).
-    // To move it to the correct portion of the viewport, we need to modify the x coordinate.
-    // It's important to do this after computing vertex_position.
-    int eyeIndex = instance_index % CONFIG_STEREO_EYE_COUNT;
-
-    float ndcViewportWidth = 2.0 / float(CONFIG_STEREO_EYE_COUNT);  // the width of ndc space is 2
-    float eyeZeroMidpoint = -1.0f + ndcViewportWidth / 2.0;
-
-    float transform = eyeZeroMidpoint + ndcViewportWidth * float(eyeIndex);
-    position.x *= 1.0 / float(CONFIG_STEREO_EYE_COUNT);
-    position.x += transform * position.w;
-
-    // A fragment is clipped when gl_ClipDistance is negative (outside the clip plane).
-
-    float leftClip  = position.x +
-            (1.0 - ndcViewportWidth * float(eyeIndex)) * position.w;
-    float rightClip = position.x +
-            (1.0 - ndcViewportWidth * float(eyeIndex + 1)) * position.w;
-    FILAMENT_CLIPDISTANCE[0] =  leftClip;
-    FILAMENT_CLIPDISTANCE[1] = -rightClip;
-#endif
-
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     position.y = -position.y;
@@ -255,9 +223,4 @@ void main() {
 
     // some PowerVR drivers crash when gl_Position is written more than once
     gl_Position = position;
-
-#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
-    // Fragment shaders filter out the stereo variant, so we need to set instance_index here.
-    instance_index = logical_instance_index;
-#endif
 }
