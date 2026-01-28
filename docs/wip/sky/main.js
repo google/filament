@@ -130,8 +130,8 @@ class App {
 
     const sunFolder = gui.addFolder('Sun');
     // Helper for "Sun Height" cosine slider like C++
-    const sunHeightParam = { height: Math.cos(this.params.sunTheta) };
-    sunFolder.add(sunHeightParam, 'height', -0.2, 1.0).name('Height (Cos)').onChange(v => {
+    this.sunHeightParam = { height: Math.cos(this.params.sunTheta) };
+    sunFolder.add(this.sunHeightParam, 'height', -0.2, 1.0).name('Height (Cos)').onChange(v => {
       this.params.sunTheta = Math.acos(v);
       updateSun();
     });
@@ -141,14 +141,14 @@ class App {
 
     const sunDisk = sunFolder.addFolder('Disk');
     // We need local proxy for sunRadius due to conversion
-    const diskParams = {
+    this.diskParams = {
       radius: 1.2,
       enabled: true // Enable sun disk
     };
     sky.setSunDiskEnabled(true);
     sky.setSunRadius(1.2);
-    sunDisk.add(diskParams, 'enabled').onChange(v => sky.setSunDiskEnabled(v));
-    sunDisk.add(diskParams, 'radius', 0.0, 5.0).onChange(v => sky.setSunRadius(v));
+    sunDisk.add(this.diskParams, 'enabled').onChange(v => sky.setSunDiskEnabled(v));
+    sunDisk.add(this.diskParams, 'radius', 0.0, 5.0).onChange(v => sky.setSunRadius(v));
     sunDisk.add(sky.sunHalo, 1, 0.0, 2.0).name('Limb Darkening').onChange(v => sky.setSunLimbDarkening(v));
     sunDisk.add(sky.sunHalo, 2, 0.0, 100.0).name('Intensity Boost').onChange(v => sky.setSunDiskIntensity(v));
 
@@ -313,65 +313,120 @@ class App {
   }
 
   getURLState() {
-    // Serialize current state
+    // Serialize current state (Minified)
+    // Mapping:
+    // p: params (Camera) -> a:aperture, ss:shutterSpeed, i:iso, st:sunTheta, sp:sunPhi, fl:focalLength, si:sunIntensity
+    // c: cParams (Clouds) -> v:volumetrics, co:coverage, d:density, h:height, s:speed, e:evolution
+    // w: wParams (Water) -> dt:derivativeTrick, st:strength, s:speed, o:octaves
+    // s: sParams (Stars) -> e:enabled, d:density
+    // b: bParams (Bloom) -> e:enabled, lf:lensFlare
+    // k: sky (Skybox) -> t:turbidity, r:rayleigh, mc:mieCoefficient, mg:mieG, o:ozone, ms:msFactors, co:contrast, nc:nightColor, sh:shimmerControl, hl:sunHalo
+
+    const p = this.params;
+    const c = this.cParams;
+    const w = this.wParams;
+    const s = this.sParams;
+    const b = this.bParams;
+    const sk = this.skybox;
+
     return {
-      params: { ...this.params },
-      cParams: { ...this.cParams },
-      wParams: { ...this.wParams },
-      sParams: { ...this.sParams },
-      bParams: { ...this.bParams },
-      // Skybox direct parameters
-      sky: {
-        turbidity: this.skybox.turbidity,
-        rayleigh: this.skybox.rayleigh,
-        mieCoefficient: this.skybox.mieCoefficient,
-        mieG: this.skybox.mieG,
-        ozone: this.skybox.ozone,
-        msFactors: [...this.skybox.msFactors],
-        contrast: this.skybox.contrast,
-        nightColor: [...this.skybox.nightColor],
-        shimmerControl: [...this.skybox.shimmerControl],
-        sunHalo: [...this.skybox.sunHalo],
-        sunDirection: [...this.skybox.sunDirection]
+      p: { a: p.aperture, ss: p.shutterSpeed, i: p.iso, st: p.sunTheta, sp: p.sunPhi, fl: p.focalLength, si: p.sunIntensity },
+      c: { v: c.volumetrics, co: c.coverage, d: c.density, h: c.height, s: c.speed, e: c.evolution },
+      w: { dt: w.derivativeTrick, st: w.strength, s: w.speed, o: w.octaves },
+      s: { e: s.enabled, d: s.density },
+      b: { e: b.enabled, lf: b.lensFlare },
+      k: {
+        t: sk.turbidity,
+        r: sk.rayleigh,
+        mc: sk.mieCoefficient,
+        mg: sk.mieG,
+        o: sk.ozone,
+        ms: [...sk.msFactors],
+        co: sk.contrast,
+        nc: [...sk.nightColor],
+        sh: [...sk.shimmerControl],
+        hl: [...sk.sunHalo]
       }
     };
   }
 
   applyURLState(state) {
-    if (state.params) Object.assign(this.params, state.params);
-    if (state.cParams) Object.assign(this.cParams, state.cParams);
-    if (state.wParams) Object.assign(this.wParams, state.wParams);
-    if (state.sParams) Object.assign(this.sParams, state.sParams);
-    if (state.bParams) Object.assign(this.bParams, state.bParams);
+    const p = state.p;
+    const c = state.c;
+    const w = state.w;
+    const s = state.s;
+    const b = state.b;
+    const k = state.k;
+
+    if (p) {
+      if (p.a !== undefined) this.params.aperture = p.a;
+      if (p.ss !== undefined) this.params.shutterSpeed = p.ss;
+      if (p.i !== undefined) this.params.iso = p.i;
+      if (p.st !== undefined) this.params.sunTheta = p.st;
+      if (p.sp !== undefined) this.params.sunPhi = p.sp;
+      if (p.fl !== undefined) this.params.focalLength = p.fl;
+      if (p.si !== undefined) this.params.sunIntensity = p.si;
+    }
+
+    if (c) {
+      if (c.v !== undefined) this.cParams.volumetrics = c.v;
+      if (c.co !== undefined) this.cParams.coverage = c.co;
+      if (c.d !== undefined) this.cParams.density = c.d;
+      if (c.h !== undefined) this.cParams.height = c.h;
+      if (c.s !== undefined) this.cParams.speed = c.s;
+      if (c.e !== undefined) this.cParams.evolution = c.e;
+    }
+
+    if (w) {
+      if (w.dt !== undefined) this.wParams.derivativeTrick = w.dt;
+      if (w.st !== undefined) this.wParams.strength = w.st;
+      if (w.s !== undefined) this.wParams.speed = w.s;
+      if (w.o !== undefined) this.wParams.octaves = w.o;
+    }
+
+    if (s) {
+      if (s.e !== undefined) this.sParams.enabled = s.e;
+      if (s.d !== undefined) this.sParams.density = s.d;
+    }
+
+    if (b) {
+      if (b.e !== undefined) this.bParams.enabled = b.e;
+      if (b.lf !== undefined) this.bParams.lensFlare = b.lf;
+    }
 
     const sky = this.skybox;
-    if (state.sky) {
-      sky.setTurbidity(state.sky.turbidity);
-      sky.setRayleigh(state.sky.rayleigh);
-      sky.setMieCoefficient(state.sky.mieCoefficient);
-      sky.setMieG(state.sky.mieG);
-      sky.setOzone(state.sky.ozone);
-      sky.setMultiScattering(state.sky.msFactors[0], state.sky.msFactors[1]);
-      sky.setHorizonGlow(state.sky.msFactors[2]);
-      sky.setContrast(state.sky.contrast);
-      sky.setNightColor(state.sky.nightColor);
-      sky.setShimmerControl(state.sky.shimmerControl[0], state.sky.shimmerControl[1], state.sky.shimmerControl[2]);
+    if (k) {
+      if (k.t !== undefined) sky.setTurbidity(k.t);
+      if (k.r !== undefined) sky.setRayleigh(k.r);
+      if (k.mc !== undefined) sky.setMieCoefficient(k.mc);
+      if (k.mg !== undefined) sky.setMieG(k.mg);
+      if (k.o !== undefined) sky.setOzone(k.o);
 
-      // Sun Halo (Radius, Limb, Intensity, Enabled)
-      sky.sunHalo = state.sky.sunHalo; // Direct assign or setters? 
-      // Setters are better but we have composite array. 
-      // sky.setSunDiskEnabled(sky.sunHalo[3] > 0.5); 
-      // Actually existing setters update individual components.
-      sky.setSunLimbDarkening(state.sky.sunHalo[1]);
-      sky.setSunDiskIntensity(state.sky.sunHalo[2]);
-      sky.setSunDiskEnabled(state.sky.sunHalo[3] > 0.5);
-      // Radius is trickier, it was set via setSunRadius(degrees). 
-      // We can just send the updated halo directly if we want, but setSunRadius is nice.
-      // Inverse cos to get rads? 
-      // Let's just trust the float array if we updateCoefficients.
-      // BUT updateCoefficients uses sky.sunHalo. So direct assign is fine + update.
-      sky.sunHalo = [...state.sky.sunHalo];
+      if (k.ms) { sky.setMultiScattering(k.ms[0], k.ms[1]); sky.setHorizonGlow(k.ms[2]); }
+      if (k.co !== undefined) sky.setContrast(k.co);
+      if (k.nc) sky.setNightColor(k.nc);
+      if (k.sh) sky.setShimmerControl(k.sh[0], k.sh[1], k.sh[2]);
+
+      // Sun Halo
+      const savedHalo = k.hl;
+      if (savedHalo && savedHalo.length === 4) {
+        sky.sunHalo[0] = savedHalo[0];
+        sky.sunHalo[1] = savedHalo[1];
+        sky.sunHalo[2] = savedHalo[2];
+        sky.sunHalo[3] = savedHalo[3];
+
+        // Update derived UI params for Sun Disk
+        const rad = Math.acos(Math.max(-1.0, Math.min(1.0, savedHalo[0])));
+        this.diskParams.radius = rad * (180.0 / Math.PI);
+        this.diskParams.enabled = savedHalo[3] > 0.5;
+      }
+
       sky.updateCoefficients();
+    }
+
+    // Update derived Sun Height param for UI
+    if (this.sunHeightParam) {
+      this.sunHeightParam.height = Math.cos(this.params.sunTheta);
     }
 
     // Apply Local Params via Setters
