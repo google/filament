@@ -60,7 +60,8 @@ private:
         PNG,
         HDR,
         PSD,
-        EXR
+        EXR,
+        TIFF
     };
 };
 
