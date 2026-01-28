@@ -16,6 +16,9 @@
 #ifndef TNT_FILAMENT_MATERIALDEFINITION_H
 #define TNT_FILAMENT_MATERIALDEFINITION_H
 
+#include "ProgramSpecialization.h"
+#include "backend/DriverApiForward.h"
+
 #include <private/filament/Variant.h>
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -55,7 +58,43 @@ struct MaterialDefinition {
     // Free GPU resources owned by this MaterialDefinition.
     void terminate(FEngine& engine);
 
+    // Creates the program for the material's given variant at the backend level. This function
+    // unconditionally compiles the program, ignoring the cache.
+    backend::Handle<backend::HwProgram> compileProgram(FEngine& engine,
+            MaterialParser const& parser, ProgramSpecialization const& specialization,
+            backend::CompilerPriorityQueue priorityQueue) const noexcept;
+
+    // Returns a compiled program. It first consults MaterialCache, and only calls compileProgram()
+    // when there is a cache miss.
+    //
+    // Must be called outside of backend render pass.
+    // Must be called before Material::getProgram().
+    backend::Handle<backend::HwProgram> prepareProgram(FEngine& engine, backend::DriverApi& driver,
+            MaterialParser const& parser, ProgramSpecialization const& specialization,
+            backend::CompilerPriorityQueue priorityQueue) const;
+
+    void acquirePrograms(FEngine& engine,
+            utils::Slice<backend::Handle<backend::HwProgram>> programCache,
+            MaterialParser const& parser,
+            utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
+            bool isDefaultMaterial) const;
+
+    void releasePrograms(FEngine& engine,
+            utils::Slice<backend::Handle<backend::HwProgram>> programCache,
+            MaterialParser const& parser,
+            utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
+            bool isDefaultMaterial) const;
+
     MaterialParser const& getMaterialParser() const noexcept { return *mMaterialParser; }
+
+    utils::Slice<const Variant> getVariants() const noexcept;
+    utils::Slice<const Variant> getDepthVariants() const noexcept;
+
+    bool hasVariant(Variant const variant,
+            backend::ShaderModel const sm, bool isStereoSupported) const noexcept;
+
+    backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
+            Variant const variant, bool useVsmDescriptorSetLayout) const noexcept;
 
     // Keep track of the definitions of the descriptor set layouts, as these
     // may be used by some backends in parallel compilation of programs.
@@ -138,6 +177,13 @@ private:
     void processSpecializationConstants(FEngine& engine);
     void processPushConstants();
     void processDescriptorSets(FEngine& engine);
+
+    backend::Program getSurfaceProgram(FEngine& engine, MaterialParser const& parser,
+            ProgramSpecialization const& specialization) const noexcept;
+
+    backend::Program getProgramWithVariants(FEngine const& engine, MaterialParser const& parser,
+            ProgramSpecialization const& specialization, Variant vertexVariant,
+            Variant fragmentVariant) const;
 
     std::unique_ptr<MaterialParser> mMaterialParser;
 };

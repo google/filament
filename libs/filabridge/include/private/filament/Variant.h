@@ -275,6 +275,8 @@ utils::Slice<const Variant> getLitVariants() noexcept UTILS_PURE;
 utils::Slice<const Variant> getUnlitVariants() noexcept UTILS_PURE;
 // list of depth variants
 utils::Slice<const Variant> getDepthVariants() noexcept UTILS_PURE;
+// list of post process variants
+utils::Slice<const Variant> getPostProcessVariants() noexcept UTILS_PURE;
 }
 
 } // namespace filament

@@ -91,6 +91,7 @@ set(SRCS
         src/MaterialParser.cpp
         src/MorphTargetBuffer.cpp
         src/PostProcessManager.cpp
+        src/ProgramSpecialization.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
@@ -187,6 +188,7 @@ set(PRIVATE_HDRS
         src/MaterialInstanceManager.h
         src/PIDController.h
         src/PostProcessManager.h
+        src/ProgramSpecialization.h
         src/RenderPass.h
         src/RenderPrimitive.h
         src/RendererUtils.h
