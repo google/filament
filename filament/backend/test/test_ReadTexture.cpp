@@ -51,7 +51,8 @@ public:
 };
 
 TEST_F(ReadTextureTest, ReadTexture2D) {
-    SKIP_IF_NOT(Backend::VULKAN, "Only implemented for Vulkan for now");
+    SKIP_IF(Backend::METAL, "readTexture not implemented for Metal");
+    SKIP_IF(Backend::WEBGPU, "readTexture not implemented for WebGPU");
 
     DriverApi& api = getDriverApi();
     const size_t textureSize = 64;
@@ -146,7 +147,8 @@ TEST_F(ReadTextureTest, ReadTexture2D) {
 }
 
 TEST_F(ReadTextureTest, ReadTextureArray) {
-    SKIP_IF_NOT(Backend::VULKAN, "Only implemented for Vulkan for now");
+    SKIP_IF(Backend::METAL, "readTexture not implemented for Metal");
+    SKIP_IF(Backend::WEBGPU, "readTexture not implemented for WebGPU");
 
     DriverApi& api = getDriverApi();
     const size_t textureSize = 64;
