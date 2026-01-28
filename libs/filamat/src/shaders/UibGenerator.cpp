@@ -121,7 +121,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "logicalViewportOffset",  0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 
             { "lodBias",                0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_1 },
+            { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT },
             { "derivativesScale",       0, Type::FLOAT2                  },
 
             { "oneOverFarMinusNear",    0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
@@ -158,7 +158,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "padding0",               0, Type::FLOAT },
             { "lightColorIntensity",    0, Type::FLOAT4, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "sun",                    0, Type::FLOAT4, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1 },
+            { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
             // Directional light shadowing [variant: SRE | DIR]
@@ -166,7 +166,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "directionalShadows",       0, Type::INT },
             { "ssContactShadowDistance",  0, Type::FLOAT },
 
-            { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1 },
+            { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH },
             { "cascades",                  0, Type::INT },
             { "shadowPenumbraRatioScale",  0, Type::FLOAT },
             { "lightFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH,  FeatureLevel::FEATURE_LEVEL_1  },
@@ -196,13 +196,13 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogNearOverFarMinusNear", 0, Type::FLOAT, Precision::HIGH },
             { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogLinearParams",         0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1  },
+            { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH  },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
             // ------------------------------------------------------------------------------------
-            { "ssrReprojection",         0, Type::MAT4,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1  },
-            { "ssrUvFromViewMatrix",     0, Type::MAT4,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_1  },
+            { "ssrReprojection",         0, Type::MAT4,  Precision::HIGH  },
+            { "ssrUvFromViewMatrix",     0, Type::MAT4,  Precision::HIGH  },
             { "ssrThickness",            0, Type::FLOAT },
             { "ssrBias",                 0, Type::FLOAT },
             { "ssrDistance",             0, Type::FLOAT },
