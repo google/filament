@@ -20,6 +20,7 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
+#include <utils/Slice.h>
 
 #include <backend/DriverEnums.h>
 
@@ -142,10 +143,6 @@ public:
     CompilerPriorityQueue getPriorityQueue() const noexcept { return mPriorityQueue; }
 
     SpecializationConstantsInfo const& getSpecializationConstants() const noexcept {
-        return mSpecializationConstants;
-    }
-
-    SpecializationConstantsInfo& getSpecializationConstants() noexcept {
         return mSpecializationConstants;
     }
 
