@@ -1588,8 +1588,6 @@ bool VulkanDriver::isProtectedContentSupported() {
 
 bool VulkanDriver::isStereoSupported() {
     switch (mStereoscopicType) {
-        case backend::StereoscopicType::INSTANCED:
-            return mContext.isClipDistanceSupported();
         case backend::StereoscopicType::MULTIVIEW:
             return mContext.isMultiviewEnabled();
         case backend::StereoscopicType::NONE:

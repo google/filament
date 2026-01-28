@@ -1267,8 +1267,6 @@ bool MetalDriver::isProtectedContentSupported() {
 
 bool MetalDriver::isStereoSupported() {
     switch (mStereoscopicType) {
-        case backend::StereoscopicType::INSTANCED:
-            return true;
         case backend::StereoscopicType::MULTIVIEW:
             // TODO: implement multiview feature in Metal.
             return false;
