@@ -407,6 +407,9 @@ private:
     struct {
         DescriptorSetHandle dsh;
         std::array<uint32_t, CONFIG_UNIFORM_BINDING_COUNT> offsets;
+#ifndef NDEBUG
+        utils::ImmutableCString tag;
+#endif
     } mBoundDescriptorSets[MAX_DESCRIPTOR_SET_COUNT] = {};
 
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
