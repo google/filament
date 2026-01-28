@@ -2161,7 +2161,7 @@ void OpenGLDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
     DEBUG_MARKER()
     GLDescriptorSetLayout const* dsl = handle_cast<GLDescriptorSetLayout*>(dslh);
     construct<GLDescriptorSet>(dsh, mContext, dslh, dsl);
-    mHandleAllocator.associateTagToHandle(dslh.getId(), std::move(tag));
+    mHandleAllocator.associateTagToHandle(dsh.getId(), std::move(tag));
 }
 
 void OpenGLDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
@@ -4111,6 +4111,12 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
 #endif
 }
 
+void OpenGLDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
+        uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
+    // TODO: implement readTexture
+    scheduleDestroy(std::move(p));
+}
+
 void OpenGLDriver::readBufferSubData(BufferObjectHandle boh,
         uint32_t const offset, uint32_t size, BufferDescriptor&& p) {
     UTILS_UNUSED_IN_RELEASE auto& gl = mContext;
@@ -4685,6 +4691,9 @@ void OpenGLDriver::bindDescriptorSet(
 
     if (UTILS_UNLIKELY(!dsh)) {
         mBoundDescriptorSets[set].dsh = dsh;
+#ifndef NDEBUG
+        mBoundDescriptorSets[set].tag = "null";
+#endif
         mInvalidDescriptorSetBindings.set(set, true);
         mInvalidDescriptorSetBindingOffsets.set(set, true);
         return;
@@ -4706,6 +4715,9 @@ void OpenGLDriver::bindDescriptorSet(
         // `offsets` data's lifetime will end when this function returns. We have to make a copy.
         // (the data is allocated inside the CommandStream)
         mBoundDescriptorSets[set].dsh = dsh;
+#ifndef NDEBUG
+        mBoundDescriptorSets[set].tag = mHandleAllocator.getHandleTag(dsh.getId());
+#endif
         assert_invariant(offsets.data() != nullptr || ds->getDynamicBufferCount() == 0);
         std::copy_n(offsets.data(), ds->getDynamicBufferCount(),
                 mBoundDescriptorSets[set].offsets.data());

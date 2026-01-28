@@ -617,6 +617,16 @@ DECL_DRIVER_API_N(readPixels,
         uint32_t, height,
         backend::PixelBufferDescriptor&&, data)
 
+DECL_DRIVER_API_N(readTexture,
+        backend::TextureHandle, src,
+        uint8_t, level,
+        uint16_t, layer,
+        uint32_t, x,
+        uint32_t, y,
+        uint32_t, width,
+        uint32_t, height,
+        backend::PixelBufferDescriptor&&, data)
+
 DECL_DRIVER_API_N(readBufferSubData,
         backend::BufferObjectHandle, src,
         uint32_t, offset,

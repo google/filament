@@ -7,7 +7,7 @@ apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 def tools = ['matc', 'cmgen']
 
 def platforms = [
-    'mac':     [classifier: 'osx-aarch64',    archive: "filament-v${VERSION_NAME}-mac.tgz",     path: { t -> "filament/bin/${t}" }],
+    'mac':     [classifier: 'osx-aarch_64',    archive: "filament-v${VERSION_NAME}-mac.tgz",     path: { t -> "filament/bin/${t}" }],
     'linux':   [classifier: 'linux-x86_64',   archive: "filament-v${VERSION_NAME}-linux.tgz",   path: { t -> "filament/bin/${t}" }],
     'windows': [classifier: 'windows-x86_64', archive: "filament-v${VERSION_NAME}-windows.tgz", path: { t -> "bin/${t}.exe" }]
 ]

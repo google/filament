@@ -26,8 +26,8 @@
 
 namespace filament {
 
-size_t MaterialCache::Key::Hash::operator()(
-        filament::MaterialCache::Key const& key) const noexcept {
+size_t MaterialCache::MaterialKey::Hash::operator()(
+        filament::MaterialCache::MaterialKey const& key) const noexcept {
     uint32_t crc;
     if (key.parser->getMaterialCrc32(&crc)) {
         return size_t(crc);
@@ -35,17 +35,17 @@ size_t MaterialCache::Key::Hash::operator()(
     return size_t(key.parser->computeCrc32());
 }
 
-bool MaterialCache::Key::operator==(Key const& rhs) const noexcept {
+bool MaterialCache::MaterialKey::operator==(MaterialKey const& rhs) const noexcept {
     return parser == rhs.parser;
 }
 
 MaterialCache::~MaterialCache() {
-    if (!mDefinitions.empty()) {
-        LOG(WARNING) << "MaterialCache was destroyed but wasn't empty";
-    }
+    assert_invariant(mDefinitions.empty());
+    assert_invariant(mPrograms.empty());
+    assert_invariant(mSpecializationConstantsInternPool.empty());
 }
 
-MaterialDefinition* UTILS_NULLABLE MaterialCache::acquire(FEngine& engine,
+MaterialDefinition* UTILS_NULLABLE MaterialCache::acquireMaterial(FEngine& engine,
         const void* UTILS_NONNULL data, size_t size) noexcept {
     std::unique_ptr<MaterialParser> parser = MaterialDefinition::createParser(engine.getBackend(),
             engine.getShaderLanguage(), data, size);
@@ -56,15 +56,16 @@ MaterialDefinition* UTILS_NULLABLE MaterialCache::acquire(FEngine& engine,
     // object is unsafe. The validity of the generated key is guaranteed because the
     // MaterialDefinition object (which owns the same parser object) created within the lambda is
     // subsequently used as the associated value in the map.
-    const Key key{ parser.get() };
+    const MaterialKey key{ parser.get() };
 
     return mDefinitions.acquire(key, [&engine, parser = std::move(parser)]() mutable {
         return MaterialDefinition::create(engine, std::move(parser));
     });
 }
 
-void MaterialCache::release(FEngine& engine, MaterialDefinition const& definition) noexcept {
-    mDefinitions.release(Key{ &definition.getMaterialParser() },
+void MaterialCache::releaseMaterial(FEngine& engine,
+        MaterialDefinition const& definition) noexcept {
+    mDefinitions.release(MaterialKey{ &definition.getMaterialParser() },
             [&engine](MaterialDefinition& definition) {
                 definition.terminate(engine);
             });
