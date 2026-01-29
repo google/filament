@@ -20,11 +20,13 @@
 #include "WebGPURenderTarget.h"
 #include "webgpu/WebGPUBlitter.h"
 #include "webgpu/WebGPUConstants.h"
+#include "webgpu/WebGPUMemoryMappedBuffer.h"
 #include "webgpu/WebGPUMsaaTextureResolver.h"
 #include "webgpu/WebGPUPipelineCache.h"
 #include "webgpu/WebGPUPipelineLayoutCache.h"
-#include "webgpu/WebGPURenderPassMipmapGenerator.h"
 #include "webgpu/WebGPUQueueManager.h"
+#include "webgpu/WebGPURenderPassMipmapGenerator.h"
+#include "webgpu/WebGPUStagePool.h"
 #include "webgpu/utils/AsyncTaskCounter.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -81,6 +83,7 @@ private:
     wgpu::Device mDevice = nullptr;
     wgpu::Limits mDeviceLimits = {};
     WebGPUQueueManager mQueueManager;
+    WebGPUStagePool mStagePool;
     void* mNativeWindow = nullptr;
     WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;

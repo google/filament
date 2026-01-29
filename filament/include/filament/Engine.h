@@ -27,6 +27,7 @@
 #include <utils/Invocable.h>
 #include <utils/Slice.h>
 
+#include <functional>
 #include <initializer_list>
 #include <optional>
 
@@ -192,6 +193,9 @@ public:
     using StereoscopicType = backend::StereoscopicType;
     using Driver = backend::Driver;
     using GpuContextPriority = backend::Platform::GpuContextPriority;
+    using AsynchronousMode = backend::AsynchronousMode;
+    using AsyncCompletionCallback = std::function<void(void* UTILS_NULLABLE)>;
+    using AsyncCallId = backend::AsyncCallId;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -428,6 +432,15 @@ public:
          * initial memory usage.
          */
         uint32_t sharedUboInitialSizeInBytes = 256 * 64;
+
+        /**
+         * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
+         * Note that selecting a non-NONE mode does not guarantee asynchronous methods are
+         * supported, as the underlying backend or the feature flag may override this configuration.
+         * Always validate availability via Engine::isAsynchronousModeEnabled() before
+         * invoking asynchronous methods.
+         */
+        AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
     };
 
 
@@ -443,7 +456,7 @@ public:
         char const* UTILS_NONNULL name;         //!< name of the feature flag
         char const* UTILS_NONNULL description;  //!< short description
         bool const* UTILS_NONNULL value;        //!< pointer to the value of the flag
-        bool constant;                          //!< whether the flag is constant after construction
+        bool constant = true;                   //!< whether the flag is constant after construction
     };
 
     /**
@@ -743,6 +756,14 @@ public:
     bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept;
 
     /**
+     * Checks if the engine is set up for asynchronous operation. If it returns true, the
+     * asynchronous versions of the APIs are available for use.
+     *
+     * @return true if the engine supports asynchronous operation.
+     */
+    bool isAsynchronousModeEnabled() const noexcept;
+
+    /**
      * Retrieves the configuration settings of this Engine.
      *
      * This method returns the configuration object that was supplied to the Engine's
@@ -1008,6 +1029,47 @@ public:
     size_t getColorGradingCount() const noexcept;
     size_t getRenderTargetCount() const noexcept;
     /**  @} */
+
+    /**
+     * This asynchronously executes user-defined commands. The commands are queued sequentially
+     * alongside other asynchronous operations (see Texture, VertexBuffer, and IndexBuffer) and
+     * guaranteed to be executed in the exact order they were invoked.
+     *
+     * Beware of overusing this method. It shares the execution queue with other asynchronous tasks
+     * like texture updates, so flooding it can delay those critical engine tasks. The recommended
+     * practice is to use this method for resource preparation, such as asset loading(images/meshes).
+     * This facilitates an efficient chaining pattern, where subsequent asynchronous operations
+     * (e.g., creating textures/vertex buffers) can be initiated directly within the completion
+     * callback.
+     *
+     * Users can call the `Engine::cancelAsyncCall()` method with the returned ID to cancel the
+     * asynchronous call.
+     *
+     * To use this method, the engine must be configured for asynchronous operation. Otherwise,
+     * calling async method will cause the program to terminate.
+     *
+     * @param command The custom command to be executed.
+     * @param handler The handler from which `onComplete` is invoked. If null, it's called from the
+     * main thread.
+     * @param onComplete The callback function that runs once the command has finished.
+     * @param user    The custom data that will be passed as an argument to the `onComplete`.
+     * @return A unique identifier for the asynchronous call.
+     */
+    AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
+            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCompletionCallback onComplete,
+            void* UTILS_NULLABLE user = nullptr);
+
+    /**
+     * Cancel the pending asynchronous call pointed to by `id`, which is retrieved whenever you
+     * invoke a non-blocking version of method on an object, such as `Texture::setImageAsync` or
+     * `BufferObject::setBufferAsync`.
+     *
+     * @param id The unique identifier for the asynchronous call to be canceled.
+     * @return Returns true upon successful cancellation. It returns false if the asynchronous
+     * operation cannot be canceled because it is currently running, has finished, or has previously
+     * been canceled.
+     */
+    bool cancelAsyncCall(AsyncCallId id);
 
     /**
      * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until

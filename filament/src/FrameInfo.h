@@ -80,8 +80,8 @@ struct FrameInfoImpl : public details::FrameInfo {
     CompositorTiming::duration_ns displayPresentInterval{ FrameTimestamps::INVALID };
     // time between the start of composition and the expected present time [ns]
     CompositorTiming::duration_ns compositionToPresentLatency{ FrameTimestamps::INVALID };
-    // system's expected present time [ns]
-    FrameTimestamps::time_point_ns expectedPresentTime{ FrameTimestamps::INVALID };
+    // system's expected present latency from vsync [ns]
+    CompositorTiming::duration_ns expectedPresentLatency{ FrameTimestamps::INVALID };
 
     // the fence used for gpuFrameComplete
     backend::FenceHandle fence{};
@@ -95,33 +95,8 @@ struct FrameInfoImpl : public details::FrameInfo {
         assert_invariant(!fence);
     }
 
-    FrameInfoImpl(FrameInfoImpl&& rhs) noexcept : 
-        details::FrameInfo(rhs),
-        frameId(rhs.frameId),
-        beginFrame(rhs.beginFrame),
-        endFrame(rhs.endFrame),
-        backendBeginFrame(rhs.backendBeginFrame),
-        backendEndFrame(rhs.backendEndFrame),
-        gpuFrameComplete(rhs.gpuFrameComplete),
-        vsync(rhs.vsync),
-        fence(rhs.fence),
-        ready(rhs.ready.load())
-    {
-    }
-
-    FrameInfoImpl& operator=(FrameInfoImpl&& rhs) noexcept {
-        details::FrameInfo::operator=(rhs);
-        frameId = rhs.frameId;
-        beginFrame = rhs.beginFrame;
-        endFrame = rhs.endFrame;
-        backendBeginFrame = rhs.backendBeginFrame;
-        backendEndFrame = rhs.backendEndFrame;
-        gpuFrameComplete = rhs.gpuFrameComplete;
-        vsync = rhs.vsync;
-        fence = rhs.fence;
-        ready.store(rhs.ready.load());
-        return *this;
-    }
+    FrameInfoImpl(FrameInfoImpl& rhs) noexcept = delete;
+    FrameInfoImpl& operator=(FrameInfoImpl& rhs) noexcept = delete;
 };
 
 template<typename T, size_t CAPACITY>
@@ -340,6 +315,7 @@ private:
     FrameHistoryQueue mFrameTimeHistory{};
     utils::AsyncJobQueue mJobQueue;
     FSwapChain* mLastSeenSwapChain = nullptr;
+    bool mLastBeginFrameSkipped = false;
     bool const mHasTimerQueries = false;
     bool const mDisableGpuFrameComplete = false;
 };

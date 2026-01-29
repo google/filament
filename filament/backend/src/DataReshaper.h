@@ -84,6 +84,9 @@ public:
             size_t dstRowOffset, size_t dstColumnOffset,
             size_t dstBytesPerRow, size_t dstChannelCount,
             size_t width, size_t height, bool swizzle) {
+        // TODO: there's a fast-path where memcpy will work but currently not being taken advantage
+        // of.
+
         const dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
         const srcComponentType srcMaxValue = getMaxValue<srcComponentType>();
         const size_t minChannelCount = math::min(srcChannelCount, dstChannelCount);

@@ -104,13 +104,17 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     const float airIor = 1.0;
 #if !defined(MATERIAL_HAS_IOR)
     // [common case] ior is not set in the material, deduce it from F0
-    float materialor = f0ToIor(pixel.f0.g);
+    float materialIor = f0ToIor(pixel.f0.g);
 #else
     // if ior is set in the material, use it (can lead to unrealistic materials)
-    float materialor = max(1.0, material.ior);
+    float materialIor = max(1.0, material.ior);
 #endif
-    pixel.etaIR = airIor / materialor;  // air -> material
-    pixel.etaRI = materialor / airIor;  // material -> air
+
+    pixel.etaIR = airIor / materialIor;  // air -> material
+    pixel.etaRI = materialIor / airIor;  // material -> air
+#if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
+    pixel.dispersion = material.dispersion;
+#endif
 #if defined(MATERIAL_HAS_TRANSMISSION)
     pixel.transmission = saturate(material.transmission);
 #else

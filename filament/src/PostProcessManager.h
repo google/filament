@@ -93,7 +93,7 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
-    void configureTemporalAntiAliasingMaterial(
+    void configureTemporalAntiAliasingMaterial(backend::DriverApi& driver,
             TemporalAntiAliasingOptions const& taaOptions) noexcept;
 
     // methods below are ordered relative to their position in the pipeline (as much as possible)
@@ -235,6 +235,8 @@ public:
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth,
+            Viewport const& xvp,
+            Viewport const& vp,
             FrameHistory& frameHistory,
             FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             TemporalAntiAliasingOptions const& taaOptions,
@@ -348,7 +350,7 @@ public:
 
         void terminate(FEngine& engine) noexcept;
 
-        FMaterial* getMaterial(FEngine& engine,
+        FMaterial* getMaterial(FEngine& engine, backend::DriverApi& driver,
                 PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
 
     private:
@@ -396,7 +398,7 @@ public:
 
     // Sets the necessary spec constants and uniforms common to both colorGrading.mat and
     // colorGradingAsSubpass.mat.
-    FMaterialInstance* configureColorGradingMaterial(
+    FMaterialInstance* configureColorGradingMaterial(backend::DriverApi& driver,
             PostProcessMaterial const& material, FColorGrading const* colorGrading,
             ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
             uint32_t width, uint32_t height) noexcept;
@@ -417,9 +419,9 @@ private:
     }
 
     // Helper to get a MaterialInstance from a PostProcessMaterial.
-    FMaterialInstance* getMaterialInstance(FEngine& engine, PostProcessMaterial const& material,
+    FMaterialInstance* getMaterialInstance(FEngine& engine, backend::DriverApi& driver, PostProcessMaterial const& material,
             PostProcessVariant variant = PostProcessVariant::OPAQUE) {
-        FMaterial const* ma = material.getMaterial(engine, variant);
+        FMaterial const* ma = material.getMaterial(engine, driver, variant);
         return getMaterialInstance(ma);
     }
 
@@ -436,6 +438,9 @@ private:
 
     FEngine& mEngine;
 
+    backend::FeatureLevel mFeatureLevel;
+    bool mDepthStencilResolveSupported;
+    bool mDepthStencilBlitSupported;
     mutable SsrPassDescriptorSet mSsrPassDescriptorSet;
     mutable PostProcessDescriptorSet mPostProcessDescriptorSet;
     mutable StructureDescriptorSet mStructureDescriptorSet;

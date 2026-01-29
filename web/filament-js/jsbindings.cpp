@@ -495,8 +495,11 @@ class_<Engine>("Engine")
             (Engine* engine, utils::Entity camera) { engine->destroyCameraComponent(camera); },
             allow_raw_pointers())
 
-    .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
-        return Material::Builder().package(mbd.bd->buffer, mbd.bd->size).build(*engine);
+    .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd, Material::UboBatchingMode uboBatching), {
+        return Material::Builder()
+                .package(mbd.bd->buffer, mbd.bd->size)
+                .uboBatching(uboBatching)
+                .build(*engine);
     }), allow_raw_pointers())
     /// destroyMaterial ::method::
     /// material ::argument:: an instance of [Material]
@@ -1360,6 +1363,10 @@ class_<Material>("Material")
         return transformName ? std::string(transformName) : std::string();
     }), allow_raw_pointers());
 
+enum_<Material::UboBatchingMode>("Material$UboBatchingMode")
+    .value("DISABLED", Material::UboBatchingMode::DISABLED)
+    .value("DEFAULT", Material::UboBatchingMode::DEFAULT);
+
 class_<MaterialInstance>("MaterialInstance")
     .function("getName", EMBIND_LAMBDA(std::string, (MaterialInstance* self), {
         return std::string(self->getName());
@@ -1591,6 +1598,8 @@ class_<SkyBuilder>("Skybox$Builder")
     .function("_build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
+    .BUILDER_FUNCTION("priority", SkyBuilder, (SkyBuilder* builder, uint8_t priority), {
+        return &builder->priority(priority); })
     .BUILDER_FUNCTION("color", SkyBuilder, (SkyBuilder* builder, filament::math::float4 color), {
         return &builder->color(color); })
     .BUILDER_FUNCTION("environment", SkyBuilder, (SkyBuilder* builder, Texture* cubemap), {
@@ -2037,6 +2046,7 @@ struct UbershaderProvider {
 
 struct StbProvider { TextureProvider* provider; };
 struct Ktx2Provider { TextureProvider* provider; };
+struct WebpProvider { TextureProvider* provider; };
 
 class_<UbershaderProvider>("gltfio$UbershaderProvider")
     .constructor(EMBIND_LAMBDA(UbershaderProvider, (Engine* engine), {
@@ -2054,6 +2064,12 @@ class_<Ktx2Provider>("gltfio$Ktx2Provider")
     .constructor(EMBIND_LAMBDA(Ktx2Provider, (Engine* engine), {
         return Ktx2Provider { createKtx2Provider(engine) };
     }));
+
+class_<WebpProvider>("gltfio$WebpProvider")
+    .constructor(EMBIND_LAMBDA(WebpProvider, (Engine* engine), {
+        return WebpProvider { createWebpProvider(engine) };
+    }))    
+    .class_function("isWebpSupported", &isWebpSupported);
 
 class_<AssetLoader>("gltfio$AssetLoader")
 
@@ -2113,6 +2129,13 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
     .function("addKtx2Provider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
             Ktx2Provider provider), {
         self->addTextureProvider(mime.c_str(), provider.provider);
+    }), allow_raw_pointers())
+
+    .function("addWebpProvider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
+            WebpProvider provider), {
+        if (provider.provider) {
+            self->addTextureProvider(mime.c_str(), provider.provider);
+        }
     }), allow_raw_pointers())
 
     .function("hasResourceData", EMBIND_LAMBDA(bool, (ResourceLoader* self, std::string url), {

@@ -22,7 +22,15 @@
 
 // We need to keep this up top for the linux (X11) name collisions.
 #if defined(FILAMENT_SUPPORTS_WEBGPU)
-    #include "backend/platforms/WebGPUPlatform.h"
+    #if defined(__ANDROID__)
+        #include "backend/platforms/WebGPUPlatformAndroid.h"
+    #elif defined(__APPLE__)
+        #include "backend/platforms/WebGPUPlatformApple.h"
+    #elif defined(__linux__)
+        #include "backend/platforms/WebGPUPlatformLinux.h"
+    #elif defined(WIN32)
+        #include "backend/platforms/WebGPUPlatformWindows.h"
+    #endif
 #endif
 
 #if defined(__ANDROID__)
@@ -136,7 +144,17 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
     }
     if (*backend == Backend::WEBGPU) {
         #if defined(FILAMENT_SUPPORTS_WEBGPU)
-            return new WebGPUPlatform();
+            #if defined(__ANDROID__)
+                return new WebGPUPlatformAndroid();
+            #elif defined(__APPLE__)
+                return new WebGPUPlatformApple();
+            #elif defined(__linux__)
+                return new WebGPUPlatformLinux();
+            #elif defined(WIN32)
+                return new WebGPUPlatformWindows();
+            #else
+                 return nullptr;
+            #endif
         #else
             return nullptr;
         #endif

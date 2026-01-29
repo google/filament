@@ -49,6 +49,7 @@ set(SRCS
         src/UbershaderProvider.cpp
         src/Utility.cpp
         src/Utility.h
+        src/WebpProvider.cpp
         src/Wireframe.cpp
         src/Wireframe.h
         src/downcast.h
@@ -61,6 +62,7 @@ set(SRCS
         src/extended/TangentSpaceMeshWrapper.cpp
         src/extended/TangentSpaceMeshWrapper.h
 )
+
 
 # ==================================================================================================
 # Build materials
@@ -181,6 +183,10 @@ set_target_properties(uberarchive PROPERTIES FOLDER Libs)
 # Build the "core" library (no filamat)
 # ==================================================================================================
 
+if(FILAMENT_SUPPORTS_WEBP_TEXTURES)
+    set(WEBP_DECODER_LIB_TARGET webpdecoder)
+endif()
+
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
 link_libraries(math utils filament cgltf stb ktxreader geometry tsl uberzlib)
 
@@ -190,7 +196,7 @@ target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(gltfio_core PROPERTIES FOLDER Libs)
 
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
-target_link_libraries(gltfio_core PUBLIC dracodec meshoptimizer)
+target_link_libraries(gltfio_core PUBLIC dracodec meshoptimizer ${WEBP_DECODER_LIB_TARGET})
 
 if (WEBGL_PTHREADS)
     target_compile_definitions(gltfio_core PUBLIC -DFILAMENT_WASM_THREADS)
@@ -233,6 +239,7 @@ function(add_test_gltf SOURCE TARGET)
 endfunction()
 
 add_test_gltf("third_party/models/AnimatedMorphCube/AnimatedMorphCube.glb" "AnimatedMorphCube.glb")
+add_test_gltf("third_party/models/DamagedHelmet/DamagedHelmetWebp.glb" "DamagedHelmetWebp.glb")
 
 add_custom_target(test_gltfio_files DEPENDS ${GLTF_TEST_FILES})
 

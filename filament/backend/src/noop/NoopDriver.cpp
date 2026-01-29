@@ -28,10 +28,13 @@
 namespace filament::backend {
 
 Driver* NoopDriver::create() {
-    return new NoopDriver();
+    Platform::DriverConfig driverConfig;
+    return new NoopDriver(driverConfig);
 }
 
-NoopDriver::NoopDriver() noexcept = default;
+NoopDriver::NoopDriver(const Platform::DriverConfig& driverConfig) noexcept
+    : DriverBase(driverConfig) {
+}
 
 NoopDriver::~NoopDriver() noexcept = default;
 
@@ -247,6 +250,10 @@ bool NoopDriver::isDepthClampSupported() {
     return false;
 }
 
+bool NoopDriver::isAsynchronousModeEnabled() {
+    return false;
+}
+
 bool NoopDriver::isWorkaroundNeeded(Workaround) {
     return false;
 }
@@ -290,8 +297,6 @@ void NoopDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor
         uint32_t byteOffset) {
     scheduleDestroy(std::move(p));
 }
-
-void NoopDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh, BufferObjectStreamDescriptor&& streams) { }
 
 void NoopDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
@@ -371,6 +376,11 @@ void NoopDriver::stopCapture(int) {
 void NoopDriver::readPixels(Handle<HwRenderTarget> src,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& p) {
+    scheduleDestroy(std::move(p));
+}
+
+void NoopDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
+        uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
     scheduleDestroy(std::move(p));
 }
 
@@ -464,6 +474,10 @@ bool NoopDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
 
 bool NoopDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
         FrameTimestamps* outFrameTimestamps) {
+    return false;
+}
+
+bool NoopDriver::cancelAsyncJob(AsyncCallId jobId) {
     return false;
 }
 

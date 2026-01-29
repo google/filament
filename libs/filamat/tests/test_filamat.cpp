@@ -475,6 +475,32 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerDispersion) {
+    std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.absorption = vec3(0.0);
+            material.transmission = 0.96;
+            material.ior = 1.33;
+            material.dispersion = 0.33;
+        }
+    )");
+
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode, "", filamat::MaterialBuilder::Shading::LIT,
+            filamat::MaterialBuilder::RefractionMode::CUBEMAP);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::DISPERSION)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
     std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
@@ -962,6 +988,77 @@ TEST_F(MaterialCompiler, FeatureLevel0Ess3CallFails) {
   builder.material(shaderCode.c_str());
   filamat::Package result = builder.build(*jobSystem);
   EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, EmbedMaterialSourceSucceeds) {
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.);
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.materialSource(shaderCode);
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, ClientApiLevelUnstableNoUseOfUnstableApiSucceeds) {
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.);
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.material(shaderCode.c_str());
+    builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, ClientApiLevelUnstableUseOfUnstableApiSucceeds) {
+    std::string shaderCode(R"(
+        // Emulate an unstable api added in the public shaders
+        #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+        /* @unstable-api */
+        float unstableApi() { return 1.; }
+        #endif
+
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(unstableApi());
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.material(shaderCode.c_str());
+    builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, ClientApiLevelReleasedUseOfUnstableApiFails) {
+    std::string shaderCode(R"(
+        // Emulate an unstable api added in the public shaders
+        #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+        /* @unstable-api */
+        float unstableApi() { return 1.; }
+        #endif
+
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(unstableApi());
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.material(shaderCode.c_str());
+    builder.setApiLevel(filament::RELEASED_MATERIAL_API_LEVEL);
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
 }
 
 #if FILAMENT_SUPPORTS_WEBGPU

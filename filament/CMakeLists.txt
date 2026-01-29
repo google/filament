@@ -91,13 +91,13 @@ set(SRCS
         src/MaterialParser.cpp
         src/MorphTargetBuffer.cpp
         src/PostProcessManager.cpp
+        src/ProgramSpecialization.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
         src/RenderableManager.cpp
         src/Renderer.cpp
         src/RendererUtils.cpp
-        src/ResourceAllocator.cpp
         src/ResourceList.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
@@ -108,6 +108,7 @@ set(SRCS
         src/SwapChain.cpp
         src/Sync.cpp
         src/Texture.cpp
+        src/TextureCache.cpp
         src/ToneMapper.cpp
         src/TransformManager.cpp
         src/UniformBuffer.cpp
@@ -158,6 +159,7 @@ set(SRCS
         src/fg/FrameGraphTexture.cpp
         src/fg/PassNode.cpp
         src/fg/ResourceNode.cpp
+        src/fg/ResourceCreationContext.cpp
         src/fsr.cpp
         src/ZstdHelper.cpp
 )
@@ -168,6 +170,7 @@ set(PRIVATE_HDRS
         src/Bimap.h
         src/BufferPoolAllocator.h
         src/ColorSpaceUtils.h
+        src/compact.h
         src/Culler.h
         src/DFG.h
         src/FilamentAPI-impl.h
@@ -185,19 +188,21 @@ set(PRIVATE_HDRS
         src/MaterialInstanceManager.h
         src/PIDController.h
         src/PostProcessManager.h
+        src/ProgramSpecialization.h
         src/RenderPass.h
         src/RenderPrimitive.h
         src/RendererUtils.h
-        src/ResourceAllocator.h
         src/ResourceList.h
         src/ShadowMap.h
         src/ShadowMapManager.h
         src/SharedHandle.h
+        src/TextureCache.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
+        src/details/AsyncHelpers.h
         src/details/BufferAllocator.h
         src/details/BufferObject.h
         src/details/Camera.h
@@ -232,6 +237,7 @@ set(PRIVATE_HDRS
         src/ds/TypedUniformBuffer.h
         src/fg/Blackboard.h
         src/fg/FrameGraph.h
+        src/fg/FrameGraphDummyLink.h
         src/fg/FrameGraphId.h
         src/fg/FrameGraphPass.h
         src/fg/FrameGraphRenderPass.h
@@ -241,6 +247,7 @@ set(PRIVATE_HDRS
         src/fg/details/DependencyGraph.h
         src/fg/details/PassNode.h
         src/fg/details/Resource.h
+        src/fg/details/ResourceAllocator.h
         src/fg/details/ResourceNode.h
         src/fg/details/Utilities.h
         src/fsr.h

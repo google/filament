@@ -23,3 +23,6 @@ SpecularColorTexture=optional
 Transmission=optional
 Ior=optional
 TransmissionTexture=optional
+
+# KHR_materials_dispersion Features
+Dispersion=unsupported

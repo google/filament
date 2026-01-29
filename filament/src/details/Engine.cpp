@@ -17,7 +17,7 @@
 #include "details/Engine.h"
 
 #include "MaterialParser.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 #include "RenderPrimitive.h"
 
 #include "details/BufferObject.h"
@@ -39,26 +39,29 @@
 #include "details/VertexBuffer.h"
 #include "details/View.h"
 
-#include <filament/ColorGrading.h>
-#include <filament/Engine.h>
-#include <filament/MaterialEnums.h>
-
 #include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
 #include <private/backend/PlatformFactory.h>
 
-#include <backend/DriverEnums.h>
-
+#include <private/utils/FeatureFlagManager.h>
 #include <private/utils/Tracing.h>
+
+#include <filament/ColorGrading.h>
+#include <filament/Engine.h>
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
+#include <utils/CString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
+#include <utils/Slice.h>
 #include <utils/ThreadUtils.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -97,8 +100,9 @@ using namespace filaflat;
 
 namespace {
 
-backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
-    return {
+Platform::DriverConfig getDriverConfig(FEngine* instance) {
+    Platform::DriverConfig const driverConfig {
+        .featureFlagManager = instance,
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
         .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
@@ -109,14 +113,21 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
         .forceGLES2Context = instance->getConfig().forceGLES2Context,
         .stereoscopicType = instance->getConfig().stereoscopicType,
+        .stereoscopicEyeCount = instance->getConfig().stereoscopicEyeCount,
         .assertNativeWindowIsValid =
                 instance->features.backend.opengl.assert_native_window_is_valid,
         .metalDisablePanicOnDrawableFailure =
                 instance->getConfig().metalDisablePanicOnDrawableFailure,
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
+        .vulkanEnableAsyncPipelineCachePrewarming =
+                instance->features.backend.vulkan.enable_pipeline_cache_prewarming,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
+        .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?
+                instance->getConfig().asynchronousMode : AsynchronousMode::NONE,
     };
+
+    return driverConfig;
 }
 
 } // anonymous
@@ -128,7 +139,7 @@ struct Engine::BuilderDetails {
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
-    std::unordered_map<std::string_view, bool> mFeatureFlags;
+    std::unordered_map<CString, bool> mFeatureFlags;
 
     static Config validateConfig(Config config) noexcept;
 };
@@ -266,24 +277,25 @@ FEngine::FEngine(Builder const& builder) :
         mMainThreadId(ThreadUtils::getThreadId()),
         mConfig(builder->mConfig)
 {
+    // update all the features flags specified in the builder
+    for (auto const& [feature, value] : builder->mFeatureFlags) {
+        auto* const p = getFeatureFlagPtr(feature.c_str_safe(), true);
+        if (p) {
+            *p = value;
+        }
+    }
+
+
     // update a feature flag from Engine::Config if the flag is not specified in the Builder
     auto const featureFlagsBackwardCompatibility =
             [this, &builder](std::string_view const name, bool const value) {
-        if (builder->mFeatureFlags.find(name) == builder->mFeatureFlags.end()) {
+        if (builder->mFeatureFlags.find(utils::CString(name)) == builder->mFeatureFlags.end()) {
             auto* const p = getFeatureFlagPtr(name, true);
             if (p) {
                 *p = value;
             }
         }
     };
-
-    // update all the features flags specified in the builder
-    for (auto const& feature : builder->mFeatureFlags) {
-        auto* const p = getFeatureFlagPtr(feature.first, true);
-        if (p) {
-            *p = feature.second;
-        }
-    }
 
     // update "old" feature flags that were specified in Engine::Config
     featureFlagsBackwardCompatibility("backend.disable_parallel_shader_compile",
@@ -337,7 +349,7 @@ void FEngine::init() {
     LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
 
 
-    mResourceAllocatorDisposer = std::make_shared<ResourceAllocatorDisposer>(driverApi);
+    mResourceAllocatorDisposer = std::make_shared<TextureCacheDisposer>(driverApi);
 
     mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)
@@ -526,14 +538,12 @@ void FEngine::init() {
             &debug.shadowmap.debug_directional_shadowmap, [this] {
                 mMaterials.forEach([this](FMaterial* material) {
                     if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
-
-                        material->setConstant(
-                                +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
+                        FMaterial::SpecializationConstantsBuilder constants =
+                                material->getSpecializationConstantsBuilder();
+                        constants.set(+ReservedSpecializationConstants::
+                                              CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
                                 debug.shadowmap.debug_directional_shadowmap);
-
-                        material->invalidate(
-                                Variant::DIR | Variant::SRE | Variant::DEP,
-                                Variant::DIR | Variant::SRE);
+                        material->setSpecializationConstants(std::move(constants));
                     }
                 });
             });
@@ -542,14 +552,12 @@ void FEngine::init() {
             &debug.lighting.debug_froxel_visualization, [this] {
                 mMaterials.forEach([this](FMaterial* material) {
                     if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
-
-                        material->setConstant(
-                                +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
+                        FMaterial::SpecializationConstantsBuilder constants =
+                                material->getSpecializationConstantsBuilder();
+                        constants.set(+ReservedSpecializationConstants::
+                                              CONFIG_DEBUG_FROXEL_VISUALIZATION,
                                 debug.lighting.debug_froxel_visualization);
-
-                        material->invalidate(
-                                Variant::DYN | Variant::DEP,
-                                Variant::DYN);
+                        material->setSpecializationConstants(std::move(constants));
                     }
                 });
             });
@@ -693,6 +701,12 @@ void FEngine::shutdown() {
         // Driver::terminate() has been called here.
     }
 
+    // Handle any pending deferred destruction for asynchronous objects.
+    if (isAsynchronousModeEnabled()) {
+        gcDeferredAsyncObjectDestruction();
+        assert_invariant(mDeferredAsyncObjectDestruction.empty());
+    }
+
     // Finally, call user callbacks that might have been scheduled.
     // These callbacks CANNOT call driver APIs.
     getDriver().purge();
@@ -708,12 +722,11 @@ void FEngine::shutdown() {
     mJobSystem.emancipate();
 }
 
-void FEngine::prepare() {
+void FEngine::prepare(DriverApi& driver) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.
-    DriverApi& driver = getDriverApi();
     const bool useUboBatching = isUboBatchingEnabled();
 
     if (useUboBatching) {
@@ -723,11 +736,10 @@ void FEngine::prepare() {
 
     UboManager* uboManager = mUboManager;
     for (auto& materialInstanceList: mMaterialInstances) {
-        materialInstanceList.second.forEach([&driver, uboManager](FMaterialInstance* item) {
+        materialInstanceList.second.forEach([&driver, uboManager](FMaterialInstance const* item) {
             // post-process materials instances must be commited explicitly because their
             // parameters are typically not set at this point in time.
             if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
-                item->commitStreamUniformAssociations(driver);
                 item->commit(driver, uboManager);
             }
         });
@@ -735,7 +747,7 @@ void FEngine::prepare() {
 
     if (useUboBatching) {
         assert_invariant(mUboManager != nullptr);
-        getUboManager()->finishBeginFrame(getDriverApi());
+        getUboManager()->finishBeginFrame(driver);
     }
 
     mMaterials.forEach([](FMaterial* material) {
@@ -745,13 +757,28 @@ void FEngine::prepare() {
     });
 }
 
-void FEngine::gc() {
+void FEngine::gcManagers() {
     // Note: this runs in a Job
     auto& em = mEntityManager;
     mRenderableManager.gc(em);
     mLightManager.gc(em);
     mTransformManager.gc(em);
     mCameraManager.gc(*this, em);
+}
+
+void FEngine::gcDeferredAsyncObjectDestruction() {
+    if (mDeferredAsyncObjectDestruction.empty()) {
+        return;
+    }
+    auto it = std::remove_if(
+            mDeferredAsyncObjectDestruction.begin(),
+            mDeferredAsyncObjectDestruction.end(),
+            [](auto& f) {
+                return f(); // Returns true if it should be removed
+            }
+    );
+    // Actually erase the elements from the vector
+    mDeferredAsyncObjectDestruction.erase(it, mDeferredAsyncObjectDestruction.end());
 }
 
 void FEngine::submitFrame() {
@@ -991,10 +1018,9 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
     return p;
 }
 
-FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material, const char* name,
-        UboBatchingMode batchingMode) noexcept {
-    FMaterialInstance* p =
-            mHeapAllocator.make<FMaterialInstance>(*this, material, name, batchingMode);
+FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
+        const char* name) noexcept {
+    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material, name);
     if (UTILS_LIKELY(p)) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);
@@ -1131,11 +1157,18 @@ bool FEngine::isValid(const T* ptr, ResourceList<T> const& list) const {
     return l.find(ptr) != l.end();
 }
 
+template <typename T, typename = void>
+struct HasIsCreationComplete : std::false_type {};
+
+template <typename T>
+struct HasIsCreationComplete<T, std::void_t<decltype(std::declval<T>().isCreationComplete())>>
+        : std::true_type {};
+
 template<typename T>
 UTILS_ALWAYS_INLINE
-bool FEngine::terminateAndDestroy(const T* p, ResourceList<T>& list) {
-    if (p == nullptr) return true;
-    bool const success = list.remove(p);
+bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
+    if (ptr == nullptr) return true;
+    bool const success = list.remove(ptr);
 
 #if UTILS_HAS_RTTI
     auto typeName = CallStack::typeName<T>();
@@ -1145,9 +1178,42 @@ bool FEngine::terminateAndDestroy(const T* p, ResourceList<T>& list) {
 #endif
 
     if (ASSERT_PRECONDITION_NON_FATAL(success,
-            "Object %s at %p doesn't exist (double free?)", typeNameCStr, p)) {
-        const_cast<T*>(p)->terminate(*this);
-        mHeapAllocator.destroy(const_cast<T*>(p));
+            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr)) {
+
+        T* p = const_cast<T*>(ptr);
+
+        if constexpr (HasIsCreationComplete<T>::value) {
+            // The presence of 'isCreationComplete' in type T implies it supports asynchronous
+            // creation. For these asynchronous objects, we can terminate the backend resources
+            // immediately as they are no longer referenced. However, we defer the destruction of
+            // the frontend object if it's still being loaded.
+            // Reason: The creation process is still active and holds a reference to the frontend
+            // object to set `mCreationComplete` to true (see FTexture::FTexture). Deleting it now
+            // may cause a crash, so we wait until creation completes.
+
+            // Terminate the backend resource immediately as they're unnecessary from this point.
+            p->terminate(*this);
+
+            if (p->isCreationComplete()) {
+                // If creation is complete, we free the frontend object immediately. Note that in
+                // regular (non-async) mode, the `isCreationComplete` method always return true.
+                mHeapAllocator.destroy(p);
+            } else {
+                // We defer the destruction of the frontend object until the creation process
+                // completes. This ensures the object remains valid while the creation process still
+                // holds references to it.
+                mDeferredAsyncObjectDestruction.push_back([this, p]() {
+                    if (!p->isCreationComplete()) {
+                        return false;
+                    }
+                    mHeapAllocator.destroy(p);
+                    return true;
+                });
+            }
+        } else {
+            p->terminate(*this);
+            mHeapAllocator.destroy(p);
+        }
     }
     return success;
 }
@@ -1443,6 +1509,29 @@ size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
 size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
+AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
+        CallbackHandler* handler, AsyncCompletionCallback onComplete, void* user) {
+
+    struct RunCommandAsyncCallback {
+        AsyncCompletionCallback userCallback;
+        void* userParam;
+        static void func(void* wrappedData) {
+            auto const* const data = static_cast<RunCommandAsyncCallback*>(wrappedData);
+            data->userCallback(data->userParam);
+            delete data;
+        }
+    };
+    auto* const wrappedData = new(std::nothrow) RunCommandAsyncCallback{
+            std::move(onComplete), user };
+
+    return getDriverApi().queueCommandAsync(std::move(command), handler, &RunCommandAsyncCallback::func,
+            wrappedData);
+}
+
+bool FEngine::cancelAsyncCall(AsyncCallId const id) {
+    return getDriver().cancelAsyncJob(id);
+}
+
 size_t FEngine::getMaxShadowMapCount() const noexcept {
     return features.engine.shadows.use_shadow_atlas ?
         CONFIG_MAX_SHADOWMAPS : CONFIG_MAX_SHADOW_LAYERS;
@@ -1503,6 +1592,11 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 
+bool FEngine::isAsynchronousModeEnabled() const noexcept {
+    DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
+    return driver.isAsynchronousModeEnabled();
+}
+
 #if defined(__EMSCRIPTEN__)
 void FEngine::resetBackendState() noexcept {
     getDriverApi().resetState();
@@ -1516,30 +1610,26 @@ void FEngine::unprotected() noexcept {
     mUnprotectedDummySwapchain->makeCurrent(getDriverApi());
 }
 
-bool FEngine::setFeatureFlag(char const* name, bool const value) const noexcept {
-    auto* const p = getFeatureFlagPtr(name);
-    if (p) {
-        *p = value;
-    }
-    return p != nullptr;
+Slice<const Engine::FeatureFlag> FEngine::getFeatureFlags() const noexcept {
+    // Engine::FeatureFlag and FeatureFlagManager::FeatureFlag are the same type
+    Slice const r{ FeatureFlagManager::getFeatureFlags() };
+    Slice const result{
+        reinterpret_cast<Engine::FeatureFlag const*>(r.data()),
+        r.size()
+    };
+    return result;
+}
+
+bool FEngine::setFeatureFlag(char const* name, bool const value) noexcept {
+    return FeatureFlagManager::setFeatureFlag(name, value);
 }
 
 std::optional<bool> FEngine::getFeatureFlag(char const* name) const noexcept {
-    auto* const p = getFeatureFlagPtr(name, true);
-    if (p) {
-        return *p;
-    }
-    return std::nullopt;
+    return FeatureFlagManager::getFeatureFlag(name);
 }
 
 bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant) const noexcept {
-    auto pos = std::find_if(mFeatures.begin(), mFeatures.end(),
-            [name](FeatureFlag const& entry) {
-                return name == entry.name;
-            });
-
-    return (pos != mFeatures.end() && (!pos->constant || allowConstant)) ?
-           const_cast<bool*>(pos->value) : nullptr;
+    return FeatureFlagManager::getFeatureFlagPtr(name, allowConstant);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1582,7 +1672,7 @@ Engine::Builder& Engine::Builder::paused(bool const paused) noexcept {
 }
 
 Engine::Builder& Engine::Builder::feature(char const* name, bool const value) noexcept {
-    mImpl->mFeatureFlags[name] = value;
+    mImpl->mFeatureFlags.emplace(name, value);
     return *this;
 }
 

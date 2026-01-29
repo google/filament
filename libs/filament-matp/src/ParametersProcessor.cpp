@@ -79,6 +79,11 @@ static utils::Status processName(MaterialBuilder& builder, const JsonishValue& v
     return utils::Status::ok();
 }
 
+static utils::Status processApiLevel(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.setApiLevel(value.toJsonNumber()->getFloat());
+    return utils::Status::ok();
+}
+
 static utils::Status processInterpolation(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::Interpolation> strToEnum {
         { "smooth", MaterialBuilder::Interpolation::SMOOTH },
@@ -1406,6 +1411,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["useDefaultDepthVariant"]        = { &processUseDefaultDepthVariant, Type::BOOL };
     mParameters["linearFog"]                     = { &processLinearFog, Type::BOOL };
     mParameters["shadowFarAttenuation"]          = { &processShadowFarAttenuation, Type::BOOL };
+    mParameters["apiLevel"]                      = { &processApiLevel, Type::NUMBER };
 }
 
 utils::Status ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

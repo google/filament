@@ -43,7 +43,7 @@ io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
 }
 
 utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out, ShaderStage stage,
-        MaterialInfo const& material, filament::Variant v) const {
+        MaterialInfo const& material, filament::Variant v, uint32_t apiLevel) const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
             // Vulkan requires version 310 or higher
@@ -385,6 +385,10 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             generateDefine(out, "textureCubeLod", "textureLod");
         }
     }
+
+    // Api level enforcement.
+    generateDefine(out, "CLIENT_MATERIAL_API_LEVEL", apiLevel);
+    generateDefine(out, "UNSTABLE_MATERIAL_API_LEVEL", filament::UNSTABLE_MATERIAL_API_LEVEL);
 
     out << "\n";
     return out;
@@ -959,6 +963,10 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     return out;
 }
 
+// Note that we've only introduced push constants to the vertex stage.  If we want to add push
+// constants to the fragment stage, in vulkan, we would have to offset the definition of the field
+// by the size of the constant struct in the vertex stage. This is due to vulkan having essentially
+// one block of memory for push constants that is shared across all stages).
 utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
         MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation) const {
     if (UTILS_UNLIKELY(pushConstants.empty())) {
@@ -1248,6 +1256,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::ABSORPTION:                  return "ABSORPTION";
         case Property::TRANSMISSION:                return "TRANSMISSION";
         case Property::IOR:                         return "IOR";
+        case Property::DISPERSION:                  return "DISPERSION";
         case Property::MICRO_THICKNESS:             return "MICRO_THICKNESS";
         case Property::BENT_NORMAL:                 return "BENT_NORMAL";
         case Property::SPECULAR_FACTOR:             return "SPECULAR_FACTOR";

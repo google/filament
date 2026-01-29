@@ -119,18 +119,6 @@ struct PlatformEGLAndroid::AndroidDetails {
 
 // ---------------------------------------------------------------------------------------------
 
-PlatformEGLAndroid::InitializeJvmForPerformanceManagerIfNeeded::InitializeJvmForPerformanceManagerIfNeeded() {
-    // PerformanceHintManager() needs the calling thread to be a Java thread; so we need
-    // to attach this thread to the JVM before we initialize PerformanceHintManager.
-    // This should be done in PerformanceHintManager(), but libutils doesn't have access to
-    // VirtualMachineEnv.
-    if (PerformanceHintManager::isSupported()) {
-        (void)VirtualMachineEnv::get().getEnvironment();
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
-
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         : mExternalStreamManager(ExternalStreamManagerAndroid::create()),
           mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
@@ -145,6 +133,7 @@ PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
 }
 
 void PlatformEGLAndroid::terminate() noexcept {
+    mPerformanceHintManager.terminate();
     mAndroidDetails.androidFrameCallback.terminate();
     ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
     PlatformEGL::terminate();
@@ -178,20 +167,30 @@ void PlatformEGLAndroid::beginFrame(
         int64_t const monotonic_clock_ns,
         int64_t refreshIntervalNs,
         uint32_t const frameId) noexcept {
-    // associate the user frameid with the system frame id
-    setPresentFrameId(mCurrentDrawSwapChain, frameId);
+    // if frameId is 0, it means we're not associated to a particular frame, which is the case
+    // for standalone views. And in this case we skip the performance hint (since we wouldn't get
+    // the right timing anyway as well as the frame info timing collections)
 
-    if (mPerformanceHintSession.isValid()) {
+    // associate the user frameid with the system frame id.
+    if (frameId && mCurrentDrawSwapChain) {
+        // mCurrentDrawSwapChain could be null if we're called from renderStandaloneView
+        setPresentFrameId(mCurrentDrawSwapChain, frameId);
+    }
+
+    if (frameId && mPerformanceHintSession.isValid()) {
         if (refreshIntervalNs <= 0) {
             // we're not provided with a target time, use the display period, if everything fails,
             // assume 16.67ms
             refreshIntervalNs = 16'666'667;
 
-            CompositorTiming compositorTiming{};
-            bool const hasCompositorTiming =
-                    queryCompositorTiming(mCurrentDrawSwapChain, &compositorTiming);
-            if (hasCompositorTiming && compositorTiming.compositeInterval > 0) {
-                refreshIntervalNs = compositorTiming.compositeInterval;
+            if (mCurrentDrawSwapChain) {
+                // mCurrentDrawSwapChain could be null if we're called from renderStandaloneView
+                CompositorTiming compositorTiming{};
+                bool const hasCompositorTiming =
+                        queryCompositorTiming(mCurrentDrawSwapChain, &compositorTiming);
+                if (hasCompositorTiming && compositorTiming.compositeInterval > 0) {
+                    refreshIntervalNs = compositorTiming.compositeInterval;
+                }
             }
         }
         mStartTimeOfActualWork = clock::time_point(std::chrono::nanoseconds(monotonic_clock_ns));
@@ -212,6 +211,14 @@ void PlatformEGLAndroid::preCommit() noexcept {
 
 Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
         const DriverConfig& driverConfig) {
+
+    // PerformanceHintManager() needs the calling thread to be a Java thread; so we need
+    // to attach this thread to the JVM before we initialize PerformanceHintManager.
+    if (PerformanceHintManager::isSupported()) {
+        (void)VirtualMachineEnv::get().getEnvironment();
+    }
+
+    mPerformanceHintManager.init();
 
     // the refresh rate default value doesn't matter, we change it later
     int32_t const tid = gettid();
@@ -257,8 +264,6 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
         eglDupNativeFenceFDANDROID =
                 PFNEGLDUPNATIVEFENCEFDANDROIDPROC(eglGetProcAddress(
                         "eglDupNativeFenceFDANDROID"));
-    } else {
-        LOG(ERROR) << "EGL_ANDROID_native_fence_sync not supported!";
     }
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
@@ -288,9 +293,18 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
 
     AndroidFrameCallback::Timeline const preferredTimeline{
             mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
-    outCompositorTiming->frameTime = preferredTimeline.frameTime;
-    outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
-    outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+    // FIXME: expectedPresentLatency might reflect the previous frame's value because
+    //        the choreographer's callback can happen before (good) or after (bad) us.
+    //        This problem is mitigated by storing the latency instead of the deadline,
+    //        because it generally is constant frame to frame.
+    if (UTILS_LIKELY(preferredTimeline.expectedPresentTime > preferredTimeline.frameTime)) {
+        // latency can never be negative, let's be safe
+        outCompositorTiming->expectedPresentLatency =
+                preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
+    } else {
+        // fake a reasonable value (33ms)
+        outCompositorTiming->expectedPresentLatency = 33'000'000;
+    }
     outCompositorTiming->compositeDeadline = CompositorTiming::INVALID;
     outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
     outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;
@@ -440,6 +454,10 @@ Platform::SwapChain* PlatformEGLAndroid::createSwapChain(
 void PlatformEGLAndroid::destroySwapChain(SwapChain* swapChain) noexcept {
     if (swapChain) {
         SwapChainEGLAndroid* const sc = static_cast<SwapChainEGLAndroid*>(swapChain);
+        if (mCurrentDrawSwapChain == sc) {
+            // don't keep a dangling pointer around
+            mCurrentDrawSwapChain = nullptr;
+        }
         sc->terminate(*this);
         delete sc;
     }

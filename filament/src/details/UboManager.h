@@ -25,7 +25,6 @@
 #include <private/backend/DriverApi.h>
 
 #include <functional>
-#include <unordered_set>
 #include <vector>
 
 class UboManagerTest;
@@ -55,6 +54,7 @@ public:
     class FenceManager {
     public:
         using AllocationId = BufferAllocator::AllocationId;
+        using AllocationIdContainer = utils::FixedCapacityVector<AllocationId>;
 
         FenceManager() = default;
         ~FenceManager() = default;
@@ -65,7 +65,7 @@ public:
 
         // Creates a new fence to track a set of allocation IDs for the current frame.
         // This marks the beginning of GPU's usage of these resources.
-        void track(backend::DriverApi& driver, std::unordered_set<AllocationId>&& allocationIds);
+        void track(backend::DriverApi& driver, AllocationIdContainer&& allocationIds);
 
 
         // Checks all tracked fences and invokes a callback for resources associated with
@@ -80,7 +80,7 @@ public:
     private:
         // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
         using FenceAndAllocations =
-                std::pair<backend::Handle<backend::HwFence>, std::unordered_set<AllocationId>>;
+                std::pair<backend::Handle<backend::HwFence>, AllocationIdContainer>;
         std::vector<FenceAndAllocations> mFenceAllocationList;
     };
 
@@ -153,11 +153,12 @@ private:
     backend::Handle<backend::HwBufferObject> mUbHandle;
     backend::MemoryMappedBufferHandle mMemoryMappedBufferHandle;
     BufferAllocator::allocation_size_t mUboSize{};
-    std::unordered_set<FMaterialInstance*> mPendingInstances;
-    std::unordered_set<FMaterialInstance*> mManagedInstances;
+    std::vector<FMaterialInstance*> mPendingInstances;
+    std::vector<FMaterialInstance*> mManagedInstances;
 
     FenceManager mFenceManager;
     BufferAllocator mAllocator;
+    std::vector<BufferAllocator::AllocationId> mFreedAllocations;
 };
 
 } // namespace filament

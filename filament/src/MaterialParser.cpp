@@ -35,6 +35,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
+#include <zstd.h>
+
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
@@ -206,7 +208,7 @@ uint32_t MaterialParser::computeCrc32() const noexcept {
 }
 
 std::optional<uint32_t> MaterialParser::getPrecomputedCrc32() const noexcept {
-    std::optional<uint32_t> cachedCrc32 = mCrc32.load(std::memory_order_relaxed);
+    uint32_t cachedCrc32 = mCrc32.load(std::memory_order_relaxed);
     if (cachedCrc32) {
         return cachedCrc32;
     }
@@ -215,6 +217,14 @@ std::optional<uint32_t> MaterialParser::getPrecomputedCrc32() const noexcept {
         return parsedCrc32;
     }
     return std::nullopt;
+}
+
+uint32_t MaterialParser::getCrc32() const noexcept {
+    std::optional<uint32_t> crc32 = getPrecomputedCrc32();
+    if (crc32) {
+        return *crc32;
+    }
+    return computeCrc32();
 }
 
 ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
@@ -235,6 +245,40 @@ bool MaterialParser::getName(CString* cstring) const noexcept {
     if (start == end) return false;
    Unflattener unflattener(start, end);
    return unflattener.read(cstring);
+}
+
+bool MaterialParser::getSourceShader(CString* cstring) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialSource);
+    // Source material is optional, treat it as a success.
+    if (start == end) return true;
+
+    Unflattener unflattener(start, end);
+
+    // First get the compressed blob.
+    const char* compressed;
+    size_t compressedSize = 0;
+    if (!unflattener.read(&compressed, &compressedSize)) {
+        return false;
+    }
+
+    // Get the bound and decompress it.
+    const size_t decompressBound =
+            ZSTD_getFrameContentSize(compressed, compressedSize);
+    if (ZSTD_isError(decompressBound)) {
+        return false;
+    }
+
+    auto dst_buffer = std::make_unique<char[]>(decompressBound);
+    const size_t decompressed =
+            ZSTD_decompress(
+                    dst_buffer.get(), decompressBound,
+                    compressed, compressedSize);
+    if (ZSTD_isError(decompressed)) {
+        return false;
+    }
+    *cstring = CString { dst_buffer.get(), decompressed };
+
+    return true;
 }
 
 bool MaterialParser::getCacheId(uint64_t* cacheId) const noexcept {
@@ -756,7 +800,7 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
     if (!unflattener.read(&descriptorCount)) {
         return false;
     }
-    auto& descriptors = container->bindings;
+    auto& descriptors = container->descriptors;
     descriptors.reserve(descriptorCount);
     for (size_t i = 0; i < descriptorCount; i++) {
         uint8_t type;

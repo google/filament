@@ -30,8 +30,6 @@
 
 #include <math/mat3.h>
 
-#include "AndroidNativeWindow.h"
-
 #include <chrono>
 
 #include <stddef.h>
@@ -182,10 +180,6 @@ private:
 
     int32_t setProducerThrottlingEnabled(EGLNativeWindowType nativeWindow, bool enabled) const;
 
-    struct InitializeJvmForPerformanceManagerIfNeeded {
-        InitializeJvmForPerformanceManagerIfNeeded();
-    };
-
     struct ExternalTextureAndroid : public ExternalTexture {
         EGLImageKHR eglImage = EGL_NO_IMAGE;
     };
@@ -193,7 +187,6 @@ private:
     int mOSVersion;
     ExternalStreamManagerAndroid& mExternalStreamManager;
     AndroidDetails& mAndroidDetails;
-    InitializeJvmForPerformanceManagerIfNeeded const mInitializeJvmForPerformanceManagerIfNeeded;
     utils::PerformanceHintManager mPerformanceHintManager;
     utils::PerformanceHintManager::Session mPerformanceHintSession;
     using clock = std::chrono::high_resolution_clock;

@@ -16,7 +16,7 @@
 
 #include <filament/Renderer.h>
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/Engine.h"
 #include "details/Renderer.h"
@@ -87,7 +87,7 @@ void Renderer::resetUserTime() {
     downcast(this)->resetUserTime();
 }
 
-void Renderer::skipNextFrames(size_t frameCount) const noexcept {
+void Renderer::skipNextFrames(size_t frameCount) noexcept {
     downcast(this)->skipNextFrames(frameCount);
 }
 

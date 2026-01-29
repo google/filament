@@ -158,7 +158,7 @@ function print_fgviewer_help {
 }
 
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
-FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g | cut -f 1 -d ".")}
+FILAMENT_NDK_VERSION=$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g | cut -f 1 -d ".")
 
 # Internal variables
 ISSUE_CLEAN=false
@@ -556,11 +556,14 @@ function build_android {
         archive_android "Release"
     fi
 
+    local root_dir=$(pwd)
+
     pushd android > /dev/null
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+            -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
@@ -573,6 +576,7 @@ function build_android {
 
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+            -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
             :filamat-android:assembleDebug
@@ -581,6 +585,7 @@ function build_android {
             for sample in ${ANDROID_SAMPLES}; do
                 ./gradlew \
                     -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+                   -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
                     -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
                     ${MATOPT_GRADLE_OPTION} \
                     :samples:${sample}:assembleDebug
@@ -613,6 +618,7 @@ function build_android {
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+            -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
@@ -625,6 +631,7 @@ function build_android {
 
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+            -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
             :filamat-android:assembleRelease
@@ -633,6 +640,7 @@ function build_android {
             for sample in ${ANDROID_SAMPLES}; do
                 ./gradlew \
                     -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+                    -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
                     -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
                     ${MATOPT_GRADLE_OPTION} \
                     :samples:${sample}:assembleRelease

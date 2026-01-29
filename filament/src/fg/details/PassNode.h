@@ -23,10 +23,15 @@
 #include "fg/FrameGraphRenderPass.h"
 
 #include "backend/DriverApiForward.h"
-
 #include <backend/TargetBufferInfo.h>
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/FrameGraphInfo.h>
+#endif
+
+#include <cstdint>
 #include <unordered_set>
+#include <vector>
 
 namespace utils {
 class CString;
@@ -58,11 +63,17 @@ public:
     virtual void resolve() noexcept = 0;
     utils::CString graphvizifyEdgeColor() const noexcept override;
 
+#if FILAMENT_ENABLE_FGVIEWER
+    virtual std::vector<fgviewer::FrameGraphInfo::Pass::RenderTargetInfo>
+            getRenderTargetInfo() const noexcept {
+        return {};
+    }
+#endif
     Vector<VirtualResource*> devirtualize;         // resources we need to create before executing
     Vector<VirtualResource*> destroy;              // resources we need to destroy after executing
 };
 
-class RenderPassNode : public PassNode {
+class RenderPassNode final : public PassNode {
 public:
     class RenderPassData {
     public:
@@ -79,8 +90,8 @@ public:
             backend::RenderPassParams params;
         } backend;
 
-        void devirtualize(FrameGraph& fg, ResourceAllocatorInterface& resourceAllocator) noexcept;
-        void destroy(ResourceAllocatorInterface& resourceAllocator) const noexcept;
+        void devirtualize(FrameGraph& fg, TextureCacheInterface& textureCache) noexcept;
+        void destroy(TextureCacheInterface& textureCache) const noexcept;
     };
 
     RenderPassNode(FrameGraph& fg, const char* name, FrameGraphPassBase* base) noexcept;
@@ -91,6 +102,7 @@ public:
             utils::StaticString name, FrameGraphRenderPass::Descriptor const& descriptor);
 
     RenderPassData const* getRenderPassData(uint32_t id) const noexcept;
+    size_t getRenderTargetCount() const noexcept { return mRenderTargetData.size(); }
 
 private:
     // virtuals from DependencyGraph::Node
@@ -98,6 +110,10 @@ private:
     utils::CString graphvizify() const noexcept override;
     void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept override;
     void resolve() noexcept override;
+#if FILAMENT_ENABLE_FGVIEWER
+    std::vector<fgviewer::FrameGraphInfo::Pass::RenderTargetInfo>
+            getRenderTargetInfo() const noexcept override;
+#endif
 
     // constants
     const char* const mName = nullptr;
@@ -107,7 +123,7 @@ private:
     std::vector<RenderPassData> mRenderTargetData;
 };
 
-class PresentPassNode : public PassNode {
+class PresentPassNode final : public PassNode {
 public:
     explicit PresentPassNode(FrameGraph& fg) noexcept;
     PresentPassNode(PresentPassNode&& rhs) noexcept;

@@ -45,7 +45,7 @@ using SibVector = utils::FixedCapacityVector<BindingPointAndSib>;
 
 using DescriptorInfo = std::tuple<
         utils::CString,
-        filament::backend::DescriptorSetLayoutBinding,
+        filament::backend::DescriptorSetLayoutDescriptor,
         std::optional<filament::SamplerInterfaceBlock::SamplerInfo>>;
 using DescriptorSetInfo = utils::FixedCapacityVector<DescriptorInfo>;
 using DescriptorSets = std::array<DescriptorSetInfo, filament::backend::MAX_DESCRIPTOR_SET_COUNT>;

@@ -50,7 +50,6 @@ void FrameSkipper::terminate(DriverApi& driver) noexcept {
 bool FrameSkipper::shouldRenderFrame(DriverApi& driver) const noexcept {
 
     if (UTILS_UNLIKELY(mFrameToSkip)) {
-        mFrameToSkip--;
         return false;
     }
 
@@ -62,7 +61,10 @@ bool FrameSkipper::shouldRenderFrame(DriverApi& driver) const noexcept {
             // The fence hasn't signaled yet, skip this frame
             return false;
         }
-        assert_invariant(status == FenceStatus::CONDITION_SATISFIED);
+        // If we get a FenceStatus::ERROR, it doesn't necessarily indicate a "bug", it could
+        // just be that fences are not supported. Regardless, we should return `true` in that
+        // case.
+        assert_invariant(status != FenceStatus::TIMEOUT_EXPIRED);
     }
     return true;
 }
@@ -83,7 +85,7 @@ void FrameSkipper::submitFrame(DriverApi& driver) noexcept {
     fences[last] = driver.createFence();
 }
 
-void FrameSkipper::skipNextFrames(size_t frameCount) const noexcept {
+void FrameSkipper::skipNextFrames(size_t frameCount) noexcept {
     frameCount = std::min(frameCount, size_t(std::numeric_limits<decltype(mFrameToSkip)>::max()));
     mFrameToSkip = uint16_t(frameCount);
 }

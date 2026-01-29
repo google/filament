@@ -1,0 +1,9 @@
+body {
+    margin: 0;
+    overflow: hidden;
+}
+canvas {
+    touch-action: none;
+    width: 100%;
+    height: 100%;
+}

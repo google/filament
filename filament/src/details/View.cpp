@@ -24,7 +24,7 @@
 #include "FrameInfo.h"
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 #include "ShadowMap.h"
 #include "ShadowMapManager.h"
 
@@ -33,6 +33,7 @@
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
 #include "details/InstanceBuffer.h"
+#include "details/MorphTargetBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/Renderer.h"
 #include "details/Scene.h"
@@ -320,9 +321,9 @@ float2 FView::updateScale(FEngine& engine,
         // relative scaling ("velocity" control)
         const float scale = mScale.x * mScale.y * command;
 
-        const float w = float(mViewport.width);
-        const float h = float(mViewport.height);
         if (scale < 1.0f && !options.homogeneousScaling) {
+            const float w = float(mViewport.width);
+            const float h = float(mViewport.height);
             // figure out the major and minor axis
             const float major = std::max(w, h);
             const float minor = std::min(w, h);
@@ -351,7 +352,7 @@ float2 FView::updateScale(FEngine& engine,
         const auto s = mScale;
         mScale = clamp(s, options.minScale, options.maxScale);
 
-        // disable the integration term when we're outside the controllable range
+        // Disable the integration term when we're outside the controllable range
         // (i.e. we clamped). This help not to have to wait too long for the Integral term
         // to kick in after a clamping event.
         mPidController.setIntegralInhibitionEnabled(mScale != s);
@@ -394,8 +395,10 @@ bool FView::isSkyboxVisible() const noexcept {
     return skybox != nullptr && (skybox->getLayerMask() & mVisibleLayers);
 }
 
-void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
-        FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept {
+void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
+        FScene::RenderableSoa& renderableData,
+        FScene::LightSoa const& lightData,
+        CameraInfo const& cameraInfo) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     mHasShadowing = false;
@@ -404,7 +407,7 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         return;
     }
 
-    auto& lcm = engine.getLightManager();
+    auto const& lcm = engine.getLightManager();
 
     ShadowMapManager::Builder builder;
 
@@ -461,8 +464,8 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
 
     if (builder.hasShadowMaps()) {
         ShadowMapManager::createIfNeeded(engine, mShadowMapManager);
-        auto const shadowTechnique = mShadowMapManager->update(builder, engine, *this,
-                cameraInfo, renderableData, lightData);
+        auto const shadowTechnique = mShadowMapManager->update(driver, builder, engine,
+                *this, cameraInfo, renderableData, lightData);
 
         mHasShadowing = any(shadowTechnique);
         mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
@@ -685,7 +688,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         setFroxelizerSync(froxelizeLightsJob);
 
-        prepareShadowing(engine, renderableData, lightData, cameraInfo);
+        prepareShadowing(engine, driver, renderableData, lightData, cameraInfo);
 
         /*
          * Partition the SoA so that renderables are partitioned w.r.t their visibility into the
@@ -830,13 +833,18 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                             +PerRenderableBindingPoints::MORPHING_UNIFORMS,
                             morphing.handle, 0, sizeof(PerRenderableMorphingUib));
 
-                    descriptorSet.setSampler(layout,
-                            +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
-                            morphing.morphTargetBuffer->getPositionsHandle(), {});
+                    const auto* mtb = morphing.morphTargetBuffer;
+                    if (mtb->hasPositions()) {
+                        descriptorSet.setSampler(layout,
+                                +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+                                mtb->getPositionsHandle(), {});
+                    }
 
-                    descriptorSet.setSampler(layout,
-                            +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
-                            morphing.morphTargetBuffer->getTangentsHandle(), {});
+                    if (mtb->hasTangents()) {
+                        descriptorSet.setSampler(layout,
+                                +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
+                                mtb->getTangentsHandle(), {});
+                    }
                 }
 
                 descriptorSet.commit(layout, driver);

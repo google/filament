@@ -1,6 +1,8 @@
 # Backend Tests
 
-This directory contains scripts to run Filament's backend tests using a software rasterizer (Mesa). This is useful for running tests in a continuous integration environment where a GPU might not be available.
+This directory (`/test/backend`) contains scripts to run Filament's backend tests using a software
+rasterizer (Mesa). This is useful for running tests in a continuous integration environment where a
+GPU might not be available.
 
 The `test.sh` script will:
 
@@ -12,5 +14,7 @@ The `test.sh` script will:
 
 The `test.sh` script accepts the following flags:
 
--   `--gtest_filter`: Filters the tests that are run. This is passed directly to the underlying gtest executable.
--   `--backend`: Specifies which backend to test. Can be `opengl`, `vulkan`, or a comma-separated list (e.g., `opengl,vulkan`). Defaults to both.
+-   `--gtest_filter`: Filters the tests that are run. This is passed directly to the underlying
+    gtest executable.
+-   `--backend`: Specifies which backend to test. Can be `opengl`, `vulkan`, or a comma-separated
+    list (e.g., `opengl,vulkan`). Defaults to both.

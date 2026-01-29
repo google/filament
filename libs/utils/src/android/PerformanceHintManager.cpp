@@ -39,13 +39,18 @@ struct PerformanceHintManager::SessionDetails {
     APerformanceHintSession* mSession = nullptr;
 };
 
-PerformanceHintManager::PerformanceHintManager() noexcept {
+PerformanceHintManager::PerformanceHintManager() noexcept = default;
+
+PerformanceHintManager::~PerformanceHintManager() noexcept = default;
+
+void PerformanceHintManager::init() {
     if (__builtin_available(android __ANDROID_API_T__, *)) {
         mImpl->mManager = APerformanceHint_getManager();
     }
 }
 
-PerformanceHintManager::~PerformanceHintManager() noexcept = default;
+void PerformanceHintManager::terminate() {
+}
 
 bool PerformanceHintManager::isSupported() noexcept {
     if (__builtin_available(android __ANDROID_API_T__, *)) {
@@ -111,7 +116,7 @@ int PerformanceHintManager::Session::reportActualWorkDuration(
         int64_t actualDurationNanos) noexcept {
     if (__builtin_available(android __ANDROID_API_T__, *)) {
         if (UTILS_LIKELY(mImpl->mSession)) {
-            return APerformanceHint_updateTargetWorkDuration(mImpl->mSession, actualDurationNanos);
+            return APerformanceHint_reportActualWorkDuration(mImpl->mSession, actualDurationNanos);
         }
     }
     return -1;

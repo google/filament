@@ -63,6 +63,7 @@ class FRenderableManager : public RenderableManager {
 public:
     using Instance = Instance;
     using GeometryType = Builder::GeometryType;
+    using MorphType = Builder::MorphType;
 
     // TODO: consider renaming, this pertains to material variants, not strictly visibility.
     struct Visibility {
@@ -72,15 +73,19 @@ public:
         bool receiveShadows             : 1;
 
         bool culling                    : 1;
-        bool skinning                   : 1;
-        bool morphing                   : 1;
         bool screenSpaceContactShadows  : 1;
         bool reversedWindingOrder       : 1;
         bool fog                        : 1;
         GeometryType geometryType       : 2;
     };
 
+    struct Skinning {
+        bool skinning                   : 1;
+        MorphType morphType             : 3;
+    };
+
     static_assert(sizeof(Visibility) == sizeof(uint16_t), "Visibility should be 16 bits");
+    static_assert(sizeof(Skinning) == sizeof(uint8_t), "Skinning should be 8 bits");
 
     explicit FRenderableManager(FEngine& engine) noexcept;
     ~FRenderableManager();
@@ -150,7 +155,7 @@ public:
     void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset);
 
-    inline void setMorphing(Instance instance, bool enable);
+    inline void setMorphing(Instance instance, MorphType type);
     void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
     void setMorphTargetBufferOffsetAt(Instance instance, uint8_t level, size_t primitiveIndex,
             size_t offset);
@@ -168,6 +173,7 @@ public:
     inline Box const& getAABB(Instance instance) const noexcept;
     Box const& getAxisAlignedBoundingBox(Instance const instance) const noexcept { return getAABB(instance); }
     inline Visibility getVisibility(Instance instance) const noexcept;
+    inline Skinning getSkinning(Instance instance) const noexcept;
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
     inline uint8_t getChannels(Instance instance) const noexcept;
@@ -256,6 +262,7 @@ private:
         CHANNELS,               // user data
         INSTANCES,              // user data
         VISIBILITY,             // user data
+        SKINNING,               // user data
         PRIMITIVES,             // user data
         BONES,                  // filament data, UBO storing a pointer to the bones information
         MORPHTARGET_BUFFER,     // morphtarget buffer for the component
@@ -269,6 +276,7 @@ private:
             uint8_t,                         // CHANNELS
             InstancesInfo,                   // INSTANCES
             Visibility,                      // VISIBILITY
+            Skinning,                        // SKINNING
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
             Bones,                           // BONES
             FMorphTargetBuffer*,            // MORPHTARGET_BUFFER
@@ -293,6 +301,7 @@ private:
                 Field<CHANNELS>             channels;
                 Field<INSTANCES>            instances;
                 Field<VISIBILITY>           visibility;
+                Field<SKINNING>             skinning;
                 Field<PRIMITIVES>           primitives;
                 Field<BONES>                bones;
                 Field<MORPHTARGET_BUFFER>   morphTargetBuffer;
@@ -399,18 +408,21 @@ void FRenderableManager::setSkinning(Instance const instance, bool const enable)
         FILAMENT_CHECK_PRECONDITION(visibility.geometryType != GeometryType::STATIC || !enable)
                 << "Skinning can't be used with STATIC geometry";
 
-        visibility.skinning = enable;
+        Skinning& skinning = mManager[instance].skinning;
+        skinning.skinning = enable;
     }
 }
 
-void FRenderableManager::setMorphing(Instance const instance, bool const enable) {
+void FRenderableManager::setMorphing(Instance const instance, Builder::MorphType const type) {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
 
-        FILAMENT_CHECK_PRECONDITION(visibility.geometryType != GeometryType::STATIC || !enable)
+        FILAMENT_CHECK_PRECONDITION(
+                visibility.geometryType != GeometryType::STATIC || type != MorphType::NONE)
                 << "Morphing can't be used with STATIC geometry";
 
-        visibility.morphing = enable;
+        Skinning& skinning = mManager[instance].skinning;
+        skinning.morphType = type;
     }
 }
 
@@ -424,6 +436,11 @@ void FRenderableManager::setPrimitives(Instance const instance,
 FRenderableManager::Visibility
 FRenderableManager::getVisibility(Instance const instance) const noexcept {
     return mManager[instance].visibility;
+}
+
+FRenderableManager::Skinning FRenderableManager::getSkinning(
+        Instance const instance) const noexcept {
+    return mManager[instance].skinning;
 }
 
 bool FRenderableManager::isShadowCaster(Instance const instance) const noexcept {

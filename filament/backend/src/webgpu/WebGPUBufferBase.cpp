@@ -18,6 +18,7 @@
 
 #include "WebGPUConstants.h"
 #include "WebGPUQueueManager.h"
+#include "WebGPUStagePool.h"
 
 #include "DriverBase.h"
 #include <backend/BufferDescriptor.h>
@@ -65,7 +66,7 @@ WebGPUBufferBase::WebGPUBufferBase(wgpu::Device const& device, const wgpu::Buffe
 // of 4 by padding with zeros.
 void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
         const uint32_t byteOffset, wgpu::Device const& device,
-        WebGPUQueueManager* const webGPUQueueManager) {
+        WebGPUQueueManager* const webGPUQueueManager, WebGPUStagePool* const webGPUStagePool) {
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
             << "updateGPUBuffer called with a null buffer";
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.size + byteOffset <= mBuffer.GetSize())
@@ -85,15 +86,12 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     const size_t stagingBufferSize =
             remainder == 0 ? bufferDescriptor.size : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
-    // create a staging buffer
-    wgpu::BufferDescriptor descriptor{
-        .label = "Filament WebGPU Staging Buffer",
-        .usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc,
-        .size = stagingBufferSize,
-        .mappedAtCreation = true };
-    wgpu::Buffer stagingBuffer = device.CreateBuffer(&descriptor);
+    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize,
+            webGPUQueueManager->getLatestSubmissionState());
 
     void* mappedRange = stagingBuffer.GetMappedRange();
+    assert_invariant(mappedRange);
+
     memcpy(mappedRange, bufferDescriptor.buffer, bufferDescriptor.size);
 
     // Make sure the padded memory is set to 0 to have deterministic behaviors
@@ -106,7 +104,9 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
 
     // Copy the staging buffer contents to the destination buffer.
     webGPUQueueManager->getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
-            byteOffset, stagingBufferSize);
+            byteOffset,
+            remainder == 0 ? bufferDescriptor.size
+                           : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
 }
 
 } // namespace filament::backend

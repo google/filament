@@ -142,6 +142,18 @@ public:
 #endif
     }
 
+    bool hasFences() const noexcept {
+#if defined(BACKEND_OPENGL_VERSION_GLES) && !defined(FILAMENT_IOS) && !defined(__EMSCRIPTEN__)
+#   ifndef BACKEND_OPENGL_LEVEL_GLES30
+        return false;
+#   else
+        return mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0;
+#   endif
+#else
+        return true;
+#endif
+    }
+
     constexpr        inline size_t getIndexForCap(GLenum cap) noexcept;
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
 
@@ -361,8 +373,8 @@ public:
 
     FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
 
-    // This is the index of the context in use. Must be 0 or 1. This is used to manange the
-    // OpenGL name of ContainerObjects within each context.
+    // This is the index of the context in use. Must be either 0 (Unprotected) or 1 (Protected).
+    // This is used to manage the OpenGL name of ContainerObjects within each context.
     uint32_t contextIndex = 0;
 
     // Try to keep the State structure sorted by data-access patterns
@@ -524,7 +536,7 @@ private:
     TimerQueryFactoryInterface* mTimerQueryFactory = nullptr;
     std::vector<std::function<void(OpenGLContext&)>> mDestroyWithNormalContext;
     RenderPrimitive mDefaultVAO;
-    std::optional<GLuint> mDefaultFbo[2];
+    std::optional<GLuint> mDefaultFbo[2]; // 0:Unprotected, 1:Protected
     mutable tsl::robin_map<SamplerParams, GLuint,
             SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
@@ -735,7 +747,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
         // - the nameVersion is out of date *and* we're on the protected context, in this case:
         //      - the name must be stale from a previous use of this context because we always
         //        destroy the protected context when we're done with it.
-        bool const recreateVaoName = p != &mDefaultVAO &&
+        bool const recreateVaoName = vao != &mDefaultVAO &&
                 ((vao->vao[contextIndex] == 0) ||
                         (vao->nameVersion != state.age && contextIndex == 1));
         if (UTILS_UNLIKELY(recreateVaoName)) {

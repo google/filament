@@ -13,11 +13,25 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(RESOURCE_DIR  "${GENERATION_ROOT}/resources")
 file(MAKE_DIRECTORY ${RESOURCE_DIR})
 
+set(MATERIAL_DIR  "${GENERATION_ROOT}/material")
+file(MAKE_DIRECTORY ${MATERIAL_DIR})
+
+set(SANDBOX_TRANSFORM_NAME_MAT ${CMAKE_CURRENT_SOURCE_DIR}/sandboxTransformName.mat)
+set(TEST_MATERIAL_TRANSFORM_NAME_FILAMAT ${MATERIAL_DIR}/test_material_transformname.filamat)
+
+add_custom_command(
+        OUTPUT ${TEST_MATERIAL_TRANSFORM_NAME_FILAMAT}
+        COMMAND matc ${MATC_BASE_FLAGS} -o ${TEST_MATERIAL_TRANSFORM_NAME_FILAMAT} ${SANDBOX_TRANSFORM_NAME_MAT}
+        MAIN_DEPENDENCY ${SANDBOX_TRANSFORM_NAME_MAT}
+        DEPENDS matc
+        COMMENT "Compiling material ${SANDBOX_TRANSFORM_NAME_MAT}"
+)
+
 get_resgen_vars(${RESOURCE_DIR} filament_test_resources)
 
 set(RESOURCE_BINS
         ${CMAKE_CURRENT_SOURCE_DIR}/test_material.filamat
-        ${CMAKE_CURRENT_SOURCE_DIR}/test_material_transformname.filamat
+        ${TEST_MATERIAL_TRANSFORM_NAME_FILAMAT}
 )
 
 add_custom_command(
@@ -49,6 +63,7 @@ if (TNT_DEV)
             test_BufferAllocator.cpp
             test_BufferAllocatorStress.cpp
             test_CircularQueue.cpp
+            test_compact.cpp
             test_FenceManager.cpp
             test_UboManager.cpp
             filament_test_exposure.cpp
@@ -56,9 +71,10 @@ if (TNT_DEV)
             filament_bimap_test.cpp
             filament_framegraph_test.cpp
             filament_test.cpp
+            filament_test_material.cpp
             ${RESGEN_SOURCE})
 
-    target_link_libraries(test_${TARGET} PRIVATE filament gtest)
+    target_link_libraries(test_${TARGET} PRIVATE filamat filament gtest)
     target_compile_options(test_${TARGET} PRIVATE ${COMPILER_FLAGS})
     target_include_directories(test_${TARGET} PRIVATE ${RESOURCE_DIR})
     set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
@@ -67,26 +83,16 @@ if (TNT_DEV)
     target_link_libraries(test_depth PRIVATE utils)
 endif()
 
-if (ANDROID)
-    add_executable(test_compiler compiler_test.cpp)
-    target_link_libraries(test_compiler PRIVATE gtest)
-    target_link_libraries(test_compiler PRIVATE utils)
-    target_link_libraries(test_compiler PRIVATE EGL)
-    target_link_libraries(test_compiler PRIVATE GLESv3)
-endif()
-
 add_executable(test_material_parser
         filament_test_material_parser.cpp
-        ${RESGEN_SOURCE})
-target_link_libraries(test_material_parser PRIVATE filament gtest)
+        ${RESGEN_SOURCE}
+)
+target_link_libraries(test_material_parser PRIVATE filamat filament gtest)
 target_compile_options(test_material_parser PRIVATE ${COMPILER_FLAGS})
 target_include_directories(test_material_parser PRIVATE ${RESOURCE_DIR})
 set_target_properties(test_material_parser PROPERTIES FOLDER Tests)
 
-add_executable(test_material
-        filament_test_material.cpp
-        ${RESGEN_SOURCE})
-target_link_libraries(test_material PRIVATE filament gtest)
-target_compile_options(test_material PRIVATE ${COMPILER_FLAGS})
-target_include_directories(test_material PRIVATE ${RESOURCE_DIR})
-set_target_properties(test_material PROPERTIES FOLDER Tests)
+if (ANDROID)
+    add_executable(test_compiler compiler_test.cpp)
+    target_link_libraries(test_compiler PRIVATE gtest utils EGL GLESv3)
+endif()

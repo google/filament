@@ -3,6 +3,7 @@ include ':filament-android'
 include ':filamat-android'
 include ':gltfio-android'
 include ':filament-utils-android'
+include ':filament-tools'
 
 // Samples
 include ':samples:sample-gltf-viewer'
@@ -17,6 +18,7 @@ include ':samples:sample-multi-view'
 include ':samples:sample-page-curl'
 include ':samples:sample-stream-test'
 include ':samples:sample-texture-view'
+include ':samples:sample-texture-target'
 include ':samples:sample-textured-object'
 include ':samples:sample-transparent-view'
 

@@ -33,7 +33,7 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
 
     // build the push constant layout key
     uint32_t const pushConstantRangeCount = program->getPushConstantRangeCount();
-    auto const& pushConstantRanges = program->getPushConstantRanges();
+    auto pushConstantRanges = program->getPushConstantRanges();
     if (pushConstantRangeCount > 0) {
         assert_invariant(pushConstantRangeCount <= Program::SHADER_TYPE_COUNT);
         for (uint8_t i = 0; i < pushConstantRangeCount; ++i) {

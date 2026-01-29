@@ -661,6 +661,15 @@ public:
     MaterialBuilder& useDefaultDepthVariant() noexcept;
 
     /**
+     * Sets the source ASCII material (aka .mat file).
+     * The provided `source` string_view must remain valid until MaterialBuilder::build() is called.
+     */
+    MaterialBuilder& materialSource(std::string_view source) noexcept;
+
+    //! Set the (client requested) api level that the material is supposed to be compiled against.
+    MaterialBuilder& setApiLevel(uint32_t apiLevel) noexcept;
+
+    /**
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
      */
@@ -905,6 +914,7 @@ private:
 
     ShaderCode mMaterialFragmentCode;
     ShaderCode mMaterialVertexCode;
+    std::string_view mMaterialSource;
 
     PropertyList mProperties;
     ParameterList mParameters;
@@ -983,6 +993,9 @@ private:
     bool mNoSamplerValidation = false;
 
     bool mUseDefaultDepthVariant = false;
+
+    // Default api level is always 1.
+    uint32_t mApiLevel = 1;
 };
 
 } // namespace filamat

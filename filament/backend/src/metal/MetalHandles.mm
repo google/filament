@@ -325,11 +325,19 @@ void MetalSwapChain::present() {
     if (frameCompleted.callback) {
         scheduleFrameCompletedCallback();
     }
+    const auto timeNs = presentationTimeNs;
+    presentationTimeNs = 0;
     if (drawable) {
         if (frameScheduled.callback) {
-            scheduleFrameScheduledCallback();
+            scheduleFrameScheduledCallback(timeNs);
         } else  {
-            [getPendingCommandBuffer(&context) presentDrawable:drawable];
+            if (presentationTimeNs) {
+                const CFTimeInterval timeSeconds =
+                        (CFTimeInterval) presentationTimeNs / 1000000000.0;
+                [getPendingCommandBuffer(&context) presentDrawable:drawable atTime:timeSeconds];
+            } else {
+                [getPendingCommandBuffer(&context) presentDrawable:drawable];
+            }
         }
     }
 }
@@ -341,15 +349,22 @@ public:
     PresentDrawableData& operator=(const PresentDrawableData&) = delete;
 
     static PresentDrawableData* create(id<CAMetalDrawable> drawable,
-            std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags) {
+            std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags,
+            int64_t presentationTimeNs) {
         assert_invariant(drawableMutex);
         assert_invariant(driver);
-        return new PresentDrawableData(drawable, drawableMutex, driver, flags);
+        return new PresentDrawableData(drawable, drawableMutex, driver, flags, presentationTimeNs);
     }
 
     static void maybePresentAndDestroyAsync(PresentDrawableData* that, bool shouldPresent) {
         if (shouldPresent) {
-           [that->mDrawable present];
+            if (that->mPresentationTimeNs) {
+                const CFTimeInterval timeSeconds =
+                        (CFTimeInterval) that->mPresentationTimeNs / 1000000000.0;
+                [that->mDrawable presentAtTime:timeSeconds];
+            } else {
+                [that->mDrawable present];
+            }
         }
 
         if (that->mFlags & SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER) {
@@ -367,8 +382,12 @@ public:
 
 private:
     PresentDrawableData(id<CAMetalDrawable> drawable, std::shared_ptr<std::mutex> drawableMutex,
-            MetalDriver* driver, uint64_t flags)
-        : mDrawable(drawable), mDrawableMutex(drawableMutex), mDriver(driver), mFlags(flags) {}
+            MetalDriver* driver, uint64_t flags, int64_t presentationTimeNs)
+            : mDrawable(drawable),
+              mDrawableMutex(drawableMutex),
+              mDriver(driver),
+              mFlags(flags),
+              mPresentationTimeNs(presentationTimeNs) {}
 
     static void cleanupAndDestroy(PresentDrawableData *that) {
         if (that->mDrawable) {
@@ -384,6 +403,7 @@ private:
     std::shared_ptr<std::mutex> mDrawableMutex;
     MetalDriver* mDriver = nullptr;
     uint64_t mFlags = 0;
+    int64_t mPresentationTimeNs = 0;
 };
 
 void presentDrawable(bool presentFrame, void* user) {
@@ -391,7 +411,7 @@ void presentDrawable(bool presentFrame, void* user) {
     PresentDrawableData::maybePresentAndDestroyAsync(presentDrawableData, presentFrame);
 }
 
-void MetalSwapChain::scheduleFrameScheduledCallback() {
+void MetalSwapChain::scheduleFrameScheduledCallback(int64_t presentationTimeNs) {
     if (!frameScheduled.callback) {
         return;
     }
@@ -400,8 +420,11 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
 
     struct Callback {
         Callback(std::shared_ptr<FrameScheduledCallback> callback, id<CAMetalDrawable> drawable,
-                 std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags)
-            : f(callback), data(PresentDrawableData::create(drawable, drawableMutex, driver, flags)) {}
+                std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags,
+                int64_t presentationTimeNs)
+                : f(callback),
+                  data(PresentDrawableData::create(drawable, drawableMutex, driver, flags,
+                          presentationTimeNs)) {}
         std::shared_ptr<FrameScheduledCallback> f;
         // PresentDrawableData* is destroyed by maybePresentAndDestroyAsync() later.
         std::unique_ptr<PresentDrawableData> data;
@@ -419,7 +442,7 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
     uint64_t const flags = frameScheduled.flags;
     ReleasablePointer* callback = [[ReleasablePointer alloc]
             initWithPointer:new Callback(frameScheduled.callback, drawable, layerDrawableMutex,
-                                    context.driver, flags)];
+                                    context.driver, flags, presentationTimeNs)];
 
     backend::CallbackHandler* handler = frameScheduled.handler;
     MetalDriver* driver = context.driver;
@@ -521,7 +544,7 @@ MetalAttachment MetalSwapChain::acquireBaseDrawable() {
 
 MetalBufferObject::MetalBufferObject(MetalContext& context, BufferObjectBinding bindingType,
         BufferUsage usage, uint32_t byteCount)
-        : HwBufferObject(byteCount), buffer(context, bindingType, usage, byteCount) {}
+        : HwBufferObject(byteCount, false), buffer(context, bindingType, usage, byteCount) {}
 
 void MetalBufferObject::updateBuffer(
         void* data, size_t size, uint32_t byteOffset, TagResolver&& getHandleTag) {
@@ -612,7 +635,7 @@ MetalVertexBuffer::MetalVertexBuffer(MetalContext& context,
 }
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
-        uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
+        uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount, false),
         buffer(context, BufferObjectBinding::VERTEX, usage, elementSize * indexCount, true) { }
 
 MetalProgram::MetalProgram(MetalContext& context, Program&& program) noexcept
@@ -641,7 +664,7 @@ void MetalProgram::initialize() {
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
         TextureUsage usage) noexcept
-    : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context) {
+    : HwTexture(target, levels, samples, width, height, depth, format, usage, false), context(context) {
     assert_invariant(target != SamplerType::SAMPLER_EXTERNAL);
 
     devicePixelFormat = decidePixelFormat(&context, format);
@@ -733,7 +756,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
 MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, uint8_t baseLevel,
         uint8_t levelCount) noexcept
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-              src->format, src->usage),
+              src->format, src->usage, false),
       context(context),
       devicePixelFormat(src->devicePixelFormat),
       externalImage(src->externalImage) {
@@ -744,7 +767,7 @@ MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, uint8
 MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, TextureSwizzle r,
         TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) noexcept
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-              src->format, src->usage),
+              src->format, src->usage, false),
       context(context),
       devicePixelFormat(src->devicePixelFormat),
       externalImage(src->externalImage) {
@@ -763,13 +786,13 @@ MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, Textu
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         id<MTLTexture> metalTexture) noexcept
-    : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context) {
+    : HwTexture(target, levels, samples, width, height, depth, format, usage, false), context(context) {
     texture = metalTexture;
 }
 
 MetalTexture::MetalTexture(MetalContext& context, TextureFormat format, uint32_t width,
         uint32_t height, TextureUsage usage, CVPixelBufferRef image) noexcept
-    : HwTexture(SamplerType::SAMPLER_EXTERNAL, 1, 1, width, height, 1, format, usage),
+    : HwTexture(SamplerType::SAMPLER_EXTERNAL, 1, 1, width, height, 1, format, usage, false),
       context(context),
       externalImage(std::make_shared<MetalExternalImage>(
               MetalExternalImage::createFromImage(context, image))) {
@@ -778,7 +801,7 @@ MetalTexture::MetalTexture(MetalContext& context, TextureFormat format, uint32_t
 
 MetalTexture::MetalTexture(MetalContext& context, TextureFormat format, uint32_t width,
         uint32_t height, TextureUsage usage, CVPixelBufferRef image, uint32_t plane) noexcept
-    : HwTexture(SamplerType::SAMPLER_EXTERNAL, 1, 1, width, height, 1, format, usage),
+    : HwTexture(SamplerType::SAMPLER_EXTERNAL, 1, 1, width, height, 1, format, usage, false),
       context(context),
       externalImage(std::make_shared<MetalExternalImage>(
               MetalExternalImage::createFromImagePlane(context, image, plane))) {
@@ -1418,7 +1441,7 @@ void MetalFence::cancel() {
 MetalDescriptorSetLayout::MetalDescriptorSetLayout(DescriptorSetLayout&& l) noexcept
     : mLayout(std::move(l)) {
     size_t dynamicBindings = 0;
-    for (const auto& binding : mLayout.bindings) {
+    for (const auto& binding : mLayout.descriptors) {
         if (any(binding.flags & DescriptorFlags::DYNAMIC_OFFSET)) {
             dynamicBindings++;
         }

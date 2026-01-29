@@ -375,6 +375,10 @@ export class Material {
     public getName(): string;
 }
 
+export enum Material$UboBatchingMode {
+    DISABLED,
+    DEFAULT,
+}
 export class Frustum {
     constructor(pv: mat4);
     public setProjection(pv: mat4): void;
@@ -542,7 +546,7 @@ export class Engine {
     public static destroy(engine: Engine): void;
     public execute(): void;
     public createCamera(entity: Entity): Camera;
-    public createMaterial(urlOrBuffer: BufferReference): Material;
+    public createMaterial(urlOrBuffer: BufferReference, options?: { uboBatching?: Material$UboBatchingMode }): Material;
     public createRenderer(): Renderer;
     public createScene(): Scene;
     public createSwapChain(): SwapChain;
@@ -1701,7 +1705,6 @@ export interface View$MultiSampleAntiAliasingOptions {
 
 export enum View$TemporalAntiAliasingOptions$BoxType {
     AABB, // use an AABB neighborhood
-    VARIANCE, // use the variance of the neighborhood (not recommended)
     AABB_VARIANCE, // use both AABB and variance
 }
 
@@ -1732,7 +1735,7 @@ export enum View$TemporalAntiAliasingOptions$JitterPattern {
  */
 export interface View$TemporalAntiAliasingOptions {
     /**
-     * reconstruction filter width typically between 1 (sharper) and 2 (smoother)
+     * @deprecated has no effect.
      */
     filterWidth?: number;
     /**
@@ -1752,9 +1755,9 @@ export interface View$TemporalAntiAliasingOptions {
      */
     enabled?: boolean;
     /**
-     * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+     * Upscaling factor. Disables Dynamic Resolution. [BETA]
      */
-    upscaling?: boolean;
+    upscaling?: number;
     /**
      * whether to filter the history buffer
      */
@@ -1767,6 +1770,10 @@ export interface View$TemporalAntiAliasingOptions {
      * whether to use the YcoCg color-space for history rejection
      */
     useYCoCg?: boolean;
+    /**
+     * set to true for HDR content
+     */
+    hdr?: boolean;
     /**
      * type of color gamut box
      */

@@ -10,6 +10,7 @@ cmake_minimum_required(VERSION 3.22.1)
 # ==================================================================================================
 # Toolchain configuration
 # ==================================================================================================
+# On iOS, the deployment target is set inside third_party/clang/ios.cmake
 if (APPLE AND NOT IOS)
     # This must be set before project() is called
     set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "")
@@ -367,14 +368,22 @@ endif()
 
 if (LINUX)
     option(USE_STATIC_LIBCXX "Link against the static runtime libraries." ON)
+
+    # Add this step to support both glibc-based Linux distributions (e.g., Ubuntu, Debian)
+    # and musl-based distributions (e.g., Alpine).
+    include(CheckSymbolExists)
+    check_symbol_exists(__GLIBC__ "features.h" CLANG_WITH_GLIBC)
+
     if (${USE_STATIC_LIBCXX})
         if (FILAMENT_USING_GCC)
             link_libraries("-static-libgcc -static-libstdc++")
-        else ()
+        elseif (CLANG_WITH_GLIBC)
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
             link_libraries("-static-libgcc -static-libstdc++")
             link_libraries(libc++.a)
             link_libraries(libc++abi.a)
+        else()
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
         endif()
     endif()
 
@@ -473,7 +482,7 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
 
 if (FILAMENT_ENABLE_COVERAGE)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping -Wno-pass-failed")
 endif()
 
 # Disable the stack check for macOS to workaround a known issue in clang 11.0.0.
@@ -563,6 +572,10 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     add_definitions(-DFILAMENT_SUPPORTS_WEBGPU)
 endif()
 
+if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
+    add_definitions(-DFILAMENT_SUPPORTS_WEBP_TEXTURES)
+endif()
+
 # Build with Metal support on non-WebGL Apple platforms.
 if (APPLE AND NOT WEBGL)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
@@ -574,7 +587,7 @@ if (FILAMENT_SUPPORTS_METAL)
 endif()
 
 # Building filamat increases build times and isn't required for web, so turn it off by default.
-if (NOT WEBGL AND NOT IOS)
+if (NOT WEBGL)
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" ON)
 else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
@@ -864,6 +877,7 @@ add_subdirectory(${LIBRARIES}/gltfio)
 add_subdirectory(${LIBRARIES}/ibl)
 add_subdirectory(${LIBRARIES}/iblprefilter)
 add_subdirectory(${LIBRARIES}/image)
+add_subdirectory(${LIBRARIES}/imagediff)
 add_subdirectory(${LIBRARIES}/ktxreader)
 add_subdirectory(${LIBRARIES}/math)
 add_subdirectory(${LIBRARIES}/mathio)
@@ -872,7 +886,9 @@ add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${LIBRARIES}/viewer)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/abseil/tnt)
-add_subdirectory(${EXTERNAL}/basisu/tnt)
+# Add zstd before basisu to force it to use the external zstd target,
+# preventing a duplicate symbol conflict with its bundled version.
+add_subdirectory(${EXTERNAL}/zstd/tnt)
 add_subdirectory(${EXTERNAL}/civetweb/tnt)
 add_subdirectory(${EXTERNAL}/imgui/tnt)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
@@ -886,7 +902,7 @@ add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
-add_subdirectory(${EXTERNAL}/zstd/tnt)
+add_subdirectory(${EXTERNAL}/basisu/tnt)
 
 
 # Note that this has to be placed after mikktspace in order for combine_static_libs to work.
@@ -913,7 +929,6 @@ endif()
 
 if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
     add_subdirectory(${EXTERNAL}/libwebp/tnt)
-    add_definitions(-DFILAMENT_SUPPORTS_WEBP_TEXTURES)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
@@ -971,6 +986,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
     add_subdirectory(${TOOLS}/uberz)
+    add_subdirectory(${TOOLS}/specgen)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)

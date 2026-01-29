@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/WebGPUPlatform.h>
+#include <backend/platforms/WebGPUPlatformWindows.h>
 
 #include <utils/Panic.h>
 
@@ -32,7 +32,7 @@
 
 namespace filament::backend {
 
-std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
+std::vector<wgpu::RequestAdapterOptions> WebGPUPlatformWindows::getAdapterOptions() {
     constexpr std::array powerPreferences = {
         wgpu::PowerPreference::HighPerformance,
         wgpu::PowerPreference::LowPower };
@@ -61,7 +61,7 @@ std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
     return requests;
 }
 
-wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+wgpu::Extent2D WebGPUPlatformWindows::getSurfaceExtent(void* nativeWindow) const {
     HWND window = static_cast<HWND>(nativeWindow);
     RECT windowRect;
     GetWindowRect(window, &windowRect);
@@ -71,7 +71,7 @@ wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
     };
 }
 
-wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
+wgpu::Surface WebGPUPlatformWindows::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     // TODO verify this is necessary for Dawn implementation as well:
     // On (at least) NVIDIA drivers, the Vulkan implementation (specifically the call to
     // vkGetPhysicalDeviceSurfaceCapabilitiesKHR()) does not correctly handle the fact that

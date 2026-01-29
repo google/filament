@@ -16,7 +16,7 @@
 
 #include "details/Engine.h"
 
-#include "ResourceAllocator.h"
+#include "TextureCache.h"
 
 #include "details/BufferObject.h"
 #include "details/Camera.h"
@@ -38,12 +38,16 @@
 #include <filament/Engine.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/CallbackHandler.h>
 
 #include <utils/compiler.h>
+#include <utils/Invocable.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
 
 #include <chrono>
+#include <optional>
+#include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -349,12 +353,21 @@ size_t Engine::getRenderTargetCount() const noexcept {
     return downcast(this)->getRenderTargetCount();
 }
 
+AsyncCallId Engine::runCommandAsync(Invocable<void()>&& command, CallbackHandler* handler,
+        AsyncCompletionCallback onComplete, void* user) {
+    return downcast(this)->runCommandAsync(std::move(command), handler, std::move(onComplete),
+            user);
+}
+
+bool Engine::cancelAsyncCall(AsyncCallId const id) {
+    return downcast(this)->cancelAsyncCall(id);
+}
 
 void Engine::flushAndWait() {
     downcast(this)->flushAndWait();
 }
 
-bool Engine::flushAndWait(uint64_t timeout) {
+bool Engine::flushAndWait(uint64_t const timeout) {
     return downcast(this)->flushAndWait(timeout);
 }
 
@@ -453,6 +466,10 @@ const Engine::Config& Engine::getConfig() const noexcept {
 
 bool Engine::isStereoSupported(StereoscopicType) const noexcept {
     return downcast(this)->isStereoSupported();
+}
+
+bool Engine::isAsynchronousModeEnabled() const noexcept {
+    return downcast(this)->isAsynchronousModeEnabled();
 }
 
 size_t Engine::getMaxStereoscopicEyes() noexcept {

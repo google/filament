@@ -40,6 +40,11 @@ namespace filament::backend {
 
 namespace {
 
+// We don't have a good estimate for this magic number. This is used to remove empty
+// slots from a descriptor set (a VulkanDescriptorset is backed by multiple
+// VkDescriptorSet.
+size_t DESCRIPTOR_SET_GC_LIMIT = 10;
+
 inline VulkanBufferBinding getBufferObjectBinding(BufferObjectBinding bindingType) noexcept {
     switch (bindingType) {
         case BufferObjectBinding::VERTEX:
@@ -95,18 +100,18 @@ inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
 using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
 BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
     BitmaskGroup mask;
-    for (auto const& binding: layout.bindings) {
-        switch (binding.type) {
+    for (auto const& descriptor: layout.descriptors) {
+        switch (descriptor.type) {
             case DescriptorType::UNIFORM_BUFFER: {
-                if ((binding.flags & DescriptorFlags::DYNAMIC_OFFSET) != DescriptorFlags::NONE) {
-                    fromStageFlags(binding.stageFlags, binding.binding, mask.dynamicUbo);
+                if ((descriptor.flags & DescriptorFlags::DYNAMIC_OFFSET) != DescriptorFlags::NONE) {
+                    fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.dynamicUbo);
                 } else {
-                    fromStageFlags(binding.stageFlags, binding.binding, mask.ubo);
+                    fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.ubo);
                 }
                 break;
             }
             case DescriptorType::SAMPLER_EXTERNAL:
-                fromStageFlags(binding.stageFlags, binding.binding, mask.externalSampler);
+                fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.externalSampler);
                 UTILS_FALLTHROUGH;
 
             case DescriptorType::SAMPLER_2D_FLOAT:
@@ -134,11 +139,11 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
             case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
             case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
             case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT: {
-                fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
+                fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.sampler);
                 break;
             }
             case DescriptorType::INPUT_ATTACHMENT: {
-                fromStageFlags(binding.stageFlags, binding.binding, mask.inputAttachment);
+                fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.inputAttachment);
                 break;
             }
             case DescriptorType::SHADER_STORAGE_BUFFER:
@@ -192,37 +197,99 @@ VulkanDescriptorSetLayout::Bitmask VulkanDescriptorSetLayout::Bitmask::fromLayou
     return fromBackendLayout(layout);
 }
 
-// This method will store an age associated with this command buffer into the VulkanBuffer, which
-// will allow us to determine whether a barrier is necessary or not.
+VulkanDescriptorSet::~VulkanDescriptorSet() {
+    for (auto setBundle: mSets) {
+        if (setBundle.onRecycleFn) {
+            setBundle.onRecycleFn(this);
+        }
+    }
+}
+
+VulkanDescriptorSet::VulkanDescriptorSet(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
+        OnRecycle&& onRecycleFn, VkDescriptorSet vkSet)
+    : dynamicUboMask(layout->bitmask.dynamicUbo),
+      uniqueDynamicUboCount(layout->count.dynamicUbo),
+      mLayout(layout),
+      mCurrentSetIndex(0) {
+    addNewSet(vkSet, std::move(onRecycleFn));
+}
+
 void VulkanDescriptorSet::referencedBy(VulkanCommandBuffer& commands) {
+    // This will store an age associated with this command buffer into the VulkanBuffer, which
+    // will allow us to determine whether a barrier is necessary or not.
     mUboMask.forEachSetBit([this, &commands](size_t index) {
         auto& res = mResources[index];
         fvkmemory::resource_ptr<VulkanBufferObject> bo =
                 fvkmemory::resource_ptr<VulkanBufferObject>::cast((VulkanBufferObject*) res.get());
         bo->referencedBy(commands);
     });
+    mSets[mCurrentSetIndex].fenceStatus = commands.getFenceStatus();
+}
+
+void VulkanDescriptorSet::gc() {
+    size_t empty = 0;
+    for (auto& setBundle: mSets) {
+        assert_invariant(setBundle.onRecycleFn);
+        if (setBundle.vkSet == VK_NULL_HANDLE) {
+            empty++;
+            continue;
+        }
+        if (setBundle.fenceStatus && setBundle.fenceStatus->getStatus() == VK_SUCCESS) {
+            setBundle.onRecycleFn(this);
+            setBundle.vkSet = VK_NULL_HANDLE;
+            setBundle.fenceStatus = {};
+            empty++;
+        }
+    }
+
+    if (empty > DESCRIPTOR_SET_GC_LIMIT) {
+        std::vector<InternalVkSet> retainedSets;
+        for (auto& setBundle: mSets) {
+            if (setBundle.vkSet != VK_NULL_HANDLE) {
+                retainedSets.push_back({
+                    setBundle.vkSet,
+                    std::move(setBundle.onRecycleFn),
+                    std::move(setBundle.fenceStatus)
+                });
+            }
+        }
+        std::swap(mSets, retainedSets);
+    }
+}
+
+void VulkanDescriptorSet::addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn) {
+    gc();
+    mCurrentSetIndex = mSets.size();
+    mSets.push_back({ vkSet, std::move(onRecycleFn) });
 }
 
 PushConstantDescription::PushConstantDescription(backend::Program const& program) {
     mRangeCount = 0;
-    for (auto stage : { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
+    uint32_t offset = 0;
+
+    // The range is laid out so that the vertex constants are defined as the first set of bytes,
+    // followed by fragment and compute. This means we need to keep track of the offset for each
+    // stage. We do the bookeeping in mDescriptions.
+    for (auto stage: { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
         auto const& constants = program.getPushConstants(stage);
         if (constants.empty()) {
             continue;
         }
 
+        auto& description = mDescriptions[(uint8_t) stage];
         // We store the type of the constant for type-checking when writing.
-        auto& types = mTypes[(uint8_t) stage];
-        types.reserve(constants.size());
-        std::for_each(constants.cbegin(), constants.cend(), [&types] (Program::PushConstant t) {
-            types.push_back(t.type);
-        });
+        description.types.reserve(constants.size());
+        std::for_each(constants.cbegin(), constants.cend(),
+                [&description](Program::PushConstant t) { description.types.push_back(t.type); });
 
+        uint32_t const constantsSize = (uint32_t) constants.size() * ENTRY_SIZE;
         mRanges[mRangeCount++] = {
             .stageFlags = getVkStage(stage),
-            .offset = 0,
-            .size = (uint32_t) constants.size() * ENTRY_SIZE,
+            .offset = offset,
+            .size = constantsSize,
         };
+        description.offset = offset;
+        offset += constantsSize;
     }
 }
 
@@ -230,7 +297,10 @@ void PushConstantDescription::write(VkCommandBuffer cmdbuf, VkPipelineLayout lay
         backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
 
     uint32_t binaryValue = 0;
-    UTILS_UNUSED_IN_RELEASE auto const& types = mTypes[(uint8_t) stage];
+    auto const& description = mDescriptions[(uint8_t) stage];
+    UTILS_UNUSED_IN_RELEASE auto const& types = description.types;
+    uint32_t const offset = description.offset;
+
     if (std::holds_alternative<bool>(value)) {
         assert_invariant(types[index] == ConstantType::BOOL);
         bool const bval = std::get<bool>(value);
@@ -244,7 +314,8 @@ void PushConstantDescription::write(VkCommandBuffer cmdbuf, VkPipelineLayout lay
         int const ival = std::get<int>(value);
         binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
     }
-    vkCmdPushConstants(cmdbuf, layout, getVkStage(stage), index * ENTRY_SIZE, ENTRY_SIZE,
+
+    vkCmdPushConstants(cmdbuf, layout, getVkStage(stage), offset + index * ENTRY_SIZE, ENTRY_SIZE,
             &binaryValue);
 }
 
@@ -316,6 +387,15 @@ VulkanProgram::~VulkanProgram() {
     delete mInfo;
 }
 
+void VulkanProgram::flushPushConstants(VkPipelineLayout layout) {
+    // At this point, we really ought to have a VkPipelineLayout.
+    assert_invariant(layout != VK_NULL_HANDLE);
+    for (const auto& c : mQueuedPushConstants) {
+        mInfo->pushConstantDescription.write(c.cmdbuf, layout, c.stage, c.index, c.value);
+    }
+    mQueuedPushConstants.clear();
+}
+
 // Creates a special "default" render target (i.e. associated with the swap chain)
 VulkanRenderTarget::VulkanRenderTarget()
     : HwRenderTarget(0, 0),
@@ -327,8 +407,9 @@ VulkanRenderTarget::VulkanRenderTarget()
 
 VulkanRenderTarget::~VulkanRenderTarget() = default;
 
-void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
+void VulkanRenderTarget::bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
     assert_invariant(!mOffscreen);
+    assert_invariant(!mInfo->colors[0]);
 
     VkExtent2D const extent = swapchain->getExtent();
     width = extent.width;
@@ -336,7 +417,8 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
     mProtected = swapchain->isProtected();
 
     VulkanAttachment color = createSwapchainAttachment(swapchain->getCurrentColor());
-    mInfo->attachments = {color};
+    assert_invariant(mInfo->attachments.size() == 0);
+    mInfo->attachments.push_back(color);
 
     auto& fbkey = mInfo->fbkey;
     auto& rpkey = mInfo->rpkey;
@@ -360,6 +442,11 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
         fbkey.depth = VK_NULL_HANDLE;
     }
     mInfo->colors.set(0);
+}
+
+void VulkanRenderTarget::releaseSwapchain() {
+    mInfo->colors = {};
+    mInfo->attachments.clear();
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
@@ -615,7 +702,7 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
 VulkanBufferObject::VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
         VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage)
-    : HwBufferObject(byteCount),
+    : HwBufferObject(byteCount, false),
       bindingType(bindingType),
       mBuffer(context, allocator, stagePool, bufferCache, getBufferObjectBinding(bindingType),
               usage, byteCount) {}

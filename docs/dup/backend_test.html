@@ -1,0 +1,255 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>backend - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="backend-unit-tests"><a class="header" href="#backend-unit-tests">Backend Unit Tests</a></h1>
+<p>These are tests that ensure the Filament backend is working properly on various operating systems
+and graphics backends.</p>
+<p>The majority of these tests generate images that are then compared against a known golden image.</p>
+<h2 id="running-with-a-specific-graphics-library"><a class="header" href="#running-with-a-specific-graphics-library">Running with a specific graphics library</a></h2>
+<p>Run with <code>-a&lt;backend&gt;</code> to run with a specific backend, such as <code>-avulkan</code> for vulkan or <code>-ametal</code>
+for metal.</p>
+<h2 id="image-comparisons"><a class="header" href="#image-comparisons">Image comparisons</a></h2>
+<p>The expected images are stored as PNG files in the <code>expected_images</code> subdirectory of the test source
+code. When cmake is run it will copy this directory to the build output creating
+<code>images/expected_images</code> inside the same directory as the unit test binary.</p>
+<p>The unit tests will then write their resulting images into <code>images/actual_images</code> in order to make
+the tests easier to debug.</p>
+<p>If an image comparison test fails, it writes a diff image to <code>images/diff_images</code> where each pixel of the diff is white (255,255,255) if the comparison for the corresponding pixel succeeds and black (0,0,0) of the comparison for the corresponding pixel fails.</p>
+<h3 id="python-utility-for-updating-golden-images-and-comparing-results"><a class="header" href="#python-utility-for-updating-golden-images-and-comparing-results">Python utility for updating golden images and comparing results</a></h3>
+<p>Inside the unit test source code directory there is a python script called
+<code>move_actual_images_to_expected.py</code>.
+It will display the actual and expected images side-by-side and copy the actual image into the
+source tree's <code>expected_images</code> directory if the user approves the change.</p>
+<h4 id="directories"><a class="header" href="#directories">Directories</a></h4>
+<p>The <code>-r</code> flag is required and should be the directory where the test binary is.</p>
+<p>If not running the script from the directory it's in, <code>-s</code> should be the source code's
+<code>expected_images</code> directory.</p>
+<h4 id="configuring-comparemove-behavior"><a class="header" href="#configuring-comparemove-behavior">Configuring compare/move behavior</a></h4>
+<p>The <code>-c</code> flag has the tool display the actual and expected images side-by-side. By default it
+does this by opening both with the OS's default behavior. <code>-p</code> can be used to specify a different
+terminal program.</p>
+<p>The <code>-m</code> flag has the tool move the actual image to overwrite the expected image in the source
+tree. If the images are also being compared then the move will only happen if the user approves the
+change.</p>
+<p>After updating the expected images, cmake will need to be run again to copy them to the binary's
+directory. Also, currently some platforms can't load images to compare and so have the hash
+hardcoded into the test source code, so for now those need to be updated by running the test and
+copying the value manually.</p>
+<h4 id="picking-which-tests-to-compare"><a class="header" href="#picking-which-tests-to-compare">Picking which tests to compare</a></h4>
+<p>The <code>-x</code> flag causes the tool to check the <code>test_detail.xml</code> file and only process the images who
+failed a comparison. <code>--gtest_output=xml</code> needs to be passed to the test binary to generate this
+file.</p>
+<p>The <code>-t</code> argument takes a list of images to compare, provided as the file name without the <code>.png</code>
+suffix.</p>
+<h2 id="unsupported-tests"><a class="header" href="#unsupported-tests">Unsupported tests</a></h2>
+<p>If a test depends on a feature that is unsupported by the current environment, it will start with
+the <code>SKIP_IF</code> macro. This will cause the test to not be run.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../notes/tests.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../dup/test_ci_backend.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../notes/tests.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../dup/test_ci_backend.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

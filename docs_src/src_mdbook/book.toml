@@ -20,3 +20,6 @@ enable = false
 
 [output.html.fold]
 enable = false
+
+[output.html.mathjax]
+enable = true

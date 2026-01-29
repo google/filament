@@ -64,11 +64,22 @@ public:
     void setBufferAt(FEngine& engine, uint8_t bufferIndex,
             backend::BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
+    AsyncCallId setBufferAtAsync(FEngine& engine, uint8_t bufferIndex,
+            backend::BufferDescriptor&& buffer, uint32_t byteOffset,
+            backend::CallbackHandler* handler, AsyncCompletionCallback callback,
+            void* user = nullptr);
+
     void setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
             FBufferObject const * bufferObject);
 
+    AsyncCallId setBufferObjectAtAsync(FEngine& engine, uint8_t bufferIndex,
+            FBufferObject const * bufferObject, backend::CallbackHandler* handler,
+            AsyncCompletionCallback callback, void* user = nullptr);
+
     void updateBoneIndicesAndWeights(FEngine& engine, std::unique_ptr<uint16_t[]> skinJoints,
                                         std::unique_ptr<float[]> skinWeights);
+
+    bool isCreationComplete() const noexcept { return mCreationComplete.load(std::memory_order_relaxed); }
 
 private:
     friend class VertexBuffer;
@@ -81,6 +92,11 @@ private:
     uint8_t mBufferCount = 0;
     bool mBufferObjectsEnabled = false;
     bool mAdvancedSkinningEnabled = false;
+
+    // This field is set to true when the creation process is complete. This is especially useful
+    // asynchronous creation. If we can guarantee that this field is only referenced by the main
+    // thread, we don't have to use atomic here.
+    std::atomic_bool mCreationComplete{ false };
 };
 
 FILAMENT_DOWNCAST(VertexBuffer)

@@ -98,6 +98,10 @@ bool MaterialCompiler::run(const matp::Config& config) {
         return false;
     }
 
+    if (config.getIncludeSourceMaterial()) {
+        builder.materialSource(std::string_view(buffer.get(), size));
+    }
+
     // If we're reflecting parameters, the MaterialParser will have handled it inside of parse().
     // We should return here to avoid actually building a material.
     if (config.getReflectionTarget() != matp::Config::Metadata::NONE) {

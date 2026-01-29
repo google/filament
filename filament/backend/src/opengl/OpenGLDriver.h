@@ -26,6 +26,7 @@
 #include "GLDescriptorSetLayout.h"
 #include "GLMemoryMappedBuffer.h"
 #include "GLTexture.h"
+#include "JobQueue.h"
 #include "ShaderCompilerService.h"
 
 #include <backend/AcquiredImage.h>
@@ -36,7 +37,6 @@
 #include <backend/Platform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
-#include <backend/BufferObjectStreamDescriptor.h>
 
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
@@ -249,6 +249,9 @@ private:
         return utils::CString{ mContext.state.renderer };
     }
 
+    JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
+    JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
+
     template<typename T>
     friend class ConcreteDispatcher;
 
@@ -359,6 +362,34 @@ private:
     static GLsizei getAttachments(AttachmentArray& attachments, TargetBufferFlags buffers,
             bool isDefaultFramebuffer) noexcept;
 
+    // Common methods
+    void createTextureCommon(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+            TextureUsage usage, utils::ImmutableCString&& tag);
+    void update3DImageCommon(Handle<HwTexture> th,
+            uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth,
+            PixelBufferDescriptor&& data);
+    void createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
+            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+            TextureSwizzle a, utils::ImmutableCString&& tag);
+    void importTextureCommon(Handle<HwTexture> th, intptr_t id, SamplerType target, uint8_t levels,
+            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+            TextureUsage usage, utils::ImmutableCString&& tag);
+    void createBufferObjectCommon(Handle<HwBufferObject> boh, uint32_t byteCount,
+            BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag);
+    void setVertexBufferObjectCommon(Handle<HwVertexBuffer> vbh, uint32_t index,
+            Handle<HwBufferObject> boh);
+    void updateBufferObjectCommon(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
+            uint32_t byteOffset);
+    void createIndexBufferCommon(Handle<HwIndexBuffer> ibh, ElementType const elementType,
+            uint32_t indexCount, BufferUsage const usage, utils::ImmutableCString&& tag);
+    void updateIndexBufferCommon(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
+            uint32_t const byteOffset);
+    void destroyTextureCommon(Handle<HwTexture> th);
+    void destroyBufferObjectCommon(Handle<HwBufferObject> boh);
+    void destroyIndexBufferCommon(Handle<HwIndexBuffer> ibh);
+
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
     RenderPassParams mRenderPassParams;
@@ -376,6 +407,9 @@ private:
     struct {
         DescriptorSetHandle dsh;
         std::array<uint32_t, CONFIG_UNIFORM_BINDING_COUNT> offsets;
+#ifndef NDEBUG
+        utils::ImmutableCString tag;
+#endif
     } mBoundDescriptorSets[MAX_DESCRIPTOR_SET_COUNT] = {};
 
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
@@ -393,8 +427,6 @@ private:
 
     // the must be accessed from the user thread only
     std::vector<GLStream*> mStreamsWithPendingAcquiredImage;
-
-    std::unordered_map<GLuint, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
 
     void attachStream(GLTexture* t, GLStream* stream);
     void detachStream(GLTexture* t) noexcept;
@@ -416,15 +448,15 @@ private:
     void executeEveryNowAndThenOps() noexcept;
     std::vector<std::function<bool()>> mEveryNowAndThenOps;
 
-    const Platform::DriverConfig mDriverConfig;
-    Platform::DriverConfig const& getDriverConfig() const noexcept { return mDriverConfig; }
-
     // for ES2 sRGB support
     GLSwapChain* mCurrentDrawSwapChain = nullptr;
     bool mRec709OutputColorspace = false;
 
     PushConstantBundle* mCurrentPushConstants = nullptr;
     PipelineLayout::SetLayout mCurrentSetLayout;
+
+    JobQueue::Ptr mJobQueue;
+    JobWorker::Ptr mJobWorker;
 };
 
 // ------------------------------------------------------------------------------------------------

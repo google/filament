@@ -37,9 +37,9 @@ set(MATERIAL_SRCS
         materials/sandboxLitSolidRefractionSsr.mat
         materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
-        materials/sandboxTransformName.mat
         materials/sandboxUnlit.mat
         materials/texturedLit.mat
+        materials/uvmorph.mat
 )
 
 # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
@@ -270,7 +270,9 @@ if (NOT ANDROID)
     add_demo(gltf_viewer)
     add_demo(gltf_instances)
     add_demo(heightfield)
+    add_demo(helloasync)
     add_demo(hellomorphing)
+    add_demo(hellouvmorphing)
     add_demo(hellopbr)
     add_demo(hellotriangle)
     add_demo(helloskinning)

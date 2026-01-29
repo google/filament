@@ -31,22 +31,19 @@ namespace filament::backend {
 VulkanBufferProxy::VulkanBufferProxy(VulkanContext const& context, VmaAllocator allocator,
         VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferBinding binding,
         BufferUsage usage, uint32_t numBytes)
-    : mStagingBufferBypassEnabled(context.stagingBufferBypassEnabled()),
-      mAllocator(allocator),
-      mStagePool(stagePool),
-      mBufferCache(bufferCache),
-      mBuffer(mBufferCache.acquire(binding, numBytes)),
-      mLastReadAge(0),
-      mUsage(usage) {}
+        : mStagingBufferBypassEnabled(context.stagingBufferBypassEnabled()),
+          mAllocator(allocator),
+          mStagePool(stagePool),
+          mBufferCache(bufferCache),
+          mBuffer(mBufferCache.acquire(binding, numBytes)),
+          mLastReadAge(0),
+          mUsage(usage) {}
 
 void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
         uint32_t byteOffset, uint32_t numBytes) {
 
-    // This means that we're recording a write into a command buffer without a previous read, so it
-    // should be safe to
-    //   1) Do a direct memcpy in UMA mode
-    //   2) Skip adding a barrier (to protect the write from writing over a read).
-    bool const isAvailable = commands.age() != mLastReadAge;
+    // This means that the buffer is not currently in use by the GPU
+    bool const isAvailable = mBuffer->getCount() == 1;
 
     // Keep track of the VulkanBuffer usage
     commands.acquire(mBuffer);
@@ -54,16 +51,12 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     // Check if we can just memcpy directly to the GPU memory.
     bool const isMemcopyable = mBuffer->getGpuBuffer()->allocationInfo.pMappedData != nullptr;
 
-    // In the case of UNIFORMS, check that is available to see to know if a memcpy is possible.
-    // This works regardless if it's a full or partial update of the buffer.
-    bool const isUniformAndAvailable = getBinding() == VulkanBufferBinding::UNIFORM && isAvailable;
-
     // In the case the content is marked as memory mapped or static, is guaranteed to be safe to do
     // a memcpy if its available.
     bool const isStaticOrShared =
             any(mUsage & (BufferUsage::STATIC | BufferUsage::SHARED_WRITE_BIT));
-    bool const useMemcpy = (isUniformAndAvailable || isStaticOrShared) && isMemcopyable &&
-                           mStagingBufferBypassEnabled;
+    bool const useMemcpy =
+            ((isAvailable && mStagingBufferBypassEnabled) || isStaticOrShared) && isMemcopyable;
     if (useMemcpy) {
         char* dest = static_cast<char*>(mBuffer->getGpuBuffer()->allocationInfo.pMappedData) +
                      byteOffset;
@@ -83,11 +76,14 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     assert_invariant(stage->memory());
     commands.acquire(stage);
     memcpy(stage->mapping(), cpuData, numBytes);
-    vmaFlushAllocation(mAllocator, stage->memory(), stage->offset(), numBytes);
+
+    // This means that we're recording a write into a command buffer with a previous read, so it
+    // needs to add a barrier (to protect the write from writing over a read).
+    bool const issueBarrier = commands.age() == mLastReadAge;
 
     // If there was a previous read, then we need to make sure the following write is properly
     // synced with the previous read.
-    if (!isAvailable) {
+    if (issueBarrier) {
         VkAccessFlags srcAccess = 0;
         VkPipelineStageFlags srcStage = 0;
         if (getBinding() == VulkanBufferBinding::UNIFORM) {
@@ -136,7 +132,7 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
         dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
     } else if (getBinding() == VulkanBufferBinding::UNIFORM) {
-        dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
+        dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
     } else if (getBinding() == VulkanBufferBinding::SHADER_STORAGE) {
         // TODO: implement me

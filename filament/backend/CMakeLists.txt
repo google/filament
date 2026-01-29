@@ -36,6 +36,7 @@ set(SRCS
         src/Driver.cpp
         src/Handle.cpp
         src/HandleAllocator.cpp
+        src/JobQueue.cpp
         src/ostream.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
@@ -59,6 +60,7 @@ set(PRIVATE_HDRS
         src/CompilerThreadPool.h
         src/DataReshaper.h
         src/DriverBase.h
+        src/JobQueue.h
 )
 
 # ==================================================================================================
@@ -206,6 +208,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanDriverFactory.h
             src/vulkan/VulkanExternalImageManager.cpp
             src/vulkan/VulkanExternalImageManager.h
+            src/vulkan/VulkanStreamedImageManager.cpp
+            src/vulkan/VulkanStreamedImageManager.h
             src/vulkan/VulkanFboCache.cpp
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
@@ -301,6 +305,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUFence.h
             src/webgpu/WebGPUIndexBuffer.cpp
             src/webgpu/WebGPUIndexBuffer.h
+            src/webgpu/WebGPUMemoryMappedBuffer.cpp
+            src/webgpu/WebGPUMemoryMappedBuffer.h
             src/webgpu/WebGPUMsaaTextureResolver.cpp
             src/webgpu/WebGPUMsaaTextureResolver.h
             src/webgpu/WebGPUPipelineCache.cpp
@@ -316,6 +322,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPURenderPrimitive.h
             src/webgpu/WebGPURenderTarget.cpp
             src/webgpu/WebGPURenderTarget.h
+            src/webgpu/WebGPUStagePool.cpp
+            src/webgpu/WebGPUStagePool.h
             src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
@@ -329,13 +337,25 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUVertexBufferInfo.h
     )
     if (WIN32)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformWindows.h
+            src/webgpu/platform/WebGPUPlatformWindows.cpp
+        )
     elseif (LINUX)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformLinux.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformLinux.h
+            src/webgpu/platform/WebGPUPlatformLinux.cpp
+        )
     elseif (APPLE OR IOS)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformApple.mm)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformApple.h
+            src/webgpu/platform/WebGPUPlatformApple.mm
+        )
     elseif (ANDROID)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformAndroid.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformAndroid.h
+            src/webgpu/platform/WebGPUPlatformAndroid.cpp
+        )
     endif()
 
     if (TNT_DEV)
@@ -562,8 +582,10 @@ if (APPLE OR LINUX)
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
+        test/test_ReadTexture.cpp
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
+        test/test_JobQueue.cpp
         test/test_MemoryMappedBuffer.cpp
         test/test_MsaaSwapChain.cpp
         test/test_MRT.cpp

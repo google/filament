@@ -37,6 +37,7 @@
 using namespace utils;
 
 namespace filament::viewer {
+
 std::string_view to_string(color::ColorSpace const& colorspace) noexcept {
     using namespace color;
     if (colorspace == Rec709-Linear-D65) {
@@ -67,6 +68,7 @@ int parse(jsmntok_t const* tokens, int i) {
     return i;
 }
 
+
 using CGQL = filament::ColorGrading::QualityLevel;
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, CGQL* out) {
@@ -88,6 +90,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ToneMapp
     else if (0 == compare(tokens[i], jsonChunk, "AGX")) { *out = ToneMapping::AGX; }
     else if (0 == compare(tokens[i], jsonChunk, "GENERIC")) { *out = ToneMapping::GENERIC; }
     else if (0 == compare(tokens[i], jsonChunk, "PBR_NEUTRAL")) { *out = ToneMapping::PBR_NEUTRAL; }
+    else if (0 == compare(tokens[i], jsonChunk, "GT7")) { *out = ToneMapping::GT7; }
     else if (0 == compare(tokens[i], jsonChunk, "DISPLAY_RANGE")) { *out = ToneMapping::DISPLAY_RANGE; }
     else {
         slog.w << "Invalid ToneMapping: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
@@ -101,6 +104,35 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, color::C
     else if (0 == compare(tokens[i], jsonChunk, "Rec709-sRGB-D65")) { *out = Rec709-sRGB-D65; }
     else {
         slog.w << "Invalid ColorSpace: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, CameraProjection* out) {
+    if (0 == compare(tokens[i], jsonChunk, "PERSPECTIVE")) {
+        *out = CameraProjection::PERSPECTIVE;
+    } else if (0 == compare(tokens[i], jsonChunk, "ORTHO")) {
+        *out = CameraProjection::ORTHO;
+    } else {
+        slog.w << "Invalid CameraProjection: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightManager::Type* out) {
+    if (0 == compare(tokens[i], jsonChunk, "SUN")) {
+        *out = LightManager::Type::SUN;
+    } else if (0 == compare(tokens[i], jsonChunk, "DIRECTIONAL")) {
+        *out = LightManager::Type::DIRECTIONAL;
+    } else if (0 == compare(tokens[i], jsonChunk, "POINT")) {
+        *out = LightManager::Type::POINT;
+    } else if (0 == compare(tokens[i], jsonChunk, "FOCUSED_SPOT")) {
+        *out = LightManager::Type::FOCUSED_SPOT;
+    } else if (0 == compare(tokens[i], jsonChunk, "SPOT")) {
+        *out = LightManager::Type::SPOT;
+    } else {
+        slog.w << "Invalid Light Type: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
     }
     return i + 1;
 }
@@ -304,6 +336,12 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->postProcessingEnabled);
         } else if (compare(tok, jsonChunk, "stereoscopicOptions") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->stereoscopicOptions);
+        } else if (compare(tok, jsonChunk, "blendMode") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->blendMode);
+        } else if (compare(tok, jsonChunk, "stencilBufferEnabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->stencilBufferEnabled);
+        } else if (compare(tok, jsonChunk, "visibleLayers") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->visibleLayers);
         } else {
             slog.w << "Invalid view setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -453,9 +491,220 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
     return i;
 }
 
-static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSettings* out) {
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightDefinition* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "type") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->type);
+        } else if (compare(tok, jsonChunk, "position") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->position);
+        } else if (compare(tok, jsonChunk, "direction") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->direction);
+        } else if (compare(tok, jsonChunk, "color") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->color);
+        } else if (compare(tok, jsonChunk, "intensity") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->intensity);
+        } else if (compare(tok, jsonChunk, "falloff") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->falloff);
+        } else if (compare(tok, jsonChunk, "spotInner") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->spotInner);
+        } else if (compare(tok, jsonChunk, "spotOuter") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->spotOuter);
+        } else if (compare(tok, jsonChunk, "spotOuter") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->spotOuter);
+        } else if (compare(tok, jsonChunk, "sunHaloSize") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunHaloSize);
+        } else if (compare(tok, jsonChunk, "sunHaloFalloff") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunHaloFalloff);
+        } else if (compare(tok, jsonChunk, "sunAngularRadius") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunAngularRadius);
+        } else if (compare(tok, jsonChunk, "castShadows") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->castShadows);
+        } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowOptions);
+        } else {
+            slog.w << "Invalid light definition key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid light definition value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        std::vector<LightDefinition>* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_ARRAY);
+    int size = tokens[i++].size;
+    out->resize(size);
+    for (int j = 0; j < size; ++j) {
+        i = parse(tokens, i, jsonChunk, &(*out)[j]);
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, CameraSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "center") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->center);
+        } else if (compare(tok, jsonChunk, "lookAt") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lookAt);
+        } else if (compare(tok, jsonChunk, "up") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->up);
+        } else if (compare(tok, jsonChunk, "horizontalFov") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->horizontalFov);
+        } else if (compare(tok, jsonChunk, "near") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->near);
+        } else if (compare(tok, jsonChunk, "far") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->far);
+        } else if (compare(tok, jsonChunk, "focalLength") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->focalLength);
+        } else if (compare(tok, jsonChunk, "projection") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->projection);
+        } else if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "scaling") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->scaling);
+        } else if (compare(tok, jsonChunk, "shift") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shift);
+        } else if (compare(tok, jsonChunk, "aperture") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->aperture);
+        } else if (compare(tok, jsonChunk, "shutterSpeed") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shutterSpeed);
+        } else if (compare(tok, jsonChunk, "sensitivity") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sensitivity);
+        } else if (compare(tok, jsonChunk, "focusDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->focusDistance);
+        } else if (compare(tok, jsonChunk, "eyeOcularDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->eyeOcularDistance);
+        } else if (compare(tok, jsonChunk, "eyeToeIn") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->eyeToeIn);
+        } else {
+            slog.w << "Invalid camera options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid camera options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AnimationSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "time") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->time);
+        } else if (compare(tok, jsonChunk, "speed") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->speed);
+        } else {
+            slog.w << "Invalid animation options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid animation options value: '" << STR(tok, jsonChunk) << "'"
+                   << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        Renderer::ClearOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "clearColor") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->clearColor);
+        } else if (compare(tok, jsonChunk, "clear") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->clear);
+        } else if (compare(tok, jsonChunk, "discard") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->discard);
+        } else if (compare(tok, jsonChunk, "clearStencil") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->clearStencil);
+        } else {
+            slog.w << "Invalid clear options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid clear options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        Renderer::FrameRateOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int const size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "headRoomRatio") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->headRoomRatio);
+        } else if (compare(tok, jsonChunk, "history") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->history);
+        } else if (compare(tok, jsonChunk, "scaleRate") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->scaleRate);
+        } else {
+            slog.w << "Invalid frame rate options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid frame rate options value: '" << STR(tok, jsonChunk) << "'"
+                   << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, RenderSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int const size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "clearOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->clearOptions);
+        } else if (compare(tok, jsonChunk, "frameRateOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->frameRateOptions);
+        } else {
+            slog.w << "Invalid render settings key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid render settings value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int const size = tokens[i++].size;
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
@@ -463,26 +712,16 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
             i = parse(tokens, i + 1, jsonChunk, &out->enableShadows);
         } else if (compare(tok, jsonChunk, "enableSunlight") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->enableSunlight);
-        } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->shadowOptions);
         } else if (compare(tok, jsonChunk, "softShadowOptions") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->softShadowOptions);
-        } else if (compare(tok, jsonChunk, "sunlightIntensity") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sunlightIntensity);
-        } else if (compare(tok, jsonChunk, "sunlightHaloSize") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sunlightHaloSize);
-        } else if (compare(tok, jsonChunk, "sunlightHaloFalloff") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sunlightHaloFalloff);
-        } else if (compare(tok, jsonChunk, "sunlightAngularRadius") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sunlightAngularRadius);
-        } else if (compare(tok, jsonChunk, "sunlightDirection") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sunlightDirection);
-        } else if (compare(tok, jsonChunk, "sunlightColor") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sunlightColor);
+        } else if (compare(tok, jsonChunk, "sunlight") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlight);
         } else if (compare(tok, jsonChunk, "iblIntensity") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblIntensity);
         } else if (compare(tok, jsonChunk, "iblRotation") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblRotation);
+        } else if (compare(tok, jsonChunk, "lights") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lights);
         } else {
             slog.w << "Invalid light setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -497,40 +736,22 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
-    int size = tokens[i++].size;
+    int const size = tokens[i++].size;
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
-        if (compare(tok, jsonChunk, "cameraAperture") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->cameraAperture);
-        } else if (compare(tok, jsonChunk, "cameraSpeed") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->cameraSpeed);
-        } else if (compare(tok, jsonChunk, "cameraISO") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->cameraISO);
-        } else if (compare(tok, jsonChunk, "cameraNear") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->cameraNear);
-        } else if (compare(tok, jsonChunk, "cameraFar") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->cameraFar);
-        } else if (compare(tok, jsonChunk, "cameraEyeOcularDistance") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->cameraEyeOcularDistance);
-        } else if (compare(tok, jsonChunk, "cameraEyeToeIn") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->cameraEyeToeIn);
-        } else if (compare(tok, jsonChunk, "groundShadowStrength") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->groundShadowStrength);
+        if (compare(tok, jsonChunk, "groundShadowStrength") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->groundShadowStrength);
         } else if (compare(tok, jsonChunk, "groundPlaneEnabled") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->groundPlaneEnabled);
+            i = parse(tokens, i + 1, jsonChunk, &out->groundPlaneEnabled);
         } else if (compare(tok, jsonChunk, "skyboxEnabled") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->skyboxEnabled);
+            i = parse(tokens, i + 1, jsonChunk, &out->skyboxEnabled);
         } else if (compare(tok, jsonChunk, "backgroundColor") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->backgroundColor);
-        } else if (compare(tok, jsonChunk, "cameraFocalLength") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->cameraFocalLength);
-        } else if (compare(tok, jsonChunk, "cameraFocusDistance") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->cameraFocusDistance);
+            i = parse(tokens, i + 1, jsonChunk, &out->backgroundColor);
         } else if (compare(tok, jsonChunk, "autoInstancingEnabled") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->autoInstancingEnabled);
+            i = parse(tokens, i + 1, jsonChunk, &out->autoInstancingEnabled);
         } else if (compare(tok, jsonChunk, "autoScaleEnabled") == 0) {
-             i = parse(tokens, i + 1, jsonChunk, &out->autoScaleEnabled);
+            i = parse(tokens, i + 1, jsonChunk, &out->autoScaleEnabled);
         } else {
             slog.w << "Invalid viewer options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -545,7 +766,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOp
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DebugOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
-    int size = tokens[i++].size;
+    int const size = tokens[i++].size;
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
@@ -565,7 +786,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DebugOpt
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
-    int size = tokens[i++].size;
+    int const size = tokens[i++].size;
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
@@ -577,6 +798,12 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
             i = parse(tokens, i + 1, jsonChunk, &out->lighting);
         } else if (compare(tok, jsonChunk, "viewer") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->viewer);
+        } else if (compare(tok, jsonChunk, "camera") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->camera);
+        } else if (compare(tok, jsonChunk, "animation") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->animation);
+        } else if (compare(tok, jsonChunk, "render") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->render);
         } else if (compare(tok, jsonChunk, "debug") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->debug);
         } else {
@@ -611,6 +838,9 @@ void applySettings(Engine* engine, const ViewSettings& settings, View* dest) {
     dest->setGuardBandOptions(settings.guardBand);
     dest->setStereoscopicOptions(settings.stereoscopicOptions);
     dest->setPostProcessingEnabled(settings.postProcessingEnabled);
+    dest->setBlendMode(static_cast<View::BlendMode>(settings.blendMode));
+    dest->setStencilBufferEnabled(settings.stencilBufferEnabled);
+    dest->setVisibleLayers(settings.visibleLayers, settings.visibleLayers);
 }
 
 template <typename T>
@@ -635,14 +865,14 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
         } else {
             scene->remove(sunlight);
         }
-        lm->setIntensity(light, settings.sunlightIntensity);
-        lm->setSunHaloSize(light, settings.sunlightHaloSize);
-        lm->setSunHaloFalloff(light, settings.sunlightHaloFalloff);
-        lm->setSunAngularRadius(light, settings.sunlightAngularRadius);
-        lm->setDirection(light, normalize(settings.sunlightDirection));
-        lm->setColor(light, settings.sunlightColor);
-        lm->setShadowCaster(light, settings.enableShadows);
-        lm->setShadowOptions(light, settings.shadowOptions);
+        lm->setIntensity(light, settings.sunlight.intensity);
+        lm->setSunHaloSize(light, settings.sunlight.sunHaloSize);
+        lm->setSunHaloFalloff(light, settings.sunlight.sunHaloFalloff);
+        lm->setSunAngularRadius(light, settings.sunlight.sunAngularRadius);
+        lm->setDirection(light, normalize(settings.sunlight.direction));
+        lm->setColor(light, settings.sunlight.color);
+        lm->setShadowCaster(light, settings.sunlight.castShadows && settings.enableShadows);
+        lm->setShadowOptions(light, settings.sunlight.shadowOptions);
     }
     if (ibl) {
         ibl->setIntensity(settings.iblIntensity);
@@ -651,8 +881,13 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
     for (size_t i = 0; i < sceneLightCount; i++) {
         auto const li = lm->getInstance(sceneLights[i]);
         if (li) {
+            // Note: We don't have individual settings for these "scene lights" (IBL maps etc)
+            // in the current structure unless we map them by index or name.
+            // For now, we only enforce the global shadow toggle.
             lm->setShadowCaster(li, settings.enableShadows);
-            lm->setShadowOptions(li, settings.shadowOptions);
+            // We removed the global shadowOptions. If they need defaults, they should be set elsewhere or
+            // we should keep a "defaultShadowOptions" but for now assuming individual control via automation
+            // or existing defaults.
         }
     }
     view->setSoftShadowOptions(settings.softShadowOptions);
@@ -675,36 +910,57 @@ void applySettings(Engine* engine, const ViewerOptions& settings, Camera* camera
     if (skybox) {
         skybox->setLayerMask(0xff, settings.skyboxEnabled ? 0xff : 0x00);
     }
-    if (camera) {
-        camera->setExposure(
-                settings.cameraAperture,
-                1.0f / settings.cameraSpeed,
-                settings.cameraISO);
-
-        camera->setFocusDistance(settings.cameraFocusDistance);
-    }
     engine->setAutomaticInstancingEnabled(settings.autoInstancingEnabled);
+}
+
+void applySettings(Engine* engine, const DebugOptions& settings, Renderer* renderer) {
+    if (!renderer->getFrameToSkipCount()) {
+        renderer->skipNextFrames(settings.skipFrames);
+    }
+}
+
+void applySettings(Engine* engine, const CameraSettings& settings, Camera* camera,
+        double aspectRatio) {
+    camera->setExposure(settings.aperture, 1.0f / settings.shutterSpeed, settings.sensitivity);
+
+    camera->setFocusDistance(settings.focusDistance);
 
     // Eyes are rendered from left-to-right, i.e., eye 0 is rendered to the left side of the
     // window.
     // For testing, we want to render a side-by-side layout so users can view with
     // "cross-eyed" stereo.
     // For cross-eyed stereo, Eye 0 is really the RIGHT eye, while Eye 1 is the LEFT eye.
-    const auto od = settings.cameraEyeOcularDistance;
-    const auto toeIn = settings.cameraEyeToeIn;
-    const auto eyeCount = engine->getConfig().stereoscopicEyeCount;
-    const double3 up = double3(0.0, 1.0, 0.0);
-    const mat4 rightEye = mat4::translation(double3{ od, 0.0, 0.0}) * mat4::rotation( toeIn, up);
-    const mat4 leftEye  = mat4::translation(double3{-od, 0.0, 0.0}) * mat4::rotation(-toeIn, up);
-    const mat4 modelMatrices[2] = { rightEye, leftEye };
-    for (int i = 0; i < eyeCount; i++) {
+    double const od = settings.eyeOcularDistance;
+    double const toeIn = settings.eyeToeIn;
+    size_t const eyeCount = engine->getConfig().stereoscopicEyeCount;
+    double3 const up = double3(0.0, 1.0, 0.0);
+    mat4 const rightEye = mat4::translation(double3{ od, 0.0, 0.0 }) * mat4::rotation(toeIn, up);
+    mat4 const leftEye = mat4::translation(double3{ -od, 0.0, 0.0 }) * mat4::rotation(-toeIn, up);
+    mat4 const modelMatrices[2] = { rightEye, leftEye };
+    for (size_t i = 0; i < eyeCount; i++) {
         camera->setEyeModelMatrix(i, modelMatrices[i % 2]);
     }
-}
 
-void applySettings(Engine* engine, const DebugOptions& settings, Renderer* renderer) {
-    if (!renderer->getFrameToSkipCount()) {
-        renderer->skipNextFrames(settings.skipFrames);
+    if (settings.enabled && aspectRatio > 0.0) {
+        camera->lookAt(settings.center, settings.lookAt, settings.up);
+        if (settings.projection == CameraProjection::PERSPECTIVE) {
+            if (settings.focalLength > 0.0f) {
+                camera->setLensProjection(settings.focalLength, aspectRatio, settings.near,
+                        settings.far);
+            } else {
+                camera->setProjection(settings.horizontalFov, aspectRatio, settings.near,
+                        settings.far, Camera::Fov::VERTICAL);
+            }
+        } else {
+            // ORTHO
+            double const left = -settings.scaling.x * aspectRatio;
+            double const right = settings.scaling.x * aspectRatio;
+            double const bottom = -settings.scaling.y;
+            double const top = settings.scaling.y;
+            camera->setProjection(Camera::Projection::ORTHO, left + settings.shift.x,
+                    right + settings.shift.x, bottom + settings.shift.y, top + settings.shift.y,
+                    settings.near, settings.far);
+        }
     }
 }
 
@@ -722,6 +978,7 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
                 settings.genericToneMapper.hdrMax
         );
         case ToneMapping::PBR_NEUTRAL: return new PBRNeutralToneMapper;
+        case ToneMapping::GT7: return new GT7ToneMapper;
         case ToneMapping::DISPLAY_RANGE: return new DisplayRangeToneMapper;
     }
 }
@@ -764,6 +1021,25 @@ static std::ostream& operator<<(std::ostream& out, CGQL in) {
     return out << "\"INVALID\"";
 }
 
+static std::ostream& operator<<(std::ostream& out, CameraProjection in) {
+    switch (in) {
+        case CameraProjection::ORTHO: return out << "\"ORTHO\"";
+        case CameraProjection::PERSPECTIVE: return out << "\"PERSPECTIVE\"";
+    }
+    return out << "\"INVALID\"";
+}
+
+static std::ostream& operator<<(std::ostream& out, LightManager::Type in) {
+    switch (in) {
+        case LightManager::Type::SUN: return out << "\"SUN\"";
+        case LightManager::Type::DIRECTIONAL: return out << "\"DIRECTIONAL\"";
+        case LightManager::Type::POINT: return out << "\"POINT\"";
+        case LightManager::Type::FOCUSED_SPOT: return out << "\"FOCUSED_SPOT\"";
+        case LightManager::Type::SPOT: return out << "\"SPOT\"";
+    }
+    return out << "\"INVALID\"";
+}
+
 static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
     switch (in) {
         case ToneMapping::LINEAR: return out << "\"LINEAR\"";
@@ -773,6 +1049,7 @@ static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
         case ToneMapping::AGX: return out << "\"AGX\"";
         case ToneMapping::GENERIC: return out << "\"GENERIC\"";
         case ToneMapping::PBR_NEUTRAL: return out << "\"PBR_NEUTRAL\"";
+        case ToneMapping::GT7: return out << "\"GT7\"";
         case ToneMapping::DISPLAY_RANGE: return out << "\"DISPLAY_RANGE\"";
     }
     return out << "\"INVALID\"";
@@ -904,41 +1181,74 @@ static std::ostream& operator<<(std::ostream& out, const MaterialSettings& in) {
     return out << result;
 }
 
-static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
+static std::ostream& operator<<(std::ostream& out, const LightDefinition& in) {
     return out << "{\n"
+               << "\"type\": " << in.type << ",\n"
+               << "\"position\": " << in.position << ",\n"
+               << "\"direction\": " << in.direction << ",\n"
+               << "\"color\": " << in.color << ",\n"
+               << "\"intensity\": " << in.intensity << ",\n"
+               << "\"falloff\": " << in.falloff << ",\n"
+               << "\"spotInner\": " << in.spotInner << ",\n"
+               << "\"spotOuter\": " << in.spotOuter << ",\n"
+               << "\"sunHaloSize\": " << in.sunHaloSize << ",\n"
+               << "\"sunHaloFalloff\": " << in.sunHaloFalloff << ",\n"
+               << "\"sunAngularRadius\": " << in.sunAngularRadius << ",\n"
+               << "\"castShadows\": " << to_string(in.castShadows) << ",\n"
+               << "\"shadowOptions\": " << in.shadowOptions << "\n"
+               << "}";
+}
+
+static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
+    out << "{\n"
         << "\"enableShadows\": " << to_string(in.enableShadows) << ",\n"
         << "\"enableSunlight\": " << to_string(in.enableSunlight) << ",\n"
-        << "\"shadowOptions\": " << (in.shadowOptions) << ",\n"
         << "\"softShadowOptions\": " << (in.softShadowOptions) << ",\n"
-        << "\"sunlightIntensity\": " << (in.sunlightIntensity) << ",\n"
-        << "\"sunlightHaloSize\": " << (in.sunlightHaloSize) << ",\n"
-        << "\"sunlightHaloFalloff\": " << (in.sunlightHaloFalloff) << ",\n"
-        << "\"sunlightAngularRadius\": " << (in.sunlightAngularRadius) << ",\n"
-        << "\"sunlightDirection\": " << (in.sunlightDirection) << ",\n"
-        << "\"sunlightColor\": " << (in.sunlightColor) << ",\n"
+        << "\"sunlight\": " << (in.sunlight) << ",\n"
         << "\"iblIntensity\": " << (in.iblIntensity) << ",\n"
-        << "\"iblRotation\": " << (in.iblRotation) << "\n"
-        << "}";
+        << "\"iblRotation\": " << (in.iblRotation) << ",\n"
+        << "\"lights\": [\n";
+    for (size_t i = 0; i < in.lights.size(); ++i) {
+        out << in.lights[i];
+        if (i < in.lights.size() - 1) {
+            out << ",";
+        }
+        out << "\n";
+    }
+    return out << "]\n" << "}";
+}
+
+static std::ostream& operator<<(std::ostream& out, const CameraSettings& in) {
+    return out << "{\n"
+               << "\"center\": " << in.center << ",\n"
+               << "\"lookAt\": " << in.lookAt << ",\n"
+               << "\"up\": " << in.up << ",\n"
+               << "\"horizontalFov\": " << in.horizontalFov << ",\n"
+               << "\"near\": " << in.near << ",\n"
+               << "\"far\": " << in.far << ",\n"
+               << "\"focalLength\": " << in.focalLength << ",\n"
+               << "\"aperture\": " << in.aperture << ",\n"
+               << "\"shutterSpeed\": " << in.shutterSpeed << ",\n"
+               << "\"sensitivity\": " << in.sensitivity << ",\n"
+               << "\"focusDistance\": " << in.focusDistance << ",\n"
+               << "\"eyeOcularDistance\": " << in.eyeOcularDistance << ",\n"
+               << "\"eyeToeIn\": " << in.eyeToeIn << ",\n"
+               << "\"projection\": " << in.projection << ",\n"
+               << "\"enabled\": " << to_string(in.enabled) << ",\n"
+               << "\"scaling\": " << in.scaling << ",\n"
+               << "\"shift\": " << in.shift << "\n"
+               << "}";
 }
 
 static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
     return out << "{\n"
-        << "\"cameraAperture\": " << (in.cameraAperture) << ",\n"
-        << "\"cameraSpeed\": " << (in.cameraSpeed) << ",\n"
-        << "\"cameraISO\": " << (in.cameraISO) << ",\n"
-        << "\"cameraNear\": " << (in.cameraNear) << ",\n"
-        << "\"cameraFar\": " << (in.cameraFar) << ",\n"
-        << "\"cameraEyeOcularDistance\": " << (in.cameraEyeOcularDistance) << ",\n"
-        << "\"cameraEyeToeIn\": " << (in.cameraEyeToeIn) << ",\n"
-        << "\"groundShadowStrength\": " << (in.groundShadowStrength) << ",\n"
-        << "\"groundPlaneEnabled\": " << to_string(in.groundPlaneEnabled) << ",\n"
-        << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"
-        << "\"backgroundColor\": " << (in.backgroundColor) << ",\n"
-        << "\"cameraFocalLength\": " << (in.cameraFocalLength) << ",\n"
-        << "\"cameraFocusDistance\": " << (in.cameraFocusDistance) << ",\n"
-        << "\"autoInstancingEnabled\": " << to_string(in.autoInstancingEnabled) << ",\n"
-        << "\"autoScaleEnabled\": " << to_string(in.autoScaleEnabled) << "\n"
-        << "}";
+               << "\"groundShadowStrength\": " << (in.groundShadowStrength) << ",\n"
+               << "\"groundPlaneEnabled\": " << to_string(in.groundPlaneEnabled) << ",\n"
+               << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"
+               << "\"backgroundColor\": " << (in.backgroundColor) << ",\n"
+               << "\"autoInstancingEnabled\": " << to_string(in.autoInstancingEnabled) << ",\n"
+               << "\"autoScaleEnabled\": " << to_string(in.autoScaleEnabled) << "\n"
+               << "}";
 }
 
 static std::ostream& operator<<(std::ostream& out, const DebugOptions& in) {
@@ -980,12 +1290,12 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
 
 static std::ostream& operator<<(std::ostream& out, const Settings& in) {
     return out << "{\n"
-        << "\"view\": " << (in.view) << ",\n"
-        << "\"material\": " << (in.material) << ",\n"
-        << "\"lighting\": " << (in.lighting) << ",\n"
-        << "\"viewer\": " << (in.viewer) << ",\n"
-        << "\"debug\": " << (in.debug)
-        << "}";
+               << "\"view\": " << (in.view) << ",\n"
+               << "\"material\": " << (in.material) << ",\n"
+               << "\"lighting\": " << (in.lighting) << ",\n"
+               << "\"viewer\": " << (in.viewer) << ",\n"
+               << "\"camera\": " << (in.camera) << ",\n"
+               << "\"debug\": " << (in.debug) << "}";
 }
 
 bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings& rhs) const {

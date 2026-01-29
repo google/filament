@@ -73,7 +73,8 @@ using namespace backend;
 using namespace math;
 
 ShadowMapManager::ShadowMapManager(FEngine& engine)
-    : mIsDepthClampSupported(engine.getDriverApi().isDepthClampSupported()) {
+    : mIsDepthClampSupported(engine.getDriverApi().isDepthClampSupported()),
+      mDisableBlitIntoTextureArray(engine.getDriverApi().isWorkaroundNeeded(Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY)) {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
             &engine.debug.shadowmap.visualize_cascades);
@@ -125,6 +126,7 @@ void ShadowMapManager::terminate(FEngine& engine) {
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::update(
+        DriverApi& driver,
         Builder const& builder,
         FEngine& engine, FView& view,
         CameraInfo const& cameraInfo,
@@ -139,7 +141,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
     if (UTILS_UNLIKELY(!mInitialized)) {
         mInitialized = true;
         // initialize our ShadowMap array in-place
-        mShadowUbh = engine.getDriverApi().createBufferObject(mShadowUb.getSize(),
+        mShadowUbh = driver.createBufferObject(mShadowUb.getSize(),
                 BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
         UTILS_NOUNROLL
         for (auto& entry: mShadowMapCache) {
@@ -415,13 +417,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         renderPassFlags |= RenderPass::HAS_DEPTH_CLAMP;
                     }
 
-                    RenderPass const pass = passBuilder
+                    RenderPass pass = passBuilder
                             .renderFlags(RenderPass::HAS_DEPTH_CLAMP, renderPassFlags)
                             .camera(cameraInfo.getPosition(), cameraInfo.getForwardVector())
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
                             .build(engine, driver);
+
+                    pass.finalize(engine, driver);
 
                     entry.executor = pass.getExecutor();
 
@@ -1051,11 +1055,11 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
         ShadowMap* pShadowMap) mutable {
         // Allocate shadowmap from our Atlas Allocator
         auto const& options = pShadowMap->getShadowOptions();
-        auto [layer, pos] = allocator.allocate(options->mapSize);
-        assert_invariant(layer >= 0);
-        assert_invariant(!pos.empty());
-        pShadowMap->setAllocation(layer, pos);
-        layersNeeded = std::max(uint8_t(layer + 1), layersNeeded);
+        auto allocation = allocator.allocate(options->mapSize);
+        assert_invariant(allocation.isValid());
+        assert_invariant(!allocation.viewport.empty());
+        pShadowMap->setAllocation(allocation.layer, allocation.viewport);
+        layersNeeded = std::max(uint8_t(allocation.layer + 1), layersNeeded);
     };
 
     std::function const allocateFromTextureArray =
@@ -1083,7 +1087,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
             ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
 
     uint8_t msaaSamples = vsmShadowOptions.msaaSamples;
-    if (engine.getDriverApi().isWorkaroundNeeded(Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY)) {
+    if (mDisableBlitIntoTextureArray) {
         msaaSamples = 1;
     }
 
@@ -1111,7 +1115,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     engine.debug.shadowmap.display_shadow_texture_level_count = mipLevels;
 
     mTextureAtlasRequirements = {
-            (uint16_t)maxDimension,
+            uint16_t(maxDimension),
             layersNeeded,
             mipLevels,
             msaaSamples,

@@ -57,6 +57,10 @@ material {
             name : transmission
         },
         {
+            type : float,
+            name : dispersion
+        },
+        {
             type : float4,
             name : emissive
         }
@@ -80,6 +84,7 @@ fragment {
         material.thickness = materialParams.thickness;
         material.ior = materialParams.ior;
         material.transmission = materialParams.transmission;
+        material.dispersion = materialParams.dispersion;
         material.emissive = materialParams.emissive;
     }
 }

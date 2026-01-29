@@ -7,6 +7,33 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.69.1
+
+
+## v1.69.0
+
+- engine: Support custom attributes morphing, and allow for omitting position and/or normal data. [⚠️ **Recompile Materials**]
+
+## v1.68.5
+
+- engine: "native" Streams are officially deprecated. Use "acquired" streams instead.
+- engine: add "engine.skip_frame_when_cpu_ahead_of_display" feature [b/474599530]
+
+## v1.68.4
+
+- gltfio: Add optional support for webp textures (EXT_texture_webp), controlled via FILAMENT_SUPPORTS_WEBP_TEXTURES cmake option
+
+## v1.68.3
+
+- materials: added support for the glTF `KHR_materials_dispersion` extension, which adds dispersion for refractive objects
+
+## v1.68.2
+
+- Support `setPresentationTime` with the Metal backend.
+
+## v1.68.1
+
+
 ## v1.68.0
 
 - engine: add `View::getLastDynamicResolutionScale()` (b/457753622)

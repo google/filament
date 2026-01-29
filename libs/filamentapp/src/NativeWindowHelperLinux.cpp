@@ -38,19 +38,18 @@ void* getNativeWindow(SDL_Window* sdlWindow) {
         SDL_GetWindowSize(sdlWindow, &width, &height);
 
         // Static is used here to allocate the struct pointer for the lifetime of the program.
-        // Without static the valid struct quickyly goes out of scope, and ends with seemingly
-        // random segfaults.
+        // Without static the valid struct quickly goes out of scope, and ends with seemingly
+        // random segfaults. We must update the values on each call.
         static struct {
             struct wl_display *display;
             struct wl_surface *surface;
             uint32_t width;
             uint32_t height;
-        } wayland {
-            wmi.info.wl.display,
-            wmi.info.wl.surface,
-            static_cast<uint32_t>(width),
-            static_cast<uint32_t>(height)
-        };
+        } wayland;
+        wayland.display = wmi.info.wl.display;
+        wayland.surface = wmi.info.wl.surface;
+        wayland.width = static_cast<uint32_t>(width);
+        wayland.height = static_cast<uint32_t>(height);
         return (void *) &wayland;
 #endif
     }

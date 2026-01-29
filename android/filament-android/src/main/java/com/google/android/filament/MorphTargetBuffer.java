@@ -65,6 +65,45 @@ public class MorphTargetBuffer {
         }
 
         /**
+         * Use this method to enable or disable the built-in position morphing buffer.
+         * Default is true.
+         *
+         * @param enabled true to enable, false to disable
+         * @return this <code>Builder</code> object for chaining calls
+         */
+        @NonNull
+        public Builder withPositions(boolean enabled) {
+            nBuilderWithPositions(mNativeBuilder, enabled);
+            return this;
+        }
+
+        /**
+         * Use this method to enable or disable the built-in tangent morphing buffer.
+         * Default is true.
+         *
+         * @param enabled true to enable, false to disable
+         * @return this <code>Builder</code> object for chaining calls
+         */
+        @NonNull
+        public Builder withTangents(boolean enabled) {
+            nBuilderWithTangents(mNativeBuilder, enabled);
+            return this;
+        }
+
+        /**
+         * Use this method to enable or disable custom morphing.
+         * Default is false.
+         *
+         * @param enabled true to enable, false to disable
+         * @return this <code>Builder</code> object for chaining calls
+         */
+        @NonNull
+        public Builder enableCustomMorphing(boolean enabled) {
+            nBuilderEnableCustomMorphing(mNativeBuilder, enabled);
+            return this;
+        }
+
+        /**
          * Creates and returns the <code>MorphTargetBuffer</code> object.
          *
          * @param engine reference to the {@link Engine} to associate this <code>MorphTargetBuffer</code>
@@ -156,6 +195,27 @@ public class MorphTargetBuffer {
         return nGetCount(mNativeObject);
     }
 
+    /**
+     * @return true if this MorphTargetBuffer has a position buffer.
+     */
+    public boolean hasPositions() {
+        return nHasPositions(mNativeObject);
+    }
+
+    /**
+     * @return true if this MorphTargetBuffer has a tangent buffer.
+     */
+    public boolean hasTangents() {
+        return nHasTangents(mNativeObject);
+    }
+
+    /**
+     * @return true if custom morphing is enabled.
+     */
+    public boolean isCustomMorphingEnabled() {
+        return nIsCustomMorphingEnabled(mNativeObject);
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed MorphTargetBuffer");
@@ -171,10 +231,16 @@ public class MorphTargetBuffer {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native void nBuilderVertexCount(long nativeBuilder, int vertexCount);
     private static native void nBuilderCount(long nativeBuilder, int count);
+    private static native void nBuilderWithPositions(long nativeBuilder, boolean enabled);
+    private static native void nBuilderWithTangents(long nativeBuilder, boolean enabled);
+    private static native void nBuilderEnableCustomMorphing(long nativeBuilder, boolean enabled);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nSetPositionsAt(long nativeObject, long nativeEngine, int targetIndex, float[] positions, int count);
     private static native int nSetTangentsAt(long nativeObject, long nativeEngine, int targetIndex, short[] tangents, int count);
     private static native int nGetVertexCount(long nativeObject);
     private static native int nGetCount(long nativeObject);
+    private static native boolean nHasPositions(long nativeObject);
+    private static native boolean nHasTangents(long nativeObject);
+    private static native boolean nIsCustomMorphingEnabled(long nativeObject);
 }
