@@ -2903,7 +2903,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine, driver);
     FMaterial::SpecializationConstantsBuilder maConstants = ma->getSpecializationConstantsBuilder();
 
-    maConstants.set("upscaling", taaOptions.upscaling);
+    maConstants.set("upscaling", taaOptions.upscaling > 1.0f);
     maConstants.set("historyReprojection", taaOptions.historyReprojection);
     maConstants.set("filterHistory", taaOptions.filterHistory);
     maConstants.set("filterInput", taaOptions.filterInput);
