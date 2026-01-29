@@ -2,6 +2,8 @@
 // Punctual lights evaluation
 //------------------------------------------------------------------------------
 
+#if MATERIAL_FEATURE_LEVEL > 0
+
 // Make sure this matches the same constants in Froxel.cpp
 #define FROXEL_BUFFER_WIDTH_SHIFT   6u
 #define FROXEL_BUFFER_WIDTH         (1u << FROXEL_BUFFER_WIDTH_SHIFT)
@@ -271,3 +273,5 @@ void evaluatePunctualLights(const MaterialInputs material,
         }
     }
 }
+
+#endif // MATERIAL_FEATURE_LEVEL > 0
