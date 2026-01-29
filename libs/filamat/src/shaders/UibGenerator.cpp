@@ -132,8 +132,8 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "needsAlphaChannel",      0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
 
             // AO
-            { "aoSamplingQualityAndEdgeDistance", 0, Type::FLOAT },
-            { "aoBentNormals",          0, Type::FLOAT },
+            { "aoSamplingQualityAndEdgeDistance", 0, Type::FLOAT         },
+            { "aoBentNormals",          0, Type::FLOAT                   },
 
             // ------------------------------------------------------------------------------------
             // Dynamic Lighting [variant: DYN]
@@ -178,6 +178,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "vsmDepthScale",           0, Type::FLOAT                  },
             { "vsmLightBleedReduction",  0, Type::FLOAT                  },
             { "shadowSamplingType",      0, Type::UINT                   },
+
             // ------------------------------------------------------------------------------------
             // Fog [variant: FOG]
             // ------------------------------------------------------------------------------------
