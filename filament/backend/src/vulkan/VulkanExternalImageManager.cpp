@@ -142,10 +142,10 @@ void VulkanExternalImageManager::updateSetAndLayout(
         return std::get<0>(a) < std::get<0>(b);
     });
 
-    utils::FixedCapacityVector<VkSampler> outSamplers;
+    utils::FixedCapacityVector<std::pair<uint8_t,VkSampler>> outSamplers;
     outSamplers.reserve(MAX_SAMPLER_COUNT);
     std::for_each(samplerAndBindings.begin(), samplerAndBindings.end(),
-            [&](auto const& b) { outSamplers.push_back(std::get<1>(b)); });
+            [&](auto const& b) { outSamplers.push_back({ std::get<0>(b), std::get<1>(b) }); });
 
     VkDescriptorSetLayout const newLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
             actualExternalSamplers, outSamplers);

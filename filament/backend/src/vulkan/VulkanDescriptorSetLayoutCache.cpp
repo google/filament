@@ -62,7 +62,7 @@ uint32_t appendBindings(VkDescriptorSetLayoutBinding* toBind, VkDescriptorType t
 
 uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
         fvkutils::SamplerBitmask const& mask, fvkutils::SamplerBitmask const& external,
-        utils::FixedCapacityVector<VkSampler> const& immutableSamplers) {
+        utils::FixedCapacityVector<std::pair<uint8_t, VkSampler>> const& immutableSamplers) {
     using Bitmask = fvkutils::SamplerBitmask;
     uint32_t count = 0;
     Bitmask alreadySeen;
@@ -92,7 +92,7 @@ uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
                 .descriptorCount = 1,
                 .stageFlags = stages,
                 .pImmutableSamplers = external[index] && immutableSamplerCount > immutableIndex
-                                              ? &immutableSamplers[immutableIndex++]
+                                              ? &(immutableSamplers[immutableIndex++].second)
                                               : nullptr,
             };
         }
@@ -100,12 +100,11 @@ uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
     return count;
 }
 
-uint64_t computeImmutableSamplerHash(utils::FixedCapacityVector<VkSampler> const& samplers) {
+uint64_t computeImmutableSamplerHash(
+        utils::FixedCapacityVector<std::pair<uint8_t, VkSampler>> const& samplers) {
     size_t const size = samplers.size();
     if (size == 0) {
         return 0;
-    } else if (size == 1) {
-        return (uint64_t) samplers[0];
     }
     return utils::hash::murmur3((uint32_t*) samplers.data(), samplers.size() * 2, 0);
 }
@@ -128,7 +127,7 @@ void VulkanDescriptorSetLayoutCache::terminate() noexcept {
 VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
         VulkanDescriptorSetLayout::Bitmask const& bitmasks,
         fvkutils::SamplerBitmask externalSamplers,
-        utils::FixedCapacityVector<VkSampler> immutableSamplers) {
+        utils::FixedCapacityVector<std::pair<uint8_t, VkSampler>> immutableSamplers) {
     LayoutKey key = {
         .bitmask = bitmasks,
         .immutableSamplerHash = computeImmutableSamplerHash(immutableSamplers),
