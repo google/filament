@@ -904,6 +904,11 @@ add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 
+# imageio and deps (imageio is needed for viewer)
+add_subdirectory(${LIBRARIES}/imageio)
+add_subdirectory(${EXTERNAL}/libpng/tnt)
+add_subdirectory(${EXTERNAL}/tinyexr/tnt)
+add_subdirectory(${EXTERNAL}/libz/tnt)
 
 # Note that this has to be placed after mikktspace in order for combine_static_libs to work.
 add_subdirectory(${LIBRARIES}/geometry)
@@ -959,16 +964,12 @@ if (IS_HOST_PLATFORM)
     if (NOT FILAMENT_SKIP_SDL2)
       add_subdirectory(${LIBRARIES}/filamentapp)
     endif()
-    add_subdirectory(${LIBRARIES}/imageio)
     add_subdirectory(${LIBRARIES}/filament-matp)
 
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${EXTERNAL}/libassimp/tnt)
-    add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/libsdl2/tnt)
-    add_subdirectory(${EXTERNAL}/libz/tnt)
-    add_subdirectory(${EXTERNAL}/tinyexr/tnt)
 
     add_subdirectory(${TOOLS}/cmgen)
     add_subdirectory(${TOOLS}/cso-lut)
