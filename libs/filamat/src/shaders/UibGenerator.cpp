@@ -121,7 +121,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "logicalViewportOffset",  0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 
             { "lodBias",                0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT },
             { "derivativesScale",       0, Type::FLOAT2                  },
 
             { "oneOverFarMinusNear",    0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
