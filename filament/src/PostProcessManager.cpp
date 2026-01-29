@@ -1001,11 +1001,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
                 FMaterial* ma = material.getMaterial(mEngine, driver);
                 {
-                    FMaterial::SpecializationConstantsBuilder maConstants =
-                            ma->getSpecializationConstantsBuilder();
-                    maConstants.set("useVisibilityBitmasks", options.gtao.useVisibilityBitmasks);
-                    maConstants.set("linearThickness", options.gtao.linearThickness);
-                    ma->setSpecializationConstants(std::move(maConstants));
+                    MaterialPrograms& programs = ma->getPrograms();
+                    programs.setConstant("useVisibilityBitmasks", options.gtao.useVisibilityBitmasks);
+                    programs.setConstant("linearThickness", options.gtao.linearThickness);
+                    programs.flushConstants();
                 }
 
                 ma = material.getMaterial(mEngine, driver);
@@ -2927,20 +2926,20 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         TemporalAntiAliasingOptions const& taaOptions) noexcept {
 
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine, driver);
-    FMaterial::SpecializationConstantsBuilder maConstants = ma->getSpecializationConstantsBuilder();
+    MaterialPrograms& programs = ma->getPrograms();
 
-    maConstants.set("upscaling", taaOptions.upscaling > 1.0f);
-    maConstants.set("historyReprojection", taaOptions.historyReprojection);
-    maConstants.set("filterHistory", taaOptions.filterHistory);
-    maConstants.set("filterInput", taaOptions.filterInput);
-    maConstants.set("useYCoCg", taaOptions.useYCoCg);
-    maConstants.set("hdr", taaOptions.hdr);
-    maConstants.set("preventFlickering", taaOptions.preventFlickering);
-    maConstants.set("boxType", int32_t(taaOptions.boxType));
-    maConstants.set("boxClipping", int32_t(taaOptions.boxClipping));
-    maConstants.set("varianceGamma", taaOptions.varianceGamma);
+    programs.setConstant("upscaling", taaOptions.upscaling > 1.0f);
+    programs.setConstant("historyReprojection", taaOptions.historyReprojection);
+    programs.setConstant("filterHistory", taaOptions.filterHistory);
+    programs.setConstant("filterInput", taaOptions.filterInput);
+    programs.setConstant("useYCoCg", taaOptions.useYCoCg);
+    programs.setConstant("hdr", taaOptions.hdr);
+    programs.setConstant("preventFlickering", taaOptions.preventFlickering);
+    programs.setConstant("boxType", int32_t(taaOptions.boxType));
+    programs.setConstant("boxClipping", int32_t(taaOptions.boxClipping));
+    programs.setConstant("varianceGamma", taaOptions.varianceGamma);
 
-    ma->setSpecializationConstants(std::move(maConstants));
+    programs.flushConstants();
 }
 
 FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::DriverApi& driver,
@@ -2949,11 +2948,10 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
         uint32_t const width, uint32_t const height) noexcept {
     FMaterial* ma = material.getMaterial(mEngine, driver);
     {
-        FMaterial::SpecializationConstantsBuilder maConstants =
-                ma->getSpecializationConstantsBuilder();
-        maConstants.set("isOneDimensional", colorGrading->isOneDimensional());
-        maConstants.set("isLDR", colorGrading->isLDR());
-        ma->setSpecializationConstants(std::move(maConstants));
+        MaterialPrograms& programs = ma->getPrograms();
+        programs.setConstant("isOneDimensional", colorGrading->isOneDimensional());
+        programs.setConstant("isLDR", colorGrading->isLDR());
+        programs.flushConstants();
     }
 
     PostProcessVariant const variant = colorGradingConfig.translucent

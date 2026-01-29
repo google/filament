@@ -163,7 +163,8 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
           mUseUboBatching(shouldEnableBatching(engine, builder->mUboBatchingMode,
                   definition.materialDomain)),
           mEngine(engine),
-          mMaterialId(engine.getMaterialId()) {
+          mMaterialId(engine.getMaterialId()),
+          mPrograms(engine, *this, processSpecializationConstants(builder)) {
 
     FILAMENT_CHECK_PRECONDITION(!mUseUboBatching || engine.isUboBatchingEnabled())
             << "UBO batching is not enabled.";
@@ -175,29 +176,6 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
     mDepthPrecacheDisabled =
             driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
     mDefaultMaterial = engine.getDefaultMaterial();
-
-    FixedCapacityVector<Program::SpecializationConstant> specializationConstants =
-            processSpecializationConstants(builder);
-    mSpecializationConstants =
-            engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
-                    std::move(specializationConstants));
-
-    size_t cachedProgramsSize;
-    switch (mDefinition.materialDomain) {
-        case filament::MaterialDomain::SURFACE:
-            cachedProgramsSize = 1 << VARIANT_BITS;
-            break;
-        case filament::MaterialDomain::POST_PROCESS:
-            cachedProgramsSize = 1 << POST_PROCESS_VARIANT_BITS;
-            break;
-        case filament::MaterialDomain::COMPUTE:
-            cachedProgramsSize = 1;
-            break;
-    }
-    mCachedPrograms = FixedCapacityVector<backend::Handle<backend::HwProgram>>(cachedProgramsSize);
-
-    mDefinition.acquirePrograms(engine, mCachedPrograms.as_slice(), getMaterialParser(),
-            mSpecializationConstants, mIsDefaultMaterial);
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.
@@ -237,11 +215,7 @@ void FMaterial::terminate(FEngine& engine) {
     }
 #endif
 
-    mDefinition.releasePrograms(engine, mCachedPrograms.as_slice(),
-            getMaterialParser(), mSpecializationConstants, mIsDefaultMaterial);
-    engine.getMaterialCache().releaseMaterial(engine, mDefinition);
-    engine.getMaterialCache().getSpecializationConstantsInternPool().release(
-            mSpecializationConstants);
+    mPrograms.terminate(engine);
 }
 
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
@@ -306,22 +280,6 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     }
 }
 
-Handle<HwProgram> FMaterial::prepareProgramSlow(DriverApi& driver, Variant const variant,
-        CompilerPriorityQueue const priorityQueue) const noexcept {
-    if (isSharedVariant(variant)) {
-        FMaterial const* defaultMaterial = mEngine.getDefaultMaterial();
-        FILAMENT_CHECK_PRECONDITION(defaultMaterial);
-        Handle<HwProgram> program = defaultMaterial->mCachedPrograms[variant.key];
-        if (program) {
-            return mCachedPrograms[variant.key] = program;
-        }
-        return mCachedPrograms[variant.key] =
-                defaultMaterial->prepareProgram(driver, variant, priorityQueue);
-    }
-    return mCachedPrograms[variant.key] = mDefinition.prepareProgram(mEngine, driver,
-            getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
-}
-
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
     if (mDefaultMaterialInstance) {
         // if we have a default instance, use it to create a new one
@@ -354,14 +312,6 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 BufferInterfaceBlock::FieldInfo const* FMaterial::reflect(
         std::string_view const name) const noexcept {
     return mDefinition.uniformInterfaceBlock.getFieldInfo(name);
-}
-
-ProgramSpecialization FMaterial::getProgramSpecialization(Variant const variant) const noexcept {
-    return ProgramSpecialization {
-        .materialCrc32 = mDefinition.getMaterialParser().getCrc32(),
-        .variant = variant,
-        .specializationConstants = mSpecializationConstants,
-    };
 }
 
 size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
@@ -430,8 +380,7 @@ void FMaterial::updateActiveProgramsForMatdbg(Variant const variant) const noexc
 void FMaterial::applyPendingEdits() noexcept {
     const char* name = mDefinition.name.c_str();
     DLOG(INFO) << "Applying edits to " << (name ? name : "(untitled)");
-    mDefinition.releasePrograms(mEngine, mCachedPrograms.as_slice(), getMaterialParser(),
-            mSpecializationConstants, mIsDefaultMaterial);
+    mPrograms.clear(mEngine);
     latchPendingEdits();
 }
 
@@ -479,26 +428,6 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pActiveVariants) {
 /** @}*/
 
 #endif // FILAMENT_ENABLE_MATDBG
-
-void FMaterial::setSpecializationConstants(SpecializationConstantsBuilder&& builder) noexcept {
-    if (builder.mConstants.empty()) {
-        // Nothing was changed.
-        return;
-    }
-
-    auto& internPool = mEngine.getMaterialCache().getSpecializationConstantsInternPool();
-    MaterialParser const& materialParser = getMaterialParser();
-
-    // Release old resources...
-    mDefinition.releasePrograms(mEngine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, mIsDefaultMaterial);
-    internPool.release(mSpecializationConstants);
-
-    // Then acquire new ones.
-    mSpecializationConstants = internPool.acquire(std::move(builder.mConstants));
-    mDefinition.acquirePrograms(mEngine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, mIsDefaultMaterial);
-}
 
 FixedCapacityVector<Program::SpecializationConstant> FMaterial::processSpecializationConstants(
         Builder const& builder) {
@@ -559,13 +488,5 @@ const char* FMaterial::getParameterTransformName(std::string_view samplerName) c
     }
     return info->transformName.c_str();
 }
-
-template FMaterial::SpecializationConstantsBuilder& FMaterial::SpecializationConstantsBuilder::set<int32_t>(uint32_t id, int32_t value) noexcept;
-template FMaterial::SpecializationConstantsBuilder& FMaterial::SpecializationConstantsBuilder::set<float>(uint32_t id, float value) noexcept;
-template FMaterial::SpecializationConstantsBuilder& FMaterial::SpecializationConstantsBuilder::set<bool>(uint32_t id, bool value) noexcept;
-
-template FMaterial::SpecializationConstantsBuilder& FMaterial::SpecializationConstantsBuilder::set<int32_t>(std::string_view name, int32_t value) noexcept;
-template FMaterial::SpecializationConstantsBuilder& FMaterial::SpecializationConstantsBuilder::set<float>(std::string_view name, float value) noexcept;
-template FMaterial::SpecializationConstantsBuilder& FMaterial::SpecializationConstantsBuilder::set<bool>(std::string_view name, bool value) noexcept;
 
 } // namespace filament

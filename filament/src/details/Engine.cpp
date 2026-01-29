@@ -538,12 +538,11 @@ void FEngine::init() {
             &debug.shadowmap.debug_directional_shadowmap, [this] {
                 mMaterials.forEach([this](FMaterial* material) {
                     if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
-                        FMaterial::SpecializationConstantsBuilder constants =
-                                material->getSpecializationConstantsBuilder();
-                        constants.set(+ReservedSpecializationConstants::
-                                              CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
+                        MaterialPrograms& programs = material->getPrograms();
+                        programs.setConstant(+ReservedSpecializationConstants::
+                                                     CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
                                 debug.shadowmap.debug_directional_shadowmap);
-                        material->setSpecializationConstants(std::move(constants));
+                        programs.flushConstants();
                     }
                 });
             });
@@ -552,12 +551,11 @@ void FEngine::init() {
             &debug.lighting.debug_froxel_visualization, [this] {
                 mMaterials.forEach([this](FMaterial* material) {
                     if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
-                        FMaterial::SpecializationConstantsBuilder constants =
-                                material->getSpecializationConstantsBuilder();
-                        constants.set(+ReservedSpecializationConstants::
-                                              CONFIG_DEBUG_FROXEL_VISUALIZATION,
+                        MaterialPrograms& programs = material->getPrograms();
+                        programs.setConstant(
+                                +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
                                 debug.lighting.debug_froxel_visualization);
-                        material->setSpecializationConstants(std::move(constants));
+                        programs.flushConstants();
                     }
                 });
             });
