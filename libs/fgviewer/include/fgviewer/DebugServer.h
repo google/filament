@@ -30,6 +30,7 @@ class CivetServer;
 namespace filament::fgviewer {
 
 using ViewHandle = uint32_t;
+class WebSocketHandler;
 
 /**
  * Server-side frame graph debugger.
@@ -71,9 +72,11 @@ private:
 
     class FileRequestHandler* mFileHandler = nullptr;
     class ApiHandler* mApiHandler = nullptr;
+    class WebSocketHandler* mWebSocketHandler = nullptr;
 
     friend class FileRequestHandler;
     friend class ApiHandler;
+    friend class WebSocketHandler;
 };
 
 } // namespace filament::fgviewer
