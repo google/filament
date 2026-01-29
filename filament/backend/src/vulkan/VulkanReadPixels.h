@@ -32,6 +32,7 @@
 namespace filament::backend {
 
 struct VulkanRenderTarget;
+struct VulkanTexture;
 
 class VulkanReadPixels {
 public:
@@ -76,6 +77,12 @@ public:
     void run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget, uint32_t x, uint32_t y,
             uint32_t width, uint32_t height, uint32_t graphicsQueueFamilyIndex,
             PixelBufferDescriptor&& pbd, SelecteMemoryFunction const& selectMemoryFunc,
+            OnReadCompleteFunction const& readCompleteFunc);
+
+    void run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, uint8_t level, uint16_t layer,
+            uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+            uint32_t graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
+            SelecteMemoryFunction const& selectMemoryFunc,
             OnReadCompleteFunction const& readCompleteFunc);
 
     // This method will block until all of the in-flight requests are complete.

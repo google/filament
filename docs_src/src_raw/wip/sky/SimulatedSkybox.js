@@ -21,12 +21,21 @@ class SimulatedSkybox {
     this.cloudControl = [0.0, 0.1, 8000.0, 0.0];
     this.cloudControl2 = [0.0, 0.0, 0.0, 0.0];
     this.waterControl = [50.0, 1.0, 1.0, 4.0]; // x=Strength, y=Speed, z=DerivativeTrick, w=Octaves
-    this.starControl = [1.0, 1.0]; // x=Density (0-1), y=Enabled (0-1)
+    this.starControl = [0.001, 1.0, 350.0, 0.01]; // x=Density, y=Enabled, z=Frequency, w=PixelScale
+    this.focalLength = 24.0;
+    this.height = 1000.0;
     this.planetRadius = 6360.0;
 
     // Sun Halo
     // x=cos(rad), y=limbDarkening, z=intensity, w=enabled
+    // Sun Halo
     this.sunHalo = [Math.cos(0.5 * Math.PI / 180.0), 0.5, 1.0, 1.0];
+
+    // Moon Parameters (Mapped to Secondary Sun)
+    this.moonDirection = [-0.2, 0.8, -0.2]; // Default Moon Pos
+    this.moonIntensity = 1.0; // Scale Factor (1.0 = Physical Peak)
+    // x=cos(rad), y=sin(rad) [Precision Fix], z=intensity, w=enabled
+    this.moonHalo = [Math.cos(0.5 * Math.PI / 180.0), Math.sin(0.5 * Math.PI / 180.0), 1.0, 0.0]; // Disabled by default
 
     this.initEntity();
   }
@@ -215,8 +224,71 @@ class SimulatedSkybox {
   }
 
   setStarControl(density, enabled) {
-    this.starControl[0] = Math.max(0.0, Math.min(1.0, density));
+    // Compensate for grid frequency reduction (350 -> 100)
+    // Fewer cells = fewer stars, so we increase density threshold.
+    // Factor ~ (350/100)^2 = 12.25
+    const compensatedDensity = density * 12.0;
+    this.starControl[0] = Math.max(0.0, Math.min(1.0, compensatedDensity));
     this.starControl[1] = enabled ? 1.0 : 0.0;
+    this.updateCoefficients();
+  }
+
+  setFocalLength(mm) {
+    this.focalLength = Math.max(1.0, mm);
+    this.updateStarFrequency();
+  }
+
+  setResolution(height) {
+    this.height = Math.max(1.0, height);
+    this.updateStarFrequency();
+  }
+
+  updateStarFrequency() {
+    // World-Anchored Stars
+    // z = Fixed Frequency (World Space Grid)
+    // w = Pixel Scale (Screen Space Radius)
+
+    // Fixed Frequency: Defines the "Universe" coordinate system. 
+    // Reduced to 100.0 to allow larger stars without clipping (square artifacts).
+    this.starControl[2] = 100.0;
+
+    // Pixel Scale in Radians
+    // We use linear scaling (24/f) instead of atan(fov) to ensure star size remains
+    // constant in pixels across all focal lengths (Perspective Projection).
+    const fovFactor = 24.0 / this.focalLength;
+    const pixelScale = (1.0 / this.height) * fovFactor;
+
+    // Pass to shader (w component)
+    // Target radius: 1.3 pixels (Diameter 2.6 pixels)
+    // Visible but sharp.
+    this.starControl[3] = pixelScale * 1.3;
+
+    this.updateCoefficients();
+  }
+
+  setMoonPosition(direction) {
+    // normalize
+    const len = Math.hypot(direction[0], direction[1], direction[2]);
+    if (len > 0) {
+      this.moonDirection = [direction[0] / len, direction[1] / len, direction[2] / len];
+    }
+    this.updateCoefficients();
+  }
+
+  setMoonIntensity(intensity) {
+    this.moonIntensity = Math.max(0.0, intensity);
+    this.updateCoefficients();
+  }
+
+  setMoonRadius(degrees) {
+    const rad = degrees * (Math.PI / 180.0);
+    this.moonHalo[0] = Math.cos(rad);
+    this.moonHalo[1] = Math.sin(rad);
+    this.updateCoefficients();
+  }
+
+  setMoonEnabled(enabled) {
+    this.moonHalo[3] = enabled ? 1.0 : 0.0;
     this.updateCoefficients();
   }
 
@@ -297,15 +369,119 @@ class SimulatedSkybox {
 
     this.materialInstance.setFloatParameter('contrast', this.contrast);
 
-    const nightColorScaled = this.nightColor.map(v => v * this.sunIntensity);
+    const nightColorScaled = this.nightColor.map(v => v * this.sunIntensity); // Lux scaling
     this.materialInstance.setFloat3Parameter('nightColor', new Float32Array(nightColorScaled));
 
     this.materialInstance.setFloat4Parameter('shimmerControl', new Float32Array(shimmerUniform));
     this.materialInstance.setFloat4Parameter('cloudControl', new Float32Array(cloudUniform));
     this.materialInstance.setFloat4Parameter('cloudControl2', new Float32Array(this.cloudControl2));
     this.materialInstance.setFloat4Parameter('waterControl', new Float32Array(this.waterControl));
-    this.materialInstance.setFloat2Parameter('starControl', new Float32Array(this.starControl));
+    this.materialInstance.setFloat4Parameter('starControl', new Float32Array(this.starControl));
 
     this.materialInstance.setFloatParameter('sunIntensity', physicalSunIntensity);
+
+    // Moon Upload (Secondary Sun)
+    this.materialInstance.setFloat3Parameter('sunDirection2', new Float32Array(this.moonDirection));
+
+    // Calculate Moon Phase Factor (Lambertian Sphere)
+    // We model the moon as a Lambertian sphere to calculate its integrated brightness (illuminance)
+    // based on the phase angle (angle between Sun-Moon and Observer-Moon vectors).
+    //
+    // Phase Angle (alpha):
+    // For a distant observer (Earth), the phase angle can be approximated as the angle between
+    // the vector to the Sun and the vector to the Earth (from the Moon).
+    // cos(alpha) = -dot(L_moon, L_sun)
+    //
+    // Lambertian Phase Law:
+    // The integrated flux of a lit sphere varies as:
+    // Phi(alpha) = (1/PI) * (sin(alpha) + (PI - alpha) * cos(alpha))
+    // This gives 1.0 at Full Moon (alpha=0) and 0.0 at New Moon (alpha=PI).
+
+    const dotSM = this.sunDirection[0] * this.moonDirection[0] +
+      this.sunDirection[1] * this.moonDirection[1] +
+      this.sunDirection[2] * this.moonDirection[2];
+
+    // Final Intensity = Peak * Scale (No Phase Factor - Phase is handled in Shader via N.L)
+    const MOON_PEAK_LUX = 5000.0;
+    const finalMoonIntensity = MOON_PEAK_LUX * this.moonIntensity;
+
+    this.materialInstance.setFloatParameter('sunIntensity2', finalMoonIntensity);
+
+    // Moon Halo Upload (Disk Visualization)
+    // Multiplier = 1.0 / SolidAngle
+    const moonSolidAngle = 2.0 * F_PI * (1.0 - this.moonHalo[0]);
+    const moonRadConv = 1.0 / Math.max(1e-9, moonSolidAngle);
+    const moonHaloUpload = [...this.moonHalo];
+    moonHaloUpload[2] *= moonRadConv;
+    this.materialInstance.setFloat4Parameter('sunHalo2', new Float32Array(moonHaloUpload));
+
+    // Solar Eclipse (CPU Calculation)
+    const sunRadius = Math.acos(this.sunHalo[0]);
+    const moonRadius = Math.acos(this.moonHalo[0]);
+    // Dot product of Sun and Moon directions
+    const dot = this.sunDirection[0] * this.moonDirection[0] +
+      this.sunDirection[1] * this.moonDirection[1] +
+      this.sunDirection[2] * this.moonDirection[2];
+    const separation = Math.acos(Math.max(-1.0, Math.min(1.0, dot)));
+
+    let eclipseFactor = 1.0;
+    // Only calculate if moon is enabled
+    if (this.moonHalo[3] > 0.5) {
+      const overlap = this.areaIntersection(sunRadius, moonRadius, separation);
+      const sunArea = Math.PI * sunRadius * sunRadius;
+      // Ensure we don't divide by zero and clamp result
+      const ratio = overlap / Math.max(1e-9, sunArea);
+      eclipseFactor = 1.0 - Math.max(0.0, Math.min(1.0, ratio));
+
+    }
+
+    // Safety check for NaN
+    if (isNaN(eclipseFactor)) {
+      console.warn("SimulatedSkybox: eclipseFactor is NaN, resetting to 1.0");
+      eclipseFactor = 1.0;
+    }
+
+
+
+    this.materialInstance.setFloatParameter('eclipseFactor', eclipseFactor);
+  }
+
+  areaIntersection(r1, r2, d) {
+    // Circle intersection area
+    // r1, r2: radii
+    // d: distance between centers
+
+    // Case 1: Too far apart
+    if (d >= r1 + r2) {
+      return 0.0;
+    }
+    // Case 2: One inside another
+    if (d <= Math.abs(r1 - r2)) {
+      return Math.PI * Math.min(r1, r2) * Math.min(r1, r2);
+    }
+
+    const r1sq = r1 * r1;
+    const r2sq = r2 * r2;
+
+    // Law of Cosines for sector angles
+    // c1 = (d^2 + r1^2 - r2^2) / (2 * d * r1)
+    // c2 = (d^2 + r2^2 - r1^2) / (2 * d * r2)
+    // We clamp to [-1, 1] to avoid NaN from floating point errors
+    const c1 = Math.max(-1.0, Math.min(1.0, (d * d + r1sq - r2sq) / (2.0 * d * r1)));
+    const c2 = Math.max(-1.0, Math.min(1.0, (d * d + r2sq - r1sq) / (2.0 * d * r2)));
+
+    const part1 = r1sq * Math.acos(c1);
+    const part2 = r2sq * Math.acos(c2);
+
+    // Heron's formula for the triangle area * 2 (or just 0.5 * sin(angle) *r*r but we have sides)
+    // part3 is Area of kite? No, part3 is sum of two triangles?
+    // Formula: Area = r1^2 * acos(c1) + r2^2 * acos(c2) - 0.5 * sqrt...
+    // The sqrt term represents the area of the two triangles formed by the chord and centers.
+
+    // Robust sqrt
+    const val = (-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2);
+    const part3 = 0.5 * Math.sqrt(Math.max(0.0, val));
+
+    return part1 + part2 - part3;
   }
 }

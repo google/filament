@@ -969,7 +969,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
 
             // check we have enough capacity to write these commandCount commands, if not,
             // request a new CircularBuffer allocation of `capacity` bytes.
-            if (UTILS_UNLIKELY(circularBuffer.getUsed() > capacity - commandSizeInBytes)) {
+            if (UTILS_UNLIKELY(circularBuffer.getUsed() + commandSizeInBytes > capacity)) {
                 // FIXME: eventually we can't flush here because this will be a secondary
                 //        command buffer. We will need another solution for overflows.
                 const_cast<FEngine&>(engine).flush();
