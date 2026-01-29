@@ -1499,10 +1499,9 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
     const uint32_t srcHeight {srcTexture.GetHeight()};
     const uint32_t srcMipLevelCount {srcTexture.GetMipLevelCount()};
 
-    const uint32_t mipLevelImageScale = 1 << srcMipLevel;
-    const uint32_t mipLeveledSrcWidth = srcWidth / mipLevelImageScale;
-    const uint32_t mipLeveledSrcHeight = srcHeight / mipLevelImageScale;
-    assert_invariant(mipLeveledSrcWidth > 0 && mipLeveledSrcHeight > 0);
+    constexpr uint32_t minValidTextureSize = 1;
+    const uint32_t mipLeveledSrcWidth = std::max(minValidTextureSize, srcWidth >> srcMipLevel);
+    const uint32_t mipLeveledSrcHeight = std::max(minValidTextureSize, srcHeight >> srcMipLevel);
 
     // Clamp read region to texture bounds
     if (UTILS_UNLIKELY(x >= mipLeveledSrcWidth || y >= mipLeveledSrcHeight)) {
