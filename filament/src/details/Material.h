@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DETAILS_MATERIAL_H
 
 #include "downcast.h"
+#include "MaterialPrograms.h"
 
 #include "details/MaterialInstance.h"
 
@@ -45,7 +46,6 @@
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
-#include <optional>
 #include <string_view>
 
 #include <stddef.h>
@@ -185,11 +185,7 @@ public:
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
             Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
-        if (UTILS_LIKELY(program)) {
-            return program;
-        }
-        return prepareProgramSlow(driver, variant, priorityQueue);
+        return mPrograms.prepareProgram(driver, variant, priorityQueue);
     }
 
     // getProgram returns the backend program for the material's given variant.
@@ -199,9 +195,7 @@ public:
 #if FILAMENT_ENABLE_MATDBG
         updateActiveProgramsForMatdbg(variant);
 #endif
-        backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
-        assert_invariant(program);
-        return program;
+        return mPrograms.getProgram(variant);
     }
 
     // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
@@ -258,6 +252,8 @@ public:
     float getSpecularAntiAliasingVariance() const noexcept { return mDefinition.specularAntiAliasingVariance; }
     float getSpecularAntiAliasingThreshold() const noexcept { return mDefinition.specularAntiAliasingThreshold; }
 
+    bool isDefaultMaterial() const noexcept { return mIsDefaultMaterial; }
+
     backend::descriptor_binding_t getSamplerBinding(
             std::string_view const& name) const;
 
@@ -282,7 +278,7 @@ public:
 
     // Update specialization constants.
     SpecializationConstantsBuilder getSpecializationConstantsBuilder() const noexcept {
-        return SpecializationConstantsBuilder(mDefinition, mSpecializationConstants);
+        return SpecializationConstantsBuilder(mDefinition, mPrograms.getSpecializationConstants());
     }
 
     void setSpecializationConstants(SpecializationConstantsBuilder&& builder) noexcept;
@@ -298,6 +294,24 @@ public:
     std::string_view getSource() const noexcept {
         return mDefinition.source.c_str_safe();
     }
+
+    inline bool isSharedVariant(Variant const variant) const {
+        return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
+               !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant);
+    }
+
+    MaterialParser const& getMaterialParser() const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+        if (mEditedMaterialParser) {
+            return *mEditedMaterialParser;
+        }
+#endif
+        return mDefinition.getMaterialParser();
+    }
+
+    MaterialDefinition const& getDefinition() const noexcept { return mDefinition; }
+
+    MaterialPrograms const& getPrograms() const noexcept { return mPrograms; }
 
 #if FILAMENT_ENABLE_MATDBG
     void applyPendingEdits() noexcept;
@@ -332,21 +346,6 @@ public:
 #endif
 
 private:
-    MaterialParser const& getMaterialParser() const noexcept {
-#if FILAMENT_ENABLE_MATDBG
-        if (mEditedMaterialParser) {
-            return *mEditedMaterialParser;
-        }
-#endif
-        return mDefinition.getMaterialParser();
-    }
-
-    ProgramSpecialization getProgramSpecialization(Variant const variant) const noexcept;
-
-    backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
-            Variant const variant,
-            backend::CompilerPriorityQueue const priorityQueue) const noexcept;
-
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>
             processSpecializationConstants(Builder const& builder);
 
@@ -354,12 +353,6 @@ private:
 
     void createAndCacheProgram(backend::DriverApi& driver, backend::Program&& p, Variant variant) const noexcept;
 
-    inline bool isSharedVariant(Variant const variant) const {
-        return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
-               !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant);
-    }
-
-    mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     MaterialDefinition const& mDefinition;
 
     bool mIsDefaultMaterial = false;
@@ -373,9 +366,6 @@ private:
 
     // reserve some space to construct the default material instance
     mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
-
-    // current specialization constants for the HwProgram
-    utils::Slice<const backend::Program::SpecializationConstant> mSpecializationConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
@@ -394,6 +384,8 @@ private:
     FEngine& mEngine;
     const uint32_t mMaterialId;
     mutable uint32_t mMaterialInstanceId = 0;
+
+    MaterialPrograms mPrograms;
 };
 
 
