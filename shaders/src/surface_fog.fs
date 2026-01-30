@@ -3,6 +3,8 @@
 // see: Real-time Atmospheric Effects in Games (Carsten Wenzel)
 //------------------------------------------------------------------------------
 
+#if MATERIAL_FEATURE_LEVEL > 0
+
 vec4 fog(vec4 color, highp vec3 view) {
     // note: d can be +inf with the skybox
     highp float d = length(view);
@@ -150,3 +152,5 @@ vec4 fogLinear(vec4 color, highp vec3 view) {
 
     return color;
 }
+
+#endif  // MATERIAL_FEATURE_LEVEL > 0
