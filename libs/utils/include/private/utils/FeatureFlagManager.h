@@ -67,7 +67,7 @@ public:
             } frame_info;
             // Automatically requests a frame skip when the CPU gets too much ahead of the display. This can prevent
             // stalls on Android, e.g. when running out buffers, but this also keeps the expected latency in check.
-            bool skip_frame_when_cpu_ahead_of_display = false;
+            bool skip_frame_when_cpu_ahead_of_display = true;
             bool enable_program_cache = false;
         } engine;
         struct {
@@ -95,6 +95,7 @@ public:
         struct {
             bool check_crc32_after_loading = false;
             bool enable_material_instance_uniform_batching = false;
+            bool enable_fog_as_postprocess = false;
         } material;
     } features;
 
