@@ -168,8 +168,13 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
     FILAMENT_CHECK_PRECONDITION(!mUseUboBatching || engine.isUboBatchingEnabled())
             << "UBO batching is not enabled.";
 
-    mDepthPrecacheDisabled = engine.getDriverApi().isWorkaroundNeeded(
-            Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
+    DriverApi& driver = engine.getDriverApi();
+
+    mIsStereoSupported = driver.isStereoSupported();
+    mIsParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
+    mDepthPrecacheDisabled =
+            driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
+    mDefaultMaterial = engine.getDefaultMaterial();
 
     FixedCapacityVector<Program::SpecializationConstant> specializationConstants =
             processSpecializationConstants(builder);

@@ -45,6 +45,11 @@ material {
            precision : high
         },
         {
+           type : float,
+           name : eclipseFactor,
+           precision : high
+        },
+        {
            type : float4,
            name : multiScatParams, // xyz=MultiScatteringColor, w=HorizonGlow
            precision : high
@@ -85,8 +90,8 @@ material {
             precision : high
         },
         {
-            type : float2,
-            name : starControl, // x=Density, y=Enabled
+            type : float4,
+            name : starControl, // x=Density, y=Enabled, z=Frequency, w=PixelScale
             precision : high
         }
     ],
@@ -125,6 +130,38 @@ fragment {
     // ------------------------------------------------------------------------
 
     #define PI 3.14159265359
+
+    // --- CONFIGURATION ---
+
+    // Stars
+    #define STAR_GLOBAL_INTENSITY 150.0      // Master brightness multiplier [0.0 - 500.0]
+    #define STAR_BRIGHTNESS_BASE 0.5         // Minimum random brightness [0.0 - 1.0]
+    #define STAR_BRIGHTNESS_VAR 4.0          // Random brightness variance range [0.0 - 10.0]
+    #define STAR_FADE_SUN_ELV_HIGH 0.10      // Sun elevation (sin) where stars are fully hidden [0.0 - 0.5]
+    #define STAR_FADE_SUN_ELV_LOW -0.20      // Sun elevation (sin) where stars are fully visible [-0.5 - 0.0]
+    #define STAR_CLOUD_OCCLUSION 0.1         // Visibility when covered by clouds [0.0 - 1.0]
+
+    // Clouds
+    #define CLOUD_UV_SCALE 0.05              // Texture scale in km^-1 [0.01 - 0.1]
+    #define CLOUD_EXTINCTION 20.0            // Beer's law coefficient (Opacity) [1.0 - 50.0]
+    #define CLOUD_SILVER_INTENSITY 40.0      // Silver lining brightness boost [0.0 - 100.0]
+    #define CLOUD_SILVER_G 0.9               // Silver lining anisotropy (0.0=iso, 1.0=forward)
+    #define CLOUD_AMBIENT_MIN 0.1            // Minimum ambient light in thick clouds [0.0 - 0.5]
+    #define VOLUMETRIC_SHADOW_STR 0.7        // Center darkening strength for "volume" [0.0 - 1.0]
+
+    // Water
+    #define WATER_PLANE_HEIGHT -10.0         // Virtual plane height relative to camera [meters]
+    #define WATER_UV_SCALE 0.05              // Texture scale for waves [0.01 - 0.2]
+    #define WATER_FRESNEL_F0 0.02            // Base reflectivity (Water is ~0.02) [0.0 - 1.0]
+    #define WATER_DEEP_COLOR vec3(0.0, 0.005, 0.02) // Deep water absorption color [RGB]
+    #define REFLECTION_HORIZON_FADE 0.1      // Normalized height to fade star reflections [0.0 - 0.5]
+    
+    // Moon
+    #define MOON_EARTHSHINE 0.002            // Dark side brightness scalar [0.0 - 0.01]
+    #define MOON_LIMB_SOFTNESS 0.05          // Edge softness relative to radius [0.0 - 0.1]
+
+    // Atmosphere
+    #define HORIZON_GLOW_POWER 5.0           // Horizon glow falloff curve [1.0 - 10.0]
 
     void dummy() {} // squash editor syntax highlighting bugs
 
@@ -277,8 +314,8 @@ fragment {
     // @param depthR        Rayleigh Optical Depth (Precalculated).
     // @param depthM        Mie Optical Depth (Precalculated).
     // @param ozone         Ozone Absorption (Precalculated).
-    // @param msFactors     Multi-Scattering factors (Rayleigh, Mie, Glow).
-    // @param mieG          Mie Phase Anisotropy.
+    // @param multiScatParams     Multi-Scattering factors (Rayleigh, Mie, Glow).
+    // @param mieParams     Mie Phase Params (x=1+g^2, y=-2g).
     // @param outTransmittance  Output: Atmospheric Transmittance (0..1) along V.
     // @return              Output: In-Scattered Radiance (The sky color).
     // ------------------------------------------------------------------------
@@ -323,7 +360,7 @@ fragment {
         // 5. Horizon "Glow" Mix (Artistic Hack)
         // multiScatParams.w contains the Horizon Glow Strength
         // Uses Sun Elevation (L.y) to only activate during golden hour/twilight.
-        mediump float horizonMix = saturate(pow(1.0 - L.y, 5.0)) * multiScatParams.w;
+        mediump float horizonMix = saturate(pow(1.0 - L.y, HORIZON_GLOW_POWER)) * multiScatParams.w;
         highp vec3 horizonGlow = sqrt(inScattering * outTransmittance);
         sunLight *= mix(vec3(1.0), horizonGlow, horizonMix);
 
@@ -430,7 +467,6 @@ fragment {
     // - Lighting includes Silver Lining (HG Phase) and Atmospheric Extinction.
     //
     // PARAMETERS:
-    // @param background   Current Sky Color (to be blended with).
     // @param V            Normalized View Vector.
     // @param L            Normalized Sun Vector.
     // @param control      x=Coverage, y=Density, z=QuadraticConst(C), w=WindSpeed.
@@ -438,23 +474,8 @@ fragment {
     // @param geometry     w=PlanetRadius (Re).
     // @param sunIntensity Sun Illuminance.
     // @param transmittance Atmospheric Transmittance (Cloud Color Tint).
-    // @return             Sky color composed with clouds.
-    // ------------------------------------------------------------------------
-    // ------------------------------------------------------------------------
-    // Procedural Cirrus Clouds
-    // ------------------------------------------------------------------------
-    // Renders a thin layer of high-altitude clouds (Cirrus) using 3D Noise.
-    //
-    // PARAMETERS:
-    // @param V            .
-    // @param L            .
-    // @param control      .
-    // @param control2     .
-    // @param geometry     .
-    // @param sunIntensity .
-    // @param transmittance.
-    // @param outDensity   Output: Cloud Density (0..1).
-    // @return             Cloud Lit Color (pre-multiplied by density? No, just lit color).
+    // @param outDensity   Output: Cloud pixel density (0..1) for compositing.
+    // @return             Cloud Radiance (Lit color * attenuation * shading).
     // ------------------------------------------------------------------------
     highp vec3 getCloudLayer(highp vec3 V, highp vec3 L,
                              highp vec4 control, highp vec4 control2, highp vec4 geometry,
@@ -478,8 +499,8 @@ fragment {
                  highp float time = getUserTime().x;
                  
                  // UV Mapping (Planar projected onto sphere cap is sufficient for skybox)
-                 // Scale factor 0.05 km^-1
-                 highp vec2 uv = (p.xz * 0.05) + vec2(time * speed * 2.0, 0.0);
+                 // Scale factor CLOUD_UV_SCALE km^-1
+                 highp vec2 uv = (p.xz * CLOUD_UV_SCALE) + vec2(time * speed * 2.0, 0.0);
                  
                  // 3D Noise for Morphing
                  highp float noiseVal = fbm(vec3(uv, time * morphSpeed));
@@ -502,15 +523,18 @@ fragment {
                      
                      // Attenuation (Beer's Law)
                      // Thick clouds block light.
-                     // 20.0 is an artistic extinction coefficient.
-                     highp float extinction = exp(-cloudDensity * 20.0);
+                     // CLOUD_EXTINCTION is an artistic extinction coefficient.
+                     highp float extinction = exp(-cloudDensity * CLOUD_EXTINCTION);
                      
-                     highp float silver = hgPhase(cosTheta, vec2(1.81, -1.8)) * 40.0 * extinction;
+                     // 1 + g^2 = 1.0 + CLOUD_SILVER_G*CLOUD_SILVER_G
+                     // -2*g = -2.0 * CLOUD_SILVER_G
+                     // We use hardcoded derived values for g=0.9: 1.81, -1.8
+                     highp float silver = hgPhase(cosTheta, vec2(1.81, -1.8)) * CLOUD_SILVER_INTENSITY * extinction;
                      
                      // Ambient/Diffuse term. 
-                     // We allow some ambient light to pass through even thick clouds (0.05 min)
+                     // We allow some ambient light to pass through even thick clouds (CLOUD_AMBIENT_MIN min)
                      // so they don't look like black holes.
-                     highp float ambient = 0.1 + 0.4 * extinction;
+                     highp float ambient = CLOUD_AMBIENT_MIN + 0.4 * extinction;
                      
                      // Diffuse term (Sun Color) + Silver Lining
                      highp vec3 cloudLight = sunIntensity * transmittance * (ambient + silver);
@@ -540,8 +564,8 @@ fragment {
                          shading = mix(0.3, 1.0, shading * 0.5 + 0.5);
                          
                          // Darken thick parts (Beer's Law approximation)
-                         // Aggressively darken center of clouds
-                         shading *= (1.0 - cloudDensity * 0.7);
+                          // Aggressively darken center of clouds
+                          shading *= (1.0 - cloudDensity * VOLUMETRIC_SHADOW_STR);
                      }
 
                      return cloudLight * shading;
@@ -577,75 +601,83 @@ fragment {
         return pow(max(vec3(0.0), color), vec3(exponent));
     }
 
-    // ------------------------------------------------------------------------
-    // Procedural Water Surface
-    // ------------------------------------------------------------------------
-    // Simulates an infinite ocean plane at y=0 using screen-space derivatives for normals.
-    //
-    // FEATURES:
-    // - Projected grid for infinite surface.
-    // - Screen-space wave normal reconstruction (no geometry required).
-    // - Fresnel reflection of Atmosphere, Sun, and Clouds.
-    // - Specular highlights (Blinn-Phong).
-    //
-    // PARAMETERS:
-    // @param V            Normalized View Vector.
-    // @param L            Normalized Sun Vector.
-    // @param sunIntensity Sun Illuminance.
-    // @param depthR       Rayleigh Optical Depth.
-    // @param depthM       Mie Optical Depth.
-    // @param ozone        Ozone Absorption.
-    // @param multiScatParams Multi-Scattering Params.
-    // @param miePhaseParams Mie Phase Params.
-    // @param sunHalo      Sun Halo Params.
-    // @param cloudControl Cloud Control Params.
-    // @param cloudControl2 Cloud Evolution Params.
-    // @param shimmerControl Shimmer Control (w component used as PlanetRadius for clouds).
-    // @param waterControl Water Control (x=Strength, y=Speed, z=DerivativeTrick).
-    // @return             Water surface color.
-    // ------------------------------------------------------------------------
-    // 3D Noise for Stars
-    highp float hash31(highp vec3 p) {
-        p = fract(p * 0.1031);
-        p += dot(p, p.yzx + 33.33);
-        return fract((p.x + p.y) * p.z);
+    // ------------------------------------------------------------------------------------------------
+    // STARS (World-Anchored)
+    // ------------------------------------------------------------------------------------------------
+
+    // 4-component hash for jitter (xyz) and intensity (w)
+    highp vec4 hash43(highp vec3 p) {
+        highp vec4 p4 = fract(vec4(p.xyzx)  * vec4(0.1031, 0.1030, 0.0973, 0.1099));
+        p4 += dot(p4, p4.wzxy + 33.33);
+        return fract((p4.xxyz + p4.yzzw) * p4.zywx);
     }
 
-    highp float getStars(highp vec3 V, highp float density) {
-        // Simple procedural stars
-        // We use view vector direction to tile the sky
-        // Higher frequency = smaller stars
-        highp float frequency = 300.0; 
-        highp vec3 p = floor(V * frequency);
+    highp float getStars(highp vec3 V) {
+        bool enabled = materialParams.starControl.y > 0.5;
+        if (!enabled) return 0.0;
         
-        highp float h = hash31(p);
+        highp float density = materialParams.starControl.x;
+        if (density <= 0.0) return 0.0;
         
-        // Threshold for stars (very sparse)
-        // param density: 0.0 (none) to 1.0 (max)
-        // Default threshold was 0.995 (0.5% stars)
-        // We map density 0.0 -> 1.0 threshold (no stars)
-        //        density 1.0 -> 0.990 threshold (1.0% stars)
-        highp float threshold = 1.0 - (0.001 + density * 0.009);
-
-        highp float star = 0.0;
-        if (h > threshold) {
-            // Random brightness
-            highp float brightness = (h - threshold) / (1.0 - threshold);
-            star = brightness * 15.0; // Reduced from 50.0 to 15.0
+        // 1. Fixed World Grid (Anchor)
+        // We use a FIXED frequency for the grid, so stars don't move when focal length changes.
+        highp float gridFreq = materialParams.starControl.z; // e.g. 350.0
+        
+        highp vec3 p = V * gridFreq;
+        highp vec3 id = floor(p);
+        
+        // 2. Scan neighbors (1-tap with jitter constraint)
+        // We constrain jitter to be well within cell to avoid edge artifacts with 1 tap.
+        highp vec4 h = hash43(id);
+        
+        // Density check (Probability)
+        if (h.w > density) return 0.0;
+        
+        // 3. World Position of Star Center
+        // Jitter range [0.2, 0.8] to avoid clipping neighbors
+        highp vec3 jitter = 0.2 + 0.6 * h.xyz;
+        highp vec3 starCenter = (id + jitter) / gridFreq;
+        starCenter = normalize(starCenter);
+        
+        // 4. Angular Distance
+        // distSq ~ 2 * (1 - cosC)
+        highp float cosC = dot(V, starCenter);
+        highp float distSq = 2.0 * (1.0 - cosC);
+        
+        // 5. Screen-Adaptive Radius
+        // materialParams.starControl.w contains "Pixel Scale in Radians"
+        // Target radius: 1.5 pixels
+        highp float pixelScaleRad = materialParams.starControl.w;
+        highp float starRadiusRad = 1.0 * pixelScaleRad; // Tunable size
+        highp float starRadiusSq = starRadiusRad * starRadiusRad;
+        
+        // 6. Rendering (Soft Disk)
+        highp float intensity = 0.0;
+        if (distSq < starRadiusSq) {
+            // Falloff
+            highp float x = distSq / starRadiusSq;
+            intensity = 1.0 - x; 
+            intensity *= intensity; // Cubic-ish
+            
+            // Random Brightness
+             // Range STAR_BRIGHTNESS_BASE - (STAR_BRIGHTNESS_BASE + STAR_BRIGHTNESS_VAR)
+             highp float brightness = STAR_BRIGHTNESS_BASE + STAR_BRIGHTNESS_VAR * h.w; 
+             intensity *= brightness * STAR_GLOBAL_INTENSITY;
         }
-        return star;
+        
+        return intensity;
     }
 
     // New helper to handle Star Compositing (Fade, Rotation, Occlusion)
-    highp vec3 getStarLayer(highp vec3 V, highp vec3 L, highp float cloudDensity, highp vec3 transmittance, highp vec2 starControl) {
+    highp vec3 getStarLayer(highp vec3 V, highp vec3 L, highp float cloudDensity, highp vec3 transmittance, highp vec4 starControl) {
          // starControl.x = Density, .y = Enabled
          if (starControl.y < 0.5) return vec3(0.0);
 
          // 1. Fade by Sun Elevation
          // Start appearing sooner (when sun is still slightly up), but stay dim.
-         // 0.10 (5.7 deg up) -> 0.0
-         // -0.20 (11.5 deg down) -> 1.0
-         highp float starFade = 1.0 - smoothstep(-0.20, 0.10, L.y);
+          // STAR_FADE_SUN_ELV_HIGH (5.7 deg up) -> 0.0
+          // STAR_FADE_SUN_ELV_LOW (11.5 deg down) -> 1.0
+          highp float starFade = 1.0 - smoothstep(STAR_FADE_SUN_ELV_LOW, STAR_FADE_SUN_ELV_HIGH, L.y);
          starFade *= starFade;
          
          if (starFade <= 0.0) return vec3(0.0);
@@ -657,13 +689,96 @@ fragment {
              V.z
          );
          
-         highp float starVal = getStars(rotV, starControl.x);
+         highp float starVal = getStars(rotV);
          if (starVal <= 0.0) return vec3(0.0);
 
-         // 3. Cloud Occlusion (Aggressive)
-         highp float cloudOcclusion = 1.0 - smoothstep(0.0, 1.0, pow(cloudDensity, 0.1));
-         
-         return vec3(starVal) * transmittance * starFade * cloudOcclusion * 0.1;
+          // 3. Cloud Occlusion (Aggressive)
+          highp float cloudOcclusion = 1.0 - smoothstep(0.0, 1.0, pow(cloudDensity, 0.1));
+          
+          return vec3(starVal) * transmittance * starFade * cloudOcclusion * STAR_CLOUD_OCCLUSION;
+    }
+
+    // ------------------------------------------------------------------------
+    // Procedural Moon Disk (Phased)
+    // ------------------------------------------------------------------------
+    // Renders the Moon as a 3D sphere with lighting from the Sun.
+    //
+    // PARAMETERS:
+    // @param V            Normalized View Vector.
+    // @param L_moon       Normalized Moon Vector.
+    // @param L_sun        Normalized Sun Vector.
+    // @param moonParams   x=CosRadius, y=SinRadius, z=IntensityBoost, w=Enabled.
+    // @param moonIntensity Peak Moon Illuminance (Lux).
+    // @param transmittance Atmospheric Transmittance (Moon Color Tint).
+    // @return             Radiance of the moon disk.
+    // ------------------------------------------------------------------------
+    highp vec3 getMoonDisk(highp vec3 V, highp vec3 L_moon, highp vec3 L_sun, 
+                           highp vec4 moonParams, highp float moonIntensity, 
+                           highp vec3 transmittance) {
+        
+        highp float moonCosRadius = moonParams.x;
+        highp float moonSinRadius = moonParams.y; // Used for precision
+        highp float moonDiskIntensity = moonParams.z;
+        bool moonEnabled = moonParams.w > 0.5;
+
+        highp float cosTheta = dot(V, L_moon);
+        highp float dist = 1.0 - cosTheta; // Angular distance (approx theta^2/2 for small angles)
+        highp float diskRadius = max(1e-6, 1.0 - moonCosRadius); // Approx Radius^2 / 2
+        
+        // Soft Edge
+        // Make edge width proportional to radius to handle small moons relative to the sun.
+        // For the sun, we used a fixed width (0.00002) which creates a glow. 
+        // For the moon, we want a sharper limb, so we use MOON_LIMB_SOFTNESS of radius.
+        highp float edgeWidth = max(2.0e-7, diskRadius * MOON_LIMB_SOFTNESS); 
+        highp float moonProfile = 1.0 - smoothstep(diskRadius, diskRadius + edgeWidth, dist);
+        
+        if (moonEnabled && moonProfile > 0.0) {
+             // 1. Reconstruct Sphere Normal
+             // Tangent vector T = V - (V.L)L
+             // This vector T points from the center of the disk towards V, in the disk plane.
+             // Magnitude |T| is the distance from center (sine of angle).
+             // Since we are working with small angles:
+             // T approx V - L_moon.
+             highp vec3 T = V - cosTheta * L_moon;
+             
+             // Normalize T to get radial direction strength
+             // We want N_perp magnitude to be 1.0 at the edge (where |T| ~ sin(angularRadius))
+             // radius in "T space" is sin(radius), which we now pass explicitly in .y
+             highp float sinRadius = max(1e-9, moonSinRadius);
+             highp vec3 N_perp = T / sinRadius; 
+             
+             // Project onto sphere to get full normal
+             // Z component is along L_moon (towards viewer approx)
+             // |N| = 1. N.z = sqrt(1 - |N_perp|^2)
+             highp float nPerpSq = dot(N_perp, N_perp);
+             
+             // N_sphere = N_perp - L_moon * zComp
+             // Vector points OUT from center.
+             // Since L_moon points from Earth to Moon, and the visible face normal points roughly towards Earth,
+             // the normal component along L_moon is negative.
+             highp vec3 N_sphere = N_perp - L_moon * sqrt(max(0.0, 1.0 - nPerpSq));
+             
+             highp float NdotL = max(0.0, dot(N_sphere, L_sun));
+             
+             // Earthshine (Ambient)
+             // Earth Phase (approx):
+             // When Sun & Moon are same direction (dot=1), Earth is Full (from Moon).
+             // When Sun & Moon are opposite (dot=-1), Earth is New (from Moon).
+             // EarthPhase ~ 0.5 * (1.0 + dot(L_sun, L_moon)).
+             highp float earthPhase = 0.5 * (1.0 + dot(L_sun, L_moon));
+             
+             // Intensity relative to Sun ~ 0.0001 to 0.01 depending on albedo/size.
+             // We use 0.002 as a base scale.
+             // Visibility: The dark side faces Earth?
+             // Yes, dot(N_sphere, -L_moon) > 0 covers the face seen from Earth.
+             // But simpler: Is this pixel in shadow (NdotL == 0)?
+             // Earthshine adds ambient to the whole sphere, but is overwhelmed by Sun.
+                          highp float earthshine = MOON_EARTHSHINE * earthPhase * clamp(dot(N_sphere, -L_moon) + 1.0, 0.0, 1.0); // Hemisphere ambient
+             
+             return ((NdotL + earthshine) * moonIntensity * moonDiskIntensity * moonProfile) * transmittance;
+        }
+        
+        return vec3(0.0);
     }
 
     // ------------------------------------------------------------------------
@@ -680,7 +795,8 @@ fragment {
     // PARAMETERS:
     // @param V            Normalized View Vector.
     // @param L            Normalized Sun Vector.
-    // @param sunIntensity Sun Illuminance.
+    // @param sunIntensity Sun Illuminance (Lit/Dimmed).
+    // @param sunDiskIntensity Sun Illuminance (Un-Dimmed) for specular.
     // @param depthR       Rayleigh Optical Depth.
     // @param depthM       Mie Optical Depth.
     // @param ozone        Ozone Absorption.
@@ -691,101 +807,21 @@ fragment {
     // @param cloudControl2 Cloud Evolution Params.
     // @param shimmerControl Shimmer Control (w component used as PlanetRadius for clouds).
     // @param waterControl Water Control (x=Strength, y=Speed, z=DerivativeTrick).
+    // @param L2           Secondary Sun Direction.
+    // @param sunIntensity2 Secondary Sun Intensity.
+    // @param sunHalo2     Secondary Sun Halo Params.
     // @return             Water surface color.
     // ------------------------------------------------------------------------
-    // ------------------------------------------------------------------------
-    // Procedural Moon Disk (Phased)
-    // ------------------------------------------------------------------------
-    // Renders the Moon as a 3D sphere with lighting from the Sun.
-    //
-    // PARAMETERS:
-    // @param V            Normalized View Vector.
-    // @param L_moon       Normalized Moon Vector.
-    // @param L_sun        Normalized Sun Vector.
-    // @param moonParams   x=CosRadius, y=LimbDarkening, z=IntensityBoost, w=Enabled.
-    // @param moonIntensity Peak Moon Illuminance (Lux).
-    // @param transmittance Atmospheric Transmittance (Moon Color Tint).
-    // @return             Radiance of the moon disk.
-    // ------------------------------------------------------------------------
-    highp vec3 getMoonDisk(highp vec3 V, highp vec3 L_moon, highp vec3 L_sun, 
-                           highp vec4 moonParams, highp float moonIntensity, 
-                           highp vec3 transmittance) {
-        
-        highp float moonCosRadius = moonParams.x;
-        // highp float limbDarkening = moonParams.y; // Unused for moon currently, maybe for earthshine?
-        highp float moonDiskIntensity = moonParams.z;
-        bool moonEnabled = moonParams.w > 0.5;
-
-        highp float cosTheta = dot(V, L_moon);
-        highp float dist = 1.0 - cosTheta;
-        highp float diskRadius = max(1e-6, 1.0 - moonCosRadius); // Approx Radius^2 / 2
-        
-        // Soft Edge
-        highp float moonProfile = 1.0 - smoothstep(diskRadius, diskRadius + 0.00002, dist);
-
-        if (moonEnabled && moonProfile > 0.0) {
-             // 1. Reconstruct Sphere Normal
-             // Tangent vector T = V - (V.L)L
-             // This vector T points from the center of the disk towards V, in the disk plane.
-             // Magnitude |T| is the distance from center (sine of angle).
-             // Since we are working with small angles:
-             // T approx V - L_moon.
-             highp vec3 T = V - cosTheta * L_moon;
-             
-             // Normalize T to get radial direction strength
-             // We want N_perp magnitude to be 1.0 at the edge (where |T| ~ sin(angularRadius))
-             // radius in "T space" is sin(acos(moonCosRadius)).
-             highp float sinRadius = sqrt(1.0 - moonCosRadius * moonCosRadius);
-             highp vec3 N_perp = T / sinRadius; 
-             
-             // Parallel component (pointing to viewer)
-             // N_para = -L_moon * sqrt(1 - |N_perp|^2)
-             highp float perpSq = dot(N_perp, N_perp);
-             highp vec3 N_local = vec3(0.0);
-             
-             if (perpSq < 1.0) {
-                 highp float para = sqrt(1.0 - perpSq);
-                 N_local = N_perp - L_moon * para;
-             } else {
-                 // Edge case precision fix
-                 N_local = N_perp; 
-             }
-             
-             highp vec3 N = normalize(N_local);
-             
-             // 2. Compute Phase (Sun Lighting)
-             highp float NdotL = dot(N, L_sun);
-             
-             // Terminator softening (0.1 radian width)
-             highp float phase = smoothstep(-0.05, 0.05, NdotL);
-             
-             // Earthshine (Ambient fill on dark side)
-             // Fake it as a small constant + maybe limb effect?
-             highp float earthshine = 0.02; // 2% brightness on dark side
-             
-             highp float lighting = max(earthshine, phase);
-             
-             // Texture? (Procedural Craters - Future work)
-             // For now just white disk
-             
-             return moonIntensity * transmittance * lighting * moonDiskIntensity * moonProfile;
-        }
-        
-        return vec3(0.0);
-    }
-
-    highp vec3 getWaterColor(highp vec3 V, highp vec3 L, 
-                             highp float sunIntensity,
+    highp vec3 getWaterColor(highp vec3 V, highp vec3 L, highp float sunIntensity, highp float sunDiskIntensity,
                              highp vec3 depthR, highp vec3 depthM, highp vec3 ozone,
-                             highp vec4 multiScatParams, highp vec2 miePhaseParams,
-                             highp vec4 sunHalo,
-                             highp vec3 L2, highp float sunIntensity2, highp vec4 sunHalo2,
-                             highp vec4 cloudControl, highp vec4 cloudControl2,
-                             highp vec4 shimmerControl, highp vec4 waterControl) {
+                             highp vec4 multiScatParams, highp vec2 miePhaseParams, 
+                             highp vec4 sunHalo, highp vec4 cloudControl, highp vec4 cloudControl2, 
+                             highp vec4 shimmerControl, highp vec4 waterControl,
+                             highp vec3 L2, highp float sunIntensity2, highp vec4 sunHalo2) {
 
         // Project to plane y=0
-        highp float t = -10.0 / min(V.y, -0.0002); // Reduced clamp to minimize "wall" artifact
-        highp vec2 uv = V.xz * t * 0.05;
+        highp float t = WATER_PLANE_HEIGHT / min(V.y, -0.0002); // Reduced clamp to minimize "wall" artifact
+        highp vec2 uv = V.xz * t * WATER_UV_SCALE;
         
         highp float time = getUserTime().x;
         highp float speed = waterControl.y;
@@ -793,14 +829,8 @@ fragment {
 
         // Wave Normal
         // Use screen-space derivatives to compute world-space normal perturbation
-        // Wave Normal
-        // Use screen-space derivatives to compute world-space normal perturbation
         int octaves = int(max(1.0, waterControl.w));
         highp float h = fbm(vec3(uv, time * 0.1 * speed), octaves);
-        
-        // Reconstruct screen-space basis in world space
-        // highp vec3 sRight = normalize(dFdx(V)); // Moved inside block
-        // highp vec3 sUp    = normalize(dFdy(V)); // Moved inside block
         
         // Perturb normal based on height gradient
         // If h increases in screen-X direction, normal tilts against sRight.
@@ -848,55 +878,82 @@ fragment {
         // Reflection
         highp vec3 R = reflect(V, N_water);
         
-        highp vec3 transRefl;
-        highp vec3 reflection = getAtmosphere(R, L, sunIntensity,
-                                              depthR, depthM, 
-                                              ozone, multiScatParams, 
-                                              miePhaseParams,
-                                              transRefl);
+        // Specular (Sun)
+        // We use `sunDiskIntensity` (Un-Dimmed) for the disk reflection to preserve its appearance,
+        // while `sunIntensity` (Lit/Dimmed) is used for general atmospheric scattering to match the sky.
+        // The reflection's occlusion is handled separately by `reflMoonOcclusion` later.
+        
+        // Re-deriving Sky Color for Reflection
+        
+        highp vec3 outTransmittance;
+        highp vec3 reflection = getAtmosphere(R, L, sunIntensity * 1.0 /* ensure match */, 
+                                            depthR, depthM, ozone, 
+                                            multiScatParams, miePhaseParams, 
+                                            outTransmittance);
+
+        // Add Moon Scattering to Reflection
+        if (sunHalo2.w > 0.5) {
+            reflection += getSecondarySunScattering(R, L2, sunIntensity2, 
+                                                   depthR, depthM, ozone, 
+                                                   miePhaseParams, 
+                                                   outTransmittance);
+        }
         
         // Clouds in reflection
         highp float reflCloudDensity;
-        highp vec3 reflCloudLayer = getCloudLayer(R, L, materialParams.cloudControl, materialParams.cloudControl2,
-                                                  materialParams.shimmerControl, materialParams.sunIntensity, transRefl,
+        highp vec3 reflCloudLayer = getCloudLayer(R, L, cloudControl, cloudControl2,
+                                                  shimmerControl, sunIntensity, outTransmittance,
                                                   reflCloudDensity);
         
         // Add Stars to Reflection
         // Use helper with Reflection Vector and Reflection Cloud Density
         // Horizon Mask: Fade out star reflections that are deep in the water (high R.y)
-        // Restricted to very close to horizon (0.0 to 0.1) as requested.
-        highp float rHorizonMask = 1.0 - smoothstep(0.0, 0.1, R.y);
+         // Restricted to very close to horizon (0.0 to REFLECTION_HORIZON_FADE) as requested.
+         highp float rHorizonMask = 1.0 - smoothstep(0.0, REFLECTION_HORIZON_FADE, R.y);
         
         if (rHorizonMask > 0.0) {
-             reflection += getStarLayer(R, L, reflCloudDensity, transRefl, materialParams.starControl) * rHorizonMask;
+             reflection += getStarLayer(R, L, reflCloudDensity, outTransmittance, materialParams.starControl) * rHorizonMask;
         }
 
-        // Add Sun Disk to reflection (Occluded)
-        highp float reflSunAccess = 1.0 - smoothstep(0.0, 0.7, reflCloudDensity * 1.5);
-        reflection += getSunDisk(R, L, sunHalo, sunIntensity, transRefl) * reflSunAccess;
+        // Sun Disk Reflection
+        // Use sunDiskIntensity (Un-Dimmed) + Moon Occlusion Mask
+        highp vec3 sunDiskRefl = getSunDisk(R, L, sunHalo, sunDiskIntensity, outTransmittance);
+        
+        // Apply Moon Occlusion to Reflection
+        // We calculate occlusion for R.
+        highp float reflDiskRadius = max(1e-6, 1.0 - sunHalo.x); // Approx
+        highp float cosThetaRefl = dot(R, L2); // Moon vs Reflection Vector
+        highp float distRefl = 1.0 - cosThetaRefl;
+        highp float moonDiskRadius = max(1e-6, 1.0 - sunHalo2.x);
+        
+        // Create a mask for the moon in the reflection
+        highp float reflMoonOcclusion = 1.0 - smoothstep(moonDiskRadius, moonDiskRadius + 0.00002, distRefl);
+        
+        // Mask the Sun Disk
+        sunDiskRefl *= (1.0 - reflMoonOcclusion);
+        
+        // Add Sun Disk to Sky Color
+        reflection += sunDiskRefl;
         
         // Add Moon Disk to reflection
         if (sunHalo2.w > 0.5) {
-             reflection += getMoonDisk(R, L2, L, sunHalo2, sunIntensity2, transRefl) * reflSunAccess;
+             reflection += getMoonDisk(R, L2, L, sunHalo2, sunIntensity2, outTransmittance);
         }
         
         // Apply clouds to reflection
         reflection = mix(reflection, reflCloudLayer, reflCloudDensity);
                 
         // Fresnel
-        highp float F0 = 0.02; // Water
+        highp float F0 = WATER_FRESNEL_F0; // Water
         highp float cosTheta = clamp(dot(-V, N_water), 0.0, 1.0);
         highp float F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
         
-        highp vec3 deepColor = vec3(0.0, 0.005, 0.02); // Deep blue/black
+        highp vec3 deepColor = WATER_DEEP_COLOR; // Deep blue/black
 
         highp vec3 waterColor = mix(deepColor, reflection, F);
                 
         return waterColor;
     }
-
-
-
 
 
     void material(inout MaterialInputs material) {
@@ -914,13 +971,7 @@ fragment {
 
         // 2. Atmospheric Scattering
         highp vec3 transmittance;
-        highp vec3 inScatter1 = getAtmosphere(V, L, materialParams.sunIntensity,
-                                              materialParams.depthR, materialParams.depthM, 
-                                              materialParams.ozone, materialParams.multiScatParams, 
-                                              materialParams.miePhaseParams,
-                                              transmittance);
-
-
+        
         // Sun 2 / Moon (Optional)
         // We reuse the same Transmittance (view dependent) and Phase params.
         // We do NOT add extra Multi-Scattering (Ambient) for the second sun to save cost/complexity.
@@ -929,6 +980,20 @@ fragment {
         
         highp vec3 L2 = normalize(materialParams.sunDirection2);
         
+        // Calculate Solar Eclipse (Light Reduction)
+        // Dim the Sun Light used for Atmosphere/Clouds/Water
+        highp float safeEclipseFactor = materialParams.eclipseFactor;
+        // Safety: If moon is disabled, ensure no eclipse
+        if (materialParams.sunHalo2.w < 0.5) {
+            safeEclipseFactor = 1.0;
+        }
+        highp float sunIntensityLit = materialParams.sunIntensity * safeEclipseFactor;
+        
+        // 1. Atmosphere Scattering
+        highp vec3 color = getAtmosphere(V, L, sunIntensityLit, materialParams.depthR, materialParams.depthM, materialParams.ozone, 
+                                         materialParams.multiScatParams, materialParams.miePhaseParams, transmittance);
+
+        // 2. Secondary Sun/Moon Scattering
         if (materialParams.sunHalo2.w > 0.5) {
             inScatter2 = getSecondarySunScattering(V, L2,
                                                    materialParams.sunIntensity2,
@@ -937,60 +1002,73 @@ fragment {
                                                    materialParams.ozone,
                                                    materialParams.miePhaseParams,
                                                    transmittance);
+            color += inScatter2;
         }
 
-        highp vec3 finalColor = inScatter1 + inScatter2;
-
-        // 5. Procedural Clouds
-        highp float cloudDensity;
-        highp vec3 cloudLayer = getCloudLayer(V, L, 
-                                              materialParams.cloudControl, 
-                                              materialParams.cloudControl2,
-                                              materialParams.shimmerControl, // reusing w=PlanetRadius
-                                              materialParams.sunIntensity, 
-                                              transmittance,
-                                              cloudDensity);
-
-        // Add Stars
-        // Stars are at infinity.
-        // Use helper function.
-        finalColor += getStarLayer(V, L, cloudDensity, transmittance, materialParams.starControl);
+        // 3. Clouds
+        highp float cloudDensityVal;
+        highp vec3 clouds = getCloudLayer(V, L, materialParams.cloudControl, materialParams.cloudControl2, materialParams.shimmerControl, 
+                                          sunIntensityLit, transmittance, cloudDensityVal);
         
-        // 3. Sun Disks - Occluded by clouds
-        highp float sunAccess = 1.0 - smoothstep(0.0, 0.7, cloudDensity * 1.5);
+        // 4. Sun Disk (Direct)
+        // Use ORIGINAL sunIntensity (Un-dimmed) so the disk looks bright
+        // We mask it by Moon Occlusion AND Cloud Occlusion
+        highp vec3 sunDisk = getSunDisk(V, L, materialParams.sunHalo, materialParams.sunIntensity, transmittance);
         
-        finalColor += getSunDisk(V, L, materialParams.sunHalo, 
-                                 materialParams.sunIntensity, transmittance) * sunAccess;
-                                 
+        // Moon Occlusion Mask
+        highp float moonOcclusion = 0.0;
         if (materialParams.sunHalo2.w > 0.5) {
-             // Pass L (Sun) as the light source for the Moon Phase
-             finalColor += getMoonDisk(V, L2, L, materialParams.sunHalo2, 
-                                       materialParams.sunIntensity2, transmittance) * sunAccess;
+            highp float distToMoon = 1.0 - dot(V, L2);
+            highp float moonDiskRad = max(1e-6, 1.0 - materialParams.sunHalo2.x);
+            moonOcclusion = 1.0 - smoothstep(moonDiskRad, moonDiskRad + 0.00002, distToMoon);
+        }
+        
+        // Cloud Occlusion Mask (Sun Access)
+        highp float sunAccess = 1.0 - smoothstep(0.0, 0.7, cloudDensityVal * 1.5);
+        
+        // Apply Masks
+        // Note: moonOcclusion is 1.0 if occluded. So we want (1.0 - moonOcclusion).
+        // Since we logic-ed it as: if dist < rad, occlusion = 1.0. Correct.
+        sunDisk *= (1.0 - moonOcclusion) * sunAccess;
+        
+        color += sunDisk;
+        
+        // 5. Moon Disk
+        if (materialParams.sunHalo2.w > 0.5) {
+             color += getMoonDisk(V, L2, L, materialParams.sunHalo2, 
+                                  materialParams.sunIntensity2, transmittance) * sunAccess;
         }
 
-        // 4. Night Sky Offset
-        finalColor += materialParams.nightColor;
+        // 6. Stars
+        // Add stars before clouds (clouds cover stars)
+        color += getStarLayer(V, L, cloudDensityVal, transmittance, materialParams.starControl) * (1.0 - moonOcclusion);
 
-        // 5. Apply Clouds
-        finalColor = mix(finalColor, cloudLayer, cloudDensity);
+        // 7. Composite Clouds
+        // Clouds are alpha blended on top of the sky (Atmos + Stars + SunDisk)
+        // The cloud color `clouds` includes its own ambient and forward scattering terms.
+        color = mix(color, clouds, cloudDensityVal);
 
-        // 6. Dynamic Tone Mapping
-        finalColor = applyDynamicToneMapping(finalColor, L, materialParams.contrast);
+        // 8. Night Sky Offset
+        color += materialParams.nightColor;
 
+        // 9. Dynamic Tone Mapping
+        color = applyDynamicToneMapping(color, L, materialParams.contrast);
+
+        // 10. Water Surface (Reflection)
         if (V.y < 0.0) {
-            finalColor = getWaterColor(V, L, materialParams.sunIntensity,
+            color = getWaterColor(V, L, sunIntensityLit, materialParams.sunIntensity,
                                        materialParams.depthR, materialParams.depthM, 
                                        materialParams.ozone, materialParams.multiScatParams, 
                                        materialParams.miePhaseParams,
                                        materialParams.sunHalo,
-                                       L2, materialParams.sunIntensity2, materialParams.sunHalo2,
                                        materialParams.cloudControl, materialParams.cloudControl2,
                                        materialParams.shimmerControl,
-                                       materialParams.waterControl);
-            finalColor = applyDynamicToneMapping(finalColor, L, materialParams.contrast);
+                                       materialParams.waterControl,
+                                       L2, materialParams.sunIntensity2, materialParams.sunHalo2);
+            color = applyDynamicToneMapping(color, L, materialParams.contrast);
         }
 
-        material.baseColor = vec4(finalColor, 1.0);
+        material.baseColor = vec4(color, 1.0);
     }
 }
 

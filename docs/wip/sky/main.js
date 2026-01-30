@@ -21,7 +21,7 @@ class App {
     // But Filament.init assets are for internal or easy access via assets object if configured?
     // Let's just let SimulatedSkybox fetch it again or use a blob if we wanted.
     // Simpler: Just let SimulatedSkybox fetch it.
-    this.skybox.loadMaterial('assets/simulated_skybox.filamat?v=46').then(() => {
+    this.skybox.loadMaterial('assets/simulated_skybox.filamat?v=56').then(() => {
       this.initGUI();
     });
 
@@ -112,6 +112,7 @@ class App {
     const height = this.canvas.height;
     const aspect = width / height;
     this.camera.setLensProjection(this.params.focalLength, aspect, 0.1, 5000.0);
+    if (this.skybox) this.skybox.setFocalLength(this.params.focalLength);
   }
 
   initGUI() {
@@ -134,31 +135,39 @@ class App {
       sky.setSunPosition([x, y, z]);
     };
 
+    // Sun UI Proxy
+    this.sunUI = {
+      azimuth: (this.params.sunPhi * 180.0 / Math.PI) % 360.0,
+      height: Math.cos(this.params.sunTheta)
+    };
+    if (this.sunUI.azimuth < 0) this.sunUI.azimuth += 360.0;
+
     const sunFolder = gui.addFolder('Sun');
-    // Helper for "Sun Height" cosine slider like C++
-    this.sunHeightParam = { height: Math.cos(this.params.sunTheta) };
-    sunFolder.add(this.sunHeightParam, 'height', -0.2, 1.0).name('Height (Cos)').onChange(v => {
+
+    sunFolder.add(this.sunUI, 'azimuth', 0.0, 360.0, 0.1).name('Azimuth').onChange(v => {
+      this.params.sunPhi = v * (Math.PI / 180.0);
+      updateSun();
+    });
+
+    sunFolder.add(this.sunUI, 'height', -0.2, 1.0).name('Height (Cos)').onChange(v => {
       this.params.sunTheta = Math.acos(v);
       updateSun();
     });
-    sunFolder.add(this.params, 'sunPhi', 0.0, Math.PI * 2).name('Azimuth').onChange(updateSun);
-    // Updated: Controls params.sunIntensity and triggers updateSunIntensity
-    sunFolder.add(this.params, 'sunIntensity', 0.0, 500000.0).onChange(v => this.updateSunIntensity());
+
+    sunFolder.add(this.params, 'sunIntensity', 0.0, 500000.0).name('Intensity').onChange(v => this.updateSunIntensity());
 
     const moonFolder = gui.addFolder('Moon');
     this.mParams = {
-      enabled: false,
+      enabled: true,
       azimuth: 180.0,
-      elevation: 45.0,
+      height: Math.cos(45.0 * Math.PI / 180.0), // Default 45 degrees elevation -> cos(45) ~ 0.707
       radius: 0.5,
-
-      intensity: 10.0
+      intensity: 1.0
     };
 
     const updateMoon = () => {
       const az = this.mParams.azimuth * (Math.PI / 180.0);
-      const el = this.mParams.elevation * (Math.PI / 180.0);
-      const theta = Math.PI / 2.0 - el;
+      const theta = Math.acos(this.mParams.height);
       const phi = az;
 
       const x = Math.sin(theta) * Math.cos(phi);
@@ -175,10 +184,10 @@ class App {
     sky.setMoonIntensity(this.mParams.intensity);
 
     moonFolder.add(this.mParams, 'enabled').name('Enabled').onChange(v => sky.setMoonEnabled(v));
-    moonFolder.add(this.mParams, 'azimuth', 0.0, 360.0).onChange(updateMoon);
-    moonFolder.add(this.mParams, 'elevation', -90.0, 90.0).onChange(updateMoon);
-    moonFolder.add(this.mParams, 'radius', 0.1, 5.0).onChange(v => sky.setMoonRadius(v));
-    moonFolder.add(this.mParams, 'intensity', 0.0, 1000.0).onChange(v => this.updateSunIntensity()); // Reuse update function to apply exposure
+    moonFolder.add(this.mParams, 'azimuth', 0.0, 360.0, 0.1).name('Azimuth').onChange(updateMoon);
+    moonFolder.add(this.mParams, 'height', -0.2, 1.0).name('Height (Cos)').onChange(updateMoon);
+    moonFolder.add(this.mParams, 'intensity', 0.0, 10.0).name('Intensity').onChange(v => this.updateSunIntensity());
+    moonFolder.add(this.mParams, 'radius', 0.1, 5.0).name('Radius').onChange(v => sky.setMoonRadius(v));
     moonFolder.close();
 
     const sunDisk = sunFolder.addFolder('Disk');
@@ -204,11 +213,11 @@ class App {
     atmFolder.add(sky, 'mieG', 0.0, 0.999).onChange(v => sky.setMieG(v));
 
     const artFolder = gui.addFolder('Artistic');
-    // Set Horizon Glow default to 1.0
-    sky.setHorizonGlow(1.0);
-    sky.msFactors[2] = 1.0;
-    // Set Contrast default to 0.85
-    sky.setContrast(0.85);
+    // Set Horizon Glow default to 0.0
+    sky.setHorizonGlow(0.0);
+    sky.msFactors[2] = 0.0;
+    // Set Contrast default to 1.0
+    sky.setContrast(1.0);
 
     artFolder.add(sky.msFactors, 0, 0.0, 2.0).name('MS Rayleigh').onChange(v => sky.setMultiScattering(v, sky.msFactors[1]));
     artFolder.add(sky.msFactors, 1, 0.0, 2.0).name('MS Mie').onChange(v => sky.setMultiScattering(sky.msFactors[0], v));
@@ -269,17 +278,17 @@ class App {
     const starFolder = gui.addFolder('Stars');
     this.sParams = {
       enabled: true,
-      density: 1.0
+      density: 0.001
     };
-    // Initialize defaults (Density 1.0, Enabled True)
-    sky.setStarControl(1.0, true);
+    // Initialize defaults (Density 0.001, Enabled True)
+    sky.setStarControl(0.001, true);
 
     const updateStars = () => {
       sky.setStarControl(this.sParams.density, this.sParams.enabled);
     };
 
     starFolder.add(this.sParams, 'enabled').name('Enabled').onChange(updateStars);
-    starFolder.add(this.sParams, 'density', 0.0, 1.0).name('Density').onChange(updateStars);
+    starFolder.add(this.sParams, 'density', 0.0, 0.01, 0.0001).name('Density').onChange(updateStars);
     starFolder.close();
 
     const camFolder = gui.addFolder('Camera');
@@ -378,7 +387,8 @@ class App {
       w: { dt: w.derivativeTrick, st: w.strength, s: w.speed, o: w.octaves },
       s: { e: s.enabled, d: s.density },
       b: { e: b.enabled, lf: b.lensFlare },
-      m: { e: m.enabled, az: m.azimuth, el: m.elevation, r: m.radius, i: m.intensity },
+      m: { e: m.enabled, az: m.azimuth, h: m.height, r: m.radius, i: m.intensity },
+      cm: { t: this.camState.theta, p: this.camState.phi },
       k: {
         t: sk.turbidity,
         r: sk.rayleigh,
@@ -392,6 +402,7 @@ class App {
         hl: [...sk.sunHalo]
       }
     };
+
   }
 
   applyURLState(state) {
@@ -402,6 +413,7 @@ class App {
     const b = state.b;
     const m = state.m;
     const k = state.k;
+    const cm = state.cm;
 
     if (p) {
       if (p.a !== undefined) this.params.aperture = p.a;
@@ -469,9 +481,16 @@ class App {
       sky.updateCoefficients();
     }
 
-    // Update derived Sun Height param for UI
-    if (this.sunHeightParam) {
-      this.sunHeightParam.height = Math.cos(this.params.sunTheta);
+    if (cm) {
+      if (cm.t !== undefined) this.camState.theta = cm.t;
+      if (cm.p !== undefined) this.camState.phi = cm.p;
+    }
+
+    // Update derived Sun UI
+    if (this.sunUI) {
+      this.sunUI.height = Math.cos(this.params.sunTheta);
+      this.sunUI.azimuth = (this.params.sunPhi * 180.0 / Math.PI) % 360.0;
+      if (this.sunUI.azimuth < 0) this.sunUI.azimuth += 360.0;
     }
 
     // Apply Local Params via Setters
@@ -485,14 +504,19 @@ class App {
     if (m) {
       if (m.e !== undefined) this.mParams.enabled = m.e;
       if (m.az !== undefined) this.mParams.azimuth = m.az;
-      if (m.el !== undefined) this.mParams.elevation = m.el;
+      // Compat: if 'el' exists (old link) convert to 'h'
+      if (m.h !== undefined) {
+        this.mParams.height = m.h;
+      } else if (m.el !== undefined) {
+        // Convert elevation degrees to height cos
+        this.mParams.height = Math.cos(m.el * Math.PI / 180.0);
+      }
       if (m.r !== undefined) this.mParams.radius = m.r;
       if (m.i !== undefined) this.mParams.intensity = m.i;
 
       // Sync Moon
       const az = this.mParams.azimuth * (Math.PI / 180.0);
-      const el = this.mParams.elevation * (Math.PI / 180.0);
-      const theta = Math.PI / 2.0 - el;
+      const theta = Math.acos(this.mParams.height);
       const phi = az;
       const x = Math.sin(theta) * Math.cos(phi);
       const y = Math.cos(theta);
@@ -502,6 +526,11 @@ class App {
       sky.setMoonEnabled(this.mParams.enabled);
       sky.setMoonRadius(this.mParams.radius);
       sky.setMoonIntensity(this.mParams.intensity);
+    }
+
+    if (cm) {
+      if (cm.t !== undefined) this.camState.theta = cm.t;
+      if (cm.p !== undefined) this.camState.phi = cm.p;
     }
 
     this.view.setBloomOptions({
@@ -516,7 +545,10 @@ class App {
     const y = Math.cos(theta);
     const z = Math.sin(theta) * Math.sin(phi);
     sky.setSunPosition([x, y, z]);
-    this.updateSunIntensity();
+
+    // Update Camera Projection (Focal Length) and Exposure (Aperture/Shutter/ISO)
+    this.updateCameraProjection();
+    this.updateCameraExposure();
   }
 
   initControls() {
@@ -545,6 +577,36 @@ class App {
       // Clamp pitch to avoid flip [ -PI/2, PI/2 ]
       this.camState.phi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.camState.phi));
     });
+
+    // Touch support
+    this.canvas.addEventListener('touchstart', e => {
+      if (e.touches.length > 0) {
+        e.preventDefault(); // Prevent scroll/long-press
+        this.camState.dragging = true;
+        this.camState.lastX = e.touches[0].clientX;
+        this.camState.lastY = e.touches[0].clientY;
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+      this.camState.dragging = false;
+    });
+
+    window.addEventListener('touchmove', e => {
+      if (!this.camState.dragging || e.touches.length === 0) return;
+      e.preventDefault(); // Prevent scrolling
+      const x = e.touches[0].clientX;
+      const y = e.touches[0].clientY;
+      const dx = x - this.camState.lastX;
+      const dy = y - this.camState.lastY;
+      this.camState.lastX = x;
+      this.camState.lastY = y;
+
+      const sensitivity = 0.005;
+      this.camState.theta -= dx * sensitivity;
+      this.camState.phi += dy * sensitivity;
+      this.camState.phi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.camState.phi));
+    }, { passive: false });
 
 
   }
@@ -582,5 +644,6 @@ class App {
     const aspect = width / height;
     // near=0.1, far=5000.0
     this.camera.setLensProjection(this.params.focalLength, aspect, 0.1, 5000.0);
+    if (this.skybox) this.skybox.setResolution(height);
   }
 }
