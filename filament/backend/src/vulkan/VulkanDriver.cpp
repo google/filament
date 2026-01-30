@@ -882,7 +882,8 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
             // formats. It seems to be enough, in practicce, to simply run through a list of the types of
             // samplers that *might* appear. As long as the real pipeline is close enough to something that
             // the driver has seen before, we are able to get a cache hit.
-            utils::FixedCapacityVector<VkSampler> externalSamplers (layouts[i]->bitmask.externalSampler.count(), externalSampler);
+            utils::FixedCapacityVector<std::pair<uint32_t, VkSampler>> externalSamplers(
+                    layouts[i]->bitmask.externalSampler.count(), { 0, externalSampler });
             vkLayouts[i] = mDescriptorSetLayoutCache.getVkLayout(
                 layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
         }
