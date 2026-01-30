@@ -30,6 +30,7 @@
 #include "materials/colorGrading/colorGrading.h"
 #include "materials/dof/dof.h"
 #include "materials/flare/flare.h"
+#include "materials/fog/fog.h"
 #include "materials/fsr/fsr.h"
 #include "materials/sgsr/sgsr.h"
 #include "materials/ssao/ssao.h"
@@ -65,6 +66,7 @@
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
+#include <private/filament/Variant.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/DriverApiForward.h>
@@ -183,12 +185,11 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
 
 UTILS_NOINLINE
 FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine,
-        DriverApi& driver, PostProcessVariant variant) const noexcept {
+        DriverApi& driver, Variant::type_t const variant) const noexcept {
     if (UTILS_UNLIKELY(mSize)) {
         loadMaterial(engine);
     }
-    mMaterial->prepareProgram(driver, Variant{ Variant::type_t(variant) },
-            CompilerPriorityQueue::CRITICAL);
+    mMaterial->prepareProgram(driver, Variant{ variant }, CompilerPriorityQueue::CRITICAL);
     return mMaterial;
 }
 
@@ -359,6 +360,9 @@ void PostProcessManager::init() noexcept {
     for (auto const& info: sMaterialListFeatureLevel0) {
         registerPostProcessMaterial(info.name, info);
     }
+    for (auto const& info: getFogMaterialList()) {
+        registerPostProcessMaterial(info.name, info);
+    }
 
     if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
         UTILS_NOUNROLL
@@ -462,9 +466,9 @@ void PostProcessManager::unbindAllDescriptorSets(DriverApi& driver) noexcept {
 
 UTILS_NOINLINE
 PipelineState PostProcessManager::getPipelineState(
-        FMaterial const* const ma, PostProcessVariant variant) const noexcept {
+        FMaterial const* const ma, Variant::type_t const variant) const noexcept {
     return {
-            .program = ma->getProgram(Variant{ Variant::type_t(variant) }),
+            .program = ma->getProgram(Variant{ variant }),
             .vertexBufferInfo = mFullScreenQuadVbih,
             .pipelineLayout = {
                     .setLayout = {
@@ -2638,12 +2642,34 @@ void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
     // the UBO has been set and committed in clearAncillaryBuffersPrepare()
     FMaterialInstance const* const mi = mMaterialInstanceManager.getMaterialInstance(ma,
             mFixedMaterialInstanceIndex.clearDepth);
-
     mi->use(driver);
 
     auto pipeline = getPipelineState(ma);
     pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
 
+    driver.scissor(mi->getScissor());
+    driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
+}
+
+void PostProcessManager::fogPrepare(DriverApi& driver) noexcept {
+    // ensures the material is loaded and material instance created
+    auto const& material = getPostProcessMaterial("fog");
+    FMaterial const* const ma = material.getMaterial(mEngine, driver, PostProcessVariant::OPAQUE);
+    FMaterialInstance const* mi = ma->getDefaultInstance();
+    mi->commit(driver, getUboManager());
+}
+
+void PostProcessManager::fog(DriverApi& driver) noexcept {
+    // note the per-view descriptor set is assumed to be already set
+
+    bindPerRenderableDescriptorSet(driver);
+
+    auto const& material = getPostProcessMaterial("fog");
+    FMaterial const* const ma = material.getMaterial(mEngine, driver);
+    FMaterialInstance const* mi = ma->getDefaultInstance();
+    mi->use(driver);
+
+    auto pipeline = getPipelineState(ma, Variant::NO_VARIANT);
     driver.scissor(mi->getScissor());
     driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
 }
