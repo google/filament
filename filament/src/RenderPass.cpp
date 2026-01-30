@@ -479,7 +479,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
     const size_t offsetBegin = FScene::getPrimitiveCount(soa, range.first) * commandsPerPrimitive;
     const size_t offsetEnd   = FScene::getPrimitiveCount(soa, range.last) * commandsPerPrimitive;
     Command* curr = commands + offsetBegin;
-    Command* const last = commands + offsetEnd;
+    Command const* const last = commands + offsetEnd;
 
     /*
      * The switch {} below is to coerce the compiler into generating different versions of
