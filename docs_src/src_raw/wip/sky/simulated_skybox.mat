@@ -95,8 +95,31 @@ material {
             type : float4,
             name : starControl, // x=Density, y=Enabled, z=Frequency, w=PixelScale
             precision : high
+        },
+        {
+            type : sampler2d,
+            name : moonTexture
+        },
+        {
+            type : sampler2d,
+            name : moonNormal
+        },
+        {
+            type : sampler2d,
+            name : milkyWayTexture
+        },
+        {
+            type : float3,
+            name : milkyWayControl, // x=Intensity, y=Saturation, z=Unused
+            precision : high
+        },
+        {
+            type : mat3,
+            name : milkyWayRotation,
+            precision : high
         }
     ],
+
     variables : [
         {
             name : "eyeDirection",
@@ -727,6 +750,43 @@ fragment {
     }
 
     // ------------------------------------------------------------------------
+    // Milky Way
+    // ------------------------------------------------------------------------
+    // Renders the Milky Way background from an equirectangular texture.
+    //
+    // @param V Normalized View Vector.
+    // @param rotation Rotation matrix (Galactic -> World).
+    // @return Milky Way Color.
+    // ------------------------------------------------------------------------
+    vec3 getMilkyWay(highp vec3 V, highp mat3 rotation, sampler2D tex, highp vec3 control) {
+         highp float intensity = control.x;
+         if (intensity <= 0.0) return vec3(0.0);
+
+         // Rotate V into Galactic coordinates
+         highp vec3 Vg = rotation * V;
+
+         // Equirectangular mapping
+         // u = atan(z, x) / 2pi + 0.5
+         // v = asin(y) / pi + 0.5
+         highp float u = atan(Vg.z, Vg.x) * (0.1591549) + 0.5; // 1/(2*PI)
+         highp float v = asin(clamp(Vg.y, -1.0, 1.0)) * (0.3183098) + 0.5; // 1/PI
+         
+         // Sample
+         highp vec3 color = texture(tex, vec2(u, v)).rgb;
+         
+         // Black Point (Remove baked-in haze)
+         highp float blackPoint = control.z;
+         color = max(vec3(0.0), color - blackPoint);
+         
+         // Saturation
+         highp float saturation = control.y;
+         highp float gray = dot(color, vec3(0.299, 0.587, 0.114));
+         color = mix(vec3(gray), color, saturation);
+         
+         return color * intensity;
+    }
+
+    // ------------------------------------------------------------------------
     // Procedural Moon Disk (Phased)
     // ------------------------------------------------------------------------
     // Renders the Moon as a 3D sphere with lighting from the Sun.
@@ -742,7 +802,7 @@ fragment {
     // ------------------------------------------------------------------------
     highp vec3 getMoonDisk(highp vec3 V, highp vec3 L_moon, highp vec3 L_sun, 
                            highp vec4 moonParams, highp float moonIntensity, 
-                           highp vec3 transmittance) {
+                           highp vec3 transmittance, sampler2D moonTex, sampler2D moonNormal) {
         
         highp float moonCosRadius = moonParams.x;
         highp float moonSinRadius = moonParams.y; // Used for precision
@@ -786,8 +846,6 @@ fragment {
              // the normal component along L_moon is negative.
              highp vec3 N_sphere = N_perp - L_moon * sqrt(max(0.0, 1.0 - nPerpSq));
              
-             highp float NdotL = max(0.0, dot(N_sphere, L_sun));
-             
              // Earthshine (Ambient)
              // Earth Phase (approx):
              // When Sun & Moon are same direction (dot=1), Earth is Full (from Moon).
@@ -795,18 +853,75 @@ fragment {
              // EarthPhase ~ 0.5 * (1.0 + dot(L_sun, L_moon)).
              highp float earthPhase = 0.5 * (1.0 + dot(L_sun, L_moon));
              
-             // Intensity relative to Sun ~ 0.0001 to 0.01 depending on albedo/size.
-             // We use 0.002 as a base scale.
-             // Visibility: The dark side faces Earth?
-             // Yes, dot(N_sphere, -L_moon) > 0 covers the face seen from Earth.
-             // But simpler: Is this pixel in shadow (NdotL == 0)?
-             // Earthshine adds ambient to the whole sphere, but is overwhelmed by Sun.
-                          highp float earthshine = MOON_EARTHSHINE * earthPhase * clamp(dot(N_sphere, -L_moon) + 1.0, 0.0, 1.0); // Hemisphere ambient
+             // Texture Mapping
+             // The moon texture is an orthographic projection of the Near Side.
+             // We align the texture using a stable "Up" vector (World Up projected onto the Moon plane).
              
-             return ((NdotL + earthshine) * moonIntensity * moonDiskIntensity * moonProfile) * transmittance;
+             highp vec3 Up = vec3(0.0, 1.0, 0.0);
+             if (abs(L_moon.y) > 0.99) Up = vec3(0.0, 0.0, 1.0);
+             
+             highp vec3 Right = normalize(cross(Up, L_moon));
+             highp vec3 MoonUp = cross(L_moon, Right);
+             
+             // Project N_sphere onto the Right/MoonUp plane to get UVs.
+             highp float u = dot(N_sphere, Right) * 0.5 + 0.5;
+             highp float v = dot(N_sphere, MoonUp) * 0.5 + 0.5;
+             
+             // Sample Texture
+             // We assume the texture is stored such that (0,0) is bottom-left.
+             // Sample Albedo
+             // Flip V here as well. Flip U to fix horizontal mirroring.
+             highp vec3 moonColorSample = texture(moonTex, vec2(1.0 - u, 1.0 - v)).rgb;
+             // The original code used a float 'moonAlbedo' derived from .rrr.
+             // To support "3 channels" properly if it had color, we use the full RGB sample.
+             highp vec3 moonAlbedo = moonColorSample;
+             
+             // Normal Mapping
+             // Convert Tangent Space Normal (from texture) to World Space
+             // Tangent Basis: T=Right, B=MoonUp, N=N_sphere
+             // We need to invert V because texturing coordinates are usually bottom-up
+             // but our procedural disk generation (and the original texture) might be top-down oriented
+             // relative to the sphere mapping we did.
+             highp vec3 N_map = texture(moonNormal, vec2(1.0 - u, 1.0 - v)).rgb * 2.0 - 1.0;
+             // Scale down the normal map strength (it was too strong)
+             N_map.xy *= 0.2;
+             
+             // Important: Since we flipped U (1.0 - u), we effectively mirrored the texture.
+             // A slope that was "right" is now "left" visually, but the normal map data still points "right".
+             // We must invert the X component of the normal to match the mirrored visual geometry.
+             N_map.x *= -1.0;
+             
+             // Perturb N_sphere
+             // N_final = N_map.x * T + N_map.y * B + N_map.z * N
+             // Note: N_map.z is the component along the surface normal.
+             N_sphere = normalize(N_map.x * Right + N_map.y * MoonUp + N_map.z * N_sphere);
+
+             highp float NdotL = max(0.0, dot(N_sphere, L_sun));
+             
+             highp vec3 litColor = moonIntensity * transmittance * NdotL * moonAlbedo;
+             highp vec3 unlitColor = moonIntensity * transmittance * MOON_EARTHSHINE * earthPhase * moonAlbedo;
+             
+             // Smooth transition at terminator to avoid hard lines
+             return mix(unlitColor, litColor, smoothstep(0.0, 0.1, NdotL)) * moonDiskIntensity * moonProfile;
         }
         
         return vec3(0.0);
+    }
+
+    // ------------------------------------------------------------------------
+    // Phase Factor (Lambertian Sphere)
+    // ------------------------------------------------------------------------
+    // Calculates the integrated flux factor for a lit sphere based on phase angle.
+    // Normalized to 1.0 at Full Moon (Phase=0) and 0.0 at New Moon (Phase=PI).
+    //
+    // @param L_sun Normalized vector to Sun
+    // @param L_moon Normalized vector to Moon
+    // @return Phase factor [0.0, 1.0]
+    // ------------------------------------------------------------------------
+    highp float getPhaseFactor(highp vec3 L_sun, highp vec3 L_moon) {
+        highp float cosAlpha = -dot(L_sun, L_moon);
+        highp float alpha = acos(clamp(cosAlpha, -1.0, 1.0));
+        return (1.0 / PI) * (sin(alpha) + (PI - alpha) * cosAlpha);
     }
 
     // ------------------------------------------------------------------------
@@ -845,7 +960,8 @@ fragment {
                              highp vec4 multiScatParams, highp vec2 miePhaseParams, 
                              highp vec4 sunHalo, highp vec4 cloudControl, highp vec4 cloudControl2, 
                              highp vec4 shimmerControl, highp vec4 waterControl,
-                             highp vec3 L2, highp float sunIntensity2, highp vec4 sunHalo2) {
+                             highp vec3 L2, highp float sunIntensity2, highp vec4 sunHalo2,
+                             sampler2D moonTex, sampler2D moonNormal) {
 
         // Project to plane y=0
         highp float t = WATER_PLANE_HEIGHT / min(V.y, -0.0002); // Reduced clamp to minimize "wall" artifact
@@ -921,10 +1037,11 @@ fragment {
 
         // Add Moon Scattering to Reflection
         if (sunHalo2.w > 0.5) {
-            reflection += getSecondarySunScattering(R, L2, sunIntensity2, 
-                                                   depthR, depthM, ozone, 
-                                                   miePhaseParams, 
-                                                   outTransmittance);
+             float phaseFactor = getPhaseFactor(L, L2);
+             reflection += getSecondarySunScattering(R, L2, sunIntensity2 * phaseFactor, 
+                                                    depthR, depthM, ozone, 
+                                                    miePhaseParams, 
+                                                    outTransmittance);
         }
         
         // Clouds in reflection
@@ -965,7 +1082,7 @@ fragment {
         
         // Add Moon Disk to reflection
         if (sunHalo2.w > 0.5) {
-             reflection += getMoonDisk(R, L2, L, sunHalo2, sunIntensity2, outTransmittance);
+             reflection += getMoonDisk(R, L2, L, sunHalo2, sunIntensity2, outTransmittance, moonTex, moonNormal);
         }
         
         // Apply clouds to reflection
@@ -1017,14 +1134,15 @@ fragment {
         }
         highp float sunIntensityLit = materialParams.sunIntensity * safeEclipseFactor;
         
-        // 1. Atmosphere Scattering
+        // 2. Atmospheric Scattering
         highp vec3 color = getAtmosphere(V, L, sunIntensityLit, materialParams.depthR, materialParams.depthM, materialParams.ozone, 
                                          materialParams.multiScatParams, materialParams.miePhaseParams, transmittance);
 
-        // 2. Secondary Sun/Moon Scattering
+        // 3. Secondary Scattering (Moon)
         if (materialParams.sunHalo2.w > 0.5) {
+            float phaseFactor = getPhaseFactor(L, L2);
             inScatter2 = getSecondarySunScattering(V, L2,
-                                                   materialParams.sunIntensity2,
+                                                   materialParams.sunIntensity2 * phaseFactor,
                                                    materialParams.depthR,
                                                    materialParams.depthM,
                                                    materialParams.ozone,
@@ -1033,12 +1151,12 @@ fragment {
             color += inScatter2;
         }
 
-        // 3. Clouds
+        // 4. Clouds
         highp float cloudDensityVal;
         highp vec3 clouds = getCloudLayer(V, L, materialParams.cloudControl, materialParams.cloudControl2, materialParams.shimmerControl, 
                                           sunIntensityLit, transmittance, cloudDensityVal);
         
-        // 4. Sun Disk (Direct)
+        // 5. Sun Disk (Direct)
         // Use ORIGINAL sunIntensity (Un-dimmed) so the disk looks bright
         // We mask it by Moon Occlusion AND Cloud Occlusion
         highp vec3 sunDisk = getSunDisk(V, L, materialParams.sunHalo, materialParams.sunIntensity, transmittance);
@@ -1056,33 +1174,54 @@ fragment {
         
         // Apply Masks
         // Note: moonOcclusion is 1.0 if occluded. So we want (1.0 - moonOcclusion).
-        // Since we logic-ed it as: if dist < rad, occlusion = 1.0. Correct.
+
         sunDisk *= (1.0 - moonOcclusion) * sunAccess;
         
         color += sunDisk;
         
-        // 5. Moon Disk
+        // 6. Moon Disk
         if (materialParams.sunHalo2.w > 0.5) {
              color += getMoonDisk(V, L2, L, materialParams.sunHalo2, 
-                                  materialParams.sunIntensity2, transmittance) * sunAccess;
+                                  materialParams.sunIntensity2, transmittance, materialParams_moonTexture, materialParams_moonNormal) * sunAccess;
         }
 
-        // 6. Stars
+        // 7. Stars
         // Add stars before clouds (clouds cover stars)
-        color += getStarLayer(V, L, cloudDensityVal, transmittance, materialParams.starControl) * (1.0 - moonOcclusion);
+        highp vec3 starColor = getStarLayer(V, L, cloudDensityVal, transmittance, materialParams.starControl);
+        
+        // 7b. Milky Way
+        // Add Milky Way behind stars (conceptually) but handled similarly
+        // We fade it by Sun Elevation just like stars
+        // Re-use starFade logic implicity or calculate it?
+        // Let's use the starControl.y (enabled) check inside getMilkyWay if needed, or just assume it's always on if intensity > 0.
+        // We reuse the fade from stars for consistency:
+        // STAR_FADE_SUN_ELV_HIGH...
+        // We recalculate fade:
+        highp float mwFade = 1.0 - smoothstep(STAR_FADE_SUN_ELV_LOW, STAR_FADE_SUN_ELV_HIGH, L.y);
+        mwFade *= mwFade;
+        
+        highp vec3 milkyWay = vec3(0.0);
+        if (mwFade > 0.0) {
+             milkyWay = getMilkyWay(V, materialParams.milkyWayRotation, materialParams_milkyWayTexture, materialParams.milkyWayControl);
+             milkyWay *= mwFade * transmittance * (1.0 - moonOcclusion);
+             // Apply cloud occlusion
+             milkyWay *= (1.0 - smoothstep(0.0, 1.0, pow(cloudDensityVal, 0.1)));
+        }
 
-        // 7. Composite Clouds
+        color += (starColor + milkyWay) * (1.0 - moonOcclusion);
+
+        // 8. Composite Clouds
         // Clouds are alpha blended on top of the sky (Atmos + Stars + SunDisk)
         // The cloud color `clouds` includes its own ambient and forward scattering terms.
         color = mix(color, clouds, cloudDensityVal);
 
-        // 8. Night Sky Offset
+        // 9. Night Sky Offset
         color += materialParams.nightColor;
 
-        // 9. Dynamic Tone Mapping
+        // 10. Dynamic Tone Mapping
         color = applyDynamicToneMapping(color, L, materialParams.contrast);
 
-        // 10. Water Surface (Reflection)
+        // 11. Water Surface (Reflection)
         if (V.y < 0.0) {
             color = getWaterColor(V, L, sunIntensityLit, materialParams.sunIntensity,
                                        materialParams.depthR, materialParams.depthM, 
@@ -1092,7 +1231,8 @@ fragment {
                                        materialParams.cloudControl, materialParams.cloudControl2,
                                        materialParams.shimmerControl,
                                        materialParams.waterControl,
-                                       L2, materialParams.sunIntensity2, materialParams.sunHalo2);
+                                       L2, materialParams.sunIntensity2, materialParams.sunHalo2,
+                                       materialParams_moonTexture, materialParams_moonNormal);
             color = applyDynamicToneMapping(color, L, materialParams.contrast);
         }
 
