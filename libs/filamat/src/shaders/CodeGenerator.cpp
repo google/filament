@@ -68,15 +68,6 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             }
             if (v.hasStereo() && stage == ShaderStage::VERTEX) {
                 switch (material.stereoscopicType) {
-                case StereoscopicType::INSTANCED:
-                    // If we're not processing the shader through glslang (in the case of unoptimized
-                    // OpenGL shaders), then we need to add the #extension string ourselves.
-                    // If we ARE running the shader through glslang, then we must not include it,
-                    // otherwise glslang will complain.
-                    out << "#ifndef FILAMENT_GLSLANG\n";
-                    out << "#extension GL_EXT_clip_cull_distance : require\n";
-                    out << "#endif\n\n";
-                    break;
                 case StereoscopicType::MULTIVIEW:
                     if (mTargetApi == TargetApi::VULKAN) {
                         out << "#extension GL_EXT_multiview : enable\n";
@@ -101,9 +92,6 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             }
             if (v.hasStereo() && stage == ShaderStage::VERTEX) {
                 switch (material.stereoscopicType) {
-                case StereoscopicType::INSTANCED:
-                    // Nothing to generate
-                    break;
                 case StereoscopicType::MULTIVIEW:
                     if (mTargetApi == TargetApi::VULKAN) {
                         out << "#extension GL_EXT_multiview : enable\n";
@@ -128,9 +116,6 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
 
     if (v.hasStereo() && stage == ShaderStage::VERTEX) {
         switch (material.stereoscopicType) {
-        case StereoscopicType::INSTANCED:
-            // Nothing to generate
-            break;
         case StereoscopicType::MULTIVIEW:
             if (mTargetApi != TargetApi::VULKAN) {
                 out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
@@ -233,9 +218,6 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
 
     switch (material.stereoscopicType) {
-    case StereoscopicType::INSTANCED:
-        generateDefine(out, "FILAMENT_STEREO_INSTANCED", true);
-        break;
     case StereoscopicType::MULTIVIEW:
         generateDefine(out, "FILAMENT_STEREO_MULTIVIEW", true);
         break;

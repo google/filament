@@ -939,7 +939,7 @@ private:
     Interpolation mInterpolation = Interpolation::SMOOTH;
     VertexDomain mVertexDomain = VertexDomain::OBJECT;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
-    StereoscopicType mStereoscopicType = StereoscopicType::INSTANCED;
+    StereoscopicType mStereoscopicType = StereoscopicType::MULTIVIEW;
     uint8_t mStereoscopicEyeCount = 2;
 
     filament::AttributeBitset mRequiredAttributes;

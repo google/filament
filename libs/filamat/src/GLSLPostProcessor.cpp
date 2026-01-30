@@ -912,7 +912,6 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
                 //   layout(num_views = 2) in;
                 glslOptions.ovr_multiview_view_count = config.materialInfo->stereoscopicEyeCount;
                 break;
-            case StereoscopicType::INSTANCED:
             case StereoscopicType::NONE:
                 // Nothing to generate
                 break;

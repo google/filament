@@ -1261,14 +1261,6 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::COLOR);
 
-
-    // RenderPass::IS_INSTANCED_STEREOSCOPIC only applies to the color pass
-    if (view.hasStereo() &&
-        engine.getConfig().stereoscopicType == StereoscopicType::INSTANCED) {
-        renderFlags |= RenderPass::IS_INSTANCED_STEREOSCOPIC;
-        passBuilder.renderFlags(renderFlags);
-    }
-
     // create the pass, which generates all its commands (this is a heavy operation)
     RenderPass const pass{ passBuilder.build(engine, driver) };
 

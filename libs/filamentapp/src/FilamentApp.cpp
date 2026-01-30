@@ -741,9 +741,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
         Engine::Config engineConfig = {};
         engineConfig.stereoscopicEyeCount = config.stereoscopicEyeCount;
-#if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
-        engineConfig.stereoscopicType = Engine::StereoscopicType::INSTANCED;
-#elif defined (FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+#if defined (FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
         engineConfig.stereoscopicType = Engine::StereoscopicType::MULTIVIEW;
 #else
         engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;

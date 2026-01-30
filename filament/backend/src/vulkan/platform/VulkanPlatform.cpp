@@ -984,10 +984,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     context.mProtectedMemorySupported =
             static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
 
-    // Only enable shaderClipDistance if we are doing instanced stereoscopic rendering.
-    if (driverConfig.stereoscopicType != StereoscopicType::INSTANCED) {
-        context.mPhysicalDeviceFeatures.features.shaderClipDistance = VK_FALSE;
-    }
+    context.mPhysicalDeviceFeatures.features.shaderClipDistance = VK_FALSE;
 
     // Check the availability of lazily allocated memory
     context.mLazilyAllocatedMemorySupported = false;
