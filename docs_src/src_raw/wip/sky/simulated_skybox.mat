@@ -3,11 +3,13 @@ material {
     parameters : [
         {
            type : float3,
-           name : sunDirection
+           name : sunDirection,
+           precision : high
         },
         {
            type : float3,
-           name : sunDirection2
+           name : sunDirection2,
+           precision : high
         },
         {
            type : float3,
@@ -96,7 +98,10 @@ material {
         }
     ],
     variables : [
-         eyeDirection
+        {
+            name : "eyeDirection",
+            precision : "high"
+        }
     ],
     vertexDomain : device,
     depthWrite : false,
@@ -168,8 +173,8 @@ fragment {
     // Rayleigh Phase Function: Scattering distribution for small particles (air molecules)
     // Lord Rayleigh (1871)
     // Normalized to integrate to 4*PI (Boosting brightness by factor PI vs standard 1-normalization)
-    highp float rayleighPhase(highp float cosTheta) {
-        const highp float THREE_SIXTEENTH = (3.0 / 16.0);
+    float rayleighPhase(float cosTheta) {
+        const float THREE_SIXTEENTH = (3.0 / 16.0);
         return THREE_SIXTEENTH * (1.0 + cosTheta * cosTheta);
     }
 
@@ -177,11 +182,11 @@ fragment {
     // Henyey & Greenstein (1941)
     // Controls the forward scattering peak (sun halo) via anisotropy parameter 'g'
     // Optimized: params.x = (1 + g^2), params.y = (-2 * g)
-    highp float hgPhase(highp float cosTheta, highp vec2 params) {
-        const highp float ONE_FOURTH = (1.0 / 4.0);
+    float hgPhase(float cosTheta, vec2 params) {
+        const float ONE_FOURTH = (1.0 / 4.0);
         // Recover (1 - g^2) => 2.0 - (1 + g^2)
-        highp float oneMinusG2 = 2.0 - params.x;
-        highp float inverse = 1.0 / pow(params.x + params.y * cosTheta, 1.5);
+        float oneMinusG2 = 2.0 - params.x;
+        float inverse = 1.0 / pow(params.x + params.y * cosTheta, 1.5);
         return ONE_FOURTH * (oneMinusG2 * inverse);
     }
 
@@ -192,15 +197,38 @@ fragment {
         return fract((p3.x + p3.y) * p3.z);
     }
 
+    // Safe mod for negative values
+    // Why 289?
+    // 1. Historical: 17*17 = 289. Used in identifying permutations in standard GLSL noise (Ashima/stegu).
+    // 2. Precision: Small enough to prevent float precision loss during internal calculations (e.g. squaring).
+    // 3. Quality: Large enough to hide repetition and coprime to standard powers-of-two (like 256), avoiding grid resonance.
+    highp vec3 mod289(highp vec3 x) {
+        return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+
     highp float noise(highp vec3 p) {
+        // Wrap input to [0, 289] to preserve precision of fract() when p is large.
+        // This fixes grid artifacts on mobile caused by large world coordinates.
+        p = mod289(p);
+        
         highp vec3 i = floor(p);
         highp vec3 f = fract(p);
         // Cubic Hermite Interpolation
         highp vec3 u = f*f*(3.0-2.0*f);
-        return mix(mix(mix(hash13(i + vec3(0,0,0)), hash13(i + vec3(1,0,0)), u.x),
-                       mix(hash13(i + vec3(0,1,0)), hash13(i + vec3(1,1,0)), u.x), u.y),
-                   mix(mix(hash13(i + vec3(0,0,1)), hash13(i + vec3(1,0,1)), u.x),
-                       mix(hash13(i + vec3(0,1,1)), hash13(i + vec3(1,1,1)), u.x), u.y), u.z);
+        
+        // i is already wrapped by p=mod289(p), but mod289(i) is safe (identity for 0..289).
+        // Actually mod289(p) ensures p is 0..289.
+        // So floor(p) is 0..288.
+        // mod289(i) is redundant but harmless.
+        highp vec3 i0 = i;
+        highp vec3 i1 = mod289(i + 1.0);
+        
+        // Wrap neighbors to ensure valid domain [0, 289] and seamless scrolling
+        // Optimized to use precomputed wrapped indices (2 mods instead of 9)
+        return mix(mix(mix(hash13(vec3(i0.x, i0.y, i0.z)), hash13(vec3(i1.x, i0.y, i0.z)), u.x),
+                       mix(hash13(vec3(i0.x, i1.y, i0.z)), hash13(vec3(i1.x, i1.y, i0.z)), u.x), u.y),
+                   mix(mix(hash13(vec3(i0.x, i0.y, i1.z)), hash13(vec3(i1.x, i0.y, i1.z)), u.x),
+                       mix(hash13(vec3(i0.x, i1.y, i1.z)), hash13(vec3(i1.x, i1.y, i1.z)), u.x), u.y), u.z);
     }
     
     // Fractal Brownian Motion (4 Octaves)
@@ -419,7 +447,7 @@ fragment {
     // @param transmittance Atmospheric Transmittance (0..1).
     // @return             Radiance of the sun disk (if visible and enabled).
     // ------------------------------------------------------------------------
-    highp vec3 getSunDisk(highp vec3 V, highp vec3 L, highp vec4 sunParams, 
+    vec3 getSunDisk(highp vec3 V, highp vec3 L, highp vec4 sunParams, 
                           highp float sunIntensity, highp vec3 transmittance) {
         
         highp float sunCosRadius = sunParams.x;
@@ -477,10 +505,10 @@ fragment {
     // @param outDensity   Output: Cloud pixel density (0..1) for compositing.
     // @return             Cloud Radiance (Lit color * attenuation * shading).
     // ------------------------------------------------------------------------
-    highp vec3 getCloudLayer(highp vec3 V, highp vec3 L,
+    vec3 getCloudLayer(highp vec3 V, highp vec3 L,
                              highp vec4 control, highp vec4 control2, highp vec4 geometry,
                              highp float sunIntensity, highp vec3 transmittance,
-                             out highp float outDensity) {
+                             out float outDensity) {
         
         outDensity = 0.0;
         highp float cloudCoverage = control.x;
@@ -594,8 +622,8 @@ fragment {
     // @param contrast  Maximum contrast exponent (at horizon). e.g. 1.5.
     // @return          Tone mapped color.
     // ------------------------------------------------------------------------
-    highp vec3 applyDynamicToneMapping(highp vec3 color, highp vec3 L, highp float contrast) {
-        float c = saturate(L.y);
+    vec3 applyDynamicToneMapping(vec3 color, highp vec3 L, float contrast) {
+        highp float c = saturate(L.y);
         // Exponent blends from 'contrast' (at L.y=0) to 1.0 (at L.y=1)
         float exponent = mix(contrast, 1.0, sqrt(c));
         return pow(max(vec3(0.0), color), vec3(exponent));
@@ -612,7 +640,7 @@ fragment {
         return fract((p4.xxyz + p4.yzzw) * p4.zywx);
     }
 
-    highp float getStars(highp vec3 V) {
+    float getStars(highp vec3 V) {
         bool enabled = materialParams.starControl.y > 0.5;
         if (!enabled) return 0.0;
         
@@ -669,7 +697,7 @@ fragment {
     }
 
     // New helper to handle Star Compositing (Fade, Rotation, Occlusion)
-    highp vec3 getStarLayer(highp vec3 V, highp vec3 L, highp float cloudDensity, highp vec3 transmittance, highp vec4 starControl) {
+    vec3 getStarLayer(highp vec3 V, highp vec3 L, float cloudDensity, highp vec3 transmittance, highp vec4 starControl) {
          // starControl.x = Density, .y = Enabled
          if (starControl.y < 0.5) return vec3(0.0);
 
@@ -851,14 +879,14 @@ fragment {
         } else {
              // Finite Difference (Standard, 3 taps)
              // More expensive but analytically correct in world space (independent of view resolution/derivatives)
-             float eps = 0.02; // Epsilon for gradient
-             vec3 p = vec3(uv, time * 0.1 * speed);
-             float hx = fbm(p + vec3(eps, 0.0, 0.0), octaves);
-             float hy = fbm(p + vec3(0.0, eps, 0.0), octaves);
+             highp float eps = 0.02; // Epsilon for gradient
+             highp vec3 p = vec3(uv, time * 0.1 * speed);
+             highp float hx = fbm(p + vec3(eps, 0.0, 0.0), octaves);
+             highp float hy = fbm(p + vec3(0.0, eps, 0.0), octaves);
              
              // Gradient
-              float dx = (hx - h) / eps;
-              float dy = (hy - h) / eps;
+              highp float dx = (hx - h) / eps;
+              highp float dy = (hy - h) / eps;
               
               // Construct World Space Perturbation
               // Gradient (dx, dy) acts on XZ plane.

@@ -1,7 +1,7 @@
 
 // main.js
 
-Filament.init(['assets/simulated_skybox.filamat'], () => {
+Filament.init(['assets/simulated_skybox.filamat?v=' + Date.now()], () => {
   window.app = new App(document.getElementsByTagName('canvas')[0]);
 });
 
@@ -21,7 +21,8 @@ class App {
     // But Filament.init assets are for internal or easy access via assets object if configured?
     // Let's just let SimulatedSkybox fetch it again or use a blob if we wanted.
     // Simpler: Just let SimulatedSkybox fetch it.
-    this.skybox.loadMaterial('assets/simulated_skybox.filamat?v=56').then(() => {
+    const matUrl = 'assets/simulated_skybox.filamat?v=' + Date.now();
+    this.skybox.loadMaterial(matUrl).then(() => {
       this.initGUI();
     });
 
