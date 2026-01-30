@@ -40,9 +40,17 @@ class MaterialPrograms {
                              std::is_same_v<bool, T>>;
 
 public:
+    MaterialPrograms() = default;
+
     MaterialPrograms(FEngine& engine, FMaterial const& material,
             utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     specializationConstants);
+
+    // Initialize with the same spec constants/programs owned by the given material. Called by
+    // MaterialInstance.
+    void initializeFromMaterial(FEngine& engine, FMaterial const& material);
+
+    bool isInitialized() { return mMaterial != nullptr; }
 
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
@@ -69,6 +77,10 @@ public:
     utils::Slice<const backend::Program::SpecializationConstant>
             getSpecializationConstants() const noexcept {
         return mSpecializationConstants;
+    }
+
+    utils::Slice<const backend::Handle<backend::HwProgram>> getPrograms() const noexcept {
+        return mCachedPrograms.as_slice();
     }
 
     // Free all engine resources associated with this instance.
@@ -103,7 +115,7 @@ private:
     void setConstantImpl(std::string_view name,
             backend::Program::SpecializationConstant value) noexcept;
 
-    FMaterial const& mMaterial;
+    FMaterial const* mMaterial = nullptr;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     utils::Slice<const backend::Program::SpecializationConstant> mSpecializationConstants;
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>

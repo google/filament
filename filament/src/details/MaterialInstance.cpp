@@ -17,6 +17,7 @@
 #include <filament/MaterialInstance.h>
 
 #include "RenderPass.h"
+#include "MaterialParser.h"
 
 #include "ds/DescriptorSetLayout.h"
 
@@ -72,6 +73,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
           mIsDefaultInstance(false),
           mUseUboBatching(material->useUboBatching()),
           mTransparencyMode(TransparencyMode::DEFAULT),
+          mHasOverriddenSpecializationConstants(false),
           mName(name ? CString(name) : material->getName()) {
     FEngine::DriverApi& driver = engine.getDriverApi();
 
@@ -125,12 +127,13 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
     setTransparencyMode(material->getTransparencyMode());
 }
 
-FMaterialInstance::FMaterialInstance(FEngine& engine,
-        FMaterialInstance const* other, const char* name)
+FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterialInstance const* other,
+        const char* name)
         : mMaterial(other->mMaterial),
           mTextureParameters(other->mTextureParameters),
-          mDescriptorSet(other->mDescriptorSet.duplicate(
-                "MaterialInstance", mMaterial->getDescriptorSetLayout())),
+          mDescriptorSet(other->mDescriptorSet.duplicate("MaterialInstance",
+                  mMaterial->getDescriptorSetLayout())),
+          mCachedPrograms(other->mCachedPrograms),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -145,10 +148,17 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mIsDoubleSided(other->mIsDoubleSided),
           mIsDefaultInstance(false),
           mUseUboBatching(other->mUseUboBatching),
+          mHasOverriddenSpecializationConstants(other->mHasOverriddenSpecializationConstants),
           mScissorRect(other->mScissorRect),
           mName(name ? CString(name) : other->mName) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
+
+    if (mHasOverriddenSpecializationConstants) {
+        mSpecializationConstants =
+                engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
+                        other->mSpecializationConstants);
+    }
 
     mUniforms.setUniforms(other->getUniformBuffer());
 
@@ -207,6 +217,13 @@ void FMaterialInstance::terminate(FEngine& engine) {
     if (ubHandle){
         driver.destroyBufferObject(*ubHandle);
     }
+
+    if (mHasOverriddenSpecializationConstants) {
+        mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
+                mMaterial->getMaterialParser(), mSpecializationConstants, mIsDefaultInstance);
+        engine.getMaterialCache().getSpecializationConstantsInternPool().release(
+                mSpecializationConstants);
+    }
 }
 
 void FMaterialInstance::commit(FEngine& engine) const {
@@ -255,6 +272,51 @@ void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManage
 
     // Commit descriptors if needed (e.g. when textures are updated,or the first time)
     mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+template<typename T>
+void FMaterialInstance::setConstantImpl(std::string_view name, T value) {
+    auto const& specializationConstantsNameToIndex = mMaterial->getDefinition().specializationConstantsNameToIndex;
+    auto it = specializationConstantsNameToIndex.find(name);
+    if (it == specializationConstantsNameToIndex.end()) {
+        return;
+    }
+
+    size_t const index = it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    if (mSpecializationConstants[index] == backend::Program::SpecializationConstant{value}) {
+        return;
+    }
+
+    FEngine& engine = mMaterial->getEngine();
+    auto& internPool = engine.getMaterialCache().getSpecializationConstantsInternPool();
+
+    if (!mHasOverriddenSpecializationConstants) {
+        mHasOverriddenSpecializationConstants = true;
+        mCachedPrograms = utils::FixedCapacityVector<backend::Handle<backend::HwProgram>>(
+                mMaterial->getCachedPrograms().size());
+    } else {
+        mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
+                mMaterial->getMaterialParser(), mSpecializationConstants, mIsDefaultInstance);
+        internPool.release(mSpecializationConstants);
+    }
+
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant> constants(
+            mSpecializationConstants);
+    constants[index] = value;
+    mSpecializationConstants = internPool.acquire(std::move(constants));
+}
+
+template<typename T>
+T FMaterialInstance::getConstantImpl(std::string_view name) const {
+    auto const& specializationConstantsNameToIndex = mMaterial->getDefinition().specializationConstantsNameToIndex;
+    auto it = specializationConstantsNameToIndex.find(name);
+    if (UTILS_UNLIKELY(it == specializationConstantsNameToIndex.end())) {
+        return {};
+    }
+    size_t const index = it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    return std::get<T>(mSpecializationConstants[index]);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -378,6 +440,15 @@ void FMaterialInstance::setTransparencyMode(TransparencyMode const mode) noexcep
     mTransparencyMode = mode;
 }
 
+RasterState FMaterialInstance::getRasterState() const noexcept {
+    RasterState rs = mMaterial->getRasterState();
+    rs.culling = mCulling;
+    rs.depthWrite = mDepthWrite;
+    rs.depthFunc = mDepthFunc;
+    rs.colorWrite = mColorWrite;
+    return rs;
+}
+
 void FMaterialInstance::setDepthCulling(bool const enable) noexcept {
     mDepthFunc = enable ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
 }
@@ -397,6 +468,82 @@ const char* FMaterialInstance::getName() const noexcept {
 }
 
 // ------------------------------------------------------------------------------------------------
+
+void FMaterialInstance::compile(FEngine& engine, CompilerPriorityQueue const priority,
+        UserVariantFilterMask variantSpec, CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) noexcept {
+
+    DriverApi& driver = engine.getDriverApi();
+    MaterialDefinition const& definition = mMaterial->getDefinition();
+
+    bool const isStereoSupported = driver.isStereoSupported();
+
+    // Turn off the STE variant if stereo is not supported.
+    if (UTILS_LIKELY(!isStereoSupported)) {
+        variantSpec &= ~UserVariantFilterMask(UserVariantFilterBit::STE);
+    }
+
+    UserVariantFilterMask const variantFilter =
+            ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
+    ShaderModel const shaderModel = engine.getShaderModel();
+
+    if (UTILS_LIKELY(driver.isParallelShaderCompileSupported())) {
+        for (auto const variant: definition.getVariants()) {
+            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
+                if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
+                    prepareProgram(driver, variant, priority);
+                }
+            }
+        }
+    }
+
+    if (callback) {
+        struct Callback {
+            Invocable<void(Material*)> f;
+            Material* m;
+            static void func(void* user) {
+                auto* const c = static_cast<Callback*>(user);
+                c->f(c->m);
+                delete c;
+            }
+        };
+        auto* const user = new(std::nothrow) Callback{ std::move(callback), mMaterial };
+        driver.compilePrograms(priority, handler, &Callback::func, user);
+    } else {
+        driver.compilePrograms(priority, nullptr, nullptr, nullptr);
+    }
+}
+
+Handle<HwProgram> FMaterialInstance::prepareProgram(DriverApi& driver,
+        Variant variant, CompilerPriorityQueue priority) const noexcept {
+    if (UTILS_LIKELY(!mHasOverriddenSpecializationConstants)) {
+        return mMaterial->prepareProgram(driver, variant, priority);
+    }
+    Handle<HwProgram> program = mCachedPrograms[variant.key];
+    if (UTILS_LIKELY(program)) {
+        return program;
+    }
+    return mCachedPrograms[variant.key] = mMaterial->getDefinition().prepareProgram(
+            mMaterial->getEngine(), driver, mMaterial->getMaterialParser(),
+            getProgramSpecialization(variant), priority);
+}
+
+Handle<HwProgram> FMaterialInstance::getProgram(Variant variant) const noexcept {
+    if (UTILS_LIKELY(!mHasOverriddenSpecializationConstants)) {
+        return mMaterial->getProgram(variant);
+    }
+    Handle<HwProgram> program = mCachedPrograms[variant.key];
+    assert_invariant(program);
+    return program;
+}
+
+ProgramSpecialization FMaterialInstance::getProgramSpecialization(Variant variant) const noexcept {
+    return ProgramSpecialization {
+        .materialCrc32 = mMaterial->getMaterialParser().getCrc32(),
+        .variant = variant,
+        .specializationConstants = mSpecializationConstants,
+    };
+}
 
 void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
     assert_invariant(mDescriptorSet.getHandle());
@@ -501,5 +648,13 @@ void FMaterialInstance::fixMissingSamplers() const {
         });
     }
 }
+
+#if FILAMENT_ENABLE_MATDBG
+
+void FMaterial::updateActiveProgramsForMatdbg(Variant const variant) const noexcept {
+    mMaterial->updateActiveProgramsForMatdbg(variant);
+}
+
+#endif // FILAMENT_ENABLE_MATDBG
 
 } // namespace filament

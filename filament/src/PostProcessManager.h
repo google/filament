@@ -377,7 +377,7 @@ public:
     void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
 
     backend::PipelineState getPipelineState(
-            FMaterial const* ma,
+            FMaterialInstance const* mi,
             PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
 
     void renderFullScreenQuad(FrameGraphResources::RenderPassInfo const& out,
