@@ -37,6 +37,15 @@ class SimulatedSkybox {
     // x=cos(rad), y=sin(rad) [Precision Fix], z=intensity, w=enabled
     this.moonHalo = [Math.cos(0.5 * Math.PI / 180.0), Math.sin(0.5 * Math.PI / 180.0), 1.0, 0.0]; // Disabled by default
 
+    this.moonTextureObj = null;
+    this.moonNormalObj = null;
+    this.milkyWayTextureObj = null;
+
+    // Milky Way Parameters
+    // x=Intensity, y=Saturation, z=Unused
+    this.milkyWayControl = [1.0, 1.0, 0.07];
+    this.milkyWayEnabled = true;
+    this.milkyWayRotation = [1, 0, 0, 0, 1, 0, 0, 0, 1]; // Identity by default
     this.initEntity();
   }
 
@@ -53,6 +62,184 @@ class SimulatedSkybox {
     rcm.setMaterialInstanceAt(instance, 0, this.materialInstance);
 
     console.log("Material loaded and bound.");
+
+    // Load Moon Texture
+    try {
+      const texUrl = 'assets/moon_disk.png';
+      const Texture = Filament.Texture;
+      const TextureSampler = Filament.TextureSampler;
+      const PixelDataFormat = Filament.PixelDataFormat;
+      const PixelDataType = Filament.PixelDataType;
+      const TextureUsage = Filament.Texture$Usage;
+      const TextureFormat = Filament.Texture$InternalFormat;
+      const MinFilter = Filament.MinFilter;
+      const MagFilter = Filament.MagFilter;
+      const WrapMode = Filament.WrapMode;
+      const texResponse = await fetch(texUrl);
+      const texBlob = await texResponse.blob();
+      const bitmap = await createImageBitmap(texBlob);
+
+      const width = bitmap.width;
+      const height = bitmap.height;
+
+      this.moonTextureObj = Texture.Builder()
+        .width(width)
+        .height(height)
+        .levels(0xff)
+        .format(TextureFormat.SRGB8_A8)
+        .usage(TextureUsage.SAMPLEABLE.value | TextureUsage.UPLOADABLE.value | TextureUsage.GEN_MIPMAPPABLE.value)
+        .build(this.engine);
+
+      // Extract Data using a Canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0);
+      const imageData = ctx.getImageData(0, 0, width, height);
+
+      // Use RGBA data directly (Uint8ClampedArray)
+      // Filament supports RGBA upload for RGB/SRGB internal formats (drops alpha).
+      // This matches Canvas layout (Top-Down, RGBA) and is 4-byte aligned.
+      const pbd = Filament.PixelBuffer(
+        new Uint8Array(imageData.data.buffer), // Wrap buffer to ensure Uint8Array
+        PixelDataFormat.RGBA,
+        PixelDataType.UBYTE
+      );
+
+      this.moonTextureObj.setImage(this.engine, 0, pbd);
+      this.moonTextureObj.generateMipmaps(this.engine);
+
+      const sampler = new TextureSampler(
+        MinFilter.LINEAR,
+        MagFilter.LINEAR,
+        WrapMode.CLAMP_TO_EDGE
+      );
+
+      this.materialInstance.setTextureParameter('moonTexture', this.moonTextureObj, sampler);
+
+    } catch (e) {
+      console.error("Failed to load moon texture:", e);
+    }
+
+    // Load Moon Normal
+    try {
+      const texUrl = 'assets/moon_normal.png';
+      const Texture = Filament.Texture;
+      const TextureSampler = Filament.TextureSampler;
+      const PixelDataFormat = Filament.PixelDataFormat;
+      const PixelDataType = Filament.PixelDataType;
+      const TextureUsage = Filament.Texture$Usage;
+      const TextureFormat = Filament.Texture$InternalFormat;
+      const MinFilter = Filament.MinFilter;
+      const MagFilter = Filament.MagFilter;
+      const WrapMode = Filament.WrapMode;
+      const texResponse = await fetch(texUrl);
+      const texBlob = await texResponse.blob();
+      const bitmap = await createImageBitmap(texBlob);
+
+      const width = bitmap.width;
+      const height = bitmap.height;
+
+      this.moonNormalObj = Texture.Builder()
+        .width(width)
+        .height(height)
+        .levels(0xff)
+        .format(TextureFormat.RGBA8)
+        .usage(TextureUsage.SAMPLEABLE.value | TextureUsage.UPLOADABLE.value | TextureUsage.GEN_MIPMAPPABLE.value)
+        .build(this.engine);
+
+      // Extract Data using a Canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0);
+      const imageData = ctx.getImageData(0, 0, width, height);
+
+      // Use RGBA data directly
+      const pbd = Filament.PixelBuffer(
+        new Uint8Array(imageData.data.buffer),
+        PixelDataFormat.RGBA,
+        PixelDataType.UBYTE
+      );
+
+      this.moonNormalObj.setImage(this.engine, 0, pbd);
+      this.moonNormalObj.generateMipmaps(this.engine);
+
+      const sampler = new TextureSampler(
+        MinFilter.LINEAR_MIPMAP_LINEAR,
+        MagFilter.LINEAR,
+        WrapMode.CLAMP_TO_EDGE
+      );
+
+      this.materialInstance.setTextureParameter('moonNormal', this.moonNormalObj, sampler);
+
+    } catch (e) {
+      console.error("Failed to load moon normal:", e);
+    }
+
+    // Load Milky Way Texture
+    try {
+      const texUrl = 'assets/milkyway.png';
+      const Texture = Filament.Texture;
+      const TextureSampler = Filament.TextureSampler;
+      const PixelDataFormat = Filament.PixelDataFormat;
+      const PixelDataType = Filament.PixelDataType;
+      const TextureUsage = Filament.Texture$Usage;
+      const TextureFormat = Filament.Texture$InternalFormat;
+      const MinFilter = Filament.MinFilter;
+      const MagFilter = Filament.MagFilter;
+      const WrapMode = Filament.WrapMode;
+      const texResponse = await fetch(texUrl);
+      const texBlob = await texResponse.blob();
+      const bitmap = await createImageBitmap(texBlob);
+
+      const width = bitmap.width;
+      const height = bitmap.height;
+
+      this.milkyWayTextureObj = Texture.Builder()
+        .width(width)
+        .height(height)
+        .levels(0xff)
+        .format(TextureFormat.SRGB8_A8)
+        .usage(TextureUsage.SAMPLEABLE.value | TextureUsage.UPLOADABLE.value | TextureUsage.GEN_MIPMAPPABLE.value)
+        .build(this.engine);
+
+      // Extract Data using a Canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0);
+      try {
+        const imageData = ctx.getImageData(0, 0, width, height);
+
+        // Use RGBA data directly
+        const pbd = Filament.PixelBuffer(
+          new Uint8Array(imageData.data.buffer),
+          PixelDataFormat.RGBA,
+          PixelDataType.UBYTE
+        );
+
+        this.milkyWayTextureObj.setImage(this.engine, 0, pbd);
+        this.milkyWayTextureObj.generateMipmaps(this.engine);
+
+        const sampler = new TextureSampler(
+          MinFilter.LINEAR_MIPMAP_LINEAR,
+          MagFilter.LINEAR,
+          WrapMode.REPEAT // Equirectangular wraps horizontally
+        );
+
+        this.materialInstance.setTextureParameter('milkyWayTexture', this.milkyWayTextureObj, sampler);
+      } catch (err) {
+        console.warn("Milky Way texture data access failed (CORS?):", err);
+      }
+
+    } catch (e) {
+      console.error("Failed to load milky way texture:", e);
+    }
+
     this.updateCoefficients();
   }
 
@@ -93,16 +280,16 @@ class SimulatedSkybox {
 
     this.ib.setBuffer(this.engine, TRIANGLE_INDICES);
 
-    // We create a dummy material first or wait? 
-    // In JS we usually can't block. We'll rely on loadMaterial being called.
-    // For now, we build the Renderable without material, then set it later.
+    // Build the Renderable without material; it will be set later by loadMaterial.
+
 
     RenderableManager.Builder(1)
       .geometry(0, PrimitiveType.TRIANGLES, this.vb, this.ib)
       .culling(false)
       .castShadows(false)
       .receiveShadows(false)
-      .priority(7) // Render behind translucent objects? 7 is skybox priority typically.
+      .priority(7) // Skybox priority
+
       .build(this.engine, this.entity);
   }
 
@@ -292,6 +479,27 @@ class SimulatedSkybox {
     this.updateCoefficients();
   }
 
+  setMilkyWayControl(intensity, saturation, blackPoint) {
+    this.milkyWayControl[0] = Math.max(0.0, intensity);
+    this.milkyWayControl[1] = Math.max(0.0, saturation);
+    if (blackPoint !== undefined) {
+      this.milkyWayControl[2] = Math.max(0.0, blackPoint);
+    }
+    this.updateCoefficients();
+  }
+
+  setMilkyWayEnabled(enabled) {
+    this.milkyWayEnabled = !!enabled;
+    this.updateCoefficients();
+  }
+
+  setMilkyWayRotation(rotationMatrix) {
+    if (rotationMatrix && rotationMatrix.length === 9) {
+      this.milkyWayRotation = rotationMatrix;
+      this.updateCoefficients();
+    }
+  }
+
   updateCoefficients() {
     if (!this.materialInstance) {
       console.warn("updateCoefficients called before material loaded");
@@ -402,10 +610,22 @@ class SimulatedSkybox {
       this.sunDirection[2] * this.moonDirection[2];
 
     // Final Intensity = Peak * Scale (No Phase Factor - Phase is handled in Shader via N.L)
-    const MOON_PEAK_LUX = 5000.0;
+    const MOON_PEAK_LUX = 1.0;
     const finalMoonIntensity = MOON_PEAK_LUX * this.moonIntensity;
 
     this.materialInstance.setFloatParameter('sunIntensity2', finalMoonIntensity);
+
+    // Scale Milky Way by Sun Intensity (Pre-exposed) to match dynamic range
+    // Calibration: 1.0 User Intensity ~ 0.025 Lux Relative (approx 2.5% of Sun Pixel Value at Day)
+    // At Sunny 16 (Sun ~ 2.6), this gives ~0.065 pixel brightness, which is visible but dim.
+    const mwIntensity = this.milkyWayEnabled ? this.milkyWayControl[0] : 0.0;
+    const mwUniform = [
+      mwIntensity * this.sunIntensity * 0.025,
+      this.milkyWayControl[1],
+      this.milkyWayControl[2]
+    ];
+    this.materialInstance.setFloat3Parameter('milkyWayControl', new Float32Array(mwUniform));
+    this.materialInstance.setMat3Parameter('milkyWayRotation', new Float32Array(this.milkyWayRotation));
 
     // Moon Halo Upload (Disk Visualization)
     // Multiplier = 1.0 / SolidAngle
@@ -473,10 +693,9 @@ class SimulatedSkybox {
     const part1 = r1sq * Math.acos(c1);
     const part2 = r2sq * Math.acos(c2);
 
-    // Heron's formula for the triangle area * 2 (or just 0.5 * sin(angle) *r*r but we have sides)
-    // part3 is Area of kite? No, part3 is sum of two triangles?
-    // Formula: Area = r1^2 * acos(c1) + r2^2 * acos(c2) - 0.5 * sqrt...
+    // Heron's formula for the triangle area * 2
     // The sqrt term represents the area of the two triangles formed by the chord and centers.
+
 
     // Robust sqrt
     const val = (-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2);

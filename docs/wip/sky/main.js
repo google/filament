@@ -1,9 +1,122 @@
 
 // main.js
 
-Filament.init(['assets/simulated_skybox.filamat'], () => {
+Filament.init(['assets/simulated_skybox.filamat?v=' + Date.now()], () => {
   window.app = new App(document.getElementsByTagName('canvas')[0]);
 });
+
+// Helper: Julian Date
+function getJD(date) {
+  return date.getTime() / 86400000.0 + 2440587.5;
+}
+
+// Helper: GMST from Date
+function getGMST(date) {
+  const JD = getJD(date);
+  const D = JD - 2451545.0;
+  // GMST = 18.697... + 24.0657... * D
+  let gmst = 18.697374558 + 24.06570982441908 * D;
+  gmst = gmst % 24.0;
+  if (gmst < 0) gmst += 24.0;
+  return gmst;
+}
+
+// Helper: Matrix Rotation
+function rotateX(m, angle) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const m1 = m[1], m2 = m[2];
+  const m4 = m[4], m5 = m[5];
+  const m7 = m[7], m8 = m[8];
+  m[1] = m1 * c - m2 * s;
+  m[2] = m1 * s + m2 * c;
+  m[4] = m4 * c - m5 * s;
+  m[5] = m4 * s + m5 * c;
+  m[7] = m7 * c - m8 * s;
+  m[8] = m7 * s + m8 * c;
+}
+function rotateY(m, angle) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const m0 = m[0], m2 = m[2];
+  const m3 = m[3], m5 = m[5];
+  const m6 = m[6], m8 = m[8];
+  m[0] = m0 * c + m2 * s;
+  m[2] = -m0 * s + m2 * c;
+  m[3] = m3 * c + m5 * s;
+  m[5] = -m3 * s + m5 * c;
+  m[6] = m6 * c + m8 * s;
+  m[8] = -m6 * s + m8 * c;
+}
+function rotateZ(m, angle) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const m0 = m[0], m1 = m[1];
+  const m3 = m[3], m4 = m[4];
+  const m6 = m[6], m7 = m[7];
+  m[0] = m0 * c - m1 * s;
+  m[1] = m0 * s + m1 * c;
+  m[3] = m3 * c - m4 * s;
+  m[4] = m3 * s + m4 * c;
+  m[6] = m6 * c - m7 * s;
+  m[7] = m6 * s + m7 * c;
+}
+
+// Galactic to Equatorial (J2000)
+// This matrix converts Galactic vectors to Equatorial vectors.
+// Or effectively, if we want to render Galactic texture from Equatorial View vector V_eq:
+// V_gal = Inv(Rot_Gal_to_Eq) * V_eq = Rot_Eq_to_Gal * V_eq.
+// The shader does: V_gal = Rotation * V_world.
+// So Rotation = Rot_Eq_to_Gal * Rot_World_to_Eq.
+//
+// Galactic North Pole (J2000): RA = 192.85948, Dec = 27.12825
+// Ascending Node: RA = 282.85
+// 
+// Pre-computed Rotation Matrix (Equatorial -> Galactic)
+// Based on standard transformation matrices.
+// 
+// R_eq_gal = 
+// [ -0.054876  -0.873437  -0.483835 ]
+// [  0.494109  -0.444830   0.746982 ]
+// [ -0.867666  -0.198076   0.455984 ]
+//
+// Let's use this static definition.
+const MAT_EQ_TO_GAL = [
+  -0.054876, 0.494109, -0.867666,
+  -0.873437, -0.444830, -0.198076,
+  -0.483835, 0.746982, 0.455984
+];
+
+// Matrix multiplication 3x3
+function multiplyMat3(a, b) {
+  const out = new Float32Array(9);
+  // Row-major or Column-major? Filament is Column-major usually.
+  // GLSL is Column-major.
+  // Mat3 in array: [col0.x, col0.y, col0.z, col1.x, ...]
+  // So a[0] is (0,0), a[1] is (1,0), a[3] is (0,1).
+  //
+  // out = a * b
+  const a00 = a[0], a10 = a[1], a20 = a[2];
+  const a01 = a[3], a11 = a[4], a21 = a[5];
+  const a02 = a[6], a12 = a[7], a22 = a[8];
+
+  const b00 = b[0], b10 = b[1], b20 = b[2];
+  const b01 = b[3], b11 = b[4], b21 = b[5];
+  const b02 = b[6], b12 = b[7], b22 = b[8];
+
+  out[0] = a00 * b00 + a01 * b10 + a02 * b20;
+  out[1] = a10 * b00 + a11 * b10 + a12 * b20;
+  out[2] = a20 * b00 + a21 * b10 + a22 * b20;
+
+  out[3] = a00 * b01 + a01 * b11 + a02 * b21;
+  out[4] = a10 * b01 + a11 * b11 + a12 * b21;
+  out[5] = a20 * b01 + a21 * b11 + a22 * b21;
+
+  out[6] = a00 * b02 + a01 * b12 + a02 * b22;
+  out[7] = a10 * b02 + a11 * b12 + a12 * b22;
+  out[8] = a20 * b02 + a21 * b12 + a22 * b22;
+  return out;
+}
 
 class App {
   constructor(canvas) {
@@ -15,13 +128,10 @@ class App {
     this.skybox.entity = this.skybox.entity; // Ensuring access if needed
     this.scene.addEntity(this.skybox.entity);
 
-    // Load the material explicitly since we passed it to init but SimulatedSkybox needs to bind it
-    // Actually SimulatedSkybox.loadMaterial fetches it. 
-    // Since we already loaded it in Filament.init, we can arguably just use it if we had a way to access the asset.
-    // But Filament.init assets are for internal or easy access via assets object if configured?
-    // Let's just let SimulatedSkybox fetch it again or use a blob if we wanted.
-    // Simpler: Just let SimulatedSkybox fetch it.
-    this.skybox.loadMaterial('assets/simulated_skybox.filamat?v=56').then(() => {
+    // Load the material explicitly. SimulatedSkybox.loadMaterial fetches it.
+
+    const matUrl = 'assets/simulated_skybox.filamat?v=' + Date.now();
+    this.skybox.loadMaterial(matUrl).then(() => {
       this.initGUI();
     });
 
@@ -70,6 +180,15 @@ class App {
     };
 
     this.initControls(); // Initialize controls immediately
+
+    this.mwParams = {
+      enabled: true,
+      intensity: 1.0,
+      saturation: 1.0,
+      blackPoint: 0.07,
+      siderealTime: 0.0, // Hours [0-24]
+      latitude: 34.0, // Default Lat
+    };
 
     this.resize();
     window.addEventListener('resize', this.resize.bind(this));
@@ -121,10 +240,7 @@ class App {
     const sky = this.skybox;
 
     // Initialize local params from skybox defaults
-    // Initialize local params from skybox defaults
-    // REMOVED: Do not overwrite this.params from sky.sunDirection (Zenith)
-    // const currentDir = sky.sunDirection;
-    // this.params.sunTheta = ...
+
 
     const updateSun = () => {
       const theta = this.params.sunTheta;
@@ -144,25 +260,28 @@ class App {
 
     const sunFolder = gui.addFolder('Sun');
 
-    sunFolder.add(this.sunUI, 'azimuth', 0.0, 360.0, 0.1).name('Azimuth').onChange(v => {
+    sunFolder.add(this.sunUI, 'azimuth', 0.0, 360.0, 0.1).name('Azimuth').listen().onChange(v => {
       this.params.sunPhi = v * (Math.PI / 180.0);
       updateSun();
     });
 
-    sunFolder.add(this.sunUI, 'height', -0.2, 1.0).name('Height (Cos)').onChange(v => {
+    sunFolder.add(this.sunUI, 'height', -0.2, 1.0).name('Height (Cos)').listen().onChange(v => {
       this.params.sunTheta = Math.acos(v);
       updateSun();
     });
 
     sunFolder.add(this.params, 'sunIntensity', 0.0, 500000.0).name('Intensity').onChange(v => this.updateSunIntensity());
 
+
+
+
     const moonFolder = gui.addFolder('Moon');
     this.mParams = {
       enabled: true,
       azimuth: 180.0,
       height: Math.cos(45.0 * Math.PI / 180.0), // Default 45 degrees elevation -> cos(45) ~ 0.707
-      radius: 0.5,
-      intensity: 1.0
+      radius: 1.2,
+      intensity: 6.0
     };
 
     const updateMoon = () => {
@@ -184,24 +303,113 @@ class App {
     sky.setMoonIntensity(this.mParams.intensity);
 
     moonFolder.add(this.mParams, 'enabled').name('Enabled').onChange(v => sky.setMoonEnabled(v));
-    moonFolder.add(this.mParams, 'azimuth', 0.0, 360.0, 0.1).name('Azimuth').onChange(updateMoon);
-    moonFolder.add(this.mParams, 'height', -0.2, 1.0).name('Height (Cos)').onChange(updateMoon);
-    moonFolder.add(this.mParams, 'intensity', 0.0, 10.0).name('Intensity').onChange(v => this.updateSunIntensity());
+    moonFolder.add(this.mParams, 'azimuth', 0.0, 360.0, 0.1).name('Azimuth').listen().onChange(updateMoon);
+    moonFolder.add(this.mParams, 'height', -0.2, 1.0).name('Height (Cos)').listen().onChange(updateMoon);
+    moonFolder.add(this.mParams, 'intensity', 0.0, 1000.0).name('Intensity').onChange(v => this.updateSunIntensity());
     moonFolder.add(this.mParams, 'radius', 0.1, 5.0).name('Radius').onChange(v => sky.setMoonRadius(v));
     moonFolder.close();
 
-    const sunDisk = sunFolder.addFolder('Disk');
+    const mwFolder = gui.addFolder('Milky Way');
+
+    const updateMW = () => {
+      sky.setMilkyWayEnabled(this.mwParams.enabled);
+      sky.setMilkyWayControl(this.mwParams.intensity, this.mwParams.saturation, this.mwParams.blackPoint);
+
+      // Calculate Rotation
+      // V_gal = Rot_Eq_to_Gal * Rot_World_to_Eq * V_world
+
+      // World: Y=Up, X=East, Z=South (Filament Camera Convention is different!)
+      // In Filament Camera: -Z is Forward.
+      // Skybox V direction is World Space direction.
+      // Let's assume standard Horizontal Coordinates:
+      // Y = Zenith.
+      // Z = North? Or South?
+      // Usually Z is South in RH Y-up.
+
+      // LST (Local Sidereal Time) converts Hour Angle to RA.
+      // LST in Radians.
+      const LST = this.mwParams.siderealTime * (Math.PI / 12.0); // Hours to Rad
+      const Lat = this.mwParams.latitude * (Math.PI / 180.0);
+
+      // Rotation World (Horizontal) -> Equatorial
+      // 1. Rotate around X by -(90 - Lat) to align Equatorial Plane.
+      // 2. Rotate around Y (Polar Axis) by -LST.
+
+      // Mat3 Identity
+      const rot = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+      // Rotate Z by LST (Earth Rotation).
+      // Actually, transformation from Horizontal (Az, Alt) to Equatorial (HA, Dec):
+      // sin(Dec) = sin(Alt)sin(Lat) - cos(Alt)cos(Lat)cos(Az)
+      // ...
+      // Let's construct matrix directly.
+      // WorldToEq:
+      // Rotate X by (Lat - 90 deg) -> brings Pole to Zenith.
+      // Rotate Y by -LST (or Z?)
+
+      // Filament Space:
+      // +Y = Up
+      // Let's match typical skybox conventions.
+
+      // Rot_World_to_Eq = Rot_Z_LST * Rot_X_Lat
+      // But we need to use Filament matrix ops which are column major.
+
+      // Let's use simple rotations:
+      // 1. Tilt Pole: Rotate X by (Lat - 90).
+      // 2. Spin Earth: Rotate Y by LST.
+
+      // Let's iterate until it looks right visually or trust the math.
+      // Rot_World_To_Equatorial:
+      // R_z(-LST) * R_x(Lat - 90)?
+
+      // Let's build it from scratch in JS using helper.
+      // Start Identity.
+      // Rotate X (Latitude Tilt).
+      // Rotate Y (Sidereal Spin).
+      // Note: rotate functions modify in place.
+
+      const mWorldToEq = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+      // 1. Tilt for Latitude (Align Celestial Pole)
+      // At Lat 90 (North Pole), Zenith is Pole. No tilt needed if Y is Pole?
+      // No, Y is Zenith. Pole is Y.
+      // At Lat 0 (Equator), Pole is at Horizon (Z?).
+      // So we rotate X by (Lat - 90).
+      rotateX(mWorldToEq, Lat - Math.PI / 2);
+
+      // 2. Spin for Time (LST)
+      // Rotate around new Pole (Y) by LST.
+      rotateY(mWorldToEq, LST);
+
+      // Combine with Gal Transform
+      // Rot = MAT_EQ_TO_GAL * mWorldToEq
+      const finalRot = multiplyMat3(MAT_EQ_TO_GAL, mWorldToEq);
+
+      sky.setMilkyWayRotation(finalRot);
+    };
+
+    mwFolder.add(this.mwParams, 'enabled').name('Enabled').onChange(updateMW);
+    mwFolder.add(this.mwParams, 'intensity', 0.0, 5.0).onChange(updateMW);
+    mwFolder.add(this.mwParams, 'saturation', 0.0, 2.0).onChange(updateMW);
+    mwFolder.add(this.mwParams, 'blackPoint', 0.0, 0.5).name('Black Point').onChange(updateMW);
+    mwFolder.add(this.mwParams, 'siderealTime', 0.0, 24.0).name('Sidereal Time').listen().onChange(updateMW);
+    mwFolder.add(this.mwParams, 'latitude', -90.0, 90.0).name('Latitude').onChange(updateMW);
+    mwFolder.close();
+
+    // Initial MW Update
+    updateMW();
+
+    this.updateMW = updateMW; // Export for sync
+
     // We need local proxy for sunRadius due to conversion
     this.diskParams = {
-      radius: 1.2,
-      enabled: true // Enable sun disk
+      radius: 1.2
     };
     sky.setSunDiskEnabled(true);
     sky.setSunRadius(1.2);
-    sunDisk.add(this.diskParams, 'enabled').onChange(v => sky.setSunDiskEnabled(v));
-    sunDisk.add(this.diskParams, 'radius', 0.0, 5.0).onChange(v => sky.setSunRadius(v));
-    sunDisk.add(sky.sunHalo, 1, 0.0, 2.0).name('Limb Darkening').onChange(v => sky.setSunLimbDarkening(v));
-    sunDisk.add(sky.sunHalo, 2, 0.0, 100.0).name('Intensity Boost').onChange(v => sky.setSunDiskIntensity(v));
+    sunFolder.add(this.diskParams, 'radius', 0.0, 5.0).onChange(v => sky.setSunRadius(v));
+    sunFolder.add(sky.sunHalo, 1, 0.0, 2.0).name('Limb Darkening').onChange(v => sky.setSunLimbDarkening(v));
+    sunFolder.add(sky.sunHalo, 2, 0.0, 100.0).name('Intensity Boost').onChange(v => sky.setSunDiskIntensity(v));
 
     const atmFolder = gui.addFolder('Atmosphere');
     atmFolder.add(sky, 'turbidity', 1.0, 10.0).onChange(v => sky.setTurbidity(v));
@@ -211,28 +419,6 @@ class App {
     sky.setOzone(0.25);
     atmFolder.add(sky, 'ozone', 0.0, 1.0).onChange(v => sky.setOzone(v));
     atmFolder.add(sky, 'mieG', 0.0, 0.999).onChange(v => sky.setMieG(v));
-
-    const artFolder = gui.addFolder('Artistic');
-    // Set Horizon Glow default to 0.0
-    sky.setHorizonGlow(0.0);
-    sky.msFactors[2] = 0.0;
-    // Set Contrast default to 1.0
-    sky.setContrast(1.0);
-
-    artFolder.add(sky.msFactors, 0, 0.0, 2.0).name('MS Rayleigh').onChange(v => sky.setMultiScattering(v, sky.msFactors[1]));
-    artFolder.add(sky.msFactors, 1, 0.0, 2.0).name('MS Mie').onChange(v => sky.setMultiScattering(sky.msFactors[0], v));
-    artFolder.add(sky.msFactors, 2, 0.0, 1.0).name('Horizon Glow').onChange(v => sky.setHorizonGlow(v));
-    artFolder.add(sky, 'contrast', 0.1, 2.0).onChange(v => sky.setContrast(v));
-
-    artFolder.addColor(sky, 'nightColor').onChange(v => sky.setNightColor(v));
-
-    const shmFolder = artFolder.addFolder('Shimmer');
-    // Set Shimmer Strength default to 0.0
-    sky.setShimmerControl(0.0, sky.shimmerControl[1], sky.shimmerControl[2]);
-
-    shmFolder.add(sky.shimmerControl, 0, 0.0, 0.1).name('Strength').onChange(v => sky.setShimmerControl(v, sky.shimmerControl[1], sky.shimmerControl[2]));
-    shmFolder.add(sky.shimmerControl, 1, 1.0, 100.0).name('Frequency').onChange(v => sky.setShimmerControl(sky.shimmerControl[0], v, sky.shimmerControl[2]));
-    shmFolder.add(sky.shimmerControl, 2, 0.01, 0.5).name('Mask Height').onChange(v => sky.setShimmerControl(sky.shimmerControl[0], sky.shimmerControl[1], v));
 
     const cloudFolder = gui.addFolder('Clouds');
     this.cParams = {
@@ -291,6 +477,28 @@ class App {
     starFolder.add(this.sParams, 'density', 0.0, 0.01, 0.0001).name('Density').onChange(updateStars);
     starFolder.close();
 
+    const artFolder = gui.addFolder('Artistic');
+    // Set Horizon Glow default to 0.0
+    sky.setHorizonGlow(0.0);
+    sky.msFactors[2] = 0.0;
+    // Set Contrast default to 1.0
+    sky.setContrast(1.0);
+
+    artFolder.add(sky.msFactors, 0, 0.0, 2.0).name('MS Rayleigh').onChange(v => sky.setMultiScattering(v, sky.msFactors[1]));
+    artFolder.add(sky.msFactors, 1, 0.0, 2.0).name('MS Mie').onChange(v => sky.setMultiScattering(sky.msFactors[0], v));
+    artFolder.add(sky.msFactors, 2, 0.0, 1.0).name('Horizon Glow').onChange(v => sky.setHorizonGlow(v));
+    artFolder.add(sky, 'contrast', 0.1, 2.0).onChange(v => sky.setContrast(v));
+
+    artFolder.addColor(sky, 'nightColor').onChange(v => sky.setNightColor(v));
+
+    const shmFolder = artFolder.addFolder('Shimmer');
+    // Set Shimmer Strength default to 0.0
+    sky.setShimmerControl(0.0, sky.shimmerControl[1], sky.shimmerControl[2]);
+
+    shmFolder.add(sky.shimmerControl, 0, 0.0, 0.1).name('Strength').onChange(v => sky.setShimmerControl(v, sky.shimmerControl[1], sky.shimmerControl[2]));
+    shmFolder.add(sky.shimmerControl, 1, 1.0, 100.0).name('Frequency').onChange(v => sky.setShimmerControl(sky.shimmerControl[0], v, sky.shimmerControl[2]));
+    shmFolder.add(sky.shimmerControl, 2, 0.01, 0.5).name('Mask Height').onChange(v => sky.setShimmerControl(sky.shimmerControl[0], sky.shimmerControl[1], v));
+
     const camFolder = gui.addFolder('Camera');
     camFolder.add(this.params, 'focalLength', 8.0, 300.0).name('Focal Length').onChange(() => this.updateCameraProjection());
     camFolder.add(this.params, 'aperture', 1.4, 32.0).onChange(() => this.updateCameraExposure());
@@ -299,7 +507,7 @@ class App {
 
     const bloomFolder = camFolder.addFolder('Bloom');
     this.bParams = {
-      enabled: false,
+      enabled: true,
       lensFlare: false
     };
 
@@ -315,18 +523,19 @@ class App {
     bloomFolder.close();
 
     // Collapse folders by default
-    sunDisk.close();
+
     atmFolder.close();
     artFolder.close();
     // shmFolder is inside artFolder, so it's hidden, but we can close it too if we want
     shmFolder.close();
     cloudFolder.close();
-    // camFolder left open? User didn't specify, but "Artistic, shimmer and clouds" + "Disk, Atmosphere" were requested.
-    // So Camera might stay open or close. Let's keep Camera open for now as it wasn't listed.
+    // camFolder left open by default for convenience.
+
 
     // Initial sync
     updateSun();
     this.updateCameraExposure(); // This will trigger updateSunIntensity too
+    updateBloom();
 
     // Check URL for config
     const urlParams = new URLSearchParams(window.location.search);
@@ -347,6 +556,46 @@ class App {
       }
     }
 
+    const syncFolder = gui.addFolder('Real-Time Sync');
+    this.syncParams = {
+      enabled: false,
+      lat: 0.0,
+      lng: 0.0,
+      status: 'Disabled'
+    };
+
+    const updateSync = () => {
+      if (this.syncParams.enabled) {
+        if (navigator.geolocation) {
+          this.syncParams.status = "Locating...";
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              this.syncParams.lat = pos.coords.latitude;
+              this.syncParams.lng = pos.coords.longitude;
+              this.syncParams.status = "Active";
+              syncFolder.controllers.forEach(c => c.updateDisplay());
+            },
+            (err) => {
+              console.error(err);
+              this.syncParams.status = "Error (See Console)";
+              this.syncParams.enabled = false;
+              syncFolder.controllers.forEach(c => c.updateDisplay());
+            }
+          );
+        } else {
+          this.syncParams.status = "Not Supported";
+        }
+      } else {
+        this.syncParams.status = "Disabled";
+      }
+      syncFolder.controllers.forEach(c => c.updateDisplay());
+    };
+
+    syncFolder.add(this.syncParams, 'enabled').name('Enable Sync').onChange(updateSync);
+    syncFolder.add(this.syncParams, 'status').name('Status').disable().listen();
+
+    this.syncFolder = syncFolder;
+
     const shareParams = {
       copyUrl: () => {
         const state = this.getURLState();
@@ -361,9 +610,73 @@ class App {
       }
     };
     gui.add(shareParams, 'copyUrl').name('Share Configuration');
+
+  }
+
+  updateRealTimeSync() {
+    if (!this.syncParams || !this.syncParams.enabled || !window.SunCalc) return;
+
+    const now = new Date();
+    const lat = this.syncParams.lat;
+    const lng = this.syncParams.lng;
+
+    // Sun
+    const sunPos = window.SunCalc.getPosition(now, lat, lng);
+    // Azimuth: South=0, West=PI/2.
+    // Skybox Phi: +X=0, +Z=PI/2.
+    // If +Z is South:
+    // SunAz 0 (South) -> Skybox PI/2 (+Z).
+    // SunAz PI/2 (West) -> Skybox PI (-X).
+    // So Phi = Az + PI/2.
+    const sunPhi = sunPos.azimuth + Math.PI / 2;
+    // Altitude: 0=Horizon, PI/2=Zenith.
+    // Skybox Theta: 0=Zenith, PI/2=Horizon.
+    const sunTheta = Math.PI / 2 - sunPos.altitude;
+
+    this.params.sunPhi = sunPhi;
+    this.params.sunTheta = sunTheta;
+
+    // Moon
+    const moonPos = window.SunCalc.getMoonPosition(now, lat, lng);
+    const moonPhi = moonPos.azimuth + Math.PI / 2;
+    const moonTheta = Math.PI / 2 - moonPos.altitude;
+
+    this.mParams.azimuth = (moonPhi * 180.0 / Math.PI) % 360.0;
+    this.mParams.height = Math.cos(moonTheta);
+
+    // Milky Way Sync
+    const gmst = getGMST(now);
+    const lst = (gmst + lng / 15.0 + 24.0) % 24.0;
+    this.mwParams.siderealTime = lst;
+    this.mwParams.latitude = lat;
+    if (this.updateMW) this.updateMW();
+
+    // Update Skybox
+    const sky = this.skybox;
+
+    // Update Sun Vector
+    const sx = Math.sin(sunTheta) * Math.cos(sunPhi);
+    const sy = Math.cos(sunTheta);
+    const sz = Math.sin(sunTheta) * Math.sin(sunPhi);
+    sky.setSunPosition([sx, sy, sz]);
+
+    // Update Moon Vector
+    const mx = Math.sin(moonTheta) * Math.cos(moonPhi);
+    const my = Math.cos(moonTheta);
+    const mz = Math.sin(moonTheta) * Math.sin(moonPhi);
+    sky.setMoonPosition([mx, my, mz]);
+
+    // Update UI Proxies
+    if (this.sunUI) {
+      this.sunUI.azimuth = (sunPhi * 180.0 / Math.PI) % 360.0;
+      if (this.sunUI.azimuth < 0) this.sunUI.azimuth += 360.0;
+      this.sunUI.height = Math.cos(sunTheta);
+    }
   }
 
   getURLState() {
+
+    // Update Camera LookAt
     // Serialize current state (Minified)
     // Mapping:
     // p: params (Camera) -> a:aperture, ss:shutterSpeed, i:iso, st:sunTheta, sp:sunPhi, fl:focalLength, si:sunIntensity
@@ -612,6 +925,7 @@ class App {
   }
 
   render() {
+    this.updateRealTimeSync();
     // Update Camera LookAt
     const r = 1.0;
     const theta = this.camState.theta;
