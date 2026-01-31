@@ -2617,34 +2617,34 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
 }
 
 
-void PostProcessManager::clearAncillaryBuffersPrepare(DriverApi& driver) noexcept {
+void PostProcessManager::clearAncillaryBuffersPrepare(DriverApi& driver,
+        Variant::type_t variant) noexcept {
     auto const& material = getPostProcessMaterial("clearDepth");
-    auto ma = material.getMaterial(mEngine, driver, PostProcessVariant::OPAQUE);
+    auto ma = material.getMaterial(mEngine, driver, variant);
     auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
     mFixedMaterialInstanceIndex.clearDepth = fixedIndex;
     mi->commit(driver, getUboManager());
 }
 
 void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
-        TargetBufferFlags attachments) const noexcept {
+        TargetBufferFlags attachments, Variant::type_t variant) const noexcept {
     // in the future we might allow STENCIL as well
     attachments &= TargetBufferFlags::DEPTH;
     if (none(attachments & TargetBufferFlags::DEPTH)) {
         return;
     }
 
-    bindPostProcessDescriptorSet(driver);
     bindPerRenderableDescriptorSet(driver);
 
     auto const& material = getPostProcessMaterial("clearDepth");
-    FMaterial const* const ma = material.getMaterial(mEngine, driver);
+    FMaterial const* const ma = material.getMaterial(mEngine, driver, variant);
 
     // the UBO has been set and committed in clearAncillaryBuffersPrepare()
     FMaterialInstance const* const mi = mMaterialInstanceManager.getMaterialInstance(ma,
             mFixedMaterialInstanceIndex.clearDepth);
     mi->use(driver);
 
-    auto pipeline = getPipelineState(ma);
+    auto pipeline = getPipelineState(ma, variant);
     pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
 
     driver.scissor(mi->getScissor());

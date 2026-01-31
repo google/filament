@@ -315,6 +315,7 @@ set(MATERIAL_FL0_SRCS
 )
 
 set(MATERIAL_MULTIVIEW_SRCS
+        src/materials/clearDepth.mat
         src/materials/defaultMaterial.mat
         src/materials/skybox.mat
 )
