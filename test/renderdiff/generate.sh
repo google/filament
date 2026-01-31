@@ -31,7 +31,7 @@ function start_render_() {
         python3 -m venv ${VENV_DIR}
         source ${VENV_DIR}/bin/activate
 
-        NEEDED_PYTHON_DEPS=("numpy" "tifffile")
+        NEEDED_PYTHON_DEPS=()
         for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
             if ! python3 -m pip show -q "${cmd}"; then
                 python3 -m pip install ${cmd}

@@ -24,7 +24,6 @@ import fnmatch
 from utils import execute, ArgParseImpl, mkdir_p, mv_f, important_print
 
 import test_config
-from image_diff import same_image
 from results import RESULT_OK, RESULT_FAILED
 
 def _render_single_model(gltf_viewer, test_json_path, named_output_dir,

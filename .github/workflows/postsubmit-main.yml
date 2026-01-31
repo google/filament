@@ -16,8 +16,8 @@ jobs:
       - uses: ./.github/actions/linux-prereq
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - name: Prerequisites
-        run: pip install tifffile numpy
+      - name: Build diffimg
+        run: ./build.sh release diffimg
       - name: Run update script
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}

@@ -23,13 +23,13 @@ from os import path
 
 def _is_list_of_strings(field):
   return isinstance(field, list) and\
-      all(isinstance(item, str) for item in field)
+    all(isinstance(item, str) for item in field)
 
 def _is_string(s):
-    return isinstance(s, str)
+  return isinstance(s, str)
 
 def _is_dict(s):
-    return isinstance(s, dict)
+  return isinstance(s, dict)
 
 class RenderingConfig():
   def __init__(self, data):
@@ -74,40 +74,40 @@ class PresetConfig(RenderingConfig):
     """
     Validate tolerance configuration structure.
 
-    Tolerance can be:
-    1. Single criteria: {"max_pixel_diff": 5, "allowed_diff_pixels": 1.0}
-    2. Nested criteria: {"operator": "OR", "criteria": [...]}
+    Tolerance follows the imagediff/diffimg schema:
+    {
+      "mode": "LEAF" | "AND" | "OR",
+      "maxAbsDiff": float,           // For LEAF mode
+      "maxFailingPixelsFraction": float, // Global check
+      "children": [...]              // For AND/OR mode
+    }
     """
-    if 'criteria' in tolerance:
-      # Nested structure with operator
-      operator = tolerance.get('operator', 'AND')
-      assert operator.upper() in ['AND', 'OR'], f"Invalid operator: {operator}"
+    valid_keys = {'mode', 'maxAbsDiff', 'maxFailingPixelsFraction', 'children', 'swizzle', 'channelMask'}
+    tolerance_keys = set(tolerance.keys())
+    invalid_keys = tolerance_keys - valid_keys
+    assert len(invalid_keys) == 0, f"Invalid tolerance keys: {invalid_keys}"
 
-      criteria_list = tolerance['criteria']
-      assert isinstance(criteria_list, list), "criteria must be a list"
-      assert len(criteria_list) > 0, "criteria list cannot be empty"
+    if 'children' in tolerance:
+      # Nested structure
+      mode = tolerance.get('mode', 'AND')
+      assert mode in ['AND', 'OR'], f"Invalid mode for node with children: {mode}"
 
-      # Recursively validate each criteria
-      for criteria in criteria_list:
-        self._validate_tolerance(criteria)
+      children = tolerance['children']
+      assert isinstance(children, list), "children must be a list"
+      assert len(children) > 0, "children list cannot be empty"
+
+      # Recursively validate each child
+      for child in children:
+        self._validate_tolerance(child)
     else:
-      # Leaf criteria - validate individual parameters
-      valid_keys = {'max_pixel_diff', 'max_pixel_diff_percent', 'allowed_diff_pixels'}
-      tolerance_keys = set(tolerance.keys())
-      invalid_keys = tolerance_keys - valid_keys
-      assert len(invalid_keys) == 0, f"Invalid tolerance keys: {invalid_keys}"
+      # Leaf criteria
+      if 'maxAbsDiff' in tolerance:
+        assert isinstance(tolerance['maxAbsDiff'], (int, float)), "maxAbsDiff must be numeric"
+        assert tolerance['maxAbsDiff'] >= 0, "maxAbsDiff must be non-negative"
 
-      if 'max_pixel_diff' in tolerance:
-        assert isinstance(tolerance['max_pixel_diff'], (int, float)), "max_pixel_diff must be numeric"
-        assert 0 <= tolerance['max_pixel_diff'] <= 255, "max_pixel_diff must be 0-255"
-
-      if 'max_pixel_diff_percent' in tolerance:
-        assert isinstance(tolerance['max_pixel_diff_percent'], (int, float)), "max_pixel_diff_percent must be numeric"
-        assert 0 <= tolerance['max_pixel_diff_percent'] <= 100, "max_pixel_diff_percent must be 0-100%"
-
-      if 'allowed_diff_pixels' in tolerance:
-        assert isinstance(tolerance['allowed_diff_pixels'], (int, float)), "allowed_diff_pixels must be numeric"
-        assert 0 <= tolerance['allowed_diff_pixels'] <= 100, "allowed_diff_pixels must be 0-100%"
+      if 'maxFailingPixelsFraction' in tolerance:
+        assert isinstance(tolerance['maxFailingPixelsFraction'], (int, float)), "maxFailingPixelsFraction must be numeric"
+        assert 0 <= tolerance['maxFailingPixelsFraction'] <= 1.0, "maxFailingPixelsFraction must be 0.0-1.0"
 
 class TestConfig(RenderingConfig):
   def __init__(self, data, existing_models, presets, backends):
@@ -146,7 +146,7 @@ class TestConfig(RenderingConfig):
     if models:
       assert _is_list_of_strings(models)
       assert all(m in existing_models for m in models)
-      self.models = set(models + self.models)
+      self.models = set(list(models) + list(self.models))
 
     # Parse tolerance configuration - test-level tolerance overrides preset tolerance
     tolerance = data.get('tolerance')
@@ -166,8 +166,8 @@ class TestConfig(RenderingConfig):
 
   def to_filament_format(self):
     json_out = {
-        'name': self.name,
-        'base': self.rendering
+      'name': self.name,
+      'base': self.rendering
     }
     return json.dumps(json_out)
 
@@ -188,9 +188,9 @@ class RenderTestConfig():
     assert all(path.isdir(p) for p in model_search_paths)
 
     model_paths = list(
-        chain(*(glob.glob(f'{d}/**/*.glb', recursive=True) for d in model_search_paths))) + \
-        list(
-          chain(*(glob.glob(f'{d}/**/*.gltf', recursive=True) for d in model_search_paths)))
+      chain(*(glob.glob(f'{d}/**/*.glb', recursive=True) for d in model_search_paths))) + \
+      list(
+        chain(*(glob.glob(f'{d}/**/*.gltf', recursive=True) for d in model_search_paths)))
     # This flatten the output for glob.glob
     self.models = {path.splitext(path.basename(model))[0]: model for model in model_paths}
 
