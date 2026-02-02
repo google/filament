@@ -21,6 +21,8 @@
 #include <math/vec3.h>
 #include <math/scalar.h>
 
+#include <cmath>
+
 namespace filament {
 
 using namespace math;
@@ -320,10 +322,10 @@ public:
         const float weightToe = 1.0f - weightLinear;
 
         // Shoulder mapping for highlights.
-        const float shoulder = mKa + mKb * std::expf(x * mKc);
+        const float shoulder = mKa + mKb * expf(x * mKc);
 
         if (x < mLinearSection * mPeakIntensity) {
-            const float toeMapped = mMidPoint * std::powf(x / mMidPoint, mToeStrength);
+            const float toeMapped = mMidPoint * powf(x / mMidPoint, mToeStrength);
             return weightToe * toeMapped + weightLinear * x;
         }
         return shoulder;
@@ -345,7 +347,7 @@ public:
         // Pre-compute constants for the shoulder region.
         const float k = (mLinearSection - 1.0f) / (mAlpha - 1.0f);
         mKa = mPeakIntensity * mLinearSection + mPeakIntensity * k;
-        mKb = -mPeakIntensity * k * std::expf(mLinearSection / k);
+        mKb = -mPeakIntensity * k * expf(mLinearSection / k);
         mKc = -1.0f / (k * mPeakIntensity);
     }
 
