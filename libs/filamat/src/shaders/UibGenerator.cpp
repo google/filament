@@ -147,7 +147,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "dynReserved1",           0, Type::INT                     },
             { "dynReserved2",           0, Type::INT                     },
 
-            { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT },
+            { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT },
             { "iblSH",                  9, Type::FLOAT3                  },
 
@@ -183,19 +183,19 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // Fog [variant: FOG]
             // ------------------------------------------------------------------------------------
             { "fogDensity",              0, Type::FLOAT3,Precision::HIGH },
-            { "fogStart",                0, Type::FLOAT, Precision::HIGH },
+            { "fogStart",                0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogMaxOpacity",           0, Type::FLOAT, Precision::DEFAULT },
             { "fogMinMaxMip",            0, Type::UINT,  Precision::HIGH },
             { "fogHeightFalloff",        0, Type::FLOAT, Precision::HIGH },
-            { "fogCutOffDistance",       0, Type::FLOAT, Precision::HIGH },
-            { "fogColor",                0, Type::FLOAT3, Precision::DEFAULT },
+            { "fogCutOffDistance",       0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogColor",                0, Type::FLOAT3, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogColorFromIbl",         0, Type::FLOAT, Precision::DEFAULT },
             { "fogInscatteringStart",    0, Type::FLOAT, Precision::HIGH },
             { "fogInscatteringSize",     0, Type::FLOAT, Precision::DEFAULT },
             { "fogOneOverFarMinusNear",  0, Type::FLOAT, Precision::HIGH },
             { "fogNearOverFarMinusNear", 0, Type::FLOAT, Precision::HIGH },
             { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH },
-            { "fogLinearParams",         0, Type::FLOAT2, Precision::HIGH },
+            { "fogLinearParams",         0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------

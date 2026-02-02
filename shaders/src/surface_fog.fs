@@ -99,6 +99,8 @@ vec4 fog(vec4 color, highp vec3 view) {
     return color;
 }
 
+#endif  // MATERIAL_FEATURE_LEVEL > 0
+
 // A linear approximation of the fog function
 vec4 fogLinear(vec4 color, highp vec3 view) {
     // note: d can be +inf with the skybox
@@ -152,5 +154,3 @@ vec4 fogLinear(vec4 color, highp vec3 view) {
 
     return color;
 }
-
-#endif  // MATERIAL_FEATURE_LEVEL > 0
