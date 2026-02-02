@@ -67,7 +67,7 @@ void main() {
     highp vec3 view = getWorldPosition() - getWorldCameraPosition();
     view = frameUniforms.fogFromWorldMatrix * view;
 
-#if defined (FILAMENT_LINEAR_FOG)
+#if defined (FILAMENT_LINEAR_FOG) || MATERIAL_FEATURE_LEVEL == 0
     fragColor = fogLinear(fragColor, view);
 #else
     fragColor = fog(fragColor, view);
