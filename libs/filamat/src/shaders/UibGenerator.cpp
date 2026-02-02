@@ -148,16 +148,16 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "dynReserved2",           0, Type::INT                     },
 
             { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT },
+            { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "iblSH",                  9, Type::FLOAT3                  },
 
             // ------------------------------------------------------------------------------------
             // Directional Lighting [variant: DIR]
             // ------------------------------------------------------------------------------------
-            { "lightDirection",         0, Type::FLOAT3, Precision::HIGH },
+            { "lightDirection",         0, Type::FLOAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "padding0",               0, Type::FLOAT                   },
-            { "lightColorIntensity",    0, Type::FLOAT4, Precision::DEFAULT },
-            { "sun",                    0, Type::FLOAT4, Precision::DEFAULT },
+            { "lightColorIntensity",    0, Type::FLOAT4, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "sun",                    0, Type::FLOAT4, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
