@@ -163,8 +163,7 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
           mUseUboBatching(shouldEnableBatching(engine, builder->mUboBatchingMode,
                   definition.materialDomain)),
           mEngine(engine),
-          mMaterialId(engine.getMaterialId()),
-          mPrograms(engine, *this, processSpecializationConstants(builder)) {
+          mMaterialId(engine.getMaterialId()) {
 
     FILAMENT_CHECK_PRECONDITION(!mUseUboBatching || engine.isUboBatchingEnabled())
             << "UBO batching is not enabled.";
@@ -176,6 +175,8 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
     mDepthPrecacheDisabled =
             driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
     mDefaultMaterial = engine.getDefaultMaterial();
+
+    mPrograms.initializeForMaterial(engine, *this, processSpecializationConstants(builder));
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.

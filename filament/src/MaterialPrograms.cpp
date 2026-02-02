@@ -27,10 +27,11 @@ namespace filament {
 using namespace backend;
 using namespace utils;
 
-MaterialPrograms::MaterialPrograms(FEngine& engine, FMaterial const& material,
+void MaterialPrograms::initializeForMaterial(FEngine& engine, FMaterial const& material,
         utils::FixedCapacityVector<backend::Program::SpecializationConstant>
-                specializationConstants)
-        : mMaterial(material) {
+                specializationConstants) {
+    mMaterial = &material;
+
     mSpecializationConstants =
             engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
                     std::move(specializationConstants));
@@ -47,16 +48,35 @@ MaterialPrograms::MaterialPrograms(FEngine& engine, FMaterial const& material,
             cachedProgramsSize = 1;
             break;
     }
-    mCachedPrograms = FixedCapacityVector<backend::Handle<backend::HwProgram>>(cachedProgramsSize);
+    mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(cachedProgramsSize);
 
     material.getDefinition().acquirePrograms(engine, mCachedPrograms.as_slice(),
             material.getMaterialParser(), mSpecializationConstants, material.isDefaultMaterial());
 }
 
+void MaterialPrograms::initializeForMaterialInstance(FEngine& engine, FMaterial const& material) {
+    mMaterial = &material;
+    MaterialPrograms const& programs = material.getPrograms();
+
+    mSpecializationConstants =
+            engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
+                    programs.getSpecializationConstants());
+
+    if (engine.features.engine.enable_program_cache) {
+        // It's safe to copy the cached programs since Material doesn't own them.
+        mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(programs.getPrograms());
+    } else {
+        // We have to compile our own copies from scratch.
+        mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(programs.getPrograms().size());
+    }
+}
+
 Handle<HwProgram> MaterialPrograms::prepareProgramSlow(DriverApi& driver, Variant const variant,
         CompilerPriorityQueue const priorityQueue) const noexcept {
-    FEngine& engine = mMaterial.getEngine();
-    if (mMaterial.isSharedVariant(variant)) {
+    FILAMENT_CHECK_PRECONDITION(mMaterial != nullptr);
+
+    FEngine& engine = mMaterial->getEngine();
+    if (mMaterial->isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = engine.getDefaultMaterial();
         FILAMENT_CHECK_PRECONDITION(defaultMaterial);
         MaterialPrograms const& defaultPrograms = defaultMaterial->getPrograms();
@@ -67,29 +87,38 @@ Handle<HwProgram> MaterialPrograms::prepareProgramSlow(DriverApi& driver, Varian
         return mCachedPrograms[variant.key] =
                 defaultPrograms.prepareProgram(driver, variant, priorityQueue);
     }
-    return mCachedPrograms[variant.key] = mMaterial.getDefinition().prepareProgram(engine, driver,
-                   mMaterial.getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
+    return mCachedPrograms[variant.key] = mMaterial->getDefinition().prepareProgram(engine, driver,
+                   mMaterial->getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
 }
 
 ProgramSpecialization MaterialPrograms::getProgramSpecialization(Variant variant) const noexcept {
+    FILAMENT_CHECK_PRECONDITION(mMaterial != nullptr);
+
     return ProgramSpecialization {
-        .materialCrc32 = mMaterial.getMaterialParser().getCrc32(),
+        .materialCrc32 = mMaterial->getMaterialParser().getCrc32(),
         .variant = variant,
         .specializationConstants = mSpecializationConstants,
     };
 }
 
 void MaterialPrograms::terminate(FEngine& engine) {
-    mMaterial.getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
-            mMaterial.getMaterialParser(), mSpecializationConstants, mMaterial.isDefaultMaterial());
-    engine.getMaterialCache().releaseMaterial(engine, mMaterial.getDefinition());
+    FILAMENT_CHECK_PRECONDITION(mMaterial != nullptr);
+
+    mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
+            mMaterial->getMaterialParser(), mSpecializationConstants, mMaterial->isDefaultMaterial());
+    engine.getMaterialCache().releaseMaterial(engine, mMaterial->getDefinition());
     engine.getMaterialCache().getSpecializationConstantsInternPool().release(
             mSpecializationConstants);
+
+    mMaterial = nullptr;
 }
 
 void MaterialPrograms::clear(FEngine& engine) {
-    mMaterial.getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
-            mMaterial.getMaterialParser(), mSpecializationConstants, mMaterial.isDefaultMaterial());
+    FILAMENT_CHECK_PRECONDITION(mMaterial != nullptr);
+
+    mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
+            mMaterial->getMaterialParser(), mSpecializationConstants,
+            mMaterial->isDefaultMaterial());
 }
 
 void MaterialPrograms::setConstantImpl(uint32_t id,
@@ -108,7 +137,9 @@ void MaterialPrograms::setConstantImpl(uint32_t id,
 
 void MaterialPrograms::setConstantImpl(std::string_view name,
         Program::SpecializationConstant value) noexcept {
-    MaterialDefinition const& definition = mMaterial.getDefinition();
+    FILAMENT_CHECK_PRECONDITION(mMaterial != nullptr);
+
+    MaterialDefinition const& definition = mMaterial->getDefinition();
     auto it = definition.specializationConstantsNameToIndex.find(name);
     if (it != definition.specializationConstantsNameToIndex.cend()) {
         setConstantImpl(it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS, value);
@@ -116,26 +147,28 @@ void MaterialPrograms::setConstantImpl(std::string_view name,
 }
 
 void MaterialPrograms::flushConstants() {
+    FILAMENT_CHECK_PRECONDITION(mMaterial != nullptr);
+
     if (mPendingSpecializationConstants.empty()) {
         // Nothing was changed.
         return;
     }
 
-    FEngine& engine = mMaterial.getEngine();
+    FEngine& engine = mMaterial->getEngine();
 
     auto& internPool = engine.getMaterialCache().getSpecializationConstantsInternPool();
-    MaterialParser const& materialParser = mMaterial.getMaterialParser();
-    MaterialDefinition const& definition = mMaterial.getDefinition();
+    MaterialParser const& materialParser = mMaterial->getMaterialParser();
+    MaterialDefinition const& definition = mMaterial->getDefinition();
 
     // Release old resources...
     definition.releasePrograms(engine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, mMaterial.isDefaultMaterial());
+            mSpecializationConstants, mMaterial->isDefaultMaterial());
     internPool.release(mSpecializationConstants);
 
     // Then acquire new ones.
     mSpecializationConstants = internPool.acquire(std::move(mPendingSpecializationConstants));
     definition.acquirePrograms(engine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, mMaterial.isDefaultMaterial());
+            mSpecializationConstants, mMaterial->isDefaultMaterial());
 }
 
 template void MaterialPrograms::setConstant<int32_t>(uint32_t id, int32_t value) noexcept;
