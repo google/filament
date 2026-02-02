@@ -194,7 +194,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogInscatteringSize",     0, Type::FLOAT, Precision::DEFAULT },
             { "fogOneOverFarMinusNear",  0, Type::FLOAT, Precision::HIGH },
             { "fogNearOverFarMinusNear", 0, Type::FLOAT, Precision::HIGH },
-            { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH,  FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogLinearParams",         0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH },
 
