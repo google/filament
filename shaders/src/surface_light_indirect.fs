@@ -1,3 +1,5 @@
+#if MATERIAL_FEATURE_LEVEL > 0
+
 //------------------------------------------------------------------------------
 // Image based lighting configuration
 //------------------------------------------------------------------------------
@@ -819,3 +821,5 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     color.rgb += Ft;
 #endif
 }
+
+#endif  // MATERIAL_FEATURE_LEVEL > 0

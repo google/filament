@@ -1,3 +1,5 @@
+#if MATERIAL_FEATURE_LEVEL > 0
+
 //------------------------------------------------------------------------------
 // Punctual lights evaluation
 //------------------------------------------------------------------------------
@@ -271,3 +273,5 @@ void evaluatePunctualLights(const MaterialInputs material,
         }
     }
 }
+
+#endif // MATERIAL_FEATURE_LEVEL > 0
