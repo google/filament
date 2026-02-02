@@ -217,10 +217,10 @@ public:
 
     // clear depth buffer pass
     void clearAncillaryBuffersPrepare(backend::DriverApi& driver,
-            Variant::type_t variant = 0) noexcept;
+            Variant::type_t variant) noexcept;
     void clearAncillaryBuffers(backend::DriverApi& driver,
             backend::TargetBufferFlags attachments,
-            Variant::type_t variant = 0) const noexcept;
+            Variant::type_t variant) const noexcept;
 
     // postfx fog
     void fogPrepare(backend::DriverApi& driver) noexcept;

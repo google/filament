@@ -1186,12 +1186,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
                 }
 
                 if (view.getChannelDepthClearMask().any()) {
-                    Variant::type_t variant = 0;
-                    if (isRenderingMultiview) {
-                        Variant v;
-                        v.setStereo(true);
-                        variant = v.key;
-                    }
+                    Variant::type_t variant = isRenderingMultiview ? Variant::STE : 0;
                     ppm.clearAncillaryBuffersPrepare(driver, variant);
                 }
 
@@ -1228,12 +1223,8 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
                 auto const& ds = view.getColorPassDescriptorSet(ShadowType::PCF)[
                         ColorPassDescriptorSet::getIndex(false, false, false)];
                 ds.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
-                Variant::type_t variant = 0;
-                if (isRenderingMultiview) {
-                    Variant v;
-                    v.setStereo(true);
-                    variant = v.key;
-                }
+
+                Variant::type_t variant = isRenderingMultiview ? Variant::STE : 0;
                 ppm.clearAncillaryBuffers(driver, TargetBufferFlags::DEPTH, variant);
             });
     });
