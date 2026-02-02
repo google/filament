@@ -62,7 +62,6 @@ void main() {
     blendPostLightingColor(inputs, fragColor);
 #endif
 
-#if MATERIAL_FEATURE_LEVEL > 0
 #if defined(VARIANT_HAS_FOG)
     highp vec3 view = getWorldPosition() - getWorldCameraPosition();
     view = frameUniforms.fogFromWorldMatrix * view;
@@ -74,7 +73,6 @@ void main() {
 #endif
 
 #endif
-#endif  // MATERIAL_FEATURE_LEVEL > 0
 
 #if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
     if (CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP) {
