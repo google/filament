@@ -1068,7 +1068,9 @@ class_<RenderableManager>("RenderableManager")
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
     .function("setLayerMask", &RenderableManager::setLayerMask)
     .function("setPriority", &RenderableManager::setPriority)
+    .function("getPriority", &RenderableManager::getPriority)
     .function("setChannel", &RenderableManager::setChannel)
+    .function("getChannel", &RenderableManager::getChannel)
     .function("setCastShadows", &RenderableManager::setCastShadows)
     .function("setReceiveShadows", &RenderableManager::setReceiveShadows)
     .function("isShadowCaster", &RenderableManager::isShadowCaster)
@@ -1077,6 +1079,10 @@ class_<RenderableManager>("RenderableManager")
     .function("getLightChannel", &RenderableManager::getLightChannel)
     .function("setFogEnabled", &RenderableManager::setFogEnabled)
     .function("getFogEnabled", &RenderableManager::getFogEnabled)
+    .function("setCulling", &RenderableManager::setCulling)
+    .function("isCullingEnabled", &RenderableManager::isCullingEnabled)
+    .function("setScreenSpaceContactShadows", &RenderableManager::setScreenSpaceContactShadows)
+    .function("isScreenSpaceContactShadowsEnabled", &RenderableManager::isScreenSpaceContactShadowsEnabled)
 
     .function("setBones", EMBIND_LAMBDA(void, (RenderableManager* self,
             RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
@@ -1125,8 +1131,10 @@ class_<RenderableManager>("RenderableManager")
     }), allow_raw_pointers())
 
     .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
+    .function("getBlendOrderAt", &RenderableManager::getBlendOrderAt)
 
     .function("setGlobalBlendOrderEnabledAt", &RenderableManager::setGlobalBlendOrderEnabledAt)
+    .function("isGlobalBlendOrderEnabledAt", &RenderableManager::isGlobalBlendOrderEnabledAt)
 
     .function("getEnabledAttributesAt", EMBIND_LAMBDA(uint32_t, (RenderableManager* self,
             RenderableManager::Instance instance, size_t primitiveIndex), {
