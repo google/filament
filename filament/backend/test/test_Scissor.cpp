@@ -83,8 +83,10 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         Handle<HwTexture> srcTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D,
                 kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
                 TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT TEXTURE_USAGE_READ_PIXELS));
-        Handle<HwTexture> depthTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
-                TextureFormat::DEPTH16, 1, 512, 512, 1, TextureUsage::DEPTH_ATTACHMENT));
+
+        Handle<HwTexture> depthTexture =
+                addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::DEPTH16, 1,
+                        512, 512, 1, TextureUsage::DEPTH_ATTACHMENT | TextureUsage::SAMPLEABLE));
 
         // Render into the bottom-left quarter of the texture.
         Viewport srcRect = {
