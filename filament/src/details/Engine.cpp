@@ -1830,7 +1830,7 @@ void FEngine::compile(
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) {
     auto const variants = getMaterialCompileVariants(view, shadowReceiver, skinning);
-    material->compile(priority, variants, handler, std::move(callback));
+    const_cast<FMaterial*>(material)->compile(priority, variants, handler, std::move(callback));
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -119,7 +119,14 @@ public:
             std::pair<std::string_view, backend::Program::SpecializationConstant>>
                     constants) noexcept;
 
+    // Set constants list directly.
+    void setConstants(utils::FixedCapacityVector<backend::Program::SpecializationConstant>
+                    constants) noexcept;
+
 private:
+    // Apply any pending specialization constants. Invalidates programs as necessary.
+    void flushConstants() const;
+
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
             Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept;
