@@ -176,15 +176,11 @@ Program::SpecializationConstant LocalProgramCache::getConstantImpl(
         std::string_view name) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
-    MaterialDefinition const& definition = mMaterial->getDefinition();
-    auto it = definition.specializationConstantsNameToIndex.find(name);
-    if (it != definition.specializationConstantsNameToIndex.cend()) {
-        return getConstantImpl(it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
-    }
+    auto const& constants = mMaterial->getDefinition().specializationConstantsNameToIndex;
+    auto it = constants.find(name);
+    FILAMENT_CHECK_PRECONDITION(it != constants.end()) << "Constant " << name << " does not exist";
 
-    std::string name_cstring(name);
-    PANIC_PRECONDITION("No such constant exists: %s", name_cstring.c_str());
-    return {};
+    return getConstantImpl(it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
 }
 
 void LocalProgramCache::setConstants(
@@ -232,6 +228,13 @@ void LocalProgramCache::setConstants(
     if (hasChanged) {
         setConstantsImpl(std::move(newSpecializationConstants));
     }
+}
+
+void LocalProgramCache::setConstants(
+        FixedCapacityVector<Program::SpecializationConstant> constants) noexcept {
+    assert_invariant(mMaterial != nullptr);
+
+    setConstantsImpl(std::move(constants));
 }
 
 void LocalProgramCache::setConstantsImpl(
