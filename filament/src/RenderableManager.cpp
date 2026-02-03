@@ -69,12 +69,24 @@ void RenderableManager::setPriority(Instance const instance, uint8_t const prior
     downcast(this)->setPriority(instance, priority);
 }
 
+uint8_t RenderableManager::getPriority(Instance const instance) const noexcept {
+    return downcast(this)->getPriority(instance);
+}
+
 void RenderableManager::setChannel(Instance const instance, uint8_t const channel) noexcept{
     downcast(this)->setChannel(instance, channel);
 }
 
+uint8_t RenderableManager::getChannel(Instance const instance) const noexcept {
+    return downcast(this)->getChannel(instance);
+}
+
 void RenderableManager::setCulling(Instance const instance, bool const enable) noexcept {
     downcast(this)->setCulling(instance, enable);
+}
+
+bool RenderableManager::isCullingEnabled(Instance const instance) const noexcept {
+    return downcast(this)->isCullingEnabled(instance);
 }
 
 void RenderableManager::setCastShadows(Instance const instance, bool const enable) noexcept {
@@ -95,6 +107,10 @@ bool RenderableManager::isShadowCaster(Instance const instance) const noexcept {
 
 bool RenderableManager::isShadowReceiver(Instance const instance) const noexcept {
     return downcast(this)->isShadowReceiver(instance);
+}
+
+bool RenderableManager::isScreenSpaceContactShadowsEnabled(Instance const instance) const noexcept {
+    return downcast(this)->isScreenSpaceContactShadowsEnabled(instance);
 }
 
 const Box& RenderableManager::getAxisAlignedBoundingBox(Instance const instance) const noexcept {
@@ -131,9 +147,17 @@ void RenderableManager::setBlendOrderAt(Instance const instance, size_t const pr
     downcast(this)->setBlendOrderAt(instance, 0, primitiveIndex, order);
 }
 
+uint16_t RenderableManager::getBlendOrderAt(Instance const instance, size_t const primitiveIndex) const noexcept {
+    return downcast(this)->getBlendOrderAt(instance, 0, primitiveIndex);
+}
+
 void RenderableManager::setGlobalBlendOrderEnabledAt(Instance const instance,
         size_t const primitiveIndex, bool const enabled) noexcept {
     downcast(this)->setGlobalBlendOrderEnabledAt(instance, 0, primitiveIndex, enabled);
+}
+
+bool RenderableManager::isGlobalBlendOrderEnabledAt(Instance const instance, size_t const primitiveIndex) const noexcept {
+    return downcast(this)->isGlobalBlendOrderEnabledAt(instance, 0, primitiveIndex);
 }
 
 AttributeBitset RenderableManager::getEnabledAttributesAt(Instance const instance, size_t const primitiveIndex) const noexcept {
