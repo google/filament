@@ -18,15 +18,13 @@
 #define TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H
 
 #include "downcast.h"
-
+#include "LocalProgramCache.h"
 #include "UniformBuffer.h"
 
 #include "ds/DescriptorSet.h"
 
 #include "details/BufferAllocator.h"
 #include "details/Engine.h"
-
-#include "private/backend/DriverApi.h"
 
 #include <filament/MaterialInstance.h>
 
@@ -67,7 +65,7 @@ public:
     ~FMaterialInstance() noexcept;
 
     void terminate(FEngine& engine);
-    
+
     void commit(FEngine& engine) const;
 
     void commit(FEngine::DriverApi& driver, UboManager* uboManager) const;
@@ -86,6 +84,34 @@ public:
 
     UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
 
+    void compile(FEngine& engine, backend::CompilerPriorityQueue priority,
+            UserVariantFilterMask variantSpec, backend::CallbackHandler* handler,
+            utils::Invocable<void(Material*)>&& callback) noexcept;
+
+    // prepareProgram creates the program for the material's given variant at the backend level.
+    // Must be called outside of backend render pass.
+    // Must be called before getProgram() below.
+    backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
+            Variant const variant,
+            backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+        if (UTILS_UNLIKELY(!mPendingSpecializationConstants.empty())) {
+            flushSpecializationConstants();
+        }
+        return getPrograms().prepareProgram(driver, variant, priorityQueue);
+    }
+
+    // getProgram returns the backend program for the material's given variant.
+    // Must be called after prepareProgram().
+    //
+    // See also Material::getProgram().
+    [[nodiscard]]
+    backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+        updateActiveProgramsForMatdbg(variant);
+#endif
+        return getPrograms().getProgram(variant);
+    }
+
     void setScissor(uint32_t const left, uint32_t const bottom, uint32_t const width, uint32_t const height) noexcept {
         constexpr uint32_t maxvalu = std::numeric_limits<int32_t>::max();
         mScissorRect = { int32_t(left), int32_t(bottom),
@@ -102,6 +128,8 @@ public:
     backend::Viewport const& getScissor() const noexcept { return mScissorRect; }
 
     bool hasScissor() const noexcept { return mHasScissor; }
+
+    backend::RasterState getRasterState() const noexcept;
 
     backend::CullingMode getCullingMode() const noexcept { return mCulling; }
 
@@ -250,10 +278,14 @@ public:
             backend::Handle<backend::HwTexture> texture, backend::SamplerParams params);
 
     using MaterialInstance::setParameter;
+    using MaterialInstance::setConstant;
 
 private:
     friend class FMaterial;
     friend class MaterialInstance;
+
+    // Cannot inline since it inspects the FMaterial class.
+    LocalProgramCache const& getPrograms() const noexcept;
 
     template<size_t Size>
     void setParameterUntypedImpl(std::string_view name, const void* value);
@@ -273,6 +305,19 @@ private:
     template<typename T>
     T getParameterImpl(std::string_view name) const;
 
+    template<typename T>
+    void setConstantImpl(std::string_view name, T value);
+
+    template<typename T>
+    T getConstantImpl(std::string_view name) const;
+
+    void flushSpecializationConstants() const noexcept;
+
+#if FILAMENT_ENABLE_MATDBG
+    // Called by getProgram() to update active program list for matdbg UI.
+    void updateActiveProgramsForMatdbg(Variant const variant) const noexcept;
+#endif
+
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
 
@@ -286,6 +331,11 @@ private:
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
+
+    // HACK: Mutable so that prepareProgram() can update specialization constants.
+    mutable LocalProgramCache mPrograms;
+    mutable utils::FixedCapacityVector<backend::Program::SpecializationConstant>
+            mPendingSpecializationConstants;
 
     backend::PolygonOffset mPolygonOffset{};
     backend::StencilState mStencilState{};

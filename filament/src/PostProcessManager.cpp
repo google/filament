@@ -189,7 +189,8 @@ FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine,
     if (UTILS_UNLIKELY(mSize)) {
         loadMaterial(engine);
     }
-    mMaterial->prepareProgram(driver, Variant{ variant }, CompilerPriorityQueue::CRITICAL);
+    mMaterial->getDefaultInstance()->prepareProgram(driver, Variant{ variant },
+            CompilerPriorityQueue::CRITICAL);
     return mMaterial;
 }
 
@@ -466,9 +467,10 @@ void PostProcessManager::unbindAllDescriptorSets(DriverApi& driver) noexcept {
 
 UTILS_NOINLINE
 PipelineState PostProcessManager::getPipelineState(
-        FMaterial const* const ma, Variant::type_t const variant) const noexcept {
+        FMaterialInstance const* const mi, Variant::type_t const variant) const noexcept {
+    FMaterial const* const ma = mi->getMaterial();
     return {
-            .program = ma->getProgram(Variant{ variant }),
+            .program = mi->getProgram(Variant{ variant }),
             .vertexBufferInfo = mFullScreenQuadVbih,
             .pipelineLayout = {
                     .setLayout = {
@@ -476,7 +478,7 @@ PipelineState PostProcessManager::getPipelineState(
                             mPerRenderableDslh,
                             ma->getDescriptorSetLayout().getHandle()
                     }},
-            .rasterState = ma->getRasterState()
+            .rasterState = mi->getRasterState()
     };
 }
 
@@ -516,8 +518,7 @@ void PostProcessManager::commitAndRenderFullScreenQuad(DriverApi& driver,
         PostProcessVariant const variant) const noexcept {
     mi->commit(driver, getUboManager());
     mi->use(driver);
-    FMaterial const* const ma = mi->getMaterial();
-    PipelineState const pipeline = getPipelineState(ma, variant);
+    PipelineState const pipeline = getPipelineState(mi, variant);
 
     assert_invariant(
             ((out.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH)
@@ -639,7 +640,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 // Only the depth texture is changing in the material instance (no UBO updates),
                 // we do not move getMaterialInstance() inside the loop.
 
-                auto pipeline = getPipelineState(ma);
+                auto pipeline = getPipelineState(mi);
 
                 // The first mip already exists, so we process n-1 lods
                 for (size_t level = 0; level < levelCount - 1; level++) {
@@ -1082,7 +1083,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
 
-                auto pipeline = getPipelineState(ma);
+                auto pipeline = getPipelineState(mi);
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::L;
                 assert_invariant(ssao.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH);
                 renderFullScreenQuad(ssao, pipeline, driver);
@@ -1203,7 +1204,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
 
-                auto pipeline = getPipelineState(ma);
+                auto pipeline = getPipelineState(mi);
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::L;
                 renderFullScreenQuad(blurred, pipeline, driver);
                 unbindAllDescriptorSets(driver);
@@ -1878,8 +1879,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("dofMipmap");
                 FMaterial const* const ma = material.getMaterial(mEngine, driver);
+                FMaterialInstance* const mi = getMaterialInstance(ma);
 
-                auto const pipeline = getPipelineState(ma, variant);
+                auto const pipeline = getPipelineState(mi, variant);
 
                 for (size_t level = 0 ; level < mipmapCount - 1u ; level++) {
                     const float w = FTexture::valueForLevel(level, desc.width);
@@ -2406,7 +2408,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                 auto const& material = getPostProcessMaterial("bloomUpsample");
                 FMaterial const* const ma = material.getMaterial(mEngine, driver);
 
-                auto pipeline = getPipelineState(ma);
+                auto pipeline = getPipelineState(getMaterialInstance(ma));
                 pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
                 pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
 
@@ -2555,7 +2557,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 
     FMaterialInstance const* mi = mMaterialInstanceManager.getMaterialInstance(ma, fixedIndex);
     mi->use(driver);
-    auto const pipeline = getPipelineState(ma, variant);
+    auto const pipeline = getPipelineState(mi, variant);
     driver.nextSubpass();
     driver.scissor(mi->getScissor());
     driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
@@ -2581,7 +2583,7 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
             mFixedMaterialInstanceIndex.customResolve);
     mi->use(driver);
 
-    auto const pipeline = getPipelineState(ma);
+    auto const pipeline = getPipelineState(mi);
     driver.nextSubpass();
     driver.scissor(mi->getScissor());
     driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
@@ -2641,7 +2643,7 @@ void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
             mFixedMaterialInstanceIndex.clearDepth);
     mi->use(driver);
 
-    auto pipeline = getPipelineState(ma, variant);
+    auto pipeline = getPipelineState(mi, variant);
     pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
 
     driver.scissor(mi->getScissor());
@@ -2666,7 +2668,7 @@ void PostProcessManager::fog(DriverApi& driver) noexcept {
     FMaterialInstance const* mi = ma->getDefaultInstance();
     mi->use(driver);
 
-    auto pipeline = getPipelineState(ma, Variant::NO_VARIANT);
+    auto pipeline = getPipelineState(mi, Variant::NO_VARIANT);
     driver.scissor(mi->getScissor());
     driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
 }
@@ -3110,7 +3112,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 if (colorGradingConfig.asSubpass) {
                     out.params.subpassMask = 1;
                 }
-                auto const pipeline = getPipelineState(ma, variant);
+                auto const pipeline = getPipelineState(mi, variant);
 
                 driver.beginRenderPass(out.target, out.params);
                 driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
@@ -3192,7 +3194,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
 
-                auto pipeline = getPipelineState(material.getMaterial(mEngine, driver), variant);
+                auto pipeline = getPipelineState(mi, variant);
                 if (mode == RcasMode::BLENDED) {
                     pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
                     pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
@@ -3285,7 +3287,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
 
                 auto out = resources.getRenderPassInfo();
 
-                auto pipeline = getPipelineState(material.getMaterial(mEngine, driver));
+                auto pipeline = getPipelineState(mi);
                 if (blended) {
                     pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
                     pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
@@ -3499,15 +3501,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
                 auto out = resources.getRenderPassInfo();
 
                 if (UTILS_UNLIKELY(twoPassesEASU)) {
-                    auto pipeline0 = getPipelineState(splitEasuMaterial->getMaterial(mEngine, driver));
-                    auto pipeline1 = getPipelineState(easuMaterial->getMaterial(mEngine, driver));
+                    auto pipeline0 = getPipelineState(getMaterialInstance(mEngine, driver, *splitEasuMaterial));
+                    auto pipeline1 = getPipelineState(getMaterialInstance(mEngine, driver, *easuMaterial));
                     pipeline1.rasterState.depthFunc = SamplerCompareFunc::NE;
                     driver.beginRenderPass(out.target, out.params);
                     driver.draw(pipeline0, mFullScreenQuadRph, 0, 3, 1);
                     driver.draw(pipeline1, mFullScreenQuadRph, 0, 3, 1);
                     driver.endRenderPass();
                 } else {
-                    auto pipeline = getPipelineState(easuMaterial->getMaterial(mEngine, driver));
+                    auto pipeline = getPipelineState(getMaterialInstance(mEngine, driver, *easuMaterial));
                     renderFullScreenQuad(out, pipeline, driver);
                 }
                 unbindAllDescriptorSets(driver);
@@ -3578,7 +3580,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool co
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
 
-                auto pipeline = getPipelineState(ma);
+                auto pipeline = getPipelineState(mi);
                 if (translucent) {
                     pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
                     pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
@@ -3819,13 +3821,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 
                 auto& material = getPostProcessMaterial("vsmMipmap");
                 FMaterial const* const ma = material.getMaterial(mEngine, driver);
+                FMaterialInstance* const mi = getMaterialInstance(ma);
 
                 // When generating shadow map mip levels, we want to preserve the 1 texel border.
                 // (note clearing never respects the scissor in Filament)
-                auto const pipeline = getPipelineState(ma);
+                auto const pipeline = getPipelineState(mi);
                 backend::Viewport const scissor = { 1u, 1u, dim - 2u, dim - 2u };
 
-                FMaterialInstance* const mi = getMaterialInstance(ma);
                 mi->setParameter("color", in, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -3937,7 +3939,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
 
-                auto pipeline = getPipelineState(ma);
+                auto pipeline = getPipelineState(mi);
                 if (translucent) {
                     pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
                     pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;

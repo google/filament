@@ -170,8 +170,6 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
 
     DriverApi& driver = engine.getDriverApi();
 
-    mIsStereoSupported = driver.isStereoSupported();
-    mIsParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
     mDepthPrecacheDisabled =
             driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
     mDefaultMaterial = engine.getDefaultMaterial();
@@ -241,44 +239,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) noexcept {
-
-    DriverApi& driver = mEngine.getDriverApi();
-
-    // Turn off the STE variant if stereo is not supported.
-    if (!mIsStereoSupported) {
-        variantSpec &= ~UserVariantFilterMask(UserVariantFilterBit::STE);
-    }
-
-    UserVariantFilterMask const variantFilter =
-            ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
-    ShaderModel const shaderModel = mEngine.getShaderModel();
-    bool const isStereoSupported = mEngine.getDriverApi().isStereoSupported();
-
-    if (UTILS_LIKELY(mIsParallelShaderCompileSupported)) {
-        for (auto const variant: mDefinition.getVariants()) {
-            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
-                if (mDefinition.hasVariant(variant, shaderModel, isStereoSupported)) {
-                    prepareProgram(driver, variant, priority);
-                }
-            }
-        }
-    }
-
-    if (callback) {
-        struct Callback {
-            Invocable<void(Material*)> f;
-            Material* m;
-            static void func(void* user) {
-                auto* const c = static_cast<Callback*>(user);
-                c->f(c->m);
-                delete c;
-            }
-        };
-        auto* const user = new(std::nothrow) Callback{ std::move(callback), this };
-        driver.compilePrograms(priority, handler, &Callback::func, user);
-    } else {
-        driver.compilePrograms(priority, nullptr, nullptr, nullptr);
-    }
+    getDefaultInstance()->compile(mEngine, priority, variantSpec, handler, std::move(callback));
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {

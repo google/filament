@@ -125,40 +125,6 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    // prepareProgram creates the program for the material's given variant at the backend level.
-    // Must be called outside of backend render pass.
-    // Must be called before getProgram() below.
-    backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
-            Variant const variant,
-            backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        return mPrograms.prepareProgram(driver, variant, priorityQueue);
-    }
-
-    // getProgram returns the backend program for the material's given variant.
-    // Must be called after prepareProgram().
-    [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
-
-        if (UTILS_UNLIKELY(mEngine.features.material.enable_fog_as_postprocess)) {
-            // if the fog as post-process feature is enabled, we need to proceed "as-if" the material
-            // didn't have the FOG variant bit.
-            if (getMaterialDomain() == MaterialDomain::SURFACE) {
-                BlendingMode const blendingMode = getBlendingMode();
-                bool const hasScreenSpaceRefraction = getRefractionMode() == RefractionMode::SCREEN_SPACE;
-                bool const isBlendingCommand = !hasScreenSpaceRefraction &&
-                        (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
-                if (!isBlendingCommand) {
-                    variant.setFog(false);
-                }
-            }
-        }
-
-#if FILAMENT_ENABLE_MATDBG
-        updateActiveProgramsForMatdbg(variant);
-#endif
-        return mPrograms.getProgram(variant);
-    }
-
     // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
     // however, the material instance will call useShared() to bind the default material's sets
     // instead.
@@ -299,6 +265,9 @@ public:
     }
 
     /** @}*/
+
+    // Called by getProgram() to update active program list for matdbg UI.
+    void updateActiveProgramsForMatdbg(Variant const variant) const noexcept;
 #endif
 
 private:
@@ -314,8 +283,6 @@ private:
     bool mIsDefaultMaterial = false;
 
     bool mUseUboBatching = false;
-    bool mIsStereoSupported = false;
-    bool mIsParallelShaderCompileSupported = false;
     bool mDepthPrecacheDisabled = false;
 
     FMaterial const* mDefaultMaterial = nullptr;
@@ -330,8 +297,6 @@ private:
     mutable utils::Mutex mPendingEditsLock;
     std::unique_ptr<MaterialParser> mPendingEdits;
     std::unique_ptr<MaterialParser> mEditedMaterialParser;
-    // Called by getProgram() to update active program list for matdbg UI.
-    void updateActiveProgramsForMatdbg(Variant const variant) const noexcept;
     void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept;
     bool hasPendingEdits() const noexcept;
     void latchPendingEdits() noexcept;

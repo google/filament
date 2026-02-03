@@ -243,8 +243,8 @@ void RenderPass::appendCommands(FEngine const& engine, backend::DriverApi& drive
     // This must be done from the main thread.
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
-            auto ma = first->info.mi->getMaterial();
-            ma->prepareProgram(driver, first->info.materialVariant, CompilerPriorityQueue::CRITICAL);
+            first->info.mi->prepareProgram(driver, first->info.materialVariant,
+                    CompilerPriorityQueue::CRITICAL);
         }
     }
 }
@@ -435,7 +435,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
-    cmdDraw.info.rasterState = ma->getRasterState();
+    cmdDraw.info.rasterState = mi->getRasterState();
 
     // for SSR pass, the blending mode of opaques (including MASKED) must be off
     // see Material.cpp.
@@ -446,10 +446,6 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
             BlendFunction::ZERO : cmdDraw.info.rasterState.blendFunctionDstAlpha;
 
     cmdDraw.info.rasterState.inverseFrontFaces = inverseFrontFaces;
-    cmdDraw.info.rasterState.culling = mi->getCullingMode();
-    cmdDraw.info.rasterState.colorWrite = mi->isColorWriteEnabled();
-    cmdDraw.info.rasterState.depthWrite = mi->isDepthWriteEnabled();
-    cmdDraw.info.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.info.rasterState.depthClamp = hasDepthClamp;
     cmdDraw.info.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
@@ -1087,8 +1083,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     mi->use(driver, info.materialVariant);
                 }
 
-                assert_invariant(ma);
-                pipeline.program = ma->getProgram(info.materialVariant);
+                pipeline.program = mi->getProgram(info.materialVariant);
 
                 if (UTILS_UNLIKELY(memcmp(&pipeline, &currentPipeline, sizeof(PipelineState)) != 0)) {
                     currentPipeline = pipeline;

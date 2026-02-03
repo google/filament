@@ -233,6 +233,26 @@ template UTILS_PUBLIC mat3f MaterialInstance::getParameter<mat3f>      (const ch
 
 // ------------------------------------------------------------------------------------------------
 
+template<typename T, typename>
+void MaterialInstance::setConstant(const char* name, size_t nameLength, T value) {
+    downcast(this)->setConstantImpl(std::string_view{name, nameLength}, value);
+}
+
+template UTILS_PUBLIC void MaterialInstance::setConstant<int32_t>(const char* name, size_t nameLength, int32_t value);
+template UTILS_PUBLIC void MaterialInstance::setConstant<float>(const char* name, size_t nameLength, float value);
+template UTILS_PUBLIC void MaterialInstance::setConstant<bool>(const char* name, size_t nameLength, bool value);
+
+template<typename T, typename>
+T MaterialInstance::getConstant(const char* name, size_t nameLength) const {
+    return downcast(this)->getConstantImpl<T>(std::string_view{name, nameLength});
+}
+
+template UTILS_PUBLIC int32_t MaterialInstance::getConstant<int32_t>(const char* name, size_t nameLength) const;
+template UTILS_PUBLIC float MaterialInstance::getConstant<float>(const char* name, size_t nameLength) const;
+template UTILS_PUBLIC bool MaterialInstance::getConstant<bool>(const char* name, size_t nameLength) const;
+
+// ------------------------------------------------------------------------------------------------
+
 Material const* MaterialInstance::getMaterial() const noexcept {
     return downcast(this)->getMaterial();
 }
