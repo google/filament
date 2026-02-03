@@ -636,7 +636,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianBlurSeparatedPass(
 
             // get the material
             auto const& separableGaussianBlur = ppm.getPostProcessMaterial("gaussian");
-            auto const ma = separableGaussianBlur.getMaterial(engine, driver);
+            auto const ma = separableGaussianBlur.getMaterial(engine);
 
             // Generates half of a Gaussian kernel (center + one side)
             auto generateGaussianWeights = [](std::array<float, 32>& weights,
@@ -685,7 +685,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianBlurSeparatedPass(
             for (auto const mi : miList) {
                 mi->use(driver);
                 driver.scissor(mi->getScissor());
-                driver.draw(ppm.getPipelineState(ma), engine.getFullScreenRenderPrimitive(), 0, 3, 1);
+                driver.draw(ppm.getPipelineState(mi), engine.getFullScreenRenderPrimitive(), 0, 3, 1);
             }
             driver.endRenderPass();
 
@@ -733,12 +733,12 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::vsmMipmapPass(
                 ppm.bindPerRenderableDescriptorSet(driver);
 
                 auto& material = ppm.getPostProcessMaterial("vsmMipmap");
-                FMaterial const* const ma = material.getMaterial(engine, driver);
+                FMaterial const* const ma = material.getMaterial(engine);
+                auto const mi = ppm.getMaterialInstanceManager().getMaterialInstance(ma);
 
-                auto const pipeline = ppm.getPipelineState(ma);
+                auto const pipeline = ppm.getPipelineState(mi);
                 backend::Viewport const scissor = { 0, 0, dim, dim };
 
-                auto const mi = ppm.getMaterialInstanceManager().getMaterialInstance(ma);
                 mi->setParameter("color", in, SamplerParams{
                         .filterMag = SamplerMagFilter::NEAREST,
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST

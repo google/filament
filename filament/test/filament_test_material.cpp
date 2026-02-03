@@ -19,6 +19,7 @@
 
 #include <filament/Engine.h>
 #include <filament/Material.h>
+#include <filament/MaterialInstance.h>
 
 #include "filament_test_resources.h"
 
@@ -165,5 +166,54 @@ TEST(Material, MaterialSettingInvalidApiLevelReturnsAnInvalidPackage) {
     result = builder.build(engine->getJobSystem());
     ASSERT_FALSE(result.isValid());
 
+    Engine::destroy(engine);
+}
+
+TEST(MaterialInstanceTest, SetConstant) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("MaterialInstanceTest");
+    builder.material(shaderCode.c_str());
+    builder.constant("myFloat", filamat::MaterialBuilder::ConstantType::FLOAT, 1.0f);
+    builder.constant("myInt", filamat::MaterialBuilder::ConstantType::INT, 2);
+    builder.constant("myBool", filamat::MaterialBuilder::ConstantType::BOOL, false);
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+            .package(result.getData(), result.getSize())
+            .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    MaterialInstance* instance = material->createInstance();
+    ASSERT_NE(instance, nullptr);
+
+    // Verify default values
+    EXPECT_EQ(instance->getConstant<float>("myFloat"), 1.0f);
+    EXPECT_EQ(instance->getConstant<int32_t>("myInt"), 2);
+    EXPECT_EQ(instance->getConstant<bool>("myBool"), false);
+
+    // Set new values
+    instance->setConstant("myFloat", 3.0f);
+    instance->setConstant("myInt", 4);
+    instance->setConstant("myBool", true);
+
+    // Verify new values
+    EXPECT_EQ(instance->getConstant<float>("myFloat"), 3.0f);
+    EXPECT_EQ(instance->getConstant<int32_t>("myInt"), 4);
+    EXPECT_EQ(instance->getConstant<bool>("myBool"), true);
+
+    engine->destroy(instance);
+    engine->destroy(material);
     Engine::destroy(engine);
 }
