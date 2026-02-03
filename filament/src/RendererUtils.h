@@ -75,6 +75,8 @@ public:
         backend::FeatureLevel featureLevel;
         // Auto depth resolve supported
         bool isAutoDepthResolveSupported;
+        // Use post-process fog
+        bool fogAsPostProcess;
     };
 
     struct ColorPassInput {

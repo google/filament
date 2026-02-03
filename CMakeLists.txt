@@ -904,6 +904,8 @@ add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 
+# imageio-lite is needed for viewer
+add_subdirectory(${LIBRARIES}/imageio-lite)
 
 # Note that this has to be placed after mikktspace in order for combine_static_libs to work.
 add_subdirectory(${LIBRARIES}/geometry)

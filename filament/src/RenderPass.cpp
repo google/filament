@@ -479,7 +479,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
     const size_t offsetBegin = FScene::getPrimitiveCount(soa, range.first) * commandsPerPrimitive;
     const size_t offsetEnd   = FScene::getPrimitiveCount(soa, range.last) * commandsPerPrimitive;
     Command* curr = commands + offsetBegin;
-    Command* const last = commands + offsetEnd;
+    Command const* const last = commands + offsetEnd;
 
     /*
      * The switch {} below is to coerce the compiler into generating different versions of
@@ -969,7 +969,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
 
             // check we have enough capacity to write these commandCount commands, if not,
             // request a new CircularBuffer allocation of `capacity` bytes.
-            if (UTILS_UNLIKELY(circularBuffer.getUsed() > capacity - commandSizeInBytes)) {
+            if (UTILS_UNLIKELY(circularBuffer.getUsed() + commandSizeInBytes > capacity)) {
                 // FIXME: eventually we can't flush here because this will be a secondary
                 //        command buffer. We will need another solution for overflows.
                 const_cast<FEngine&>(engine).flush();

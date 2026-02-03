@@ -23,8 +23,6 @@ set(SRCS
         src/Settings.cpp
         src/Settings_generated.cpp
         src/Settings_generated.h
-        src/TIFFExport.cpp
-        src/TIFFExport.h
         src/ViewerGui.cpp
 )
 
@@ -32,7 +30,7 @@ set(SRCS
 # Include and target definitions
 # ==================================================================================================
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
-target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn civetweb)
+target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn civetweb imageio-lite)
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 

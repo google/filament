@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef VIEWER_TIFF_EXPORT_H
-#define VIEWER_TIFF_EXPORT_H
+#include "fog.h"
 
-#include <cstdint>
-#include <fstream>
+#include "generated/resources/fog.h"
 
-void exportTIFF(void* buffer, uint32_t width, uint32_t height, std::ostream& outstream);
+#include <materials/StaticMaterialInfo.h>
 
-#endif // VIEWER_TIFF_EXPORT_H
+#include <utils/Slice.h>
+
+#include <iterator>
+
+#include <stddef.h>
+
+namespace filament {
+
+static const StaticMaterialInfo sMaterialList[] = {
+        { "fog",                        MATERIAL(FOG, FOG) },
+};
+
+utils::Slice<const StaticMaterialInfo> getFogMaterialList() noexcept {
+    return { std::begin(sMaterialList), std::end(sMaterialList) };
+}
+
+} // namespace filament

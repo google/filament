@@ -37,6 +37,7 @@
 #include <filament/Viewport.h>
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -219,6 +220,10 @@ public:
     void clearAncillaryBuffers(backend::DriverApi& driver,
             backend::TargetBufferFlags attachments) const noexcept;
 
+    // postfx fog
+    void fogPrepare(backend::DriverApi& driver) noexcept;
+    void fog(backend::DriverApi& driver) noexcept;
+
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
@@ -351,7 +356,12 @@ public:
         void terminate(FEngine& engine) noexcept;
 
         FMaterial* getMaterial(FEngine& engine, backend::DriverApi& driver,
-                PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
+                Variant::type_t variant) const noexcept;
+
+        FMaterial* getMaterial(FEngine& engine, backend::DriverApi& driver,
+                PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept {
+                return getMaterial(engine, driver, Variant::type_t(variant));
+        }
 
     private:
         void loadMaterial(FEngine& engine) const noexcept;
@@ -376,9 +386,12 @@ public:
 
     void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
 
-    backend::PipelineState getPipelineState(
-            FMaterial const* ma,
-            PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
+    backend::PipelineState getPipelineState(FMaterial const* ma, Variant::type_t variant) const noexcept;
+
+    backend::PipelineState getPipelineState(FMaterial const* ma,
+                    PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept {
+            return getPipelineState(ma, Variant::type_t(variant));
+    }
 
     void renderFullScreenQuad(FrameGraphResources::RenderPassInfo const& out,
             backend::PipelineState const& pipeline,
