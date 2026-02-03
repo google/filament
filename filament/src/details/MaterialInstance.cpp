@@ -17,6 +17,7 @@
 #include <filament/MaterialInstance.h>
 
 #include "RenderPass.h"
+#include "MaterialParser.h"
 
 #include "ds/DescriptorSetLayout.h"
 
@@ -131,6 +132,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mTextureParameters(other->mTextureParameters),
           mDescriptorSet(other->mDescriptorSet.duplicate(
                 "MaterialInstance", mMaterial->getDescriptorSetLayout())),
+          mPrograms(other->mPrograms),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -207,6 +209,10 @@ void FMaterialInstance::terminate(FEngine& engine) {
     if (ubHandle){
         driver.destroyBufferObject(*ubHandle);
     }
+
+    if (mPrograms.isInitialized()) {
+        mPrograms.terminate(engine);
+    }
 }
 
 void FMaterialInstance::commit(FEngine& engine) const {
@@ -255,6 +261,21 @@ void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManage
 
     // Commit descriptors if needed (e.g. when textures are updated,or the first time)
     mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+template<typename T>
+void FMaterialInstance::setConstantImpl(std::string_view name, T value) {
+    if (!mPrograms.isInitialized()) {
+        mPrograms.initializeForMaterialInstance(mMaterial->getEngine(), *mMaterial);
+    }
+    mPrograms.setConstant(name, value);
+}
+
+template<typename T>
+T FMaterialInstance::getConstantImpl(std::string_view name) const {
+    return getPrograms().getConstant<T>(name);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -378,6 +399,15 @@ void FMaterialInstance::setTransparencyMode(TransparencyMode const mode) noexcep
     mTransparencyMode = mode;
 }
 
+RasterState FMaterialInstance::getRasterState() const noexcept {
+    RasterState rs = mMaterial->getRasterState();
+    rs.culling = mCulling;
+    rs.depthWrite = mDepthWrite;
+    rs.depthFunc = mDepthFunc;
+    rs.colorWrite = mColorWrite;
+    return rs;
+}
+
 void FMaterialInstance::setDepthCulling(bool const enable) noexcept {
     mDepthFunc = enable ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
 }
@@ -397,6 +427,53 @@ const char* FMaterialInstance::getName() const noexcept {
 }
 
 // ------------------------------------------------------------------------------------------------
+
+void FMaterialInstance::compile(FEngine& engine, CompilerPriorityQueue const priority,
+        UserVariantFilterMask variantSpec, CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) noexcept {
+
+    DriverApi& driver = engine.getDriverApi();
+    MaterialDefinition const& definition = mMaterial->getDefinition();
+
+    bool const isStereoSupported = driver.isStereoSupported();
+
+    // Turn off the STE variant if stereo is not supported.
+    if (UTILS_LIKELY(!isStereoSupported)) {
+        variantSpec &= ~UserVariantFilterMask(UserVariantFilterBit::STE);
+    }
+
+    UserVariantFilterMask const variantFilter =
+            ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
+    ShaderModel const shaderModel = engine.getShaderModel();
+
+    if (UTILS_LIKELY(driver.isParallelShaderCompileSupported())) {
+        for (auto const variant: definition.getVariants()) {
+            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
+                if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
+                    prepareProgram(driver, variant, priority);
+                }
+            }
+        }
+    }
+
+    if (callback) {
+        struct Callback {
+            Invocable<void(Material*)> f;
+            Material* m;
+            static void func(void* user) {
+                auto* const c = static_cast<Callback*>(user);
+                c->f(c->m);
+                delete c;
+            }
+        };
+        // TODO(exv): fix this const cast
+        auto* const user = new (std::nothrow) Callback{ std::move(callback),
+            const_cast<Material*>(static_cast<Material const*>(mMaterial)) };
+        driver.compilePrograms(priority, handler, &Callback::func, user);
+    } else {
+        driver.compilePrograms(priority, nullptr, nullptr, nullptr);
+    }
+}
 
 void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
     assert_invariant(mDescriptorSet.getHandle());
@@ -501,5 +578,17 @@ void FMaterialInstance::fixMissingSamplers() const {
         });
     }
 }
+
+LocalProgramCache const& FMaterialInstance::getPrograms() const noexcept {
+    return mPrograms.isInitialized() ? mPrograms : mMaterial->getPrograms();
+}
+
+#if FILAMENT_ENABLE_MATDBG
+
+void FMaterialInstance::updateActiveProgramsForMatdbg(Variant const variant) const noexcept {
+    mMaterial->updateActiveProgramsForMatdbg(variant);
+}
+
+#endif // FILAMENT_ENABLE_MATDBG
 
 } // namespace filament
