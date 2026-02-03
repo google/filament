@@ -1751,12 +1751,34 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     MetalAttachment color = srcTarget->getDrawColorAttachment(0);
     id<MTLTexture> srcTexture = color.getTexture();
     size_t miplevel = color.getLevel();
+    size_t layer = color.getLayer();
 
     // Clamp height and width to actual texture's height and width
     MTLSize srcTextureSize = MTLSizeMake(srcTexture.width >> miplevel, srcTexture.height >> miplevel, 1);
     height = std::min(static_cast<uint32_t>(srcTextureSize.height), height);
     width = std::min(static_cast<uint32_t>(srcTextureSize.width), width);
 
+    readTextureCommon(srcTexture, miplevel, layer, x, y, width, height, std::move(data));
+}
+
+void MetalDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
+        uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
+    FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
+            << "readTexture must be called outside of a render pass.";
+
+    auto srcTexture = handle_cast<MetalTexture>(src);
+    id<MTLTexture> texture = srcTexture->getMtlTextureForWrite();
+
+    // Clamp height and width to actual texture's height and width
+    MTLSize srcTextureSize = MTLSizeMake(texture.width >> level, texture.height >> level, 1);
+    height = std::min(static_cast<uint32_t>(srcTextureSize.height), height);
+    width = std::min(static_cast<uint32_t>(srcTextureSize.width), width);
+
+    readTextureCommon(texture, level, layer, x, y, width, height, std::move(p));
+}
+
+void MetalDriver::readTextureCommon(id<MTLTexture> srcTexture, uint8_t level, uint16_t layer,
+        uint32_t x, uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& data) {
     const MTLPixelFormat format = getMetalFormat(data.format, data.type);
     FILAMENT_CHECK_PRECONDITION(format != MTLPixelFormatInvalid)
             << "The chosen combination of PixelDataFormat (" << (int)data.format
@@ -1764,10 +1786,14 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
             << ") is not supported for "
                "readPixels.";
 
+    // Clamp height and width to actual texture's height and width
+    MTLSize levelSize = MTLSizeMake(std::max(1lu, srcTexture.width >> level),
+            std::max(1lu, srcTexture.height >> level), 1);
+
     MTLTextureDescriptor* textureDescriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
-                                                               width:srcTextureSize.width
-                                                              height:srcTextureSize.height
+                                                               width:levelSize.width
+                                                              height:levelSize.height
                                                            mipmapped:NO];
 #if defined(FILAMENT_IOS)
     textureDescriptor.storageMode = MTLStorageModeShared;
@@ -1779,14 +1805,16 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     MetalBlitter::BlitArgs args{};
     args.filter = SamplerMagFilter::NEAREST;
-    args.source.level = miplevel;
-    args.source.region = MTLRegionMake2D(0, 0, srcTexture.width >> miplevel, srcTexture.height >> miplevel);
+    args.source.level = level;
+    args.source.slice = layer;
+    args.source.region = MTLRegionMake2D(0, 0, levelSize.width, levelSize.height);
     args.source.texture = srcTexture;
     args.destination.level = 0;
+    args.destination.slice = 0;
     args.destination.region = MTLRegionMake2D(0, 0, readPixelsTexture.width, readPixelsTexture.height);
     args.destination.texture = readPixelsTexture;
 
-    mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "readPixels blit");
+    mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "readTexture blit");
 
 #if !defined(FILAMENT_IOS)
     // Managed textures on macOS require explicit synchronization between GPU / CPU.
@@ -1812,12 +1840,6 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
         scheduleDestroy(std::move(*p));
         delete p;
     }];
-}
-
-void MetalDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
-        uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
-    // TODO: implement readTexture
-    scheduleDestroy(std::move(p));
 }
 
 void MetalDriver::readBufferSubData(backend::BufferObjectHandle boh,
