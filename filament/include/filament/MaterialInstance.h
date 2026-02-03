@@ -94,6 +94,12 @@ public:
             std::is_same_v<math::mat3f, T>
     >;
 
+    template<typename T>
+    using is_supported_constant_parameter_t = std::enable_if_t<
+            std::is_same_v<int32_t, T> ||
+            std::is_same_v<float, T> ||
+            std::is_same_v<bool, T>>;
+
     /**
      * Creates a new MaterialInstance using another MaterialInstance as a template for initialization.
      * The new MaterialInstance is an instance of the same Material of the template instance and
@@ -274,6 +280,54 @@ public:
     template<typename T, typename = is_supported_parameter_t<T>>
     T getParameter(const char* UTILS_NONNULL name) const {
         return getParameter<T>(name, strlen(name));
+    }
+
+    /**
+     * Overrides a specialization constant of this material instance.
+     *
+     * @tparam T    The type of the constant. Must be int32_t, float, or bool.
+     * @param name  The name of the constant as defined in the material. Cannot be nullptr.
+     * @param nameLength Length in `char` of the name parameter.
+     * @param value The value of the constant.
+     *
+     * @see Material::Builder::constant
+     */
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    void setConstant(const char* UTILS_NONNULL name, size_t nameLength, T value);
+
+    /** inline helper to provide the name as a null-terminated string literal */
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    void setConstant(StringLiteral const name, T value) {
+        setConstant<T>(name.data, name.size, value);
+    }
+
+    /** inline helper to provide the name as a null-terminated C string */
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    void setConstant(const char* UTILS_NONNULL name, T value) {
+        setConstant<T>(name, strlen(name), value);
+    }
+
+    /**
+     * Gets the value of a specialization constant by name.
+     *
+     * @tparam T    The type of the constant. Must be int32_t, float, or bool.
+     * @param name  The name of the constant as defined in the material. Cannot be nullptr.
+     * @param nameLength Length in `char` of the name parameter.
+     * @return The value of the constant.
+     */
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    T getConstant(const char* UTILS_NONNULL name, size_t nameLength) const;
+
+    /** inline helper to provide the name as a null-terminated C string */
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    T getConstant(StringLiteral const name) const {
+        return getConstant<T>(name.data, name.size);
+    }
+
+    /** inline helper to provide the name as a null-terminated C string */
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    T getConstant(const char* UTILS_NONNULL name) const {
+        return getConstant<T>(name, strlen(name));
     }
 
     /**
