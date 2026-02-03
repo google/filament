@@ -388,11 +388,12 @@ public:
 
     void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
 
-    backend::PipelineState getPipelineState(FMaterial const* ma, Variant::type_t variant) const noexcept;
+    backend::PipelineState getPipelineState(FMaterialInstance const* mi,
+            Variant::type_t variant) const noexcept;
 
-    backend::PipelineState getPipelineState(FMaterial const* ma,
-                    PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept {
-            return getPipelineState(ma, Variant::type_t(variant));
+    backend::PipelineState getPipelineState(FMaterialInstance const* mi,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept {
+        return getPipelineState(mi, Variant::type_t(variant));
     }
 
     void renderFullScreenQuad(FrameGraphResources::RenderPassInfo const& out,

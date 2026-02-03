@@ -403,6 +403,69 @@ public class MaterialInstance {
     }
 
     /**
+     * Overrides a specialization constant of this material instance.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @param value The value of the constant.
+     * @see Material.Builder#constant
+     */
+    public void setConstant(@NonNull String name, boolean value) {
+        nSetConstantBool(getNativeObject(), name, value);
+    }
+
+    /**
+     * Overrides a specialization constant of this material instance.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @param value The value of the constant.
+     * @see Material.Builder#constant
+     */
+    public void setConstant(@NonNull String name, float value) {
+        nSetConstantFloat(getNativeObject(), name, value);
+    }
+
+    /**
+     * Overrides a specialization constant of this material instance.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @param value The value of the constant.
+     * @see Material.Builder#constant
+     */
+    public void setConstant(@NonNull String name, int value) {
+        nSetConstantInt(getNativeObject(), name, value);
+    }
+
+    /**
+     * Gets the value of a specialization constant by name.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @return The value of the constant.
+     */
+    public boolean getConstantBoolean(@NonNull String name) {
+        return nGetConstantBool(getNativeObject(), name);
+    }
+
+    /**
+     * Gets the value of a specialization constant by name.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @return The value of the constant.
+     */
+    public float getConstantFloat(@NonNull String name) {
+        return nGetConstantFloat(getNativeObject(), name);
+    }
+
+    /**
+     * Gets the value of a specialization constant by name.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @return The value of the constant.
+     */
+    public int getConstantInt(@NonNull String name) {
+        return nGetConstantInt(getNativeObject(), name);
+    }
+
+    /**
      * Set-up a custom scissor rectangle; by default it is disabled.
      *
      * <p>
@@ -936,6 +999,17 @@ public class MaterialInstance {
     private static native void nSetFloatParameterArray(long nativeMaterialInstance,
             @NonNull String name, int element, @NonNull @Size(min = 1) float[] v,
             @IntRange(from = 0) int offset, @IntRange(from = 1) int count);
+
+    private static native boolean nGetConstantBool(long nativeMaterialInstance, @NonNull String name);
+    private static native float nGetConstantFloat(long nativeMaterialInstance, @NonNull String name);
+    private static native int nGetConstantInt(long nativeMaterialInstance, @NonNull String name);
+
+    private static native void nSetConstantBool(long nativeMaterialInstance,
+            @NonNull String name, boolean x);
+    private static native void nSetConstantFloat(long nativeMaterialInstance,
+            @NonNull String name, float x);
+    private static native void nSetConstantInt(long nativeMaterialInstance,
+            @NonNull String name, int x);
 
     private static native void nSetParameterTexture(long nativeMaterialInstance,
             @NonNull String name, long nativeTexture, long sampler);
