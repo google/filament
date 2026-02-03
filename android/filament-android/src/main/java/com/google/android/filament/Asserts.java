@@ -136,4 +136,13 @@ final class Asserts {
             throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
         }
     }
+
+    @NonNull @Size(min = 2)
+    static double[] assertDouble2(@Nullable double[] out) {
+        if (out == null) out = new double[2];
+        else if (out.length < 2) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
+        }
+        return out;
+    }
 }

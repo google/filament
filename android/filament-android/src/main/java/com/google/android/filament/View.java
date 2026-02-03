@@ -351,6 +351,26 @@ public class View {
     }
 
     /**
+     * Returns the visible layers.
+     *
+     * @return a bitmask specifying which layer is visible.
+     */
+    public int getVisibleLayers() {
+        return nGetVisibleLayers(getNativeObject());
+    }
+
+    /**
+     * Enables or disables a specific layer.
+     *
+     * @param layer     Index of the layer to enable or disable, must be between 0 and 7.
+     * @param enabled   True to enable the layer, false to disable it.
+     */
+    public void setLayerEnabled(@IntRange(from = 0, to = 7) int layer, boolean enabled) {
+        int mask = 1 << layer;
+        setVisibleLayers(mask, enabled ? mask : 0);
+    }
+
+    /**
      * Enables or disables shadow mapping. Enabled by default.
      *
      * @see LightManager.Builder#castShadows
@@ -366,6 +386,22 @@ public class View {
      */
     boolean isShadowingEnabled() {
         return nIsShadowingEnabled(getNativeObject());
+    }
+
+    /**
+     * Enables or disables frustum culling. Enabled by default.
+     *
+     * @param enabled true enables frustum culling, false disables it.
+     */
+    public void setFrustumCullingEnabled(boolean enabled) {
+        nSetFrustumCullingEnabled(getNativeObject(), enabled);
+    }
+
+    /**
+     * @return whether frustum culling is enabled
+     */
+    public boolean isFrustumCullingEnabled() {
+        return nIsFrustumCullingEnabled(getNativeObject());
     }
 
     /**
@@ -1322,6 +1358,9 @@ public class View {
     private static native boolean nHasCamera(long nativeView);
     private static native void nSetViewport(long nativeView, int left, int bottom, int width, int height);
     private static native void nSetVisibleLayers(long nativeView, int select, int value);
+    private static native int nGetVisibleLayers(long nativeView);
+    private static native void nSetFrustumCullingEnabled(long nativeView, boolean enabled);
+    private static native boolean nIsFrustumCullingEnabled(long nativeView);
     private static native void nSetShadowingEnabled(long nativeView, boolean enabled);
     private static native void nSetRenderTarget(long nativeView, long nativeRenderTarget);
     private static native void nSetSampleCount(long nativeView, int count);
