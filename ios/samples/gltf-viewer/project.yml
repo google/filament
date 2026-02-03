@@ -21,7 +21,7 @@ targets:
             base:
                 OTHER_LDFLAGS: ["-lgltfio_core", "-luberarchive", "-limage", "-lstb", "-lbasis_transcoder",
                                 "-lzstd", "-lcamutils", "-ldracodec", "-lmeshoptimizer", "-lviewer", "-lcivetweb",
-                                "-luberzlib"]
+                                "-luberzlib", "-limageio-lite"]
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources

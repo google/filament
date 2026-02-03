@@ -16,7 +16,10 @@
 
 #include <viewer/AutomationEngine.h>
 
-#include "TIFFExport.h"
+#include <image/ColorTransform.h>
+#include <image/ImageOps.h>
+#include <image/LinearImage.h>
+#include <imageio-lite/ImageEncoder.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -110,7 +113,11 @@ void AutomationEngine::exportScreenshot(View* view, Renderer* renderer, std::str
             if (extension == "ppm") {
                 exportPPM(buffer, vp.width, vp.height, outstream);
             } else if (extension == "tif" || extension == "tiff") {
-                exportTIFF(buffer, vp.width, vp.height, outstream);
+                image::LinearImage image = image::toLinearWithAlpha<uint8_t>(
+                        vp.width, vp.height, vp.width * 4, (uint8_t*) buffer,
+                        [](uint8_t v) { return v; }, image::sRGBToLinear<filament::math::float4>);
+                imageio_lite::ImageEncoder::encode(outstream,
+                        imageio_lite::ImageEncoder::Format::TIFF, image, "", "");
             } else {
                 utils::slog.e << out.c_str() << " does not specify a supported file extension."
                               << utils::io::endl;

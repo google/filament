@@ -399,13 +399,8 @@ const char* FMaterialInstance::getName() const noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
-    if (!mDescriptorSet.getHandle()) {
-        return;
-    }
-
-    if (isUsingUboBatching() && !BufferAllocator::isValid(getAllocationId())) {
-        return;
-    }
+    assert_invariant(mDescriptorSet.getHandle());
+    assert_invariant(!isUsingUboBatching() || BufferAllocator::isValid(getAllocationId()));
 
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
         std::call_once(mMissingSamplersFlag, [this] {
