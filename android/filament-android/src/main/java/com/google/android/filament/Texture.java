@@ -796,6 +796,17 @@ public class Texture {
         }
 
         /**
+         * Specifies the number of samples for multisample anti-aliasing.
+         * @param samples number of samples, must be at least 1. Default is 1.
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder samples(@IntRange(from = 1) int samples) {
+            nBuilderSamples(mNativeBuilder, samples);
+            return this;
+        }
+
+        /**
          * Specifies the texture's internal format.
          * <p>The internal format specifies how texels are stored (which may be different from how
          * they're specified in {@link #setImage}). {@link InternalFormat InternalFormat} specifies
@@ -1370,6 +1381,7 @@ public class Texture {
     private static native void nBuilderFormat(long nativeBuilder, int format);
     private static native void nBuilderUsage(long nativeBuilder, int flags);
     private static native void nBuilderSwizzle(long nativeBuilder, int r, int g, int b, int a);
+    private static native void nBuilderSamples(long nativeBuilder, int samples);
     private static native void nBuilderImportTexture(long nativeBuilder, long id);
     private static native void nBuilderExternal(long nativeBuilder);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);

@@ -564,3 +564,19 @@ Java_com_google_android_filament_MaterialInstance_nGetDepthFunc(JNIEnv* env, jcl
     MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return (jint)instance->getDepthFunc();
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetTransparencyMode(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jint mode) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setTransparencyMode((MaterialInstance::TransparencyMode) mode);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetTransparencyMode(JNIEnv*, jclass,
+        jlong nativeMaterialInstance) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    return (jint) instance->getTransparencyMode();
+}

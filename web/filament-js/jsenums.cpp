@@ -30,6 +30,8 @@
 
 #include <ktxreader/Ktx2Reader.h>
 
+#include <backend/DriverEnums.h>
+
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
@@ -162,7 +164,10 @@ enum_<Frustum::Plane>("Frustum$Plane")
 enum_<Texture::Sampler>("Texture$Sampler") // aka backend::SamplerType
     .value("SAMPLER_2D", Texture::Sampler::SAMPLER_2D)
     .value("SAMPLER_CUBEMAP", Texture::Sampler::SAMPLER_CUBEMAP)
-    .value("SAMPLER_EXTERNAL", Texture::Sampler::SAMPLER_EXTERNAL);
+    .value("SAMPLER_EXTERNAL", Texture::Sampler::SAMPLER_EXTERNAL)
+    .value("SAMPLER_2D_ARRAY", Texture::Sampler::SAMPLER_2D_ARRAY)
+    .value("SAMPLER_3D", Texture::Sampler::SAMPLER_3D)
+    .value("SAMPLER_CUBEMAP_ARRAY", Texture::Sampler::SAMPLER_CUBEMAP_ARRAY);
 
 enum_<Texture::InternalFormat>("Texture$InternalFormat") // aka backend::TextureFormat
     .value("R8", Texture::InternalFormat::R8)
@@ -276,7 +281,9 @@ enum_<Texture::Usage>("Texture$Usage") // aka backend::TextureUsage
     .value("SAMPLEABLE", Texture::Usage::SAMPLEABLE)
     .value("BLIT_SRC", Texture::Usage::BLIT_SRC)
     .value("BLIT_DST", Texture::Usage::BLIT_DST)
-    .value("SUBPASS_INPUT", Texture::Usage::SUBPASS_INPUT);
+    .value("SUBPASS_INPUT", Texture::Usage::SUBPASS_INPUT)
+    .value("PROTECTED", Texture::Usage::PROTECTED)
+    .value("GEN_MIPMAPPABLE", Texture::Usage::GEN_MIPMAPPABLE);
 
 enum_<Texture::CubemapFace>("Texture$CubemapFace") // aka backend::TextureCubemapFace
     .value("POSITIVE_X", Texture::CubemapFace::POSITIVE_X)
@@ -411,7 +418,8 @@ enum_<filament::TransparencyMode>("TransparencyMode")
 
 enum_<backend::FeatureLevel>("FeatureLevel")
     .value("FEATURE_LEVEL_1", backend::FeatureLevel::FEATURE_LEVEL_1)
-    .value("FEATURE_LEVEL_2", backend::FeatureLevel::FEATURE_LEVEL_2);
+    .value("FEATURE_LEVEL_2", backend::FeatureLevel::FEATURE_LEVEL_2)
+    .value("FEATURE_LEVEL_3", backend::FeatureLevel::FEATURE_LEVEL_3);
 
 enum_<backend::StencilOperation>("StencilOperation")
     .value("KEEP", backend::StencilOperation::KEEP)
@@ -438,5 +446,12 @@ enum_<ktxreader::Ktx2Reader::Result>("Ktx2Reader$Result")
     .value("UNCOMPRESSED_TRANSCODE_FAILURE", ktxreader::Ktx2Reader::Result::UNCOMPRESSED_TRANSCODE_FAILURE)
     .value("FORMAT_UNSUPPORTED", ktxreader::Ktx2Reader::Result::FORMAT_UNSUPPORTED)
     .value("FORMAT_ALREADY_REQUESTED", ktxreader::Ktx2Reader::Result::FORMAT_ALREADY_REQUESTED);
+
+    enum_<backend::Backend>("Backend")
+        .value("DEFAULT", backend::Backend::DEFAULT)
+        .value("OPENGL", backend::Backend::OPENGL)
+        .value("VULKAN", backend::Backend::VULKAN)
+        .value("METAL", backend::Backend::METAL)
+        .value("NOOP", backend::Backend::NOOP);
 
 }
