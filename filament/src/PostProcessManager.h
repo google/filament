@@ -216,9 +216,11 @@ public:
             FrameGraphId<FrameGraphTexture> inout) noexcept;
 
     // clear depth buffer pass
-    void clearAncillaryBuffersPrepare(backend::DriverApi& driver) noexcept;
+    void clearAncillaryBuffersPrepare(backend::DriverApi& driver,
+            Variant::type_t variant) noexcept;
     void clearAncillaryBuffers(backend::DriverApi& driver,
-            backend::TargetBufferFlags attachments) const noexcept;
+            backend::TargetBufferFlags attachments,
+            Variant::type_t variant) const noexcept;
 
     // postfx fog
     void fogPrepare(backend::DriverApi& driver) noexcept;
