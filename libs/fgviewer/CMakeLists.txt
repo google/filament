@@ -24,6 +24,7 @@ set(SRCS
     src/DebugServer.cpp
     src/FrameGraphInfo.cpp
     src/JsonWriter.cpp
+    src/WebSocketHandler.cpp
 )
 
 # ==================================================================================================

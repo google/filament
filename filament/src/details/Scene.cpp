@@ -232,7 +232,7 @@ void FScene::prepare(JobSystem& js,
             sceneData.elementAt<INSTANCES>(index)           = rcm.getInstancesInfo(ri);
             sceneData.elementAt<WORLD_AABB_CENTER>(index)   = worldAABB.center;
             sceneData.elementAt<VISIBLE_MASK>(index)        = 0;
-            sceneData.elementAt<CHANNELS>(index)            = rcm.getChannels(ri);
+            sceneData.elementAt<CHANNELS>(index)            = rcm.getLightChannels(ri);
             sceneData.elementAt<LAYERS>(index)              = rcm.getLayerMask(ri);
             sceneData.elementAt<WORLD_AABB_EXTENT>(index)   = worldAABB.halfExtent;
             //sceneData.elementAt<PRIMITIVES>(index)          = {}; // already initialized, Slice<>
