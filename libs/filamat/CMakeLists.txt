@@ -157,7 +157,7 @@ endif()
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (IS_HOST_PLATFORM)
+if (BUILD_TESTING AND IS_HOST_PLATFORM)
     project(test_filamat)
     set(TARGET test_filamat)
     set(SRCS

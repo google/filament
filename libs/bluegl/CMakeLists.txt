@@ -74,17 +74,19 @@ endif()
 
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
 
-# Build the tests...
-add_executable(test_${TARGET}
-    tests/OpenGLSupport.cpp
-    tests/OpenGLSupport.hpp
-    tests/test_bluegl.cpp)
+if (BUILD_TESTING)
+    # Build the tests...
+    add_executable(test_${TARGET}
+        tests/OpenGLSupport.cpp
+        tests/OpenGLSupport.hpp
+        tests/test_bluegl.cpp)
 
-if (LINUX)
-    target_link_libraries(test_${TARGET} PUBLIC dl)
+    if (LINUX)
+        target_link_libraries(test_${TARGET} PUBLIC dl)
+    endif()
+
+    # and we're linking against the libraries below, importing their public headers
+    target_link_libraries(test_${TARGET} LINK_PUBLIC ${TARGET})
+    target_link_libraries(test_${TARGET} LINK_PUBLIC gtest)
+    set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 endif()
-
-# and we're linking against the libraries below, importing their public headers
-target_link_libraries(test_${TARGET} LINK_PUBLIC ${TARGET})
-target_link_libraries(test_${TARGET} LINK_PUBLIC gtest)
-set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)

@@ -55,20 +55,22 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/ DESTINATION include)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-project(test_matp)
-set(TARGET test_matp)
-set(SRCS
-    tests/test_includes.cpp
-    tests/test_includer.cpp
-    tests/test_matp.cpp
-    tests/TestMaterialParser.h
-    tests/test_compute_material.cpp
-)
+if (BUILD_TESTING)
+    project(test_matp)
+    set(TARGET test_matp)
+    set(SRCS
+        tests/test_includes.cpp
+        tests/test_includer.cpp
+        tests/test_matp.cpp
+        tests/TestMaterialParser.h
+        tests/test_compute_material.cpp
+    )
 
-add_executable(${TARGET} ${SRCS})
+    add_executable(${TARGET} ${SRCS})
 
-target_link_libraries(${TARGET} matp gtest)
+    target_link_libraries(${TARGET} matp gtest)
 
-target_include_directories(${TARGET} PRIVATE ${matp_SOURCE_DIR}/src)
+    target_include_directories(${TARGET} PRIVATE ${matp_SOURCE_DIR}/src)
 
-set_target_properties(test_matp PROPERTIES FOLDER Tests)
+    set_target_properties(test_matp PROPERTIES FOLDER Tests)
+endif()
