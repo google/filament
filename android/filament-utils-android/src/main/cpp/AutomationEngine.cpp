@@ -228,6 +228,18 @@ Java_com_google_android_filament_utils_AutomationEngine_nShouldClose(JNIEnv*, jc
     return automation->shouldClose();
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_utils_AutomationEngine_nGetTestCount(JNIEnv*, jclass, jlong native) {
+    AutomationEngine* automation = (AutomationEngine*) native;
+    return (jint) automation->testCount();
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_utils_AutomationEngine_nGetCurrentTest(JNIEnv*, jclass, jlong native) {
+    AutomationEngine* automation = (AutomationEngine*) native;
+    return (jint) automation->currentTest();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nDestroy(JNIEnv*, jclass, jlong native) {
     AutomationEngine* automation = (AutomationEngine*) native;
