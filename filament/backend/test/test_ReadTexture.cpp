@@ -51,7 +51,6 @@ public:
 };
 
 TEST_F(ReadTextureTest, ReadTexture2D) {
-    SKIP_IF(Backend::OPENGL, "readTexture not implemented for OpenGL");
     SKIP_IF(Backend::METAL, "readTexture not implemented for Metal");
 
     DriverApi& api = getDriverApi();
@@ -147,7 +146,6 @@ TEST_F(ReadTextureTest, ReadTexture2D) {
 }
 
 TEST_F(ReadTextureTest, ReadTextureArray) {
-    SKIP_IF(Backend::OPENGL, "readTexture not implemented for OpenGL");
     SKIP_IF(Backend::METAL, "readTexture not implemented for Metal");
 
     DriverApi& api = getDriverApi();

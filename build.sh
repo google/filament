@@ -214,8 +214,6 @@ ENABLE_PERFETTO=""
 
 BACKEND_DEBUG_FLAG_OPTION=""
 
-STEREOSCOPIC_OPTION=""
-
 OSMESA_OPTION=""
 
 IOS_BUILD_SIMULATOR=false
@@ -316,7 +314,6 @@ function build_desktop_target {
             ${ASAN_UBSAN_OPTION} \
             ${COVERAGE_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
-            ${STEREOSCOPIC_OPTION} \
             ${OSMESA_OPTION} \
             ${architectures} \
             ../..
@@ -455,7 +452,6 @@ function build_android_target {
             ${VULKAN_ANDROID_OPTION} \
             ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
-            ${STEREOSCOPIC_OPTION} \
             ${ENABLE_PERFETTO} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
@@ -697,7 +693,6 @@ function build_ios_target {
             ${WEBGPU_OPTION} \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
-            ${STEREOSCOPIC_OPTION} \
             ../..
         ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -1010,20 +1005,6 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
             echo "Enabled perfetto"
             ;;
         x)  BACKEND_DEBUG_FLAG_OPTION="-DFILAMENT_BACKEND_DEBUG_FLAG=${OPTARG}"
-            ;;
-        S)  case $(echo "${OPTARG}" | tr '[:upper:]' '[:lower:]') in
-                instanced)
-                    STEREOSCOPIC_OPTION="-DFILAMENT_SAMPLES_STEREO_TYPE=instanced"
-                    ;;
-                multiview)
-                    STEREOSCOPIC_OPTION="-DFILAMENT_SAMPLES_STEREO_TYPE=multiview"
-                    ;;
-                *)
-                    echo "Unknown stereoscopic type ${OPTARG}"
-                    echo "Type must be one of [instanced|multiview]"
-                    echo ""
-                    exit 1
-            esac
             ;;
         X)  OSMESA_OPTION="-DFILAMENT_OSMESA_PATH=${OPTARG}"
             ;;
