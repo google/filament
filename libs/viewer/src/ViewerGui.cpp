@@ -1153,15 +1153,13 @@ void ViewerGui::updateUserInterface() {
             ImGui::ListBox("Cameras", &mCurrentCamera, cstrings.data(), cstrings.size());
         }
 
-#if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)                                                \
-        || defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
         ImGui::Checkbox("Stereo mode", &mSettings.view.stereoscopicOptions.enabled);
-#if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+
         ImGui::Indent();
         ImGui::Checkbox("Combine Multiview Images",
                 debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
         ImGui::Unindent();
-#endif
+
         ImGui::SliderFloat("Ocular distance", &mSettings.camera.eyeOcularDistance, 0.0f, 1.0f);
 
         float toeInDegrees = mSettings.camera.eyeToeIn / f::PI * 180.0f;
@@ -1169,7 +1167,6 @@ void ViewerGui::updateUserInterface() {
         mSettings.camera.eyeToeIn = toeInDegrees / 180.0f * f::PI;
 
         ImGui::Unindent();
-#endif
     }
 
     if (ImGui::CollapsingHeader("Debug Options")) {
