@@ -462,22 +462,8 @@ void FEngine::init() {
 #endif
     {
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
-        switch (mConfig.stereoscopicType) {
-            case StereoscopicType::NONE:
-            case StereoscopicType::INSTANCED:
-                defaultMaterialBuilder.package(
-                        MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
-                break;
-            case StereoscopicType::MULTIVIEW:
-#ifdef FILAMENT_ENABLE_MULTIVIEW
-                defaultMaterialBuilder.package(
-                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA,
-                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
-#else
-                assert_invariant(false);
-#endif
-                break;
-        }
+        defaultMaterialBuilder.package(
+                MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
     }
 

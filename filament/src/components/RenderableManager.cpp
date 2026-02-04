@@ -608,7 +608,7 @@ void FRenderableManager::create(
         setFogEnabled(ci, builder->mFogEnabled);
         // do this after calling setAxisAlignedBoundingBox
         static_cast<Visibility&>(mManager[ci].visibility).geometryType = builder->mGeometryType;
-        mManager[ci].channels = builder->mLightChannels;
+        mManager[ci].lightChannels = builder->mLightChannels;
 
         InstancesInfo& instances = manager[ci].instances;
         instances.count = builder->mInstanceCount;
@@ -807,7 +807,7 @@ void FRenderableManager::setMaterialInstanceAt(Instance const instance, uint8_t 
     assert_invariant(mi);
     if (instance) {
         Slice<FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
-        if (primitiveIndex < primitives.size() && mi) {
+        if (primitiveIndex < primitives.size()) {
             FMaterial const* material = mi->getMaterial();
 
             // we want a feature level violation to be a hard error (exception if enabled, or crash)
@@ -864,6 +864,17 @@ void FRenderableManager::setBlendOrderAt(Instance const instance, uint8_t const 
     }
 }
 
+uint16_t FRenderableManager::getBlendOrderAt(Instance const instance, uint8_t const level,
+        size_t const primitiveIndex) const noexcept {
+    if (instance) {
+        Slice<const FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
+        if (primitiveIndex < primitives.size()) {
+            return primitives[primitiveIndex].getBlendOrder();
+        }
+    }
+    return 0;
+}
+
 void FRenderableManager::setGlobalBlendOrderEnabledAt(Instance const instance, uint8_t const level,
         size_t const primitiveIndex, bool const enabled) noexcept {
     if (instance) {
@@ -872,6 +883,17 @@ void FRenderableManager::setGlobalBlendOrderEnabledAt(Instance const instance, u
             primitives[primitiveIndex].setGlobalBlendOrderEnabled(enabled);
         }
     }
+}
+
+bool FRenderableManager::isGlobalBlendOrderEnabledAt(Instance const instance, uint8_t const level,
+        size_t const primitiveIndex) const noexcept {
+    if (instance) {
+        Slice<const FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
+        if (primitiveIndex < primitives.size()) {
+            return primitives[primitiveIndex].isGlobalBlendOrderEnabled();
+        }
+    }
+    return false;
 }
 
 AttributeBitset FRenderableManager::getEnabledAttributesAt(
@@ -1014,8 +1036,8 @@ void FRenderableManager::setLightChannel(Instance const ci, unsigned int const c
     if (ci) {
         if (channel < 8) {
             const uint8_t mask = 1u << channel;
-            mManager[ci].channels &= ~mask;
-            mManager[ci].channels |= enable ? mask : 0u;
+            mManager[ci].lightChannels &= ~mask;
+            mManager[ci].lightChannels |= enable ? mask : 0u;
         }
     }
 }
@@ -1024,7 +1046,7 @@ bool FRenderableManager::getLightChannel(Instance const ci, unsigned int const c
     if (ci) {
         if (channel < 8) {
             const uint8_t mask = 1u << channel;
-            return bool(mManager[ci].channels & mask);
+            return bool(mManager[ci].lightChannels & mask);
         }
     }
     return false;

@@ -344,6 +344,27 @@ public class Camera {
     }
 
     /**
+     * Sets a custom projection matrix for each eye.
+     *
+     * @param inProjection              An array of projection matrices, one for each eye.
+     *                                  Must have at least 16 * count elements.
+     * @param count                     Number of eyes to set.
+     * @param inProjectionForCulling    Custom projection matrix for culling, must encompass all eyes.
+     * @param near                      Distance to the near plane.
+     * @param far                       Distance to the far plane.
+     */
+    public void setCustomEyeProjection(
+            @NonNull double[] inProjection, int count,
+            @NonNull @Size(min = 16) double[] inProjectionForCulling,
+            double near, double far) {
+        Asserts.assertMat4dIn(inProjectionForCulling);
+        if (inProjection.length < 16 * count) {
+            throw new IllegalArgumentException("inProjection array too small for the given count");
+        }
+        nSetCustomEyeProjection(getNativeObject(), inProjection, count, inProjectionForCulling, near, far);
+    }
+
+    /**
      * Sets an additional matrix that scales the projection matrix.
      *
      * <p>This is useful to adjust the aspect ratio of the camera independent from its projection.
@@ -398,6 +419,31 @@ public class Camera {
     public void setShift(double xshift, double yshift) {
         nSetShift(getNativeObject(), xshift, yshift);
     }
+
+    /**
+     * Returns the shift amount used to translate the projection matrix.
+     *
+     * @param out A 2-double array where the shift will be stored, or null.
+     * @return A 2-double array containing the x and y shift.
+     */
+    @NonNull @Size(min = 2)
+    public double[] getShift(@Nullable @Size(min = 2) double[] out) {
+        out = Asserts.assertDouble2(out);
+        nGetShift(getNativeObject(), out);
+        return out;
+    }
+
+    /**
+     * Returns the camera's field of view in degrees.
+     *
+     * @param direction The direction of the FOV (VERTICAL or HORIZONTAL).
+     * @return The field of view in degrees.
+     */
+    public double getFieldOfViewInDegrees(@NonNull Fov direction) {
+        return nGetFieldOfViewInDegrees(getNativeObject(), direction.ordinal());
+    }
+
+
 
     /**
      * Sets the camera's model matrix.
@@ -746,6 +792,17 @@ public class Camera {
     }
 
     /**
+     * Sets the model matrix for a specific eye.
+     *
+     * @param eyeId The index of the eye.
+     * @param model The model matrix for the eye.
+     */
+    public void setEyeModelMatrix(int eyeId, @NonNull @Size(min = 16) double[] model) {
+        Asserts.assertMat4dIn(model);
+        nSetEyeModelMatrix(getNativeObject(), eyeId, model);
+    }
+
+    /**
      * Helper to compute the effective focal length taking into account the focus distance
      *
      * @param focalLength       focal length in any unit (e.g. [m] or [mm])
@@ -784,8 +841,13 @@ public class Camera {
     private static native void nSetCustomProjection(long nativeCamera, double[] inProjection, double[] inProjectionForCulling, double near, double far);
     private static native void nSetScaling(long nativeCamera, double x, double y);
     private static native void nSetShift(long nativeCamera, double x, double y);
+    private static native void nGetShift(long nativeCamera, double[] out);
     private static native void nSetModelMatrix(long nativeCamera, float[] in);
     private static native void nSetModelMatrixFp64(long nativeCamera, double[] in);
+    private static native void nSetEyeModelMatrix(long nativeCamera, int eyeId, double[] model);
+    private static native void nSetCustomEyeProjection(long nativeCamera, double[] inProjection, int count, double[] inProjectionForCulling, double near, double far);
+    private static native double nGetFieldOfViewInDegrees(long nativeCamera, int direction);
+
     private static native void nLookAt(long nativeCamera, double eyeX, double eyeY, double eyeZ, double centerX, double centerY, double centerZ, double upX, double upY, double upZ);
     private static native double nGetNear(long nativeCamera);
     private static native double nGetCullingFar(long nativeCamera);
