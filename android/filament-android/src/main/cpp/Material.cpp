@@ -96,6 +96,14 @@ Java_com_google_android_filament_Material_nGetBlendingMode(JNIEnv*, jclass,
     return (jint) material->getBlendingMode();
 }
 
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Material_nGetTransparencyMode(JNIEnv*, jclass,
+        jlong nativeMaterial) {
+    Material* material = (Material*) nativeMaterial;
+    return (jint) material->getTransparencyMode();
+}
+
 
 extern "C"
 JNIEXPORT jint JNICALL

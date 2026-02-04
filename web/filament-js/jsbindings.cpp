@@ -250,6 +250,7 @@ DecodedImage decodeImage(BufferDescriptor encoded_data, int requested_ncomp) {
 
 EMSCRIPTEN_BINDINGS(jsbindings) {
 
+
 // MATH TYPES
 // ----------
 // Individual JavaScript objects for math types would be too heavy, so instead we simply accept
@@ -403,6 +404,8 @@ class_<Engine>("Engine")
     .function("setActiveFeatureLevel", &Engine::setActiveFeatureLevel)
 
     .function("getActiveFeatureLevel", &Engine::getActiveFeatureLevel)
+
+    .function("getBackend", &Engine::getBackend)
 
     .class_function("getMaxStereoscopicEyes", &Engine::getMaxStereoscopicEyes)
 
@@ -678,6 +681,13 @@ class_<View>("View")
     .function("_setTemporalAntiAliasingOptions", &View::setTemporalAntiAliasingOptions)
     .function("_setScreenSpaceReflectionsOptions", &View::setScreenSpaceReflectionsOptions)
     .function("_setBloomOptions", &View::setBloomOptions)
+    .function("setShadowingEnabled", &View::setShadowingEnabled)
+    .function("setFrontFaceWindingInverted", &View::setFrontFaceWindingInverted)
+    .function("isFrontFaceWindingInverted", &View::isFrontFaceWindingInverted)
+    .function("setDynamicLightingOptions", &View::setDynamicLightingOptions)
+    .function("setRenderQuality", &View::setRenderQuality)
+    .function("setDynamicResolutionOptions", &View::setDynamicResolutionOptions)
+    .function("getDynamicResolutionOptions", &View::getDynamicResolutionOptions)
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
     .function("_setGuardBandOptions", &View::setGuardBandOptions)
@@ -777,6 +787,8 @@ class_<Camera>("Camera")
     }), allow_raw_pointers())
 
     .function("getScaling", &Camera::getScaling)
+    .function("setShift", &Camera::setShift)
+    .function("getShift", &Camera::getShift)
 
     .function("getNear", &Camera::getNear)
     .function("getCullingFar", &Camera::getCullingFar)
@@ -937,7 +949,9 @@ class_<RenderTarget>("RenderTarget")
     })
     .function("getMipLevel", &RenderTarget::getMipLevel)
     .function("getFace", &RenderTarget::getFace)
-    .function("getLayer", &RenderTarget::getLayer);
+    .function("getLayer", &RenderTarget::getLayer)
+    .function("getTexture", &RenderTarget::getTexture, allow_raw_pointers())
+    .function("getSupportedColorAttachmentsCount", &RenderTarget::getSupportedColorAttachmentsCount);
 
 class_<RenderableBuilder>("RenderableManager$Builder")
     .BUILDER_FUNCTION("geometry", RenderableBuilder, (RenderableBuilder* builder,
@@ -1068,15 +1082,22 @@ class_<RenderableManager>("RenderableManager")
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
     .function("setLayerMask", &RenderableManager::setLayerMask)
     .function("setPriority", &RenderableManager::setPriority)
+    .function("getPriority", &RenderableManager::getPriority)
     .function("setChannel", &RenderableManager::setChannel)
+    .function("getChannel", &RenderableManager::getChannel)
     .function("setCastShadows", &RenderableManager::setCastShadows)
     .function("setReceiveShadows", &RenderableManager::setReceiveShadows)
+    .function("setScreenSpaceContactShadows", &RenderableManager::setScreenSpaceContactShadows)
     .function("isShadowCaster", &RenderableManager::isShadowCaster)
     .function("isShadowReceiver", &RenderableManager::isShadowReceiver)
     .function("setLightChannel", &RenderableManager::setLightChannel)
     .function("getLightChannel", &RenderableManager::getLightChannel)
     .function("setFogEnabled", &RenderableManager::setFogEnabled)
     .function("getFogEnabled", &RenderableManager::getFogEnabled)
+    .function("setCulling", &RenderableManager::setCulling)
+    .function("isCullingEnabled", &RenderableManager::isCullingEnabled)
+    .function("setScreenSpaceContactShadows", &RenderableManager::setScreenSpaceContactShadows)
+    .function("isScreenSpaceContactShadowsEnabled", &RenderableManager::isScreenSpaceContactShadowsEnabled)
 
     .function("setBones", EMBIND_LAMBDA(void, (RenderableManager* self,
             RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
@@ -1125,8 +1146,10 @@ class_<RenderableManager>("RenderableManager")
     }), allow_raw_pointers())
 
     .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
+    .function("getBlendOrderAt", &RenderableManager::getBlendOrderAt)
 
     .function("setGlobalBlendOrderEnabledAt", &RenderableManager::setGlobalBlendOrderEnabledAt)
+    .function("isGlobalBlendOrderEnabledAt", &RenderableManager::isGlobalBlendOrderEnabledAt)
 
     .function("getEnabledAttributesAt", EMBIND_LAMBDA(uint32_t, (RenderableManager* self,
             RenderableManager::Instance instance, size_t primitiveIndex), {
@@ -1590,6 +1613,9 @@ class_<IblBuilder>("IndirectLight$Builder")
 class_<Skybox>("Skybox")
     .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); })
     .function("setColor", &Skybox::setColor)
+    .function("setLayerMask", &Skybox::setLayerMask)
+    .function("getLayerMask", &Skybox::getLayerMask)
+    .function("getIntensity", &Skybox::getIntensity)
     .function("getTexture", EMBIND_LAMBDA(Texture*, (Skybox* skybox), {
         return (Texture*) skybox->getTexture(); // cast away const to appease embind
     }), allow_raw_pointers());

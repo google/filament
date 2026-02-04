@@ -138,20 +138,7 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
     } else
 #endif
     {
-        switch (engine.getConfig().stereoscopicType) {
-            case Engine::StereoscopicType::NONE:
-            case Engine::StereoscopicType::INSTANCED:
-                builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
-                break;
-            case Engine::StereoscopicType::MULTIVIEW:
-#ifdef FILAMENT_ENABLE_MULTIVIEW
-                builder.package(MATERIALS_SKYBOX_MULTIVIEW_DATA, MATERIALS_SKYBOX_MULTIVIEW_SIZE);
-#else
-                PANIC_POSTCONDITION("Multiview is enabled in the Engine, but this build has not "
-                                    "been compiled for multiview.");
-#endif
-                break;
-        }
+        builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
     }
     auto material = builder.build(engine);
     return downcast(material);
