@@ -22,6 +22,10 @@ set(MATERIAL_NAMES
     textured
     nonlit)
 
+set(MATERIAL_FL0_NAMES
+    nonlit
+)
+
 set(MATC_FLAGS -a opengl -p mobile)
 if (NOT CMAKE_BUILD_TYPE MATCHES Release)
     set(MATC_FLAGS -g ${MATC_FLAGS})
@@ -32,14 +36,28 @@ foreach (NAME ${MATERIAL_NAMES})
     set(mat_src "materials/${NAME}.mat")
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
-    set(output_bin "${SERVER_DIR}/${localname}.filamat")
+    set(output_path "${SERVER_DIR}/${localname}.filamat")
     add_custom_command(
-            OUTPUT ${output_bin}
-            COMMAND matc ${MATC_FLAGS} -o ${output_bin} ${fullname}
+            OUTPUT ${output_path}
+            COMMAND matc ${MATC_FLAGS} -o ${output_path} ${fullname}
             MAIN_DEPENDENCY ${mat_src}
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}")
-    list(APPEND MATERIAL_BINS ${output_bin})
+    list(APPEND MATERIAL_BINS ${output_path})
+
+    # --- Feature Level 0 variant ---
+    list(FIND MATERIAL_FL0_NAMES ${NAME} index)
+    if (${index} GREATER -1 AND FILAMENT_ENABLE_FEATURE_LEVEL_0)
+        string(REGEX REPLACE "[.]filamat$" "_fl0.filamat" output_path_fl0 ${output_path})
+        add_custom_command(
+                OUTPUT ${output_path_fl0}
+                COMMAND matc ${MATC_FLAGS} -PfeatureLevel=0 -o ${output_path_fl0} ${fullname}
+                MAIN_DEPENDENCY ${fullname}
+                DEPENDS matc
+                COMMENT "Compiling material ${fullname} (FL0)"
+        )
+        list(APPEND MATERIAL_BINS ${output_path_fl0})
+    endif()
 endforeach()
 
 add_custom_target(sample_materials DEPENDS ${MATERIAL_BINS})
@@ -196,6 +214,7 @@ endif()
 
 set(HTML_FILES
     animation.html
+    cube_fl0.html
     helmet.html
     morphing.html
     parquet.html
