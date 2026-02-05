@@ -196,6 +196,7 @@ endif()
 
 set(HTML_FILES
     animation.html
+    cube.html
     helmet.html
     morphing.html
     parquet.html
