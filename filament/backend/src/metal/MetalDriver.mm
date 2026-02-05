@@ -784,6 +784,46 @@ const char* toString(DescriptorFlags flags) {
     return "NONE";
 }
 
+const char* toString(DescriptorType type) {
+#define DESCRIPTOR_TYPE_CASE(TYPE)                                                                 \
+    case DescriptorType::TYPE: {                                                                   \
+        return #TYPE;                                                                              \
+    }
+    switch (type) {
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_EXTERNAL)
+        DESCRIPTOR_TYPE_CASE(UNIFORM_BUFFER)
+        DESCRIPTOR_TYPE_CASE(SHADER_STORAGE_BUFFER)
+        DESCRIPTOR_TYPE_CASE(INPUT_ATTACHMENT)
+    }
+#undef DESCRIPTOR_TYPE_CASE
+    return "UNKNOWN";
+}
+
 void MetalDriver::createDescriptorSetLayoutR(
         Handle<HwDescriptorSetLayout> dslh, DescriptorSetLayout&& info, utils::ImmutableCString&& tag) {
 #if FILAMENT_METAL_DEBUG_LOG == 1
@@ -794,14 +834,15 @@ void MetalDriver::createDescriptorSetLayoutR(
             labelStr = arg.c_str();
         }
     }, info.label);
-    std::sort(info.bindings.begin(), info.bindings.end(),
+    std::sort(info.descriptors.begin(), info.descriptors.end(),
             [](const auto& a, const auto& b) { return a.binding < b.binding; });
     DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = { label = %s,\n", dslh.getId(),
             labelStr);
-    for (size_t i = 0; i < info.bindings.size(); i++) {
+    for (size_t i = 0; i < info.descriptors.size(); i++) {
         DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s},\n",
-                info.bindings[i].binding, toString(info.bindings[i].type), info.bindings[i].count,
-                toString(info.bindings[i].stageFlags), toString(info.bindings[i].flags));
+                info.descriptors[i].binding, toString(info.descriptors[i].type),
+                info.descriptors[i].count, toString(info.descriptors[i].stageFlags),
+                toString(info.descriptors[i].flags));
     }
     DEBUG_LOG("})\n");
 #endif
