@@ -101,6 +101,7 @@ public:
 
     struct GLSwapChain : public HwSwapChain {
         using HwSwapChain::HwSwapChain;
+        TargetBufferFlags attachments{};
         bool rec709 = false;
         struct {
             CallbackHandler* handler = nullptr;
