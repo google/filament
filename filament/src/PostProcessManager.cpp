@@ -282,21 +282,21 @@ static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
         { "blitDepth",                  MATERIAL(MATERIALS, BLITDEPTH) },
         { "clearDepth",                 MATERIAL(MATERIALS, CLEARDEPTH) },
         { "separableGaussianBlur1",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", false}, {"componentCount", 1} } },
-        { "separableGaussianBlur1L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", true }, {"componentCount", 1} } },
+                { {"componentCount", 1} } },
+        { "separableGaussianBlur1L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLURARRAYSAMPLER),
+                { {"componentCount", 1} } },
         { "separableGaussianBlur2",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", false}, {"componentCount", 2} } },
-        { "separableGaussianBlur2L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", true }, {"componentCount", 2} } },
+                { {"componentCount", 2} } },
+        { "separableGaussianBlur2L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLURARRAYSAMPLER),
+                { {"componentCount", 2} } },
         { "separableGaussianBlur3",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", false}, {"componentCount", 3} } },
-        { "separableGaussianBlur3L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", true }, {"componentCount", 3} } },
+                { {"componentCount", 3} } },
+        { "separableGaussianBlur3L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLURARRAYSAMPLER),
+                { {"componentCount", 3} } },
         { "separableGaussianBlur4",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", false}, {"componentCount", 4} } },
-        { "separableGaussianBlur4L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", true }, {"componentCount", 4} } },
+                { {"componentCount", 4} } },
+        { "separableGaussianBlur4L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLURARRAYSAMPLER),
+                { {"componentCount", 4} } },
         { "vsmMipmap",                  MATERIAL(MATERIALS, VSMMIPMAP) },
         { "debugShadowCascades",        MATERIAL(MATERIALS, DEBUGSHADOWCASCADES) },
         { "resolveDepth",               MATERIAL(MATERIALS, RESOLVEDEPTH) },
@@ -1375,14 +1375,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 auto setCommonParams = [&](FMaterialInstance* const mi) {
                     // Initialize the samplers with dummy textures because vulkan requires a sampler to
                     // be bound to a texture even if sampler might be unused.
-                    mi->setParameter("sourceArray"sv, getZeroTextureArray(), SamplerParams{
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                    });
-                    mi->setParameter("source"sv, getZeroTexture(), SamplerParams{
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                    });
+                    if (is2dArray) {
+                        mi->setParameter("sourceArray"sv, getZeroTextureArray(),
+                                SamplerParams{ .filterMag = SamplerMagFilter::LINEAR,
+                                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
+                    } else {
+                        mi->setParameter("source"sv, getZeroTexture(),
+                                SamplerParams{ .filterMag = SamplerMagFilter::LINEAR,
+                                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
+                    }
                     mi->setParameter("reinhard", reinhard ? uint32_t(1) : uint32_t(0));
                     mi->setParameter("count", int32_t(m));
                     mi->setParameter("kernel", kernel, m);

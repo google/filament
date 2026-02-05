@@ -2,8 +2,8 @@ material {
     name : separableGaussianBlur,
     parameters : [
         {
-            type : sampler2d,
-            name : source,
+            type : sampler2dArray,
+            name : sourceArray,
             precision: high
         },
         {
@@ -58,6 +58,6 @@ vertex {
 }
 
 fragment {
-#define ARRAY_SAMPLER 0
+#define ARRAY_SAMPLER 1
 #include "separableGaussianBlur.fs"
 }
