@@ -407,7 +407,7 @@ public:
          * context if supported by the Platform, or if not, will have the backend pretend
          * it's a GLES2 context. Ignored on other backends.
          */
-        bool forceGLES2Context = false;
+        bool forceGLES2Context = true;
 
         /**
          * Assert the native window associated to a SwapChain is valid when calling makeCurrent().

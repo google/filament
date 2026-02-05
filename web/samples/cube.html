@@ -26,7 +26,7 @@
   <script src="gl-matrix-min.js"></script>
   <script>
 
-    Filament.init(['nonlit.filamat'], () => {
+    Filament.init(['nonlit_fl0.filamat'], () => {
       window.VertexAttribute = Filament.VertexAttribute;
       window.AttributeType = Filament.VertexBuffer$AttributeType;
       window.Projection = Filament.Camera$Projection;
@@ -122,7 +122,7 @@
 
         this.ib.setBuffer(engine, CUBE_INDICES);
 
-        const mat = engine.createMaterial('nonlit.filamat');
+        const mat = engine.createMaterial('nonlit_fl0.filamat');
         const matinst = mat.getDefaultInstance();
         Filament.RenderableManager.Builder(1)
           .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
@@ -138,6 +138,7 @@
         this.view.setSampleCount(4);
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
+        this.view.setPostProcessingEnabled(false);
 
         this.renderer.setClearOptions({ clearColor: [0.0, 0.1, 0.2, 1.0], clear: true });
 
@@ -176,7 +177,7 @@
 
         const aspect = width / height;
         const fov = aspect < 1 ? Fov.HORIZONTAL : Fov.VERTICAL;
-        this.camera.setProjectionFov(45, aspect, 1.0, 10.0, fov);
+        this.camera.setProjectionFov(90, aspect, 1.0, 10.0, fov);
       }
     }
   </script>
