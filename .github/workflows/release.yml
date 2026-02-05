@@ -245,7 +245,8 @@ jobs:
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
-          build\windows\build-github.bat release
+          @REMARK 'call' is required to ensure control returns to this script after the batch file finishes.
+          call build\windows\build-github.bat release
           echo on
           move out\filament-windows.tgz out\filament-%TAG%-windows.tgz
         shell: cmd

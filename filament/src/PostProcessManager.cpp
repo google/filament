@@ -126,17 +126,6 @@ constexpr float halton(unsigned int i, unsigned int const b) noexcept {
     return r;
 }
 
-template <typename ValueType>
-void setConstantParameter(FMaterial* const material, std::string_view const name,
-        ValueType value, bool& dirty) noexcept {
-    auto id = material->getSpecializationConstantId(name);
-    if (id.has_value()) {
-        if (material->setConstant(id.value(), value)) {
-            dirty = true;
-        }
-    }
-}
-
 } // anonymous
 
 // ------------------------------------------------------------------------------------------------
@@ -327,7 +316,7 @@ void PostProcessManager::init() noexcept {
     mFullScreenQuadVbih = engine.getFullScreenVertexBuffer()->getVertexBufferInfoHandle();
     mPerRenderableDslh = engine.getPerRenderableDescriptorSetLayout().getHandle();
 
-    mDummyPerRenderableDsh = driver.createDescriptorSet(mPerRenderableDslh);
+    mDummyPerRenderableDsh = driver.createDescriptorSet(mPerRenderableDslh, "mDummyPerRenderableDsh");
 
     driver.updateDescriptorSetBuffer(mDummyPerRenderableDsh,
             +PerRenderableBindingPoints::OBJECT_UNIFORMS, engine.getDummyUniformBuffer(), 0,
@@ -1007,13 +996,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 auto& material = getPostProcessMaterial(materialName);
 
                 FMaterial* ma = material.getMaterial(mEngine, driver);
-                bool dirty = false;
-                setConstantParameter(ma, "useVisibilityBitmasks", options.gtao.useVisibilityBitmasks, dirty);
-                setConstantParameter(ma, "linearThickness", options.gtao.linearThickness, dirty);
-                if (dirty) {
-                   ma->invalidate();
-                   // TODO: call Material::compile(), we can't do that now because it works only
-                   //       with surface materials
+                {
+                    FMaterial::SpecializationConstantsBuilder maConstants =
+                            ma->getSpecializationConstantsBuilder();
+                    maConstants.set("useVisibilityBitmasks", options.gtao.useVisibilityBitmasks);
+                    maConstants.set("linearThickness", options.gtao.linearThickness);
+                    ma->setSpecializationConstants(std::move(maConstants));
                 }
 
                 ma = material.getMaterial(mEngine, driver);
@@ -2913,23 +2901,20 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         TemporalAntiAliasingOptions const& taaOptions) noexcept {
 
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine, driver);
-    bool dirty = false;
+    FMaterial::SpecializationConstantsBuilder maConstants = ma->getSpecializationConstantsBuilder();
 
-    setConstantParameter(ma, "upscaling", taaOptions.upscaling > 1.0f, dirty);
-    setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection, dirty);
-    setConstantParameter(ma, "filterHistory", taaOptions.filterHistory, dirty);
-    setConstantParameter(ma, "filterInput", taaOptions.filterInput, dirty);
-    setConstantParameter(ma, "useYCoCg", taaOptions.useYCoCg, dirty);
-    setConstantParameter(ma, "hdr", taaOptions.hdr, dirty);
-    setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering, dirty);
-    setConstantParameter(ma, "boxType", int32_t(taaOptions.boxType), dirty);
-    setConstantParameter(ma, "boxClipping", int32_t(taaOptions.boxClipping), dirty);
-    setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma, dirty);
-    if (dirty) {
-        ma->invalidate();
-        // TODO: call Material::compile(), we can't do that now because it works only
-        //       with surface materials
-    }
+    maConstants.set("upscaling", taaOptions.upscaling > 1.0f);
+    maConstants.set("historyReprojection", taaOptions.historyReprojection);
+    maConstants.set("filterHistory", taaOptions.filterHistory);
+    maConstants.set("filterInput", taaOptions.filterInput);
+    maConstants.set("useYCoCg", taaOptions.useYCoCg);
+    maConstants.set("hdr", taaOptions.hdr);
+    maConstants.set("preventFlickering", taaOptions.preventFlickering);
+    maConstants.set("boxType", int32_t(taaOptions.boxType));
+    maConstants.set("boxClipping", int32_t(taaOptions.boxClipping));
+    maConstants.set("varianceGamma", taaOptions.varianceGamma);
+
+    ma->setSpecializationConstants(std::move(maConstants));
 }
 
 FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::DriverApi& driver,
@@ -2937,15 +2922,12 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
         ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
         uint32_t const width, uint32_t const height) noexcept {
     FMaterial* ma = material.getMaterial(mEngine, driver);
-    bool dirty = false;
-
-    setConstantParameter(ma, "isOneDimensional", colorGrading->isOneDimensional(), dirty);
-    setConstantParameter(ma, "isLDR", colorGrading->isLDR(), dirty);
-
-    if (dirty) {
-        ma->invalidate();
-        // TODO: call Material::compile(), we can't do that now because it works only
-        //       with surface materials
+    {
+        FMaterial::SpecializationConstantsBuilder maConstants =
+                ma->getSpecializationConstantsBuilder();
+        maConstants.set("isOneDimensional", colorGrading->isOneDimensional());
+        maConstants.set("isLDR", colorGrading->isLDR());
+        ma->setSpecializationConstants(std::move(maConstants));
     }
 
     PostProcessVariant const variant = colorGradingConfig.translucent

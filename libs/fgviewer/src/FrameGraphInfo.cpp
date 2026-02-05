@@ -37,13 +37,25 @@ bool FrameGraphInfo::operator==(const FrameGraphInfo& rhs) const {
             && resources == rhs.resources;
 }
 
-FrameGraphInfo::Pass::Pass(utils::CString name, std::vector<ResourceId> reads,
-    std::vector<ResourceId> writes): name(std::move(name)),
+FrameGraphInfo::Pass::Pass(uint32_t id, utils::CString name, std::vector<ResourceId> reads,
+    std::vector<ResourceId> writes, std::vector<RenderTargetInfo> renderTargets):
+                                    id(id),
+                                    name(std::move(name)),
                                     reads(std::move(reads)),
-                                    writes(std::move(writes)) {}
+                                    writes(std::move(writes)),
+                                    renderTargets(std::move(renderTargets)) {}
 
 bool FrameGraphInfo::Pass::operator==(const Pass& rhs) const {
-    return name == rhs.name && reads == rhs.reads && writes == rhs.writes;
+    return id == rhs.id && name == rhs.name && reads == rhs.reads && writes == rhs.writes &&
+           renderTargets == rhs.renderTargets;
+}
+
+bool FrameGraphInfo::Pass::AttachmentInfo::operator==(const AttachmentInfo& rhs) const {
+    return name == rhs.name && id == rhs.id;
+}
+
+bool FrameGraphInfo::Pass::RenderTargetInfo::operator==(const RenderTargetInfo& rhs) const {
+    return discardStart == rhs.discardStart && discardEnd == rhs.discardEnd && clear == rhs.clear;
 }
 
 FrameGraphInfo::Resource::Resource(ResourceId id, utils::CString name,

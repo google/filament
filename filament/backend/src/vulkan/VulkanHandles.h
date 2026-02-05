@@ -262,6 +262,14 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
     VulkanProgram(VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();
 
+    /**
+     * Writes out any queued push constants using the provided VkPipelineLayout.
+     *
+     * @param layout The layout that is to be used along with these push constants,
+     *               in the next draw call.
+     */
+    void flushPushConstants(VkPipelineLayout layout);
+
     inline VkShaderModule getVertexShader() const {
         return mInfo->shaders[0];
     }
@@ -278,7 +286,15 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
 
     inline void writePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
             backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-        mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
+        // It's possible that we don't have the layout yet. When external samplers are used, bindPipeline()
+        // in VulkanDriver returns early, without binding a layout. If that happens, the layout is not
+        // set until draw time. Any push constants that are written during that time should be saved for
+        // later, and flushed when the layout is set.
+        if (layout != VK_NULL_HANDLE) {
+            mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
+        } else {
+            mQueuedPushConstants.push_back({cmdbuf, stage, index, value});
+        }
     }
 
     // TODO: handle compute shaders.
@@ -295,8 +311,16 @@ private:
         PushConstantDescription pushConstantDescription;
     };
 
+    struct PushConstantInfo {
+        VkCommandBuffer cmdbuf;
+        backend::ShaderStage stage;
+        uint8_t index;
+        backend::PushConstantVariant value;
+    };
+
     PipelineInfo* mInfo;
     VkDevice mDevice = VK_NULL_HANDLE;
+    std::vector<PushConstantInfo> mQueuedPushConstants;
 };
 
 // The render target bundles together a set of attachments, each of which can have one of the

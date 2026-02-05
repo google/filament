@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Analytic Skybox</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+  <link href="styles.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    canvas {
+      touch-action: none;
+      width: 100%;
+      height: 100%;
+      outline: none;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas></canvas>
+  <!-- Filament -->
+  <script src="filament.js"></script>
+  <script src="gl-matrix-min.js"></script>
+
+  <!-- UI -->
+  <script src="lil-gui.js"></script>
+
+  <!-- App -->
+  <script src="SimulatedSkybox.js?v=26"></script>
+  <script src="main.js?v=26"></script>
+</body>
+
+</html>

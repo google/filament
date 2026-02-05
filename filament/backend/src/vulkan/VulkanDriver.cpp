@@ -882,7 +882,8 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
             // formats. It seems to be enough, in practicce, to simply run through a list of the types of
             // samplers that *might* appear. As long as the real pipeline is close enough to something that
             // the driver has seen before, we are able to get a cache hit.
-            utils::FixedCapacityVector<VkSampler> externalSamplers (layouts[i]->bitmask.externalSampler.count(), externalSampler);
+            utils::FixedCapacityVector<std::pair<uint64_t, VkSampler>> externalSamplers(
+                    layouts[i]->bitmask.externalSampler.count(), { 0, externalSampler });
             vkLayouts[i] = mDescriptorSetLayoutCache.getVkLayout(
                 layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
         }
@@ -2553,6 +2554,11 @@ void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
         VkPipelineLayout const pipelineLayout = mPipelineLayoutCache.getLayout(vklayouts, program);
         if (pipelineLayout != mPipelineState.pipelineLayout) {
             bindPipelineImpl(bundle.pipelineState, pipelineLayout, bundle.descriptorSetMask);
+            // Any push constants received while the layout was null were not written out. They were
+            // added to a list of pending constants, so we'll flush them now.
+            // Further push constant updates after the pipeline is bound will immediately set
+            // the constants because the layout is non-null (see VulkanProgram::writePushConstant).
+            program->flushPushConstants(pipelineLayout);
         }
         mPipelineState.bindInDraw.first = false;
     }
