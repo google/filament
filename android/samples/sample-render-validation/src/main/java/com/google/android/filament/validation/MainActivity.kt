@@ -17,16 +17,36 @@
 package com.google.android.filament.validation
 
 import android.app.Activity
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
 import android.view.Choreographer
 import android.view.SurfaceView
+import android.view.View
 import android.view.WindowManager
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.google.android.filament.utils.KTX1Loader
+import com.google.android.filament.IndirectLight
+import com.google.android.filament.Skybox
+import android.graphics.Color
 import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.nio.ByteBuffer
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.Spinner
+import android.widget.AdapterView
 
 class MainActivity : Activity(), ValidationRunner.Callback {
 
@@ -42,8 +62,15 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private lateinit var choreographer: Choreographer
     private lateinit var modelViewer: ModelViewer
     private lateinit var statusTextView: TextView
+    private lateinit var resultsContainer: LinearLayout
+    private lateinit var inputManager: ValidationInputManager
+    private var currentInput: ValidationInputManager.ValidationInput? = null
+    private lateinit var modeSpinner: Spinner
+    private lateinit var runButton: Button
+    private var resultManager: ValidationResultManager? = null
+
     private var validationRunner: ValidationRunner? = null
-    
+
     // Frame callback
     private val frameScheduler = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
@@ -55,58 +82,109 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Simple layout
-        val layout = android.widget.FrameLayout(this)
-        surfaceView = SurfaceView(this)
-        layout.addView(surfaceView)
-        
-        statusTextView = TextView(this)
-        statusTextView.setTextColor(0xFFFFFFFF.toInt())
-        statusTextView.textSize = 16f
-        statusTextView.setPadding(20, 20, 20, 20)
-        statusTextView.text = "Initializing..."
-        layout.addView(statusTextView)
-        
-        setContentView(layout)
+        setContentView(R.layout.activity_main)
+
+        // SurfaceView container
+        surfaceView = findViewById(R.id.surface_view)
+        surfaceView.holder.setFixedSize(512, 512)
+
+        statusTextView = findViewById(R.id.status_text)
+        modeSpinner = findViewById(R.id.mode_spinner)
+        runButton = findViewById(R.id.run_button)
+        resultsContainer = findViewById(R.id.results_container)
+
+        // Setup Spinner
+        val modes = arrayOf("Run Validation", "Generate Goldens")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        modeSpinner.adapter = adapter
+
+        // Setup Run Button
+        runButton.setOnClickListener {
+            currentInput?.let { input ->
+                val generateGoldens = modeSpinner.selectedItemPosition == 1
+                val newInput = input.copy(generateGoldens = generateGoldens)
+                startValidation(newInput)
+            }
+        }
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         choreographer = Choreographer.getInstance()
         modelViewer = ModelViewer(surfaceView)
-        
-        // Check permissions? 
-        // We assume 'adb install -g' or permissions granted.
-        // But for scoped storage we might not need PERMISSION if reading from app-specific dirs, 
-        // but user mentioned /sdcard/ so we need MANAGE_EXTERNAL_STORAGE or READ_EXTERNAL_STORAGE.
-        // For waiting/simplicity, we just try.
-        
+        inputManager = ValidationInputManager(this)
+
+        // Initialize IBL
+        createIndirectLight()
+
         handleIntent()
     }
-    
-    private fun handleIntent() {
-        val intent = intent
-        val testConfigPath = intent.getStringExtra("test_config")
-        
-        if (testConfigPath != null) {
-            startValidation(testConfigPath)
-        } else {
-             statusTextView.text = "No test_config provided via Intent.\nUse -e test_config <path>"
-             Log.w(TAG, "No test config provided")
+
+    private fun createIndirectLight() {
+        try {
+            val engine = modelViewer.engine
+            val scene = modelViewer.scene
+            val iblName = "default_env"
+
+            fun readAsset(path: String): ByteBuffer {
+                val input = assets.open(path)
+                val bytes = input.readBytes()
+                return ByteBuffer.wrap(bytes)
+            }
+
+            readAsset("envs/$iblName/${iblName}_ibl.ktx").let {
+                val bundle = KTX1Loader.createIndirectLight(engine, it)
+                scene.indirectLight = bundle.indirectLight
+                modelViewer.indirectLightCubemap = bundle.cubemap
+                scene.indirectLight!!.intensity = 30_000.0f
+            }
+
+            readAsset("envs/$iblName/${iblName}_skybox.ktx").let {
+                val bundle = KTX1Loader.createSkybox(engine, it)
+                scene.skybox = bundle.skybox
+                modelViewer.skyboxCubemap = bundle.cubemap
+            }
+            Log.i(TAG, "IBL loaded successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load IBL", e)
+            statusTextView.text = "Warning: Failed to load IBL"
         }
     }
 
-    private fun startValidation(configPath: String) {
+    private fun handleIntent() {
+        statusTextView.text = "Resolving configuration..."
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val input = inputManager.resolveConfig(intent)
+                currentInput = input
+
+                // Sync spinner with intent
+                modeSpinner.setSelection(if (input.generateGoldens) 1 else 0)
+
+                startValidation(input)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to resolve config", e)
+                statusTextView.text = "Error: ${e.message}"
+            }
+        }
+    }
+
+    private fun startValidation(input: ValidationInputManager.ValidationInput) {
         try {
-            Log.i(TAG, "Parsing config from $configPath")
-            val config = ConfigParser.parseFromPath(configPath)
-            
-            val outputDir = File(getExternalFilesDir(null), "validation_results")
-            Log.i(TAG, "Output dir: ${outputDir.absolutePath}")
-            
-            validationRunner = ValidationRunner(this, modelViewer, config, outputDir)
+            resultsContainer.removeAllViews()
+            Log.i(TAG, "Starting validation with config: ${input.config.name}")
+            Log.i(TAG, "Output dir: ${input.outputDir.absolutePath}")
+
+            resultManager = ValidationResultManager(input.outputDir)
+
+            validationRunner = ValidationRunner(this, modelViewer, input.config, resultManager!!)
             validationRunner?.callback = this
+            validationRunner?.generateGoldens = input.generateGoldens
             validationRunner?.start()
-            
+
+            // Sync spinner in case it was called programmatically or changed implicitly
+            modeSpinner.setSelection(if (input.generateGoldens) 1 else 0)
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start validation", e)
             statusTextView.text = "Error: ${e.message}"
@@ -128,11 +206,68 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         choreographer.removeFrameCallback(frameScheduler)
     }
 
-    override fun onTestFinished(result: ValidationRunner.TestResult) {
+    private var currentRenderedBitmap: Bitmap? = null
+    private var currentGoldenBitmap: Bitmap? = null
+    private var currentDiffBitmap: Bitmap? = null
+
+    override fun onTestFinished(result: ValidationResult) {
         runOnUiThread {
-            val status = "Test ${result.name} finished: ${if(result.passed) "PASS" else "FAIL"}"
+            val status = "Test ${result.testName} finished: ${if(result.passed) "PASS" else "FAIL"}"
             statusTextView.text = status
             Log.i(TAG, status)
+
+            // Container for this result
+            val resultContainer = LinearLayout(this)
+            resultContainer.orientation = LinearLayout.VERTICAL
+            resultContainer.setPadding(0, 10, 0, 20)
+
+            // Header
+            val resultView = TextView(this)
+            resultView.text = "${result.testName}: ${if(result.passed) "PASS" else "FAIL"} (Diff: ${result.diffMetric})"
+            resultView.setTextColor(if(result.passed) Color.GREEN else Color.RED)
+            resultView.textSize = 16f
+            resultView.setTypeface(null, android.graphics.Typeface.BOLD)
+            resultContainer.addView(resultView)
+
+            // Images Row
+            val imagesRow = LinearLayout(this)
+            imagesRow.orientation = LinearLayout.HORIZONTAL
+
+            fun addImage(label: String, bitmap: Bitmap?) {
+                if (bitmap != null) {
+                    val container = LinearLayout(this)
+                    container.orientation = LinearLayout.VERTICAL
+                    container.setPadding(0, 0, 10, 0)
+
+                    val labelView = TextView(this)
+                    labelView.text = label
+                    labelView.textSize = 12f
+                    container.addView(labelView)
+
+                    val iv = ImageView(this)
+                    iv.setImageBitmap(bitmap) // Use the same bitmap (or copy if needed, but same is usually fine for UI)
+                    iv.layoutParams = LinearLayout.LayoutParams(250, 250) // Smaller thumbnails
+                    iv.scaleType = ImageView.ScaleType.FIT_CENTER
+                    iv.setBackgroundColor(0xFF404040.toInt())
+                    container.addView(iv)
+
+                    imagesRow.addView(container)
+                }
+            }
+
+            addImage("Rendered", currentRenderedBitmap)
+            addImage("Golden", currentGoldenBitmap)
+            if (!result.passed) {
+                addImage("Diff", currentDiffBitmap)
+            }
+
+            resultContainer.addView(imagesRow)
+            resultsContainer.addView(resultContainer)
+
+            // Clear current images for next test
+            currentRenderedBitmap = null
+            currentGoldenBitmap = null
+            currentDiffBitmap = null
         }
     }
 
@@ -140,8 +275,6 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         runOnUiThread {
             statusTextView.text = "All tests finished!"
             Log.i(TAG, "All tests finished")
-            // Optional: Auto-close activity?
-            // finish()
         }
     }
 
@@ -150,5 +283,68 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             statusTextView.text = status
         }
     }
+
+    override fun onImageResult(type: String, bitmap: Bitmap) {
+        runOnUiThread {
+            // Update the "live" views
+            when (type) {
+                "Rendered" -> {
+                    currentRenderedBitmap = bitmap
+                }
+                "Golden" -> {
+                    currentGoldenBitmap = bitmap
+                }
+                "Diff" -> {
+                    currentDiffBitmap = bitmap
+                }
+            }
+        }
+    }
 }
 
+/*
+ * Scripts for reference:
+ *
+ * generate_goldens.sh:
+ * --------------------
+ * #!/bin/bash
+ * set -e
+ *
+ * # Config path (on device)
+ * CONFIG_PATH=$1
+ * if [ -z "$CONFIG_PATH" ]; then
+ *     echo "Usage: $0 <device_config_path>"
+ *     echo "Example: $0 /sdcard/Android/data/com.google.android.filament.validation/files/default_test.json"
+ *     exit 1
+ * fi
+ *
+ * echo "Starting Golden Generation for $CONFIG_PATH..."
+ * adb shell am force-stop com.google.android.filament.validation
+ * adb shell am start -n com.google.android.filament.validation/.MainActivity \
+ *     -e test_config "$CONFIG_PATH" \
+ *     --ez generate_goldens true
+ *
+ * echo "Check device or logcat for progress."
+ * echo "adb logcat -s FilamentValidation:I ValidationRunner:I"
+ * echo "To pull results: ./samples/sample-render-validation/pull_goldens.sh"
+ *
+ * pull_goldens.sh:
+ * ----------------
+ * #!/bin/bash
+ * set -e
+ *
+ * # Default destination is local golden directory relative to script
+ * SCRIPT_DIR=$(cd $(dirname $0); pwd)
+ * DEST_DIR=${1:-"$SCRIPT_DIR/golden"}
+ *
+ * echo "Pulling goldens to $DEST_DIR..."
+ * mkdir -p "$DEST_DIR"
+ *
+ * # Path on device
+ * DEVICE_GOLDEN_DIR="/storage/emulated/0/Android/data/com.google.android.filament.validation/files/golden/."
+ *
+ * adb pull "$DEVICE_GOLDEN_DIR" "$DEST_DIR"
+ *
+ * echo "Done."
+ * ls -l "$DEST_DIR"
+ */
