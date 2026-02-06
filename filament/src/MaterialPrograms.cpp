@@ -35,14 +35,12 @@ MaterialPrograms::MaterialPrograms(MaterialPrograms const& other)
                                                      .getMaterialCache()
                                                      .getSpecializationConstantsInternPool()
                                                      .acquire(other.mSpecializationConstants)
-                                           : SpecializationConstants()),
-          mPendingSpecializationConstants(other.mPendingSpecializationConstants) {}
+                                           : SpecializationConstants()) {}
 
 MaterialPrograms& MaterialPrograms::operator=(MaterialPrograms const& other) {
     assert_invariant(mMaterial == nullptr);
     assert_invariant(mCachedPrograms.empty());
     assert_invariant(mSpecializationConstants.empty());
-    assert_invariant(mPendingSpecializationConstants.empty());
 
     mMaterial = other.mMaterial;
     if (mMaterial != nullptr) {
@@ -51,7 +49,6 @@ MaterialPrograms& MaterialPrograms::operator=(MaterialPrograms const& other) {
                 .getMaterialCache()
                 .getSpecializationConstantsInternPool()
                 .acquire(other.mSpecializationConstants);
-        mPendingSpecializationConstants = other.mPendingSpecializationConstants;
     }
 
     return *this;
@@ -63,7 +60,6 @@ void MaterialPrograms::initializeForMaterial(FEngine& engine, FMaterial const& m
     assert_invariant(mMaterial == nullptr);
     assert_invariant(mCachedPrograms.empty());
     assert_invariant(mSpecializationConstants.empty());
-    assert_invariant(mPendingSpecializationConstants.empty());
 
     mMaterial = &material;
 
@@ -93,7 +89,6 @@ void MaterialPrograms::initializeForMaterialInstance(FEngine& engine, FMaterial 
     assert_invariant(mMaterial == nullptr);
     assert_invariant(mCachedPrograms.empty());
     assert_invariant(mSpecializationConstants.empty());
-    assert_invariant(mPendingSpecializationConstants.empty());
 
     mMaterial = &material;
     MaterialPrograms const& programs = material.getPrograms();
@@ -173,17 +168,13 @@ Variant MaterialPrograms::filterVariantForGetProgram(Variant variant) const noex
     return variant;
 }
 
-
 Program::SpecializationConstant MaterialPrograms::getConstantImpl(uint32_t id) const noexcept {
-    if (mPendingSpecializationConstants.empty()) {
-        return mSpecializationConstants[id];
-    }
-    return mPendingSpecializationConstants[id];
+    return mSpecializationConstants[id];
 }
 
 Program::SpecializationConstant MaterialPrograms::getConstantImpl(
         std::string_view name) const noexcept {
-    FILAMENT_CHECK_PRECONDITION(mMaterial != nullptr);
+    assert_invariant(mMaterial != nullptr);
 
     MaterialDefinition const& definition = mMaterial->getDefinition();
     auto it = definition.specializationConstantsNameToIndex.find(name);
@@ -196,59 +187,71 @@ Program::SpecializationConstant MaterialPrograms::getConstantImpl(
     return {};
 }
 
-void MaterialPrograms::setConstantImpl(uint32_t id,
-        Program::SpecializationConstant value) noexcept {
-    // Don't allocate if we can help it.
-    if (mPendingSpecializationConstants.empty()) {
-        if (mSpecializationConstants[id] == value) {
-            return;
+void MaterialPrograms::setConstants(
+        std::initializer_list<std::pair<uint32_t, Program::SpecializationConstant>>
+                constants) noexcept {
+    assert_invariant(mMaterial != nullptr);
+
+    auto newSpecializationConstants =
+            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants);
+
+    bool hasChanged = false;
+    for (const auto& [id, value] : constants) {
+        if (newSpecializationConstants[id] != value) {
+            newSpecializationConstants[id] = value;
+            hasChanged = true;
         }
-        mPendingSpecializationConstants =
-                FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants);
     }
-    mPendingSpecializationConstants[id] = value;
-}
 
-void MaterialPrograms::setConstantImpl(std::string_view name,
-        Program::SpecializationConstant value) noexcept {
-    assert_invariant(mMaterial != nullptr);
-
-    MaterialDefinition const& definition = mMaterial->getDefinition();
-    auto it = definition.specializationConstantsNameToIndex.find(name);
-    if (it != definition.specializationConstantsNameToIndex.cend()) {
-        setConstantImpl(it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS, value);
+    if (hasChanged) {
+        setConstantsImpl(std::move(newSpecializationConstants));
     }
 }
 
-void MaterialPrograms::flushConstants() const {
+void MaterialPrograms::setConstants(
+        std::initializer_list<std::pair<std::string_view, Program::SpecializationConstant>>
+                constants) noexcept {
     assert_invariant(mMaterial != nullptr);
 
-    if (mPendingSpecializationConstants.size() == mSpecializationConstants.size() &&
-            std::equal(mPendingSpecializationConstants.begin(),
-                    mPendingSpecializationConstants.end(), mSpecializationConstants.begin())) {
-        // No values were actually changed. The client probably changed something to a non-default
-        // value, but then changed it back for some reason.
-        mPendingSpecializationConstants.clear();
-        return;
+    auto newSpecializationConstants =
+            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants);
+
+    bool hasChanged = false;
+    for (const auto& [name, value] : constants) {
+        MaterialDefinition const& definition = mMaterial->getDefinition();
+        auto it = definition.specializationConstantsNameToIndex.find(name);
+        if (it != definition.specializationConstantsNameToIndex.cend()) {
+            uint32_t id = it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+            if (newSpecializationConstants[id] != value) {
+                newSpecializationConstants[id] = value;
+                hasChanged = true;
+            }
+        }
     }
 
+    if (hasChanged) {
+        setConstantsImpl(std::move(newSpecializationConstants));
+    }
+}
+
+void MaterialPrograms::setConstantsImpl(
+        FixedCapacityVector<Program::SpecializationConstant> constants) noexcept {
     FEngine& engine = mMaterial->getEngine();
 
     auto& internPool = engine.getMaterialCache().getSpecializationConstantsInternPool();
     MaterialParser const& materialParser = mMaterial->getMaterialParser();
     MaterialDefinition const& definition = mMaterial->getDefinition();
+    const bool isDefaultMaterial = mMaterial->isDefaultMaterial();
 
     // Release old resources...
     definition.releasePrograms(engine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, mMaterial->isDefaultMaterial());
+            mSpecializationConstants, isDefaultMaterial);
     internPool.release(mSpecializationConstants);
 
     // Then acquire new ones.
-    mSpecializationConstants = internPool.acquire(std::move(mPendingSpecializationConstants));
+    mSpecializationConstants = internPool.acquire(std::move(constants));
     definition.acquirePrograms(engine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, mMaterial->isDefaultMaterial());
-
-    mPendingSpecializationConstants.clear();
+            mSpecializationConstants, isDefaultMaterial);
 }
 
 template int32_t MaterialPrograms::getConstant<int32_t>(uint32_t id) const noexcept;
@@ -258,13 +261,5 @@ template bool MaterialPrograms::getConstant<bool>(uint32_t id) const noexcept;
 template int32_t MaterialPrograms::getConstant<int32_t>(std::string_view name) const noexcept;
 template float MaterialPrograms::getConstant<float>(std::string_view name) const noexcept;
 template bool MaterialPrograms::getConstant<bool>(std::string_view name) const noexcept;
-
-template void MaterialPrograms::setConstant<int32_t>(uint32_t id, int32_t value) noexcept;
-template void MaterialPrograms::setConstant<float>(uint32_t id, float value) noexcept;
-template void MaterialPrograms::setConstant<bool>(uint32_t id, bool value) noexcept;
-
-template void MaterialPrograms::setConstant<int32_t>(std::string_view name, int32_t value) noexcept;
-template void MaterialPrograms::setConstant<float>(std::string_view name, float value) noexcept;
-template void MaterialPrograms::setConstant<bool>(std::string_view name, bool value) noexcept;
 
 } // namespace filament
