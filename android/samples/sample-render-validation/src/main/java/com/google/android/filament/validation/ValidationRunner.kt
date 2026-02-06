@@ -19,25 +19,19 @@ package com.google.android.filament.validation
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
-import com.google.android.filament.Engine
-import com.google.android.filament.Renderer
-import com.google.android.filament.View
 import com.google.android.filament.utils.AutomationEngine
 import com.google.android.filament.utils.ImageDiff
 import com.google.android.filament.utils.ModelViewer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 class ValidationRunner(
     private val context: Context,
     private val modelViewer: ModelViewer,
     private val config: RenderTestConfig,
-    private val outputDir: File
+    private val resultManager: ValidationResultManager
 ) {
 
     private var currentState = State.IDLE
@@ -46,25 +40,30 @@ class ValidationRunner(
     private var currentEngine: AutomationEngine? = null
     private var currentTestConfig: TestConfig? = null
     private var currentModelName: String? = null
-    
+
     private var loadStartFence: com.google.android.filament.Fence? = null
     private var loadStartTime = 0L
+    private var frameCounter = 0
 
     enum class State {
         IDLE,
         LOADING_MODEL,
         WAITING_FOR_FENCE,
+        WAITING_FOR_RESOURCES,
+        WARMUP,
         RUNNING_TEST,
         COMPARING
     }
 
     interface Callback {
-        fun onTestFinished(result: TestResult)
+        fun onTestFinished(result: ValidationResult)
         fun onAllTestsFinished()
         fun onStatusChanged(status: String)
+        fun onImageResult(type: String, bitmap: Bitmap)
     }
 
     var callback: Callback? = null
+    var generateGoldens: Boolean = false
 
     fun start() {
         if (config.tests.isEmpty()) {
@@ -94,12 +93,11 @@ class ValidationRunner(
             nextModel()
             return
         }
-        
+
         currentState = State.LOADING_MODEL
         callback?.onStatusChanged("Loading $modelName for ${currentTestConfig?.name}")
-        
+
         // Load model on main thread (required by ModelViewer)
-        // We assume this is called from main thread or we dispatch
         loadModel(modelPath)
     }
 
@@ -107,13 +105,18 @@ class ValidationRunner(
         // Assume called on Main Thread
         modelViewer.destroyModel()
         try {
+            Log.i("ValidationRunner", "Reading model file: $path")
             val bytes = File(path).readBytes()
+            Log.i("ValidationRunner", "Loading GLB buffer... (${bytes.size} bytes)")
             val buffer = ByteBuffer.wrap(bytes)
             modelViewer.loadModelGlb(buffer)
+            Log.i("ValidationRunner", "Model loaded. initializing fence.")
             modelViewer.transformToUnitCube()
             loadStartFence = modelViewer.engine.createFence()
             loadStartTime = System.nanoTime()
             currentState = State.WAITING_FOR_FENCE
+            frameCounter = 0 // Reset for fence timeout tracking
+            Log.i("ValidationRunner", "State set to WAITING_FOR_FENCE")
         } catch (e: Exception) {
              Log.e("ValidationRunner", "Failed to load $path", e)
              nextModel()
@@ -121,37 +124,67 @@ class ValidationRunner(
     }
 
     fun onFrame(frameTimeNanos: Long) {
+        if (frameCounter % 60 == 0) {
+             Log.i("ValidationRunner", "onFrame: $currentState (frame: $frameCounter)")
+        }
+
         when (currentState) {
             State.IDLE -> {}
             State.WAITING_FOR_FENCE -> {
+                frameCounter++
+                if (frameCounter > 600) {
+                     Log.w("ValidationRunner", "Fence timed out after 600 frames! Forcing proceed.")
+                     modelViewer.engine.destroyFence(loadStartFence!!)
+                     loadStartFence = null
+                     currentState = State.WAITING_FOR_RESOURCES
+                     return
+                }
+
                 loadStartFence?.let { fence ->
-                     if (fence.wait(com.google.android.filament.Fence.Mode.FLUSH, 0) == com.google.android.filament.Fence.FenceStatus.CONDITION_SATISFIED) {
+                     if (fence.wait(com.google.android.filament.Fence.Mode.FLUSH, 0) ==
+                            com.google.android.filament.Fence.FenceStatus.CONDITION_SATISFIED) {
                          modelViewer.engine.destroyFence(fence)
                          loadStartFence = null
-                         
+
                          // Compile materials (simplified)
                          modelViewer.scene.forEach { entity ->
                              // ... existing material compilation logic ...
                          }
-                         
-                         startAutomation()
+
+                         currentState = State.WAITING_FOR_RESOURCES
                      }
                 }
             }
+            State.WAITING_FOR_RESOURCES -> {
+                 val progress = modelViewer.progress
+                 if (progress >= 1.0f) {
+                     Log.i("ValidationRunner", "Resources loaded. Starting warmup.")
+                     frameCounter = 0
+                     currentState = State.WARMUP
+                 }
+            }
+            State.WARMUP -> {
+                frameCounter++
+                if (frameCounter > 5) { // 5 frames warmup
+                     startAutomation()
+                }
+            }
             State.RUNNING_TEST -> {
-                currentEngine?.let { engine ->
+                 // Log.i("ValidationRunner", "Running test...")
+                 currentEngine?.let { engine ->
                     val content = AutomationEngine.ViewerContent()
                     content.view = modelViewer.view
                     content.renderer = modelViewer.renderer
                     content.scene = modelViewer.scene
                     content.lightManager = modelViewer.engine.lightManager
-                    
+
                     // Tick
-                    // Delta time? 
-                    val deltaTime = 1.0f / 60.0f // Fixed step for consistency?
+                    val deltaTime = 1.0f / 60.0f
                     engine.tick(modelViewer.engine, content, deltaTime)
-                    
-                    if (!engine.isRunning) {
+
+                    frameCounter++
+                    if (engine.shouldClose()) {
+                        Log.i("ValidationRunner", "Finishing test (frames: $frameCounter)")
                         // Test finished (for this spec)
                         currentState = State.COMPARING
                         captureAndCompare()
@@ -175,104 +208,83 @@ class ValidationRunner(
         options.sleepDuration = 0.0f // Minimal sleep, let frames drive it
         options.minFrameCount = 5 // Ensure some frames pass
         currentEngine?.setOptions(options)
-        currentEngine?.startRunning()
+
+        // Use batch mode to ensure shouldClose() works reliably
+        currentEngine?.startBatchMode()
+        currentEngine?.signalBatchMode() // Start immediately
+
+        frameCounter = 0
         currentState = State.RUNNING_TEST
     }
 
 
     private fun captureAndCompare() {
         callback?.onStatusChanged("Comparing ${currentTestConfig?.name}...")
-        val view = modelViewer.view
-        val renderer = modelViewer.renderer
-        val width = view.viewport.width
-        val height = view.viewport.height
-
-        val buffer = ByteBuffer.allocateDirect(width * height * 4)
-        
-        val pbd = com.google.android.filament.Texture.PixelBufferDescriptor(
-            buffer,
-            com.google.android.filament.Texture.Format.RGBA,
-            com.google.android.filament.Texture.Type.UBYTE,
-            1, 0, 0, 0, 0, // alignment, left, top, stride (0=default)
-            null // handler (null = current thread? no, handler is for callback)
-        ) {
-            // Callback when readPixels is done
-            // Dispatch to background thread for comparison to avoid blocking UI?
-            // "it" is undefined here? The callback interface is Runnable?
-            // Kotlin lambda for Runnable.
-            compareCapturedImage(buffer, width, height)
+        modelViewer.debugGetNextFrameCallback { bitmap ->
+            compareCapturedImage(bitmap)
         }
-        renderer.readPixels(0, 0, width, height, pbd)
     }
 
-    private fun compareCapturedImage(buffer: java.nio.Buffer, width: Int, height: Int) {
-         // This runs on... which thread? Filament driver thread possibly.
-         // We should use a helper to process.
-         
+    private fun compareCapturedImage(bitmap: Bitmap) {
          val testName = currentTestConfig!!.name
          val modelName = currentModelName!!
-         val backend = "opengl" // Hardcoded for now, or get from View/Engine?
+         val backend = currentTestConfig?.backends?.firstOrNull() ?: "opengl"
          val testFullName = "${testName}.${backend}.${modelName}"
-         
+
          // Golden path
-         // We expect a golden directory.
-         val goldenFile = File(config.models.get(modelName)!!).parentFile.parentFile.resolve("golden/${testFullName}.png") 
-         // Strategy: models are in .../models/model.glb
-         // Goldens are in .../golden/
-         
+         val modelFile = File(config.models.get(modelName)!!)
+         val goldenFile = modelFile.parentFile!!.parentFile!!.resolve("golden/${testFullName}.png")
+
          Thread {
              try {
-                // Convert buffer to Bitmap
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                bitmap.copyPixelsFromBuffer(buffer)
-                
-                // Flip Y? ReadPixels is typically bottom-up?
-                // Filament readPixels is bottom-left? YES.
-                // Bitmap is top-left.
-                // We need to flip.
-                val matrix = android.graphics.Matrix()
-                matrix.postScale(1f, -1f)
-                val flipped = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true)
-                
+                val flipped = bitmap
+
+                callback?.onImageResult("Rendered", flipped)
+
                 var passed = false
-                if (goldenFile.exists()) {
-                    val golden = android.graphics.BitmapFactory.decodeFile(goldenFile.absolutePath)
-                    if (golden != null) {
-                        // Populate tolerance from config
-                        val tol = currentTestConfig?.tolerance ?: org.json.JSONObject()
-                        val tolJson = tol.toString()
-                        
-                        val result = ImageDiff.compare(golden, flipped, tolJson, null)
-                        passed = (result.status == ImageDiff.Result.Status.PASSED)
-                        
-                        // Save diff if failed?
-                         if (!passed) {
-                            val diffFile = File(outputDir, "${testFullName}_diff.png")
-                            if (result.diffImage != null) {
-                                FileOutputStream(diffFile).use { out ->
-                                    result.diffImage.compress(Bitmap.CompressFormat.PNG, 100, out)
-                                }
-                            }
-                         }
-                    } else {
-                        Log.e("ValidationRunner", "Failed to load golden: ${goldenFile.absolutePath}")
+                var diffMetric = 0f
+
+                if (generateGoldens) {
+                    goldenFile.parentFile?.mkdirs()
+                    FileOutputStream(goldenFile).use { out ->
+                        flipped.compress(Bitmap.CompressFormat.PNG, 100, out)
                     }
+                    passed = true // Generating goldens always passes if successful
+                    callback?.onStatusChanged("Golden generated")
                 } else {
-                    Log.w("ValidationRunner", "Golden not found: ${goldenFile.absolutePath}")
-                }
-                
-                // Save output
-                val outFile = File(outputDir, "${testFullName}.png")
-                FileOutputStream(outFile).use { out ->
-                    flipped.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    if (goldenFile.exists()) {
+                        val golden = android.graphics.BitmapFactory.decodeFile(goldenFile.absolutePath)
+                        if (golden != null) {
+                            callback?.onImageResult("Golden", golden)
+
+                            val tol = currentTestConfig?.tolerance ?: org.json.JSONObject()
+                            val tolJson = tol.toString()
+                            val result = ImageDiff.compare(golden, flipped, tolJson, null)
+                            passed = (result.status == ImageDiff.Result.Status.PASSED)
+                            diffMetric = result.failingPixelCount.toFloat()
+
+                             if (!passed) {
+                                if (result.diffImage != null) {
+                                    callback?.onImageResult("Diff", result.diffImage!!)
+                                    resultManager.saveImage("${testFullName}_diff", result.diffImage!!)
+                                }
+                             }
+                        } else {
+                            callback?.onStatusChanged("Failed to load golden")
+                        }
+                    } else {
+                        Log.w("ValidationRunner", "Golden not found: ${goldenFile.absolutePath}")
+                        callback?.onStatusChanged("Golden not found")
+                    }
                 }
 
-                callback?.onTestFinished(TestResult(testFullName, passed))
-                
-                // Schedule next model on main thread
-                // Use Handler or View.post
-                modelViewer.view.viewport
-                // dispatch nextModel()
+                // Save output
+                resultManager.saveImage(testFullName, flipped)
+
+                val result = ValidationResult(testFullName, passed, diffMetric)
+                resultManager.addResult(result)
+                callback?.onTestFinished(result)
+
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                     nextModel()
                 }
@@ -300,28 +312,8 @@ class ValidationRunner(
             startTest(config.tests[currentTestIndex])
         } else {
             currentState = State.IDLE
-            zipResults()
+            resultManager.finalizeResults()
             callback?.onAllTestsFinished()
         }
     }
-
-    private fun zipResults() {
-        callback?.onStatusChanged("Zipping results...")
-        val zipFile = File(outputDir, "results.zip")
-        try {
-            java.util.zip.ZipOutputStream(java.io.FileOutputStream(zipFile)).use { zos ->
-                outputDir.walkTopDown().filter { it.isFile && it.name != "results.zip" }.forEach { file ->
-                    val entryName = file.relativeTo(outputDir).path
-                    zos.putNextEntry(java.util.zip.ZipEntry(entryName))
-                    file.inputStream().use { it.copyTo(zos) }
-                    zos.closeEntry()
-                }
-            }
-            Log.i("ValidationRunner", "Zipped results to ${zipFile.absolutePath}")
-        } catch (e: Exception) {
-            Log.e("ValidationRunner", "Failed to zip results", e)
-        }
-    }
-
-    data class TestResult(val name: String, val passed: Boolean)
-
+}

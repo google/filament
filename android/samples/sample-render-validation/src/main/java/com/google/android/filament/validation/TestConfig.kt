@@ -70,6 +70,26 @@ class ConfigParser {
                 }
             }
 
+            // Explicit models map override
+            val modelsJson = json.optJSONObject("models")
+            if (modelsJson != null) {
+                val keys = modelsJson.keys()
+                while (keys.hasNext()) {
+                    val name = keys.next()
+                    val path = modelsJson.getString(name)
+                    // Resolve path relative to baseDir if not absolute
+                    val file = File(path)
+                    if (file.isAbsolute) {
+                        models[name] = path
+                    } else if (baseDir != null) {
+                        models[name] = File(baseDir, path).absolutePath
+                    } else {
+                        models[name] = path
+                    }
+                }
+            }
+
+
             val presetsJson = json.optJSONArray("presets")
             val presets = mutableMapOf<String, PresetConfig>()
             if (presetsJson != null) {
