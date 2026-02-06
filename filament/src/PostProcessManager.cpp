@@ -1004,7 +1004,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                     MaterialPrograms& programs = ma->getPrograms();
                     programs.setConstant("useVisibilityBitmasks", options.gtao.useVisibilityBitmasks);
                     programs.setConstant("linearThickness", options.gtao.linearThickness);
-                    programs.flushConstants();
                 }
 
                 ma = material.getMaterial(mEngine, driver);
@@ -2938,8 +2937,6 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
     programs.setConstant("boxType", int32_t(taaOptions.boxType));
     programs.setConstant("boxClipping", int32_t(taaOptions.boxClipping));
     programs.setConstant("varianceGamma", taaOptions.varianceGamma);
-
-    programs.flushConstants();
 }
 
 FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::DriverApi& driver,
@@ -2951,7 +2948,6 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
         MaterialPrograms& programs = ma->getPrograms();
         programs.setConstant("isOneDimensional", colorGrading->isOneDimensional());
         programs.setConstant("isLDR", colorGrading->isLDR());
-        programs.flushConstants();
     }
 
     PostProcessVariant const variant = colorGradingConfig.translucent
