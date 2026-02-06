@@ -18,7 +18,7 @@
 #define TNT_FILAMENT_DETAILS_MATERIAL_H
 
 #include "downcast.h"
-#include "MaterialPrograms.h"
+#include "LocalProgramCache.h"
 
 #include "details/MaterialInstance.h"
 
@@ -237,7 +237,7 @@ public:
 
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
-    MaterialPrograms& getPrograms() noexcept { return mPrograms; }
+    LocalProgramCache& getPrograms() noexcept { return mPrograms; }
 
     uint8_t getPerViewLayoutIndex() const noexcept {
         return mDefinition.perViewLayoutIndex;
@@ -267,7 +267,7 @@ public:
 
     MaterialDefinition const& getDefinition() const noexcept { return mDefinition; }
 
-    MaterialPrograms const& getPrograms() const noexcept { return mPrograms; }
+    LocalProgramCache const& getPrograms() const noexcept { return mPrograms; }
 
 #if FILAMENT_ENABLE_MATDBG
     void applyPendingEdits() noexcept;
@@ -341,7 +341,7 @@ private:
     const uint32_t mMaterialId;
     mutable uint32_t mMaterialInstanceId = 0;
 
-    MaterialPrograms mPrograms;
+    LocalProgramCache mPrograms;
 };
 
 
