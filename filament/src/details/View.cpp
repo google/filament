@@ -465,7 +465,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     if (builder.hasShadowMaps()) {
         ShadowMapManager::createIfNeeded(engine, mShadowMapManager);
         auto const shadowTechnique = mShadowMapManager->update(driver, builder, engine,
-                *this, cameraInfo, renderableData, lightData);
+                *this, cameraInfo, renderableData, lightData, lightData);
 
         mHasShadowing = any(shadowTechnique);
         mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);

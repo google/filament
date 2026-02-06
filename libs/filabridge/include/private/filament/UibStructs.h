@@ -305,7 +305,7 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         float normalBias;                       //  4
         bool elvsm;                             //  4
         uint32_t layer;                         //  4
-        uint32_t reserved1;                     //  4
+        int32_t cookieIndex;                    //  4
         uint32_t reserved2;                     //  4
     };
     ShadowData shadows[CONFIG_MAX_SHADOWMAPS];

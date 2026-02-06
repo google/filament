@@ -162,6 +162,16 @@ Light getLight(const uint lightIndex) {
     if (light.lightType == LIGHT_TYPE_SPOT) {
         light.zLight = dot(shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ, vec4(worldPosition, 1.0));
     }
+
+    // Sample Light Cookie from Shadow Map Atlas
+    int cookieIndex = shadowUniforms.shadows[light.shadowIndex].cookieIndex;
+    if (cookieIndex >= 0) {
+        highp vec4 shadowPos = shadowUniforms.shadows[light.shadowIndex].lightFromWorldMatrix * vec4(worldPosition, 1.0);
+        highp vec2 cookieUv = (shadowPos.xy / shadowPos.w) * 0.5 + 0.5;
+        // Sample from the shadowMap sampler (which is a 2D array)
+        // We use texture() instead of shadow() because we want the color value, not a depth comparison
+        light.attenuation *= texture(sampler0_shadowMap, vec3(cookieUv, float(cookieIndex))).r;
+    }
 #endif
     if (light.lightType == LIGHT_TYPE_SPOT) {
         light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);

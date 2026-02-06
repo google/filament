@@ -130,10 +130,18 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
         Builder const& builder,
         FEngine& engine, FView& view,
         CameraInfo const& cameraInfo,
-        FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept {
+        FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData,
+        FScene::LightSoa const& lightSoa) noexcept {
 
-    if (!builder.mDirectionalShadowMapCount && !builder.mSpotShadowMapCount) {
-        // no shadows were recorder
+    mCookieCount = 0;
+    for (size_t i = 0, c = lightSoa.size(); i < c; ++i) {
+        if (lightSoa.elementAt<FScene::COOKIE>(i)) {
+            mCookieCount++;
+        }
+    }
+
+    if (!builder.mDirectionalShadowMapCount && !builder.mSpotShadowMapCount && !mCookieCount) {
+        // no shadows or cookies were recorded
         return ShadowTechnique::NONE;
     }
 
@@ -164,7 +172,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
 
     ShadowTechnique shadowTechnique = {};
 
-    calculateTextureRequirements(engine, view, lightData);
+    calculateTextureRequirements(engine, view, lightData, lightSoa);
 
     // Compute scene-dependent values shared across all shadow maps
     ShadowMap::SceneInfo const info{ *view.getScene(), view.getVisibleLayers() };
@@ -436,6 +444,21 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                 .constant = -options->polygonOffsetConstant
                         };
                         entry.executor.overridePolygonOffset(&polygonOffset);
+                    }
+                }
+
+                // Upload cookie textures
+                uint32_t cookieLayer = textureRequirements.layers - mCookieCount;
+                for (size_t i = 0, c = lightSoa.size(); i < c; ++i) {
+                    FTexture* cookie = lightSoa.elementAt<FScene::COOKIE>(i);
+                    if (cookie) {
+                        driver.blit(
+                                { .handle = prepareShadowPass->shadows, .level = 0, .layer = cookieLayer },
+                                { .left = 0, .top = 0, .right = (int32_t)textureRequirements.size, .bottom = (int32_t)textureRequirements.size },
+                                { .handle = cookie->getHwHandle(), .level = 0, .layer = 0 },
+                                { .left = 0, .top = 0, .right = (int32_t)cookie->getWidth(), .bottom = (int32_t)cookie->getHeight() },
+                                backend::SamplerMagFilter::LINEAR);
+                        cookieLayer++;
                     }
                 }
 
@@ -852,6 +875,18 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engin
                 mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
                         / wsTexelSizeAtOneMeter;
 
+        // Populate cookieIndex
+        s.shadows[shadowIndex].cookieIndex = -1;
+        uint32_t cookieLayer = mTextureAtlasRequirements.layers - mCookieCount;
+        for (size_t i = 0, c = lightSoa.size(); i < c; ++i) {
+            if (lightSoa.elementAt<FScene::COOKIE>(i)) {
+                if (lightSoa.elementAt<FScene::LIGHT_INSTANCE>(i) == lightData.elementAt<FScene::LIGHT_INSTANCE>(shadowMap.getLightIndex())) {
+                    s.shadows[shadowIndex].cookieIndex = (int32_t)cookieLayer;
+                    break;
+                }
+                cookieLayer++;
+            }
+        }
     }
 }
 
@@ -1080,6 +1115,9 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     for (ShadowMap& shadowMap : getSpotShadowMaps()) {
         allocateShadowmapTexture(&shadowMap);
     }
+
+    // Cookies are always allocated as full layers for now to simplify blitting
+    layersNeeded += mCookieCount;
 
     // Generate mipmaps for VSM when anisotropy is enabled or when requested
     auto const& vsmShadowOptions = view.getVsmShadowOptions();
