@@ -538,10 +538,10 @@ void FEngine::init() {
             &debug.shadowmap.debug_directional_shadowmap, [this] {
                 mMaterials.forEach([this](FMaterial* material) {
                     if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
-                        MaterialPrograms& programs = material->getPrograms();
-                        programs.setConstant(+ReservedSpecializationConstants::
-                                                     CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
-                                debug.shadowmap.debug_directional_shadowmap);
+                        material->getPrograms().setConstants({
+                            { +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
+                              debug.shadowmap.debug_directional_shadowmap },
+                        });
                     }
                 });
             });
@@ -550,10 +550,10 @@ void FEngine::init() {
             &debug.lighting.debug_froxel_visualization, [this] {
                 mMaterials.forEach([this](FMaterial* material) {
                     if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
-                        MaterialPrograms& programs = material->getPrograms();
-                        programs.setConstant(
-                                +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
-                                debug.lighting.debug_froxel_visualization);
+                        material->getPrograms().setConstants({
+                            { +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
+                              debug.lighting.debug_froxel_visualization },
+                        });
                     }
                 });
             });

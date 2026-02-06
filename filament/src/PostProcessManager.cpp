@@ -1000,11 +1000,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 auto& material = getPostProcessMaterial(materialName);
 
                 FMaterial* ma = material.getMaterial(mEngine, driver);
-                {
-                    MaterialPrograms& programs = ma->getPrograms();
-                    programs.setConstant("useVisibilityBitmasks", options.gtao.useVisibilityBitmasks);
-                    programs.setConstant("linearThickness", options.gtao.linearThickness);
-                }
+                ma->getPrograms().setConstants({
+                    { "useVisibilityBitmasks", options.gtao.useVisibilityBitmasks },
+                    { "linearThickness", options.gtao.linearThickness },
+                });
 
                 ma = material.getMaterial(mEngine, driver);
                 FMaterialInstance* const mi = getMaterialInstance(ma);
@@ -2925,18 +2924,18 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         TemporalAntiAliasingOptions const& taaOptions) noexcept {
 
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine, driver);
-    MaterialPrograms& programs = ma->getPrograms();
-
-    programs.setConstant("upscaling", taaOptions.upscaling > 1.0f);
-    programs.setConstant("historyReprojection", taaOptions.historyReprojection);
-    programs.setConstant("filterHistory", taaOptions.filterHistory);
-    programs.setConstant("filterInput", taaOptions.filterInput);
-    programs.setConstant("useYCoCg", taaOptions.useYCoCg);
-    programs.setConstant("hdr", taaOptions.hdr);
-    programs.setConstant("preventFlickering", taaOptions.preventFlickering);
-    programs.setConstant("boxType", int32_t(taaOptions.boxType));
-    programs.setConstant("boxClipping", int32_t(taaOptions.boxClipping));
-    programs.setConstant("varianceGamma", taaOptions.varianceGamma);
+    ma->getPrograms().setConstants({
+        { "upscaling", taaOptions.upscaling > 1.0f },
+        { "historyReprojection", taaOptions.historyReprojection },
+        { "filterHistory", taaOptions.filterHistory },
+        { "filterInput", taaOptions.filterInput },
+        { "useYCoCg", taaOptions.useYCoCg },
+        { "hdr", taaOptions.hdr },
+        { "preventFlickering", taaOptions.preventFlickering },
+        { "boxType", int32_t(taaOptions.boxType) },
+        { "boxClipping", int32_t(taaOptions.boxClipping) },
+        { "varianceGamma", taaOptions.varianceGamma },
+    });
 }
 
 FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::DriverApi& driver,
@@ -2944,11 +2943,10 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
         ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
         uint32_t const width, uint32_t const height) noexcept {
     FMaterial* ma = material.getMaterial(mEngine, driver);
-    {
-        MaterialPrograms& programs = ma->getPrograms();
-        programs.setConstant("isOneDimensional", colorGrading->isOneDimensional());
-        programs.setConstant("isLDR", colorGrading->isLDR());
-    }
+    ma->getPrograms().setConstants({
+        { "isOneDimensional", colorGrading->isOneDimensional() },
+        { "isLDR", colorGrading->isLDR() },
+    });
 
     PostProcessVariant const variant = colorGradingConfig.translucent
                                                ? PostProcessVariant::TRANSLUCENT
