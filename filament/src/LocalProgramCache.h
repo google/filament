@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_MATERIALPROGRAMS_H
-#define TNT_FILAMENT_MATERIALPROGRAMS_H
+#ifndef TNT_FILAMENT_LOCALPROGRAMCACHE_H
+#define TNT_FILAMENT_LOCALPROGRAMCACHE_H
 
 #include "MaterialDefinition.h"
 
@@ -35,7 +35,7 @@ class FMaterial;
 
 // L0 cache for material programs. Manages recompiling them on-demand; owned by Material and
 // MaterialInstance.
-class MaterialPrograms {
+class LocalProgramCache {
     template<typename T>
     using is_supported_constant_parameter_t =
             std::enable_if_t<std::is_same_v<int32_t, T> || std::is_same_v<float, T> ||
@@ -45,10 +45,10 @@ public:
     using Programs = utils::Slice<const backend::Handle<backend::HwProgram>>;
     using SpecializationConstants = utils::Slice<const backend::Program::SpecializationConstant>;
 
-    MaterialPrograms() = default;
-    MaterialPrograms(MaterialPrograms const& other);
+    LocalProgramCache() = default;
+    LocalProgramCache(LocalProgramCache const& other);
 
-    MaterialPrograms& operator=(MaterialPrograms const& other);
+    LocalProgramCache& operator=(LocalProgramCache const& other);
 
     // Initialize for use in a Material.
     void initializeForMaterial(FEngine& engine, FMaterial const& material,
@@ -141,4 +141,4 @@ private:
 
 } // namespace filament
 
-#endif  // TNT_FILAMENT_MATERIALPROGRAMS_H
+#endif  // TNT_FILAMENT_LOCALPROGRAMCACHE_H
