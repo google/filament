@@ -312,6 +312,28 @@ value_object<filament::Aabb>("Aabb")
     .field("min", &filament::Aabb::min)
     .field("max", &filament::Aabb::max);
 
+value_object<filament::Engine::Config>("Engine$Config")
+    .field("commandBufferSizeMB", &filament::Engine::Config::commandBufferSizeMB)
+    .field("perRenderPassArenaSizeMB", &filament::Engine::Config::perRenderPassArenaSizeMB)
+    .field("driverHandleArenaSizeMB", &filament::Engine::Config::driverHandleArenaSizeMB)
+    .field("minCommandBufferSizeMB", &filament::Engine::Config::minCommandBufferSizeMB)
+    .field("perFrameCommandsSizeMB", &filament::Engine::Config::perFrameCommandsSizeMB)
+    .field("jobSystemThreadCount", &filament::Engine::Config::jobSystemThreadCount)
+    .field("metalUploadBufferSizeBytes", &filament::Engine::Config::metalUploadBufferSizeBytes)
+    .field("metalDisablePanicOnDrawableFailure", &filament::Engine::Config::metalDisablePanicOnDrawableFailure)
+    .field("disableParallelShaderCompile", &filament::Engine::Config::disableParallelShaderCompile)
+    .field("stereoscopicType", &filament::Engine::Config::stereoscopicType)
+    .field("stereoscopicEyeCount", &filament::Engine::Config::stereoscopicEyeCount)
+    .field("resourceAllocatorCacheSizeMB", &filament::Engine::Config::resourceAllocatorCacheSizeMB)
+    .field("resourceAllocatorCacheMaxAge", &filament::Engine::Config::resourceAllocatorCacheMaxAge)
+    .field("disableHandleUseAfterFreeCheck", &filament::Engine::Config::disableHandleUseAfterFreeCheck)
+    .field("preferredShaderLanguage", &filament::Engine::Config::preferredShaderLanguage)
+    .field("forceGLES2Context", &filament::Engine::Config::forceGLES2Context)
+    .field("assertNativeWindowIsValid", &filament::Engine::Config::assertNativeWindowIsValid)
+    .field("gpuContextPriority", &filament::Engine::Config::gpuContextPriority)
+    .field("sharedUboInitialSizeInBytes", &filament::Engine::Config::sharedUboInitialSizeInBytes)
+    .field("asynchronousMode", &filament::Engine::Config::asynchronousMode);
+
 value_object<filament::Renderer::ClearOptions>("Renderer$ClearOptions")
     .field("clearColor", &filament::Renderer::ClearOptions::clearColor)
     .field("clear", &filament::Renderer::ClearOptions::clear)
@@ -376,9 +398,31 @@ register_vector<allow_raw_pointer<MaterialInstance*>>("MaterialInstanceVector");
 // CORE FILAMENT CLASSES
 // ---------------------
 
+enum_<Engine::StereoscopicType>("StereoscopicType")
+    .value("NONE", Engine::StereoscopicType::NONE)
+    .value("INSTANCED", Engine::StereoscopicType::INSTANCED)
+    .value("MULTIVIEW", Engine::StereoscopicType::MULTIVIEW);
+
+enum_<Engine::GpuContextPriority>("GpuContextPriority")
+    .value("DEFAULT", Engine::GpuContextPriority::DEFAULT)
+    .value("LOW", Engine::GpuContextPriority::LOW)
+    .value("MEDIUM", Engine::GpuContextPriority::MEDIUM)
+    .value("HIGH", Engine::GpuContextPriority::HIGH)
+    .value("REALTIME", Engine::GpuContextPriority::REALTIME);
+
+enum_<Engine::AsynchronousMode>("AsynchronousMode")
+    .value("NONE", Engine::AsynchronousMode::NONE)
+    .value("THREAD_PREFERRED", Engine::AsynchronousMode::THREAD_PREFERRED)
+    .value("AMORTIZATION", Engine::AsynchronousMode::AMORTIZATION);
+
+enum_<Engine::Config::ShaderLanguage>("ShaderLanguage")
+    .value("DEFAULT", Engine::Config::ShaderLanguage::DEFAULT)
+    .value("MSL", Engine::Config::ShaderLanguage::MSL)
+    .value("METAL_LIBRARY", Engine::Config::ShaderLanguage::METAL_LIBRARY);
+
 /// Engine ::core class:: Central manager and resource owner.
 class_<Engine>("Engine")
-    .class_function("_create", (Engine* (*)()) [] {
+    .class_function("_create", (Engine* (*)(Engine::Config)) [] (Engine::Config config) {
         EM_ASM_INT({
             const options = window.filament_glOptions;
             const context = window.filament_glContext;
@@ -386,8 +430,15 @@ class_<Engine>("Engine")
             window.filament_contextHandle = handle;
             GL.makeContextCurrent(handle);
         });
-        return Engine::create();
+        return Engine::create(Engine::Backend::DEFAULT, nullptr, nullptr, &config);
     }, allow_raw_pointers())
+
+    // Create a default Engine configuration. This is for internal use to ensure that engine
+    // creation logic in 'extensions.js' does not have to populate the default configuration
+    // variables manually.
+    .class_function("createDefaultConfig", (Engine::Config (*)()) [] {
+        return Engine::Config();
+    })
 
     .class_function("getSteadyClockTimeNano", &Engine::getSteadyClockTimeNano)
 
@@ -408,6 +459,8 @@ class_<Engine>("Engine")
     .function("getBackend", &Engine::getBackend)
 
     .class_function("getMaxStereoscopicEyes", &Engine::getMaxStereoscopicEyes)
+
+    .function("getConfig", &Engine::getConfig)
 
     .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
         EM_ASM_INT({

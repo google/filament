@@ -37,7 +37,8 @@
     class App {
       constructor(canvas) {
         this.canvas = canvas;
-        const engine = this.engine = Filament.Engine.create(this.canvas);
+        const engine = this.engine = Filament.Engine.create(this.canvas, {}, { forceGLES2Context: true });
+        console.log("Engine Config forceGLES2Context:", engine.getConfig().forceGLES2Context);
         this.scene = engine.createScene();
         this.cube = Filament.EntityManager.get().create();
         this.scene.addEntity(this.cube);
