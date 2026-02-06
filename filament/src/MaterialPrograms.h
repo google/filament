@@ -40,7 +40,13 @@ class MaterialPrograms {
                              std::is_same_v<bool, T>>;
 
 public:
+    using Programs = utils::Slice<const backend::Handle<backend::HwProgram>>;
+    using SpecializationConstants = utils::Slice<const backend::Program::SpecializationConstant>;
+
     MaterialPrograms() = default;
+    MaterialPrograms(MaterialPrograms const& other);
+
+    MaterialPrograms& operator=(MaterialPrograms const& other);
 
     // Initialize for use in a Material.
     void initializeForMaterial(FEngine& engine, FMaterial const& material,
@@ -59,6 +65,9 @@ public:
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
             Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+        if (UTILS_UNLIKELY(!mPendingSpecializationConstants.empty())) {
+            flushConstants();
+        }
         backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
         if (UTILS_LIKELY(program)) {
             return program;
@@ -69,48 +78,64 @@ public:
     // getProgram returns the backend program for the material's given variant.
     // Must be called after prepareProgram().
     [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
+    backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
+        variant = filterVariantForGetProgram(variant);
         backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
         assert_invariant(program);
         return program;
     }
 
-    utils::Slice<const backend::Program::SpecializationConstant>
-            getSpecializationConstants() const noexcept {
+    SpecializationConstants getSpecializationConstants() const noexcept {
         return mSpecializationConstants;
     }
 
-    utils::Slice<const backend::Handle<backend::HwProgram>> getPrograms() const noexcept {
-        return mCachedPrograms.as_slice();
-    }
+    Programs getPrograms() const noexcept { return mCachedPrograms.as_slice(); }
 
     // Free all engine resources associated with this instance.
     void terminate(FEngine& engine);
 
-    // Clear all cached programs. Used primarily to
+    // Clear all cached programs. Used primarily by matdbg to "sever" a Material's connection to the
+    // global material cache.
     void clear(FEngine& engine);
 
-    // Set constant by ID. Not applied until flushConstants() is called.
+    // Get constant by ID.
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    T getConstant(uint32_t id) const noexcept {
+        return std::get<T>(getConstantImpl(id));
+    }
+
+    // Get constant by name.
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    T getConstant(std::string_view name) const noexcept {
+        return std::get<T>(getConstantImpl(name));
+    }
+
+    // Set constant by ID.
     template<typename T, typename = is_supported_constant_parameter_t<T>>
     void setConstant(uint32_t id, T value) noexcept {
         setConstantImpl(id, value);
     }
 
-    // Set constant by name. Not applied until flushConstants() is called.
+    // Set constant by name.
     template<typename T, typename = is_supported_constant_parameter_t<T>>
     void setConstant(std::string_view name, T value) noexcept {
         setConstantImpl(name, value);
     }
 
-    // Apply any pending specialization constants. Invalidates programs as necessary.
-    void flushConstants();
-
 private:
+    // Apply any pending specialization constants. Invalidates programs as necessary.
+    void flushConstants() const;
+
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
             Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept;
 
     ProgramSpecialization getProgramSpecialization(Variant variant) const noexcept;
+
+    Variant filterVariantForGetProgram(Variant const variant) const noexcept;
+
+    backend::Program::SpecializationConstant getConstantImpl(uint32_t id) const noexcept;
+    backend::Program::SpecializationConstant getConstantImpl(std::string_view name) const noexcept;
 
     void setConstantImpl(uint32_t id, backend::Program::SpecializationConstant value) noexcept;
     void setConstantImpl(std::string_view name,
@@ -118,8 +143,8 @@ private:
 
     FMaterial const* mMaterial = nullptr;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
-    utils::Slice<const backend::Program::SpecializationConstant> mSpecializationConstants;
-    utils::FixedCapacityVector<backend::Program::SpecializationConstant>
+    mutable SpecializationConstants mSpecializationConstants;
+    mutable utils::FixedCapacityVector<backend::Program::SpecializationConstant>
             mPendingSpecializationConstants;
 };
 

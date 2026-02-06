@@ -542,7 +542,6 @@ void FEngine::init() {
                         programs.setConstant(+ReservedSpecializationConstants::
                                                      CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
                                 debug.shadowmap.debug_directional_shadowmap);
-                        programs.flushConstants();
                     }
                 });
             });
@@ -555,7 +554,6 @@ void FEngine::init() {
                         programs.setConstant(
                                 +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
                                 debug.lighting.debug_froxel_visualization);
-                        programs.flushConstants();
                     }
                 });
             });
