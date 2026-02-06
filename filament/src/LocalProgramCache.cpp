@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "MaterialPrograms.h"
+#include "LocalProgramCache.h"
 #include "MaterialParser.h"
 
 #include "details/Engine.h"
@@ -27,7 +27,7 @@ namespace filament {
 using namespace backend;
 using namespace utils;
 
-MaterialPrograms::MaterialPrograms(MaterialPrograms const& other)
+LocalProgramCache::LocalProgramCache(LocalProgramCache const& other)
         : mMaterial(other.mMaterial),
           mCachedPrograms(other.mCachedPrograms.size()),
           mSpecializationConstants((other.mMaterial != nullptr)
@@ -37,7 +37,7 @@ MaterialPrograms::MaterialPrograms(MaterialPrograms const& other)
                                                      .acquire(other.mSpecializationConstants)
                                            : SpecializationConstants()) {}
 
-MaterialPrograms& MaterialPrograms::operator=(MaterialPrograms const& other) {
+LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) {
     assert_invariant(mMaterial == nullptr);
     assert_invariant(mCachedPrograms.empty());
     assert_invariant(mSpecializationConstants.empty());
@@ -54,7 +54,7 @@ MaterialPrograms& MaterialPrograms::operator=(MaterialPrograms const& other) {
     return *this;
 }
 
-void MaterialPrograms::initializeForMaterial(FEngine& engine, FMaterial const& material,
+void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& material,
         utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                 specializationConstants) {
     assert_invariant(mMaterial == nullptr);
@@ -85,13 +85,13 @@ void MaterialPrograms::initializeForMaterial(FEngine& engine, FMaterial const& m
             material.getMaterialParser(), mSpecializationConstants, material.isDefaultMaterial());
 }
 
-void MaterialPrograms::initializeForMaterialInstance(FEngine& engine, FMaterial const& material) {
+void LocalProgramCache::initializeForMaterialInstance(FEngine& engine, FMaterial const& material) {
     assert_invariant(mMaterial == nullptr);
     assert_invariant(mCachedPrograms.empty());
     assert_invariant(mSpecializationConstants.empty());
 
     mMaterial = &material;
-    MaterialPrograms const& programs = material.getPrograms();
+    LocalProgramCache const& programs = material.getPrograms();
 
     mSpecializationConstants =
             engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
@@ -101,7 +101,7 @@ void MaterialPrograms::initializeForMaterialInstance(FEngine& engine, FMaterial 
             FixedCapacityVector<Handle<HwProgram>>(material.getPrograms().mCachedPrograms.size());
 }
 
-Handle<HwProgram> MaterialPrograms::prepareProgramSlow(DriverApi& driver, Variant const variant,
+Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Variant const variant,
         CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
@@ -109,7 +109,7 @@ Handle<HwProgram> MaterialPrograms::prepareProgramSlow(DriverApi& driver, Varian
     if (mMaterial->isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = engine.getDefaultMaterial();
         assert_invariant(defaultMaterial);
-        MaterialPrograms const& defaultPrograms = defaultMaterial->getPrograms();
+        LocalProgramCache const& defaultPrograms = defaultMaterial->getPrograms();
         Handle<HwProgram> program = defaultPrograms.mCachedPrograms[variant.key];
         if (program) {
             return mCachedPrograms[variant.key] = program;
@@ -121,7 +121,7 @@ Handle<HwProgram> MaterialPrograms::prepareProgramSlow(DriverApi& driver, Varian
                    mMaterial->getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
 }
 
-ProgramSpecialization MaterialPrograms::getProgramSpecialization(Variant variant) const noexcept {
+ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant variant) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
     return ProgramSpecialization {
@@ -131,7 +131,7 @@ ProgramSpecialization MaterialPrograms::getProgramSpecialization(Variant variant
     };
 }
 
-void MaterialPrograms::terminate(FEngine& engine) {
+void LocalProgramCache::terminate(FEngine& engine) {
     assert_invariant(mMaterial != nullptr);
 
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
@@ -142,7 +142,7 @@ void MaterialPrograms::terminate(FEngine& engine) {
             mSpecializationConstants);
 }
 
-void MaterialPrograms::clear(FEngine& engine) {
+void LocalProgramCache::clear(FEngine& engine) {
     assert_invariant(mMaterial != nullptr);
 
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
@@ -150,7 +150,7 @@ void MaterialPrograms::clear(FEngine& engine) {
             mMaterial->isDefaultMaterial());
 }
 
-Variant MaterialPrograms::filterVariantForGetProgram(Variant variant) const noexcept {
+Variant LocalProgramCache::filterVariantForGetProgram(Variant variant) const noexcept {
     if (UTILS_UNLIKELY(mMaterial->getEngine().features.material.enable_fog_as_postprocess)) {
         // if the fog as post-process feature is enabled, we need to proceed "as-if" the material
         // didn't have the FOG variant bit.
@@ -168,11 +168,11 @@ Variant MaterialPrograms::filterVariantForGetProgram(Variant variant) const noex
     return variant;
 }
 
-Program::SpecializationConstant MaterialPrograms::getConstantImpl(uint32_t id) const noexcept {
+Program::SpecializationConstant LocalProgramCache::getConstantImpl(uint32_t id) const noexcept {
     return mSpecializationConstants[id];
 }
 
-Program::SpecializationConstant MaterialPrograms::getConstantImpl(
+Program::SpecializationConstant LocalProgramCache::getConstantImpl(
         std::string_view name) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
@@ -187,7 +187,7 @@ Program::SpecializationConstant MaterialPrograms::getConstantImpl(
     return {};
 }
 
-void MaterialPrograms::setConstants(
+void LocalProgramCache::setConstants(
         std::initializer_list<std::pair<uint32_t, Program::SpecializationConstant>>
                 constants) noexcept {
     assert_invariant(mMaterial != nullptr);
@@ -208,7 +208,7 @@ void MaterialPrograms::setConstants(
     }
 }
 
-void MaterialPrograms::setConstants(
+void LocalProgramCache::setConstants(
         std::initializer_list<std::pair<std::string_view, Program::SpecializationConstant>>
                 constants) noexcept {
     assert_invariant(mMaterial != nullptr);
@@ -234,7 +234,7 @@ void MaterialPrograms::setConstants(
     }
 }
 
-void MaterialPrograms::setConstantsImpl(
+void LocalProgramCache::setConstantsImpl(
         FixedCapacityVector<Program::SpecializationConstant> constants) noexcept {
     FEngine& engine = mMaterial->getEngine();
 
@@ -254,12 +254,12 @@ void MaterialPrograms::setConstantsImpl(
             mSpecializationConstants, isDefaultMaterial);
 }
 
-template int32_t MaterialPrograms::getConstant<int32_t>(uint32_t id) const noexcept;
-template float MaterialPrograms::getConstant<float>(uint32_t id) const noexcept;
-template bool MaterialPrograms::getConstant<bool>(uint32_t id) const noexcept;
+template int32_t LocalProgramCache::getConstant<int32_t>(uint32_t id) const noexcept;
+template float LocalProgramCache::getConstant<float>(uint32_t id) const noexcept;
+template bool LocalProgramCache::getConstant<bool>(uint32_t id) const noexcept;
 
-template int32_t MaterialPrograms::getConstant<int32_t>(std::string_view name) const noexcept;
-template float MaterialPrograms::getConstant<float>(std::string_view name) const noexcept;
-template bool MaterialPrograms::getConstant<bool>(std::string_view name) const noexcept;
+template int32_t LocalProgramCache::getConstant<int32_t>(std::string_view name) const noexcept;
+template float LocalProgramCache::getConstant<float>(std::string_view name) const noexcept;
+template bool LocalProgramCache::getConstant<bool>(std::string_view name) const noexcept;
 
 } // namespace filament
