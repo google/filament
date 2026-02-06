@@ -292,6 +292,7 @@ set(MATERIAL_SRCS
         src/materials/sgsr/sgsr1.mat
         src/materials/resolveDepth.mat
         src/materials/separableGaussianBlur.mat
+        src/materials/separableGaussianBlurArraySampler.mat
         src/materials/skybox.mat
         src/materials/shadowmap.mat
         src/materials/ssao/bilateralBlur.mat
@@ -606,6 +607,13 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/separableGaussianBlur.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlurArraySampler.filamat"
         DEPENDS src/materials/separableGaussianBlur.vs
         DEPENDS src/materials/separableGaussianBlur.fs
         APPEND

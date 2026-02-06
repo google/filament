@@ -4,11 +4,11 @@ float vmax(const float v) {
 
 highp vec4 sourceTexLod(const highp vec2 p, float m, float l) {
     // This condition is optimized away at compile-time.
-    if (materialConstants_arraySampler) {
+#if ARRAY_SAMPLER
         return textureLod(materialParams_sourceArray, vec3(p, l), m);
-    } else {
+#else
         return textureLod(materialParams_source, p, m);
-    }
+#endif
 }
 
 void tap(inout highp vec4 sum, const float weight, const highp vec2 position) {
