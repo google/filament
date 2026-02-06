@@ -902,6 +902,7 @@ void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
         return;
     }
     auto vprogram = resource_ptr<VulkanProgram>::cast(&mResourceManager, ph);
+    vprogram->cancelParallelCompilation();
     vprogram.dec();
 }
 

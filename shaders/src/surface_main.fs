@@ -73,11 +73,7 @@ void main() {
     vec4 fogColor = fog(view, sampler0_fog);
 #   endif
 #else
-#   if defined (FILAMENT_LINEAR_FOG)
     vec4 fogColor = fogLinear(view);
-#   else
-    vec4 fogColor = fog(view);
-#   endif
 #endif
 
 #   if   defined(BLEND_MODE_OPAQUE)
