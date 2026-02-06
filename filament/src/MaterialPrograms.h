@@ -27,6 +27,8 @@
 #include <backend/DriverApiForward.h>
 #include <backend/Program.h>
 
+#include <utility>
+
 namespace filament {
 
 class FMaterial;
@@ -65,9 +67,6 @@ public:
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
             Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        if (UTILS_UNLIKELY(!mPendingSpecializationConstants.empty())) {
-            flushConstants();
-        }
         backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
         if (UTILS_LIKELY(program)) {
             return program;
@@ -110,22 +109,17 @@ public:
         return std::get<T>(getConstantImpl(name));
     }
 
-    // Set constant by ID.
-    template<typename T, typename = is_supported_constant_parameter_t<T>>
-    void setConstant(uint32_t id, T value) noexcept {
-        setConstantImpl(id, value);
-    }
+    // Set constants by ID.
+    void setConstants(
+            std::initializer_list<std::pair<uint32_t, backend::Program::SpecializationConstant>>
+                    constants) noexcept;
 
-    // Set constant by name.
-    template<typename T, typename = is_supported_constant_parameter_t<T>>
-    void setConstant(std::string_view name, T value) noexcept {
-        setConstantImpl(name, value);
-    }
+    // Set constants by name.
+    void setConstants(std::initializer_list<
+            std::pair<std::string_view, backend::Program::SpecializationConstant>>
+                    constants) noexcept;
 
 private:
-    // Apply any pending specialization constants. Invalidates programs as necessary.
-    void flushConstants() const;
-
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
             Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept;
@@ -134,18 +128,15 @@ private:
 
     Variant filterVariantForGetProgram(Variant const variant) const noexcept;
 
+    void setConstantsImpl(utils::FixedCapacityVector<backend::Program::SpecializationConstant>
+                    constants) noexcept;
+
     backend::Program::SpecializationConstant getConstantImpl(uint32_t id) const noexcept;
     backend::Program::SpecializationConstant getConstantImpl(std::string_view name) const noexcept;
 
-    void setConstantImpl(uint32_t id, backend::Program::SpecializationConstant value) noexcept;
-    void setConstantImpl(std::string_view name,
-            backend::Program::SpecializationConstant value) noexcept;
-
     FMaterial const* mMaterial = nullptr;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
-    mutable SpecializationConstants mSpecializationConstants;
-    mutable utils::FixedCapacityVector<backend::Program::SpecializationConstant>
-            mPendingSpecializationConstants;
+    SpecializationConstants mSpecializationConstants;
 };
 
 } // namespace filament
