@@ -4,13 +4,18 @@ plugins {
 
 gradlePlugin {
     plugins {
-        create("filament-tools-plugin") {
-            id = "filament-tools-plugin"
-            implementationClass = "FilamentToolsPlugin"
+        create("filament-plugin") {
+            id = "filament-plugin"
+            implementationClass = "com.google.android.filament.gradle.FilamentPlugin"
         }
     }
 }
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
+}
+
+dependencies {
+    implementation "com.google.gradle:osdetector-gradle-plugin:1.7.3"
 }

@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
-    id 'filament-tools-plugin'
+    id 'filament-plugin'
 }
 
 project.ext.isSample = true
@@ -10,7 +10,7 @@ kotlin {
     jvmToolchain(versions.jdk)
 }
 
-filamentTools {
+filament {
     materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
     materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
 
