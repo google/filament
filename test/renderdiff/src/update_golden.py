@@ -16,9 +16,10 @@ import sys
 import os
 import glob
 import time
+import subprocess
+import json
 
 from golden_manager import GoldenManager, ACCESS_TYPE_SSH, ACCESS_TYPE_TOKEN
-from image_diff import same_image
 
 from utils import execute, ArgParseImpl
 from utils import prompt_helper, PROMPT_YES, PROMPT_NO
@@ -61,21 +62,54 @@ def _do_update(golden_manager, config):
                              deletes=deletes,
                              push_to_remote=push_to_remote)
 
-def _get_deletes_updates(update_dir, golden_dir):
+def _same_image_diffimg(diffimg_path, img1, img2):
+  cmd = [diffimg_path, img1, img2]
+  try:
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    output = result.stdout.strip()
+    if not output:
+      return False
+
+    try:
+      res_json = json.loads(output)
+      return res_json.get('passed', False)
+    except json.JSONDecodeError:
+      return False
+  except Exception:
+    return False
+
+def _get_deletes_updates(update_dir, golden_dir, diffimg_path):
   ret_delete = []
   ret_update = []
-  for ext in ['tif', 'json']:
-    base = set(glob.glob(f'./**/*.{ext}', root_dir=golden_dir, recursive=True))
-    new = set(glob.glob(f'./**/*.{ext}', root_dir=update_dir, recursive=True))
 
+  # Scan update_dir for files to potentially update or add
+  for ext in ['tif', 'json']:
+    # Get relative paths from golden_dir (base) and update_dir (new)
+    # Note: glob with root_dir returns relative paths
+    base_files = set(glob.glob(f'./**/*.{ext}', root_dir=golden_dir, recursive=True))
+    new_files = set(glob.glob(f'./**/*.{ext}', root_dir=update_dir, recursive=True))
+
+    # Files in base but not in new are candidates for deletion (if we decide to prune)
+    # However, update_golden typically only updates/adds based on the new render set.
+    # But strict sync might imply deleting missing ones.
+    # The original logic was: delete = list(base - new).
     delete = list(base - new)
+
+    # Files in new but not in base are definitely updates (additions)
     update = list(new - base)
 
-    for fpath in base.intersection(new):
+    # Files in both need comparison
+    for fpath in base.intersection(new_files):
       base_fpath = os.path.join(golden_dir, fpath)
       new_fpath = os.path.join(update_dir, fpath)
-      if (ext == 'tif' and not same_image(new_fpath, base_fpath)[0]) or \
-         (ext == 'json' and _file_as_str(new_fpath) != _file_as_str(base_fpath)):
+
+      is_different = False
+      if ext == 'tif':
+          is_different = not _same_image_diffimg(diffimg_path, new_fpath, base_fpath)
+      elif ext == 'json':
+          is_different = _file_as_str(new_fpath) != _file_as_str(base_fpath)
+
+      if is_different:
         update.append(fpath)
 
     ret_update += update
@@ -84,7 +118,7 @@ def _get_deletes_updates(update_dir, golden_dir):
   return ret_delete, ret_update
 
 # Ask a bunch of questions to gather the configuration for the update
-def _interactive_mode(base_golden_dir):
+def _interactive_mode(base_golden_dir, diffimg_path):
   config = {}
   cur_branch = _get_current_branch()
   if prompt_helper(
@@ -121,7 +155,7 @@ def _interactive_mode(base_golden_dir):
     config[CONFIG_COMMIT_MSG] = f'Update {time.time()} from filament ({cur_branch})'
 
   new_golden_dir = config[CONFIG_NEW_SRC_DIR]
-  deletes, updates = _get_deletes_updates(new_golden_dir, base_golden_dir)
+  deletes, updates = _get_deletes_updates(new_golden_dir, base_golden_dir, diffimg_path)
   if len(deletes) + len(updates) != 0:
     prompt = 'The following files will be changed:\n' + \
         '\n'.join([f'  {fname} [delete]' for fname in deletes]) + \
@@ -146,6 +180,8 @@ if __name__ == "__main__":
   parser.add_argument('--branch', help='Branch of the golden repo to write to')
   parser.add_argument('--golden-repo-token', help='Access token for the golden repo')
   parser.add_argument('--push-to-remote', action="store_true", help='Access token for the golden repo')
+  parser.add_argument('--diffimg', help='Path to the diffimg tool',
+                      default='./out/cmake-release/tools/diffimg/diffimg')
 
   # write-to-branch mode
   parser.add_argument('--source', help='Directory containing the new goldens')
@@ -164,10 +200,21 @@ if __name__ == "__main__":
   )
   base_golden_dir = golden_manager.directory()
 
+  diffimg_path = args.diffimg
+  # Try to find diffimg if default path doesn't exist, mainly for local interactive use convenience
+  if not os.path.exists(diffimg_path):
+    # fallback check for debug build
+    debug_path = './out/cmake-debug/tools/diffimg/diffimg'
+    if os.path.exists(debug_path):
+      diffimg_path = debug_path
+
   # This is the write-to-branch mode
   if args.branch and args.source and args.commit_msg:
+    if not os.path.exists(diffimg_path):
+      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh release diffimg)")
+      sys.exit(1)
     assert os.path.exists(args.source), f'{args.source} (--source) directory not found'
-    deletes, updates = _get_deletes_updates(args.source, base_golden_dir)
+    deletes, updates = _get_deletes_updates(args.source, base_golden_dir, diffimg_path)
     config = {
         CONFIG_PUSH_TO_REMOTE: args.push_to_remote,
         CONFIG_GOLDENS_BRANCH: args.branch,
@@ -182,5 +229,8 @@ if __name__ == "__main__":
     golden_manager.merge_to_main(branch=args.branch, tag=args.filament_tag, push_to_remote=True)
   # Else, we're in interactive mode of write-to-branch (for local execution).
   else:
-    config = _interactive_mode(base_golden_dir)
+    if not os.path.exists(diffimg_path):
+      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh release diffimg)")
+      sys.exit(1)
+    config = _interactive_mode(base_golden_dir, diffimg_path)
     _do_update(golden_manager, config)
