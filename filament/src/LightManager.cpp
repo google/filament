@@ -135,6 +135,14 @@ void LightManager::setSunHaloFalloff(Instance const i, float const haloFalloff) 
     downcast(this)->setSunHaloFalloff(i, haloFalloff);
 }
 
+void LightManager::setCookie(Instance const i, Texture* texture) noexcept {
+    downcast(this)->setCookie(i, texture);
+}
+
+Texture* LightManager::getCookie(Instance const i) const noexcept {
+    return downcast(this)->getCookie(i);
+}
+
 float LightManager::getSunHaloFalloff(Instance const i) const noexcept {
     return downcast(this)->getSunHaloFalloff(i);
 }

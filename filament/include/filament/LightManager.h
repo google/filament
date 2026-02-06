@@ -472,6 +472,14 @@ public:
         Builder& shadowOptions(const ShadowOptions& options) noexcept;
 
         /**
+         * Sets the cookie texture for a light.
+         * @param engine Reference to the filament engine.
+         * @param texture The cookie texture.
+         * @return This Builder, for chaining calls.
+         */
+        Builder& cookie(Engine& engine, Texture* texture) noexcept;
+
+        /**
          * Whether this light casts light (enabled by default)
          *
          * @param enable Enables or disables lighting from this Light.
@@ -930,7 +938,21 @@ public:
     void setSunHaloFalloff(Instance i, float haloFalloff) noexcept;
 
     /**
-     * returns the halo falloff of a Type.SUN light as a dimensionless value.
+     * Sets the cookie texture for a light.
+     * @param i Instance of the light.
+     * @param texture The cookie texture.
+     */
+    void setCookie(Instance i, Texture* texture) noexcept;
+
+    /**
+     * Returns the cookie texture for a light.
+     * @param i Instance of the light.
+     * @return The cookie texture.
+     */
+    Texture* getCookie(Instance i) const noexcept;
+
+    /**
+     * Returns the ShadowOptions for the given light instance.sionless value.
      * @param i     Instance of the component obtained from getInstance().
      * @return the halo falloff
      */

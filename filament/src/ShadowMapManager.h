@@ -126,7 +126,8 @@ public:
     ShadowTechnique update(backend::DriverApi& driver,
             Builder const& builder, FEngine& engine,
             FView& view,
-            CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
+            CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData,
+            FScene::LightSoa const& lightSoa) noexcept;
 
     // Renders all the shadow maps.
     FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg,
@@ -161,7 +162,7 @@ private:
             FScene::LightSoa const& lightData) const noexcept;
 
     void calculateTextureRequirements(FEngine&, FView& view,
-            FScene::LightSoa const&) noexcept;
+            FScene::LightSoa const&, FScene::LightSoa const&) noexcept;
 
     void prepareSpotShadowMap(ShadowMap& shadowMap,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
@@ -235,6 +236,7 @@ private:
     ShadowMapCacheContainer mShadowMapCache;
     uint32_t mDirectionalShadowMapCount = 0;
     uint32_t mSpotShadowMapCount = 0;
+    uint32_t mCookieCount = 0;
     bool const mIsDepthClampSupported;
     bool mInitialized = false;
     bool mFeatureShadowAllocator = false;
