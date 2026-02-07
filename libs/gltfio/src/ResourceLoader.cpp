@@ -234,9 +234,34 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
     auto& slots = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mBufferSlots;
     for (auto const& slot: slots) {
         const cgltf_accessor* accessor = slot.accessor;
-        if (!accessor->buffer_view) {
+        // Morph target accessors may not have a buffer_view (data is directly in the accessor)
+        bool isMorphTarget = (slot.morphTargetBuffer != nullptr);
+
+        if (!accessor->buffer_view && !isMorphTarget) {
             continue;
         }
+
+        // For morph targets without buffer_view, use cgltf_accessor_unpack_floats to unpack data directly
+        if (!accessor->buffer_view && isMorphTarget) {
+            const size_t floatsCount = accessor->count * cgltf_num_components(accessor->type);
+            const size_t floatsByteCount = sizeof(float) * floatsCount;
+            float* floatsData = (float*)malloc(floatsByteCount);
+            cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
+
+            if (accessor->type == cgltf_type_vec3) {
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                    (const float3*)floatsData, slot.morphTargetCount, slot.morphTargetOffset);
+            }
+            else {
+                assert_invariant(accessor->type == cgltf_type_vec4);
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                    (const float4*)floatsData, slot.morphTargetCount, slot.morphTargetOffset);
+            }
+
+            free(floatsData);
+            continue;
+        }
+
         const uint8_t* bufferData = nullptr;
         const uint8_t* data = nullptr;
         if (accessor->buffer_view->has_meshopt_compression) {
