@@ -54,45 +54,47 @@ list(APPEND RESGEN_SOURCE ${DUMMY_SRC})
 # Unit tests
 # ==================================================================================================
 
-# The following tests rely on private APIs that are stripped
-# away in Release builds
-if (TNT_DEV)
-    add_executable(test_${TARGET}
-            MockDriver.h
-            filament_AtlasAllocator_test.cpp
-            test_BufferAllocator.cpp
-            test_BufferAllocatorStress.cpp
-            test_CircularQueue.cpp
-            test_compact.cpp
-            test_FenceManager.cpp
-            test_UboManager.cpp
-            filament_test_exposure.cpp
-            filament_rendering_test.cpp
-            filament_bimap_test.cpp
-            filament_framegraph_test.cpp
-            filament_test.cpp
-            filament_test_material.cpp
-            ${RESGEN_SOURCE})
+if (FILAMENT_BUILD_TESTING)
+    # The following tests rely on private APIs that are stripped
+    # away in Release builds
+    if (TNT_DEV)
+        add_executable(test_${TARGET}
+                MockDriver.h
+                filament_AtlasAllocator_test.cpp
+                test_BufferAllocator.cpp
+                test_BufferAllocatorStress.cpp
+                test_CircularQueue.cpp
+                test_compact.cpp
+                test_FenceManager.cpp
+                test_UboManager.cpp
+                filament_test_exposure.cpp
+                filament_rendering_test.cpp
+                filament_bimap_test.cpp
+                filament_framegraph_test.cpp
+                filament_test.cpp
+                filament_test_material.cpp
+                ${RESGEN_SOURCE})
 
-    target_link_libraries(test_${TARGET} PRIVATE filamat filament gtest)
-    target_compile_options(test_${TARGET} PRIVATE ${COMPILER_FLAGS})
-    target_include_directories(test_${TARGET} PRIVATE ${RESOURCE_DIR})
-    set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
+        target_link_libraries(test_${TARGET} PRIVATE filamat filament gtest)
+        target_compile_options(test_${TARGET} PRIVATE ${COMPILER_FLAGS})
+        target_include_directories(test_${TARGET} PRIVATE ${RESOURCE_DIR})
+        set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 
-    add_executable(test_depth depth_test.cpp)
-    target_link_libraries(test_depth PRIVATE utils)
-endif()
+        add_executable(test_depth depth_test.cpp)
+        target_link_libraries(test_depth PRIVATE utils)
+    endif()
 
-add_executable(test_material_parser
-        filament_test_material_parser.cpp
-        ${RESGEN_SOURCE}
-)
-target_link_libraries(test_material_parser PRIVATE filamat filament gtest)
-target_compile_options(test_material_parser PRIVATE ${COMPILER_FLAGS})
-target_include_directories(test_material_parser PRIVATE ${RESOURCE_DIR})
-set_target_properties(test_material_parser PROPERTIES FOLDER Tests)
+    add_executable(test_material_parser
+            filament_test_material_parser.cpp
+            ${RESGEN_SOURCE}
+    )
+    target_link_libraries(test_material_parser PRIVATE filamat filament gtest)
+    target_compile_options(test_material_parser PRIVATE ${COMPILER_FLAGS})
+    target_include_directories(test_material_parser PRIVATE ${RESOURCE_DIR})
+    set_target_properties(test_material_parser PROPERTIES FOLDER Tests)
 
-if (ANDROID)
-    add_executable(test_compiler compiler_test.cpp)
-    target_link_libraries(test_compiler PRIVATE gtest utils EGL GLESv3)
+    if (ANDROID)
+        add_executable(test_compiler compiler_test.cpp)
+        target_link_libraries(test_compiler PRIVATE gtest utils EGL GLESv3)
+    endif()
 endif()
