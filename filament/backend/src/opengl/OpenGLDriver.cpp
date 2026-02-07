@@ -2931,7 +2931,11 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
         case Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL:
             return mContext.bugs.disable_depth_precache_for_default_material;
         case Workaround::EMULATE_SRGB_SWAPCHAIN:
+#if defined(__EMSCRIPTEN__)
+            return mContext.isES2();
+#else
             return mContext.isES2() && !mPlatform.isSRGBSwapChainSupported();
+#endif
         default:
             return false;
     }
@@ -3700,7 +3704,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // If we're rendering into the default render target (i.e. into the current SwapChain),
     // get the value of the output colorspace from there, otherwise it's always linear.
     assert_invariant(!rt->gl.isDefault || mCurrentDrawSwapChain);
-    mRec709OutputColorspace = rt->gl.isDefault ? mCurrentDrawSwapChain->rec709 : false;
+    mRec709OutputColorspace = rt->gl.isDefault ? mCurrentDrawSwapChain->rec709 : isWorkaroundNeeded(Workaround::EMULATE_SRGB_SWAPCHAIN);
 
     const TargetBufferFlags clearFlags = params.flags.clear & rt->targets;
     TargetBufferFlags discardFlags = params.flags.discardStart & rt->targets;
