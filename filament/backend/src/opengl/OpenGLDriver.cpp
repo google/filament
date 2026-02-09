@@ -2931,11 +2931,7 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
         case Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL:
             return mContext.bugs.disable_depth_precache_for_default_material;
         case Workaround::EMULATE_SRGB_SWAPCHAIN:
-#if defined(__EMSCRIPTEN__)
-            return mContext.isES2();
-#else
             return mContext.isES2() && !mPlatform.isSRGBSwapChainSupported();
-#endif
         default:
             return false;
     }
