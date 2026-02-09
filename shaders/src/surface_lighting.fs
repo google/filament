@@ -11,6 +11,7 @@ struct Light {
     uint lightType;
     int shadowIndex;
     int channels;
+    int cookieLayer;
 };
 
 struct PixelParams {
