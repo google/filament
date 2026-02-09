@@ -29,20 +29,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-namespace {
-
-// The robin iterator's copy assignment operator is missing
-// the template declaration, which is likely why we are unable to
-// use it. Instead, let's use the copy constructor by using
-// in place destruction, and in place copy construction.
-template <typename Iter>
-void AssignIterator(Iter* dest, Iter&& value) {
-    std::destroy_at(dest);  // Should be trivial, but just in case that changes.
-    new (dest) Iter(value);
-}
-
-}  // namespace
-
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
     if (k1.initialDepthLayout != k2.initialDepthLayout) return false;
@@ -398,7 +384,7 @@ void VulkanFboCache::gc() noexcept {
             iter.value().handle = VK_NULL_HANDLE;
 
             // erase(iterator) returns the iterator to the next element.
-            AssignIterator(&iter, mFramebufferCache.erase(iter));
+            iter = mFramebufferCache.erase(iter);
         } else {
             ++iter;
         }
@@ -411,7 +397,7 @@ void VulkanFboCache::gc() noexcept {
             iter.value().handle = VK_NULL_HANDLE;
 
             // erase(iterator) returns the iterator to the next element.
-            AssignIterator(&iter, mRenderPassCache.erase(iter));
+            iter = mRenderPassCache.erase(iter);
             mRenderPassRefCount.erase(handle);
         } else {
             ++iter;
