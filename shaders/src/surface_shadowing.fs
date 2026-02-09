@@ -473,6 +473,16 @@ float ShadowSample_VSM(const bool ELVSM, const highp sampler2DArray shadowMap,
     return p;
 }
 
+#if defined(VARIANT_HAS_VSM)
+float CookieSample(const highp sampler2DArray map,
+        const highp vec4 scissorNormalized,
+        const int layer, const highp vec4 shadowPosition) {
+    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+    highp vec2 uv = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
+    return textureLod(map, vec3(uv, layer), 0.0).r;
+}
+#endif
+
 //------------------------------------------------------------------------------
 // Shadow sampling dispatch
 //------------------------------------------------------------------------------
