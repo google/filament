@@ -39,16 +39,24 @@ VkSampler VulkanSamplerCache::getSampler(Params params) {
     };
 
     auto const& samplerParams = params.sampler;
+    bool const hasConversion = params.conversion != VK_NULL_HANDLE;
+    // If the sampler has a ycbcrConversion then anisotropic must be disabled and addressModeU,
+    // addressModeV and addressModeW must be VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE.
+    // https://docs.vulkan.org/spec/latest/chapters/samplers.html#VUID-VkSamplerCreateInfo-addressModeU-01646
+    bool const disableAnisotropic = (samplerParams.anisotropyLog2 == 0) || hasConversion;
     VkSamplerCreateInfo samplerInfo{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .pNext = params.conversion != VK_NULL_HANDLE ? &ycbcrConversion : VK_NULL_HANDLE,
+        .pNext = hasConversion ? &ycbcrConversion : nullptr,
         .magFilter = fvkutils::getFilter(samplerParams.filterMag),
         .minFilter = fvkutils::getFilter(samplerParams.filterMin),
         .mipmapMode = fvkutils::getMipmapMode(samplerParams.filterMin),
-        .addressModeU = fvkutils::getWrapMode(samplerParams.wrapS),
-        .addressModeV = fvkutils::getWrapMode(samplerParams.wrapT),
-        .addressModeW = fvkutils::getWrapMode(samplerParams.wrapR),
-        .anisotropyEnable = samplerParams.anisotropyLog2 == 0 ? VK_FALSE : VK_TRUE,
+        .addressModeU = hasConversion ? VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+                                      : fvkutils::getWrapMode(samplerParams.wrapS),
+        .addressModeV = hasConversion ? VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+                                      : fvkutils::getWrapMode(samplerParams.wrapT),
+        .addressModeW = hasConversion ? VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+                                      : fvkutils::getWrapMode(samplerParams.wrapR),
+        .anisotropyEnable = disableAnisotropic ? VK_FALSE : VK_TRUE,
         .maxAnisotropy = (float) (1u << samplerParams.anisotropyLog2),
         .compareEnable = fvkutils::getCompareEnable(samplerParams.compareMode),
         .compareOp = fvkutils::getCompareOp(samplerParams.compareFunc),
