@@ -185,8 +185,8 @@ int main(int argc, char** argv) {
     if (!configPath.isEmpty()) {
         std::string jsonContent = readFile(configPath);
         if (jsonContent.empty()) {
-             std::cerr << "Error: Could not read config file: " << configPath << std::endl;
-             return 1;
+            std::cerr << "Error: Could not read config file: " << configPath << std::endl;
+            return 1;
         }
         if (!imagediff::parseConfig(jsonContent.c_str(), jsonContent.size(), &config)) {
             std::cerr << "Error: Failed to parse config file." << std::endl;
