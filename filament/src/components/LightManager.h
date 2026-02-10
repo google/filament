@@ -32,6 +32,7 @@ namespace filament {
 
 class FEngine;
 class FScene;
+class FTexture;
 
 class FLightManager : public LightManager {
 public:

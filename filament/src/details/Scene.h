@@ -151,6 +151,7 @@ public:
         bool castsShadows = false;      // whether this light casts shadows
         bool contactShadows = false;    // whether this light casts contact shadows
         uint8_t index = 0;              // an index into the arrays in the Shadows uniform buffer
+        uint16_t cookieLayer = std::numeric_limits<uint16_t>::max();
     };
 
     enum {

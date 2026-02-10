@@ -19,6 +19,7 @@
 #include "components/LightManager.h"
 
 #include "details/Engine.h"
+#include "details/Texture.h"
 #include "utils/ostream.h"
 
 #include <filament/LightManager.h>

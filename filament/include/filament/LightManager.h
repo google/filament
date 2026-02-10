@@ -39,6 +39,7 @@ namespace filament {
 class Engine;
 class FEngine;
 class FLightManager;
+class Texture;
 
 /**
  * LightManager allows to create a light source in the scene, such as a sun or street lights.
