@@ -1186,7 +1186,8 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
                 }
 
                 if (view.getChannelDepthClearMask().any()) {
-                    ppm.clearAncillaryBuffersPrepare(driver);
+                    Variant::type_t variant = isRenderingMultiview ? Variant::STE : 0;
+                    ppm.clearAncillaryBuffersPrepare(driver, variant);
                 }
 
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
@@ -1217,8 +1218,14 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
         passBuilder.customCommand(channel,
             RenderPass::Pass::DEPTH,
             RenderPass::CustomCommand::PROLOGUE,
-            0, [&ppm, &driver] {
-                ppm.clearAncillaryBuffers(driver, TargetBufferFlags::DEPTH);
+            0, [&ppm, &driver, &view, isRenderingMultiview] {
+                // set the per-view descriptor set (always unlit, no ssr, no fog, no vsm)
+                auto const& ds = view.getColorPassDescriptorSet(ShadowType::PCF)[
+                        ColorPassDescriptorSet::getIndex(false, false, false)];
+                ds.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
+
+                Variant::type_t variant = isRenderingMultiview ? Variant::STE : 0;
+                ppm.clearAncillaryBuffers(driver, TargetBufferFlags::DEPTH, variant);
             });
     });
 

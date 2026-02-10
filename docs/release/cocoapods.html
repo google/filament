@@ -195,6 +195,30 @@ for inspection.</li>
 <p><strong>Tip:</strong> To view all defined subspecs, grep the podspec file:
 <code>grep "spec.subspec" ios/CocoaPods/Filament.podspec</code></p>
 </blockquote>
+<h2 id="testing-a-podspec-locally"><a class="header" href="#testing-a-podspec-locally">Testing a Podspec Locally</a></h2>
+<p>Before pushing a new version to the CocoaPods trunk, you should verify the podspec in a sample project.</p>
+<h3 id="using-the-sample-project"><a class="header" href="#using-the-sample-project">Using the Sample Project</a></h3>
+<p>Filament includes a dedicated sample project located in <code>ios/samples/HelloCocoaPods</code>. To test your
+local changes:</p>
+<ol>
+<li><strong>Modify the Podfile</strong>: Add a <code>:podspec</code> directive pointing to your local <code>.podspec</code> file.</li>
+</ol>
+<pre><code class="language-ruby">platform :ios, '13.0'
+
+target 'HelloCocoaPods' do
+    # Use the local development podspec
+    pod 'Filament', :podspec =&gt; '../../CocoaPods/Filament.podspec'
+end
+</code></pre>
+<ol start="2">
+<li><strong>Sync Dependencies</strong>: Run the installation command from the sample directory:</li>
+</ol>
+<pre><code class="language-bash">pod install
+</code></pre>
+<ol start="3">
+<li><strong>Verify the Build</strong>: Open the generated <code>HelloCocoaPods.xcworkspace</code> in Xcode. Build and run the
+target to ensure the headers are found and the binaries link correctly.</li>
+</ol>
 
                     </main>
 

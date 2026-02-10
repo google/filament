@@ -346,8 +346,8 @@ public class RenderableManager {
          *
          * @return Builder reference for chaining calls.
          *
-         * @see Builder::blendOrder()
-         * @see Builder::priority()
+         * @see Builder#blendOrder()
+         * @see Builder#priority()
          * @see RenderableManager::setBlendOrderAt()
          */
         @NonNull
@@ -725,6 +725,10 @@ public class RenderableManager {
         nSetPriority(mNativeObject, i, priority);
     }
 
+    public int getPriority(@EntityInstance int i) {
+        return nGetPriority(mNativeObject, i);
+    }
+
     /**
      * Changes the channel of a renderable
      *
@@ -734,6 +738,10 @@ public class RenderableManager {
         nSetChannel(mNativeObject, i, channel);
     }
 
+    public int getChannel(@EntityInstance int i) {
+        return nGetChannel(mNativeObject, i);
+    }
+
     /**
      * Changes whether or not frustum culling is on.
      *
@@ -741,6 +749,10 @@ public class RenderableManager {
      */
     public void setCulling(@EntityInstance int i, boolean enabled) {
         nSetCulling(mNativeObject, i, enabled);
+    }
+
+    public boolean isCullingEnabled(@EntityInstance int i) {
+        return nIsCullingEnabled(mNativeObject, i);
     }
 
     /**
@@ -810,6 +822,10 @@ public class RenderableManager {
      */
     public void setScreenSpaceContactShadows(@EntityInstance int i, boolean enabled) {
         nSetScreenSpaceContactShadows(mNativeObject, i, enabled);
+    }
+
+    public boolean isScreenSpaceContactShadowsEnabled(@EntityInstance int i) {
+        return nIsScreenSpaceContactShadowsEnabled(mNativeObject, i);
     }
 
     /**
@@ -932,6 +948,10 @@ public class RenderableManager {
         nSetBlendOrderAt(mNativeObject, instance, primitiveIndex, blendOrder);
     }
 
+    public int getBlendOrderAt(@EntityInstance int instance, @IntRange(from = 0) int primitiveIndex) {
+        return nGetBlendOrderAt(mNativeObject, instance, primitiveIndex);
+    }
+
     /**
      * Changes whether the blend order is global or local to this Renderable (by default).
      *
@@ -944,6 +964,10 @@ public class RenderableManager {
     public void setGlobalBlendOrderEnabledAt(@EntityInstance int instance, @IntRange(from = 0) int primitiveIndex,
             boolean enabled) {
         nSetGlobalBlendOrderEnabledAt(mNativeObject, instance, primitiveIndex, enabled);
+    }
+
+    public boolean isGlobalBlendOrderEnabledAt(@EntityInstance int instance, @IntRange(from = 0) int primitiveIndex) {
+        return nIsGlobalBlendOrderEnabledAt(mNativeObject, instance, primitiveIndex);
     }
 
     /**
@@ -1013,8 +1037,11 @@ public class RenderableManager {
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);
+    private static native int nGetPriority(long nativeRenderableManager, int i);
     private static native void nSetChannel(long nativeRenderableManager, int i, int channel);
+    private static native int nGetChannel(long nativeRenderableManager, int i);
     private static native void nSetCulling(long nativeRenderableManager, int i, boolean enabled);
+    private static native boolean nIsCullingEnabled(long nativeRenderableManager, int i);
     private static native void nSetFogEnabled(long nativeRenderableManager, int i, boolean enabled);
     private static native boolean nGetFogEnabled(long nativeRenderableManager, int i);
     private static native void nSetLightChannel(long nativeRenderableManager, int i, int channel, boolean enable);
@@ -1022,6 +1049,7 @@ public class RenderableManager {
     private static native void nSetCastShadows(long nativeRenderableManager, int i, boolean enabled);
     private static native void nSetReceiveShadows(long nativeRenderableManager, int i, boolean enabled);
     private static native void nSetScreenSpaceContactShadows(long nativeRenderableManager, int i, boolean enabled);
+    private static native boolean nIsScreenSpaceContactShadowsEnabled(long nativeRenderableManager, int i);
     private static native boolean nIsShadowCaster(long nativeRenderableManager, int i);
     private static native boolean nIsShadowReceiver(long nativeRenderableManager, int i);
     private static native void nGetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float[] center, float[] halfExtent);
@@ -1032,6 +1060,8 @@ public class RenderableManager {
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
     private static native void nSetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex, int blendOrder);
+    private static native int nGetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGlobalBlendOrderEnabledAt(long nativeRenderableManager, int i, int primitiveIndex, boolean enabled);
+    private static native boolean nIsGlobalBlendOrderEnabledAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native int nGetEnabledAttributesAt(long nativeRenderableManager, int i, int primitiveIndex);
 }

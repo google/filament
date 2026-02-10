@@ -323,6 +323,7 @@ public:
          * @see Builder::blendOrder()
          * @see Builder::priority()
          * @see RenderableManager::setBlendOrderAt()
+         * @see RenderableManager::getChannel()
          */
         Builder& channel(uint8_t channel) noexcept;
 
@@ -615,6 +616,7 @@ public:
      */
     void destroy(utils::Entity e) noexcept;
 
+
     /**
      * Changes the bounding box used for frustum culling.
      * The renderable must not have staticGeometry enabled.
@@ -623,6 +625,14 @@ public:
      * \see RenderableManager::getAxisAlignedBoundingBox()
      */
     void setAxisAlignedBoundingBox(Instance instance, const Box& aabb);
+
+    /**
+     * Gets the bounding box used for frustum culling.
+     *
+     * \see Builder::boundingBox()
+     * \see RenderableManager::setAxisAlignedBoundingBox()
+     */
+    const Box& getAxisAlignedBoundingBox(Instance instance) const noexcept;
 
     /**
      * Changes the visibility bits.
@@ -634,11 +644,27 @@ public:
     void setLayerMask(Instance instance, uint8_t select, uint8_t values) noexcept;
 
     /**
+     * Get the visibility bits.
+     *
+     * \see Builder::layerMask()
+     * \see View::setVisibleLayers().
+     * \see RenderableManager::getLayerMask()
+     */
+    uint8_t getLayerMask(Instance instance) const noexcept;
+
+    /**
      * Changes the coarse-level draw ordering.
      *
      * \see Builder::priority().
      */
     void setPriority(Instance instance, uint8_t priority) noexcept;
+
+    /**
+     * Get the coarse-level draw ordering.
+     *
+     * \see Builder::priority().
+     */
+    uint8_t getPriority(Instance instance) const noexcept;
 
     /**
      * Changes the channel a renderable is associated to.
@@ -648,11 +674,25 @@ public:
     void setChannel(Instance instance, uint8_t channel) noexcept;
 
     /**
+     * Get the channel a renderable is associated to.
+     *
+     * \see Builder::channel().
+     */
+    uint8_t getChannel(Instance instance) const noexcept;
+
+    /**
      * Changes whether or not frustum culling is on.
      *
      * \see Builder::culling()
      */
     void setCulling(Instance instance, bool enable) noexcept;
+
+    /**
+     * Get whether or not frustum culling is on.
+     *
+     * \see Builder::culling()
+     */
+    bool isCullingEnabled(Instance instance) const noexcept;
 
     /**
      * Changes whether or not the large-scale fog is applied to this renderable
@@ -719,6 +759,13 @@ public:
     bool isShadowReceiver(Instance instance) const noexcept;
 
     /**
+     * Checks if the renderable can use screen-space contact shadows.
+     *
+     * \see Builder::screenSpaceContactShadows().
+     */
+    bool isScreenSpaceContactShadowsEnabled(Instance instance) const noexcept;
+
+    /**
      * Updates the bone transforms in the range [offset, offset + boneCount).
      * The bones must be pre-allocated using Builder::skinning().
      */
@@ -769,28 +816,13 @@ public:
 
     /**
      * Gets the number of morphing in the given entity.
+     * @see Builder::morphing()
      */
     size_t getMorphTargetCount(Instance instance) const noexcept;
 
     /**
-     * Gets the bounding box used for frustum culling.
-     *
-     * \see Builder::boundingBox()
-     * \see RenderableManager::setAxisAlignedBoundingBox()
-     */
-    const Box& getAxisAlignedBoundingBox(Instance instance) const noexcept;
-
-    /**
-     * Get the visibility bits.
-     *
-     * \see Builder::layerMask()
-     * \see View::setVisibleLayers().
-     * \see RenderableManager::getLayerMask()
-     */
-    uint8_t getLayerMask(Instance instance) const noexcept;
-
-    /**
      * Gets the immutable number of primitives in the given renderable.
+     * @see Builder::Builder(size_t count)
      */
     size_t getPrimitiveCount(Instance instance) const noexcept;
 
@@ -798,6 +830,7 @@ public:
      * Returns the number of instances for this renderable.
      * @param instance Instance of the component obtained from getInstance().
      * @return The number of instances.
+     * @see Builder::instances()
      */
     size_t getInstanceCount(Instance instance) const noexcept;
 
@@ -852,6 +885,16 @@ public:
     void setBlendOrderAt(Instance instance, size_t primitiveIndex, uint16_t order) noexcept;
 
     /**
+     * Get the drawing order for blended primitives.
+     *
+     * @param instance the renderable of interest
+     * @param primitiveIndex the primitive of interest
+     *
+     * @see Builder::blendOrder(), setGlobalBlendOrderEnabledAt()
+     */
+    uint16_t getBlendOrderAt(Instance instance, size_t primitiveIndex) const noexcept;
+
+    /**
      * Changes whether the blend order is global or local to this Renderable (by default).
      *
      * @param instance the renderable of interest
@@ -861,6 +904,16 @@ public:
      * @see Builder::globalBlendOrderEnabled(), setBlendOrderAt()
      */
     void setGlobalBlendOrderEnabledAt(Instance instance, size_t primitiveIndex, bool enabled) noexcept;
+
+    /**
+     * Get whether the blend order is global or local to this Renderable (by default).
+     *
+     * @param instance the renderable of interest
+     * @param primitiveIndex the primitive of interest
+     *
+     * @see Builder::globalBlendOrderEnabled(), setBlendOrderAt()
+     */
+    bool isGlobalBlendOrderEnabledAt(Instance instance, size_t primitiveIndex) const noexcept;
 
     /**
      * Retrieves the set of enabled attribute slots in the given primitive's VertexBuffer.

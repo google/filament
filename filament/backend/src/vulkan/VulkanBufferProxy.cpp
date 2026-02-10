@@ -76,6 +76,7 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     assert_invariant(stage->memory());
     commands.acquire(stage);
     memcpy(stage->mapping(), cpuData, numBytes);
+    vmaFlushAllocation(mAllocator, stage->memory(), stage->offset(), numBytes);
 
     // This means that we're recording a write into a command buffer with a previous read, so it
     // needs to add a barrier (to protect the write from writing over a read).

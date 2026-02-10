@@ -1912,7 +1912,9 @@ void OpenGLDriver::createDefaultRenderTargetR(
     rt->gl.isDefault = true;
     rt->gl.fbo = 0; // the actual id is resolved at binding time
     rt->gl.samples = 1;
-    // FIXME: these flags should reflect the actual attachments present
+    // for the default render target, the attachments (i.e. targets) are unknown until the swapChain is bound
+    // (via OpenGLPlatform::makeCurrent()). Here we initialize the field with some reasonable defaults, but
+    // these will be ignored in begin/endRenderPass()
     rt->targets = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
     mHandleAllocator.associateTagToHandle(rth.getId(), std::move(tag));
 }
@@ -2104,6 +2106,13 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
 
+    // TODO: This is a bit fragile, instead we should ask the SwapChain for its actual attachments.
+    //       But this requires an API change in the platform. So we can do that later if needed.
+    sc->attachments = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+    if (flags & SWAP_CHAIN_CONFIG_HAS_STENCIL_BUFFER) {
+        sc->attachments |= TargetBufferFlags::STENCIL;
+    }
+
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
     FILAMENT_CHECK_POSTCONDITION(sc->swapChain) << "createSwapChain(" << nativeWindow << ", "
@@ -2125,6 +2134,13 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
+
+    // TODO: This is a bit fragile, instead we should ask the SwapChain for its actual attachments.
+    //       But this requires an API change in the platform. So we can do that later if needed.
+    sc->attachments = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+    if (flags & SWAP_CHAIN_CONFIG_HAS_STENCIL_BUFFER) {
+        sc->attachments |= TargetBufferFlags::STENCIL;
+    }
 
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
@@ -3702,8 +3718,10 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     assert_invariant(!rt->gl.isDefault || mCurrentDrawSwapChain);
     mRec709OutputColorspace = rt->gl.isDefault ? mCurrentDrawSwapChain->rec709 : false;
 
-    const TargetBufferFlags clearFlags = params.flags.clear & rt->targets;
-    TargetBufferFlags discardFlags = params.flags.discardStart & rt->targets;
+    // for the default renderTarget the attachments come from the current swapChain
+    TargetBufferFlags const rtAttachments = rt->gl.isDefault ? mCurrentDrawSwapChain->attachments : rt->targets;
+    TargetBufferFlags const clearFlags = params.flags.clear & rtAttachments;
+    TargetBufferFlags discardFlags = params.flags.discardStart & rtAttachments;
 
     GLuint const fbo = gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     CHECK_GL_FRAMEBUFFER_STATUS(GL_FRAMEBUFFER)
@@ -3768,7 +3786,8 @@ void OpenGLDriver::endRenderPass(int) {
 
     GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
-    TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd & rt->targets;
+    TargetBufferFlags const rtAttachments = rt->gl.isDefault ? mCurrentDrawSwapChain->attachments : rt->targets;
+    TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd & rtAttachments;
     if (rt->gl.fbo_read) {
         resolvePass(ResolveAction::STORE, rt, discardFlags);
     }
@@ -3985,10 +4004,8 @@ void OpenGLDriver::stopCapture(int) {
 // Read-back ops
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
-        uint32_t const x, uint32_t const y, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& p) {
-    DEBUG_MARKER()
+void OpenGLDriver::readPixelsFromBoundFramebuffer(uint32_t const x, uint32_t const y,
+        uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
     auto& gl = mContext;
 
     GLenum const glFormat = getFormat(p.format);
@@ -4021,8 +4038,6 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
      *                                  of the buffer.
      */
 
-    GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
-
     using PBD = PixelBufferDescriptor;
 
     // The PBO only needs to accommodate the area we're reading, with alignment.
@@ -4032,7 +4047,6 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     if (UTILS_UNLIKELY(gl.isES2())) {
         void* buffer = malloc(pboSize);
         if (buffer) {
-            gl.bindFramebuffer(GL_FRAMEBUFFER, s->gl.fbo_read ? s->gl.fbo_read : s->gl.fbo);
             glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, buffer);
             CHECK_GL_ERROR()
 
@@ -4056,10 +4070,6 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    // glReadPixel doesn't resolve automatically, but it does with the auto-resolve extension,
-    // which we're always emulating. So if we have a resolved fbo (fbo_read), use that instead.
-    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo_read ? s->gl.fbo_read : s->gl.fbo);
-
     GLuint pbo;
     glGenBuffers(1, &pbo);
     gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
@@ -4111,10 +4121,83 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
 #endif
 }
 
+void OpenGLDriver::readPixels(Handle<HwRenderTarget> src, uint32_t const x, uint32_t const y,
+        uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
+    DEBUG_MARKER()
+    auto& gl = mContext;
+
+    GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
+
+    if (UTILS_UNLIKELY(gl.isES2())) {
+        gl.bindFramebuffer(GL_FRAMEBUFFER, s->gl.fbo_read ? s->gl.fbo_read : s->gl.fbo);
+        readPixelsFromBoundFramebuffer(x, y, width, height, std::move(p));
+        return;
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    // glReadPixel doesn't resolve automatically, but it does with the auto-resolve extension,
+    // which we're always emulating. So if we have a resolved fbo (fbo_read), use that instead.
+    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo_read ? s->gl.fbo_read : s->gl.fbo);
+    readPixelsFromBoundFramebuffer(x, y, width, height, std::move(p));
+#endif
+}
+
 void OpenGLDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
         uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
-    // TODO: implement readTexture
+    DEBUG_MARKER()
+    auto& gl = mContext;
+
+    // readTexture() requires GLES 3.0+ features such as GL_READ_FRAMEBUFFER and
+    // glFramebufferTextureLayer, so we wrap it in FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2.
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    if (UTILS_UNLIKELY(gl.isES2())) {
+        // This is not supported on ES2 (at least not in this driver)
+        scheduleDestroy(std::move(p));
+        return;
+    }
+
+    GLTexture const* s = handle_cast<GLTexture*>(src);
+    assert_invariant(s);
+    assert_invariant(s->target != SamplerType::SAMPLER_3D);
+
+    GLuint fbo = 0;
+    glGenFramebuffers(1, &fbo);
+    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+
+    GLenum const attachment = GL_COLOR_ATTACHMENT0;
+
+    switch (s->target) {
+        case SamplerType::SAMPLER_2D:
+            if (any(s->usage & TextureUsage::SAMPLEABLE)) {
+                glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, s->gl.id,
+                        level);
+            } else {
+                glFramebufferRenderbuffer(GL_READ_FRAMEBUFFER, attachment, GL_RENDERBUFFER,
+                        s->gl.id);
+            }
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment,
+                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer, s->gl.id, level);
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, attachment, s->gl.id, level, layer);
+            break;
+        default:
+            // This should not happen (e.g. 3D textures are excluded)
+            break;
+    }
+
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_READ_FRAMEBUFFER)
+
+    readPixelsFromBoundFramebuffer(x, y, width, height, std::move(p));
+
+    gl.unbindFramebuffer(GL_READ_FRAMEBUFFER);
+    glDeleteFramebuffers(1, &fbo);
+#else
     scheduleDestroy(std::move(p));
+#endif
 }
 
 void OpenGLDriver::readBufferSubData(BufferObjectHandle boh,
