@@ -64,7 +64,7 @@ struct LightManager::BuilderDetails {
     float mSunHaloSize = 10.0f;
     float mSunHaloFalloff = 80.0f;
     ShadowOptions mShadowOptions;
-    Texture* mCookieTexture = nullptr;
+    uint16_t mCookieLayer = std::numeric_limits<uint16_t>::max();
 
     explicit BuilderDetails(Type const type) noexcept : mType(type) { }
     // this is only needed for the explicit instantiation below
@@ -161,13 +161,13 @@ LightManager::Builder& LightManager::Builder::lightChannel(unsigned int const ch
     return *this;
 }
 
-LightManager::Builder& LightManager::Builder::cookie(Texture* const texture) noexcept {
-    mImpl->mCookieTexture = texture;
+LightManager::Builder& LightManager::Builder::cookieLayer(uint16_t const layer) noexcept {
+    mImpl->mCookieLayer = layer;
     return *this;
 }
 
 LightManager::Builder& LightManager::Builder::clearCookie() noexcept {
-    mImpl->mCookieTexture = nullptr;
+    mImpl->mCookieLayer = std::numeric_limits<uint16_t>::max();
     return *this;
 }
 
@@ -224,7 +224,7 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
         setSunAngularRadius(i, builder->mSunAngle);
         setSunHaloSize(i, builder->mSunHaloSize);
         setSunHaloFalloff(i, builder->mSunHaloFalloff);
-        setCookieTexture(i, downcast(builder->mCookieTexture));
+        setCookieLayer(i, builder->mCookieLayer);
     }
 }
 
@@ -430,9 +430,9 @@ void FLightManager::setSunHaloFalloff(Instance const i, float const haloFalloff)
     }
 }
 
-void FLightManager::setCookieTexture(Instance const i, FTexture* const texture) noexcept {
+void FLightManager::setCookieLayer(Instance const i, uint16_t const layer) noexcept {
     if (i) {
-        mManager[i].cookieTexture = texture;
+        mManager[i].cookieLayer = layer;
     }
 }
 

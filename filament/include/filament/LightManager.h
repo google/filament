@@ -457,24 +457,22 @@ public:
         Builder& lightChannel(unsigned int channel, bool enable = true) noexcept;
 
         /**
-         * Sets a light cookie texture for this light.
+         * Sets a light cookie layer index for this light.
          *
-         * Cookies are sampled from the shadow map texture array when using a shadow sampling
-         * mode that relies on a sampler2DArray (e.g., VSM, DPCF or PCSS). For PCF
-         * (sampler2DArrayShadow), cookies are ignored.
+         * The cookie is sampled from the shadow map texture array using the layer index provided.
+         * This does not allocate or upload any cookie textures; the application must ensure that
+         * the cookie data is available in the shadow map array.
          *
-         * The cookie texture is copied into the shadow map array internally. The texture must:
-         * - be a 2D texture for spot lights or a cubemap for point lights,
-         * - include Texture::Usage::BLIT_SRC, and
-         * - match the shadow map's format and size.
+         * Cookies are only sampled when the shadow sampling mode uses a sampler2DArray
+         * (e.g., VSM, DPCF or PCSS). For PCF (sampler2DArrayShadow), cookies are ignored.
          *
-         * @param texture Cookie texture to use.
+         * @param layer Index into the shadow map texture array.
          * @return This Builder, for chaining calls.
          */
-        Builder& cookie(Texture* UTILS_NULLABLE texture) noexcept;
+        Builder& cookieLayer(uint16_t layer) noexcept;
 
         /**
-         * Clears the light cookie texture.
+         * Clears the light cookie layer index.
          *
          * @return This Builder, for chaining calls.
          */

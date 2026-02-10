@@ -116,7 +116,7 @@ public:
     UTILS_NOINLINE void setSunAngularRadius(Instance i, float angularRadius) noexcept;
     UTILS_NOINLINE void setSunHaloSize(Instance i, float haloSize) noexcept;
     UTILS_NOINLINE void setSunHaloFalloff(Instance i, float haloFalloff) noexcept;
-    UTILS_NOINLINE void setCookieTexture(Instance i, FTexture* texture) noexcept;
+    UTILS_NOINLINE void setCookieLayer(Instance i, uint16_t layer) noexcept;
 
     UTILS_NOINLINE bool getLightChannel(Instance i, unsigned int channel) const noexcept;
 
@@ -206,8 +206,8 @@ public:
         return getRadius(i);
     }
 
-    FTexture* getCookieTexture(Instance const i) const noexcept {
-        return mManager[i].cookieTexture;
+    uint16_t getCookieLayer(Instance const i) const noexcept {
+        return mManager[i].cookieLayer;
     }
 
     SpotParams const& getSpotParams(Instance const i) const noexcept {
@@ -262,7 +262,7 @@ private:
         INTENSITY,
         FALLOFF,
         CHANNELS,
-        COOKIE_TEXTURE,
+        COOKIE_LAYER,
     };
 
     using Base = utils::SingleInstanceComponentManager<  // 120 bytes
@@ -278,7 +278,7 @@ private:
             float,          //  4
             float,          //  4
             uint8_t,        //  1
-            FTexture*       //  8
+            uint16_t        //  2
     >;
 
     struct Sim : public Base {
@@ -305,7 +305,7 @@ private:
                 Field<INTENSITY>            intensity;
                 Field<FALLOFF>              squaredFallOffInv;
                 Field<CHANNELS>             channels;
-                Field<COOKIE_TEXTURE>       cookieTexture;
+                Field<COOKIE_LAYER>         cookieLayer;
             };
         };
 

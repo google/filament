@@ -441,6 +441,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
     auto const* UTILS_RESTRICT directions       = lightData.data<DIRECTION>();
     auto const* UTILS_RESTRICT instances        = lightData.data<LIGHT_INSTANCE>();
     auto const* UTILS_RESTRICT shadowInfo       = lightData.data<SHADOW_INFO>();
+    constexpr uint16_t kInvalidCookieLayer = std::numeric_limits<uint16_t>::max();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = size; i < c; ++i) {
         const size_t gpuIndex = i - DIRECTIONAL_LIGHTS_COUNT;
         auto const li = instances[i];
@@ -449,11 +450,9 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
         lp[gpuIndex].reserved1            = {};
         lp[gpuIndex].colorIES             = { lcm.getColor(li), 0.0f };
         lp[gpuIndex].spotScaleOffset      = lcm.getSpotParams(li).scaleOffset;
-        const uint16_t cookieLayer = shadowInfo[i].cookieLayer;
+        const uint16_t cookieLayer = lcm.getCookieLayer(li);
         const uint32_t cookieLayerBits =
-                cookieLayer == std::numeric_limits<uint16_t>::max()
-                        ? 0xFFFFFFFFu
-                        : uint32_t(cookieLayer);
+                cookieLayer == kInvalidCookieLayer ? 0xFFFFFFFFu : uint32_t(cookieLayer);
         lp[gpuIndex].cookieLayer          = utils::bit_cast<float>(cookieLayerBits);
         lp[gpuIndex].intensity            = lcm.getIntensity(li);
         lp[gpuIndex].typeShadow           = LightsUib::packTypeShadow(
