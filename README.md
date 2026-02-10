@@ -93,8 +93,8 @@ pod 'Filament', '~> 1.69.2'
 - OpenGL ES 3.0+ for Android and iOS
 - Metal for macOS and iOS
 - Vulkan 1.0 for Android, Linux, macOS, and Windows
-- WebGL 2.0 for all platforms
-- WebGPU for all platforms
+- WebGPU for Android, Linux, macOS, and Windows
+- WebGL 2.0 for all browsers supporting it
 
 ### Rendering
 
