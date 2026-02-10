@@ -4,5 +4,8 @@ material {
     colorWrite : false,
     depthWrite : true,
     depthCulling : false,
-    domain: postprocess,
+
+    vertexDomain : device,
+    shadingModel : unlit,
+    variantFilter : [ skinning, shadowReceiver, vsm, fog ],
 }

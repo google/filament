@@ -2212,9 +2212,24 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
             [&context = mContext](uint32_t types, VkFlags reqs) {
                 return context.selectMemoryType(types, reqs);
             },
-            [this](PixelBufferDescriptor&& pbd) {
-                scheduleDestroy(std::move(pbd));
-            });
+            [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); });
+}
+
+void VulkanDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
+        uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd) {
+    auto srcTexture = resource_ptr<VulkanTexture>::cast(&mResourceManager, src);
+
+    // Currently, we don't support 3D textures since pbd doesn't support it.
+    assert_invariant(srcTexture->target != SamplerType::SAMPLER_3D);
+
+    endCommandRecording();
+    mReadPixels.run(
+            srcTexture, level, layer, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
+            std::move(pbd),
+            [&context = mContext](uint32_t types, VkFlags reqs) {
+                return context.selectMemoryType(types, reqs);
+            },
+            [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); });
 }
 
 void VulkanDriver::readBufferSubData(backend::BufferObjectHandle boh,

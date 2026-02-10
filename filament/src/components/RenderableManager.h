@@ -168,6 +168,7 @@ public:
     inline bool isShadowCaster(Instance instance) const noexcept;
     inline bool isShadowReceiver(Instance instance) const noexcept;
     inline bool isCullingEnabled(Instance instance) const noexcept;
+    inline bool isScreenSpaceContactShadowsEnabled(Instance instance) const noexcept;
 
 
     inline Box const& getAABB(Instance instance) const noexcept;
@@ -176,7 +177,8 @@ public:
     inline Skinning getSkinning(Instance instance) const noexcept;
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
-    inline uint8_t getChannels(Instance instance) const noexcept;
+    inline uint8_t getChannel(Instance instance) const noexcept;
+    inline uint8_t getLightChannels(Instance instance) const noexcept;
     inline DescriptorSet& getDescriptorSet(Instance instance) noexcept;
 
     struct SkinningBindingInfo {
@@ -215,7 +217,9 @@ public:
             PrimitiveType type, FVertexBuffer* vertices, FIndexBuffer* indices,
             size_t offset, size_t count) noexcept;
     void setBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex, uint16_t blendOrder) noexcept;
+    uint16_t getBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     void setGlobalBlendOrderEnabledAt(Instance instance, uint8_t level, size_t primitiveIndex, bool enabled) noexcept;
+    bool isGlobalBlendOrderEnabledAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     AttributeBitset getEnabledAttributesAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     inline utils::Slice<const FRenderPrimitive> getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
     inline utils::Slice<FRenderPrimitive> getRenderPrimitives(Instance instance, uint8_t level) noexcept;
@@ -259,7 +263,7 @@ private:
         AABB,                   // user data
         LAYERS,                 // user data
         MORPH_WEIGHTS,          // filament data, UBO storing a pointer to the morph weights information
-        CHANNELS,               // user data
+        LIGHT_CHANNELS,         // user data
         INSTANCES,              // user data
         VISIBILITY,             // user data
         SKINNING,               // user data
@@ -298,7 +302,7 @@ private:
                 Field<AABB>                 aabb;
                 Field<LAYERS>               layers;
                 Field<MORPH_WEIGHTS>        morphWeights;
-                Field<CHANNELS>             channels;
+                Field<LIGHT_CHANNELS>       lightChannels;
                 Field<INSTANCES>            instances;
                 Field<VISIBILITY>           visibility;
                 Field<SKINNING>             skinning;
@@ -455,6 +459,10 @@ bool FRenderableManager::isCullingEnabled(Instance const instance) const noexcep
     return getVisibility(instance).culling;
 }
 
+bool FRenderableManager::isScreenSpaceContactShadowsEnabled(Instance const instance) const noexcept {
+    return getVisibility(instance).screenSpaceContactShadows;
+}
+
 uint8_t FRenderableManager::getLayerMask(Instance const instance) const noexcept {
     return mManager[instance].layers;
 }
@@ -463,8 +471,12 @@ uint8_t FRenderableManager::getPriority(Instance const instance) const noexcept 
     return getVisibility(instance).priority;
 }
 
-uint8_t FRenderableManager::getChannels(Instance const instance) const noexcept {
-    return mManager[instance].channels;
+uint8_t FRenderableManager::getChannel(Instance const instance) const noexcept {
+    return getVisibility(instance).channel;
+}
+
+uint8_t FRenderableManager::getLightChannels(Instance const instance) const noexcept {
+    return mManager[instance].lightChannels;
 }
 
 Box const& FRenderableManager::getAABB(Instance const instance) const noexcept {

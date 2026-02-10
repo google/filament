@@ -54,6 +54,7 @@ public class Material {
         static final CullingMode[] sCullingModeValues = CullingMode.values();
         static final VertexBuffer.VertexAttribute[] sVertexAttributeValues =
                 VertexBuffer.VertexAttribute.values();
+        static final TransparencyMode[] sTransparencyModeValues = TransparencyMode.values();
     }
 
     private long mNativeObject;
@@ -158,6 +159,31 @@ public class Material {
 
         /** Material brightens what's behind it. */
         SCREEN,
+    }
+
+    /**
+     * How transparent objects are handled
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:transparencymode">
+     * Blending and transparency: transparencyMode</a>
+     */
+    public enum TransparencyMode {
+        /** The transparent object is drawn honoring the raster state. */
+        DEFAULT,
+
+        /**
+         * The transparent object is first drawn in the depth buffer,
+         * then in the color buffer, honoring the culling mode, but ignoring the depth test function.
+         */
+        TWO_PASSES_ONE_SIDE,
+
+        /**
+         * The transparent object is drawn twice in the color buffer,
+         * first with back faces only, then with front faces; the culling
+         * mode is ignored. Can be combined with two-sided lighting.
+         */
+        TWO_PASSES_TWO_SIDES
     }
 
     /**
@@ -585,6 +611,18 @@ public class Material {
      */
     public BlendingMode getBlendingMode() {
         return EnumCache.sBlendingModeValues[nGetBlendingMode(getNativeObject())];
+    }
+
+    /**
+     * Returns the transparency mode of this material.
+     * This value only makes sense when the blending mode is transparent or fade.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:transparencymode">
+     * Blending and transparency: transparencyMode</a>
+     */
+    public TransparencyMode getTransparencyMode() {
+        return EnumCache.sTransparencyModeValues[nGetTransparencyMode(getNativeObject())];
     }
 
     /**
@@ -1130,6 +1168,7 @@ public class Material {
     private static native int nGetShading(long nativeMaterial);
     private static native int nGetInterpolation(long nativeMaterial);
     private static native int nGetBlendingMode(long nativeMaterial);
+    private static native int nGetTransparencyMode(long nativeMaterial);
     private static native int nGetVertexDomain(long nativeMaterial);
     private static native int nGetCullingMode(long nativeMaterial);
     private static native boolean nIsColorWriteEnabled(long nativeMaterial);

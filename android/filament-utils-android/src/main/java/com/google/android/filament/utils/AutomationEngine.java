@@ -271,6 +271,9 @@ public class AutomationEngine {
      */
     public boolean shouldClose() { return nShouldClose(mNativeObject); }
 
+    public int getTestCount() { return nGetTestCount(mNativeObject); }
+    public int getCurrentTest() { return nGetCurrentTest(mNativeObject); }
+
     @Override
     protected void finalize() throws Throwable {
         nDestroy(mNativeObject);
@@ -295,5 +298,7 @@ public class AutomationEngine {
     private static native void nSignalBatchMode(long nativeObject);
     private static native void nStopRunning(long nativeObject);
     private static native boolean nShouldClose(long nativeObject);
+    private static native int nGetTestCount(long nativeObject);
+    private static native int nGetCurrentTest(long nativeObject);
     private static native void nDestroy(long nativeObject);
 }

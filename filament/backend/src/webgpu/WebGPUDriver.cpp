@@ -1460,11 +1460,6 @@ void WebGPUDriver::stopCapture(int /* dummy */) {
     //todo
 }
 
-// Reads a block of pixels from a render target into a buffer.
-// This function is asynchronous. It copies the pixel data to a staging buffer on the GPU,
-// and then maps the buffer for reading on the CPU. The provided callback is invoked when the
-// data is ready. This function also handles the 256-byte row alignment requirement for
-// buffer-to-texture copies in WebGPU.
 void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, const uint32_t x,
         const uint32_t y, const uint32_t width, const uint32_t height,
         PixelBufferDescriptor&& pixelBufferDescriptor) {
@@ -1473,6 +1468,8 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
     assert_invariant(srcTarget);
 
     wgpu::Texture srcTexture{ nullptr };
+    uint32_t level = 0;
+    uint32_t layer = 0;
     if (srcTarget->isDefaultRenderTarget()) {
         assert_invariant(mSwapChain);
         srcTexture = mSwapChain->getCurrentTexture();
@@ -1484,6 +1481,8 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
             auto texture = handleCast<WebGPUTexture>(colorAttachmentInfos[0].handle);
             if (texture) {
                 srcTexture = texture->getTexture();
+                level = colorAttachmentInfos[0].level;
+                layer = colorAttachmentInfos[0].layer;
             }
         }
     }
@@ -1493,43 +1492,70 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
-    const uint32_t srcWidth {srcTexture.GetWidth()};
-    const uint32_t srcHeight{srcTexture.GetHeight()};
 
-    // Clamp read region to texture bounds
-    if (UTILS_UNLIKELY(x >= srcWidth || y >= srcHeight)) {
+    readTextureToBuffer(srcTexture, level, layer, x, y, width, height,
+            std::move(pixelBufferDescriptor));
+}
+
+// Helper function to read texture data into a buffer asynchronously.
+void WebGPUDriver::readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level, uint32_t layer,
+        uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+        PixelBufferDescriptor&& pixelBufferDescriptor) {
+    if (UTILS_UNLIKELY(!srcTexture)) {
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
-    auto actualWidth{ std::min(width, srcWidth - x) };
-    auto actualHeight{ std::min(height, srcHeight - y)};
+
+    const uint32_t levelWidth = std::max(1u, srcTexture.GetWidth() >> level);
+    const uint32_t levelHeight = std::max(1u, srcTexture.GetHeight() >> level);
+
+    // Clamp read region to level bounds
+    if (UTILS_UNLIKELY(x >= levelWidth || y >= levelHeight)) {
+        scheduleDestroy(std::move(pixelBufferDescriptor));
+        return;
+    }
+    auto actualWidth{ std::min(width, levelWidth - x) };
+    auto actualHeight{ std::min(height, levelHeight - y) };
     if (UTILS_UNLIKELY(actualWidth == 0 || actualHeight == 0)) {
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
 
     const wgpu::CommandEncoderDescriptor commandEncoderDescriptor{
-        .label = "read_pixels_command",
+        .label = "read_texture_to_buffer_command",
     };
     auto commandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     FILAMENT_CHECK_POSTCONDITION(commandEncoder)
-            << "Failed to create command encoder for readPixels?";
+            << "Failed to create command encoder for readTextureToBuffer?";
 
     const wgpu::TextureFormat srcFormat{srcTexture.GetFormat()};
     const wgpu::TextureFormat dstFormat{toWebGPUFormat(pixelBufferDescriptor.format,
                                                        pixelBufferDescriptor.type)};
+
+    if (dstFormat == wgpu::TextureFormat::Undefined) {
+        FWGPU_LOGE << "readTextureToBuffer: Undefined destination format for "
+                   << toString(pixelBufferDescriptor.format) << " "
+                   << toString(pixelBufferDescriptor.type);
+        scheduleDestroy(std::move(pixelBufferDescriptor));
+        return;
+    }
+
     wgpu::Texture textureToReadFrom{srcTexture};
     wgpu::Texture stagingTexture{ nullptr };
     uint32_t readX{x};
     uint32_t readY{y};
+    uint32_t readLevel{ level };
+    uint32_t readLayer{ layer };
+
+    bool isReadingFromOriginalTexture = true;
 
     // If the source format is different from the destination (e.g. BGRA vs RGBA),
     // we need to perform a conversion using an intermediate blit.
     if (conversionNecessary(srcFormat, dstFormat, pixelBufferDescriptor.type)) {
         const wgpu::TextureDescriptor stagingDescriptor{
-                .label = "readpixels_staging_texture",
+                .label = "readtexture_staging_texture",
                 .usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::RenderAttachment,
-                .dimension = wgpu::TextureDimension::e2D, // are we sure we can assume this? thus far we have
+                .dimension = wgpu::TextureDimension::e2D,
                 .size = {
                         .width = actualWidth,
                         .height = actualHeight,
@@ -1542,6 +1568,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         stagingTexture = mDevice.CreateTexture(&stagingDescriptor);
         assert_invariant(stagingTexture);
         textureToReadFrom = stagingTexture;
+        isReadingFromOriginalTexture = false;
         const WebGPUBlitter::BlitArgs blitArgs{
                 .source = {
                         .texture = srcTexture,
@@ -1550,6 +1577,8 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
                                 .width = actualWidth,
                                 .height = actualHeight,
                         },
+                        .mipLevel = level,
+                        .layerOrDepth = layer,
                 },
                 .destination = {
                         .texture = stagingTexture,
@@ -1558,14 +1587,18 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
                                 .width = actualWidth,
                                 .height = actualHeight,
                         },
+                        .mipLevel = 0,
+                        .layerOrDepth = 0,
                 },
-                .filter = SamplerMagFilter::NEAREST, // Use NEAREST for a 1:1 copy
+                .filter = SamplerMagFilter::NEAREST,
         };
         mBlitter.blit(mDevice.GetQueue(), commandEncoder, blitArgs);
 
         // The subsequent read will be from the top-left of the new intermediate texture.
         readX = 0;
         readY = 0;
+        readLevel = 0;
+        readLayer = 0;
     }
 
     // Create a staging buffer to copy the texture to. WebGPU requires 256 byte alignment for buffer-to-texture copies.
@@ -1586,13 +1619,18 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
 
     // WebGPU's texture coordinates for copies are top-left, but Filament's y-coordinate is
     // bottom-left. We must flip the y-coordinate relative to the texture we are reading from.
-    const uint32_t textureHeight{ textureToReadFrom.GetHeight() };
-    const uint32_t flippedY{ textureHeight - readY - actualHeight };
+    uint32_t readTextureHeight;
+    if (isReadingFromOriginalTexture) {
+        readTextureHeight = levelHeight;
+    } else {
+        readTextureHeight = textureToReadFrom.GetHeight();
+    }
+    const uint32_t flippedY{ readTextureHeight - readY - actualHeight };
 
     const wgpu::TexelCopyTextureInfo source{
-            .texture = textureToReadFrom, // Read from the original or intermediate texture
-            .mipLevel = 0,
-            .origin = {.x = readX, .y = flippedY, .z = 0,},
+            .texture = textureToReadFrom,
+            .mipLevel = readLevel,
+            .origin = {.x = readX, .y = flippedY, .z = readLayer,},
     };
     const wgpu::TexelCopyBufferInfo destination{
             .layout = {
@@ -1651,7 +1689,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
                     }
                     data->buffer.Unmap();
                 } else {
-                    FWGPU_LOGE << "Failed to map staging buffer for readPixels: " << message;
+                    FWGPU_LOGE << "Failed to map staging buffer: " << message;
                 }
                 data->driver->scheduleDestroy(std::move(data->pixelBufferDescriptor));
                 data->driver->mReadPixelMapsCounter.finishTask();
@@ -1663,6 +1701,13 @@ void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> bufferObjectHandle,
         const uint32_t offset, const uint32_t size, backend::BufferDescriptor&& bufferDescriptor) {
     // todo
     scheduleDestroy(std::move(bufferDescriptor));
+}
+
+void WebGPUDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
+        uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p) {
+    const auto texture = handleCast<WebGPUTexture>(src);
+    assert_invariant(texture);
+    readTextureToBuffer(texture->getTexture(), level, layer, x, y, width, height, std::move(p));
 }
 
 void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
