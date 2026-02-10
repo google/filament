@@ -270,6 +270,9 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         .type = SamplerType::SAMPLER_2D_ARRAY,
                         .format = textureRequirements.format
                 });
+                if (view.hasVSM() && mCookieLayerCount > 0) {
+                    data.shadows = builder.write(data.shadows, FrameGraphTexture::Usage::BLIT_DST);
+                }
 
                 // these loops create a list of the shadow maps that might need to be rendered
                 auto& passList = data.passList;
@@ -343,7 +346,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     passBuilder = passBuilder,
                     &engine = const_cast<FEngine /*const*/ &>(engine), // FIXME: we want this const
                     &view = const_cast<FView const&>(view)]
-                    (FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
+                    (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
                 // that updatePrimitivesLod() updates temporary global state.
@@ -444,6 +447,65 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     mShadowUb.clean();
                     driver.updateBufferObject(mShadowUbh,
                             mShadowUb.toBufferDescriptor(driver), 0);
+                }
+
+                if (view.hasVSM() && mCookieLayerCount > 0) {
+                    constexpr uint16_t kInvalidCookieLayer = std::numeric_limits<uint16_t>::max();
+                    auto const& shadowDesc = resources.getDescriptor(data.shadows);
+                    auto const& shadowTexture = resources.getTexture(data.shadows);
+                    auto const* UTILS_RESTRICT instances =
+                            scene->getLightData().data<FScene::LIGHT_INSTANCE>();
+                    auto const* UTILS_RESTRICT shadowInfo =
+                            scene->getLightData().data<FScene::SHADOW_INFO>();
+                    auto& lcm = engine.getLightManager();
+
+                    for (ShadowMap const& shadowMap : getSpotShadowMaps()) {
+                        size_t const lightIndex = shadowMap.getLightIndex();
+                        uint16_t const baseLayer = shadowInfo[lightIndex].cookieLayer;
+                        if (baseLayer == kInvalidCookieLayer) {
+                            continue;
+                        }
+
+                        auto const li = instances[lightIndex];
+                        FTexture* const cookieTexture = lcm.getCookieTexture(li);
+                        if (!cookieTexture) {
+                            continue;
+                        }
+
+                        bool const isPoint = shadowMap.isPointShadow();
+                        if (isPoint != cookieTexture->isCubemap()) {
+                            continue;
+                        }
+
+                        if (!utils::any(cookieTexture->getUsage() & Texture::Usage::BLIT_SRC)) {
+                            continue;
+                        }
+
+                        if (cookieTexture->getFormat() != shadowDesc.format) {
+                            continue;
+                        }
+
+                        backend::Viewport const viewport = shadowMap.getViewport();
+                        uint32_t const width = viewport.width;
+                        uint32_t const height = viewport.height;
+                        if (cookieTexture->getWidth(0) != width ||
+                                cookieTexture->getHeight(0) != height) {
+                            continue;
+                        }
+
+                        uint8_t const face = shadowMap.getFace();
+                        uint16_t const dstLayer = uint16_t(baseLayer + (isPoint ? face : 0));
+                        if (dstLayer >= shadowDesc.depth) {
+                            continue;
+                        }
+
+                        driver.blit(
+                                shadowTexture, 0, dstLayer,
+                                { uint32_t(viewport.left), uint32_t(viewport.bottom) },
+                                cookieTexture->getHwHandle(), 0, isPoint ? face : 0,
+                                { 0, 0 },
+                                { width, height });
+                    }
                 }
             });
 
@@ -989,7 +1051,7 @@ void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView cons
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine& engine,
-        FScene::LightSoa const& lightData) const noexcept {
+        FScene::LightSoa const& lightData) noexcept {
 
     // The const_cast here is a little ugly, but conceptually lightData should be const,
     // it's just that we're using it to store some temporary data. With SoA we can't have
@@ -1013,9 +1075,33 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
         }
     }
 
-    // screen-space contact shadows for point/spotlights
-    auto& lcm = engine.getLightManager();
+    constexpr uint16_t kInvalidCookieLayer = std::numeric_limits<uint16_t>::max();
+
     auto *pLightInstances = lightData.data<FScene::LIGHT_INSTANCE>();
+    for (size_t i = 0, c = lightData.size(); i < c; i++) {
+        shadowInfo[i].cookieLayer = kInvalidCookieLayer;
+    }
+
+    uint16_t cookieLayer = mCookieLayerOffset;
+    auto& lcm = engine.getLightManager();
+    if (mCookieLayerCount > 0) {
+        for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; i++) {
+            auto const li = pLightInstances[i];
+            FTexture* const cookieTexture = lcm.getCookieTexture(li);
+            if (!cookieTexture) {
+                continue;
+            }
+            if (lcm.isPointLight(li)) {
+                shadowInfo[i].cookieLayer = cookieLayer;
+                cookieLayer += 6;
+            } else if (lcm.isSpotLight(li)) {
+                shadowInfo[i].cookieLayer = cookieLayer++;
+            }
+        }
+        assert_invariant(cookieLayer == uint16_t(mCookieLayerOffset + mCookieLayerCount));
+    }
+
+    // screen-space contact shadows for point/spotlights
     for (size_t i = 0, c = lightData.size(); i < c; i++) {
         // screen-space contact shadows
         LightManager::ShadowOptions const& shadowOptions = lcm.getShadowOptions(pLightInstances[i]);
@@ -1030,7 +1116,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
 }
 
 void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view,
-        FScene::LightSoa const&) noexcept {
+        FScene::LightSoa const& lightData) noexcept {
 
     uint32_t maxDimension = 0;
     bool elvsm = false;
@@ -1079,6 +1165,23 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     }
     for (ShadowMap& shadowMap : getSpotShadowMaps()) {
         allocateShadowmapTexture(&shadowMap);
+    }
+
+    mCookieLayerOffset = layersNeeded;
+    mCookieLayerCount = 0;
+    if (view.hasVSM()) {
+        auto& lcm = engine.getLightManager();
+        auto const* UTILS_RESTRICT instances = lightData.data<FScene::LIGHT_INSTANCE>();
+        for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; i++) {
+            auto const li = instances[i];
+            FTexture const* const cookieTexture = lcm.getCookieTexture(li);
+            if (!cookieTexture) {
+                continue;
+            }
+            mCookieLayerCount += lcm.isPointLight(li) ? 6u : 1u;
+        }
+        layersNeeded = uint8_t(layersNeeded + mCookieLayerCount);
+        assert_invariant(layersNeeded <= CONFIG_MAX_SHADOW_LAYERS);
     }
 
     // Generate mipmaps for VSM when anisotropy is enabled or when requested

@@ -43,6 +43,7 @@
 #include <math/vec4.h>
 
 #include <utils/Allocator.h>
+#include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/EntityManager.h>
@@ -448,7 +449,12 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
         lp[gpuIndex].reserved1            = {};
         lp[gpuIndex].colorIES             = { lcm.getColor(li), 0.0f };
         lp[gpuIndex].spotScaleOffset      = lcm.getSpotParams(li).scaleOffset;
-        lp[gpuIndex].reserved3            = {};
+        const uint16_t cookieLayer = shadowInfo[i].cookieLayer;
+        const uint32_t cookieLayerBits =
+                cookieLayer == std::numeric_limits<uint16_t>::max()
+                        ? 0xFFFFFFFFu
+                        : uint32_t(cookieLayer);
+        lp[gpuIndex].cookieLayer          = utils::bit_cast<float>(cookieLayerBits);
         lp[gpuIndex].intensity            = lcm.getIntensity(li);
         lp[gpuIndex].typeShadow           = LightsUib::packTypeShadow(
                 lcm.isPointLight(li) ? 0u : 1u,
