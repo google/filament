@@ -4,9 +4,10 @@ import sys
 import pprint
 import json
 import fnmatch
+import subprocess
+import tempfile
 
 from utils import execute, ArgParseImpl, important_print, mkdir_p
-from image_diff import same_image, output_image_diff
 from results import RESULT_OK, RESULT_FAILED, RESULT_MISSING, GOLDEN_MISSING
 import test_config
 
@@ -24,65 +25,43 @@ def _get_tolerance_for_test_case(test_case_name, test_config_obj):
 
   return None
 
-def _format_tolerance_summary(stats):
-  """
-  Create human-readable summary of tolerance statistics.
+def _run_diffimg(diffimg_path, ref_path, cand_path, tolerance=None, diff_out_path=None):
+  cmd = [diffimg_path, ref_path, cand_path]
 
-  Args:
-    stats: Statistics dictionary from tolerance evaluation
+  config_file = None
+  if tolerance:
+    fd, config_file = tempfile.mkstemp(suffix='.json', text=True)
+    with os.fdopen(fd, 'w') as f:
+      json.dump(tolerance, f)
+    cmd.extend(['--config', config_file])
 
-  Returns:
-    str: Formatted summary string
-  """
-  if 'error' in stats:
-    return f"Error: {stats['error']}"
+  if diff_out_path:
+    cmd.extend(['--diff', diff_out_path])
 
-  if 'operator' in stats:
-    # Nested criteria with operator
-    operator = stats['operator']
-    criteria_count = len(stats['criteria_results'])
-    passed_count = sum(1 for c in stats['criteria_results'] if c.get('passed', False))
-    summary = f"{operator} of {criteria_count} criteria: {passed_count} passed, {criteria_count - passed_count} failed"
+  try:
+    result_proc = subprocess.run(cmd, capture_output=True, text=True)
+    # diffimg outputs JSON to stdout even on failure (exit code might be non-zero for mismatch)
+    # However, if it crashed or failed to run, stdout might be empty or not JSON.
 
-    # Add details for each criteria
-    details = []
-    for i, criteria_stats in enumerate(stats['criteria_results']):
-      details.append(f"  Criteria {i+1}: {_format_tolerance_summary(criteria_stats)}")
+    output = result_proc.stdout.strip()
+    if not output:
+      return False, {'error': 'No output from diffimg', 'stderr': result_proc.stderr}
 
-    return summary + "\n" + "\n".join(details)
-  else:
-    # Single criteria
-    total_pixels = stats.get('total_pixels', 0)
-    failing_pixels = stats.get('failing_pixels', 0)
-    failing_percentage = stats.get('failing_percentage', 0.0)
-    allowed_percentage = stats.get('allowed_percentage', 0.0)
-    max_abs_diff = stats.get('max_abs_diff', 0)
-    mean_abs_diff = stats.get('mean_abs_diff', 0)
-    max_diff_per_channel = stats.get('max_diff_per_channel', [])
+    try:
+      result_json = json.loads(output)
+      passed = result_json.get('passed', False)
+      return passed, result_json
+    except json.JSONDecodeError:
+      return False, {'error': 'Invalid JSON output from diffimg', 'stdout': output, 'stderr': result_proc.stderr}
 
-    criteria = stats.get('criteria', {})
-    criteria_desc = []
-    if 'max_pixel_diff' in criteria:
-      criteria_desc.append(f"max_pixel_diff: {criteria['max_pixel_diff']}")
-    if 'max_pixel_diff_percent' in criteria:
-      criteria_desc.append(f"max_pixel_diff_percent: {criteria['max_pixel_diff_percent']}%")
-    if 'allowed_diff_pixels' in criteria:
-      criteria_desc.append(f"allowed_diff_pixels: {criteria['allowed_diff_pixels']}%")
+  except Exception as e:
+    return False, {'error': f'Failed to run diffimg: {e}'}
+  finally:
+    if config_file and os.path.exists(config_file):
+      os.remove(config_file)
 
-    summary_lines = [
-      f"Tolerance: {', '.join(criteria_desc)}",
-      f"Pixels: {failing_pixels:,} / {total_pixels:,} ({failing_percentage:.2f}%) exceed tolerance",
-      f"Allowed: {allowed_percentage:.2f}% - {'PASS' if stats.get('passed', False) else 'FAIL'}",
-      f"Max difference: {max_abs_diff} (mean: {mean_abs_diff:.1f})"
-    ]
 
-    if len(max_diff_per_channel) > 1:
-      channel_info = ", ".join(f"Ch{i}: {diff}" for i, diff in enumerate(max_diff_per_channel))
-      summary_lines.append(f"Per-channel max: {channel_info}")
-
-    return "\n".join(summary_lines)
-
-def _compare_goldens(base_dir, comparison_dir, out_dir=None, test_filter=None, test_config_path=None):
+def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_filter=None, test_config_path=None):
   def test_name(p):
     return p.replace('.tif', '')
 
@@ -115,16 +94,19 @@ def _compare_goldens(base_dir, comparison_dir, out_dir=None, test_filter=None, t
       # Get tolerance configuration for this test case
       tolerance = _get_tolerance_for_test_case(test_case.replace('.tif', ''), test_config_obj)
 
-      # Compare images and get detailed statistics
-      comparison_result, stats = same_image(src_fname, dest_fname, tolerance)
+      diff_fname = None
+      if output_test_dir:
+        diff_fname = os.path.join(output_test_dir, f"{test_case.replace('.tif', '_diff.tif')}")
+        # Ensure subdirectories exist for diff output
+        os.makedirs(os.path.dirname(diff_fname), exist_ok=True)
+
+      # Compare images using diffimg
+      comparison_result, stats = _run_diffimg(diffimg_path, src_fname, dest_fname, tolerance, diff_fname)
 
       if not comparison_result:
         result['result'] = RESULT_FAILED
-        if output_test_dir:
-          # just the file name
-          diff_fname = f"{test_case.replace('.tif', '_diff.tif')}"
-          output_image_diff(src_fname, dest_fname, os.path.join(output_test_dir, diff_fname))
-          result['diff'] = diff_fname
+        if diff_fname and os.path.exists(diff_fname):
+          result['diff'] = os.path.basename(diff_fname)
       else:
         result['result'] = RESULT_OK
 
@@ -132,16 +114,11 @@ def _compare_goldens(base_dir, comparison_dir, out_dir=None, test_filter=None, t
       if tolerance:
         result['tolerance_used'] = True
         result['tolerance_config'] = tolerance
-        if stats:
-          result['tolerance_stats'] = stats
-          # Add human-readable summary
-          result['tolerance_summary'] = _format_tolerance_summary(stats)
-      elif stats is None and comparison_result:
-        result['comparison_type'] = 'exact_match'
-      elif stats and 'error' in stats:
-        result['error'] = stats['error']
-        if 'details' in stats:
-          result['error_details'] = stats['details']
+
+      if stats:
+        result['stats'] = stats
+        if 'error' in stats:
+          result['error'] = stats['error']
 
     return result
 
@@ -191,6 +168,7 @@ if __name__ == '__main__':
   parser.add_argument('--src', help='Directory of the base of the diff.', required=True)
   parser.add_argument('--dest', help='Directory of the comparison of the diff.')
   parser.add_argument('--out', help='Directory of output for the result of the diff.')
+  parser.add_argument('--diffimg', help='Path to the diffimg tool.', required=True)
   parser.add_argument('--test_filter', help='Filter for the tests to run')
   parser.add_argument('--test', help='Path to test configuration JSON file for tolerance settings.')
 
@@ -202,37 +180,32 @@ if __name__ == '__main__':
     dest = os.path.join(os.getcwd(), './out/renderdiff')
   assert os.path.exists(dest), f"Destination folder={dest} does not exist."
 
-  results = _compare_goldens(args.src, dest, out_dir=args.out,
+  if not os.path.exists(args.diffimg):
+    print(f"Error: diffimg tool not found at {args.diffimg}")
+    sys.exit(1)
+
+  results = _compare_goldens(args.src, dest, args.diffimg, out_dir=args.out,
                              test_filter=args.test_filter, test_config_path=args.test)
 
   # Categorize results
   failed = [k for k in results if k['result'] != RESULT_OK]
   passed = [k for k in results if k['result'] == RESULT_OK]
-  tolerance_used_count = len([k for k in results if k.get('tolerance_used', False)])
 
   # Create detailed failure report
   failed_details = []
   for k in failed:
     failure_line = f"   {k['name']} ({k['result']})"
-    if 'tolerance_summary' in k:
-      failure_line += f"\n     {k['tolerance_summary'].replace(chr(10), chr(10) + '     ')}"
+    if 'stats' in k:
+      stats = k['stats']
+      if 'maxDiffFound' in stats:
+        failure_line += f"\n     Max Diff: {stats['maxDiffFound']}"
+      if 'failingPixelCount' in stats:
+        failure_line += f"\n     Failing Pixels: {stats['failingPixelCount']}"
     failed_details.append(failure_line)
-
-  # Create success report with tolerance details
-  tolerance_used_details = []
-  for k in passed:
-    if k.get('tolerance_used', False) and 'tolerance_summary' in k:
-      tolerance_used_details.append(f"   {k['name']}: {k['tolerance_summary'].split(chr(10))[0]}")
 
   # Main summary
   success_count = len(passed)
   important_print(f'Successfully compared {success_count} / {len(results)} images')
-
-  if tolerance_used_details:
-    pstr = 'Passed:'
-    for detail in tolerance_used_details:
-      pstr += '\n' + detail
-    important_print(pstr)
 
   if failed_details:
     pstr = 'Failed:'

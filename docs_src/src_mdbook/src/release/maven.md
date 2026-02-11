@@ -64,25 +64,30 @@ staging API compatibility service, which works with Filament's Gradle setup.
 
 -----
 
-### 1\. Upload to the Staging API Compatibility Service
+### 1\. Upload to the Central Publisher Portal
+
+To upload the artifacts, it is important to run both of these Gradle tasks together in a single
+command. This ensures the staging repository is created and closed automatically.
 
 ```bash
 cd android
-./gradlew publishToSonatype
+./gradlew publishToSonatype closeSonatypeStagingRepository
 ```
 
-### 2\. Move the Repository to the Central Publisher Portal
+#### Troubleshooting: Manual Staging
 
-We have a script to automate this. It reads the `sonatypeUsername` and `sonatypePassword` from your
-`~/.gradle/gradle.properties` file.
+If you ran `publishToSonatype` by itself, the repository will remain open and won't appear in the
+portal correctly. You can fix this by running our automation script, which uses the
+`sonatypeUsername` and `sonatypePassword` from your ~/.gradle/gradle.properties file:
 
 ```bash
 python3 build/common/close-sonatype-staging-repository.py
 ```
 
-### 3\. Publish the Release on Sonatype
+### 2\. Publish the Release on Sonatype
 
-Navigate to [Maven Central Repository Deployments](https://central.sonatype.com/publishing/deployments).
+Once the upload is successful, you must manually trigger the final release. Navigate to [Maven
+Central Repository Deployments](https://central.sonatype.com/publishing/deployments).
 
 Here, you should see a new deployment with a **Validated** status and all your artifacts listed. Click
 the **Publish** button to publish the artifacts. It typically takes around 5 minutes after clicking

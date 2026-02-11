@@ -26,6 +26,7 @@ else
 fi
 
 bash `dirname $0`/generate.sh "$@" && \
+    ./build.sh release diffimg && \
     python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py \
             --branch=${GOLDEN_BRANCH} \
             --output=${GOLDEN_OUTPUT_DIR} && \
@@ -33,6 +34,7 @@ bash `dirname $0`/generate.sh "$@" && \
             --src=${GOLDEN_OUTPUT_DIR} \
             --dest=${RENDER_OUTPUT_DIR} \
             --out=${DIFF_OUTPUT_DIR} \
+            --diffimg="$(pwd)/out/cmake-release/tools/diffimg/diffimg" \
             --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" "$@"
 
     # $@ Pass arguments to generate.sh, e.g. --test_filter

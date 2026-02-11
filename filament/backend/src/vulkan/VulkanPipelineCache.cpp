@@ -178,9 +178,14 @@ void VulkanPipelineCache::asyncPrewarmCache(
     CallbackManager::Handle cmh = mCallbackManager.get();
     auto token = std::make_shared<ProgramToken>();
     // Note: we keep a ref to vprogram in this lambda so that the shader modules don't get
-    // destroyed before we call createPipeline(). This is rare enough that we are ok with
-    // occasionally creating pipelines for destroyed materials.
+    // destroyed before we call createPipeline(). We can catch this in some cases, to avoid
+    // compiling too many unnecessary already-destroyed-materials.
     mCompilerThreadPool.queue(priority, token, [this, vprogram, key, dynamicOptions, cmh]() mutable {
+        if (vprogram->isParallelCompilationCanceled()) {
+            FVK_LOGD << "Skipping prewarm for a program that has been destroyed already.";
+            return;
+        }
+
         VkPipeline pipeline = createPipeline(key, dynamicOptions);
         mCallbackManager.put(cmh);
         // We don't actually need this pipeline, we just wanted to force the driver to cache
