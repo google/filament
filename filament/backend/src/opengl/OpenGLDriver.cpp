@@ -3716,7 +3716,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // If we're rendering into the default render target (i.e. into the current SwapChain),
     // get the value of the output colorspace from there, otherwise it's always linear.
     assert_invariant(!rt->gl.isDefault || mCurrentDrawSwapChain);
-    mRec709OutputColorspace = rt->gl.isDefault ? mCurrentDrawSwapChain->rec709 : false;
+    mRec709OutputColorspace = rt->gl.isDefault ? mCurrentDrawSwapChain->rec709 : isWorkaroundNeeded(Workaround::EMULATE_SRGB_SWAPCHAIN);
 
     // for the default renderTarget the attachments come from the current swapChain
     TargetBufferFlags const rtAttachments = rt->gl.isDefault ? mCurrentDrawSwapChain->attachments : rt->targets;
