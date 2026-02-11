@@ -39,6 +39,7 @@ namespace filament {
 class Engine;
 class FEngine;
 class FLightManager;
+class Texture;
 
 /**
  * LightManager allows to create a light source in the scene, such as a sun or street lights.
@@ -454,6 +455,28 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& lightChannel(unsigned int channel, bool enable = true) noexcept;
+
+        /**
+         * Sets a light cookie layer index for this light.
+         *
+         * The cookie is sampled from the shadow map texture array using the layer index provided.
+         * This does not allocate or upload any cookie textures; the application must ensure that
+         * the cookie data is available in the shadow map array.
+         *
+         * Cookies are only sampled when the shadow sampling mode uses a sampler2DArray
+         * (e.g., VSM, DPCF or PCSS). For PCF (sampler2DArrayShadow), cookies are ignored.
+         *
+         * @param layer Index into the shadow map texture array.
+         * @return This Builder, for chaining calls.
+         */
+        Builder& cookieLayer(uint16_t layer) noexcept;
+
+        /**
+         * Clears the light cookie layer index.
+         *
+         * @return This Builder, for chaining calls.
+         */
+        Builder& clearCookie() noexcept;
 
         /**
          * Whether this Light casts shadows (disabled by default)

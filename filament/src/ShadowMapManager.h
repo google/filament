@@ -158,7 +158,7 @@ private:
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
 
     ShadowTechnique updateSpotShadowMaps(FEngine& engine,
-            FScene::LightSoa const& lightData) const noexcept;
+            FScene::LightSoa const& lightData) noexcept;
 
     void calculateTextureRequirements(FEngine&, FView& view,
             FScene::LightSoa const&) noexcept;
@@ -226,6 +226,9 @@ private:
     ShadowMappingUniforms mShadowMappingUniforms = {};
 
     ShadowMap::SceneInfo mSceneInfo;
+
+    uint8_t mCookieLayerOffset = 0;
+    uint8_t mCookieLayerCount = 0;
 
     // Inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
     // Because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.

@@ -138,6 +138,8 @@ Light getLight(const uint lightIndex) {
     highp float intensity = data[3][1];
     highp uint typeShadow = floatBitsToUint(data[3][2]);
     highp uint channels = floatBitsToUint(data[3][3]);
+    highp uint cookieLayerBits = floatBitsToUint(data[3][0]);
+    const highp uint invalidCookieLayer = 0xFFFFFFFFu;
 
     // poition-to-light vector
     highp vec3 worldPosition = getWorldPosition();
@@ -153,6 +155,7 @@ Light getLight(const uint lightIndex) {
     light.NoL = saturate(dot(shading_normal, light.l));
     light.worldPosition = positionFalloff.xyz;
     light.channels = int(channels);
+    light.cookieLayer = (cookieLayerBits == invalidCookieLayer) ? -1 : int(cookieLayerBits);
     light.contactShadows = bool(typeShadow & 0x10u);
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
     light.lightType = (typeShadow & 0x1u);
@@ -207,7 +210,27 @@ void evaluatePunctualLights(const MaterialInputs material,
 #endif
 
         float visibility = 1.0;
+        float cookie = 1.0;
 #if defined(VARIANT_HAS_SHADOWING)
+#if defined(VARIANT_HAS_VSM)
+        if (light.cookieLayer >= 0 && light.castsShadows) {
+            int cookieLayer = light.cookieLayer;
+            int shadowIndex = light.shadowIndex;
+            highp vec3 worldPosition = getWorldPosition();
+            if (light.lightType == LIGHT_TYPE_POINT) {
+                highp vec3 r = worldPosition - light.worldPosition;
+                int face = getPointLightFace(r);
+                shadowIndex += face;
+                cookieLayer += face;
+                light.zLight = dot(shadowUniforms.shadows[shadowIndex].lightFromWorldZ,
+                        vec4(worldPosition, 1.0));
+            }
+            highp vec4 shadowPosition = getShadowPosition(shadowIndex, light.direction, light.zLight);
+            cookie = CookieSample(sampler0_shadowMap,
+                    shadowUniforms.shadows[shadowIndex].scissorNormalized,
+                    cookieLayer, shadowPosition);
+        }
+#endif
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
                 int shadowIndex = light.shadowIndex;
@@ -238,6 +261,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 #endif
         }
 #endif
+        light.attenuation *= cookie;
 
 #if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
         color.rgb += customSurfaceShading(material, pixel, light, visibility);
