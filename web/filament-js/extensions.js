@@ -79,7 +79,7 @@ Filament.loadClassExtensions = function() {
     /// canvas ::argument:: the canvas DOM element
     /// options ::argument:: optional WebGL 2.0 context configuration
     /// ::retval:: an instance of [Engine]
-    Filament.Engine.create = function(canvas, options) {
+    Filament.Engine.create = function (canvas, options, config) {
         const defaults = {
             majorVersion: 2,
             minorVersion: 0,
@@ -103,7 +103,9 @@ Filament.loadClassExtensions = function() {
         window.filament_glContext = ctx;
 
         // Register the GL context with emscripten and create the Engine.
-        const engine = Filament.Engine._create();
+        const defaultConfig = Filament.Engine.createDefaultConfig();
+        const finalConfig = Object.assign(defaultConfig, config);
+        const engine = Filament.Engine._create(finalConfig);
 
         // Annotate the engine with the GL context to support multiple canvases.
         engine.context = window.filament_glContext;
