@@ -39,16 +39,11 @@ Here are all the libraries available in the group `com.google.android.filament`:
 
 | Artifact      | Description   |
 | ------------- | ------------- |
-| [![filament-android](https://img.shields.io/maven-central/v/com.google.android.filament/filament-android?label=filament-android&color=green
-)](https://mvnrepository.com/artifact/com.google.android.filament/filament-android)  | The Filament rendering engine itself. |
-| [![filament-android-debug](https://img.shields.io/maven-central/v/com.google.android.filament/filament-android-debug?label=filament-android-debug&color=green
-)](https://mvnrepository.com/artifact/com.google.android.filament/filament-android-debug)  | Debug version of `filament-android`. |
-| [![gltfio-android](https://img.shields.io/maven-central/v/com.google.android.filament/gltfio-android?label=gltfio-android&color=green
-)](https://mvnrepository.com/artifact/com.google.android.filament/gltfio-android) | A glTF 2.0 loader for Filament, depends on `filament-android`. |
-| [![filament-utils-android](https://img.shields.io/maven-central/v/com.google.android.filament/filament-utils-android?label=filament-utils-android&color=green
-)](https://mvnrepository.com/artifact/com.google.android.filament/filament-utils-android) | KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`. |
-| [![filamat-android](https://img.shields.io/maven-central/v/com.google.android.filament/filamat-android?label=filamat-android&color=green
-)](https://mvnrepository.com/artifact/com.google.android.filament/filamat-android) | A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer and supports both OpenGL and Vulkan. |
+| [![filament-android](https://img.shields.io/maven-central/v/com.google.android.filament/filament-android?label=filament-android&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/filament-android)  | The Filament rendering engine itself. |
+| [![filament-android-debug](https://img.shields.io/maven-central/v/com.google.android.filament/filament-android-debug?label=filament-android-debug&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/filament-android-debug)  | Debug version of `filament-android`. |
+| [![gltfio-android](https://img.shields.io/maven-central/v/com.google.android.filament/gltfio-android?label=gltfio-android&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/gltfio-android) | A glTF 2.0 loader for Filament, depends on `filament-android`. |
+| [![filament-utils-android](https://img.shields.io/maven-central/v/com.google.android.filament/filament-utils-android?label=filament-utils-android&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/filament-utils-android) | KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`. |
+| [![filamat-android](https://img.shields.io/maven-central/v/com.google.android.filament/filamat-android?label=filamat-android&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/filamat-android) | A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer and supports both OpenGL and Vulkan. |
 
 ### iOS
 
