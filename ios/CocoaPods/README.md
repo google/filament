@@ -52,3 +52,32 @@ pod spec lint --no-clean --verbose --subspec=Filament/filament 2>&1 | tee lint_o
 > **Tip:** To view all defined subspecs, grep the podspec file:
 > `grep "spec.subspec" ios/CocoaPods/Filament.podspec`
 
+
+## Testing a Podspec Locally
+
+Before pushing a new version to the CocoaPods trunk, you should verify the podspec in a sample project.
+
+### Using the Sample Project
+
+Filament includes a dedicated sample project located in `ios/samples/HelloCocoaPods`. To test your
+local changes:
+
+1. **Modify the Podfile**: Add a `:podspec` directive pointing to your local `.podspec` file.
+
+```ruby
+platform :ios, '13.0'
+
+target 'HelloCocoaPods' do
+    # Use the local development podspec
+    pod 'Filament', :podspec => '../../CocoaPods/Filament.podspec'
+end
+```
+
+2. **Sync Dependencies**: Run the installation command from the sample directory:
+
+```bash
+pod install
+```
+
+3. **Verify the Build**: Open the generated `HelloCocoaPods.xcworkspace` in Xcode. Build and run the
+   target to ensure the headers are found and the binaries link correctly.

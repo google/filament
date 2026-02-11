@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 project(tsl)
 
 set(TARGET tsl)
-set(OUR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
+set(OUR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 # ==================================================================================================
 # Sources and headers
