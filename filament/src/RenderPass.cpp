@@ -901,6 +901,12 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
     size_t const capacity = engine.getMinCommandBufferSize();
     CircularBuffer const& circularBuffer = driver.getCircularBuffer();
 
+    // b/479079631: Log the number of commands in this render pass.
+    size_t const commandCount = last - first;
+    if (Platform* platform = engine.getPlatform(); platform->hasDebugUpdateStatFunc()) {
+        platform->debugUpdateStat("filament.renderer.render_pass.command_count", commandCount);
+    }
+
     if (first != last) {
         FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "commandCount", last - first);
 
