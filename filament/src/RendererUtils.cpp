@@ -271,7 +271,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 if (platform->hasDebugUpdateStatFunc()) {
                     platform->debugUpdateStat(
                             "filament.renderer.color_pass.command_buffer_used_end",
-                            driver.getCircularBuffer().getUsed());
+                            circularBuffer.getUsed());
                 }
                 driver.endRenderPass();
 
