@@ -6,6 +6,8 @@ on:
       - main
 
 jobs:
+  # Update the renderdiff goldens in filament-assets. This will add or merge the new goldens from
+  # a branch on filament-assets.
   update-renderdiff-goldens:
     name: update-renderdiff-goldens
     runs-on: 'ubuntu-24.04-4core'
@@ -35,6 +37,7 @@ jobs:
                   --merge-to-main --filament-tag=${COMMIT_HASH} --golden-repo-token=${GH_TOKEN}
           fi
 
+  # Update the /docs (offiicla github-hosted Filament site) if necessary
   update-docs:
     name: update-docs
     runs-on: 'ubuntu-24.04-4core'
@@ -57,3 +60,40 @@ jobs:
           git config --global user.name "Filament Bot"
           git config --global credential.helper cache
           bash docs_src/build/postsubmit.sh ${COMMIT_HASH} ${GH_TOKEN}
+
+  # Produce a json that describes the android artifact sizes, and will push that json to a folder in
+  # filament-assets
+  update-sizeguard:
+    name: update-sizeguard
+    runs-on: 'ubuntu-24.04-16core'
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/linux-prereq
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
+      - name: Build and generate size report
+        run: |
+          cd build/android && printf "y" | ./build.sh release all
+          cd ../..
+          COMMIT_HASH="${{ steps.get_commit_msg.outputs.hash }}"
+          python3 test/sizeguard/dump_artifact_size.py out/*.tgz out/*.aar > "${COMMIT_HASH}.json"
+      - name: Push to filament-assets
+        env:
+          GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+        run: |
+          COMMIT_HASH="${{ steps.get_commit_msg.outputs.hash }}"
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git clone https://x-access-token:${GH_TOKEN}@github.com/google/filament-assets.git filament-assets
+          mkdir -p filament-assets/sizeguard
+          mv "${COMMIT_HASH}.json" filament-assets/sizeguard/
+          cd filament-assets
+          git add sizeguard/"${COMMIT_HASH}.json"
+          git commit -m "Update sizeguard for filament@${COMMIT_HASH}" || echo "No changes to commit"
+          git push https://x-access-token:${GH_TOKEN}@github.com/google/filament-assets.git main
