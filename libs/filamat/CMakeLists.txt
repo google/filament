@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
+
+include(${EXTERNAL}/clang/usage_ios_13.cmake)
+
 project(filamat)
 
 set(TARGET         filamat)
@@ -9,13 +12,14 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(HDRS
         include/filamat/Enums.h
-        include/filamat/IncludeCallback.h
         include/filamat/MaterialBuilder.h
-        include/filamat/Package.h)
+        include/filamat/Package.h
+)
 
 set(COMMON_PRIVATE_HDRS
         src/eiff/Chunk.h
         src/eiff/ChunkContainer.h
+        src/eiff/CompressedStringChunk.h
         src/eiff/DictionaryTextChunk.h
         src/eiff/Flattener.h
         src/eiff/LineDictionary.h
@@ -23,12 +27,12 @@ set(COMMON_PRIVATE_HDRS
         src/eiff/MaterialInterfaceBlockChunk.h
         src/eiff/ShaderEntry.h
         src/eiff/SimpleFieldChunk.h
-        src/Includes.h
         src/PushConstantDefinitions.h)
 
 set(COMMON_SRCS
         src/eiff/Chunk.cpp
         src/eiff/ChunkContainer.cpp
+        src/eiff/CompressedStringChunk.cpp
         src/eiff/DictionaryTextChunk.cpp
         src/eiff/LineDictionary.cpp
         src/eiff/MaterialTextChunk.cpp
@@ -39,7 +43,6 @@ set(COMMON_SRCS
         src/shaders/SibGenerator.cpp
         src/shaders/UibGenerator.cpp
         src/Enums.cpp
-        src/Includes.cpp
         src/MaterialBuilder.cpp
         src/MaterialVariants.cpp
 )
@@ -56,7 +59,6 @@ set(PRIVATE_HDRS
         src/MetalArgumentBuffer.h
         src/ShaderMinifier.h
         src/SpirvFixup.h
-        src/SpirvRemapWrapper.h
         src/sca/ASTHelpers.h
         src/sca/GLSLTools.h
         src/sca/builtinResource.h)
@@ -72,8 +74,7 @@ set(SRCS
         src/sca/GLSLTools.cpp
         src/GLSLPostProcessor.cpp
         src/ShaderMinifier.cpp
-        src/SpirvFixup.cpp
-        src/SpirvRemapWrapper.cpp)
+        src/SpirvFixup.cpp)
 
 # ==================================================================================================
 # Include and target definitions
@@ -85,7 +86,7 @@ include_directories(${CMAKE_BINARY_DIR})
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
-target_link_libraries(${TARGET} backend_headers shaders filabridge utils smol-v)
+target_link_libraries(${TARGET} backend_headers shaders filabridge utils smol-v zstd)
 
 if (FILAMENT_SUPPORTS_WEBGPU)
     target_link_libraries(${TARGET} libtint)
@@ -137,6 +138,7 @@ set(FILAMAT_DEPS
         spirv-cross-core
         spirv-cross-glsl
         spirv-cross-msl
+        zstd
         )
 
 set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")
@@ -148,21 +150,21 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 
 # Need to install libtint for filamat on Android.
 # See libs/filamat/CMakeLists.txt and android/filamat-android/CMakeLists.txt.
-if (ANDROID)
+if (ANDROID AND FILAMENT_SUPPORTS_WEBGPU)
    target_link_libraries(${TARGET} libtint_combined)
 endif()
 
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (IS_HOST_PLATFORM)
+if (FILAMENT_BUILD_TESTING AND IS_HOST_PLATFORM)
     project(test_filamat)
     set(TARGET test_filamat)
     set(SRCS
             tests/test_filamat.cpp
             tests/test_argBufferFixup.cpp
             tests/test_clipDistanceFixup.cpp
-            tests/test_includes.cpp)
+            tests/test_line_dictionary.cpp)
 
     add_executable(${TARGET} ${SRCS})
     target_include_directories(${TARGET} PRIVATE src)

@@ -38,7 +38,7 @@ public:
 
     // Allocates or reuse a new VkBuffer that is device local.
     // In the case of Unified memory architecture, uniform buffers are also host visible.
-    fvkmemory::resource_ptr<VulkanBuffer> acquire(VulkanBufferUsage usage,
+    fvkmemory::resource_ptr<VulkanBuffer> acquire(VulkanBufferBinding binding,
             uint32_t numBytes) noexcept;
 
     // Evicts old unused `VulkanGpuBuffer` and bumps the current frame number
@@ -60,12 +60,12 @@ private:
     void release(VulkanGpuBuffer const* gpuBuffer) noexcept;
 
     // Allocate a new VkBuffer from the VMA pool of the corresponding `numBytes` and `usage`.
-    VulkanGpuBuffer const* allocate(VulkanBufferUsage usage, uint32_t numBytes) noexcept;
+    VulkanGpuBuffer const* allocate(VulkanBufferBinding binding, uint32_t numBytes) noexcept;
 
     // Destroy the corresponding VkBuffer and return the VkDeviceMemory to the VMA pool.
     void destroy(VulkanGpuBuffer const* gpuBuffer) noexcept;
 
-    BufferPool& getPool(VulkanBufferUsage usage) noexcept;
+    BufferPool& getPool(VulkanBufferBinding binding) noexcept;
 
     VulkanContext const& mContext;
     fvkmemory::ResourceManager& mResourceManager;

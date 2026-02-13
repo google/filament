@@ -8,6 +8,12 @@ struct SSBO
     float4 in_data[1];
 };
 
+struct ResType
+{
+    float4 _m0;
+    float4 _m1;
+};
+
 struct SSBO2
 {
     float4 out_data[1];
@@ -15,10 +21,10 @@ struct SSBO2
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
-kernel void main0(const device SSBO& _23 [[buffer(0)]], device SSBO2& _35 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+kernel void main0(const device SSBO& _23 [[buffer(0)]], device SSBO2& _38 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
 {
-    float4 i;
-    float4 _31 = modf(_23.in_data[gl_GlobalInvocationID.x], i);
-    _35.out_data[gl_GlobalInvocationID.x] = _31;
+    ResType _32;
+    _32._m0 = modf(_23.in_data[gl_GlobalInvocationID.x], _32._m1);
+    _38.out_data[gl_GlobalInvocationID.x] = _32._m0;
 }
 

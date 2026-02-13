@@ -617,16 +617,26 @@ TEST_F(ExternalTextureTest, BindGroupDoesNotMatchLayout) {
             device, {{0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Uniform}});
         ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, externalTexture}}));
     }
+
+    // Bind group creation should fail when a sampler is present in the
+    // corresponding slot of the bind group layout.
+    {
+        wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+            device, {{0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Uniform}});
+        ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, device.CreateSampler()}}));
+    }
 }
 
-class ExternalTextureTestSafe : public ExternalTextureTest {
+class ExternalTextureTestEnabledToggle : public ExternalTextureTest {
   protected:
-    bool AllowUnsafeAPIs() override { return false; }
+    std::vector<const char*> GetEnabledToggles() override {
+        return {"disable_texture_view_binding_used_as_external_texture"};
+    }
 };
 
 // Regression test for crbug.com/1343099 where BindGroup validation let other binding types be used
 // for external texture bindings.
-TEST_F(ExternalTextureTestSafe, TextureViewBindingDoesntMatch) {
+TEST_F(ExternalTextureTestEnabledToggle, TextureViewBindingDoesntMatch) {
     wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
         device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
 

@@ -1,0 +1,59 @@
+material {
+    name : fog,
+    vertexDomain : device,
+    shadingModel : unlit,
+    variantFilter : [ skinning, shadowReceiver, vsm, fog ],
+    culling: none,
+    blending : transparent,
+    depthWrite : false,
+    depthCulling : false,
+    parameters : [
+        {
+            type : samplerCubemap,
+            name : fogColorTexture,
+        }
+    ],
+    variables : [
+        vertex
+    ]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.vertex.xy = mesh_position.xy * 0.5 + 0.5;
+    }
+}
+
+fragment {
+
+#include "../../../../shaders/src/surface_fog.fs"
+#include "../utils/geometry.fs"
+
+void dummy(){}
+
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
+
+        highp mat4 m = getViewFromClipMatrix();
+        highp vec2 p = vec2(m[0][0], m[1][1]);
+
+        highp float depth = sampleDepth(sampler0_structure, uv, 0.0);
+        highp float z = linearizeDepth(depth);
+        highp vec3 v = computeViewSpacePositionFromDepth(uv, z, p);
+
+        highp vec3 view = mulMat3x3Float3(getWorldFromViewMatrix(), v) - getWorldCameraPosition();
+
+        view = frameUniforms.fogFromWorldMatrix * view;
+
+        material.baseColor = fog(view
+#if MATERIAL_FEATURE_LEVEL > 0
+            , materialParams_fogColorTexture
+#endif
+            );
+
+        // TODO: fog linear mode
+        // TODO: actually set the fogColorTexture
+    }
+}

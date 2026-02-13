@@ -123,10 +123,10 @@ public:
 
     // Updates all the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
-    ShadowTechnique update(Builder const& builder,
-            FEngine& engine, FView& view,
-            CameraInfo const& cameraInfo,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
+    ShadowTechnique update(backend::DriverApi& driver,
+            Builder const& builder, FEngine& engine,
+            FView& view,
+            CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
 
     // Renders all the shadow maps.
     FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg,
@@ -238,6 +238,7 @@ private:
     bool const mIsDepthClampSupported;
     bool mInitialized = false;
     bool mFeatureShadowAllocator = false;
+    bool mDisableBlitIntoTextureArray = false;
 
     ShadowMap& getShadowMap(size_t const index) noexcept {
         assert_invariant(index < mShadowMapCache.size());
@@ -245,19 +246,26 @@ private:
     }
 
     ShadowMap const& getShadowMap(size_t const index) const noexcept {
-        return const_cast<ShadowMapManager*>(this)->getShadowMap(index);
+        assert_invariant(index < mShadowMapCache.size());
+        return *std::launder(reinterpret_cast<ShadowMap const*>(&mShadowMapCache[index]));
     }
 
     utils::Slice<ShadowMap> getCascadedShadowMap() noexcept {
+        ShadowMap* const p = &getShadowMap(0);
+        return { p, mDirectionalShadowMapCount };
+    }
+
+    utils::Slice<const ShadowMap> getCascadedShadowMap() const noexcept {
         ShadowMap const* const p = &getShadowMap(0);
         return { p, mDirectionalShadowMapCount };
     }
 
-    utils::Slice<ShadowMap> getCascadedShadowMap() const noexcept {
-        return const_cast<ShadowMapManager*>(this)->getCascadedShadowMap();
+    utils::Slice<ShadowMap> getSpotShadowMaps() noexcept {
+        ShadowMap* const p = &getShadowMap(CONFIG_MAX_SHADOW_CASCADES);
+        return { p, mSpotShadowMapCount };
     }
 
-    utils::Slice<ShadowMap> getSpotShadowMaps() const noexcept {
+    utils::Slice<const ShadowMap> getSpotShadowMaps() const noexcept {
         ShadowMap const* const p = &getShadowMap(CONFIG_MAX_SHADOW_CASCADES);
         return { p, mSpotShadowMapCount };
     }

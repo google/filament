@@ -63,14 +63,14 @@ void StructureDescriptorSet::terminate(DriverApi& driver) {
     mUniforms.terminate(driver);
 }
 
-void StructureDescriptorSet::commit(DriverApi& driver) noexcept {
-    assert_invariant(mDescriptorSetLayout);
-    driver.updateBufferObject(mUniforms.getUboHandle(),
-            mUniforms.toBufferDescriptor(driver), 0);
-    mDescriptorSet.commit(*mDescriptorSetLayout, driver);
-}
-
 void StructureDescriptorSet::bind(DriverApi& driver) const noexcept {
+    assert_invariant(mDescriptorSetLayout);
+    if (mUniforms.isDirty()) {
+        mUniforms.clean();
+        driver.updateBufferObject(mUniforms.getUboHandle(),
+                mUniforms.toBufferDescriptor(driver), 0);
+        mDescriptorSet.commit(*mDescriptorSetLayout, driver);
+    }
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
 }
 

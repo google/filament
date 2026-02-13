@@ -14,10 +14,12 @@ runs:
       id: brew-cache
       uses: actions/cache@v4 # Use a specific version
       with:
-        path: $HOME/Library/Caches/Homebrew
-        key: ${{ runner.os }}-brew-20250424
+        path: ~/Library/Caches/Homebrew
+        key: ${{ runner.os }}-brew-20251211
     - name: Install Mac Prerequisites
       shell: bash
       run: |
+        # Install brew prereqs
+        brew install coreutils
         # Install ninja
         source ./build/common/get-ninja.sh

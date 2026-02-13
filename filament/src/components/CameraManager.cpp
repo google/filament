@@ -37,7 +37,7 @@ void FCameraManager::terminate(FEngine& engine) noexcept {
     auto& manager = mManager;
     if (!manager.empty()) {
         DLOG(INFO) << "cleaning up " << manager.getComponentCount() << " leaked Camera components";
-        Slice<Entity> const entities{ manager.getEntities(), manager.getComponentCount() };
+        Slice<const Entity> entities{ manager.getEntities(), manager.getComponentCount() };
         for (Entity const e : entities) {
             destroy(engine, e);
         }

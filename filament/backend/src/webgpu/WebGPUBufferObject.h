@@ -31,6 +31,12 @@ namespace filament::backend {
 
 enum class BufferObjectBinding : uint8_t;
 
+/**
+  * A WebGPU-specific implementation of BufferObject.
+  * A BufferObject is a GPU buffer that can be used for a variety of purposes, such as storing
+  * uniform data, vertex attributes, or pixel data. The specific usage is determined by the
+  * BufferObjectBinding.
+  */
 class WebGPUBufferObject final : public HwBufferObject, public WebGPUBufferBase {
 public:
     WebGPUBufferObject(wgpu::Device const&, BufferObjectBinding, uint32_t byteCount);

@@ -28,6 +28,7 @@
 #include "VulkanTexture.h"
 #include "vulkan/VulkanCommands.h"
 #include "vulkan/memory/Resource.h"
+#include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"
 #include "vulkan/utils/StaticVector.h"
 
@@ -56,6 +57,8 @@ inline uint8_t collapsedCount(Bitmask const& mask) {
 }
 
 } // anonymous namespace
+
+class VulkanDescriptorSetCache;
 
 struct VulkanBufferObject;
 
@@ -159,38 +162,14 @@ public:
     using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
 
     VulkanDescriptorSet(
-            fvkutils::UniformBufferBitmask const& dynamicUboMask,
-            uint8_t uniqueDynamicUboCount,
-            OnRecycle&& onRecycleFn, VkDescriptorSet vkSet)
-        : dynamicUboMask(dynamicUboMask),
-          uniqueDynamicUboCount(uniqueDynamicUboCount),
-          mVkSet(vkSet),
-          mOnRecycleFn(std::move(onRecycleFn)) {}
+            fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
+            OnRecycle&& onRecycleFn, VkDescriptorSet vkSet);
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
-    ~VulkanDescriptorSet() {
-        if (mOnRecycleFn) {
-            mOnRecycleFn(this);
-        }
-        if (mOnRecycleExternalSamplerFn) {
-            mOnRecycleExternalSamplerFn(this);
-        }
-    }
+    ~VulkanDescriptorSet();
 
     VkDescriptorSet getVkSet() const noexcept {
-        return mVkSet;
-    }
-
-    VkDescriptorSet getExternalSamplerVkSet() const noexcept {
-        return mExternalSamplerVkSet;
-    }
-
-    void setExternalSamplerVkSet(VkDescriptorSet vkset, OnRecycle onRecycle) {
-        mExternalSamplerVkSet = vkset;
-        if (mOnRecycleExternalSamplerFn) {
-            mOnRecycleExternalSamplerFn(this);
-        }
-        mOnRecycleExternalSamplerFn = onRecycle;
+        return mSets[mCurrentSetIndex].vkSet;
     }
 
     void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
@@ -211,18 +190,55 @@ public:
 
     void referencedBy(VulkanCommandBuffer& commands);
 
-    fvkutils::UniformBufferBitmask const dynamicUboMask;
+    bool isBound() const {
+        return bool(mSets[mCurrentSetIndex].fenceStatus);
+    }
+
+    // The current layout used by the descriptor set. This one will match the bindings, including
+    // external samplers data. 
+    // This will not necessarilly be the same as `mLayout`.
+    VkDescriptorSetLayout boundLayout = VK_NULL_HANDLE;
+
+    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> getLayout() const { return mLayout; }
+
+    fvkutils::UniformBufferBitmask const& dynamicUboMask;
     uint8_t const uniqueDynamicUboCount;
+    
+    // Flag to indicate if the current layout needs to be recreated or not.
+    // This should only set to `true` when a external sampler image is bound to the descriptor set.
+    bool isLayoutDirty = false;
+    bool isAnExternalSamplerBound = false;
 
 private:
-    VkDescriptorSet const mVkSet;
-    VkDescriptorSet mExternalSamplerVkSet = VK_NULL_HANDLE;
+    friend class VulkanDescriptorSetCache;
 
+    void addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn);
+
+    void gc();
+
+    struct InternalVkSet {
+        VkDescriptorSet vkSet = {};
+        OnRecycle onRecycleFn;
+        std::shared_ptr<VulkanCmdFence> fenceStatus;
+    };
+
+    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> mLayout;
     backend::DescriptorSetOffsetArray mOffsets;
     std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;
-    OnRecycle mOnRecycleFn;
-    OnRecycle mOnRecycleExternalSamplerFn;
+    uint8_t mCurrentSetIndex;
+    std::vector<InternalVkSet> mSets;
     fvkutils::UniformBufferBitmask mUboMask;
+};
+
+struct VulkanMemoryMappedBuffer : public HwMemoryMappedBuffer, Resource {
+    VulkanMemoryMappedBuffer(BufferObjectHandle boh, size_t const offset,
+            size_t const size, MapBufferAccessFlags const access)
+        : boh(boh), access(access), size(size), offset(offset) {
+    }
+    BufferObjectHandle boh{};
+    MapBufferAccessFlags access{};
+    uint32_t size = 0;
+    uint32_t offset = 0;
 };
 
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
@@ -239,7 +255,13 @@ struct PushConstantDescription {
 private:
     static constexpr uint32_t ENTRY_SIZE = sizeof(uint32_t);
 
-    utils::FixedCapacityVector<backend::ConstantType> mTypes[Program::SHADER_TYPE_COUNT];
+    struct ConstantDescription {
+        utils::FixedCapacityVector<backend::ConstantType> types;
+        uint32_t offset = 0;
+    };
+
+    // Describes the constants in each shader stage.
+    ConstantDescription mDescriptions[Program::SHADER_TYPE_COUNT];
     VkPushConstantRange mRanges[Program::SHADER_TYPE_COUNT];
     uint32_t mRangeCount;
 };
@@ -249,6 +271,22 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
 
     VulkanProgram(VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();
+
+    /**
+     * Cancels any parallel compilation jobs that have not yet run for this
+     * program.
+     */
+    inline void cancelParallelCompilation() {
+        mParallelCompilationCanceled.store(true, std::memory_order_release);
+    }
+
+    /**
+     * Writes out any queued push constants using the provided VkPipelineLayout.
+     *
+     * @param layout The layout that is to be used along with these push constants,
+     *               in the next draw call.
+     */
+    void flushPushConstants(VkPipelineLayout layout);
 
     inline VkShaderModule getVertexShader() const {
         return mInfo->shaders[0];
@@ -264,9 +302,28 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
         return mInfo->pushConstantDescription.getVkRanges();
     }
 
+    /**
+     * Returns true if parallel compilation is canceled, false if not. Parallel
+     * compilation will be canceled if this program is destroyed before relevant
+     * pipelines are created.
+     *
+     * @return true if parallel compilation should run for this program, false if not
+     */
+    inline bool isParallelCompilationCanceled() const {
+        return mParallelCompilationCanceled.load(std::memory_order_acquire);
+    }
+
     inline void writePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
             backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-        mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
+        // It's possible that we don't have the layout yet. When external samplers are used, bindPipeline()
+        // in VulkanDriver returns early, without binding a layout. If that happens, the layout is not
+        // set until draw time. Any push constants that are written during that time should be saved for
+        // later, and flushed when the layout is set.
+        if (layout != VK_NULL_HANDLE) {
+            mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
+        } else {
+            mQueuedPushConstants.push_back({cmdbuf, stage, index, value});
+        }
     }
 
     // TODO: handle compute shaders.
@@ -283,8 +340,17 @@ private:
         PushConstantDescription pushConstantDescription;
     };
 
+    struct PushConstantInfo {
+        VkCommandBuffer cmdbuf;
+        backend::ShaderStage stage;
+        uint8_t index;
+        backend::PushConstantVariant value;
+    };
+
     PipelineInfo* mInfo;
     VkDevice mDevice = VK_NULL_HANDLE;
+    std::atomic<bool> mParallelCompilationCanceled { false };
+    std::vector<PushConstantInfo> mQueuedPushConstants;
 };
 
 // The render target bundles together a set of attachments, each of which can have one of the
@@ -307,6 +373,18 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget();
+
+    VulkanRenderTarget(VulkanRenderTarget&& target)
+        : HwRenderTarget(0, 0),
+          mOffscreen(false),
+          mProtected(false) {
+        swap(std::move(target));
+    }
+
+    VulkanRenderTarget& operator=(VulkanRenderTarget&& target) {
+        swap(std::move(target));
+        return *this;
+    }
 
     void transformClientRectToPlatform(VkRect2D* bounds) const;
 
@@ -348,13 +426,27 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
     inline bool isSwapChain() const { return !mOffscreen; }
     inline bool isProtected() const { return mProtected; }
 
-    void bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain);
+    void bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain);
+
+    void releaseSwapchain();
+
+    bool isSwapchainBound() const {
+        return isSwapChain() && mInfo->colors[0];
+    }
 
     void emitBarriersBeginRenderPass(VulkanCommandBuffer& commands);
 
     void emitBarriersEndRenderPass(VulkanCommandBuffer& commands);
 
 private:
+    void swap(VulkanRenderTarget&& target) {
+        std::swap(width, target.width);
+        std::swap(height, target.height);
+        std::swap(mOffscreen, target.mOffscreen);
+        std::swap(mProtected, target.mProtected);
+        std::swap(mInfo, target.mInfo);
+    }
+
     struct Auxiliary {
         static constexpr int8_t UNDEFINED_INDEX = -1;
 
@@ -368,7 +460,7 @@ private:
         int8_t msaaDepthIndex = UNDEFINED_INDEX;
         int8_t msaaIndex = UNDEFINED_INDEX;
     };
-    bool const mOffscreen;
+    bool mOffscreen;
     bool mProtected;
 
     std::unique_ptr<Auxiliary> mInfo;
@@ -444,10 +536,10 @@ struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
     VulkanIndexBuffer(VulkanContext const& context, VmaAllocator allocator,
             VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint8_t elementSize,
             uint32_t indexCount)
-        : HwIndexBuffer(elementSize, indexCount),
+        : HwIndexBuffer(elementSize, indexCount, false),
           indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
-          mBuffer(context, allocator, stagePool, bufferCache, VulkanBufferUsage::INDEX,
-                  elementSize * indexCount) {}
+          mBuffer(context, allocator, stagePool, bufferCache, VulkanBufferBinding::INDEX,
+                  BufferUsage::STATIC, elementSize * indexCount) {}
 
     inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
             uint32_t numBytes) {
@@ -465,7 +557,7 @@ private:
 struct VulkanBufferObject : public HwBufferObject, fvkmemory::Resource {
     VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
             VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
-            BufferObjectBinding bindingType);
+            BufferObjectBinding bindingType, BufferUsage usage);
 
     inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
             uint32_t numBytes) {

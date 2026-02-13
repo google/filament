@@ -46,9 +46,26 @@ highp mat4 getViewFromClipMatrix() {
     return frameUniforms.viewFromClipMatrix;
 }
 
+#if FILAMENT_EFFECTIVE_VERSION > 100
+/** @public-api */
+highp mat4 getEyeFromViewMatrix() {
+    return frameUniforms.eyeFromViewMatrix[getEyeIndex()];
+}
+
+/** @public-api */
+highp mat4 getEyeFromViewMatrix(int eyeIndex) {
+    return frameUniforms.eyeFromViewMatrix[eyeIndex];
+}
+#endif // MATERIAL_FEATURE_LEVEL > 0
+
 /** @public-api */
 highp mat4 getClipFromWorldMatrix() {
     return frameUniforms.clipFromWorldMatrix[getEyeIndex()];
+}
+
+/** @public-api */
+highp mat4 getClipFromWorldMatrix(int eyeIndex) {
+    return frameUniforms.clipFromWorldMatrix[eyeIndex];
 }
 
 /** @public-api */

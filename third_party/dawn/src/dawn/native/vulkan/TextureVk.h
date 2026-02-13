@@ -308,10 +308,11 @@ class SharedTexture final : public ImportedTextureBase {
     SharedTextureMemoryObjects mSharedTextureMemoryObjects;
 };
 
-class TextureView final : public TextureViewBase {
+class TextureView final : public TextureViewBase, public WeakRefSupport<TextureView> {
   public:
     static ResultOrError<Ref<TextureView>> Create(
         TextureBase* texture,
+        uint64_t textureViewId,
         const UnpackedPtr<TextureViewDescriptor>& descriptor);
     VkImageView GetHandle() const;
     VkImageView GetHandleForBGRA8UnormStorage() const;
@@ -321,7 +322,13 @@ class TextureView final : public TextureViewBase {
     bool IsYCbCr() const override;
     YCbCrVkDescriptor GetYCbCrVkDescriptor() const override;
 
+    // Unique per-device.
+    uint64_t GetTextureViewId() const { return mTextureViewId; }
+
   private:
+    TextureView(TextureBase* texture,
+                uint64_t textureViewId,
+                const UnpackedPtr<TextureViewDescriptor>& descriptor);
     ~TextureView() override;
     void DestroyImpl() override;
     using TextureViewBase::TextureViewBase;
@@ -340,6 +347,8 @@ class TextureView final : public TextureViewBase {
     bool mIsYCbCr = false;
     YCbCrVkDescriptor mYCbCrVkDescriptor;
     std::vector<VkImageView> mHandlesFor2DViewOn3D;
+
+    const uint64_t mTextureViewId;
 };
 
 }  // namespace dawn::native::vulkan

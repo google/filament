@@ -40,14 +40,28 @@ fun loadTexture(engine: Engine, resources: Resources, resourceId: Int, type: Tex
     options.inPremultiplied = type == TextureType.COLOR
 
     val bitmap = BitmapFactory.decodeResource(resources, resourceId, options)
+    return buildTexture(engine, bitmap, type)
+}
 
+fun loadTexture(engine: Engine, bytes: ByteArray, type: TextureType, offset: Int = 0, length: Int = bytes.size): Texture {
+    val options = BitmapFactory.Options()
+    // Color is the only type of texture we want to pre-multiply with the alpha channel
+    // Pre-multiplication is the default behavior, so we need to turn it off here
+    options.inPremultiplied = type == TextureType.COLOR
+
+    val bitmap = BitmapFactory.decodeByteArray(bytes, offset, length, options)
+    return buildTexture(engine, bitmap, type)
+}
+
+
+private fun buildTexture(engine: Engine, bitmap: Bitmap, type: TextureType): Texture {
     val texture = Texture.Builder()
             .width(bitmap.width)
             .height(bitmap.height)
             .sampler(Texture.Sampler.SAMPLER_2D)
             .format(internalFormat(type))
-            // This tells Filament to figure out the number of mip levels
-            .levels(0xff)
+            .levels(0xff)  // This tells Filament to figure out the number of mip levels
+            .usage(Texture.Usage.DEFAULT or Texture.Usage.GEN_MIPMAPPABLE)
             .build(engine)
 
     // TextureHelper offers a method that skips the copy of the bitmap into a ByteBuffer

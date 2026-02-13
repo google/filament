@@ -62,6 +62,9 @@ public:
     void bind(backend::DriverApi& driver, DescriptorSetBindingPoints set,
             backend::DescriptorSetOffsetArray dynamicOffsets) const noexcept;
 
+    // unbind the descriptor set
+    static void unbind(backend::DriverApi& driver, DescriptorSetBindingPoints set) noexcept;
+
     // sets a ubo/ssbo descriptor
     void setBuffer(DescriptorSetLayout const& layout,
             backend::descriptor_binding_t binding,

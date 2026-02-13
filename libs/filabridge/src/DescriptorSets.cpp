@@ -40,13 +40,8 @@ namespace filament::descriptor_sets {
 
 using namespace backend;
 
-// used for post-processing passes
-static constexpr std::initializer_list<DescriptorSetLayoutBinding> postProcessDescriptorSetLayoutList = {
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
-};
-
-// used to generate shadow-maps
-static constexpr std::initializer_list<DescriptorSetLayoutBinding> depthVariantDescriptorSetLayoutList = {
+// used to generate shadow-maps, structure and postfx passes
+static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> depthVariantDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 };
 
@@ -55,7 +50,7 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> depthVariantD
 // dedicated SSR vertex shader), which uses perViewDescriptorSetLayout.
 // This means that PerViewBindingPoints::SHADOWS must be in the layout even though it's not used
 // by the SSR variant.
-static constexpr std::initializer_list<DescriptorSetLayoutBinding> ssrVariantDescriptorSetLayoutList = {
+static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> ssrVariantDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
     { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE, DescriptorFlags::UNFILTERABLE },
@@ -77,7 +72,7 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> ssrVariantDes
 //
 // The SamplerType to use depends on the Variant. Variant::VSM is set for all cases except PCM.
 //
-static constexpr std::initializer_list<DescriptorSetLayoutBinding> perViewDescriptorSetLayoutList = {
+static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perViewDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::LIGHTS         },
@@ -92,13 +87,13 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> perViewDescri
     { DescriptorType::SAMPLER_CUBE_FLOAT,                        ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
 };
 
-static constexpr std::initializer_list<DescriptorSetLayoutBinding> perRenderableDescriptorSetLayoutList = {
+static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perRenderableDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS, DescriptorFlags::DYNAMIC_OFFSET },
     { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,  DescriptorFlags::DYNAMIC_OFFSET },
     { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS         },
     { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,   ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS, DescriptorFlags::UNFILTERABLE },
     { DescriptorType::SAMPLER_2D_ARRAY_INT,     ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
-    { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,   ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS },
+    { DescriptorType::SAMPLER_2D_FLOAT,   ShaderStageFlags::VERTEX                                   ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, DescriptorFlags::UNFILTERABLE },
 };
 
 struct PairSamplerTypeFormatHasher {
@@ -142,10 +137,6 @@ static const std::unordered_map<
         {{ SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT }, DescriptorType::SAMPLER_EXTERNAL }
 };
 
-// used for post-processing passes
-static DescriptorSetLayout const postProcessDescriptorSetLayout{ utils::StaticString("postProcess"),
-    postProcessDescriptorSetLayoutList };
-
 // used to generate shadow-maps
 static DescriptorSetLayout const depthVariantDescriptorSetLayout{
     utils::StaticString("depthVariant"), depthVariantDescriptorSetLayoutList
@@ -162,10 +153,6 @@ static DescriptorSetLayout perViewDescriptorSetLayout = { utils::StaticString("p
 static DescriptorSetLayout perRenderableDescriptorSetLayout = {
     utils::StaticString("perRenderable"), perRenderableDescriptorSetLayoutList
 };
-
-DescriptorSetLayout const& getPostProcessLayout() noexcept {
-    return postProcessDescriptorSetLayout;
-}
 
 DescriptorSetLayout const& getDepthVariantLayout() noexcept {
     return depthVariantDescriptorSetLayout;
@@ -239,51 +226,51 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
             auto layout = perViewDescriptorSetLayout;
             // remove descriptors not needed for unlit materials
             if (!isLit) {
-                layout.bindings.erase(
-                        std::remove_if(layout.bindings.begin(), layout.bindings.end(),
+                layout.descriptors.erase(
+                        std::remove_if(layout.descriptors.begin(), layout.descriptors.end(),
                                 [](auto const& entry) {
                                     return  entry.binding == PerViewBindingPoints::IBL_DFG_LUT ||
                                             entry.binding == PerViewBindingPoints::IBL_SPECULAR;
                                 }),
-                        layout.bindings.end());
+                        layout.descriptors.end());
             }
             // remove descriptors not needed for SSRs
             if (!isSSR) {
-                layout.bindings.erase(
-                        std::remove_if(layout.bindings.begin(), layout.bindings.end(),
+                layout.descriptors.erase(
+                        std::remove_if(layout.descriptors.begin(), layout.descriptors.end(),
                                 [](auto const& entry) {
                                     return entry.binding == PerViewBindingPoints::SSR;
                                 }),
-                        layout.bindings.end());
+                        layout.descriptors.end());
 
             }
             // remove fog descriptor if filtered out
             if (!hasFog) {
-                layout.bindings.erase(
-                        std::remove_if(layout.bindings.begin(), layout.bindings.end(),
+                layout.descriptors.erase(
+                        std::remove_if(layout.descriptors.begin(), layout.descriptors.end(),
                                 [](auto const& entry) {
                                     return entry.binding == PerViewBindingPoints::FOG;
                                 }),
-                        layout.bindings.end());
+                        layout.descriptors.end());
             }
 
             // change the SHADOW_MAP descriptor type for VSM
             if (isVSM) {
-                auto const pos = std::find_if(layout.bindings.begin(), layout.bindings.end(),
+                auto const pos = std::find_if(layout.descriptors.begin(), layout.descriptors.end(),
                         [](auto const& v) {
                             return v.binding == PerViewBindingPoints::SHADOW_MAP;
                         });
-                if (pos != layout.bindings.end()) {
+                if (pos != layout.descriptors.end()) {
                     pos->type = DescriptorType::SAMPLER_2D_ARRAY_FLOAT;
                 }
             }
             return layout;
         }
         case MaterialDomain::POST_PROCESS:
-            return postProcessDescriptorSetLayout;
+            return depthVariantDescriptorSetLayout;
         case MaterialDomain::COMPUTE:
             // TODO: what's the layout for compute?
-            return postProcessDescriptorSetLayout;
+            return depthVariantDescriptorSetLayout;
     }
 }
 

@@ -28,7 +28,7 @@
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 
 #include "gmock/gmock.h"
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/wgsl/ast/stage_attribute.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/struct.h"
@@ -50,6 +50,141 @@ TEST_F(ResolverPipelineStageUseTest, UnusedStruct) {
     auto* sem = TypeOf(s)->As<core::type::Struct>();
     ASSERT_NE(sem, nullptr);
     EXPECT_TRUE(sem->PipelineStageUses().IsEmpty());
+}
+
+TEST_F(ResolverPipelineStageUseTest, IsConstructable) {
+    auto* inner =  //
+        Structure("Inner", tint::Vector{
+                               Member("a", ty.i32()),
+                               Member("b", ty.u32()),
+                               Member("c", ty.f32()),
+                               Member("d", ty.vec3<f32>()),
+                               Member("e", ty.mat4x2<f32>()),
+                           });
+
+    auto* outer = Structure("Outer", tint::Vector{
+                                         Member("inner", ty("Inner")),
+                                         Member("a", ty.i32()),
+                                     });
+
+    auto* outer_runtime_sized_array =
+        Structure("OuterRuntimeSizedArray", tint::Vector{
+                                                Member("inner", ty("Inner")),
+                                                Member("a", ty.i32()),
+                                                Member("runtime_sized_array", ty.array<i32>()),
+                                            });
+    ASSERT_TRUE(r()->Resolve()) << r()->error();
+    auto* sem_inner = TypeOf(inner)->As<core::type::Struct>();
+    auto* sem_outer = TypeOf(outer)->As<core::type::Struct>();
+
+    auto* sem_outer_runtime_sized_array = TypeOf(outer_runtime_sized_array);
+
+    EXPECT_TRUE(sem_inner->IsConstructible());
+    EXPECT_TRUE(sem_outer->IsConstructible());
+    EXPECT_FALSE(sem_outer_runtime_sized_array->IsConstructible());
+}
+
+TEST_F(ResolverPipelineStageUseTest, HasCreationFixedFootprint) {
+    auto* inner =  //
+        Structure("Inner", tint::Vector{
+                               Member("a", ty.i32()),
+                               Member("b", ty.u32()),
+                               Member("c", ty.f32()),
+                               Member("d", ty.vec3<f32>()),
+                               Member("e", ty.mat4x2<f32>()),
+                               Member("f", ty.array<f32, 32>()),
+                           });
+
+    auto* outer = Structure("Outer", tint::Vector{
+                                         Member("inner", ty("Inner")),
+                                     });
+
+    auto* outer_with_runtime_sized_array =
+        Structure("OuterRuntimeSizedArray", tint::Vector{
+                                                Member("inner", ty("Inner")),
+                                                Member("runtime_sized_array", ty.array<i32>()),
+                                            });
+
+    ASSERT_TRUE(r()->Resolve()) << r()->error();
+
+    auto* sem_inner = TypeOf(inner);
+    auto* sem_outer = TypeOf(outer);
+    auto* sem_outer_with_runtime_sized_array = TypeOf(outer_with_runtime_sized_array);
+
+    EXPECT_TRUE(sem_inner->HasCreationFixedFootprint());
+    EXPECT_TRUE(sem_outer->HasCreationFixedFootprint());
+    EXPECT_FALSE(sem_outer_with_runtime_sized_array->HasCreationFixedFootprint());
+}
+
+TEST_F(ResolverPipelineStageUseTest, HasFixedFootprint) {
+    auto* inner =  //
+        Structure("Inner", tint::Vector{
+                               Member("a", ty.i32()),
+                               Member("b", ty.u32()),
+                               Member("c", ty.f32()),
+                               Member("d", ty.vec3<f32>()),
+                               Member("e", ty.mat4x2<f32>()),
+                               Member("f", ty.array<f32, 32>()),
+                           });
+
+    auto* outer = Structure("Outer", tint::Vector{
+                                         Member("inner", ty("Inner")),
+                                     });
+
+    auto* outer_with_runtime_sized_array =
+        Structure("OuterRuntimeSizedArray", tint::Vector{
+                                                Member("inner", ty("Inner")),
+                                                Member("runtime_sized_array", ty.array<i32>()),
+                                            });
+
+    ASSERT_TRUE(r()->Resolve()) << r()->error();
+
+    auto* sem_inner = TypeOf(inner);
+    auto* sem_outer = TypeOf(outer);
+    auto* sem_outer_with_runtime_sized_array = TypeOf(outer_with_runtime_sized_array);
+
+    EXPECT_TRUE(sem_inner->HasFixedFootprint());
+    EXPECT_TRUE(sem_outer->HasFixedFootprint());
+    EXPECT_FALSE(sem_outer_with_runtime_sized_array->HasFixedFootprint());
+}
+
+TEST_F(ResolverPipelineStageUseTest, Layout) {
+    auto* inner_st =  //
+        Structure("Inner", tint::Vector{
+                               Member("a", ty.i32()),
+                               Member("b", ty.u32()),
+                               Member("c", ty.f32()),
+                               Member("d", ty.vec3<f32>()),
+                               Member("e", ty.mat4x2<f32>()),
+                           });
+
+    auto* outer_st = Structure("Outer", tint::Vector{
+                                            Member("inner", ty("Inner")),
+                                            Member("a", ty.i32()),
+                                        });
+
+    ASSERT_TRUE(r()->Resolve()) << r()->error();
+
+    auto* sem_inner_st = TypeOf(inner_st)->As<core::type::Struct>();
+    auto* sem_outer_st = TypeOf(outer_st)->As<core::type::Struct>();
+
+    EXPECT_EQ(sem_inner_st->Layout().Plain(),
+              R"(/*            align(16) size(64) */ struct Inner {
+/* offset( 0) align( 4) size( 4) */   a : i32,
+/* offset( 4) align( 4) size( 4) */   b : u32,
+/* offset( 8) align( 4) size( 4) */   c : f32,
+/* offset(12) align( 1) size( 4) */   // -- implicit field alignment padding --
+/* offset(16) align(16) size(12) */   d : vec3<f32>,
+/* offset(28) align( 1) size( 4) */   // -- implicit field alignment padding --
+/* offset(32) align( 8) size(32) */   e : mat4x2<f32>,
+/*                               */ };)");
+
+    EXPECT_EQ(sem_outer_st->Layout().Plain(),
+              R"(/*            align(16) size(80) */ struct Outer {
+/* offset( 0) align(16) size(64) */   inner : Inner,
+/* offset(64) align( 4) size( 4) */   a : i32,
+/* offset(68) align( 1) size(12) */   // -- implicit struct size padding --
+/*                               */ };)");
 }
 
 TEST_F(ResolverPipelineStageUseTest, StructUsedAsNonEntryPointParam) {

@@ -37,8 +37,8 @@ namespace tint::spirv::writer {
 Result<SuccessType> ValidateBindingOptions(const Options& options) {
     diag::List diagnostics;
 
-    tint::Hashmap<tint::BindingPoint, binding::BindingInfo, 8> seen_wgsl_bindings{};
-    tint::Hashmap<binding::BindingInfo, tint::BindingPoint, 8> seen_spirv_bindings{};
+    tint::Hashmap<tint::BindingPoint, tint::BindingPoint, 8> seen_wgsl_bindings{};
+    tint::Hashmap<tint::BindingPoint, tint::BindingPoint, 8> seen_spirv_bindings{};
 
     // Both wgsl_seen and spirv_seen check to see if the pair of [src, dst] are unique. If we have
     // multiple entries that map the same [src, dst] pair, that's fine. We treat it as valid as it's
@@ -46,7 +46,7 @@ Result<SuccessType> ValidateBindingOptions(const Options& options) {
     // match, then we report an error about a duplicate binding point.
 
     auto wgsl_seen = [&diagnostics, &seen_wgsl_bindings](const tint::BindingPoint& src,
-                                                         const binding::BindingInfo& dst) -> bool {
+                                                         const tint::BindingPoint& dst) -> bool {
         if (auto binding = seen_wgsl_bindings.Get(src)) {
             if (*binding != dst) {
                 diagnostics.AddError(Source{}) << "found duplicate WGSL binding point: " << src;
@@ -61,7 +61,7 @@ Result<SuccessType> ValidateBindingOptions(const Options& options) {
         options.statically_paired_texture_binding_points;
     auto spirv_seen = [&diagnostics, &seen_spirv_bindings,
                        &statically_paired_texture_binding_points](
-                          const binding::BindingInfo& src, const tint::BindingPoint& dst) -> bool {
+                          const tint::BindingPoint& src, const tint::BindingPoint& dst) -> bool {
         if (auto binding = seen_spirv_bindings.Get(src)) {
             if (*binding != dst && !statically_paired_texture_binding_points.count(*binding) &&
                 !statically_paired_texture_binding_points.count(dst)) {
@@ -193,16 +193,14 @@ void PopulateRemapperAndMultiplanarOptions(
     auto create_remappings = [&remapper_data](const auto& hsh) {
         for (const auto& it : hsh) {
             const BindingPoint& src_binding_point = it.first;
-            const binding::BindingInfo& dst_binding_point = it.second;
+            const auto& dst_binding_point = it.second;
 
             // Bindings which go to the same slot in SPIR-V do not need to be re-bound.
-            if (src_binding_point.group == dst_binding_point.group &&
-                src_binding_point.binding == dst_binding_point.binding) {
+            if (src_binding_point == dst_binding_point) {
                 continue;
             }
 
-            remapper_data.emplace(src_binding_point,
-                                  BindingPoint{dst_binding_point.group, dst_binding_point.binding});
+            remapper_data.emplace(src_binding_point, dst_binding_point);
         }
     };
 
@@ -216,26 +214,20 @@ void PopulateRemapperAndMultiplanarOptions(
     // External textures are re-bound to their plane0 location
     for (const auto& it : options.bindings.external_texture) {
         const BindingPoint& src_binding_point = it.first;
-        const binding::BindingInfo& plane0 = it.second.plane0;
-        const binding::BindingInfo& plane1 = it.second.plane1;
-        const binding::BindingInfo& metadata = it.second.metadata;
-
-        const BindingPoint plane0_binding_point{plane0.group, plane0.binding};
-        const BindingPoint plane1_binding_point{plane1.group, plane1.binding};
-        const BindingPoint metadata_binding_point{metadata.group, metadata.binding};
+        const auto& plane0 = it.second.plane0;
+        const auto& plane1 = it.second.plane1;
+        const auto& metadata = it.second.metadata;
 
         // Use the re-bound spir-v plane0 value for the lookup key.
-        multiplanar_map.emplace(plane0_binding_point,
-                                tint::transform::multiplanar::BindingPoints{
-                                    plane1_binding_point, metadata_binding_point});
+        multiplanar_map.emplace(plane0,
+                                tint::transform::multiplanar::BindingPoints{plane1, metadata});
 
         // Bindings which go to the same slot in SPIR-V do not need to be re-bound.
-        if (src_binding_point.group == plane0.group &&
-            src_binding_point.binding == plane0.binding) {
+        if (src_binding_point == plane0) {
             continue;
         }
 
-        remapper_data.emplace(src_binding_point, BindingPoint{plane0.group, plane0.binding});
+        remapper_data.emplace(src_binding_point, plane0);
     }
 }
 

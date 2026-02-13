@@ -1,0 +1,60 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate access_test.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+{{- $access_enum := ($I.Sem.Enum "access") -}}
+{{- $addr_space_enum := ($I.Sem.Enum "address_space") -}}
+{{- $interpolation_sampling_enum := ($I.Sem.Enum "interpolation_sampling") -}}
+{{- $interpolation_type_enum := ($I.Sem.Enum "interpolation_type") -}}
+{{- $subgroup_matrix_kind_enum := ($I.Sem.Enum "subgroup_matrix_kind") -}}
+{{- $texel_format_enum := ($I.Sem.Enum "texel_format") -}}
+{{- $builtin_type_enum := ($I.Sem.Enum "builtin_type") -}}
+{{- $builtin_value_enum := ($I.Sem.Enum "builtin_value") -}}
+{{- $attribute_enum := ($I.Sem.Enum "attribute") -}}
+
+{{- Eval "OverrideEnumName" "Enum" $builtin_type_enum "Name" "BuiltinType" -}}
+
+#include "src/tint/lang/core/enums.h"
+
+#include <gtest/gtest.h>
+
+#include <string>
+
+#include "src/tint/utils/text/string.h"
+
+namespace tint::core {
+namespace {
+
+{{ Eval "TestParsePrintEnum" $access_enum}}
+
+{{ Eval "TestParsePrintEnum" $addr_space_enum}}
+
+namespace interpolation_sampling_tests {
+{{ Eval "TestParsePrintEnum" $interpolation_sampling_enum }}
+}  // namespace interpolation_sampling_tests
+
+namespace interpolation_type_tests {
+{{ Eval "TestParsePrintEnum" $interpolation_type_enum }}
+}  // namespace interpolation_type_tests
+
+{{ Eval "TestParsePrintEnum" $texel_format_enum}}
+
+{{ Eval "TestParsePrintEnum" $builtin_type_enum}}
+
+{{ Eval "TestParsePrintEnum" $builtin_value_enum}}
+
+{{ Eval "TestParsePrintEnum" $attribute_enum}}
+
+}  // namespace
+}  // namespace tint::core

@@ -929,6 +929,9 @@ EOF
     ia64:Linux:*:*)
 	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit ;;
+    loongarch64:Linux:*:*)
+	echo ${UNAME_MACHINE}-unknown-linux-gnu
+	exit ;;
     m32r*:Linux:*:*)
 	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit ;;

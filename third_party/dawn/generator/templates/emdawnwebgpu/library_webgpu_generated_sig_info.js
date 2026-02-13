@@ -35,11 +35,11 @@
     null;
 {{'}}}'}}
 {%- macro render_function_or_method_sig(object_or_none, function) -%}
-    {%- if not has_wasmType(function.return_type, function.arguments) -%}
+    {%- if not has_wasmType(function.returns, function.arguments) -%}
         //
     {%- endif -%}
     {{as_cMethod(object_or_none.name if object_or_none else None, function.name)}}__sig: '
-        {{- as_wasmType(function.return_type) -}}
+        {{- as_wasmType(function.returns) -}}
         {%- if object_or_none -%}
             {{- as_wasmType(object_or_none) -}}
         {%- endif -%}

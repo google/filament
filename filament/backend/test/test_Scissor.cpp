@@ -22,6 +22,7 @@
 #include "SharedShaders.h"
 #include "Skip.h"
 #include "TrianglePrimitive.h"
+#include "Workarounds.h"
 
 #include <utils/Hash.h>
 
@@ -31,8 +32,7 @@ using namespace filament;
 using namespace filament::backend;
 
 TEST_F(BackendTest, ScissorViewportRegion) {
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Affected area in wrong corner, see b/417229118");
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     auto& api = getDriverApi();
 
     constexpr int kSrcTexWidth = 1024;
@@ -40,76 +40,71 @@ TEST_F(BackendTest, ScissorViewportRegion) {
     constexpr auto kSrcTexFormat = TextureFormat::RGBA8;
     constexpr int kNumLevels = 3;
     constexpr int kSrcLevel = 1;
-    constexpr int kSrcRtWidth = 384;
-    constexpr int kSrcRtHeight = 384;
+    constexpr int kSrcRtWidth = kSrcTexWidth >> kSrcLevel;
+    constexpr int kSrcRtHeight = kSrcTexHeight >> kSrcLevel;
 
     api.startCapture(0);
-    Cleanup cleanup(api);
 
-    //    color texture (mip level 1) 512x512           depth texture (mip level 0) 512x512
+    //    color texture/RT (mip level 1) 512x512        depth texture (mip level 0) 512x512
     // +----------------------------------------+   +------------------------------------------+
     // |                                        |   |                                          |
     // |                                        |   |                                          |
-    // |     RenderTarget (384x384)             |   |   RenderTarget (384x384)                 |
-    // +------------------------------+         |   +------------------------------+           |
-    // |                              |         |   |                              |           |
-    // |     +-------------------+    |         |   |                              |           |
-    // |     |    viewport       |    |         |   |                              |           |
-    // |     |                   |    |         |   |                              |           |
-    // | +---+---------------+   |    |         |   |                              |           |
-    // | |   |               |   |    |         |   |                              |           |
-    // | |   |               |   |    |         |   |                              |           |
-    // | |   | (64,64)       |   |    |         |   |                              |           |
-    // | |   +---------------+---+    |         |   |                              |           |
-    // | |  scissor          |        |         |   |                              |           |
-    // | +-------------------+        |         |   |                              |           |
-    // |  (32, 32)                    |         |   |                              |           |
-    // +------------------------------+---------+   +------------------------------+-----------+
+    // |                                        |   |                                          |
+    // |                                        |   |                                          |
+    // |                                        |   |                                          |
+    // |     +-------------------+              |   |                                          |
+    // |     |    viewport       |              |   |                                          |
+    // |     |                   |              |   |                                          |
+    // | +---+---------------+   |              |   |                                          |
+    // | |   |               |   |              |   |                                          |
+    // | |   |               |   |              |   |                                          |
+    // | |   | (64,64)       |   |              |   |                                          |
+    // | |   +---------------+---+              |   |                                          |
+    // | |  scissor          |                  |   |                                          |
+    // | +-------------------+                  |   |                                          |
+    // |  (32, 32)                              |   |                                          |
+    // +----------------------------------------+   +------------------------------_-----------+
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-        auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
-            .mVertexType = VertexShaderType::Noop,
-            .mFragmentType = FragmentShaderType::White,
-            .mUniformType = ShaderUniformType::None,
-        });
+        Shader shader = SharedShaders::makeShader(api, *mCleanup,
+                ShaderRequest{
+                    .mVertexType = VertexShaderType::Noop,
+                    .mFragmentType = FragmentShaderType::White,
+                    .mUniformType = ShaderUniformType::None,
+                });
 
         // Create source color and depth textures.
-        Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+        Handle<HwTexture> srcTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D,
                 kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
-        Handle<HwTexture> depthTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-                TextureFormat::DEPTH16, 1, 512, 512, 1,
-                TextureUsage::DEPTH_ATTACHMENT));
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT TEXTURE_USAGE_READ_PIXELS));
+        Handle<HwTexture> depthTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+                TextureFormat::DEPTH16, 1, 512, 512, 1, TextureUsage::DEPTH_ATTACHMENT));
 
         // Render into the bottom-left quarter of the texture.
         Viewport srcRect = {
-                .left = 64,
-                .bottom = 64,
-                .width = kSrcRtWidth - 64 * 2,
-                .height = kSrcRtHeight - 64 * 2
+            .left = 64,
+            .bottom = 64,
+            .width = kSrcRtWidth - 64 * 2,
+            .height = kSrcRtHeight - 64 * 2,
         };
         Viewport scissor = {
-                .left = 32,
-                .bottom = 32,
-                .width = kSrcRtWidth - 64 * 2,
-                .height = kSrcRtHeight - 64 * 2
+            .left = 32,
+            .bottom = 32,
+            .width = kSrcRtWidth - 64 * 2,
+            .height = kSrcRtHeight - 64 * 2,
         };
 
         // We purposely set the render target width and height to smaller than the texture, to check
         // that this case is handled correctly.
-        Handle<HwRenderTarget> srcRenderTarget = cleanup.add(api.createRenderTarget(
+        Handle<HwRenderTarget> rt = addCleanup(api.createRenderTarget(
                 TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1,
-                0, { srcTexture, kSrcLevel, 0 }, { depthTexture, 0, 0 }, {}));
-
-        Handle<HwRenderTarget> fullRenderTarget = cleanup.add(
-                api.createRenderTarget(TargetBufferFlags::COLOR, kSrcTexHeight >> kSrcLevel,
-                        kSrcTexWidth >> kSrcLevel, 1, 0, {srcTexture, kSrcLevel, 0}, {}, {}));
+                1, { srcTexture, kSrcLevel, 0 }, { depthTexture, 0, 0 }, {}));
 
         TrianglePrimitive triangle(api);
 
@@ -123,7 +118,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
 
-        api.beginRenderPass(srcRenderTarget, params);
+        api.beginRenderPass(rt, params);
         api.scissor(scissor);
         ps.primitiveType = PrimitiveType::TRIANGLES;
         ps.vertexBufferInfo = triangle.getVertexBufferInfo();
@@ -132,7 +127,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(fullRenderTarget, getExpectations(),
+        EXPECT_IMAGE(rt,
                 ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
 
         api.commit(swapChain);
@@ -147,25 +142,24 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
     auto& api = getDriverApi();
 
     api.startCapture(0);
-    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-        auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
+        Shader shader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest{
                 .mVertexType = VertexShaderType::Noop,
                 .mFragmentType = FragmentShaderType::White,
                 .mUniformType = ShaderUniformType::None,
         });
 
         // Create a source color textures.
-        Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+        Handle<HwTexture> srcTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 TextureFormat::RGBA8, 1, 512, 512, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT TEXTURE_USAGE_READ_PIXELS));
 
         // Render into the bottom-left quarter of the texture, checking 3 special cases.
         // 1. negative viewport left/bottom
@@ -187,8 +181,8 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         Viewport scissor = {0, 0, (uint32_t)std::numeric_limits<int32_t>::max(),
                 (uint32_t)std::numeric_limits<int32_t>::max()};
 
-        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
-                TargetBufferFlags::COLOR, 512, 512, 1, 0,
+        Handle<HwRenderTarget> renderTarget = addCleanup(api.createRenderTarget(
+                TargetBufferFlags::COLOR, 512, 512, 1, 1,
                 {srcTexture, 0, 0}, {}, {}));
 
         TrianglePrimitive triangle(api);
@@ -224,7 +218,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(renderTarget, getExpectations(),
+        EXPECT_IMAGE(renderTarget,
                 ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 2199186852));
 
         api.commit(swapChain);

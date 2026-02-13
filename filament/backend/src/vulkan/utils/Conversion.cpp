@@ -155,10 +155,11 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::RGBA16UI:          return VK_FORMAT_R16G16B16A16_UINT;
         case TextureFormat::RGBA16I:           return VK_FORMAT_R16G16B16A16_SINT;
 
-        // 96-bits per element.
-        case TextureFormat::RGB32F:            return VK_FORMAT_R32G32B32_SFLOAT;
-        case TextureFormat::RGB32UI:           return VK_FORMAT_R32G32B32_UINT;
-        case TextureFormat::RGB32I:            return VK_FORMAT_R32G32B32_SINT;
+        // 96-bits per element. In practice, very few GPU vendors support these. So, we simply
+        // always reshape them into 128-bit formats.
+        case TextureFormat::RGB32F:            return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case TextureFormat::RGB32UI:           return VK_FORMAT_R32G32B32A32_UINT;
+        case TextureFormat::RGB32I:            return VK_FORMAT_R32G32B32A32_SINT;
 
         // 128-bits per element.
         case TextureFormat::RGBA32F:           return VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -220,8 +221,8 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::ETC2_RGB8_A1:      return VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK;
         case TextureFormat::ETC2_SRGB8_A1:     return VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK;
 
-        case TextureFormat::ETC2_EAC_RGBA8:    return VK_FORMAT_UNDEFINED;
-        case TextureFormat::ETC2_EAC_SRGBA8:   return VK_FORMAT_UNDEFINED;
+        case TextureFormat::ETC2_EAC_RGBA8:    return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+        case TextureFormat::ETC2_EAC_SRGBA8:   return VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK;
 
         case TextureFormat::EAC_R11:           return VK_FORMAT_EAC_R11_UNORM_BLOCK;
         case TextureFormat::EAC_R11_SIGNED:    return VK_FORMAT_EAC_R11_SNORM_BLOCK;

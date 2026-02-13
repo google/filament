@@ -30,7 +30,7 @@
 #include <limits>
 #include <utility>
 
-#include "src/tint/lang/core/attribute.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/external_texture.h"
 #include "src/tint/lang/core/type/multisampled_texture.h"
@@ -55,9 +55,9 @@
 #include "src/tint/lang/wgsl/ast/var.h"
 #include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
 #include "src/tint/lang/wgsl/ast/workgroup_attribute.h"
-#include "src/tint/lang/wgsl/common/reserved_words.h"
 #include "src/tint/lang/wgsl/reader/parser/classify_template_args.h"
 #include "src/tint/lang/wgsl/reader/parser/lexer.h"
+#include "src/tint/lang/wgsl/reserved_words.h"
 #include "src/tint/utils/containers/reverse.h"
 #include "src/tint/utils/macros/defer.h"
 #include "src/tint/utils/text/string.h"

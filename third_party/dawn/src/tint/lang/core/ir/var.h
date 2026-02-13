@@ -31,7 +31,7 @@
 #include <string>
 
 #include "src/tint/api/common/binding_point.h"
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/interpolation.h"
 #include "src/tint/lang/core/io_attributes.h"
 #include "src/tint/lang/core/ir/operand_instruction.h"
@@ -76,21 +76,63 @@ class Var : public Castable<Var, OperandInstruction<1, 1>> {
     /// Sets the binding point
     /// @param group the group
     /// @param binding the binding
-    void SetBindingPoint(uint32_t group, uint32_t binding) { binding_point_ = {group, binding}; }
+    void SetBindingPoint(uint32_t group, uint32_t binding) {
+        attributes_.binding_point = {group, binding};
+    }
     /// @returns the binding points if `Attributes` contains `kBindingPoint`
-    std::optional<struct BindingPoint> BindingPoint() const { return binding_point_; }
+    std::optional<struct BindingPoint> BindingPoint() const { return attributes_.binding_point; }
 
     /// Sets the input attachment index
     /// @param index the index
-    void SetInputAttachmentIndex(uint32_t index) { input_attachment_index_ = index; }
+    void SetInputAttachmentIndex(uint32_t index) { attributes_.input_attachment_index = index; }
     /// @returns the input attachment index if any
-    std::optional<uint32_t> InputAttachmentIndex() const { return input_attachment_index_; }
+    std::optional<uint32_t> InputAttachmentIndex() const {
+        return attributes_.input_attachment_index;
+    }
+
+    /// Sets the interpolation.
+    /// @param interpolation the optional location interpolation settings
+    void SetInterpolation(std::optional<core::Interpolation> interpolation) {
+        attributes_.interpolation = interpolation;
+    }
+
+    /// Sets the parameter as invariant
+    /// @param val the value to set for invariant
+    void SetInvariant(bool val) { attributes_.invariant = val; }
+
+    /// Sets the blend source.
+    /// @param src the optional value
+    void SetBlendSrc(std::optional<uint32_t> src) { attributes_.blend_src = src; }
+
+    /// Sets the color.
+    /// @param col the optional color value
+    void SetColor(std::optional<uint32_t> col) { attributes_.color = col; }
+
+    /// Sets the location.
+    /// @param loc the optional location value
+    void SetLocation(std::optional<uint32_t> loc) { attributes_.location = loc; }
+
+    /// Sets the builtin information. Note, it is currently an error if the builtin is already set.
+    /// @param val the builtin to set
+    void SetBuiltin(core::BuiltinValue val) {
+        TINT_ASSERT(!attributes_.builtin.has_value());
+        attributes_.builtin = val;
+    }
+    /// Returns the builtin information, if available
+    std::optional<core::BuiltinValue> Builtin() const { return attributes_.builtin; }
+
+    /// Resets the IO attributes
+    void ResetAttributes() { attributes_ = {}; }
 
     /// Sets the IO attributes
     /// @param attrs the attributes
     void SetAttributes(const IOAttributes& attrs) { attributes_ = attrs; }
+
     /// @returns the IO attributes
     const IOAttributes& Attributes() const { return attributes_; }
+
+    /// @returns the IO attributes
+    IOAttributes& Attributes() { return attributes_; }
 
     /// Destroys this instruction along with any assignment instructions, if the var is never read.
     void DestroyIfOnlyAssigned();
@@ -99,8 +141,6 @@ class Var : public Castable<Var, OperandInstruction<1, 1>> {
     std::string FriendlyName() const override { return "var"; }
 
   private:
-    std::optional<struct BindingPoint> binding_point_;
-    std::optional<uint32_t> input_attachment_index_;
     IOAttributes attributes_;
 };
 

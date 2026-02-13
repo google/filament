@@ -41,6 +41,36 @@ using namespace filament::math;
 namespace filament {
 namespace viewer {
 
+namespace {
+
+ImGuiKey convertKey(int keycode) {
+
+    // The following table uses normal ANSI codes, which is consistent with the keyCode that
+    // comes from a web "keydown" event.
+    switch (keycode) {
+        case 9: return ImGuiKey_Tab;
+        case 37: return ImGuiKey_LeftArrow;
+        case 39: return ImGuiKey_RightArrow;
+        case 38: return ImGuiKey_UpArrow;
+        case 40: return ImGuiKey_DownArrow;
+        case 36: return ImGuiKey_Home;
+        case 35: return ImGuiKey_End;
+        case 46: return ImGuiKey_Delete;
+        case 8: return ImGuiKey_Backspace;
+        case 13: return ImGuiKey_Enter;
+        case 27: return ImGuiKey_Escape;
+        case 65: return ImGuiKey_A;
+        case 67: return ImGuiKey_C;
+        case 86: return ImGuiKey_V;
+        case 88: return ImGuiKey_X;
+        case 89: return ImGuiKey_Y;
+        case 90: return ImGuiKey_Z;
+        default: return ImGuiKey_None;
+    }
+}
+
+}
+
 mat4f fitIntoUnitCube(const Aabb& bounds, float zoffset) {
     float3 minpt = bounds.min;
     float3 maxpt = bounds.max;
@@ -148,6 +178,9 @@ static void computeToneMapPlot(ColorGradingSettings& settings, float* plot) {
         case ToneMapping::PBR_NEUTRAL:
             mapper = new PBRNeutralToneMapper;
             break;
+        case ToneMapping::GT7:
+            mapper = new GT7ToneMapper;
+            break;
         case ToneMapping::DISPLAY_RANGE:
             mapper = new DisplayRangeToneMapper;
             break;
@@ -199,7 +232,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
 
         int toneMapping = (int) colorGrading.toneMapping;
         ImGui::Combo("Tone-mapping", &toneMapping,
-                "Linear\0ACES (legacy)\0ACES\0Filmic\0AgX\0Generic\0PBR Neutral\0Display Range\0\0");
+                "Linear\0ACES (legacy)\0ACES\0Filmic\0AgX\0Generic\0PBR Neutral\0GT7\0Display Range\0\0");
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
         if (colorGrading.toneMapping == ToneMapping::GENERIC) {
             if (ImGui::CollapsingHeader("Tonemap parameters")) {
@@ -219,7 +252,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
         computeToneMapPlot(colorGrading, toneMapPlot);
 
         ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
-        ImGui::PlotLines("", toneMapPlot, 1024, 0, "Tone map", 0.0f, 1.05f, ImVec2(0, 160));
+        ImGui::PlotLines("##ToneMap", toneMapPlot, 1024, 0, "Tone map", 0.0f, 1.05f,
+                ImVec2(0, 160));
         ImGui::PopStyleColor();
 
         ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
@@ -282,9 +316,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
             ImGui::SliderFloat("Weight##highlightsWeight", &colorGrading.highlights.w, -2.0f, 2.0f);
             ImGui::SliderFloat4("Ranges", &colorGrading.ranges.x, 0.0f, 1.0f);
             computeRangePlot(settings, rangePlot);
-            ImGuiExt::PlotLinesSeries("", 3,
-                    rangePlotSeriesStart, getRangePlotValue, rangePlotSeriesEnd,
-                    rangePlot, 1024, 0, "", 0.0f, 1.0f, plotLinesWideSize);
+            ImGuiExt::PlotLinesSeries("##RangePlot", 3, rangePlotSeriesStart, getRangePlotValue,
+                    rangePlotSeriesEnd, rangePlot, 1024, 0, "", 0.0f, 1.0f, plotLinesWideSize);
         }
         if (ImGui::CollapsingHeader("Color decision list")) {
             ImGui::SliderFloat3("Slope", &colorGrading.slope.x, 0.0f, 2.0f);
@@ -315,7 +348,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 popSliderColors();
 
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
-                ImGui::PlotLines("", curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PlotLines("##RedCurve", curvePlot, 1024, 0, "Red", 0.0f, 2.0f,
+                        plotLinesSize);
                 ImGui::PopStyleColor();
 
                 pushSliderColors(2.0f / 7.0f);
@@ -331,7 +365,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 popSliderColors();
 
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
-                ImGui::PlotLines("", curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PlotLines("##GreenCurve", curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f,
+                        plotLinesSize);
                 ImGui::PopStyleColor();
 
                 pushSliderColors(4.0f / 7.0f);
@@ -347,7 +382,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 popSliderColors();
 
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
-                ImGui::PlotLines("", curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PlotLines("##BlueCurve", curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f,
+                        plotLinesSize);
                 ImGui::PopStyleColor();
             } else {
                 ImGui::VSliderFloat("##curveGamma", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
@@ -365,7 +401,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 colorGrading.scale = float3{colorGrading.scale.r};
 
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
-                ImGui::PlotLines("", curvePlot, 1024, 0, "RGB", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PlotLines("##RGBCurve", curvePlot, 1024, 0, "RGB", 0.0f, 2.0f,
+                        plotLinesSize);
                 ImGui::PopStyleColor();
             }
         }
@@ -392,13 +429,13 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
 
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
-        .color(mSettings.lighting.sunlightColor)
-        .intensity(mSettings.lighting.sunlightIntensity)
-        .direction(normalize(mSettings.lighting.sunlightDirection))
+        .color(mSettings.lighting.sunlight.color)
+        .intensity(mSettings.lighting.sunlight.intensity)
+        .direction(normalize(mSettings.lighting.sunlight.direction))
         .castShadows(true)
-        .sunAngularRadius(mSettings.lighting.sunlightAngularRadius)
-        .sunHaloSize(mSettings.lighting.sunlightHaloSize)
-        .sunHaloFalloff(mSettings.lighting.sunlightHaloFalloff)
+        .sunAngularRadius(mSettings.lighting.sunlight.sunAngularRadius)
+        .sunHaloSize(mSettings.lighting.sunlight.sunHaloSize)
+        .sunHaloFalloff(mSettings.lighting.sunlight.sunHaloFalloff)
         .build(*engine, mSunlight);
     if (mSettings.lighting.enableSunlight) {
         mScene->addEntity(mSunlight);
@@ -473,9 +510,9 @@ void ViewerGui::setIndirectLight(filament::IndirectLight* ibl,
         bool const dIsValid = std::none_of(std::begin(d.v), std::end(d.v), is_not_a_number);
         bool const cIsValid = std::none_of(std::begin(c.v), std::end(c.v), is_not_a_number);
         if (dIsValid && cIsValid) {
-            mSettings.lighting.sunlightDirection = d;
-            mSettings.lighting.sunlightColor = c.rgb;
-            mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
+            mSettings.lighting.sunlight.direction = d;
+            mSettings.lighting.sunlight.color = c.rgb;
+            mSettings.lighting.sunlight.intensity = c[3] * ibl->getIntensity();
         }
     }
 }
@@ -563,27 +600,6 @@ void ViewerGui::renderUserInterface(float timeStepInSeconds, View* guiView, floa
         mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
 
         auto& io = ImGui::GetIO();
-
-        // The following table uses normal ANSI codes, which is consistent with the keyCode that
-        // comes from a web "keydown" event.
-        io.KeyMap[ImGuiKey_Tab] = 9;
-        io.KeyMap[ImGuiKey_LeftArrow] = 37;
-        io.KeyMap[ImGuiKey_RightArrow] = 39;
-        io.KeyMap[ImGuiKey_UpArrow] = 38;
-        io.KeyMap[ImGuiKey_DownArrow] = 40;
-        io.KeyMap[ImGuiKey_Home] = 36;
-        io.KeyMap[ImGuiKey_End] = 35;
-        io.KeyMap[ImGuiKey_Delete] = 46;
-        io.KeyMap[ImGuiKey_Backspace] = 8;
-        io.KeyMap[ImGuiKey_Enter] = 13;
-        io.KeyMap[ImGuiKey_Escape] = 27;
-        io.KeyMap[ImGuiKey_A] = 65;
-        io.KeyMap[ImGuiKey_C] = 67;
-        io.KeyMap[ImGuiKey_V] = 86;
-        io.KeyMap[ImGuiKey_X] = 88;
-        io.KeyMap[ImGuiKey_Y] = 89;
-        io.KeyMap[ImGuiKey_Z] = 90;
-
         // TODO: this is not the best way to handle high DPI in ImGui, but it is fine when using the
         // proggy font. Users need to refresh their window when dragging between displays with
         // different pixel ratios.
@@ -609,20 +625,28 @@ void ViewerGui::mouseEvent(float mouseX, float mouseY, bool mouseButton, float m
         io.MouseDown[0] = mouseButton != 0;
         io.MouseDown[1] = false;
         io.MouseDown[2] = false;
-        io.KeyCtrl = control;
+        io.AddKeyEvent(ImGuiMod_Ctrl, control);
     }
 }
 
 void ViewerGui::keyDownEvent(int keyCode) {
-    if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
-        ImGui::GetIO().KeysDown[keyCode] = true;
+    if (!mImGuiHelper) {
+        return;
     }
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddKeyEvent(
+            convertKey(keyCode),
+            true);
 }
 
 void ViewerGui::keyUpEvent(int keyCode) {
-    if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
-        ImGui::GetIO().KeysDown[keyCode] = false;
+    if (!mImGuiHelper) {
+        return;
     }
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddKeyEvent(
+            convertKey(keyCode),
+            false);
 }
 
 void ViewerGui::keyPressEvent(int charCode) {
@@ -799,13 +823,13 @@ void ViewerGui::updateUserInterface() {
     }
 
     if (ImGui::CollapsingHeader("TAA Options")) {
-        ImGui::Checkbox("Upscaling", &mSettings.view.taa.upscaling);
+        ImGui::SliderFloat("Upscaling", &mSettings.view.taa.upscaling, 1.0f, 3.0f);
         ImGui::Checkbox("History Reprojection", &mSettings.view.taa.historyReprojection);
         ImGui::SliderFloat("Feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
         ImGui::Checkbox("Filter History", &mSettings.view.taa.filterHistory);
         ImGui::Checkbox("Filter Input", &mSettings.view.taa.filterInput);
-        ImGui::SliderFloat("FilterWidth", &mSettings.view.taa.filterWidth, 0.2f, 2.0f);
         ImGui::SliderFloat("LOD bias", &mSettings.view.taa.lodBias, -8.0f, 0.0f);
+        ImGui::Checkbox("HDR", &mSettings.view.taa.hdr);
         ImGui::Checkbox("Use YCoCg", &mSettings.view.taa.useYCoCg);
         ImGui::Checkbox("Prevent Flickering", &mSettings.view.taa.preventFlickering);
         int jitterSequence = (int)mSettings.view.taa.jitterPattern;
@@ -813,7 +837,7 @@ void ViewerGui::updateUserInterface() {
         int boxType = (int)mSettings.view.taa.boxType;
         ImGui::Combo("Jitter Pattern", &jitterSequence, "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton x16\0Halton x32\0\0");
         ImGui::Combo("Box Clipping", &boxClipping, "Accurate\0Clamp\0None\0\0");
-        ImGui::Combo("Box Type", &boxType, "AABB\0Variance\0Both\0\0");
+        ImGui::Combo("Box Type", &boxType, "AABB\0Variance\0\0");
         ImGui::SliderFloat("Variance Gamma", &mSettings.view.taa.varianceGamma, 0.75f, 1.25f);
         ImGui::SliderFloat("RCAS", &mSettings.view.taa.sharpness, 0.0f, 1.0f);
         mSettings.view.taa.boxClipping = (TemporalAntiAliasingOptions::BoxClipping)boxClipping;
@@ -854,6 +878,11 @@ void ViewerGui::updateUserInterface() {
 
                 ImGui::SliderInt("Slice Count", &sliceCount, 1, 10);
                 ImGui::SliderInt("Steps Per Slice", &stepsPerSlice, 1, 4);
+                ImGui::Checkbox("Use Visibility Bitmasks", &ssao.gtao.useVisibilityBitmasks);
+                if (ssao.gtao.useVisibilityBitmasks) {
+                    ImGui::SliderFloat("Constant Thickness", &ssao.gtao.constThickness, 0.01f, 10.0f);
+                    ImGui::Checkbox("Linear Thickness", &ssao.gtao.linearThickness);
+                }
 
                 ssao.gtao.sampleSliceCount = static_cast<uint8_t>(sliceCount);
                 ssao.gtao.sampleStepsPerSlice = static_cast<uint8_t>(stepsPerSlice);
@@ -916,31 +945,31 @@ void ViewerGui::updateUserInterface() {
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
-            ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 0.0f, 150000.0f);
-            ImGui::SliderFloat("Halo size", &light.sunlightHaloSize, 1.01f, 40.0f);
-            ImGui::SliderFloat("Halo falloff", &light.sunlightHaloFalloff, 4.0f, 1024.0f);
-            ImGui::SliderFloat("Sun radius", &light.sunlightAngularRadius, 0.1f, 10.0f);
-            ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
-            ImGui::SliderFloat("Shadow Far", &light.shadowOptions.shadowFar, 0.0f,
-                    mSettings.viewer.cameraFar);
+            ImGui::SliderFloat("Sun intensity", &light.sunlight.intensity, 0.0f, 150000.0f);
+            ImGui::SliderFloat("Halo size", &light.sunlight.sunHaloSize, 1.01f, 40.0f);
+            ImGui::SliderFloat("Halo falloff", &light.sunlight.sunHaloFalloff, 4.0f, 1024.0f);
+            ImGui::SliderFloat("Sun radius", &light.sunlight.sunAngularRadius, 0.1f, 10.0f);
+            ImGuiExt::DirectionWidget("Sun direction", light.sunlight.direction.v);
+            ImGui::SliderFloat("Shadow Far", &light.sunlight.shadowOptions.shadowFar, 0.0f,
+                    mSettings.camera.far);
 
             if (ImGui::CollapsingHeader("Shadow direction")) {
-                float3 shadowDirection = light.shadowOptions.transform * light.sunlightDirection;
+                float3 shadowDirection = light.sunlight.shadowOptions.transform * light.sunlight.direction;
                 ImGuiExt::DirectionWidget("Shadow direction", shadowDirection.v);
-                light.shadowOptions.transform = normalize(quatf{
-                        cross(light.sunlightDirection, shadowDirection),
-                        sqrt(length2(light.sunlightDirection) * length2(shadowDirection))
-                        + dot(light.sunlightDirection, shadowDirection)
+                light.sunlight.shadowOptions.transform = normalize(quatf{
+                        cross(light.sunlight.direction, shadowDirection),
+                        sqrt(length2(light.sunlight.direction) * length2(shadowDirection))
+                        + dot(light.sunlight.direction, shadowDirection)
                 });
             }
         }
         if (ImGui::CollapsingHeader("Shadows")) {
             ImGui::Checkbox("Enable shadows", &light.enableShadows);
-            int mapSize = light.shadowOptions.mapSize;
+            int mapSize = light.sunlight.shadowOptions.mapSize;
             ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024);
-            light.shadowOptions.mapSize = mapSize;
-            ImGui::Checkbox("Stable Shadows", &light.shadowOptions.stable);
-            ImGui::Checkbox("Enable LiSPSM", &light.shadowOptions.lispsm);
+            light.sunlight.shadowOptions.mapSize = mapSize;
+            ImGui::Checkbox("Stable Shadows", &light.sunlight.shadowOptions.stable);
+            ImGui::Checkbox("Enable LiSPSM", &light.sunlight.shadowOptions.lispsm);
 
             int shadowType = (int)mSettings.view.shadowType;
             ImGui::Combo("Shadow type", &shadowType, "PCF\0VSM\0DPCF\0PCSS\0PCFd\0\0");
@@ -948,7 +977,7 @@ void ViewerGui::updateUserInterface() {
 
             if (mSettings.view.shadowType == ShadowType::VSM) {
                 ImGui::Checkbox("High precision", &mSettings.view.vsmShadowOptions.highPrecision);
-                ImGui::Checkbox("ELVSM", &mSettings.lighting.shadowOptions.vsm.elvsm);
+                ImGui::Checkbox("ELVSM", &mSettings.lighting.sunlight.shadowOptions.vsm.elvsm);
                 char label[32];
                 snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
                 ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
@@ -960,7 +989,7 @@ void ViewerGui::updateUserInterface() {
                 ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
                 mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
                 ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
-                ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
+                ImGui::SliderFloat("VSM blur", &light.sunlight.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
 
                 // These are not very useful in practice (defaults are good), but we keep them here for debugging
                 //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
@@ -971,15 +1000,15 @@ void ViewerGui::updateUserInterface() {
                 ImGui::SliderFloat("Penumbra Ratio scale", &light.softShadowOptions.penumbraRatioScale, 1.0f, 100.0f);
             }
 
-            int shadowCascades = light.shadowOptions.shadowCascades;
+            int shadowCascades = light.sunlight.shadowOptions.shadowCascades;
             ImGui::SliderInt("Cascades", &shadowCascades, 1, 4);
             ImGui::Checkbox("Debug cascades",
                     debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
-            ImGui::Checkbox("Enable contact shadows", &light.shadowOptions.screenSpaceContactShadows);
-            ImGui::SliderFloat("Split pos 0", &light.shadowOptions.cascadeSplitPositions[0], 0.0f, 1.0f);
-            ImGui::SliderFloat("Split pos 1", &light.shadowOptions.cascadeSplitPositions[1], 0.0f, 1.0f);
-            ImGui::SliderFloat("Split pos 2", &light.shadowOptions.cascadeSplitPositions[2], 0.0f, 1.0f);
-            light.shadowOptions.shadowCascades = shadowCascades;
+            ImGui::Checkbox("Enable contact shadows", &light.sunlight.shadowOptions.screenSpaceContactShadows);
+            ImGui::SliderFloat("Split pos 0", &light.sunlight.shadowOptions.cascadeSplitPositions[0], 0.0f, 1.0f);
+            ImGui::SliderFloat("Split pos 1", &light.sunlight.shadowOptions.cascadeSplitPositions[1], 0.0f, 1.0f);
+            ImGui::SliderFloat("Split pos 2", &light.sunlight.shadowOptions.cascadeSplitPositions[2], 0.0f, 1.0f);
+            light.sunlight.shadowOptions.shadowCascades = shadowCascades;
         }
         ImGui::Unindent();
     }
@@ -1054,12 +1083,12 @@ void ViewerGui::updateUserInterface() {
     if (ImGui::CollapsingHeader("Camera")) {
         ImGui::Indent();
 
-        ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength, 16.0f, 90.0f);
-        ImGui::SliderFloat("Aperture", &mSettings.viewer.cameraAperture, 1.0f, 32.0f);
-        ImGui::SliderFloat("Speed (1/s)", &mSettings.viewer.cameraSpeed, 1000.0f, 1.0f);
-        ImGui::SliderFloat("ISO", &mSettings.viewer.cameraISO, 25.0f, 6400.0f);
-        ImGui::SliderFloat("Near", &mSettings.viewer.cameraNear, 0.001f, 1.0f);
-        ImGui::SliderFloat("Far", &mSettings.viewer.cameraFar, 1.0f, 10000.0f);
+        ImGui::SliderFloat("Focal length (mm)", &mSettings.camera.focalLength, 16.0f, 90.0f);
+        ImGui::SliderFloat("Aperture", &mSettings.camera.aperture, 1.0f, 32.0f);
+        ImGui::SliderFloat("Speed (1/s)", &mSettings.camera.shutterSpeed, 1000.0f, 1.0f);
+        ImGui::SliderFloat("ISO", &mSettings.camera.sensitivity, 25.0f, 6400.0f);
+        ImGui::SliderFloat("Near", &mSettings.camera.near, 0.001f, 1.0f);
+        ImGui::SliderFloat("Far", &mSettings.camera.far, 1.0f, 10000.0f);
 
         if (ImGui::CollapsingHeader("DoF")) {
             bool dofMedian = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
@@ -1068,7 +1097,7 @@ void ViewerGui::updateUserInterface() {
             if (!dofRingCount) dofRingCount = 5;
             if (!dofMaxCoC) dofMaxCoC = 32;
             ImGui::Checkbox("Enabled##dofEnabled", &mSettings.view.dof.enabled);
-            ImGui::SliderFloat("Focus distance", &mSettings.viewer.cameraFocusDistance, 0.0f, 30.0f);
+            ImGui::SliderFloat("Focus distance", &mSettings.camera.focusDistance, 0.0f, 30.0f);
             ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
             ImGui::SliderFloat("CoC aspect-ratio", &mSettings.view.dof.cocAspectRatio, 0.25f, 4.0f);
             ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
@@ -1133,15 +1162,21 @@ void ViewerGui::updateUserInterface() {
                 debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
         ImGui::Unindent();
 #endif
-#endif
-        ImGui::SliderFloat("Ocular distance", &mSettings.viewer.cameraEyeOcularDistance, 0.0f,
-                1.0f);
+        ImGui::SliderFloat("Ocular distance", &mSettings.camera.eyeOcularDistance, 0.0f, 1.0f);
 
-        float toeInDegrees = mSettings.viewer.cameraEyeToeIn / f::PI * 180.0f;
+        float toeInDegrees = mSettings.camera.eyeToeIn / f::PI * 180.0f;
         ImGui::SliderFloat("Toe in", &toeInDegrees, 0.0f, 30.0, "%.3f°");
-        mSettings.viewer.cameraEyeToeIn = toeInDegrees / 180.0f * f::PI;
+        mSettings.camera.eyeToeIn = toeInDegrees / 180.0f * f::PI;
 
         ImGui::Unindent();
+#endif
+    }
+
+    if (ImGui::CollapsingHeader("Debug Options")) {
+        mSettings.debug.skipFrames = 0;
+        if (ImGui::Button("Skip 10 frames")) {
+            mSettings.debug.skipFrames = 10;
+        }
     }
 
     colorGradingUI(mSettings, mRangePlot, mCurvePlot, mToneMapPlot);
@@ -1149,6 +1184,9 @@ void ViewerGui::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mEngine, mSettings.view, mView);
+    double const aspect =
+            (double) mView->getViewport().width / (double) mView->getViewport().height;
+    applySettings(mEngine, mSettings.camera, &mView->getCamera(), aspect);
 
     auto lights = utils::FixedCapacityVector<utils::Entity>::with_capacity(mScene->getEntityCount());
     mScene->forEach([&](utils::Entity entity) {

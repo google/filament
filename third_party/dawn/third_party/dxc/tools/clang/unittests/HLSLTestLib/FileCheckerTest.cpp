@@ -519,28 +519,21 @@ FileRunCommandPart::RunDxc(dxc::DxcDllSupport &DllSupport,
       // Convert stage to minimum dxil/validator version:
       RequiredDxilMajor = std::max(RequiredDxilMajor, (unsigned)6) - 5;
 
-      bool bInternalValidator =
-          opts.SelectValidator == hlsl::options::ValidatorSelection::Internal;
       bool bValVerExplicit = opts.ValVerMajor != UINT_MAX;
 
-      // Normally we must check the validator version as well, but there are
-      // two scenarios where the validator version doesn't need to be checked
-      // against the version based on the shader model:
-      // 1. The test selects internal validator.
-      // 2. The test explicitly requests a specific validator version.
-      FileRunCommandResult result =
-          CheckDxilVer(DllSupport, RequiredDxilMajor, RequiredDxilMinor,
-                       !(bInternalValidator || bValVerExplicit));
+      // If validator version set explicitly, skip validator version check when
+      // checking required version for shader model.
+      FileRunCommandResult result = CheckDxilVer(
+          DllSupport, RequiredDxilMajor, RequiredDxilMinor, !bValVerExplicit);
       if (result.AbortPipeline)
         return result;
 
       // Additionally, if the test explicitly requests a specific non-zero
-      // validator version, and doesn't select internal validator or disable
-      // validation, we must check that the validator version is at least as
-      // high as the requested version.
-      // When ValVerMajor is 0, validation cannot be run against the module.
-      if (bValVerExplicit && opts.ValVerMajor != 0 &&
-          !(bInternalValidator || opts.DisableValidation))
+      // validator version, and doesn't disable validation, we must check
+      // that the validator version is at least as high as the requested
+      // version. When ValVerMajor is 0, validation cannot be run against
+      // the module.
+      if (bValVerExplicit && opts.ValVerMajor != 0 && !opts.DisableValidation)
         result = CheckDxilVer(DllSupport, opts.ValVerMajor, opts.ValVerMinor);
       if (result.AbortPipeline)
         return result;

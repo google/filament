@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <backend/platforms/WebGPUPlatform.h>
+#include <backend/platforms/WebGPUPlatformLinux.h>
 
 #include <backend/DriverEnums.h>
 
@@ -41,36 +41,23 @@
         uint32_t height;
     } wl;
     }// namespace
-#elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11)
-    // TODO: we should allow for headless on Linux explicitly. Right now this is the headless path
-    // (with no FILAMENT_SUPPORTS_XCB or FILAMENT_SUPPORTS_XLIB).
+#elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11) && defined(FILAMENT_SUPPORTS_XLIB)
+    // TODO: we should allow for headless on Linux explicitly. Right now headless path doesn't work
     #include <dlfcn.h>
-    #if defined(FILAMENT_SUPPORTS_XCB)
-        #include <xcb/xcb.h>
-        namespace {
-        typedef xcb_connection_t* (*XCB_CONNECT)(const char* displayname, int* screenp);
-        }// namespace
-    #endif
-    #if defined(FILAMENT_SUPPORTS_XLIB)
-        #include <X11/Xlib.h>
-        namespace {
-        typedef Display* (*X11_OPEN_DISPLAY)(const char*);
-        }// namespace
-    #endif
-    static constexpr const char* LIBRARY_X11 = "libX11.so.6";
+    #include <X11/Xlib.h>
+
+    static constexpr const char* LIBRARY_X11 { "libX11.so.6" };
+
     namespace {
-    struct XEnv {
-    #if defined(FILAMENT_SUPPORTS_XCB)
-        XCB_CONNECT xcbConnect;
-        xcb_connection_t* connection;
-    #endif
-    #if defined(FILAMENT_SUPPORTS_XLIB)
-        X11_OPEN_DISPLAY openDisplay;
-        Display* display;
-    #endif
-        void* library = nullptr;
-    } g_x11;
-    }// namespace
+        typedef Display* (*X11_OPEN_DISPLAY)(const char*);
+        struct XEnv final {
+            X11_OPEN_DISPLAY openDisplay;
+            Display* display { nullptr };
+            void* library { nullptr };
+        } g_x11;
+    } // namespace
+#elif defined(FILAMENT_SUPPORTS_OSMESA)
+    // No need
 #else
     #error Not a supported Linux or FeeBSD + WebGPU platform
 #endif
@@ -81,7 +68,7 @@
 
 namespace filament::backend {
 
-std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
+std::vector<wgpu::RequestAdapterOptions> WebGPUPlatformLinux::getAdapterOptions() {
     constexpr std::array powerPreferences = {
         wgpu::PowerPreference::HighPerformance,
         wgpu::PowerPreference::LowPower };
@@ -108,7 +95,7 @@ std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
     return requests;
 }
 
-wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+wgpu::Extent2D WebGPUPlatformLinux::getSurfaceExtent(void* nativeWindow) const {
     auto surfaceExtent = wgpu::Extent2D{};
 #if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
     wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
@@ -116,59 +103,26 @@ wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
     surfaceExtent.height = ptrval->height;
     FILAMENT_CHECK_POSTCONDITION(surfaceExtent.width != 0 && surfaceExtent.height != 0)
             << "Unable to get window size for Linux Wayland-backed surface.";
-#elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11)
+#elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11) && defined (FILAMENT_SUPPORTS_XLIB)
     if (g_x11.library == nullptr) {
         g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
         FILAMENT_CHECK_PRECONDITION(g_x11.library) << "Unable to open X11 library.";
-        #if defined(FILAMENT_SUPPORTS_XCB)
-            g_x11.xcbConnect = (XCB_CONNECT) dlsym(g_x11.library, "xcb_connect");
-            int screen = 0;
-            g_x11.connection = g_x11.xcbConnect(nullptr, &screen);
-        #endif
-        #if defined(FILAMENT_SUPPORTS_XLIB)
-            g_x11.openDisplay = (X11_OPEN_DISPLAY) dlsym(g_x11.library, "XOpenDisplay");
-            g_x11.display = g_x11.openDisplay(NULL);
-            FILAMENT_CHECK_PRECONDITION(g_x11.display) << "Unable to open X11 display.";
-        #endif
     }
-    #if defined(FILAMENT_SUPPORTS_XCB) || defined(FILAMENT_SUPPORTS_XLIB)
-        bool useXcb = false;
-    #endif
-    #if defined(FILAMENT_SUPPORTS_XCB)
-        #if defined(FILAMENT_SUPPORTS_XLIB)
-            useXcb = (SWAP_CHAIN_CONFIG_ENABLE_XCB) != 0;
-        #else
-            useXcb = true;
-        #endif
-        if (useXcb) {
-            const xcb_setup_t* setup = xcb_get_setup(g_x11.connection);
-            xcb_screen_iterator_t screen_iter = xcb_setup_roots_iterator(setup);
-            xcb_screen_t* screen = screen_iter.data;
-            surfaceExtent.width = static_cast<uint32_t>(screen->width_in_pixels);
-            surfaceExtent.height = static_cast<uint32_t>(screen->height_in_pixels);
-            FILAMENT_CHECK_POSTCONDITION(surfaceExtent.width != 0 && surfaceExtent.height != 0)
-                    << "Unable to get window surface size for Linux (or FreeBSD) "
-                       "XCB-backed surface.";
-        }
-    #endif
-    #if defined(FILAMENT_SUPPORTS_XLIB)
-        if (!useXcb) {
-            int screenNumber = DefaultScreen(g_x11.display);
-            Screen* screen = ScreenOfDisplay(g_x11.display, screenNumber);
-            surfaceExtent.width = static_cast<uint32_t>(WidthOfScreen(screen));
-            surfaceExtent.height = static_cast<uint32_t>(HeightOfScreen(screen));
-            FILAMENT_CHECK_POSTCONDITION(surfaceExtent.width != 0 && surfaceExtent.height != 0)
-                    << "Unable to get window surface size for Linux (or FreeBSD) "
-                       "XLib-backed surface.";
-        }
-    #endif
+    if (g_x11.openDisplay == nullptr) {
+        g_x11.openDisplay = reinterpret_cast<X11_OPEN_DISPLAY>(dlsym(g_x11.library, "XOpenDisplay"));
+        g_x11.display = g_x11.openDisplay(NULL);
+        FILAMENT_CHECK_PRECONDITION(g_x11.display) << "Unable to open X11 display.";
+    }
+    Window window { reinterpret_cast<Window const>(nativeWindow) };
+    XWindowAttributes windowAttributes;
+    Status ok { XGetWindowAttributes(g_x11.display, window, &windowAttributes) };
+    FILAMENT_CHECK_PRECONDITION(ok != 0) << " XGetWindowAttributes failed";
+    surfaceExtent.width = static_cast<uint32_t>(windowAttributes.width);
+    surfaceExtent.height = static_cast<uint32_t>(windowAttributes.height);
+
     FILAMENT_CHECK_POSTCONDITION(surfaceExtent.width != 0 && surfaceExtent.height != 0)
             << "Cannot get window surface size for X11 surface for Linux (or FreeBSD) OS "
-               "(not built with support for XCB or XLIB?)";
-#elif defined(__linux__)
-    FILAMENT_CHECK_POSTCONDITION(surfaceExtent.width != 0 && surfaceExtent.height != 0)
-            << "Cannot get window surface size for Linux (or FreeBSD) OS "
-               "(not built with support for Wayland or X11?)";
+               "(not built with support for XLIB?)";
 #else
     FILAMENT_CHECK_POSTCONDITION(surfaceExtent.width != 0 && surfaceExtent.height != 0)
             << "Not a supported (Linux) OS + WebGPU platform";
@@ -176,80 +130,40 @@ wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
     return surfaceExtent;
 }
 
-wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t flags) {
+wgpu::Surface WebGPUPlatformLinux::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     wgpu::Surface surface = nullptr;
 #if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
     wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
     wgpu::SurfaceSourceWaylandSurface surfaceSourceWayland{};
     surfaceSourceWayland.display = ptrval->display;
     surfaceSourceWayland.surface = ptrval->surface;
-    wgpu::SurfaceDescriptor surfaceDescriptor{
+    wgpu::SurfaceDescriptor const surfaceDescriptor {
         .nextInChain = &surfaceSourceWayland,
         .label = "linux_wayland_surface"
     };
     surface = mInstance.CreateSurface(&surfaceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(surface != nullptr)
             << "Unable to create Linux Wayland-backed surface.";
-#elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11)
+#elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11) && defined(FILAMENT_SUPPORTS_XLIB)
     if (g_x11.library == nullptr) {
         g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
         FILAMENT_CHECK_PRECONDITION(g_x11.library) << "Unable to open X11 library.";
-        #if defined(FILAMENT_SUPPORTS_XCB)
-            g_x11.xcbConnect = (XCB_CONNECT) dlsym(g_x11.library, "xcb_connect");
-            int screen = 0;
-            g_x11.connection = g_x11.xcbConnect(nullptr, &screen);
-        #endif
-        #if defined(FILAMENT_SUPPORTS_XLIB)
-            g_x11.openDisplay = (X11_OPEN_DISPLAY) dlsym(g_x11.library, "XOpenDisplay");
-            g_x11.display = g_x11.openDisplay(NULL);
-            FILAMENT_CHECK_PRECONDITION(g_x11.display) << "Unable to open X11 display.";
-        #endif
     }
-    #if defined(FILAMENT_SUPPORTS_XCB) || defined(FILAMENT_SUPPORTS_XLIB)
-        bool useXcb = false;
-    #endif
-    #if defined(FILAMENT_SUPPORTS_XCB)
-        #if defined(FILAMENT_SUPPORTS_XLIB)
-            useXcb = (flags & SWAP_CHAIN_CONFIG_ENABLE_XCB) != 0;
-        #else
-            useXcb = true;
-        #endif
-        if (useXcb) {
-            wgpu::SurfaceSourceXCBWindow surfaceSourceXcb{};
-            surfaceSourceXcb.connection = g_x11.connection;
-
-            // TODO: this looks really wrong, please fix!!
-            surfaceSourceXcb.window = *((uint32_t*) nativeWindow);
-            wgpu::SurfaceDescriptor surfaceDescriptor{
-                .nextInChain = &surfaceSourceXcb,
-                .label = "linux_xcb_surface"
-            };
-            surface = mInstance.CreateSurface(&surfaceDescriptor);
-            FILAMENT_CHECK_POSTCONDITION(surface != nullptr)
-                    << "Unable to create Linux (or FreeBSD) XCB-backed surface.";
-        }
-    #endif
-    #if defined(FILAMENT_SUPPORTS_XLIB)
-        if (!useXcb) {
-            wgpu::SurfaceSourceXlibWindow surfaceSourceXlib{};
-            surfaceSourceXlib.display = g_x11.display;
-            surfaceSourceXlib.window = reinterpret_cast<uint64_t>(nativeWindow);
-            wgpu::SurfaceDescriptor surfaceDescriptor{
-                .nextInChain = &surfaceSourceXlib,
-                .label = "linux_xlib_surface"
-            };
-            surface = mInstance.CreateSurface(&surfaceDescriptor);
-            FILAMENT_CHECK_POSTCONDITION(surface != nullptr)
-                    << "Unable to create Linux (or FreeBSD) XLib-backed surface.";
-        }
-    #endif
+    if (g_x11.openDisplay == nullptr) {
+        g_x11.openDisplay = (X11_OPEN_DISPLAY) dlsym(g_x11.library, "XOpenDisplay");
+        g_x11.display = g_x11.openDisplay(NULL);
+        FILAMENT_CHECK_PRECONDITION(g_x11.display) << "Unable to open X11 display.";
+    }
+    wgpu::SurfaceSourceXlibWindow surfaceSourceXlib{};
+    surfaceSourceXlib.display = g_x11.display;
+    surfaceSourceXlib.window = reinterpret_cast<Window const>(nativeWindow);
+    wgpu::SurfaceDescriptor const surfaceDescriptor {
+        .nextInChain = &surfaceSourceXlib,
+        .label = "linux_xlib_surface"
+    };
+    surface = mInstance.CreateSurface(&surfaceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(surface != nullptr)
-            << "Cannot create WebGPU X11 surface for Linux (or FreeBSD) OS "
-               "(not built with support for XCB or XLIB?)";
-#elif defined(__linux__)
-    FILAMENT_CHECK_POSTCONDITION(surface != nullptr)
-            << "Cannot create WebGPU surface for Linux (or FreeBSD) OS "
-               "(not built with support for Wayland or X11?)";
+            << "Unable to create Linux (or FreeBSD) XLib-backed surface.";
 #else
     FILAMENT_CHECK_POSTCONDITION(surface != nullptr)
             << "Not a supported (Linux) OS + WebGPU platform";

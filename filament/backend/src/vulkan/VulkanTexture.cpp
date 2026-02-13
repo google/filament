@@ -106,7 +106,7 @@ VkComponentMapping composeSwizzle(VkComponentMapping const& prev, VkComponentMap
         return { vals[0], vals[1], vals[2], vals[3] };
     };
 
-    // We make sure all all identities are mapped into respective channels so that actual channel
+    // We make sure all identities are mapped into respective channels so that actual channel
     // mapping will be passed onto the output.
     VkComponentMapping const prevExplicit = identityToChannel(prev);
     VkComponentMapping const nextExplicit = identityToChannel(next);
@@ -117,12 +117,14 @@ inline VulkanLayout getDefaultLayoutImpl(TextureUsage usage) {
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
         if (any(usage & TextureUsage::SAMPLEABLE)) {
             return VulkanLayout::DEPTH_SAMPLER;
-        } else {
-            return VulkanLayout::DEPTH_ATTACHMENT;
         }
+        return VulkanLayout::DEPTH_ATTACHMENT;
     }
 
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
+        if (any(usage & TextureUsage::SAMPLEABLE)) {
+            return VulkanLayout::FRAG_READ;
+        }
         return VulkanLayout::COLOR_ATTACHMENT;
     }
     // Finally, the layout for an immutable texture is optimal read-only.
@@ -160,6 +162,10 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
     }
     if (any(tusage & TextureUsage::BLIT_DST)) {
         usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    if (any(tusage & TextureUsage::GEN_MIPMAPPABLE)) {
+        usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     // Determine if we can use the transient usage flag combined with lazily allocated memory.
@@ -340,7 +346,7 @@ VulkanTexture::VulkanTexture(VulkanContext const& context, VkDevice device, VmaA
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage tusage,
         VulkanStagePool& stagePool)
     : HwTexture(getSamplerTypeFromDepth(depth), 1, samples, width, height, depth,
-              TextureFormat::UNUSED, tusage),
+              TextureFormat::UNUSED, tusage, false),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
               commands, allocator, device, image, memory, format,
               fvkutils::getViewType(SamplerType::SAMPLER_2D),
@@ -356,7 +362,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, SamplerType target,
         uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h,
         uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool)
-     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage) {
+     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage, false) {
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkFormat const vkFormat = fvkutils::getVkFormat(tformat);
     bool const isProtected = any(tusage & TextureUsage::PROTECTED);
@@ -486,7 +492,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         fvkmemory::resource_ptr<VulkanTexture> src, uint8_t baseLevel,
         uint8_t levelCount)
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-            src->format, src->usage),
+            src->format, src->usage, src->asynchronous),
       mState(src->mState) {
     mPrimaryViewRange = src->mPrimaryViewRange;
     mPrimaryViewRange.baseMipLevel = src->mPrimaryViewRange.baseMipLevel + baseLevel;
@@ -498,7 +504,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
         fvkmemory::resource_ptr<VulkanTexture> src, VkComponentMapping swizzle)
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-              src->format, src->usage),
+              src->format, src->usage, src->asynchronous),
       mState(src->mState),
       mPrimaryViewRange(src->mPrimaryViewRange),
       mSwizzle(composeSwizzle(src->mSwizzle, swizzle)) {}

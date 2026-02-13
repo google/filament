@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,37 @@
  * limitations under the License.
  */
 
+/*
+ *  This tool loads an object, applies a material, and renders a sequence of frames
+ *  while varying material parameters, saving each frame as a PNG image.
+ *
+ *  The parameters file format is line-based. Each line specifies a parameter to vary:
+ *      param_name start_value [end_value]
+ *
+ *  - param_name: The name of the material parameter.
+ *  - start_value: The value at the first frame.
+ *  - end_value: (Optional) The value at the last frame. If omitted, defaults to start_value.
+ *
+ *  Values can be scalars or vectors. Vectors are enclosed in curly braces with comma-separated components.
+ *  Examples:
+ *      roughness 0.0 1.0
+ *      baseColor {0.1, 0.2, 0.3} {1.0, 0.0, 0.0}
+ *      clearCoat 1.0
+ *
+ *  Comments start with '#' or '//'. Empty lines are ignored.
+ */
+
 #include "common/arguments.h"
 
-#include <atomic>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <string>
-#include <sstream>
-#include <utility>
-#include <vector>
+#include <image/ColorTransform.h>
+#include <image/LinearImage.h>
 
-#include <getopt/getopt.h>
+#include <imageio/ImageEncoder.h>
 
-#include <utils/Path.h>
-
-#include <backend/PixelBufferDescriptor.h>
+#include <filamentapp/Config.h>
+#include <filamentapp/IBL.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/MeshAssimp.h>
 
 #include <filament/Color.h>
 #include <filament/Engine.h>
@@ -45,18 +58,34 @@
 #include <filament/TransformManager.h>
 #include <filament/View.h>
 
-#include <image/ColorTransform.h>
-#include <imageio/ImageEncoder.h>
+#include <backend/PixelBufferDescriptor.h>
+
+#include <utils/Path.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
 #include <math/vec4.h>
-#include <math/norm.h>
 
-#include <filamentapp/Config.h>
-#include <filamentapp/IBL.h>
-#include <filamentapp/FilamentApp.h>
-#include <filamentapp/MeshAssimp.h>
+#include <getopt/getopt.h>
+
+#include <algorithm>
+#include <atomic>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <sstream>
+#include <utility>
+#include <vector>
 
 using namespace filament::math;
 using namespace filament;
@@ -66,11 +95,11 @@ using namespace image;
 
 struct Param {
     std::string name;
-    float start = 0.0f;
-    float end = 0.0f;
+    std::vector<float> start;
+    std::vector<float> end;
 };
 
-const int FRAME_TO_SKIP = 10;
+constexpr int FRAME_TO_SKIP = 10;
 
 static std::vector<Path> g_filenames;
 static std::vector<char> g_materialBuffer;
@@ -83,10 +112,13 @@ static int g_materialVariantCount = 1;
 static int g_currentFrame = 0;
 static std::atomic_int g_savedFrames(0);
 static std::vector<Param> g_parameters;
+static std::vector<Param> g_activeParameters;
 static std::string g_prefix;
 static uint32_t g_clearColor = 0x000000;
+static uint32_t g_width = 512;
+static uint32_t g_height = 512;
 
-std::unique_ptr<MeshAssimp> g_meshSet;
+static std::unique_ptr<MeshAssimp> g_meshSet;
 static std::map<std::string, MaterialInstance*> g_meshMaterialInstances;
 static const Material* g_material = nullptr;
 static MaterialInstance* g_materialInstance = nullptr;
@@ -94,8 +126,9 @@ static Entity g_light;
 
 static Config g_config;
 
+// Prints the usage message to the console.
 static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
+    std::string const exec_name(Path(name).getName());
     std::string usage(
             "SAMPLE_FRAME_GENERATOR tests a material by varying float parameters\n"
             "Usage:\n"
@@ -107,8 +140,11 @@ static void printUsage(char* name) {
             "params file (see -p). Each frame is finally saved as a PNG.\n\n"
             "The --params and --material parameters are mandatory.\n\n"
             "Example of a parameters file that varies only the roughness:\n\n"
-            "roughness  0.0 1.0\n"
-            "metallic   1.0 1.0\n"
+            "       # default\n"
+            "       baseColor  {1,1,1}\n"
+            "       metallic   1.0\n"
+            "       # interpolated\n"
+            "       roughness  0.0 1.0\n"
             "\n"
             "Options:\n"
             "   --help, -h\n"
@@ -133,20 +169,23 @@ static void printUsage(char* name) {
             "       Hide the skybox, showing the clear color\n\n"
             "   --clear-color=0xRRGGBB, -b 0xRRGGBB\n"
             "       Set the clear color\n\n"
+            "   --size=[number], -S [number]\n"
+            "       Set the viewport width and height (default 512)\n\n"
     );
-    const std::string from("SAMPLE_FRAME_GENERATOR");
+    std::string from("SAMPLE_FRAME_GENERATOR"); // NOLINT(*-const-correctness)
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
     }
-    const std::string apiUsage("API_USAGE");
+    std::string apiUsage("API_USAGE"); // NOLINT(*-const-correctness)
     for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
         usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
     }
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "ha:s:li:m:c:p:x:yb:";
+// Parses command line arguments and populates the Config object.
+static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
+    static constexpr const char* OPTSTR = "ha:s:li:m:c:p:x:yb:S:";
     static const struct option OPTIONS[] = {
             { "help",        no_argument,       nullptr, 'h' },
             { "api",         required_argument, nullptr, 'a' },
@@ -159,12 +198,13 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
             { "skybox-off",  no_argument,       nullptr, 'y' },
             { "prefix",      required_argument, nullptr, 'x' },
             { "clear-color", required_argument, nullptr, 'b' },
+            { "size",        required_argument, nullptr, 'S' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
     int option_index = 0;
     while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+        std::string const arg(optarg ? optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -180,18 +220,30 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                 try {
                     config->scale = std::stof(arg);
                 } catch (std::invalid_argument& e) {
-                    // keep scale of 1.0
+                    config->scale = 1.0;
                 } catch (std::out_of_range& e) {
-                    // keep scale of 1.0
+                    config->scale = 1.0;
                 }
                 break;
             case 'b':
                 try {
-                    g_clearColor = (uint32_t) std::stoul(arg, nullptr, 16);
+                    g_clearColor = uint32_t(std::stoul(arg, nullptr, 16));
                 } catch (std::invalid_argument& e) {
-                    // keep default color
+                    g_clearColor = {};
                 } catch (std::out_of_range& e) {
-                    // keep default color
+                    g_clearColor = {};
+                }
+                break;
+            case 'S':
+                try {
+                    g_width = uint32_t(std::stoul(arg));
+                    g_height = g_width;
+                } catch (std::invalid_argument& e) {
+                    g_width = 512;
+                    g_height = 512;
+                } catch (std::out_of_range& e) {
+                    g_width = 512;
+                    g_height = 512;
                 }
                 break;
             case 'm':
@@ -212,9 +264,9 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                 try {
                     g_materialVariantCount = std::min(std::max(1, std::stoi(arg)), 256);
                 } catch (std::invalid_argument& e) {
-                    // keep count of 1
+                    g_materialVariantCount = 1;
                 } catch (std::out_of_range& e) {
-                    // keep count of 1
+                    g_materialVariantCount = 1;
                 }
                 break;
         }
@@ -223,8 +275,15 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
     return optind;
 }
 
+// Cleans up Filament resources (entities, materials, etc.) before exit.
 static void cleanup(Engine* engine, View*, Scene*) {
-    for (auto material : g_meshMaterialInstances) {
+    for (auto& renderable: g_meshSet->getRenderables()) {
+        if (engine->getRenderableManager().getInstance(renderable)) {
+            engine->destroy(renderable);
+        }
+    }
+
+    for (auto const& material : g_meshMaterialInstances) {
         engine->destroy(material.second);
     }
 
@@ -242,45 +301,110 @@ static void cleanup(Engine* engine, View*, Scene*) {
     em.destroy(g_light);
 }
 
+// Helper function to get the size of a file.
 static std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
 }
 
+// Reads the compiled material file and creates a Filament Material instance.
 static void readMaterial(Engine* engine) {
-    long fileSize = static_cast<long>(getFileSize(g_materialPath.c_str()));
+    long const fileSize = getFileSize(g_materialPath.c_str());
     if (fileSize <= 0) {
         return;
     }
 
-    std::ifstream in(g_materialPath.c_str(), std::ifstream::in);
+    std::ifstream in(g_materialPath.c_str(), std::ifstream::in | std::ios::binary);
     if (in.is_open()) {
-        g_materialBuffer.reserve(static_cast<unsigned long>(fileSize));
+        g_materialBuffer.resize(static_cast<unsigned long>(fileSize));
         if (in.read(g_materialBuffer.data(), fileSize)) {
             g_material = Material::Builder()
-                    .package((void*) g_materialBuffer.data(), (size_t) fileSize)
+                    .package(g_materialBuffer.data(), size_t(fileSize))
                     .build(*engine);
             g_materialInstance = g_material->createInstance();
         }
     }
 }
 
+static std::vector<float> parseFloats(std::istream& stream) {
+    std::vector<float> values;
+    stream >> std::ws;
+    if (stream.peek() == '{') {
+        char c;
+        stream >> c; // consume '{'
+        while (stream.good()) {
+            stream >> std::ws;
+            if (stream.peek() == '}') {
+                stream >> c; // consume '}'
+                break;
+            }
+            float v;
+            stream >> v;
+            if (!stream.fail()) {
+                values.push_back(v);
+            }
+            stream >> std::ws;
+            if (stream.peek() == ',') {
+                stream >> c; // consume ','
+            }
+        }
+    } else {
+        float v;
+        stream >> v;
+        if (!stream.fail()) {
+            values.push_back(v);
+        }
+    }
+    return values;
+}
+
+// Reads the parameters file which defines how material properties change over frames.
 static void readParameters() {
     std::ifstream in(g_paramsPath.c_str(), std::ifstream::in);
     if (in.is_open()) {
         std::string line;
         while (std::getline(in, line)) {
+            if (line.empty() || line[0] == '#' || (line.length() > 1 && line[0] == '/' && line[1] == '/')) continue;
             std::istringstream lineStream(line);
             Param param;
             lineStream >> param.name;
-            lineStream >> param.start;
-            lineStream >> param.end;
+            param.start = parseFloats(lineStream);
+            param.end = parseFloats(lineStream);
+
+            if (param.end.empty()) {
+                param.end = param.start;
+            }
+
+            if (param.start.size() != param.end.size()) {
+                std::cerr << "Error: Parameter " << param.name << " has mismatching dimensions: "
+                          << param.start.size() << " vs " << param.end.size() << std::endl;
+                continue;
+            }
+            if (param.start.empty() || param.start.size() > 4) {
+                std::cerr << "Error: Parameter " << param.name << " has invalid dimension: "
+                          << param.start.size() << std::endl;
+                continue;
+            }
+
             g_parameters.push_back(param);
         }
     }
 }
 
-static void setup(Engine* engine, View* view, Scene* scene) {
+static void setParameter(MaterialInstance* mi, const std::string& name, const std::vector<float>& values) {
+    if (values.size() == 1) {
+        mi->setParameter(name.c_str(), values[0]);
+    } else if (values.size() == 2) {
+        mi->setParameter(name.c_str(), float2{values[0], values[1]});
+    } else if (values.size() == 3) {
+        mi->setParameter(name.c_str(), float3{values[0], values[1], values[2]});
+    } else if (values.size() == 4) {
+        mi->setParameter(name.c_str(), float4{values[0], values[1], values[2], values[3]});
+    }
+}
+
+// Sets up the scene: loads mesh, material, lights, and camera.
+static void setup(Engine* engine, View*, Scene* scene) {
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
 
     readMaterial(engine);
@@ -296,13 +420,13 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     }
 
     auto& tcm = engine->getTransformManager();
-    auto ei = tcm.getInstance(g_meshSet->getRenderables()[0]);
+    auto const ei = tcm.getInstance(g_meshSet->getRenderables()[0]);
     tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -4.0f) } *
             tcm.getWorldTransform(ei));
 
     auto& rcm = engine->getRenderableManager();
-    for (auto renderable : g_meshSet->getRenderables()) {
-        auto instance = rcm.getInstance(renderable);
+    for (auto const renderable : g_meshSet->getRenderables()) {
+        auto const instance = rcm.getInstance(renderable);
         if (!instance) continue;
 
         rcm.setCastShadows(instance, true);
@@ -326,34 +450,43 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         scene->addEntity(g_light);
     }
 
+    g_activeParameters.clear();
+    g_activeParameters.reserve(g_parameters.size());
     for (const auto& p : g_parameters) {
-        g_materialInstance->setParameter(p.name.c_str(), p.start);
+        if (g_material->hasParameter(p.name.c_str())) {
+            setParameter(g_materialInstance, p.name, p.start);
+            g_activeParameters.push_back(p);
+        }
     }
 
-    if (!g_skyboxOn) {
-        auto ibl = FilamentApp::get().getIBL();
-        if (ibl) ibl->getSkybox()->setLayerMask(0xff, 0x00);
-    } else {
+    auto const ibl = FilamentApp::get().getIBL();
+    if (!ibl || !g_skyboxOn) {
         g_skybox = Skybox::Builder().color({
-                ((g_clearColor >> 16) & 0xFF) / 255.0f,
-                ((g_clearColor >>  8) & 0xFF) / 255.0f,
-                ((g_clearColor      ) & 0xFF) / 255.0f,
+                float((g_clearColor >> 16) & 0xFF) / 255.0f,
+                float((g_clearColor >>  8) & 0xFF) / 255.0f,
+                float((g_clearColor      ) & 0xFF) / 255.0f,
                 1.0f
         }).build(*engine);
         scene->setSkybox(g_skybox);
     }
 }
 
+// Called every frame to update material parameters based on the current frame index.
 static void render(Engine*, View*, Scene*, Renderer*) {
-    int frame = g_currentFrame - FRAME_TO_SKIP - 1;
+    int const frame = g_currentFrame - FRAME_TO_SKIP - 1;
     if (frame >= 0 && frame < g_materialVariantCount) {
-        for (const auto& p : g_parameters) {
-            g_materialInstance->setParameter(p.name.c_str(),
-                    p.start + frame * ((p.end - p.start) / float(g_materialVariantCount - 1)));
+        float const t = (g_materialVariantCount > 1) ? (float(frame) / float(g_materialVariantCount - 1)) : 0.0f;
+        for (auto const& [name, start, end] : g_activeParameters) {
+            std::vector<float> current(start.size());
+            for (size_t i = 0; i < current.size(); ++i) {
+                current[i] = start[i] + t * (end[i] - start[i]);
+            }
+            setParameter(g_materialInstance, name, current);
         }
     }
 }
 
+// Called after rendering to capture the frame and save it as a PNG file.
 static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
     int frame = g_currentFrame - FRAME_TO_SKIP - 1;
     // Account for the back buffer
@@ -361,7 +494,7 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
         frame -= 1;
 
         const Viewport& vp = view->getViewport();
-        uint8_t* pixels = new uint8_t[vp.width * vp.height * 3];
+        uint8_t const* pixels = new uint8_t[vp.width * vp.height * 3];
 
         struct CaptureState {
             View* view = nullptr;
@@ -371,14 +504,14 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
         backend::PixelBufferDescriptor buffer(pixels, vp.width * vp.height * 3,
                 backend::PixelBufferDescriptor::PixelDataFormat::RGB,
                 backend::PixelBufferDescriptor::PixelDataType::UBYTE,
-                [](void* buffer, size_t size, void* user) {
-                    CaptureState* state = static_cast<CaptureState*>(user);
+                [](void* buffer, size_t, void* user) {
+                    CaptureState const* state = static_cast<CaptureState*>(user);
                     const Viewport& v = state->view->getViewport();
 
-                    LinearImage image(toLinear<uint8_t>(v.width, v.height, v.width * 3,
+                    LinearImage const image(toLinear<uint8_t>(v.width, v.height, v.width * 3,
                             static_cast<uint8_t*>(buffer)));
 
-                    int digits = (int) log10 ((double) g_materialVariantCount) + 1;
+                    int const digits = int(log10(double(g_materialVariantCount))) + 1;
 
                     std::ostringstream stringStream;
                     stringStream << "./" << g_prefix;
@@ -386,8 +519,8 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
                     stringStream << std::to_string(state->currentFrame);
                     stringStream << ".png";
 
-                    std::string name = stringStream.str();
-                    Path out(name);
+                    std::string const name = stringStream.str();
+                    Path const out(name);
 
                     std::ofstream outputStream(out, std::ios::binary | std::ios::trunc);
                     ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "", name);
@@ -395,13 +528,13 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
                     delete[] static_cast<uint8_t*>(buffer);
                     delete state;
 
-                    g_savedFrames++;
+                    ++g_savedFrames;
                 },
                 new CaptureState { view, frame }
         );
 
         renderer->readPixels(
-                (uint32_t) vp.left, (uint32_t) vp.bottom, vp.width, vp.height, std::move(buffer));
+                uint32_t(vp.left), uint32_t(vp.bottom), vp.width, vp.height, std::move(buffer));
     }
 
     if (g_savedFrames.load() == g_materialVariantCount) {
@@ -411,16 +544,17 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
     g_currentFrame++;
 }
 
-int main(int argc, char* argv[]) {
-    int option_index = handleCommandLineArgments(argc, argv, &g_config);
-    int num_args = argc - option_index;
+// Main entry point: parses args, validates inputs, and runs the Filament application.
+int main(int const argc, char* argv[]) {
+    int const option_index = handleCommandLineArguments(argc, argv, &g_config);
+    int const num_args = argc - option_index;
     if (num_args < 1 || g_materialPath.isEmpty() || g_paramsPath.isEmpty()) {
         printUsage(argv[0]);
         return 1;
     }
 
     for (int i = option_index; i < argc; i++) {
-        utils::Path filename = argv[i];
+        Path const filename = argv[i];
         if (!filename.exists()) {
             std::cerr << "file " << argv[i] << " not found!" << std::endl;
             return 1;
@@ -432,7 +566,7 @@ int main(int argc, char* argv[]) {
     g_config.headless = true;
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.run(g_config,
-            setup, cleanup, FilamentApp::ImGuiCallback(), render, postRender, 512, 512);
+            setup, cleanup, FilamentApp::ImGuiCallback(), render, postRender, g_width, g_height);
 
     return 0;
 }

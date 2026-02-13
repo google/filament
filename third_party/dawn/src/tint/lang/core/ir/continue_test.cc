@@ -101,5 +101,17 @@ TEST_F(IR_ContinueTest, CloneWithArgs) {
     EXPECT_EQ(2_u, val1->As<core::constant::Scalar<u32>>()->ValueAs<u32>());
 }
 
+TEST_F(IR_ContinueTest, Destroy) {
+    auto* loop = b.Loop();
+    auto* inst = b.Continue(loop);
+
+    ASSERT_EQ(1u, loop->Continuing()->InboundSiblingBranches().Length());
+    EXPECT_EQ(inst, loop->Continuing()->InboundSiblingBranches()[0]);
+
+    inst->Destroy();
+
+    EXPECT_EQ(0u, loop->Continuing()->InboundSiblingBranches().Length());
+}
+
 }  // namespace
 }  // namespace tint::core::ir

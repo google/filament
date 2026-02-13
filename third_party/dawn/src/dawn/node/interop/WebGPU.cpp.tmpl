@@ -48,15 +48,25 @@ See:
 #include <unordered_map>
 
 #include "src/dawn/node/utils/Debug.h"
+#include "src/dawn/node/binding/Errors.h"
 
 namespace wgpu {
 namespace interop {
 
 namespace {
 
+// This is passed to constructors so that constructor can
+// check if it's being called legitimately from C++ or
+// illegitimately from JavaScript.
+static void* kInternalConstructionMarker = nullptr;
+
 {{template "Wrappers" $}}
 
 }  // namespace
+
+const Constructors* ConstructorsFor(Napi::Env env) {
+  return Wrappers::For(env);
+}
 
 {{ range $ := .Declarations}}
 {{-        if IsDictionary $}}{{template "Dictionary" $}}
@@ -92,11 +102,20 @@ Napi::Object Initialize(Napi::Env env) {
 {{- define "Wrappers"}}
 // Wrappers holds all the Napi class constructors, and Napi::ObjectWrap type
 // declarations, for each of the WebIDL interface and namespace types.
-class Wrappers {
-  Wrappers(Napi::Env env) {
+class Wrappers : public Constructors  {
+  Wrappers(Napi::Env env) : Constructors(env) {
 {{-   range $ := .Declarations}}
-{{-     if IsInterfaceOrNamespace $}}
+{{-     if and (IsInterfaceOrNamespace $) (not (HasAnnotation $ "ManualImplementation"))}}
+{{-       if and (IsInterface $) ($.Inherits)}}
+    {
+      // It's an interface and it inherits from another class, pass the class it inherits
+      // from to its Class factory
+      Napi::Value baseClassValue = {{$.Inherits}}_ctor.Value();
+      {{$.Name}}_ctor = Napi::Persistent(W{{$.Name}}::Class(env, baseClassValue));
+    }
+{{-       else}}
     {{$.Name}}_ctor = Napi::Persistent(W{{$.Name}}::Class(env));
+{{-       end}}
 {{-     end}}
 {{-   end}}
   }
@@ -105,7 +124,8 @@ class Wrappers {
 
 public:
 {{-   range $ := .Declarations}}
-{{-     if IsInterfaceOrNamespace $}}{{template "Wrapper" $}}
+{{-     if and (IsInterfaceOrNamespace $) (not (HasAnnotation $ "ManualImplementation"))}}
+  {{template "Wrapper" $}}
 {{-     end}}
 {{-   end}}
 
@@ -121,17 +141,11 @@ public:
     instance = nullptr;
   }
 
-  static Wrappers* For(Napi::Env env) {
+  static Constructors* For(Napi::Env env) {
     // Currently Napi only actually supports a single Env, so there's no point
     // maintaining a map of Env to Wrapper. Note: This might not always be true.
     return instance;
   }
-
-{{   range $ := .Declarations}}
-{{-     if IsInterfaceOrNamespace $}}
-  Napi::FunctionReference {{$.Name}}_ctor;
-{{-     end}}
-{{-   end}}
 };
 
 Wrappers* Wrappers::instance = nullptr;
@@ -158,8 +172,14 @@ Wrappers* Wrappers::instance = nullptr;
 {{-  if IsInterface $}}
     std::unique_ptr<{{$.Name}}> impl;
 {{-  end}}
+{{-  if and (IsInterface $) ($.Inherits) }}
+    // This class inherits from another, require the class factory to
+    // receive the base class so it can setup inheritance.
+    static Napi::Function Class(Napi::Env env, Napi::Value baseClassValue) {
+{{-  else}}
     static Napi::Function Class(Napi::Env env) {
-      return DefineClass(env, "{{$.Name}}", {
+{{-  end}}
+      auto func = DefineClass(env, "{{$.Name}}", {
 {{   if $s := SetlikeOf $}}
         InstanceMethod("has", &W{{$.Name}}::has),
         InstanceMethod("keys", &W{{$.Name}}::keys),
@@ -180,9 +200,44 @@ Wrappers* Wrappers::instance = nullptr;
         StaticValue("{{$c.Name}}", ToJS(env, {{$.Name}}::{{$c.Name}}), napi_default_jsproperty),
 {{-  end}}
       });
+
+{{-  if and (IsInterface $) ($.Inherits)}}
+      // It inherits from another class, setup the prototype chain.
+      ChainPrototype(baseClassValue, func);
+{{-  end}}
+      return func;
     }
 
-    W{{$.Name}}(const Napi::CallbackInfo& info) : ObjectWrap(info) {}
+    W{{$.Name}}(const Napi::CallbackInfo& info) : ObjectWrap(info) {
+{{-   if IsInterface $}}
+{{-     if HasConstructor $}}
+
+{{-  range $m := $.Members}}
+{{-    if IsInitializer $m}}
+      {
+        {{template "ParameterTupleDecl" $m}}
+        auto res = FromJS(info, args);
+        if (res) {
+          impl = std::make_unique<wgpu::binding::{{$.Name}}>(args);
+        }
+      }
+      // No constructor matched.
+      if (impl == nullptr) {
+        Napi::TypeError::New(info.Env(), "No constructor matched.").ThrowAsJavaScriptException();
+      }
+{{-      end}}
+{{-  end}}
+
+
+{{-     else}}
+        // Check if the first argument is our internal Napi::External<void> marker
+        // to prevent JavaScript from constructing this non-constructable object.
+        if (info.Length() < 1 || !info[0].IsExternal() || info[0].As<Napi::External<void>>().Data() != &kInternalConstructionMarker) {
+           Napi::TypeError::New(info.Env(), "Failed to construct '{{$.Name}}': Illegal constructor").ThrowAsJavaScriptException();
+         }
+{{-     end}}
+{{-   end}}
+    }
 
 {{-  if $s := SetlikeOf $}}
     Napi::Value has(const Napi::CallbackInfo& info) {
@@ -217,21 +272,7 @@ Wrappers* Wrappers::instance = nullptr;
 {{-    range $overload_idx, $o := $m.Overloads}}
 {{- $overloaded := gt (len $m.Overloads) 1}}
       { {{if $overloaded}}// Overload {{$overload_idx}}{{end}}
-        std::tuple<
-{{-        range $i, $p := $o.Parameters}}
-{{-          if $i}}, {{end}}
-{{-          if      $p.Init    }}DefaultedParameter<{{template "Type" $p.Type}}>
-{{-          else if $p.Optional}}std::optional<{{template "Type" $p.Type}}>
-{{-          else               }}{{template "Type" $p.Type}}
-{{-          end}}
-{{-        end}}> args;
-
-{{-        range $i, $p := $o.Parameters}}
-{{-          if $p.Init}}
-        std::get<{{$i}} /* {{$p.Name}} */>(args).default_value = {{Eval "Literal" "Value" $p.Init "Type" $p.Type}};
-{{-          end}}
-{{-        end}}
-
+        {{template "ParameterTupleDecl" $o}}
         auto res = FromJS(info, args);
         if (res) {
           {{/* indent */}}INTEROP_LOG(
@@ -276,6 +317,29 @@ Wrappers* Wrappers::instance = nullptr;
   };
 {{end}}
 
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a tuple "args" for function argument conversion from JS to C++
+--------------------------------------------------------------------------------
+
+*/ -}}
+{{- define "ParameterTupleDecl"}}
+        std::tuple<
+{{-        range $i, $p := $.Parameters}}
+{{-          if $i}}, {{end}}
+{{-          if      $p.Init    }}DefaultedParameter<{{template "Type" $p.Type}}>
+{{-          else if $p.Optional}}std::optional<{{template "Type" $p.Type}}>
+{{-          else               }}{{template "Type" $p.Type}}
+{{-          end}}
+{{-        end}}> args;
+
+{{-        range $i, $p := $.Parameters}}
+{{-          if $p.Init}}
+        std::get<{{$i}} /* {{$p.Name}} */>(args).default_value = {{Eval "Literal" "Value" $p.Init "Type" $p.Type}};
+{{-          end}}
+{{-        end}}
+
+{{- end}}
 
 {{- /*
 --------------------------------------------------------------------------------
@@ -287,7 +351,7 @@ Wrappers* Wrappers::instance = nullptr;
 Result Converter<{{$.Name}}>::FromJS(Napi::Env env, Napi::Value value, {{$.Name}}& out) {
   auto object = value.ToObject();
   Result res;
-{{- template "DictionaryMembersFromJS" $}};
+{{- template "DictionaryMembersFromJS" $}}
   return Success;
 }
 
@@ -327,6 +391,8 @@ std::ostream& operator<<(std::ostream& o, const {{$.Name}}& dict) {
   if (!res) {
     return res.Append("while converting member '{{$m.Name}}'");
   }
+{{-    else}}
+  (void)object;
 {{-    end}}
 {{- end}}
 
@@ -356,6 +422,7 @@ std::ostream& operator<<(std::ostream& o, const {{$.Name}}& dict) {
 {{- define "Interface"}}
 {{$.Name}}::{{$.Name}}() = default;
 
+{{-  if not (HasAnnotation $ "ManualImplementation")}}
 {{$.Name}}* {{$.Name}}::Unwrap(Napi::Object object) {
   auto* wrappers = Wrappers::For(object.Env());
   if (!object.InstanceOf(wrappers->{{$.Name}}_ctor.Value())) {
@@ -366,7 +433,10 @@ std::ostream& operator<<(std::ostream& o, const {{$.Name}}& dict) {
 
 Interface<{{$.Name}}> {{$.Name}}::Bind(Napi::Env env, std::unique_ptr<{{$.Name}}>&& impl) {
   auto* wrappers = Wrappers::For(env);
-  auto object = wrappers->{{$.Name}}_ctor.New({});
+  // Pass in kInternalConstructionMarker to allow this instance to actually be constructed.
+  auto object = wrappers->{{$.Name}}_ctor.New({
+    Napi::External<void>::New(env, &kInternalConstructionMarker)
+  });
   auto* wrapper = Wrappers::W{{$.Name}}::Unwrap(object);
   wrapper->impl = std::move(impl);
 
@@ -381,6 +451,7 @@ Interface<{{$.Name}}> {{$.Name}}::Bind(Napi::Env env, std::unique_ptr<{{$.Name}}
 
   return Interface<{{$.Name}}>(object);
 }
+{{-  end}}
 
 {{$.Name}}::~{{$.Name}}() = default;
 {{ end}}

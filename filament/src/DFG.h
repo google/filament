@@ -23,6 +23,9 @@
 
 #include <utils/compiler.h>
 
+#include <cstdint>
+#include <cstddef>
+
 namespace filament {
 
 class FEngine;
@@ -40,7 +43,7 @@ public:
     DFG& operator=(DFG const& rhs) = delete;
     DFG& operator=(DFG&& rhs) = delete;
 
-    void init(FEngine& engine) noexcept;
+    void init(FEngine& engine);
 
     size_t getLutSize() const noexcept {
         return DFG_LUT_SIZE;
@@ -61,9 +64,6 @@ private:
 
     // make sure to use the right size here
     static constexpr size_t DFG_LUT_SIZE = FILAMENT_DFG_LUT_SIZE;
-
-    // this lookup table is generated with cmgen
-    static const uint16_t DFG_LUT[];
 };
 
 #undef FILAMENT_DFG_LUT_SIZE

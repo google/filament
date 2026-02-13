@@ -86,6 +86,15 @@ public:
     virtual bool isSRGBSwapChainSupported() const noexcept;
 
     /**
+     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_MSAA_*_SAMPLES flag.
+     * The default implementation returns false.
+     *
+     * @param samples The number of samples
+     * @return true if SWAP_CHAIN_CONFIG_MSAA_*_SAMPLES is supported, false otherwise.
+     */
+    virtual bool isMSAASwapChainSupported(uint32_t samples) const noexcept;
+
+    /**
      * Return whether protected contexts are supported by this backend.
      * If protected context are supported, the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag can be
      * used when creating a SwapChain.
@@ -103,7 +112,7 @@ public:
      *
      */
     virtual SwapChain* UTILS_NULLABLE createSwapChain(
-            void* UTILS_NULLABLE nativeWindow, uint64_t flags) noexcept = 0;
+            void* UTILS_NULLABLE nativeWindow, uint64_t flags) = 0;
 
     /**
      * Called by the driver create a headless SwapChain.
@@ -117,7 +126,7 @@ public:
      *       A void* might be enough.
      */
     virtual SwapChain* UTILS_NULLABLE createSwapChain(
-            uint32_t width, uint32_t height, uint64_t flags) noexcept = 0;
+            uint32_t width, uint32_t height, uint64_t flags) = 0;
 
     /**
      * Called by the driver to destroys the SwapChain
@@ -276,6 +285,26 @@ public:
      */
     virtual backend::FenceStatus waitFence(Fence* UTILS_NONNULL fence, uint64_t timeout) noexcept;
 
+    // --------------------------------------------------------------------------------------------
+    // Sync support
+
+    /**
+     * Creates a Sync. These can be used for frame synchronization externally
+     * (certain platform implementations can be exported to handles that can
+     * be used in other processes).
+     *
+     * @return A Sync object.
+     */
+    virtual Platform::Sync* UTILS_NONNULL createSync() noexcept;
+
+    /**
+     * Destroys a sync. If called with a sync not created by this platform
+     * object, this will lead to undefined behavior.
+     *
+     * @param sync The sync to destroy, that was created by this platform
+     *             instance.
+     */
+    virtual void destroySync(Platform::Sync* UTILS_NONNULL sync) noexcept;
 
     // --------------------------------------------------------------------------------------------
     // Streaming support
@@ -401,7 +430,7 @@ public:
     virtual bool isExtraContextSupported() const noexcept;
 
     /**
-     * Creates an OpenGL context with the same configuration than the main context and makes it
+     * Creates an OpenGL context with the same configuration as the main context and makes it
      * current to the current thread. Must not be called from the main driver thread.
      * createContext() is only supported if isExtraContextSupported() returns true.
      * These additional contexts will be automatically terminated in terminate.
@@ -414,7 +443,7 @@ public:
 
     /**
      * Detach and destroy the current context if any and releases all resources associated to
-     * this thread.
+     * this thread. This must be called from the same thread where createContext() was called.
      */
     virtual void releaseContext() noexcept;
 };

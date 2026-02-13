@@ -23,7 +23,6 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 
 #include "ShaderMinifier.h"
-#include "SpirvRemapWrapper.h"
 
 #include <spirv-tools/optimizer.hpp>
 
@@ -46,7 +45,7 @@ using SibVector = utils::FixedCapacityVector<BindingPointAndSib>;
 
 using DescriptorInfo = std::tuple<
         utils::CString,
-        filament::backend::DescriptorSetLayoutBinding,
+        filament::backend::DescriptorSetLayoutDescriptor,
         std::optional<filament::SamplerInterfaceBlock::SamplerInfo>>;
 using DescriptorSetInfo = utils::FixedCapacityVector<DescriptorInfo>;
 using DescriptorSets = std::array<DescriptorSetInfo, filament::backend::MAX_DESCRIPTOR_SET_COUNT>;
@@ -58,7 +57,10 @@ public:
         GENERATE_DEBUG_INFO = 1 << 1,
     };
 
-    GLSLPostProcessor(MaterialBuilder::Optimization optimization, uint32_t flags);
+    GLSLPostProcessor(
+            MaterialBuilder::Optimization optimization,
+            MaterialBuilder::Workarounds workarounds,
+            uint32_t flags);
 
     ~GLSLPostProcessor();
 
@@ -67,6 +69,7 @@ public:
         filament::UserVariantFilterMask variantFilter;
         MaterialBuilder::TargetApi targetApi;
         MaterialBuilder::TargetLanguage targetLanguage;
+        MaterialBuilder::Workarounds workarounds;
         filament::backend::ShaderStage shaderType;
         filament::backend::ShaderModel shaderModel;
         filament::backend::FeatureLevel featureLevel;
@@ -133,6 +136,7 @@ private:
     void fixupClipDistance(SpirvBlob& spirv, GLSLPostProcessor::Config const& config) const;
 
     const MaterialBuilder::Optimization mOptimization;
+    const MaterialBuilder::Workarounds mWorkarounds;
     const bool mPrintShaders;
     const bool mGenerateDebugInfo;
 };

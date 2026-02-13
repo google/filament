@@ -28,6 +28,7 @@
 #ifndef SRC_DAWN_COMMON_UNDERLYINGTYPE_H_
 #define SRC_DAWN_COMMON_UNDERLYINGTYPE_H_
 
+#include <concepts>
 #include <type_traits>
 
 namespace dawn {
@@ -41,12 +42,14 @@ template <typename T, typename Enable = void>
 struct UnderlyingTypeImpl;
 
 template <typename I>
-struct UnderlyingTypeImpl<I, typename std::enable_if_t<std::is_integral<I>::value>> {
+    requires std::integral<I>
+struct UnderlyingTypeImpl<I> {
     using type = I;
 };
 
 template <typename E>
-struct UnderlyingTypeImpl<E, typename std::enable_if_t<std::is_enum<E>::value>> {
+    requires std::is_enum_v<E>
+struct UnderlyingTypeImpl<E> {
     using type = std::underlying_type_t<E>;
 };
 

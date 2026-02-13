@@ -31,9 +31,6 @@ namespace filament::backend {
 
 namespace {
 
-using Bitmask = fvkutils::UniformBufferBitmask;
-static_assert(sizeof(Bitmask) * 8 == fvkutils::MAX_DESCRIPTOR_SET_BITMASK_BITS);
-
 template<typename T>
 void erasep(std::vector<T>& v, std::function<bool(T const&)> f) {
     auto newEnd = std::remove_if(v.begin(), v.end(), f);
@@ -50,42 +47,15 @@ ImageData& findImage(std::vector<ImageData>& images,
     return *itr;
 }
 
-void copySet(VkDevice device, VkDescriptorSet srcSet, VkDescriptorSet dstSet, Bitmask bindings) {
-    // TODO: fix the size for better memory management
-    std::vector<VkCopyDescriptorSet> copies;
-    bindings.forEachSetBit([&](size_t index) {
-        copies.push_back({
-            .sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
-            .srcSet = srcSet,
-            .srcBinding = (uint32_t) index,
-            .dstSet = dstSet,
-            .dstBinding = (uint32_t) index,
-            .descriptorCount = 1,
-        });
-    });
-    vkUpdateDescriptorSets(device, 0, nullptr, copies.size(), copies.data());
-}
-
-Bitmask foldBitsInHalf(Bitmask bitset) {
-    Bitmask outBitset;
-    bitset.forEachSetBit([&](size_t index) {
-        constexpr size_t BITMASK_LOWER_BITS_LEN = sizeof(outBitset) * 4;
-        outBitset.set(index % BITMASK_LOWER_BITS_LEN);
-    });
-    return outBitset;
-}
-
 }// namespace
 
-VulkanExternalImageManager::VulkanExternalImageManager(VulkanPlatform* platform,
-        VulkanSamplerCache* samplerCache, VulkanYcbcrConversionCache* ycbcrConversionCache,
-        VulkanDescriptorSetCache* setCache, VulkanDescriptorSetLayoutCache* layoutCache)
-    : mPlatform(platform),
-      mSamplerCache(samplerCache),
-      mYcbcrConversionCache(ycbcrConversionCache),
-      mDescriptorSetCache(setCache),
-      mDescriptorSetLayoutCache(layoutCache) {
-}
+VulkanExternalImageManager::VulkanExternalImageManager(VulkanSamplerCache* samplerCache,
+        VulkanYcbcrConversionCache* ycbcrConversionCache, VulkanDescriptorSetCache* setCache,
+        VulkanDescriptorSetLayoutCache* layoutCache)
+        : mSamplerCache(samplerCache),
+          mYcbcrConversionCache(ycbcrConversionCache),
+          mDescriptorSetCache(setCache),
+          mDescriptorSetLayoutCache(layoutCache) {}
 
 VulkanExternalImageManager::~VulkanExternalImageManager() = default;
 
@@ -94,72 +64,21 @@ void VulkanExternalImageManager::terminate() {
     mImages.clear();
 }
 
-void VulkanExternalImageManager::onBeginFrame() {
-    std::for_each(mImages.begin(), mImages.end(), [](ImageData& image) {
-        image.hasBeenValidated = false;
-    });
-    std::for_each(mSetBindings.begin(), mSetBindings.end(), [](SetBindingInfo& info) {
-        info.bound = false;
-    });
-}
-
-fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutArray const& layouts,
-        SetArray const& sets) {
-    fvkutils::DescriptorSetMask shouldUseExternalSampler{};
-    for (uint8_t i = 0; i < sets.size(); i++) {
-        auto set = sets[i];
-        auto layout = layouts[i];
-        if (!set || !layout) {
-            continue;
-        }
-        if (hasExternalSampler(set)) {
-            updateSetAndLayout(set, layout);
-            shouldUseExternalSampler.set(i);
-        }
-    }
-    return shouldUseExternalSampler;
-}
-
-bool VulkanExternalImageManager::hasExternalSampler(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set) {
-    auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
-            [&](SetBindingInfo const& info) { return info.set == set; });
-    return itr != mSetBindings.end();
-}
-
 void VulkanExternalImageManager::updateSetAndLayout(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set) {
     utils::FixedCapacityVector<
             std::tuple<uint8_t, VkSampler, fvkmemory::resource_ptr<VulkanTexture>>>
             samplerAndBindings;
     samplerAndBindings.reserve(MAX_SAMPLER_COUNT);
 
     fvkutils::SamplerBitmask actualExternalSamplers;
-    for (auto& bindingInfo : mSetBindings) {
-        if (bindingInfo.set != set || bindingInfo.bound) {
+    for (auto& bindingInfo: mSetBindings) {
+        if (bindingInfo.set != set) {
             continue;
         }
-        auto& imageData = findImage(mImages, bindingInfo.image);
-        updateImage(&imageData);
-
-        auto samplerParams = bindingInfo.samplerParams;
-        // according to spec, these must match chromaFilter
-        // https://registry.khronos.org/vulkan/specs/latest/man/html/VkSamplerCreateInfo.html#VUID-VkSamplerCreateInfo-minFilter-01645
-        samplerParams.filterMag = SamplerMagFilter::NEAREST;
-        samplerParams.filterMin = SamplerMinFilter::NEAREST;
-
-        auto sampler = mSamplerCache->getSampler({
-            .sampler = samplerParams,
-            .conversion = imageData.conversion,
-        });
         actualExternalSamplers.set(bindingInfo.binding);
-        samplerAndBindings.push_back({ bindingInfo.binding, sampler, bindingInfo.image });
-        bindingInfo.bound = true;
-    }
-
-    if (samplerAndBindings.empty()) {
-        return;
+        samplerAndBindings.push_back(
+                { bindingInfo.binding, bindingInfo.sampler, bindingInfo.image });
     }
 
     // Sort by binding number
@@ -167,41 +86,19 @@ void VulkanExternalImageManager::updateSetAndLayout(
         return std::get<0>(a) < std::get<0>(b);
     });
 
-    utils::FixedCapacityVector<VkSampler> outSamplers;
+    utils::FixedCapacityVector<std::pair<uint64_t,VkSampler>> outSamplers;
     outSamplers.reserve(MAX_SAMPLER_COUNT);
     std::for_each(samplerAndBindings.begin(), samplerAndBindings.end(),
-            [&](auto const& b) { outSamplers.push_back(std::get<1>(b)); });
+            [&](auto const& b) { outSamplers.push_back({ static_cast<uint64_t>(std::get<0>(b)), std::get<1>(b) }); });
 
-    VkDescriptorSetLayout const oldLayout = layout->getExternalSamplerVkLayout();
-    VkDescriptorSetLayout const newLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
+    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> const& layout = set->getLayout();
+    set->boundLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
             actualExternalSamplers, outSamplers);
-
-    // Need to copy the set
-    VkDescriptorSet const oldSet = set->getExternalSamplerVkSet();
-    if (oldLayout != newLayout || oldSet == VK_NULL_HANDLE) {
-        // Build a new descriptor set from the new layout
-        VkDescriptorSet const newSet = mDescriptorSetCache->getVkSet(layout->count, newLayout);
-        auto const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
-        auto const samplers = layout->bitmask.sampler & (~actualExternalSamplers);
-
-        // Each bitmask denotes a binding index, and separated into two stages - vertex and buffer
-        // We fold the two stages into just the lower half of the bits to denote a combined set of
-        // bindings.
-        Bitmask const copyBindings = foldBitsInHalf(ubo | samplers);
-        VkDescriptorSet const srcSet = oldSet != VK_NULL_HANDLE ? oldSet : set->getVkSet();
-        copySet(mPlatform->getDevice(), srcSet, newSet, copyBindings);
-
-        set->setExternalSamplerVkSet(newSet, [&](VulkanDescriptorSet*) {
-            mDescriptorSetCache->manualRecycle(layout->count, newLayout, newSet);
-        });
-        if (oldLayout != newLayout) {
-            layout->setExternalSamplerVkLayout(newLayout);
-        }
-    }
-
     // Update the external samplers in the set
     for (auto& [binding, sampler, image]: samplerAndBindings) {
-        mDescriptorSetCache->updateSamplerForExternalSamplerSet(set, binding, image);
+        // We cannot call updateSamplerForExternalSamplerSet because some samplers are non NULL
+        // (RGB) and we cannot do a combined update with a NULL sampler.
+        mDescriptorSetCache->updateSampler(set, binding, image, sampler, set->boundLayout);
     }
 }
 
@@ -231,23 +128,6 @@ VkSamplerYcbcrConversion VulkanExternalImageManager::getVkSamplerYcbcrConversion
     return mYcbcrConversionCache->getConversion(ycbcrParams);
 }
 
-void VulkanExternalImageManager::updateImage(ImageData* image) {
-    if (image->hasBeenValidated) {
-        return;
-    }
-    image->hasBeenValidated = true;
-
-    auto metadata = mPlatform->extractExternalImageMetadata(image->platformHandle);
-    auto vkYcbcr = getVkSamplerYcbcrConversion(metadata);
-    if (vkYcbcr == image->conversion) {
-        return;
-    }
-
-    image->image->setYcbcrConversion(vkYcbcr);
-    image->conversion = vkYcbcr;
-    return;
-}
-
 void VulkanExternalImageManager::removeDescriptorSet(
         fvkmemory::resource_ptr<VulkanDescriptorSet> inSet) {
     erasep<SetBindingInfo>(mSetBindings,
@@ -259,13 +139,32 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
         fvkmemory::resource_ptr<VulkanTexture> image, SamplerParams samplerParams) {
     // Should we do duplicate validation here?
     auto& imageData = findImage(mImages, image);
-    mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
+    // according to spec, these must match chromaFilter
+    // https://registry.khronos.org/vulkan/specs/latest/man/html/VkSamplerCreateInfo.html#VUID-VkSamplerCreateInfo-minFilter-01645
+    samplerParams.filterMag = SamplerMagFilter::NEAREST;
+    samplerParams.filterMin = SamplerMinFilter::NEAREST;
+    // If the sampler has a ycbcrConversion then anisotropic must be disabled and addressModeU,
+    // addressModeV and addressModeW must be VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE.
+    // https://docs.vulkan.org/spec/latest/chapters/samplers.html#VUID-VkSamplerCreateInfo-addressModeU-01646
+    samplerParams.wrapS = SamplerWrapMode::CLAMP_TO_EDGE;
+    samplerParams.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
+    samplerParams.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
+    samplerParams.anisotropyLog2 = 0;
+
+    VkSampler const sampler = mSamplerCache->getSampler({
+        .sampler = samplerParams,
+        .conversion = imageData.conversion,
+    });
+
+    mSetBindings.push_back({ bindingPoint, imageData.image, set, sampler });
 }
 
 void VulkanExternalImageManager::addExternallySampledTexture(
-       fvkmemory::resource_ptr<VulkanTexture> image,
-        Platform::ExternalImageHandleRef platformHandleRef) {
-    mImages.push_back({ image, platformHandleRef, false });
+        fvkmemory::resource_ptr<VulkanTexture> image, VkSamplerYcbcrConversion const conversion) {
+    mImages.push_back({
+        .image = image,
+        .conversion = conversion,
+    });
 }
 
 void VulkanExternalImageManager::removeExternallySampledTexture(

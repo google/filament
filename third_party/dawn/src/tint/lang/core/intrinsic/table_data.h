@@ -33,8 +33,8 @@
 #include <string>
 
 #include "src/tint/lang/core/constant/eval.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/evaluation_stage.h"
-#include "src/tint/lang/core/parameter_usage.h"
 #include "src/tint/utils/containers/enum_set.h"
 #include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/text/styled_text.h"

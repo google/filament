@@ -376,21 +376,34 @@ void VulkanFboCache::gc() noexcept {
     }
     const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
 
-    for (FboMap::iterator iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ++iter) {
+    for (FboMap::iterator iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ) {
         const FboVal fbo = iter->second;
         if (fbo.timestamp < evictTime && fbo.handle) {
             mRenderPassRefCount[iter->first.renderPass]--;
             vkDestroyFramebuffer(mDevice, fbo.handle, VKALLOC);
             iter.value().handle = VK_NULL_HANDLE;
+
+            // erase(iterator) returns the iterator to the next element.
+            iter = mFramebufferCache.erase(iter);
+        } else {
+            ++iter;
         }
     }
-    for (auto iter = mRenderPassCache.begin(); iter != mRenderPassCache.end(); ++iter) {
+
+    for (RenderPassMap::iterator iter = mRenderPassCache.begin(); iter != mRenderPassCache.end(); ) {
         const VkRenderPass handle = iter->second.handle;
         if (iter->second.timestamp < evictTime && handle && mRenderPassRefCount[handle] == 0) {
             vkDestroyRenderPass(mDevice, handle, VKALLOC);
             iter.value().handle = VK_NULL_HANDLE;
+
+            // erase(iterator) returns the iterator to the next element.
+            iter = mRenderPassCache.erase(iter);
+            mRenderPassRefCount.erase(handle);
+        } else {
+            ++iter;
         }
     }
+
     FVK_SYSTRACE_END();
 }
 

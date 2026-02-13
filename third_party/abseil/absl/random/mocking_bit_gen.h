@@ -35,7 +35,7 @@
 
 #include "gmock/gmock.h"
 #include "absl/base/config.h"
-#include "absl/base/internal/fast_type_id.h"
+#include "absl/base/fast_type_id.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
 #include "absl/random/internal/mock_helpers.h"
@@ -175,9 +175,9 @@ class MockingBitGen {
   // distribution parameters of the expectation.
   template <typename ResultT, typename ArgTupleT, typename SelfT,
             typename ValidatorT>
-  auto RegisterMock(SelfT&, base_internal::FastTypeIdType type, ValidatorT)
+  auto RegisterMock(SelfT&, FastTypeIdType type, ValidatorT)
       -> decltype(GetMockFnType(std::declval<ResultT>(),
-                                std::declval<ArgTupleT>())) & {
+                                std::declval<ArgTupleT>()))& {
     using MockFnType = decltype(GetMockFnType(std::declval<ResultT>(),
                                               std::declval<ArgTupleT>()));
 
@@ -203,8 +203,8 @@ class MockingBitGen {
 
   // MockingBitGen::InvokeMock
   //
-  // InvokeMock(FastTypeIdType, args, result) is the entrypoint for invoking
-  // mocks registered on MockingBitGen.
+  // bool InvokeMock(key_id, args_tuple*, result*) is the entrypoint
+  // for invoking mocks registered on MockingBitGen.
   //
   // When no mocks are registered on the provided FastTypeIdType, returns false.
   // Otherwise attempts to invoke the mock function ResultT(Args...) that
@@ -212,18 +212,16 @@ class MockingBitGen {
   // Requires tuple_args to point to a ArgTupleT, which is a std::tuple<Args...>
   // used to invoke the mock function.
   // Requires result to point to a ResultT, which is the result of the call.
-  inline bool InvokeMock(base_internal::FastTypeIdType type, void* args_tuple,
+  inline bool InvokeMock(FastTypeIdType key_id, void* args_tuple,
                          void* result) {
     // Trigger a mock, if there exists one that matches `param`.
-    auto it = mocks_.find(type);
+    auto it = mocks_.find(key_id);
     if (it == mocks_.end()) return false;
     it->second->Apply(args_tuple, result);
     return true;
   }
 
-  absl::flat_hash_map<base_internal::FastTypeIdType,
-                      std::unique_ptr<FunctionHolder>>
-      mocks_;
+  absl::flat_hash_map<FastTypeIdType, std::unique_ptr<FunctionHolder>> mocks_;
   absl::BitGen gen_;
 
   template <typename>

@@ -92,14 +92,14 @@ Copy your platform's Makefile below into a `Makefile` inside the same directory.
 ### Linux
 
 ```make
-FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -lvkshaders -libl -labseil
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -libl -labseil
 CC=clang++
 
 main: main.o
 	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) -lpthread -lc++ -ldl -o main
 
 main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++17 -pthread -c main.cpp
+	$(CC) -Iinclude/ -std=c++20 -pthread -c main.cpp
 
 clean:
 	rm -f main main.o
@@ -110,7 +110,7 @@ clean:
 ### macOS
 
 ```make
-FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -lvkshaders -libl -labseil
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -libl -labseil
 FRAMEWORKS=-framework Cocoa -framework Metal -framework CoreVideo
 CC=clang++
 ARCH ?= $(shell uname -m)
@@ -119,7 +119,7 @@ main: main.o
 	$(CC) -Llib/$(ARCH)/ main.o $(FILAMENT_LIBS) $(FRAMEWORKS) -o main
 
 main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++17 -c main.cpp
+	$(CC) -Iinclude/ -std=c++20 -c main.cpp
 
 clean:
 	rm -f main main.o
@@ -140,7 +140,7 @@ used to change the run-time library version.
 
 ```make
 FILAMENT_LIBS=filament.lib backend.lib bluegl.lib bluevk.lib filabridge.lib filaflat.lib \
-              utils.lib geometry.lib smol-v.lib ibl.lib vkshaders.lib abseil.lib
+              utils.lib geometry.lib smol-v.lib ibl.lib abseil.lib
 CC=cl.exe
 
 main.exe: main.obj
@@ -148,7 +148,7 @@ main.exe: main.obj
 	gdi32.lib user32.lib opengl32.lib
 
 main.obj: main.cpp
-	$(CC) /MT /Iinclude\\ /std:c++17 /c main.cpp
+	$(CC) /MT /Iinclude\\ /std:c++20 /c main.cpp
 
 clean:
 	del main.exe main.obj

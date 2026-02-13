@@ -94,7 +94,7 @@ std::string VkResultAsString(::VkResult result) {
 }
 
 MaybeError CheckVkSuccessImpl(VkResult result, const char* context) {
-    if (DAWN_LIKELY(result == VK_SUCCESS)) {
+    if (result == VK_SUCCESS) [[likely]] {
         return {};
     }
 
@@ -108,7 +108,7 @@ MaybeError CheckVkSuccessImpl(VkResult result, const char* context) {
 }
 
 MaybeError CheckVkOOMThenSuccessImpl(VkResult result, const char* context) {
-    if (DAWN_LIKELY(result == VK_SUCCESS)) {
+    if (result == VK_SUCCESS) [[likely]] {
         return {};
     }
 

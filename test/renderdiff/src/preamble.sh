@@ -22,13 +22,16 @@ GOLDEN_OUTPUT_DIR="$(pwd)/out/renderdiff/goldens"
 RENDERDIFF_TEST_DIR="$(pwd)/test/renderdiff"
 MESA_DIR="$(pwd)/mesa/out/"
 VENV_DIR="$(pwd)/venv"
+GLTF_DIR="$(pwd)/gltf/Models"
 BUILD_COMMON_DIR="$(pwd)/build/common"
 
 os_name=$(uname -s)
 if [[ "$os_name" == "Linux" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib/x86_64-linux-gnu"
+    MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.x86_64.json"
 elif [[ "$os_name" == "Darwin" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib"
+    MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.aarch64.json"
 else
     echo "Unsupported platform for renderdiff tests"
     exit 1

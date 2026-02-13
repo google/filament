@@ -81,7 +81,7 @@ public:
     };
 
     //! Use Builder to construct a RenderTarget object instance
-    class Builder : public BuilderBase<BuilderDetails> {
+    class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
         friend struct BuilderDetails;
     public:
         Builder() noexcept;

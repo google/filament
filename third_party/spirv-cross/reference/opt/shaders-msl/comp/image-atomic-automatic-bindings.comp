@@ -1,5 +1,5 @@
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
 #pragma clang diagnostic ignored "-Wunused-variable"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
 
 #include <metal_stdlib>
 #include <simd/simd.h>

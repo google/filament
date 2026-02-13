@@ -33,7 +33,7 @@
 #include "dawn/native/Commands.h"
 #include "dawn/native/DynamicUploader.h"
 #include "dawn/native/MetalBackend.h"
-#include "dawn/native/WaitAnySystemEvent.h"
+#include "dawn/native/PhysicalDevice.h"
 #include "dawn/native/metal/CommandBufferMTL.h"
 #include "dawn/native/metal/DeviceMTL.h"
 #include "dawn/platform/DawnPlatform.h"
@@ -47,8 +47,7 @@ ResultOrError<Ref<Queue>> Queue::Create(Device* device, const QueueDescriptor* d
     return queue;
 }
 
-Queue::Queue(Device* device, const QueueDescriptor* descriptor)
-    : QueueBase(device, descriptor), mCompletedSerial(0) {}
+Queue::Queue(Device* device, const QueueDescriptor* descriptor) : QueueBase(device, descriptor) {}
 
 Queue::~Queue() = default;
 
@@ -67,7 +66,39 @@ void Queue::DestroyImpl() {
 MaybeError Queue::Initialize() {
     id<MTLDevice> mtlDevice = ToBackend(GetDevice())->GetMTLDevice();
 
-    mCommandQueue.Acquire([mtlDevice newCommandQueue]);
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
+    if (@available(macOS 15.0, *)) {
+        if (gpu_info::IsApple(GetDevice()->GetPhysicalDevice()->GetVendorId()) &&
+            GetDevice()->IsToggleEnabled(Toggle::EnableShaderPrint)) {
+            // Add a logging callback to the command queue that forwards print output to the Dawn
+            // logging callback.
+            NSError* error = nil;
+            MTLLogStateDescriptor* logStateDesc = [MTLLogStateDescriptor new];
+            logStateDesc.bufferSize = 4096;
+            logStateDesc.level = MTLLogLevelInfo;
+            id<MTLLogState> mtlLogState = [mtlDevice newLogStateWithDescriptor:logStateDesc
+                                                                         error:&error];
+            if (error != nil) {
+                return DAWN_INTERNAL_ERROR("Error creating MTLLogState:" +
+                                           std::string([error.localizedDescription UTF8String]));
+            }
+            [mtlLogState addLogHandler:^(NSString* substring, NSString* category, MTLLogLevel level,
+                                         NSString* message) {
+                GetDevice()->EmitLog([message UTF8String]);
+            }];
+
+            MTLCommandQueueDescriptor* mtlQueueDescriptor = [MTLCommandQueueDescriptor new];
+            mtlQueueDescriptor.logState = mtlLogState;
+            mCommandQueue.Acquire([mtlDevice newCommandQueueWithDescriptor:mtlQueueDescriptor]);
+        } else {
+            mCommandQueue.Acquire([mtlDevice newCommandQueue]);
+        }
+    } else
+#endif
+    {
+        mCommandQueue.Acquire([mtlDevice newCommandQueue]);
+    }
+
     if (mCommandQueue == nil) {
         return DAWN_INTERNAL_ERROR("Failed to allocate MTLCommandQueue.");
     }
@@ -163,19 +194,12 @@ MaybeError Queue::SubmitPendingCommandBuffer() {
     // Update the completed serial once the completed handler is fired. Make a local copy of
     // mLastSubmittedSerial so it is captured by value.
     ExecutionSerial pendingSerial = GetPendingCommandSerial();
-    // this ObjC block runs on a different thread
+    // This ObjC block runs on a different thread
     [*pendingCommands addCompletedHandler:^(id<MTLCommandBuffer>) {
         TRACE_EVENT_ASYNC_END0(platform, GPUWork, "DeviceMTL::SubmitPendingCommandBuffer",
                                uint64_t(pendingSerial));
 
-        // Do an atomic_max on mCompletedSerial since it might have been increased outside the
-        // CommandBufferMTL completed handlers if the device has been lost, or if they handlers fire
-        // in an unordered way.
-        uint64_t currentCompleted = mCompletedSerial.load();
-        while (uint64_t(pendingSerial) > currentCompleted &&
-               !mCompletedSerial.compare_exchange_weak(currentCompleted, uint64_t(pendingSerial))) {
-        }
-
+        this->UpdateCompletedSerialTo(pendingSerial);
         this->UpdateWaitingEvents(pendingSerial);
     }];
 
@@ -225,25 +249,14 @@ bool Queue::HasPendingCommands() const {
     return mCommandContext.NeedsSubmit();
 }
 
-MaybeError Queue::SubmitPendingCommands() {
+MaybeError Queue::SubmitPendingCommandsImpl() {
     return SubmitPendingCommandBuffer();
 }
 
 ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
-    uint64_t frontendCompletedSerial{GetCompletedCommandSerial()};
-    // sometimes we increase the serials, in which case the completed serial in
-    // the device base will surpass the completed serial we have in the metal backend, so we
-    // must update ours when we see that the completed serial from device base has
-    // increased.
-    //
-    // This update has to be atomic otherwise there is a race with the `addCompletedHandler`
-    // call below and this call could set the mCompletedSerial backwards.
-    uint64_t current = mCompletedSerial.load();
-    while (frontendCompletedSerial > current &&
-           !mCompletedSerial.compare_exchange_weak(current, frontendCompletedSerial)) {
-    }
-
-    return ExecutionSerial(mCompletedSerial.load());
+    // Metal serials are updated via a thread owned by Metal so we don't actually need to do
+    // anything, just return the latest completed serial.
+    return GetCompletedCommandSerial();
 }
 
 void Queue::ForceEventualFlushOfCommands() {
@@ -252,16 +265,14 @@ void Queue::ForceEventualFlushOfCommands() {
     }
 }
 
-Ref<SystemEvent> Queue::CreateWorkDoneSystemEvent(ExecutionSerial serial) {
-    Ref<SystemEvent> completionEvent = AcquireRef(new SystemEvent());
+Ref<WaitListEvent> Queue::CreateWorkDoneEvent(ExecutionSerial serial) {
+    Ref<WaitListEvent> completionEvent = AcquireRef(new WaitListEvent());
     mWaitingEvents.Use([&](auto events) {
-        SystemEventReceiver receiver;
-        // Now that we hold the lock, check against mCompletedSerial before inserting.
+        // Now that we hold the lock, check against completed serial before inserting.
         // This serial may have just completed. If it did, mark the event complete.
         // Also check for device loss. Otherwise, we could enqueue the event
         // after mWaitingEvents has been flushed for device loss, and it'll never get cleaned up.
-        if (GetDevice()->IsLost() ||
-            serial <= ExecutionSerial(mCompletedSerial.load(std::memory_order_acquire))) {
+        if (GetDevice()->IsLost() || serial <= GetCompletedCommandSerial()) {
             completionEvent->Signal();
         } else {
             // Insert the event into the list which will be signaled inside Metal's queue
@@ -272,12 +283,9 @@ Ref<SystemEvent> Queue::CreateWorkDoneSystemEvent(ExecutionSerial serial) {
     return completionEvent;
 }
 
-ResultOrError<bool> Queue::WaitForQueueSerial(ExecutionSerial serial, Nanoseconds timeout) {
-    Ref<SystemEvent> event = CreateWorkDoneSystemEvent(serial);
-    bool ready = false;
-    std::array<std::pair<const dawn::native::SystemEventReceiver&, bool*>, 1> events{
-        {{event->GetOrCreateSystemEventReceiver(), &ready}}};
-    return WaitAnySystemEvent(events.begin(), events.end(), timeout);
+ResultOrError<ExecutionSerial> Queue::WaitForQueueSerialImpl(ExecutionSerial waitSerial,
+                                                             Nanoseconds timeout) {
+    return CreateWorkDoneEvent(waitSerial)->Wait(timeout) ? waitSerial : kWaitSerialTimeout;
 }
 
 }  // namespace dawn::native::metal

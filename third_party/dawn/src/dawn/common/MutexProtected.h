@@ -31,16 +31,22 @@
 #include <mutex>
 #include <utility>
 
+#include "dawn/common/Compiler.h"
+#include "dawn/common/Defer.h"
 #include "dawn/common/Mutex.h"
 #include "dawn/common/NonMovable.h"
 #include "dawn/common/Ref.h"
 #include "dawn/common/StackAllocated.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
 
 namespace dawn {
 
 template <typename T, template <typename, typename> class Guard>
 class MutexProtected;
+
+template <typename T, template <typename, typename> class Guard>
+class MutexProtectedSupport;
 
 namespace detail {
 
@@ -68,18 +74,38 @@ struct MutexProtectedTraits<Ref<T>> {
     static const ObjectType* GetObj(const Ref<T>* const obj) { return obj->Get(); }
 };
 
+template <typename T>
+struct MutexProtectedSupportTraits {
+    using MutexType = std::mutex;
+    using LockType = std::unique_lock<std::mutex>;
+
+    static MutexType CreateMutex() { return std::mutex(); }
+    static std::mutex& GetMutex(MutexType& m) { return m; }
+    static auto* GetObj(T* const obj) { return &obj->mImpl; }
+    static const auto* GetObj(const T* const obj) { return &obj->mImpl; }
+};
+
 // Guard class is a wrapping class that gives access to a protected resource after acquiring the
 // lock related to it. For the lifetime of this class, the lock is held.
 template <typename T, typename Traits>
-class Guard : public NonMovable, StackAllocated {
+class DAWN_SCOPED_LOCKABLE Guard : public NonMovable, StackAllocated {
   public:
     // It's the programmer's burden to not save the pointer/reference and reuse it without the lock.
     auto* operator->() const { return Get(); }
     auto& operator*() const { return *Get(); }
 
+    void Defer(std::function<void()> f) {
+        DAWN_ASSERT(mDefer);
+        mDefer->Append(std::move(f));
+    }
+
   protected:
-    Guard(T* obj, typename Traits::MutexType& mutex) : mLock(Traits::GetMutex(mutex)), mObj(obj) {}
-    Guard(Guard&& other) : mLock(std::move(other.mLock)), mObj(std::move(other.mObj)) {
+    Guard(T* obj, typename Traits::MutexType& mutex, class Defer* defer = nullptr)
+        : mLock(Traits::GetMutex(mutex)), mObj(obj), mDefer(defer) {}
+    Guard(Guard&& other)
+        : mLock(std::move(other.mLock)),
+          mObj(std::move(other.mObj)),
+          mDefer(std::move(other.mDefer)) {
         other.mObj = nullptr;
     }
 
@@ -91,6 +117,7 @@ class Guard : public NonMovable, StackAllocated {
 
   private:
     using NonConstT = typename std::remove_const<T>::type;
+    friend class MutexProtectedSupport<NonConstT, Guard>;
     friend class MutexProtected<NonConstT, Guard>;
 
     typename Traits::LockType mLock;
@@ -98,6 +125,42 @@ class Guard : public NonMovable, StackAllocated {
     // The pointer is always transiently used while the MutexProtected is in scope so it is
     // unlikely to be used after it is freed.
     RAW_PTR_EXCLUSION T* mObj = nullptr;
+    raw_ptr<class Defer> mDefer = nullptr;
+};
+
+template <typename T, typename Traits, template <typename, typename> class Guard = detail::Guard>
+class MutexProtectedBase {
+  public:
+    using Usage = Guard<T, Traits>;
+    using ConstUsage = Guard<const T, Traits>;
+
+    MutexProtectedBase() : mMutex(Traits::CreateMutex()) {}
+    virtual ~MutexProtectedBase() = default;
+
+    Usage operator->() { return Use(); }
+    ConstUsage operator->() const { return Use(); }
+
+    template <typename Fn>
+    auto Use(Fn&& fn) {
+        return fn(Use());
+    }
+    template <typename Fn>
+    auto Use(Fn&& fn) const {
+        return fn(Use());
+    }
+
+    template <typename Fn>
+    auto UseWithDefer(Fn&& fn) {
+        Defer defer;
+        return fn(UseWithDefer(defer));
+    }
+
+  protected:
+    virtual Usage Use() = 0;
+    virtual Usage UseWithDefer(Defer& defer) = 0;
+    virtual ConstUsage Use() const = 0;
+
+    mutable typename Traits::MutexType mMutex;
 };
 
 }  // namespace detail
@@ -135,37 +198,70 @@ class Guard : public NonMovable, StackAllocated {
 //         MutexProtected<Allocator> mAllocator;
 //     };
 template <typename T, template <typename, typename> class Guard = detail::Guard>
-class MutexProtected {
+class MutexProtected
+    : public detail::MutexProtectedBase<T, detail::MutexProtectedTraits<T>, Guard> {
   public:
     using Traits = detail::MutexProtectedTraits<T>;
-    using Usage = Guard<T, Traits>;
-    using ConstUsage = Guard<const T, Traits>;
-
-    MutexProtected() : mMutex(Traits::CreateMutex()) {}
+    using Base = detail::MutexProtectedBase<T, Traits, Guard>;
+    using typename Base::ConstUsage;
+    using typename Base::Usage;
 
     template <typename... Args>
     // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    MutexProtected(Args&&... args)
-        : mMutex(Traits::CreateMutex()), mObj(std::forward<Args>(args)...) {}
+    MutexProtected(Args&&... args) : mObj(std::forward<Args>(args)...) {}
 
-    Usage operator->() { return Use(); }
-    ConstUsage operator->() const { return Use(); }
-
-    template <typename Fn>
-    auto Use(Fn&& fn) {
-        return fn(Use());
-    }
-    template <typename Fn>
-    auto Use(Fn&& fn) const {
-        return fn(Use());
-    }
+    using Base::Use;
+    using Base::UseWithDefer;
 
   private:
-    Usage Use() { return Usage(&mObj, mMutex); }
-    ConstUsage Use() const { return ConstUsage(&mObj, mMutex); }
+    Usage Use() override { return Usage(&mObj, this->mMutex); }
+    Usage UseWithDefer(Defer& defer) override { return Usage(&mObj, this->mMutex, &defer); }
+    ConstUsage Use() const override { return ConstUsage(&mObj, this->mMutex); }
 
-    mutable typename Traits::MutexType mMutex;
     T mObj;
+};
+
+// CRTP wrapper to help create classes that are generally MutexProtected, but may wish to implement
+// specific workarounds to avoid taking the lock in certain scenarios. See the example below and the
+// unittests for more example usages of this wrapper. Example usage:
+//     struct Counter : public MutexProtectedSupport<Counter> {
+//       public:
+//         // Reads the value stored in |mCounter| without acquiring the lock.
+//         int UnsafeRead() {
+//             return mImpl.mCounter;
+//         }
+//
+//       private:
+//         // This friend declaration MUST be included in all classes using this wrapper.
+//         friend typename MutexProtectedSupport<Counter>::Traits;
+//
+//         // Internal struct that wraps all the actual data that we want to be protected. Note that
+//         // this struct currently MUST be named |mImpl| to work.
+//         struct {
+//             int mCounter = 0;
+//         } mImpl;
+//     };
+//     // Other uses of this struct look as if we are using a MutexProtected<mImpl>.
+template <typename T, template <typename, typename> class Guard = detail::Guard>
+class MutexProtectedSupport
+    : public detail::MutexProtectedBase<T, detail::MutexProtectedSupportTraits<T>, Guard> {
+  public:
+    using Traits = detail::MutexProtectedSupportTraits<T>;
+    using Base = detail::MutexProtectedBase<T, Traits, Guard>;
+    using typename Base::ConstUsage;
+    using typename Base::Usage;
+
+    using Base::Use;
+    using Base::UseWithDefer;
+
+  private:
+    Usage Use() override { return Usage(static_cast<T*>(this), this->mMutex); }
+    Usage UseWithDefer(Defer& defer) override {
+        return Usage(static_cast<T*>(this), this->mMutex, &defer);
+    }
+    ConstUsage Use() const override {
+        return ConstUsage(static_cast<const T*>(this), this->mMutex);
+    }
 };
 
 }  // namespace dawn

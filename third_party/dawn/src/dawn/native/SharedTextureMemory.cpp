@@ -89,7 +89,9 @@ SharedTextureMemoryBase::SharedTextureMemoryBase(DeviceBase* device,
     // Reify properties to ensure we don't expose capabilities not supported by the device.
     const Format& internalFormat = device->GetValidInternalFormat(mProperties.format);
     if (internalFormat.format != wgpu::TextureFormat::External) {
-        if (!internalFormat.supportsStorageUsage || internalFormat.IsMultiPlanar()) {
+        bool supportsStorageUsage = internalFormat.supportsReadOnlyStorageUsage ||
+                                    internalFormat.supportsWriteOnlyStorageUsage;
+        if (!supportsStorageUsage || internalFormat.IsMultiPlanar()) {
             mProperties.usage = mProperties.usage & ~wgpu::TextureUsage::StorageBinding;
         }
         if (!internalFormat.isRenderable ||

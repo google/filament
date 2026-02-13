@@ -375,6 +375,10 @@ export class Material {
     public getName(): string;
 }
 
+export enum Material$UboBatchingMode {
+    DISABLED,
+    DEFAULT,
+}
 export class Frustum {
     constructor(pv: mat4);
     public setProjection(pv: mat4): void;
@@ -542,7 +546,7 @@ export class Engine {
     public static destroy(engine: Engine): void;
     public execute(): void;
     public createCamera(entity: Entity): Camera;
-    public createMaterial(urlOrBuffer: BufferReference): Material;
+    public createMaterial(urlOrBuffer: BufferReference, options?: { uboBatching?: Material$UboBatchingMode }): Material;
     public createRenderer(): Renderer;
     public createScene(): Scene;
     public createSwapChain(): SwapChain;
@@ -1126,182 +1130,155 @@ export enum View$BlendMode {
  * by lowering the resolution of a View, or to increase the quality when the
  * rendering is faster than the target frame rate.
  *
- * This structure can be used to specify the minimum scale factor used when
+ * <p>This structure can be used to specify the minimum scale factor used when
  * lowering the resolution of a View, and the maximum scale factor used when
  * increasing the resolution for higher quality rendering. The scale factors
  * can be controlled on each X and Y axis independently. By default, all scale
- * factors are set to 1.0.
+ * factors are set to 1.0.</p>
  *
- * enabled:   enable or disables dynamic resolution on a View
+ * <ul>
+ * <li>enabled:   enable or disables dynamic resolution on a View</li>
  *
- * homogeneousScaling: by default the system scales the major axis first. Set this to true
- *                     to force homogeneous scaling.
+ * <li>homogeneousScaling: by default the system scales the major axis first. Set this to true
+ *                     to force homogeneous scaling.</li>
  *
- * minScale:  the minimum scale in X and Y this View should use
+ * <li>minScale:  the minimum scale in X and Y this View should use</li>
  *
- * maxScale:  the maximum scale in X and Y this View should use
+ * <li>maxScale:  the maximum scale in X and Y this View should use</li>
  *
- * quality:   upscaling quality.
- *            LOW: 1 bilinear tap, Medium: 4 bilinear taps, High: 9 bilinear taps (tent)
+ * <li>quality:   upscaling quality.
+ *            LOW: 1 bilinear tap, Medium: 4 bilinear taps, High: 9 bilinear taps (tent)</li>
+ * </ul>
  *
- * \note
+ * <p>Note:
  * Dynamic resolution is only supported on platforms where the time to render
- * a frame can be measured accurately. On platform where this is not supported,
- * Dynamic Resolution can't be enabled unless minScale == maxScale.
+ * a frame can be measured accurately. On platforms where this is not supported,
+ * Dynamic Resolution can't be enabled unless <code>minScale == maxScale</code>.</p>
  *
- * @see Renderer::FrameRateOptions
+ * @see Renderer.FrameRateOptions
  *
  */
 export interface View$DynamicResolutionOptions {
-    /**
-     * minimum scale factors in x and y
-     */
+    /** minimum scale factors in x and y */
     minScale?: float2;
-    /**
-     * maximum scale factors in x and y
-     */
+    /** maximum scale factors in x and y */
     maxScale?: float2;
-    /**
-     * sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]
-     */
+    /** sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)] */
     sharpness?: number;
-    /**
-     * enable or disable dynamic resolution
-     */
+    /** enable or disable dynamic resolution */
     enabled?: boolean;
-    /**
-     * set to true to force homogeneous scaling
-     */
+    /** set to true to force homogeneous scaling */
     homogeneousScaling?: boolean;
     /**
      * Upscaling quality
-     * LOW:    bilinear filtered blit. Fastest, poor quality
-     * MEDIUM: Qualcomm Snapdragon Game Super Resolution (SGSR) 1.0
-     * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations
-     * ULTRA:  AMD FidelityFX FSR1
-     *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene. Avoid FXAA and dithering.
+     * <ul>
+     * <li>LOW:    bilinear filtered blit. Fastest, poor quality</li>
+     * <li>MEDIUM: Qualcomm Snapdragon Game Super Resolution (SGSR) 1.0</li>
+     * <li>HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations</li>
+     * <li>ULTRA:  AMD FidelityFX FSR1</li>
+     * </ul>
+     *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene.
+     *      Avoid FXAA and dithering.
      *
-     * The default upscaling quality is set to LOW.
+     * <p>The default upscaling quality is set to LOW.</p>
+     *
+     * <p>caveat: currently, <code>quality</code> is always set to LOW if the View is TRANSLUCENT.</p>
      */
     quality?: View$QualityLevel;
 }
 
 export enum View$BloomOptions$BlendMode {
-    ADD, // Bloom is modulated by the strength parameter and added to the scene
-    INTERPOLATE, // Bloom is interpolated with the scene using the strength parameter
+    ADD, // /** Bloom is modulated by the strength parameter and added to the scene */
+
+    INTERPOLATE, // /** Bloom is interpolated with the scene using the strength parameter */
+
 }
 
 /**
  * Options to control the bloom effect
  *
- * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
+ * <ul>
+ * <li>enabled:     Enable or disable the bloom post-processing effect. Disabled by default.</li>
  *
- * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
+ * <li>levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
  *              maximum is 12. This value together with resolution influences the spread of the
  *              blur effect. This value can be silently reduced to accommodate the original
- *              image size.
+ *              image size.</li>
  *
- * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
+ * <li>resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
  *              the maximum is lower of the original resolution and 4096. This parameter is
  *              silently clamped to the minimum and maximum.
  *              It is highly recommended that this value be smaller than the target resolution
- *              after dynamic resolution is applied (horizontally and vertically).
+ *              after dynamic resolution is applied (horizontally and vertically).</li>
  *
- * strength:    how much of the bloom is added to the original image. Between 0 and 1.
+ * <li>strength:    how much of the bloom is added to the original image. Between 0 and 1.</li>
  *
- * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
- *              image (true).
+ * <li>blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
+ *              image (true).</li>
  *
- * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
- *              useful for artistic reasons and is usually needed when a dirt texture is used.
+ * <li>threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
+ *              useful for artistic reasons and is usually needed when a dirt texture is used.</li>
  *
- * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
+ * <li>dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
  *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
- *              enabled for the dirt effect to work properly.
+ *              enabled for the dirt effect to work properly.</li>
  *
- * dirtStrength: Strength of the dirt texture.
+ * <li>dirtStrength: Strength of the dirt texture.</li>
+ * </ul>
  */
 export interface View$BloomOptions {
     // JavaScript binding for dirt is not yet supported, must use default value.
     // JavaScript binding for dirtStrength is not yet supported, must use default value.
-    /**
-     * bloom's strength between 0.0 and 1.0
-     */
+    /** bloom's strength between 0.0 and 1.0 */
     strength?: number;
-    /**
-     * resolution of vertical axis (2^levels to 2048)
-     */
+    /** resolution of vertical axis (2^levels to 2048) */
     resolution?: number;
-    /**
-     * number of blur levels (1 to 11)
-     */
+    /** number of blur levels (1 to 11) */
     levels?: number;
-    /**
-     * how the bloom effect is applied
-     */
+    /** how the bloom effect is applied */
     blendMode?: View$BloomOptions$BlendMode;
-    /**
-     * whether to threshold the source
-     */
+    /** whether to threshold the source */
     threshold?: boolean;
-    /**
-     * enable or disable bloom
-     */
+    /** enable or disable bloom */
     enabled?: boolean;
-    /**
-     * limit highlights to this value before bloom [10, +inf]
-     */
+    /** limit highlights to this value before bloom [10, +inf] */
     highlight?: number;
     /**
      * Bloom quality level.
-     * LOW (default): use a more optimized down-sampling filter, however there can be artifacts
-     *      with dynamic resolution, this can be alleviated by using the homogenous mode.
-     * MEDIUM: Good balance between quality and performance.
-     * HIGH: In this mode the bloom resolution is automatically increased to avoid artifacts.
+     * <ul>
+     * <li>LOW (default): use a more optimized down-sampling filter, however there can be artifacts
+     *      with dynamic resolution, this can be alleviated by using the homogenous mode.</li>
+     * <li>MEDIUM: Good balance between quality and performance.</li>
+     * <li>HIGH: In this mode the bloom resolution is automatically increased to avoid artifacts.
      *      This mode can be significantly slower on mobile, especially at high resolution.
-     *      This mode greatly improves the anamorphic bloom.
+     *      This mode greatly improves the anamorphic bloom.</li>
+     * </ul>
      */
     quality?: View$QualityLevel;
-    /**
-     * enable screen-space lens flare
-     */
+    /** enable screen-space lens flare */
     lensFlare?: boolean;
-    /**
-     * enable starburst effect on lens flare
-     */
+    /** enable starburst effect on lens flare */
     starburst?: boolean;
-    /**
-     * amount of chromatic aberration
-     */
+    /** amount of chromatic aberration */
     chromaticAberration?: number;
-    /**
-     * number of flare "ghosts"
-     */
+    /** number of flare "ghosts" */
     ghostCount?: number;
-    /**
-     * spacing of the ghost in screen units [0, 1[
-     */
+    /** spacing of the ghost in screen units [0, 1[ */
     ghostSpacing?: number;
-    /**
-     * hdr threshold for the ghosts
-     */
+    /** hdr threshold for the ghosts */
     ghostThreshold?: number;
-    /**
-     * thickness of halo in vertical screen units, 0 to disable
-     */
+    /** thickness of halo in vertical screen units, 0 to disable */
     haloThickness?: number;
-    /**
-     * radius of halo in vertical screen units [0, 0.5]
-     */
+    /** radius of halo in vertical screen units [0, 0.5] */
     haloRadius?: number;
-    /**
-     * hdr threshold for the halo
-     */
+    /** hdr threshold for the halo */
     haloThreshold?: number;
 }
 
 /**
- * Options to control large-scale fog in the scene
+ * Options to control large-scale fog in the scene. Materials can enable the <code>linearFog</code> property,
+ * which uses a simplified, linear equation for fog calculation; in this mode, the heightFalloff
+ * is ignored as well as the mipmap selection in IBL or skyColor mode.
  */
 export interface View$FogOptions {
     /**
@@ -1313,12 +1290,12 @@ export interface View$FogOptions {
      * This can be used to exclude the skybox, which is desirable if it already contains clouds or
      * fog. The default value is +infinity which applies the fog to everything.
      *
-     * Note: The SkyBox is typically at a distance of 1e19 in world space (depending on the near
-     * plane distance and projection used though).
+     * <p>Note: The SkyBox is typically at a distance of 1e19 in world space (depending on the near
+     * plane distance and projection used though).</p>
      */
     cutOffDistance?: number;
     /**
-     * fog's maximum opacity between 0 and 1
+     * fog's maximum opacity between 0 and 1. Ignored in <code>linearFog</code> mode.
      */
     maximumOpacity?: number;
     /**
@@ -1326,12 +1303,15 @@ export interface View$FogOptions {
      */
     height?: number;
     /**
-     * How fast the fog dissipates with altitude. heightFalloff has a unit of [1/m].
+     * How fast the fog dissipates with the altitude. heightFalloff has a unit of [1/m].
      * It can be expressed as 1/H, where H is the altitude change in world units [m] that causes a
      * factor 2.78 (e) change in fog density.
      *
-     * A falloff of 0 means the fog density is constant everywhere and may result is slightly
-     * faster computations.
+     * <p>A falloff of 0 means the fog density is constant everywhere and may result is slightly
+     * faster computations.</p>
+     *
+     * <p>In <code>linearFog</code> mode, only use to compute the slope of the linear equation. Completely
+     * ignored if set to 0.</p>
      */
     heightFalloff?: number;
     /**
@@ -1341,29 +1321,34 @@ export interface View$FogOptions {
      *  above one are allowed but could create a non energy-conservative fog (this is dependant
      *  on the IBL's intensity as well).
      *
-     *  We assume that our fog has no absorption and therefore all the light it scatters out
+     *  <p>We assume that our fog has no absorption and therefore all the light it scatters out
      *  becomes ambient light in-scattering and has lost all directionality, i.e.: scattering is
-     *  isotropic. This somewhat simulates Rayleigh scattering.
+     *  isotropic. This somewhat simulates Rayleigh scattering.</p>
      *
-     *  This value is used as a tint instead, when fogColorFromIbl is enabled.
+     *  <p>This value is used as a tint instead, when fogColorFromIbl is enabled.</p>
      *
-     *  @see fogColorFromIbl
+     *  @see #fogColorFromIbl
      */
     color?: float3;
     /**
-     * Extinction factor in [1/m] at altitude 'height'. The extinction factor controls how much
+     * Extinction factor in [1/m] at an altitude 'height'. The extinction factor controls how much
      * light is absorbed and out-scattered per unit of distance. Each unit of extinction reduces
      * the incoming light to 37% of its original value.
      *
-     * Note: The extinction factor is related to the fog density, it's usually some constant K times
+     * <p>Note: The extinction factor is related to the fog density, it's usually some constant K times
      * the density at sea level (more specifically at fog height). The constant K depends on
-     * the composition of the fog/atmosphere.
+     * the composition of the fog/atmosphere.</p>
      *
-     * For historical reason this parameter is called `density`.
+     * <p>For historical reason this parameter is called <code>density</code>.</p>
+     *
+     * <p>In <code>linearFog</code> mode this is the slope of the linear equation if heightFalloff is set to 0.
+     * Otherwise, heightFalloff affects the slope calculation such that it matches the slope of
+     * the standard equation at the camera height.</p>
      */
     density?: number;
     /**
      * Distance in world units [m] from the camera where the Sun in-scattering starts.
+     * Ignored in <code>linearFog</code> mode.
      */
     inScatteringStart?: number;
     /**
@@ -1371,17 +1356,18 @@ export interface View$FogOptions {
      * is scattered (by the fog) towards the camera.
      * Size of the Sun in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
      * Smaller values result is a larger scattering size.
+     * Ignored in <code>linearFog</code> mode.
      */
     inScatteringSize?: number;
     /**
-     * The fog color will be sampled from the IBL in the view direction and tinted by `color`.
+     * The fog color will be sampled from the IBL in the view direction and tinted by <code>color</code>.
      * Depending on the scene this can produce very convincing results.
      *
-     * This simulates a more anisotropic phase-function.
+     * <p>This simulates a more anisotropic phase-function.</p>
      *
-     * `fogColorFromIbl` is ignored when skyTexture is specified.
+     * <p><code>fogColorFromIbl</code> is ignored when skyTexture is specified.</p>
      *
-     * @see skyColor
+     * @see #skyColor
      */
     fogColorFromIbl?: boolean;
     // JavaScript binding for skyColor is not yet supported, must use default value.
@@ -1400,65 +1386,30 @@ export enum View$DepthOfFieldOptions$Filter {
 /**
  * Options to control Depth of Field (DoF) effect in the scene.
  *
- * cocScale can be used to set the depth of field blur independently from the camera
+ * <p>cocScale can be used to set the depth of field blur independently of the camera
  * aperture, e.g. for artistic reasons. This can be achieved by setting:
- *      cocScale = cameraAperture / desiredDoFAperture
+ *      cocScale = cameraAperture / desiredDoFAperture</p>
  *
  * @see Camera
  */
 export interface View$DepthOfFieldOptions {
-    /**
-     * circle of confusion scale factor (amount of blur)
-     */
+    /** circle of confusion scale factor (amount of blur) */
     cocScale?: number;
-    /**
-     * width/height aspect ratio of the circle of confusion (simulate anamorphic lenses)
-     */
+    /** width/height aspect ratio of the circle of confusion (simulate anamorphic lenses) */
     cocAspectRatio?: number;
-    /**
-     * maximum aperture diameter in meters (zero to disable rotation)
-     */
+    /** maximum aperture diameter in meters (zero to disable rotation) */
     maxApertureDiameter?: number;
-    /**
-     * enable or disable depth of field effect
-     */
+    /** enable or disable depth of field effect */
     enabled?: boolean;
-    /**
-     * filter to use for filling gaps in the kernel
-     */
+    /** filter to use for filling gaps in the kernel */
     filter?: View$DepthOfFieldOptions$Filter;
-    /**
-     * perform DoF processing at native resolution
-     */
+    /** perform DoF processing at native resolution */
     nativeResolution?: boolean;
-    /**
-     * Number of of rings used by the gather kernels. The number of rings affects quality
-     * and performance. The actual number of sample per pixel is defined
-     * as (ringCount * 2 - 1)^2. Here are a few commonly used values:
-     *       3 rings :   25 ( 5x 5 grid)
-     *       4 rings :   49 ( 7x 7 grid)
-     *       5 rings :   81 ( 9x 9 grid)
-     *      17 rings : 1089 (33x33 grid)
-     *
-     * With a maximum circle-of-confusion of 32, it is never necessary to use more than 17 rings.
-     *
-     * Usually all three settings below are set to the same value, however, it is often
-     * acceptable to use a lower ring count for the "fast tiles", which improves performance.
-     * Fast tiles are regions of the screen where every pixels have a similar
-     * circle-of-confusion radius.
-     *
-     * A value of 0 means default, which is 5 on desktop and 3 on mobile.
-     *
-     * @{
-     */
+    /** number of kernel rings for foreground tiles */
     foregroundRingCount?: number;
-    /**
-     * number of kernel rings for background tiles
-     */
+    /** number of kernel rings for background tiles */
     backgroundRingCount?: number;
-    /**
-     * number of kernel rings for fast tiles
-     */
+    /** number of kernel rings for fast tiles */
     fastGatherRingCount?: number;
     /**
      * maximum circle-of-confusion in pixels for the foreground, must be in [0, 32] range.
@@ -1476,49 +1427,42 @@ export interface View$DepthOfFieldOptions {
  * Options to control the vignetting effect.
  */
 export interface View$VignetteOptions {
-    /**
-     * high values restrict the vignette closer to the corners, between 0 and 1
-     */
+    /** high values restrict the vignette closer to the corners, between 0 and 1 */
     midPoint?: number;
-    /**
-     * controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
-     */
+    /** controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0) */
     roundness?: number;
-    /**
-     * softening amount of the vignette effect, between 0 and 1
-     */
+    /** softening amount of the vignette effect, between 0 and 1 */
     feather?: number;
-    /**
-     * color of the vignette effect, alpha is currently ignored
-     */
+    /** color of the vignette effect, alpha is currently ignored */
     color?: float4;
-    /**
-     * enables or disables the vignette effect
-     */
+    /** enables or disables the vignette effect */
     enabled?: boolean;
 }
 
 /**
  * Structure used to set the precision of the color buffer and related quality settings.
  *
- * @see setRenderQuality, getRenderQuality
+ * @see #setRenderQuality
+ * @see #getRenderQuality
  */
 export interface View$RenderQuality {
     /**
      * Sets the quality of the HDR color buffer.
      *
-     * A quality of HIGH or ULTRA means using an RGB16F or RGBA16F color buffer. This means
+     * <p>A quality of HIGH or ULTRA means using an RGB16F or RGBA16F color buffer. This means
      * colors in the LDR range (0..1) have a 10 bit precision. A quality of LOW or MEDIUM means
      * using an R11G11B10F opaque color buffer or an RGBA16F transparent color buffer. With
      * R11G11B10F colors in the LDR range have a precision of either 6 bits (red and green
-     * channels) or 5 bits (blue channel).
+     * channels) or 5 bits (blue channel).</p>
      */
     hdrColorBuffer?: View$QualityLevel;
 }
 
 export enum View$AmbientOcclusionOptions$AmbientOcclusionType {
-    SAO, // use Scalable Ambient Occlusion
-    GTAO, // use Ground Truth-Based Ambient Occlusion
+    SAO, // /** use Scalable Ambient Occlusion */
+
+    GTAO, // /** use Ground Truth-Based Ambient Occlusion */
+
 }
 
 /**
@@ -1526,45 +1470,25 @@ export enum View$AmbientOcclusionOptions$AmbientOcclusionType {
  * Ambient shadows from dominant light
  */
 export interface View$AmbientOcclusionOptions$Ssct {
-    /**
-     * full cone angle in radian, between 0 and pi/2
-     */
+    /** full cone angle in radian, between 0 and pi/2 */
     lightConeRad?: number;
-    /**
-     * how far shadows can be cast
-     */
+    /** how far shadows can be cast */
     shadowDistance?: number;
-    /**
-     * max distance for contact
-     */
+    /** max distance for contact */
     contactDistanceMax?: number;
-    /**
-     * intensity
-     */
+    /** intensity */
     intensity?: number;
-    /**
-     * light direction
-     */
+    /** light direction */
     lightDirection?: float3;
-    /**
-     * depth bias in world units (mitigate self shadowing)
-     */
+    /** depth bias in world units (mitigate self shadowing) */
     depthBias?: number;
-    /**
-     * depth slope bias (mitigate self shadowing)
-     */
+    /** depth slope bias (mitigate self shadowing) */
     depthSlopeBias?: number;
-    /**
-     * tracing sample count, between 1 and 255
-     */
+    /** tracing sample count, between 1 and 255 */
     sampleCount?: number;
-    /**
-     * # of rays to trace, between 1 and 255
-     */
+    /** # of rays to trace, between 1 and 255 */
     rayCount?: number;
-    /**
-     * enables or disables SSCT
-     */
+    /** enables or disables SSCT */
     enabled?: boolean;
 }
 
@@ -1572,77 +1496,59 @@ export interface View$AmbientOcclusionOptions$Ssct {
  * Ground Truth-base Ambient Occlusion (GTAO) options
  */
 export interface View$AmbientOcclusionOptions$Gtao {
-    /**
-     * # of slices. Higher value makes less noise.
-     */
+    /** # of slices. Higher value makes less noise. */
     sampleSliceCount?: number;
-    /**
-     * # of steps the radius is divided into for integration. Higher value makes less bias.
-     */
+    /** # of steps the radius is divided into for integration. Higher value makes less bias. */
     sampleStepsPerSlice?: number;
-    /**
-     * thickness heuristic, should be closed to 0
-     */
+    /** thickness heuristic, should be closed to 0. No effect when useVisibilityBitmasks sets to true. */
     thicknessHeuristic?: number;
+    /**
+     * Enables or disables visibility bitmasks mode. Notes that bent normal doesn't work under this mode.
+     * Caution: Changing this option at runtime is very expensive as it may trigger a shader re-compilation.
+     */
+    useVisibilityBitmasks?: boolean;
+    /** constant thickness value of objects on the screen in world space. Only take effect when useVisibilityBitmasks is set to true. */
+    constThickness?: number;
+    /**
+     * Increase thickness with distance to maintain detail on distant surfaces.
+     * Caution: Changing this option at runtime is very expensive as it may trigger a shader re-compilation.
+     */
+    linearThickness?: boolean;
 }
 
 /**
  * Options for screen space Ambient Occlusion (SSAO) and Screen Space Cone Tracing (SSCT)
- * @see setAmbientOcclusionOptions()
+ * @see #setAmbientOcclusionOptions
  */
 export interface View$AmbientOcclusionOptions {
-    /**
-     * Type of ambient occlusion algorithm.
-     */
+    /** Type of ambient occlusion algorithm. */
     aoType?: View$AmbientOcclusionOptions$AmbientOcclusionType;
-    /**
-     * Ambient Occlusion radius in meters, between 0 and ~10.
-     */
+    /** Ambient Occlusion radius in meters, between 0 and ~10. */
     radius?: number;
-    /**
-     * Controls ambient occlusion's contrast. Must be positive.
-     */
+    /** Controls ambient occlusion's contrast. Must be positive. */
     power?: number;
     /**
      * Self-occlusion bias in meters. Use to avoid self-occlusion.
      * Between 0 and a few mm. No effect when aoType set to GTAO
      */
     bias?: number;
-    /**
-     * How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
-     */
+    /** How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0. */
     resolution?: number;
-    /**
-     * Strength of the Ambient Occlusion effect.
-     */
+    /** Strength of the Ambient Occlusion effect. */
     intensity?: number;
-    /**
-     * depth distance that constitute an edge for filtering
-     */
+    /** depth distance that constitute an edge for filtering */
     bilateralThreshold?: number;
-    /**
-     * affects # of samples used for AO and params for filtering
-     */
+    /** affects # of samples used for AO and params for filtering */
     quality?: View$QualityLevel;
-    /**
-     * affects AO smoothness. Recommend setting to HIGH when aoType set to GTAO.
-     */
+    /** affects AO smoothness. Recommend setting to HIGH when aoType set to GTAO. */
     lowPassFilter?: View$QualityLevel;
-    /**
-     * affects AO buffer upsampling quality
-     */
+    /** affects AO buffer upsampling quality */
     upsampling?: View$QualityLevel;
-    /**
-     * enables or disables screen-space ambient occlusion
-     */
+    /** enables or disables screen-space ambient occlusion */
     enabled?: boolean;
-    /**
-     * enables bent normals computation from AO, and specular AO
-     */
+    /** enables bent normals computation from AO, and specular AO */
     bentNormals?: boolean;
-    /**
-     * min angle in radian to consider. No effect when aoType set to GTAO.
-     */
+    /** min angle in radian to consider. No effect when aoType set to GTAO. */
     minHorizonAngleRad?: number;
     // JavaScript binding for ssct is not yet supported, must use default value.
     // JavaScript binding for gtao is not yet supported, must use default value.
@@ -1650,15 +1556,13 @@ export interface View$AmbientOcclusionOptions {
 
 /**
  * Options for Multi-Sample Anti-aliasing (MSAA)
- * @see setMultiSampleAntiAliasingOptions()
+ * @see #setMultiSampleAntiAliasingOptions
  */
 export interface View$MultiSampleAntiAliasingOptions {
-    /**
-     * enables or disables msaa
-     */
+    /** enables or disables msaa */
     enabled?: boolean;
     /**
-     * sampleCount number of samples to use for multi-sampled anti-aliasing.\n
+     * sampleCount number of samples to use for multi-sampled anti-aliasing.<br>
      *              0: treated as 1
      *              1: no anti-aliasing
      *              n: sample count. Effective sample could be different depending on the
@@ -1672,23 +1576,32 @@ export interface View$MultiSampleAntiAliasingOptions {
 }
 
 export enum View$TemporalAntiAliasingOptions$BoxType {
-    AABB, // use an AABB neighborhood
-    VARIANCE, // use the variance of the neighborhood (not recommended)
-    AABB_VARIANCE, // use both AABB and variance
+    AABB, // /** use an AABB neighborhood */
+
+    AABB_VARIANCE, // /** use both AABB and variance */
+
 }
 
 export enum View$TemporalAntiAliasingOptions$BoxClipping {
-    ACCURATE, // Accurate box clipping
-    CLAMP, // clamping
-    NONE, // no rejections (use for debugging)
+    ACCURATE, // /** Accurate box clipping */
+
+    CLAMP, // /** clamping */
+
+    NONE, // /** no rejections (use for debugging) */
+
 }
 
 export enum View$TemporalAntiAliasingOptions$JitterPattern {
-    RGSS_X4,
-    UNIFORM_HELIX_X4,
-    HALTON_23_X8,
-    HALTON_23_X16,
-    HALTON_23_X32,
+    RGSS_X4, // /** 4-samples, rotated grid sampling */
+
+    UNIFORM_HELIX_X4, // /** 4-samples, uniform grid in helix sequence */
+
+    HALTON_23_X8, // /** 8-samples of halton 2,3 */
+
+    HALTON_23_X16, // /** 16-samples of halton 2,3 */
+
+    HALTON_23_X32, // /** 32-samples of halton 2,3 */
+
 }
 
 /**
@@ -1697,97 +1610,67 @@ export enum View$TemporalAntiAliasingOptions$JitterPattern {
  * shaders to be recompiled. These options should be changed or set during initialization.
  * `filterWidth`, `feedback` and `jitterPattern`, however, can be changed at any time.
  *
- * `feedback` of 0.1 effectively accumulates a maximum of 19 samples in steady state.
- * see "A Survey of Temporal Antialiasing Techniques" by Lei Yang and all for more information.
+ * <p><code>feedback</code> of 0.1 effectively accumulates a maximum of 19 samples in steady state.
+ * see "A Survey of Temporal Antialiasing Techniques" by Lei Yang and all for more information.</p>
  *
- * @see setTemporalAntiAliasingOptions()
+ * @see #setTemporalAntiAliasingOptions
  */
 export interface View$TemporalAntiAliasingOptions {
-    /**
-     * reconstruction filter width typically between 1 (sharper) and 2 (smoother)
-     */
+    /** @deprecated has no effect. */
     filterWidth?: number;
-    /**
-     * history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
-     */
+    /** history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA). */
     feedback?: number;
-    /**
-     * texturing lod bias (typically -1 or -2)
-     */
+    /** texturing lod bias (typically -1 or -2) */
     lodBias?: number;
-    /**
-     * post-TAA sharpen, especially useful when upscaling is true.
-     */
+    /** post-TAA sharpen, especially useful when upscaling is true. */
     sharpness?: number;
-    /**
-     * enables or disables temporal anti-aliasing
-     */
+    /** enables or disables temporal anti-aliasing */
     enabled?: boolean;
-    /**
-     * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
-     */
-    upscaling?: boolean;
-    /**
-     * whether to filter the history buffer
-     */
+    /** Upscaling factor. Disables Dynamic Resolution. [BETA] */
+    upscaling?: number;
+    /** whether to filter the history buffer */
     filterHistory?: boolean;
-    /**
-     * whether to apply the reconstruction filter to the input
-     */
+    /** whether to apply the reconstruction filter to the input */
     filterInput?: boolean;
-    /**
-     * whether to use the YcoCg color-space for history rejection
-     */
+    /** whether to use the YcoCg color-space for history rejection */
     useYCoCg?: boolean;
-    /**
-     * type of color gamut box
-     */
+    /** set to true for HDR content */
+    hdr?: boolean;
+    /** type of color gamut box */
     boxType?: View$TemporalAntiAliasingOptions$BoxType;
-    /**
-     * clipping algorithm
-     */
+    /** clipping algorithm */
     boxClipping?: View$TemporalAntiAliasingOptions$BoxClipping;
+    /** Jitter Pattern */
     jitterPattern?: View$TemporalAntiAliasingOptions$JitterPattern;
+    /** High values increases ghosting artefact, lower values increases jittering, range [0.75, 1.25] */
     varianceGamma?: number;
-    /**
-     * adjust the feedback dynamically to reduce flickering
-     */
+    /** adjust the feedback dynamically to reduce flickering */
     preventFlickering?: boolean;
-    /**
-     * whether to apply history reprojection (debug option)
-     */
+    /** whether to apply history reprojection (debug option) */
     historyReprojection?: boolean;
 }
 
 /**
  * Options for Screen-space Reflections.
- * @see setScreenSpaceReflectionsOptions()
+ * @see #setScreenSpaceReflectionsOptions
  */
 export interface View$ScreenSpaceReflectionsOptions {
-    /**
-     * ray thickness, in world units
-     */
+    /** ray thickness, in world units */
     thickness?: number;
-    /**
-     * bias, in world units, to prevent self-intersections
-     */
+    /** bias, in world units, to prevent self-intersections */
     bias?: number;
-    /**
-     * maximum distance, in world units, to raycast
-     */
+    /** maximum distance, in world units, to raycast */
     maxDistance?: number;
-    /**
-     * stride, in texels, for samples along the ray.
-     */
+    /** stride, in texels, for samples along the ray. */
     stride?: number;
     enabled?: boolean;
 }
 
 /**
  * Options for the  screen-space guard band.
- * A guard band can be enabled to avoid some artifacts towards the edge of the screen when
+ * <p>A guard band can be enabled to avoid some artifacts towards the edge of the screen when
  * using screen-space effects such as SSAO. Enabling the guard band reduces performance slightly.
- * Currently the guard band can only be enabled or disabled.
+ * Currently the guard band can only be enabled or disabled.</p>
  */
 export interface View$GuardBandOptions {
     enabled?: boolean;
@@ -1795,44 +1678,54 @@ export interface View$GuardBandOptions {
 
 /**
  * List of available post-processing anti-aliasing techniques.
- * @see setAntiAliasing, getAntiAliasing, setSampleCount
+ * @see #setAntiAliasing
+ * @see #getAntiAliasing
+ * @see #setSampleCount
  */
 export enum View$AntiAliasing {
-    NONE, // no anti aliasing performed as part of post-processing
-    FXAA, // FXAA is a low-quality but very efficient type of anti-aliasing. (default).
+    NONE, // /** no anti aliasing performed as part of post-processing */
+
+    FXAA, // /** FXAA is a low-quality but very efficient type of anti-aliasing. (default). */
+
 }
 
 /**
  * List of available post-processing dithering techniques.
  */
 export enum View$Dithering {
-    NONE, // No dithering
-    TEMPORAL, // Temporal dithering (default)
+    NONE, // /** No dithering */
+
+    TEMPORAL, // /** Temporal dithering (default) */
+
 }
 
 /**
  * List of available shadow mapping techniques.
- * @see setShadowType
+ * @see #setShadowType
  */
 export enum View$ShadowType {
-    PCF, // percentage-closer filtered shadows (default)
-    VSM, // variance shadows
-    DPCF, // PCF with contact hardening simulation
-    PCSS, // PCF with soft shadows and contact hardening
+    PCF, // /** percentage-closer filtered shadows (default) */
+
+    VSM, // /** variance shadows */
+
+    DPCF, // /** PCF with contact hardening simulation */
+
+    PCSS, // /** PCF with soft shadows and contact hardening */
+
     PCFd,
 }
 
 /**
  * View-level options for VSM Shadowing.
- * @see setVsmShadowOptions()
- * @warning This API is still experimental and subject to change.
+ * @see #setVsmShadowOptions
+ * <b>Warning:</b> This API is still experimental and subject to change.
  */
 export interface View$VsmShadowOptions {
     /**
      * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
      * than 0, mipmaps will automatically be generated each frame for all lights.
      *
-     * The number of anisotropic samples = 2 ^ vsmAnisotropy.
+     * <p>The number of anisotropic samples = 2 ^ vsmAnisotropy.</p>
      */
     anisotropy?: number;
     /**
@@ -1865,8 +1758,8 @@ export interface View$VsmShadowOptions {
 
 /**
  * View-level options for DPCF and PCSS Shadowing.
- * @see setSoftShadowOptions()
- * @warning This API is still experimental and subject to change.
+ * @see #setSoftShadowOptions
+ * <b>Warning:</b> This API is still experimental and subject to change.
  */
 export interface View$SoftShadowOptions {
     /**

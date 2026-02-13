@@ -99,6 +99,8 @@ struct Variant {
     static constexpr type_t VSM   = 0x40; // variance shadow maps / sampler type
     static constexpr type_t STE   = 0x80; // instanced stereo
 
+    static constexpr type_t NO_VARIANT         = 0u;
+
     // special variants (variants that use the reserved space)
     static constexpr type_t SPECIAL_SSR   = VSM | SRE; // screen-space reflections variant
 
@@ -270,11 +272,13 @@ private:
 
 namespace VariantUtils {
 // list of lit variants
-utils::Slice<Variant> getLitVariants() noexcept UTILS_PURE;
+utils::Slice<const Variant> getLitVariants() noexcept UTILS_PURE;
 // list of unlit variants
-utils::Slice<Variant> getUnlitVariants() noexcept UTILS_PURE;
+utils::Slice<const Variant> getUnlitVariants() noexcept UTILS_PURE;
 // list of depth variants
-utils::Slice<Variant> getDepthVariants() noexcept UTILS_PURE;
+utils::Slice<const Variant> getDepthVariants() noexcept UTILS_PURE;
+// list of post process variants
+utils::Slice<const Variant> getPostProcessVariants() noexcept UTILS_PURE;
 }
 
 } // namespace filament

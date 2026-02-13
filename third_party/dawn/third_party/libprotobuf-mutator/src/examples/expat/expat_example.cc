@@ -21,10 +21,9 @@
 #include "src/libfuzzer/libfuzzer_macro.h"
 
 namespace {
-protobuf_mutator::protobuf::LogSilencer log_silincer;
-std::vector<const char*> kEncodings = {{"UTF-16", "UTF-8", "ISO-8859-1",
-                                        "US-ASCII", "UTF-16BE", "UTF-16LE",
-                                        "INVALIDENCODING"}};
+const std::vector<const char*> kEncodings = {{"UTF-16", "UTF-8", "ISO-8859-1",
+                                              "US-ASCII", "UTF-16BE",
+                                              "UTF-16LE", "INVALIDENCODING"}};
 }
 
 DEFINE_PROTO_FUZZER(const protobuf_mutator::xml::Input& message) {

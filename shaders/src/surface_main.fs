@@ -65,7 +65,31 @@ void main() {
 #if defined(VARIANT_HAS_FOG)
     highp vec3 view = getWorldPosition() - getWorldCameraPosition();
     view = frameUniforms.fogFromWorldMatrix * view;
-    fragColor = fog(fragColor, view);
+
+#if MATERIAL_FEATURE_LEVEL > 0
+#   if defined (FILAMENT_LINEAR_FOG)
+    vec4 fogColor = fogLinear(view, sampler0_fog);
+#   else
+    vec4 fogColor = fog(view, sampler0_fog);
+#   endif
+#else
+    vec4 fogColor = fogLinear(view);
+#endif
+
+#   if   defined(BLEND_MODE_OPAQUE)
+    // nothing to do here
+#   elif defined(BLEND_MODE_TRANSPARENT)
+    fogColor.rgb *= fragColor.a;
+#   elif defined(BLEND_MODE_ADD)
+    fogColor.rgb = vec3(0.0);
+#   elif defined(BLEND_MODE_MASKED)
+    // nothing to do here
+#   elif defined(BLEND_MODE_MULTIPLY)
+    // FIXME: unclear what to do here
+#   elif defined(BLEND_MODE_SCREEN)
+    // FIXME: unclear what to do here
+#endif
+    fragColor.rgb = fragColor.rgb * (1.0 - fogColor.a) + fogColor.rgb;
 #endif
 
 #if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)

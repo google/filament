@@ -64,6 +64,9 @@ struct PixelParams {
 #if defined(MATERIAL_HAS_REFRACTION)
     float etaRI;
     float etaIR;
+#if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
+    float dispersion;
+#endif
     float transmission;
     float uThickness;
     vec3  absorption;

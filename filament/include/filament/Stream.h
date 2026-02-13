@@ -69,12 +69,11 @@ class Engine;
  * - Filament invokes low-level graphics commands on the \em{driver thread}.
  * - The thread that calls `beginFrame` is called the \em{main thread}.
  *
- * For ACQUIRED streams, there is no need to perform the copy because Filament explictly acquires
+ * For ACQUIRED streams, there is no need to perform the copy because Filament explicitly acquires
  * the stream, then releases it later via a callback function. This configuration is especially
  * useful when the Vulkan backend is enabled.
  *
- * For NATIVE streams, Filament does not make any synchronization guarantee. However they are simple
- * to use and do not incur a copy. These are often appropriate in video applications.
+ * NATIVE streams are deprecated because they are backend specific and do not make any synchronization guarantee.
  *
  * Please see `sample-stream-test` and `sample-hello-camera` for usage examples.
  *
@@ -116,7 +115,9 @@ public:
          *                     be CLAMP_TO_EDGE.
          *
          * @return This Builder, for chaining calls.
+         * @deprecated Use Stream::setAcquiredImage instead.
          */
+        UTILS_DEPRECATED
         Builder& stream(void* UTILS_NULLABLE stream) noexcept;
 
         /**

@@ -4,7 +4,6 @@
 // CHECK-SAME: %gl_TessCoord
 
 // CHECK: OpDecorate %gl_TessCoord BuiltIn TessCoord
-// CHECK: OpDecorate %gl_TessCoord Patch
 
 // CHECK: %gl_TessCoord = OpVariable %_ptr_Input_v3float Input
 

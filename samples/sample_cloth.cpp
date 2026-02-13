@@ -169,6 +169,7 @@ Texture* loadMap(Engine* engine, const char* name, bool sRGB = true) {
                     .height(uint32_t(h))
                     .levels(0xff)
                     .format(sRGB ? Texture::InternalFormat::SRGB8 : Texture::InternalFormat::RGB8)
+                    .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
                     .build(*engine);
             Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
                     Texture::Format::RGB, Texture::Type::UBYTE,

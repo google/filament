@@ -43,6 +43,7 @@ Atomic::Atomic(const core::type::Type* subtype)
            core::type::Flags{
                Flag::kCreationFixedFootprint,
                Flag::kFixedFootprint,
+               Flag::kHostShareable,
            }),
       subtype_(subtype) {
     TINT_ASSERT(!subtype->Is<Reference>());

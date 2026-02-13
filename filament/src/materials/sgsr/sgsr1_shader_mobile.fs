@@ -25,14 +25,14 @@ vec2 weightY(float dx, float dy, float c, float data)
 #endif
 {
 #if defined(UseEdgeDirection)
-	float std = data.x;
+	float stdDeviation = data.x;
 	vec2 dir = data.yz;
 
 	float edgeDis = ((dx*dir.y)+(dy*dir.x));
-	float x = (((dx*dx)+(dy*dy))+((edgeDis*edgeDis)*((clamp(((c*c)*std),0.0,1.0)*0.7)+-1.0)));
+	float x = (((dx*dx)+(dy*dy))+((edgeDis*edgeDis)*((clamp(((c*c)*stdDeviation),0.0,1.0)*0.7)+-1.0)));
 #else
-	float std = data;
-	float x = ((dx*dx)+(dy*dy))* 0.55 + clamp(abs(c)*std, 0.0, 1.0);
+	float stdDeviation = data;
+	float x = ((dx*dx)+(dy*dy))* 0.55 + clamp(abs(c)*stdDeviation, 0.0, 1.0);
 #endif
 
 	float w = fastLanczos2(x);
@@ -92,8 +92,8 @@ vec4 sgsr(mediump sampler2D ps0, highp vec2 in_TEXCOORD0, highp vec4 ViewportInf
 
 #if defined(UseEdgeDirection)
 			float sumMean = 1.014185e+01 / sum;
-			float std = (sumMean * sumMean);
-			vec3 data = vec3(std, edgeDirection(left, right));
+			float stdDeviation = (sumMean * sumMean);
+			vec3 data = vec3(stdDeviation, edgeDirection(left, right));
 #else
 			// taken from sgsr sample
 			float data = 2.181818 / sum;

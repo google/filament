@@ -18,6 +18,7 @@
 
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
+#include "PlatformRunner.h"
 #include "Shader.h"
 #include "SharedShaders.h"
 #include "Skip.h"
@@ -48,7 +49,7 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 0) uniform {samplerType} test_tex;
+layout(binding = 0, set = 0) uniform {samplerType} test_tex;
 
 void main() {
     vec2 fbsize = vec2({texSize});
@@ -66,7 +67,7 @@ std::string fragmentUpdateImage3DTemplate (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-layout(location = 0, set = 0) uniform {samplerType} test_tex;
+layout(binding = 0, set = 0) uniform {samplerType} test_tex;
 
 float getLayer(in sampler3D s) { return 2.5f / 4.0f; }
 float getLayer(in sampler2DArray s) { return 2.0f; }
@@ -87,7 +88,7 @@ std::string fragmentUpdateImageMip (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-layout(location = 0, set = 0) uniform sampler2D test_tex;
+layout(binding = 0, set = 0) uniform sampler2D test_tex;
 
 void main() {
     vec2 fbsize = vec2({texSize});
@@ -231,7 +232,8 @@ public:
 };
 
 TEST_F(LoadImageTest, UpdateImage2D) {
-    FAIL_IF(Backend::VULKAN, "Multiple test cases crash, see b/417481434");
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
+    SKIP_IF(Backend::VULKAN, "b/453776547");
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
     static const uint32_t expectedHash = 1875922935;
@@ -271,15 +273,18 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
     // Test format conversion.
     // TODO: Vulkan crashes with `Texture at colorAttachment[0] has usage (0x01) which doesn't specify MTLTextureUsageRenderTarget (0x04)'
+    // TODO: WebGPU Crashes with "destination texture usage doesn't have wgpu::TextureUsage::RenderAttachment"
     testCases.emplace_back("RGBA FLOAT to RGBA16F", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F);
 
     // Test texture formats not all backends support natively.
     // TODO: Vulkan crashes with "VK_FORMAT_R32G32B32_SFLOAT is not supported"
+    // TODO: WebGPU Crashes with "destination texture usage doesn't have wgpu::TextureUsage::RenderAttachment"
     testCases.emplace_back("RGB FLOAT to RGB32F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F);
     testCases.emplace_back("RGB FLOAT to RGB16F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB16F);
 
     // Test packed format uploads.
     // TODO: Vulkan crashes with "Texture at colorAttachment[0] has usage (0x01) which doesn't specify MTLTextureUsageRenderTarget (0x04)"
+    // TODO: WebGPU Crashes with "destination texture usage doesn't have wgpu::TextureUsage::RenderAttachment"
     testCases.emplace_back("RGBA UINT_2_10_10_10_REV to RGB10_A2", PixelDataFormat::RGBA, PixelDataType::UINT_2_10_10_10_REV, TextureFormat::RGB10_A2);
     testCases.emplace_back("RGB UINT_10F_11F_11F_REV to R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::UINT_10F_11F_11F_REV, TextureFormat::R11F_G11F_B10F);
     testCases.emplace_back("RGB HALF to R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::HALF, TextureFormat::R11F_G11F_B10F);
@@ -287,9 +292,12 @@ TEST_F(LoadImageTest, UpdateImage2D) {
     // Test integer format uploads.
     // TODO: These cases fail on OpenGL and Vulkan.
     // TODO: These cases now also fail on Metal, but at some point previously worked.
-     testCases.emplace_back("RGB_INTEGER UBYTE to RGB8UI", PixelDataFormat::RGB_INTEGER, PixelDataType::UBYTE, TextureFormat::RGB8UI);
-     testCases.emplace_back("RGB_INTEGER USHORT to RGB16UI", PixelDataFormat::RGB_INTEGER, PixelDataType::USHORT, TextureFormat::RGB16UI);
-     testCases.emplace_back("RGB_INTEGER INT to RGB32I", PixelDataFormat::RGB_INTEGER, PixelDataType::INT, TextureFormat::RGB32I);
+    // TODO: These cases fail for WebGPU. However, leaving them causes
+    //       Tint Reader Error: error: sampled image must have float component type
+    //       Beginning SpirV-output dump with ret 0
+//     testCases.emplace_back("RGB_INTEGER UBYTE to RGB8UI", PixelDataFormat::RGB_INTEGER, PixelDataType::UBYTE, TextureFormat::RGB8UI);
+//     testCases.emplace_back("RGB_INTEGER USHORT to RGB16UI", PixelDataFormat::RGB_INTEGER, PixelDataType::USHORT, TextureFormat::RGB16UI);
+//     testCases.emplace_back("RGB_INTEGER INT to RGB32I", PixelDataFormat::RGB_INTEGER, PixelDataType::INT, TextureFormat::RGB32I);
 
     // Test uploads with buffer padding.
     // TODO: Vulkan crashes with "Assertion failed: (offset + size <= allocationSize)"
@@ -311,19 +319,17 @@ TEST_F(LoadImageTest, UpdateImage2D) {
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     for (const auto& t : testCases) {
-        Cleanup cleanup(api);
-
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
             SamplerType::SAMPLER_2D, getSamplerFormat(t.textureFormat), Precision::HIGH, false };
 
         std::string const fragment = getFormattedFragment(fragmentTemplate, t.textureFormat);
-        Shader shader(api, cleanup, ShaderConfig{
+        Shader shader(api, *mCleanup, ShaderConfig{
            .vertexShader = mVertexShader,
            .fragmentShader= fragment,
            .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
@@ -331,7 +337,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         // Create a Texture.
         auto usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
-        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+        Handle<HwTexture> const texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 t.textureFormat, 1, kTexSize, kTexSize, 1u, usage));
 
         // Upload some pixel data.
@@ -355,7 +361,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         }
 
         DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
@@ -374,7 +380,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+        EXPECT_IMAGE(defaultRenderTarget,
                 ScreenshotParams(kTexSize, kTexSize, t.name, expectedHash));
 
         api.commit(swapChain);
@@ -385,12 +391,10 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "see b/453756688");
+    SKIP_IF(Backend::VULKAN, "b/454040142");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat const pixelFormat = PixelDataFormat::RGBA;
@@ -398,22 +402,22 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     TextureFormat const textureFormat = TextureFormat::SRGB8_A8;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
     std::string const fragment = getFormattedFragment(fragmentTemplate, textureFormat);
-    Shader shader(api, cleanup, ShaderConfig{
+    Shader shader(api, *mCleanup, ShaderConfig{
         .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
             "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
     }}});
 
     // Create a texture.
     Handle<HwTexture> const texture =
-            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, textureFormat, 1, kTexSize,
+            addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1, textureFormat, 1, kTexSize,
                     kTexSize, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
 
     // Create image data.
@@ -443,7 +447,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     // Update samplers.
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
@@ -463,7 +467,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     api.draw2(0, 3, 1);
     api.endRenderPass();
 
-    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+    EXPECT_IMAGE(defaultRenderTarget,
             ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
 
     api.commit(swapChain);
@@ -473,12 +477,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 }
 
 TEST_F(LoadImageTest, UpdateImageMipLevel) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
-
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
@@ -486,15 +485,15 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     TextureFormat textureFormat = TextureFormat::RGBA32F;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
     std::string const fragment = getFormattedFragment(fragmentUpdateImageMip, textureFormat);
-    Shader shader(api, cleanup, ShaderConfig {
+    Shader shader(api, *mCleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
         .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
@@ -504,7 +503,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     // Base level: 1024
     // Level 1:     512     <-- upload data and sample from this level
     // Level 2:     256
-    Handle<HwTexture> texture = cleanup.add(
+    Handle<HwTexture> texture = addCleanup(
             api.createTexture(SamplerType::SAMPLER_2D, 3, textureFormat, 1, kDoubleTexSize,
                     kDoubleTexSize, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
 
@@ -512,11 +511,9 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, kTexSize);
     api.update3DImage(texture, /* level*/ 1, 0, 0, 0, kTexSize, kTexSize, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
-
     // Update samplers.
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
@@ -537,51 +534,44 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
         api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
         api.draw2(0, 3, 1);
         api.endRenderPass();
+
+        EXPECT_IMAGE(defaultRenderTarget,
+                ScreenshotParams(kTexSize, kTexSize, "UpdateImageMipLevel", 1875922935));
     }
 
-    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(kTexSize, kTexSize, "UpdateImageMipLevel", 1875922935));
-
     api.commit(swapChain);
-    api.endFrame(0);
 
     api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Checkerboard not drawn, possibly due to using wrong z value of 3d texture, "
-            "see b/417254499");
+    SKIP_IF(Backend::VULKAN, "b/453776983");
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
     PixelDataType pixelType = PixelDataType::FLOAT;
     TextureFormat textureFormat = TextureFormat::RGBA16F;
     SamplerType samplerType = SamplerType::SAMPLER_2D_ARRAY;
-    TextureUsage usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
+    TextureUsage usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D_ARRAY, getSamplerFormat(textureFormat), Precision::HIGH, false };
     std::string fragment = getFormattedFragment(fragmentUpdateImage3DTemplate, samplerType);
-    Shader shader(api, cleanup, ShaderConfig {
+    Shader shader(api, *mCleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
         .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_ARRAY_FLOAT, samplerInfo}}
     });
 
     // Create a texture.
-    Handle<HwTexture> texture = cleanup.add(api.createTexture(samplerType, 1,
+    Handle<HwTexture> texture = addCleanup(api.createTexture(samplerType, 1,
             textureFormat, 1, kTexSize, kTexSize, 4, usage));
 
     // Create image data for all 4 layers.
@@ -606,9 +596,9 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
         // Update samplers.
         DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture,
-                { .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
@@ -625,7 +615,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+        EXPECT_IMAGE(defaultRenderTarget,
                 ScreenshotParams(kTexSize, kTexSize, "UpdateImage3D", 1875922935));
     }
 

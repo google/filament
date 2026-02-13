@@ -31,10 +31,10 @@
 #include <utility>
 #include <vector>
 
+#include "src/tint/lang/spirv/reader/ast_lower/helper_test.h"
+#include "src/tint/lang/spirv/reader/ast_lower/simplify_pointers.h"
+#include "src/tint/lang/spirv/reader/ast_lower/unshadow.h"
 #include "src/tint/lang/wgsl/ast/disable_validation_attribute.h"
-#include "src/tint/lang/wgsl/ast/transform/helper_test.h"
-#include "src/tint/lang/wgsl/ast/transform/simplify_pointers.h"
-#include "src/tint/lang/wgsl/ast/transform/unshadow.h"
 #include "src/tint/lang/wgsl/program/clone_context.h"
 #include "src/tint/lang/wgsl/program/program_builder.h"
 #include "src/tint/lang/wgsl/resolver/resolve.h"

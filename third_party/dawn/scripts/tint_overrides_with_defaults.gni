@@ -125,19 +125,9 @@ declare_args() {
     tint_build_glsl_validator = true
   }
 
-  # Build the Syntax Tree writer
-  if (!defined(tint_build_syntax_tree_writer)) {
-    tint_build_syntax_tree_writer = false
-  }
-
   # Build IR binary format support
   if (!defined(tint_build_ir_binary)) {
     tint_build_ir_binary = tint_has_protobuf
-  }
-
-  # Build IR binary fuzzer
-  if (!defined(tint_build_ir_fuzzer)) {
-    tint_build_ir_fuzzer = false
   }
 
   # Build the tintd language server
@@ -153,6 +143,11 @@ declare_args() {
   # Build benchmarks
   if (!defined(tint_build_benchmarks)) {
     tint_build_benchmarks = true
+  }
+
+  # Enable Tint IR validation for backend codegen.
+  if (!defined(tint_enable_ir_validation)) {
+    tint_enable_ir_validation = is_debug
   }
 }
 

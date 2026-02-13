@@ -377,7 +377,8 @@ public:
      * @param file the file where the above function in implemented
      * @param line the line in the above file where the error was detected
      * @param literal a literal version of the error message
-     * @param format printf style string describing the error
+     * @param format printf style format string describing the error
+     * @param ... printf style arguments
      * @see ASSERT_PRECONDITION, ASSERT_POSTCONDITION, ASSERT_ARITHMETIC
      * @see PANIC_PRECONDITION, PANIC_POSTCONDITION, PANIC_ARITHMETIC
      * @see setMode()
@@ -448,8 +449,8 @@ void panicLog(
 class UTILS_PUBLIC PreconditionPanic final : public TPanic<PreconditionPanic> {
     // Programming error, can be avoided
     // e.g.: invalid arguments
-    using TPanic<PreconditionPanic>::TPanic;
-    friend class TPanic<PreconditionPanic>;
+    using TPanic::TPanic;
+    friend class TPanic;
     constexpr static auto type = "Precondition";
 };
 
@@ -462,8 +463,8 @@ class UTILS_PUBLIC PreconditionPanic final : public TPanic<PreconditionPanic> {
 class UTILS_PUBLIC PostconditionPanic final : public TPanic<PostconditionPanic> {
     // Usually only detectable at runtime
     // e.g.: deadlock would occur, arithmetic errors
-    using TPanic<PostconditionPanic>::TPanic;
-    friend class TPanic<PostconditionPanic>;
+    using TPanic::TPanic;
+    friend class TPanic;
     constexpr static auto type = "Postcondition";
 };
 
@@ -476,8 +477,8 @@ class UTILS_PUBLIC PostconditionPanic final : public TPanic<PostconditionPanic> 
 class UTILS_PUBLIC ArithmeticPanic final : public TPanic<ArithmeticPanic> {
     // A common case of post-condition error
     // e.g.: underflow, overflow, internal computations errors
-    using TPanic<ArithmeticPanic>::TPanic;
-    friend class TPanic<ArithmeticPanic>;
+    using TPanic::TPanic;
+    friend class TPanic;
     constexpr static auto type = "Arithmetic";
 };
 
@@ -544,6 +545,27 @@ public:
     }
 };
 
+template<typename PanicType>
+class FlagGuardedStream : public PanicStream {
+public:
+    FlagGuardedStream(bool const enable, char const* function, char const* file, int const line,
+            char const* condition)
+        : PanicStream(function, file, line, condition),
+          mEnablePanic(enable) {}
+    ~FlagGuardedStream() noexcept(false) {
+        if (mEnablePanic) {
+            PanicType::panic(mFunction, mFile, mLine, mLiteral, mStream.c_str());
+        } else {
+            logWarning();
+        }
+    }
+
+private:
+    void logWarning() noexcept;
+
+    bool mEnablePanic;
+};
+
 } // namespace details
 
 // -----------------------------------------------------------------------------------------------
@@ -580,6 +602,20 @@ public:
 #ifndef FILAMENT_CHECK_ARITHMETIC
 #define FILAMENT_CHECK_ARITHMETIC(condition)                                                       \
     FILAMENT_CHECK_CONDITION_IMPL(condition)  FILAMENT_PANIC_IMPL(#condition, ArithmeticPanic)
+#endif
+
+#define FILAMENT_FLAG_GUARDED_PANIC_IMPL(flag, condition, TYPE)                                    \
+    ::utils::details::FlagGuardedStream<::utils::TYPE>(flag, PANIC_FUNCTION, PANIC_FILE(__FILE__), \
+            __LINE__, #condition)
+
+#ifndef FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION
+#define FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(condition, flag)                                  \
+    FILAMENT_CHECK_CONDITION_IMPL(condition)  FILAMENT_FLAG_GUARDED_PANIC_IMPL(flag, condition, PreconditionPanic)
+#endif
+
+#ifndef FILAMENT_FLAG_GUARDED_CHECK_POSTCONDITION
+#define FILAMENT_FLAG_GUARDED_CHECK_POSTCONDITION(condition, flag)                                 \
+    FILAMENT_CHECK_CONDITION_IMPL(condition)  FILAMENT_FLAG_GUARDED_PANIC_IMPL(flag, condition, PostconditionPanic)
 #endif
 
 #define PANIC_PRECONDITION_IMPL(cond, format, ...)                                                 \

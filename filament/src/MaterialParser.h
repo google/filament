@@ -32,6 +32,7 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <array>
+#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -65,7 +66,17 @@ public:
         ERROR_OTHER
     };
 
+    bool operator==(MaterialParser const& rhs) const noexcept;
+
     ParseResult parse() noexcept;
+
+    // Compute the CRC32 of the material or return the cached value.
+    uint32_t computeCrc32() const noexcept;
+    // Return the cached computed CRC32 or the CRC32 built into the material file if one exists.
+    std::optional<uint32_t> getPrecomputedCrc32() const noexcept;
+    // Return the CRC32 of the material.
+    uint32_t getCrc32() const noexcept;
+
     backend::ShaderLanguage getShaderLanguage() const noexcept;
 
     // Accessors
@@ -126,14 +137,17 @@ public:
     bool getSpecularAntiAliasingVariance(float* value) const noexcept;
     bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
     bool getStereoscopicType(backend::StereoscopicType*) const noexcept;
+    bool getMaterialCrc32(uint32_t* value) const noexcept;
 
     bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
-            Variant variant, backend::ShaderStage stage) noexcept;
+            Variant variant, backend::ShaderStage stage) const noexcept;
 
     bool hasShader(backend::ShaderModel const model,
             Variant const variant, backend::ShaderStage const stage) const noexcept {
         return getMaterialChunk().hasShader(model, variant, stage);
     }
+
+    bool getSourceShader(utils::CString* cstring) const noexcept;
 
     filaflat::MaterialChunk const& getMaterialChunk() const noexcept {
         return mImpl.mMaterialChunk;
@@ -182,6 +196,9 @@ private:
     filaflat::ChunkContainer& getChunkContainer() noexcept;
     filaflat::ChunkContainer const& getChunkContainer() const noexcept;
     MaterialParserDetails mImpl;
+    // 0 == not cached. This technically means that a file with a CRC32 of 0 will never be cached,
+    // but this is unlikely, and keeping it a 32-bit value guarantees that it will be lockless.
+    mutable std::atomic<uint32_t> mCrc32 = 0;
 };
 
 struct ChunkUniformInterfaceBlock {

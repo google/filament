@@ -16,6 +16,11 @@
 
 #include "WebGPUDescriptorSetLayout.h"
 
+#include "WebGPUConstants.h"
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+#include "WebGPUStrings.h"
+#endif
+
 #include <backend/DriverEnums.h>
 
 #include <utils/BitmaskEnum.h>
@@ -35,7 +40,9 @@ namespace filament::backend {
 
 namespace {
 
-// Convert Filament Shader Stage Flags bitmask to webgpu equivalent
+/**
+ * Converts Filament shader stage flags to the corresponding WebGPU shader stage bitmask.
+ */
 [[nodiscard]] wgpu::ShaderStage filamentStageToWGPUStage(const ShaderStageFlags fFlags) {
     wgpu::ShaderStage retStages = wgpu::ShaderStage::None;
     if (any(ShaderStageFlags::VERTEX & fFlags)) {
@@ -59,29 +66,30 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     std::string baseLabel;
     if (std::holds_alternative<utils::StaticString>(layout.label)) {
         const auto& temp = std::get_if<utils::StaticString>(&layout.label);
-        baseLabel = temp->c_str();
+        baseLabel = temp->c_str() == nullptr ? "" : temp->c_str();
     } else if (std::holds_alternative<utils::CString>(layout.label)) {
         const auto& temp = std::get_if<utils::CString>(&layout.label);
         baseLabel = temp->c_str();
     }
 
-    // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
-    // debugging. For now, hack an incrementing value.
-    static int layoutNum = 0;
-
     const unsigned int samplerCount =
-            std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
-                return DescriptorSetLayoutBinding::isSampler(fEntry.type);
+            std::count_if(layout.descriptors.begin(), layout.descriptors.end(), [](auto& fEntry) {
+                return DescriptorSetLayoutDescriptor::isSampler(fEntry.type);
             });
 
     std::vector<wgpu::BindGroupLayoutEntry> wEntries;
-    wEntries.reserve(layout.bindings.size() + samplerCount);
+    wEntries.reserve(layout.descriptors.size() + samplerCount);
     mBindGroupEntries.reserve(wEntries.capacity());
 
-    for (auto fEntry: layout.bindings) {
+    for (auto fEntry: layout.descriptors) {
         auto& wEntry = wEntries.emplace_back();
         auto& entryInfo = mBindGroupEntries.emplace_back();
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
+
+        // In WebGPU, textures and samplers are separate bindings.
+        // We map the Filament binding index to two WebGPU binding indices:
+        // - texture: binding * 2
+        // - sampler: binding * 2 + 1
         wEntry.binding = fEntry.binding * 2;
         entryInfo.binding = wEntry.binding;
 
@@ -173,17 +181,32 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         } else if (isCubeArrayTypeDescriptor(fEntry.type)) {
             wEntry.texture.viewDimension = wgpu::TextureViewDimension::CubeArray;
         }
-        // fEntry.count is unused currently
     }
-    std::string label =  "layout_" + baseLabel + std::to_string(++layoutNum) ;
+    // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
+    // debugging. For now, hack an incrementing value.
+    static int layoutNum = 0;
+    std::string label =  "layout_" + baseLabel + "_" + std::to_string(++layoutNum) ;
     const wgpu::BindGroupLayoutDescriptor layoutDescriptor{
-        .label{label.c_str()}, // Use .c_str() if label needs to be const char*
+        .label{label.c_str()},
         .entryCount = wEntries.size(),
         .entries = wEntries.data()
     };
     mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
     FILAMENT_CHECK_POSTCONDITION(mLayout)
             << "Failed to create bind group layout with label " << label;
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+    FWGPU_LOGD << "WebGPUDescriptorSetLayout:";
+    FWGPU_LOGD << "  label: " << label;
+    FWGPU_LOGD << "  wgpu::BindGroupLayout handle: " << mLayout.Get();
+    FWGPU_LOGD << "  Filament bindings (" << layout.descriptors.size() << "):";
+    for (DescriptorSetLayoutDescriptor const& descriptor: layout.descriptors) {
+        FWGPU_LOGD << "    binding:" << +descriptor.binding
+                   << " type:" << filamentDescriptorTypeToString(descriptor.type)
+                   << " stageFlags:" << filamentStageFlagsToString(descriptor.stageFlags)
+                   << " flags:" << filamentDescriptorFlagsToString(descriptor.flags)
+                   << " count:" << descriptor.count;
+    }
+#endif
 }
 
 } // namespace filament::backend

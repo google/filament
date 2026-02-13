@@ -34,7 +34,6 @@
 #include <string>
 #include <utility>
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/Numeric.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/Buffer.h"
@@ -270,7 +269,7 @@ ResultOrError<uint64_t> ComputeRequiredBytesInCopy(const TexelBlockInfo& blockIn
     }
 
     // Check for potential overflows for the rest of the computations. We have the following
-    // inequalities:
+    // invariants:
     //
     //   bytesInLastRow <= bytesPerRow
     //   heightInBlocks <= rowsPerImage

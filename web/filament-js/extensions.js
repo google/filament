@@ -79,7 +79,7 @@ Filament.loadClassExtensions = function() {
     /// canvas ::argument:: the canvas DOM element
     /// options ::argument:: optional WebGL 2.0 context configuration
     /// ::retval:: an instance of [Engine]
-    Filament.Engine.create = function(canvas, options) {
+    Filament.Engine.create = function (canvas, options, config) {
         const defaults = {
             majorVersion: 2,
             minorVersion: 0,
@@ -103,7 +103,9 @@ Filament.loadClassExtensions = function() {
         window.filament_glContext = ctx;
 
         // Register the GL context with emscripten and create the Engine.
-        const engine = Filament.Engine._create();
+        const defaultConfig = Filament.Engine.createDefaultConfig();
+        const finalConfig = Object.assign(defaultConfig, config);
+        const engine = Filament.Engine._create(finalConfig);
 
         // Annotate the engine with the GL context to support multiple canvases.
         engine.context = window.filament_glContext;
@@ -125,10 +127,12 @@ Filament.loadClassExtensions = function() {
 
     /// createMaterial ::method::
     /// package ::argument:: asset string, or Uint8Array, or [Buffer] with filamat contents
+    /// options ::argument:: optional dictionary with `uboBatching` key.
     /// ::retval:: an instance of [createMaterial]
-    Filament.Engine.prototype.createMaterial = function(buffer) {
+    Filament.Engine.prototype.createMaterial = function(buffer, options) {
         buffer = getBufferDescriptor(buffer);
-        const result = this._createMaterial(buffer);
+        const uboBatching = (options && options.uboBatching) || Filament.Material$UboBatchingMode.DEFAULT; // The default is DEFAULT
+        const result = this._createMaterial(buffer, uboBatching);
         buffer.delete();
         return result;
     };

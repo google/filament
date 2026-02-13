@@ -32,6 +32,15 @@ do {                                                                            
     }                                                                                          \
 } while (false)
 
+#define SKIP_IF_NOT(skipEnvironment, rationale)                                                \
+do {                                                                                           \
+    SkipEnvironment skip(skipEnvironment);                                                     \
+    if (!skip.matches()) {                                                                     \
+        GTEST_SKIP() << "Skipping test as the " << skip.describe() << "\n"                     \
+                     << " This test can't run there because " << rationale;                    \
+    }                                                                                          \
+} while (false)
+
 #define NONFATAL_FAIL_IF(skipEnvironment, rationale)                                           \
 do {                                                                                           \
     SkipEnvironment skip(skipEnvironment);                                                     \

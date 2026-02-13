@@ -23,6 +23,7 @@
 #include <backend/Platform.h>
 
 #include <cstdint>
+#include <memory>
 
 namespace filament::backend {
 
@@ -40,15 +41,26 @@ public:
 
     [[nodiscard]] wgpu::TextureFormat getDepthFormat() const { return mDepthFormat; }
 
-    [[nodiscard]] wgpu::TextureView getCurrentTextureView(wgpu::Extent2D const& extent);
-    [[nodiscard]] wgpu::TextureView getCurrentHeadlessTextureView();
-    [[nodiscard]] wgpu::Texture getCurrentTexture(wgpu::Extent2D const& extent);
+    [[nodiscard]] wgpu::TextureView getNextTextureView();
+    [[nodiscard]] wgpu::TextureView getNextTextureView(wgpu::Extent2D const& extent);
+
+    [[nodiscard]] wgpu::Texture getCurrentTexture();
 
     [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
 
     [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
 
-    void present();
+    void present(DriverBase& driver);
+
+    void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback) {
+        if (!callback) {
+            mFrameScheduled.handler = nullptr;
+            mFrameScheduled.callback.reset();
+            return;
+        }
+        mFrameScheduled.handler = handler;
+        mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+    }
 
 private:
 
@@ -69,11 +81,16 @@ private:
     const SwapChainType mType;
     const uint32_t mHeadlessWidth;
     const uint32_t mHeadlessHeight;
-
+    wgpu::SurfaceTexture mCurrentTexture;
     static constexpr uint32_t mHeadlessBufferCount = 3;
     uint8_t mHeadlessBufferIndex = 0;
     std::array<wgpu::Texture, mHeadlessBufferCount> mRenderTargetTextures;
     std::array<wgpu::TextureView, mHeadlessBufferCount> mRenderTargetViews;
+
+    struct {
+        CallbackHandler* handler = nullptr;
+        std::shared_ptr<FrameScheduledCallback> callback;
+    } mFrameScheduled;
 };
 
 } // namespace filament::backend

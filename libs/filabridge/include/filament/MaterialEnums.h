@@ -28,7 +28,16 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 62;
+static constexpr size_t MATERIAL_VERSION = 69;
+
+// Those are the api levels that are used in the source material file (.mat)
+//
+// The level used for the apis that are already public and stable. Any released api supports
+// backward compatibility (i.e. No breaking changes will be introduced for those apis.)
+static constexpr uint32_t RELEASED_MATERIAL_API_LEVEL = 1;
+// The level used for the apis that are currently under development or development has completed
+// but may introduce breaking changes.
+static constexpr uint32_t UNSTABLE_MATERIAL_API_LEVEL = 2;
 
 /**
  * Supported shading models
@@ -203,7 +212,7 @@ enum class ReflectionMode : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 30;
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 31;
 enum class Property : uint8_t {
     BASE_COLOR,              //!< float4, all shading models
     ROUGHNESS,               //!< float,  lit shading models only
@@ -230,6 +239,7 @@ enum class Property : uint8_t {
     ABSORPTION,              //!< float3, how much light is absorbed by the material
     TRANSMISSION,            //!< float,  how much light is refracted through the material
     IOR,                     //!< float,  material's index of refraction
+    DISPERSION,              //!< float,  material's dispersion
     MICRO_THICKNESS,         //!< float, thickness of the thin layer
     BENT_NORMAL,             //!< float3, all shading models only, except unlit
     SPECULAR_FACTOR,         //!< float, lit shading models only, except subsurface and cloth

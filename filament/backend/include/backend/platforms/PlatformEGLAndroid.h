@@ -17,13 +17,18 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 
+#include "AndroidNdk.h"
+
 #include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/platforms/PlatformEGL.h>
 
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
+
+#include <math/mat3.h>
 
 #include <chrono>
 
@@ -38,7 +43,7 @@ class ExternalStreamManagerAndroid;
  * A concrete implementation of OpenGLPlatform and subclass of PlatformEGL that supports
  * EGL on Android. It adds Android streaming functionality to PlatformEGL.
  */
-class PlatformEGLAndroid : public PlatformEGL {
+class PlatformEGLAndroid : public PlatformEGL, public AndroidNdk {
 public:
 
     PlatformEGLAndroid() noexcept;
@@ -58,7 +63,26 @@ public:
 
     ExternalImageDescAndroid UTILS_PUBLIC getExternalImageDesc(ExternalImageHandle externalImage) noexcept;
 
+    /**
+     * Converts a sync to an external file descriptor, if possible. Accepts an
+     * opaque handle to a sync, as well as a pointer to where the fd should be
+     * stored.
+     * @param sync The sync to be converted to a file descriptor.
+     * @param fd   A pointer to where the file descriptor should be stored.
+     * @return `true` on success, `false` on failure. The default implementation
+     *         returns `false`.
+     */
+    bool convertSyncToFd(Sync* sync, int* fd) noexcept;
+
 protected:
+    struct {
+        struct {
+            bool ANDROID_presentation_time = false;
+            bool ANDROID_get_frame_timestamps = false;
+            bool ANDROID_native_fence_sync = false;
+        } egl;
+    } ext;
+
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
@@ -69,10 +93,24 @@ protected:
     int getOSVersion() const noexcept override;
 
     Driver* createDriver(void* sharedContext,
-            const Platform::DriverConfig& driverConfig) noexcept override;
+            const DriverConfig& driverConfig) override;
+
+    bool isCompositorTimingSupported() const noexcept override;
+
+    bool queryCompositorTiming(SwapChain const* swapchain,
+            CompositorTiming* outCompositorTiming) const noexcept override;
+
+    bool setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept override;
+
+    bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+            FrameTimestamps* outFrameTimestamps) const noexcept override;
 
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
+
+    struct SyncEGLAndroid : public Sync {
+        EGLSyncKHR sync;
+    };
 
     void terminate() noexcept override;
 
@@ -89,9 +127,10 @@ protected:
      */
     void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept override;
 
-
     Stream* createStream(void* nativeStream) noexcept override;
     void destroyStream(Stream* stream) noexcept override;
+    Sync* createSync() noexcept override;
+    void destroySync(Sync* sync) noexcept override;
     void attach(Stream* stream, intptr_t tname) noexcept override;
     void detach(Stream* stream) noexcept override;
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override;
@@ -104,7 +143,7 @@ protected:
      */
     AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept override;
 
-    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
+    ExternalTexture* createExternalImageTexture() noexcept override;
     void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
 
     struct ExternalImageEGLAndroid : public ExternalImageEGL {
@@ -124,27 +163,35 @@ protected:
     bool setImage(ExternalImageEGLAndroid const* eglExternalImage,
             ExternalTexture* texture) noexcept;
 
-protected:
     bool makeCurrent(ContextType type,
             SwapChain* drawSwapChain,
             SwapChain* readSwapChain) override;
 
 private:
-    struct InitializeJvmForPerformanceManagerIfNeeded {
-        InitializeJvmForPerformanceManagerIfNeeded();
+    struct SwapChainEGLAndroid;
+    struct AndroidDetails;
+
+    // prevent derived classes' implementations to call through
+    [[nodiscard]] SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) override;
+    [[nodiscard]] SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
+    void destroySwapChain(SwapChain* swapChain) noexcept override;
+
+    bool isProducerThrottlingControlSupported() const;
+
+    int32_t setProducerThrottlingEnabled(EGLNativeWindowType nativeWindow, bool enabled) const;
+
+    struct ExternalTextureAndroid : public ExternalTexture {
+        EGLImageKHR eglImage = EGL_NO_IMAGE;
     };
 
     int mOSVersion;
     ExternalStreamManagerAndroid& mExternalStreamManager;
-    InitializeJvmForPerformanceManagerIfNeeded const mInitializeJvmForPerformanceManagerIfNeeded;
+    AndroidDetails& mAndroidDetails;
     utils::PerformanceHintManager mPerformanceHintManager;
     utils::PerformanceHintManager::Session mPerformanceHintSession;
-
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
-
-    void* mNativeWindowLib = nullptr;
-    int32_t (*ANativeWindow_getBuffersDefaultDataSpace)(ANativeWindow* window) = nullptr;
+    SwapChainEGLAndroid* mCurrentDrawSwapChain{};
     bool mAssertNativeWindowIsValid = false;
 };
 

@@ -14,10 +14,16 @@
  * limitations under the License.
  */
 
+#include "fg/FrameGraphId.h"
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphResources.h"
 #include "fg/details/PassNode.h"
 #include "fg/details/ResourceNode.h"
+
+#include <utils/debug.h>
+#include <utils/Panic.h>
+
+#include <cstdint>
 
 namespace filament {
 
@@ -43,7 +49,7 @@ VirtualResource& FrameGraphResources::getResource(FrameGraphHandle const handle)
 
     FILAMENT_CHECK_PRECONDITION(hasReadOrWrite)
             << "Pass \"" << mPassNode.getName() << "\" didn't declare any access to resource \""
-            << resource->name << "\"";
+            << resource->name.c_str() << "\"";
 
     assert_invariant(resource->refcount);
 

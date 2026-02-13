@@ -33,6 +33,7 @@
 
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 #include "src/tint/lang/core/type/reference.h"
+#include "src/tint/lang/wgsl/writer/ir_to_program/program_options.h"
 
 namespace tint::wgsl::writer {
 
@@ -97,6 +98,11 @@ class IRToProgramTest : public core::ir::IRTestHelper {
     core::ir::Var* Var(std::string_view name) {
         return b.Var(name, mod.Types().ref<SPACE, T, ACCESS>());
     }
+
+    /// The options to use when generating WGSL.
+    ProgramOptions options{
+        .allowed_features = AllowedFeatures::Everything(),
+    };
 };
 
 #define EXPECT_WGSL(expected_wgsl)                                                   \

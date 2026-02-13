@@ -191,6 +191,8 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 }
 
 static void cleanup(Engine* engine, View*, Scene*) {
+    g_meshSet.reset(nullptr);
+
     for (const auto& material : g_meshMaterialInstances) {
         engine->destroy(material.second);
     }
@@ -202,8 +204,6 @@ static void cleanup(Engine* engine, View*, Scene*) {
     for (auto& i : g_params.material) {
         engine->destroy(i);
     }
-
-    g_meshSet.reset(nullptr);
 
     engine->destroy(g_params.light);
     engine->destroy(g_params.spotLight);
@@ -395,6 +395,7 @@ static filament::MaterialInstance* updateInstances(
                     Color::absorptionAtDistance(color, params.distance));
             materialInstance->setParameter("ior", params.ior);
             materialInstance->setParameter("transmission", params.transmission);
+            materialInstance->setParameter("dispersion", params.dispersion);
             materialInstance->setParameter("thickness", params.thickness);
         }
     }
@@ -571,6 +572,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                 if (hasRefraction) {
                     ImGui::SliderFloat("IOR", &params.ior, 1.0f, 3.0f);
                     ImGui::SliderFloat("Transmission", &params.transmission, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Dispersion", &params.dispersion, 0.0f, 5.0f);
                     ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
                     ImGui::ColorEdit3("Transmittance", &params.transmittanceColor.r);
                     ImGui::SliderFloat("Distance", &params.distance, 0.0f, 4.0f);
@@ -715,7 +717,6 @@ static void gui(filament::Engine* engine, filament::View*) {
             if (params.taaOptions.enabled) {
                 ImGui::Indent();
                 ImGui::SliderFloat("feedback", &params.taaOptions.feedback, 0.0f, 1.0f);
-                ImGui::SliderFloat("filter", &params.taaOptions.filterWidth, 0.02f, 2.0f);
                 ImGui::Unindent();
             }
             ImGui::Checkbox("FXAA", &params.fxaa);

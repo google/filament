@@ -67,6 +67,7 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& rhs) noexcept {
         mValid = rhs.mValid;
         mSetAfterCommitWarning = rhs.mSetAfterCommitWarning;
         mSetUndefinedParameterWarning = rhs.mSetUndefinedParameterWarning;
+        mName = rhs.mName;
     }
     return *this;
 }
@@ -88,7 +89,7 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
         // point later.
         driver.destroyDescriptorSet(mDescriptorSetHandle);
     }
-    mDescriptorSetHandle = driver.createDescriptorSet(layout.getHandle());
+    mDescriptorSetHandle = driver.createDescriptorSet(layout.getHandle(), mName);
     mValid.forEachSetBit([&layout, &driver,
             dsh = mDescriptorSetHandle, descriptors = mDescriptors.data()]
             (backend::descriptor_binding_t const binding) {
@@ -105,13 +106,22 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
         }
     });
 
-    auto const unsetValidDescriptors = layout.getValidDescriptors() & ~mValid;
-    if (UTILS_VERY_UNLIKELY(!unsetValidDescriptors.empty() && !mSetUndefinedParameterWarning)) {
-        unsetValidDescriptors.forEachSetBit([&](auto i) {
-            LOG(WARNING) << (layout.isSampler(i) ? "Sampler" : "Buffer") << " descriptor " << i
-                         << " of " << mName.c_str() << " is not set. Please report this issue.";
-        });
-        mSetUndefinedParameterWarning = true;
+    // FIXME: see [b/468072646]
+    //  We only validate empty descriptors at FEATURE_LEVEL_1 and above.
+    //  This is because at FL0 it's expected that some descriptor won't be set. In theory, the
+    //  corresponding layouts should not even contain those descriptors. However, making that change
+    //  is difficult and risky, and will be done at a later time.
+    //  Note: that the correct fix is actually needed to properly support FL3 once we want
+    //  to take advantage of having more samplers.
+    if (UTILS_LIKELY(driver.getFeatureLevel() > backend::FeatureLevel::FEATURE_LEVEL_0)) {
+        auto const unsetValidDescriptors = layout.getValidDescriptors() & ~mValid;
+        if (UTILS_VERY_UNLIKELY(!unsetValidDescriptors.empty() && !mSetUndefinedParameterWarning)) {
+            unsetValidDescriptors.forEachSetBit([&](auto i) {
+                LOG(WARNING) << (layout.isSampler(i) ? "Sampler" : "Buffer") << " descriptor " << i
+                        << " of " << mName.c_str() << " is not set. Please report this issue.";
+            });
+            mSetUndefinedParameterWarning = true;
+        }
     }
 }
 
@@ -139,20 +149,27 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
     driver.bindDescriptorSet(mDescriptorSetHandle, +set, std::move(dynamicOffsets));
 }
 
+void DescriptorSet::unbind(backend::DriverApi& driver,
+        DescriptorSetBindingPoints set) noexcept {
+    driver.bindDescriptorSet({}, +set, {});
+}
+
 void DescriptorSet::setBuffer(DescriptorSetLayout const& layout,
         backend::descriptor_binding_t const binding,
         backend::Handle<backend::HwBufferObject> boh, uint32_t const offset, uint32_t const size) {
 
     // Validate it's the right kind of descriptor
-    using DSLB = backend::DescriptorSetLayoutBinding;
-    FILAMENT_CHECK_PRECONDITION(DSLB::isBuffer(layout.getDescriptorType(binding)))
+    using DSLD = backend::DescriptorSetLayoutDescriptor;
+    FILAMENT_CHECK_PRECONDITION(DSLD::isBuffer(layout.getDescriptorType(binding)))
             << "descriptor " << +binding << "is not a buffer";
 
-    if (mDescriptors[binding].buffer.boh != boh || mDescriptors[binding].buffer.size != size) {
-        // we don't set the dirty bit if only offset changes
+    auto& buffer = mDescriptors[binding].buffer;
+    if (buffer.boh != boh ||
+        buffer.offset != offset ||
+        buffer.size != size) {
         mDirty.set(binding);
     }
-    mDescriptors[binding].buffer = { boh, offset, size };
+    buffer = { boh, offset, size };
     mValid.set(binding, bool(boh));
 }
 
@@ -162,11 +179,11 @@ void DescriptorSet::setSampler(
         backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) {
 
     using namespace backend;
-    using DSLB = DescriptorSetLayoutBinding;
+    using DSLD = DescriptorSetLayoutDescriptor;
 
     // Validate it's the right kind of descriptor
     auto type = layout.getDescriptorType(binding);
-    FILAMENT_CHECK_PRECONDITION(DSLB::isSampler(type))
+    FILAMENT_CHECK_PRECONDITION(DSLD::isSampler(type))
             << "descriptor " << +binding << " is not a sampler";
 
     FILAMENT_CHECK_PRECONDITION(

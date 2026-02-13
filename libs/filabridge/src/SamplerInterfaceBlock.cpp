@@ -51,11 +51,19 @@ SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags)
 
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(std::string_view samplerName,
         Binding binding, Type type, Format format, Precision precision, bool filterable,
-        bool multisample, ShaderStageFlags stages) noexcept {
+        bool multisample, std::string_view transformName, ShaderStageFlags stages) noexcept {
     mEntries.push_back({
         { samplerName.data(), samplerName.size() }, // name
         {},                                         // uniform name
-        binding, type, format, precision, filterable, multisample, stages });
+        binding,
+        type,
+        format,
+        precision,
+        filterable,
+        multisample,
+        stages,
+        { transformName.data(), transformName.size() },
+    });
     return *this;
 }
 
@@ -66,8 +74,8 @@ SamplerInterfaceBlock SamplerInterfaceBlock::Builder::build() {
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         std::initializer_list<ListEntry> list) noexcept {
     for (auto& e: list) {
-        add(e.name, e.binding, e.type, e.format, e.precision, e.filterable, e.multisample,
-                e.stages);
+        add(e.name, e.binding, e.type, e.format, e.precision, e.filterable,
+                e.multisample, e.transformName, e.stages);
     }
     return *this;
 }
@@ -144,12 +152,12 @@ SamplerInterfaceBlock::SamplerInfoList SamplerInterfaceBlock::filterSamplerList(
             std::remove_if(list.begin(), list.end(),
                     [&](auto const& entry) {
                         auto pos = std::find_if(
-                                descriptorSetLayout.bindings.begin(),
-                                descriptorSetLayout.bindings.end(),
+                                descriptorSetLayout.descriptors.begin(),
+                                descriptorSetLayout.descriptors.end(),
                                 [&entry](const auto& item) {
                                     return item.binding == entry.binding;
                                 });
-                        return pos == descriptorSetLayout.bindings.end();
+                        return pos == descriptorSetLayout.descriptors.end();
                     }), list.end());
 
     return list;

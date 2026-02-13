@@ -20,13 +20,21 @@
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphTexture.h"
 #include "fg/FrameGraphRenderPass.h"
+
+#include "fg/details/ResourceAllocator.h"
+#include "fg/details/ResourceCreationContext.h"
 #include "fg/details/DependencyGraph.h"
 
-#include <utils/Panic.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
-namespace filament {
-class ResourceAllocatorInterface;
-} // namespace::filament
+#include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
+
+#include <cstddef>
+#include <cstdint>
 
 namespace filament {
 
@@ -49,15 +57,19 @@ class VirtualResource {
 public:
     // constants
     VirtualResource* parent;
-    const char* const name;
+    utils::StaticString name;
 
     // computed during compile()
     uint32_t refcount = 0;
     PassNode* first = nullptr;  // pass that needs to instantiate the resource
     PassNode* last = nullptr;   // pass that can destroy the resource
 
-    explicit VirtualResource(const char* name) noexcept : parent(this), name(name) { }
-    VirtualResource(VirtualResource* parent, const char* name) noexcept : parent(parent), name(name) { }
+    explicit VirtualResource(utils::StaticString const name) noexcept : parent(this), name(name) {
+    }
+
+    VirtualResource(VirtualResource* parent,
+            utils::StaticString const name) noexcept : parent(parent), name(name) {
+    }
     VirtualResource(VirtualResource const& rhs) noexcept = delete;
     VirtualResource& operator=(VirtualResource const&) = delete;
     virtual ~VirtualResource() noexcept;
@@ -84,11 +96,10 @@ public:
             ResourceEdgeBase const* writer) noexcept = 0;
 
     /* Instantiate the concrete resource */
-    virtual void devirtualize(ResourceAllocatorInterface& resourceAllocator,
-            bool useProtectedMemory) noexcept = 0;
+    virtual void devirtualize(ResourceCreationContext const& context) noexcept = 0;
 
     /* Destroy the concrete resource */
-    virtual void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept = 0;
+    virtual void destroy(ResourceCreationContext const& context) noexcept = 0;
 
     /* Destroy an Edge instantiated by this resource */
     virtual void destroyEdge(DependencyGraph::Edge* edge) noexcept = 0;
@@ -97,7 +108,7 @@ public:
 
     virtual bool isImported() const noexcept { return false; }
 
-    // this is to workaround our lack of RTTI -- otherwise we could use dynamic_cast
+    // this is to work around our lack of RTTI -- otherwise we could use dynamic_cast
     virtual ImportedRenderTarget* asImportedRenderTarget() noexcept { return nullptr; }
 
 protected:
@@ -147,18 +158,18 @@ public:
     };
 
     UTILS_NOINLINE
-    Resource(const char* name, Descriptor const& desc) noexcept
+    Resource(utils::StaticString const name, Descriptor const& desc) noexcept
         : VirtualResource(name), descriptor(desc) {
     }
 
     UTILS_NOINLINE
-    Resource(Resource* parent, const char* name, SubResourceDescriptor const& desc) noexcept
+    Resource(Resource* parent, utils::StaticString const name, SubResourceDescriptor const& desc) noexcept
             : VirtualResource(parent, name),
               descriptor(RESOURCE::generateSubResourceDescriptor(parent->descriptor, desc)),
               subResourceDescriptor(desc) {
     }
 
-    ~Resource() noexcept = default;
+    ~Resource() noexcept override = default;
 
     // pass Node to resource Node edge (a write to)
     UTILS_NOINLINE
@@ -230,21 +241,20 @@ protected:
         delete static_cast<ResourceEdge *>(edge);
     }
 
-    void devirtualize(ResourceAllocatorInterface& resourceAllocator,
-            bool useProtectedMemory) noexcept override {
+    void devirtualize(ResourceCreationContext const& context) noexcept override {
         if (!isSubResource()) {
-            resource.create(resourceAllocator, name, descriptor, usage, useProtectedMemory);
+            ResourceAllocator<RESOURCE>::create(resource, context, name, descriptor, usage);
         } else {
             // resource is guaranteed to be initialized before we are by construction
             resource = static_cast<Resource const*>(parent)->resource;
         }
     }
 
-    void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept override {
+    void destroy(ResourceCreationContext const& context) noexcept override {
         if (detached || isSubResource()) {
             return;
         }
-        resource.destroy(resourceAllocator);
+        ResourceAllocator<RESOURCE>::destroy(resource, context);
     }
 
     utils::CString usageString() const noexcept override {
@@ -263,17 +273,17 @@ public:
     using Usage = typename RESOURCE::Usage;
 
     UTILS_NOINLINE
-    ImportedResource(const char* name, Descriptor const& desc, Usage usage, RESOURCE const& rsrc) noexcept
+    ImportedResource(utils::StaticString name, Descriptor const& desc, Usage usage, RESOURCE const& rsrc) noexcept
             : Resource<RESOURCE>(name, desc) {
         this->resource = rsrc;
         this->usage = usage;
     }
 
 protected:
-    void devirtualize(ResourceAllocatorInterface&, bool) noexcept override {
+    void devirtualize(ResourceCreationContext const&) noexcept override {
         // imported resources don't need to devirtualize
     }
-    void destroy(ResourceAllocatorInterface&) noexcept override {
+    void destroy(ResourceCreationContext const&) noexcept override {
         // imported resources never destroy the concrete resource
     }
 
@@ -295,22 +305,22 @@ protected:
 
 private:
     UTILS_NOINLINE
-    void assertConnect(FrameGraphTexture::Usage u) {
+    void assertConnect(FrameGraphTexture::Usage u) const {
         FILAMENT_CHECK_PRECONDITION((u & this->usage) == u)
                 << "Requested usage " << utils::to_string(u).c_str()
-                << " not available on imported resource \"" << this->name << "\" with usage "
+                << " not available on imported resource \"" << this->name.c_str() << "\" with usage "
                 << utils::to_string(this->usage).c_str();
     }
 };
 
 
-class ImportedRenderTarget : public ImportedResource<FrameGraphTexture> {
+class ImportedRenderTarget final : public ImportedResource<FrameGraphTexture> {
 public:
     backend::Handle<backend::HwRenderTarget> target;
     FrameGraphRenderPass::ImportDescriptor importedDesc;
 
     UTILS_NOINLINE
-    ImportedRenderTarget(const char* name,
+    ImportedRenderTarget(utils::StaticString name,
             FrameGraphTexture::Descriptor const& mainAttachmentDesc,
             FrameGraphRenderPass::ImportDescriptor const& importedDesc,
             backend::Handle<backend::HwRenderTarget> target);
@@ -329,7 +339,7 @@ protected:
     ImportedRenderTarget* asImportedRenderTarget() noexcept override { return this; }
 
 private:
-    void assertConnect(FrameGraphTexture::Usage u);
+    void assertConnect(FrameGraphTexture::Usage u) const;
 
     static FrameGraphTexture::Usage usageFromAttachmentsFlags(
             backend::TargetBufferFlags attachments) noexcept;

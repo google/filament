@@ -55,7 +55,8 @@ public:
             VkDeviceSize size) noexcept;
 
     void updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
-            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler) noexcept;
+            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler,
+            VkDescriptorSetLayout externalSamplerLayout = VK_NULL_HANDLE) noexcept;
 
     void updateSamplerForExternalSamplerSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
             fvkmemory::resource_ptr<VulkanTexture> texture) noexcept;
@@ -70,7 +71,6 @@ public:
     void unbind(uint8_t setIndex);
 
     void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
-            fvkutils::DescriptorSetMask const& useExternalSamplerMask,
             fvkutils::DescriptorSetMask const& setMask);
 
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
@@ -87,9 +87,11 @@ public:
 
     void gc();
 
+    void resetCachedState() noexcept { mLastBoundInfo = {}; }
+
 private:
-    void updateSamplerImpl(VkDescriptorSet set, uint8_t binding,
-            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler) noexcept;
+    void copySet(VkDescriptorSet srcSet, VkDescriptorSet destSet,
+            fvkutils::SamplerBitmask copyBindings) const;
 
     class DescriptorInfinitePool;
 

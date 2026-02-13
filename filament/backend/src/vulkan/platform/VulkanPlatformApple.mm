@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatform.h>
+#include <backend/platforms/VulkanPlatformApple.h>
 
 #include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanDriverFactory.h"
 
 #include <utils/Panic.h>
 
@@ -28,35 +27,36 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
-#ifndef VK_MVK_macos_surface
-    #error VK_MVK_macos_surface is not defined
+#ifndef VK_EXT_metal_surface
+    #error VK_EXT_metal_surface is not defined
 #endif
 
 using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() {
+VulkanPlatform::ExtensionSet VulkanPlatformApple::getSwapchainInstanceExtensions() const {
     ExtensionSet const ret = {
-        VK_MVK_MACOS_SURFACE_EXTENSION_NAME,  // TODO: replace with VK_EXT_metal_surface
+        VK_EXT_METAL_SURFACE_EXTENSION_NAME,
     };
     return ret;
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
-        VkInstance instance, uint64_t flags) noexcept {
+VulkanPlatform::SurfaceBundle VulkanPlatformApple::createVkSurfaceKHR(void* nativeWindow,
+        VkInstance instance, uint64_t flags) const noexcept {
     VkSurfaceKHR surface;
-    NSView* nsview = (__bridge NSView*) nativeWindow;
-    FILAMENT_CHECK_POSTCONDITION(nsview) << "Unable to obtain Metal-backed NSView.";
+    CAMetalLayer* mlayer = (__bridge CAMetalLayer*) nativeWindow;
+    FILAMENT_CHECK_POSTCONDITION(mlayer) << "Unable to obtain Metal-backed layer.";
 
     // Create the VkSurface.
-    FILAMENT_CHECK_POSTCONDITION(vkCreateMacOSSurfaceMVK)
-            << "Unable to load vkCreateMacOSSurfaceMVK.";
-    VkMacOSSurfaceCreateInfoMVK createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
-    createInfo.pView = (__bridge void*) nsview;
-    VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
-            (VkSurfaceKHR*) &surface);
+    FILAMENT_CHECK_POSTCONDITION(vkCreateMetalSurfaceEXT)
+            << "Unable to load vkCreateMetalSurfaceEXT.";
+    VkMetalSurfaceCreateInfoEXT createInfo = {
+        .sType = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT,
+        .pLayer = mlayer,
+    };
+    VkResult result =
+            vkCreateMetalSurfaceEXT(instance, &createInfo, VKALLOC, &surface);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkCreateMacOSSurfaceMVK. error=" << static_cast<int32_t>(result);
     return std::make_tuple(surface, VkExtent2D{});

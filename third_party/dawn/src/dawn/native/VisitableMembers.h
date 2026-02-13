@@ -35,10 +35,10 @@
 #include "dawn/native/stream/Stream.h"
 
 // Helper for X macro to declare a visitable member.
-#define DAWN_INTERNAL_VISITABLE_MEMBER_DECL(type, name) type name{};
+#define DAWN_INTERNAL_VISITABLE_MEMBER_DECL(type, name, ...) type name{__VA_OPT__(__VA_ARGS__)};
 
 // Helper for X macro for visiting a visitable member.
-#define DAWN_INTERNAL_VISITABLE_MEMBER_ARG(type, name) , name
+#define DAWN_INTERNAL_VISITABLE_MEMBER_ARG(type, name, ...) , name
 
 namespace dawn::native::detail {
 constexpr int kInternalVisitableUnusedForComma = 0;
@@ -47,10 +47,10 @@ constexpr int kInternalVisitableUnusedForComma = 0;
 // Helper X macro to declare members of a class or struct, along with VisitAll
 // methods to call a functor on all members.
 // Example usage:
-//   #define MEMBERS(X) \
-//       X(int, a)              \
-//       X(float, b)            \
-//       X(Foo, foo)            \
+//   #define MEMBERS(X)    \
+//       X(int, a)         \
+//       X(float, b, 42.0) \
+//       X(Foo, foo, kFoo) \
 //       X(Bar, bar)
 //   struct MyStruct {
 //    DAWN_VISITABLE_MEMBERS(MEMBERS)

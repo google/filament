@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/WebGPUPlatform.h>
+#include <backend/platforms/WebGPUPlatformAndroid.h>
 
 #include <utils/Panic.h>
 
@@ -31,7 +31,7 @@
 
 namespace filament::backend {
 
-std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
+std::vector<wgpu::RequestAdapterOptions> WebGPUPlatformAndroid::getAdapterOptions() {
     constexpr std::array powerPreferences = {
         wgpu::PowerPreference::HighPerformance,
         wgpu::PowerPreference::LowPower };
@@ -55,7 +55,7 @@ std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
     return requests;
 }
 
-wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+wgpu::Extent2D WebGPUPlatformAndroid::getSurfaceExtent(void* nativeWindow) const {
     ANativeWindow* window = static_cast<ANativeWindow*>(nativeWindow);
     return wgpu::Extent2D{
         .width = static_cast<uint32_t>(ANativeWindow_getWidth(window)),
@@ -63,7 +63,7 @@ wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
     };
 }
 
-wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
+wgpu::Surface WebGPUPlatformAndroid::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     wgpu::SurfaceSourceAndroidNativeWindow surfaceSourceAndroidWindow{};
     surfaceSourceAndroidWindow.window = nativeWindow;
     wgpu::SurfaceDescriptor surfaceDescriptor{

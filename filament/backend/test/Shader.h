@@ -19,6 +19,8 @@
 
 #include "Lifetimes.h"
 #include "private/filament/SamplerInterfaceBlock.h"
+#include "private/backend/DriverApi.h"
+#include "backend/DriverEnums.h"
 
 namespace test {
 

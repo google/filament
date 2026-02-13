@@ -55,7 +55,9 @@ namespace glslang {
 //
 void TType::buildMangledName(TString& mangledName) const
 {
-    if (isMatrix())
+    if (isTensorARM())
+        mangledName += 'T';
+    else if (isMatrix())
         mangledName += 'm';
     else if (isVector())
         mangledName += 'v';
@@ -71,6 +73,8 @@ void TType::buildMangledName(TString& mangledName) const
     case EbtDouble:             mangledName += 'd';      break;
     case EbtFloat16:            mangledName += "f16";    break;
     case EbtBFloat16:           mangledName += "bf16";   break;
+    case EbtFloatE5M2:          mangledName += "fe5m2";  break;
+    case EbtFloatE4M3:          mangledName += "fe4m3";  break;
     case EbtInt8:               mangledName += "i8";     break;
     case EbtUint8:              mangledName += "u8";     break;
     case EbtInt16:              mangledName += "i16";    break;
@@ -421,6 +425,7 @@ TFunction::TFunction(const TFunction& copyOf) : TSymbol(copyOf)
     defined = copyOf.defined;
     prototyped = copyOf.prototyped;
     implicitThis = copyOf.implicitThis;
+    variadic = copyOf.variadic;
     illegalImplicitThis = copyOf.illegalImplicitThis;
     defaultParamCount = copyOf.defaultParamCount;
     spirvInst = copyOf.spirvInst;

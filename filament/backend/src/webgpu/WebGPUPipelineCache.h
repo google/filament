@@ -34,6 +34,11 @@
 
 namespace filament::backend {
 
+/**
+ * A cache for WebGPU render pipelines.
+ * This class is responsible for creating and caching wgpu::RenderPipeline objects to avoid
+ * expensive pipeline creation at runtime.
+ */
 class WebGPUPipelineCache final {
 public:
     struct RenderPipelineRequest final {
@@ -63,6 +68,9 @@ public:
     [[nodiscard]] wgpu::RenderPipeline const& getOrCreateRenderPipeline(
             RenderPipelineRequest const&);
 
+    /**
+     * Should be called at the end of each frame to perform cache maintenance.
+     */
     void onFrameEnd();
 
 private:
@@ -153,7 +161,7 @@ private:
         // render targets...                                                                //
         uint8_t multisampleCount{ 0 };                                                      // 1    : 313
         uint8_t colorFormatCount{ 0 };                                                      // 1    : 314
-        uint8_t padding[5]{ 0 };                                                            // 5    : 319
+        uint8_t padding[5]{ 0 };                                                            // 5    : 315
         TargetBufferFlags targetRenderFlags{ TargetBufferFlags::NONE };                     // 4    : 320
         wgpu::TextureFormat depthStencilFormat { wgpu::TextureFormat::Undefined };          // 4    : 324
         wgpu::TextureFormat colorFormats[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]{           //

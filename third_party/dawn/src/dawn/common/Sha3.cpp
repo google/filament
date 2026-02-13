@@ -53,6 +53,10 @@ constexpr uint32_t kRoundCount = 24;  // aka "nr"
 // The rotation of a lane by `offset` bits.
 Sha3Lane Rotl(Sha3Lane l, size_t offset) {
     DAWN_ASSERT(offset < kLaneBitWidth);
+    // Offset should not be 0, as the expected result should be just identical and
+    // right-shifting (kLaneBitWidth - offset) == kLaneBitWidth bits on Sha3Lane (having
+    // kLaneBitWidth bits) results in undefined behavior.
+    DAWN_ASSERT(offset > 0);
     return (l << offset) | (l >> (kLaneBitWidth - offset));
 }
 
@@ -105,7 +109,9 @@ static constexpr std::array<uint8_t, 25> kRhoOffsets = []() {
 }();
 
 void Rho(Sha3State& a) {
-    for (uint32_t i = 0; i < 25; i++) {
+    // Rotating starts from i = 1, as kRhoOffsets[0] = 0 and the lane 0 is not rotated.
+    static_assert(kRhoOffsets[0] == 0);
+    for (uint32_t i = 1; i < 25; i++) {
         a[i] = Rotl(a[i], kRhoOffsets[i]);
     }
 }

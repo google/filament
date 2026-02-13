@@ -187,7 +187,8 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
         wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D const& extent,
         bool useSRGBColorSpace) {
     config.device = device;
-    config.usage = wgpu::TextureUsage::RenderAttachment;
+    config.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc |
+                   wgpu::TextureUsage::TextureBinding;
     config.width = extent.width;
     config.height = extent.height;
     config.format = selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
@@ -269,8 +270,6 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
 
     initConfig(mConfig, device, capabilities, extent, useSRGBColorSpace);
-    mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
-            mNeedStencil);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printSurfaceConfiguration(mConfig, mDepthFormat);
 #endif
@@ -297,8 +296,6 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
     mConfig.presentMode = wgpu::PresentMode::Fifo;
     mConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
 
-    mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
-                mNeedStencil);
     const wgpu::TextureDescriptor textureDescriptor = {
         .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc,
         .dimension = wgpu::TextureDimension::e2D,
@@ -352,48 +349,53 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     }
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& extent) {
+wgpu::TextureView WebGPUSwapChain::getNextTextureView() {
+    assert_invariant(isHeadless());
+
+    mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
+    return mRenderTargetViews[mHeadlessBufferIndex];
+}
+
+wgpu::TextureView WebGPUSwapChain::getNextTextureView( wgpu::Extent2D const& extent) {
     setExtent(extent);
-    wgpu::SurfaceTexture surfaceTexture;
-    mSurface.GetCurrentTexture(&surfaceTexture);
-    if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
+
+    mSurface.GetCurrentTexture(&mCurrentTexture);
+    if (mCurrentTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
         return nullptr;
     }
 
     // TODO: review these initializations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
         .label = "surface_texture_view",
-        .format = surfaceTexture.texture.GetFormat(),
+        .format = mCurrentTexture.texture.GetFormat(),
         .dimension = wgpu::TextureViewDimension::e2D,
         .baseMipLevel = 0,
         .mipLevelCount = 1,
         .baseArrayLayer = 0,
         .arrayLayerCount = 1
     };
-    return surfaceTexture.texture.CreateView(&textureViewDescriptor);
+    return mCurrentTexture.texture.CreateView(&textureViewDescriptor);
 }
 
-wgpu::Texture WebGPUSwapChain::getCurrentTexture(wgpu::Extent2D const& extent) {
+wgpu::Texture WebGPUSwapChain::getCurrentTexture() {
     if (isHeadless()) {
         return mRenderTargetTextures[mHeadlessBufferIndex];
     }
-    // We should return the actual texture that was in use, but we don't keep a direct handle to it.
-    // The non-headless case for this isn't currently relevant (Since this is only used by headless
-    // rendering captured by readPixels), but if we need it this can be done in the future
-    FILAMENT_CHECK_POSTCONDITION(false)
-            << "getCurrentTexture is not implemented for non-headless mode.";
-    return nullptr;
+    // We return the texture that was in use
+    return mCurrentTexture.texture;
+
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentHeadlessTextureView() {
-    return mRenderTargetViews[mHeadlessBufferIndex];
-}
-
-void WebGPUSwapChain::present() {
-    if (isHeadless()) {
-        mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
-    } else {
+void WebGPUSwapChain::present(DriverBase& driver) {
+    if (!isHeadless()) {
         mSurface.Present();
+    }
+    if (mFrameScheduled.callback) {
+        driver.scheduleCallback(mFrameScheduled.handler,
+                [callback = mFrameScheduled.callback]() {
+                    PresentCallable noop = PresentCallable(PresentCallable::noopPresent, nullptr);
+                    callback->operator()(noop);
+                });
     }
 }
 

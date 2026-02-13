@@ -52,6 +52,7 @@ void CommandRecordingContext::AddToSharedTextureList(Texture* texture) {
 
 void CommandRecordingContext::Open(ComPtr<ID3D12GraphicsCommandList> commandList) {
     mD3d12CommandList = std::move(commandList);
+    mD3d12CommandList.As(&mD3d12CommandList1);
     mD3d12CommandList.As(&mD3d12CommandList4);
     mNeedsSubmit = false;
 }
@@ -61,7 +62,7 @@ MaybeError CommandRecordingContext::ExecuteCommandList(Device* device,
     DAWN_ASSERT(mD3d12CommandList != nullptr);
 
     for (Buffer* buffer : mSharedBuffers) {
-        DAWN_TRY(buffer->SynchronizeBufferBeforeUse());
+        DAWN_TRY(buffer->SynchronizeBufferBeforeUseOnGPU());
     }
 
     for (Texture* texture : mSharedTextures) {
@@ -133,6 +134,11 @@ ID3D12GraphicsCommandList* CommandRecordingContext::GetCommandList() const {
     return mD3d12CommandList.Get();
 }
 
+ID3D12GraphicsCommandList1* CommandRecordingContext::GetCommandList1() const {
+    DAWN_ASSERT(mD3d12CommandList != nullptr);
+    return mD3d12CommandList1.Get();
+}
+
 // This function will fail on Windows versions prior to 1809. Support must be queried through
 // the device before calling.
 ID3D12GraphicsCommandList4* CommandRecordingContext::GetCommandList4() const {
@@ -142,6 +148,7 @@ ID3D12GraphicsCommandList4* CommandRecordingContext::GetCommandList4() const {
 
 void CommandRecordingContext::Release() {
     mD3d12CommandList.Reset();
+    mD3d12CommandList1.Reset();
     mD3d12CommandList4.Reset();
 
     mNeedsSubmit = false;

@@ -81,19 +81,19 @@ HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& ar
 template <size_t P0, size_t P1, size_t P2>
 HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size,
         bool disableUseAfterFreeCheck,
-        bool disableHeapHandleTags) noexcept
+        bool disableHeapHandleTags)
     : mHandleArena(name, size, disableUseAfterFreeCheck),
       mUseAfterFreeCheckDisabled(disableUseAfterFreeCheck),
       mHeapHandleTagsDisabled(disableHeapHandleTags) {
 }
 
 template <size_t P0, size_t P1, size_t P2>
-HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size) noexcept
+HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size)
     : HandleAllocator(name, size, false, false) {
 }
 
 template <size_t P0, size_t P1, size_t P2>
-HandleAllocator<P0, P1, P2>::~HandleAllocator() {
+HandleAllocator<P0, P1, P2>::~HandleAllocator() noexcept {
     auto& overflowMap = mOverflowMap;
     if (!overflowMap.empty()) {
         PANIC_LOG("Not all handles have been freed. Probably leaking memory.");
@@ -108,7 +108,7 @@ template <size_t P0, size_t P1, size_t P2>
 UTILS_NOINLINE
 void* HandleAllocator<P0, P1, P2>::handleToPointerSlow(HandleBase::HandleId id) const noexcept {
     auto& overflowMap = mOverflowMap;
-    std::lock_guard lock(mLock);
+    std::lock_guard const lock(mLock);
     auto pos = overflowMap.find(id);
     if (pos != overflowMap.end()) {
         return pos.value();
@@ -119,14 +119,15 @@ void* HandleAllocator<P0, P1, P2>::handleToPointerSlow(HandleBase::HandleId id) 
 template <size_t P0, size_t P1, size_t P2>
 HandleBase::HandleId HandleAllocator<P0, P1, P2>::allocateHandleSlow(size_t size) {
     void* p = ::malloc(size);
-    std::unique_lock lock(mLock);
 
-    HandleBase::HandleId id = (++mId) | HANDLE_HEAP_FLAG;
-
-    FILAMENT_CHECK_POSTCONDITION(mId < HANDLE_HEAP_FLAG) <<
+    auto const nextId = mId.fetch_add(1, std::memory_order_relaxed) + 1;
+    FILAMENT_CHECK_POSTCONDITION(nextId < HANDLE_HEAP_FLAG) <<
             "No more Handle ids available! This can happen if HandleAllocator arena has been full"
             " for a while. Please increase FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB";
 
+    HandleBase::HandleId id = nextId | HANDLE_HEAP_FLAG;
+
+    std::unique_lock lock(mLock);
     mOverflowMap.emplace(id, p);
     lock.unlock();
 
@@ -156,7 +157,7 @@ void HandleAllocator<P0, P1, P2>::deallocateHandleSlow(HandleBase::HandleId id, 
 
 template<size_t P0, size_t P1, size_t P2>
 UTILS_NOINLINE
-CString HandleAllocator<P0, P1, P2>::getHandleTag(HandleBase::HandleId id) const noexcept {
+ImmutableCString HandleAllocator<P0, P1, P2>::getHandleTag(HandleBase::HandleId id) const noexcept {
     uint32_t key = id;
     if (UTILS_LIKELY(isPoolHandle(id))) {
         // Truncate the age to get the debug tag
@@ -172,7 +173,7 @@ DebugTag::DebugTag() {
 }
 
 UTILS_NOINLINE
-CString DebugTag::findHandleTag(HandleBase::HandleId key) const noexcept {
+ImmutableCString DebugTag::findHandleTag(HandleBase::HandleId key) const noexcept {
     std::unique_lock const lock(mDebugTagLock);
     if (auto pos = mDebugTags.find(key); pos != mDebugTags.end()) {
         return pos->second;
@@ -181,7 +182,7 @@ CString DebugTag::findHandleTag(HandleBase::HandleId key) const noexcept {
 }
 
 UTILS_NOINLINE
-void DebugTag::writePoolHandleTag(HandleBase::HandleId key, CString&& tag) noexcept {
+void DebugTag::writePoolHandleTag(HandleBase::HandleId key, ImmutableCString&& tag) noexcept {
     // This line is the costly part. In the future, we could potentially use a custom
     // allocator.
     std::unique_lock const lock(mDebugTagLock);
@@ -190,7 +191,7 @@ void DebugTag::writePoolHandleTag(HandleBase::HandleId key, CString&& tag) noexc
 }
 
 UTILS_NOINLINE
-void DebugTag::writeHeapHandleTag(HandleBase::HandleId key, CString&& tag) noexcept {
+void DebugTag::writeHeapHandleTag(HandleBase::HandleId key, ImmutableCString&& tag) noexcept {
     // This line is the costly part. In the future, we could potentially use a custom
     // allocator.
     std::unique_lock const lock(mDebugTagLock);

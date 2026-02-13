@@ -149,7 +149,7 @@ VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
     return new VulkanStage(memory, buffer, capacity, pMapping);
 }
 
-void VulkanStagePool::destroyStage(VulkanStage const*&& stage) {
+void VulkanStagePool::destroyStage(VulkanStage const* stage) {
     assert(stage->isSafeToReset());  // Ensure all segments have been reset already.
     vmaUnmapMemory(mAllocator, stage->memory());
     vmaDestroyBuffer(mAllocator, stage->buffer(), stage->memory());
@@ -196,7 +196,7 @@ fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImag
 
     VkImage image;
     VmaAllocation memory;
-    const UTILS_UNUSED VkResult result = vmaCreateImage(mAllocator, &imageInfo, &allocInfo,
+    UTILS_UNUSED const VkResult result = vmaCreateImage(mAllocator, &imageInfo, &allocInfo,
             &image, &memory, nullptr);
 
     assert_invariant(result == VK_SUCCESS);
@@ -207,16 +207,11 @@ fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImag
     VulkanStageImage* stageImage = new VulkanStageImage(
         vkformat, width, height, memory, image, mCurrentFrame);
 
-    // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
-    // "Host access to image memory is only well-defined for linear images and for image
-    // subresources of those images which are currently in either the
-    // VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL layout. Calling
-    // vkGetImageSubresourceLayout for a linear image returns a subresource layout mapping that is
-    // valid for either of those image layouts."
     fvkutils::transitionLayout(cmdbuffer, {
             .image = stageImage->image(),
             .oldLayout = VulkanLayout::UNDEFINED,
-            .newLayout = VulkanLayout::STAGING, // (= VK_IMAGE_LAYOUT_GENERAL)
+            // TRANSFER_SRC because we're about to blit this to the actual texture.
+            .newLayout = VulkanLayout::TRANSFER_SRC,
             .subresources = { aspectFlags, 0, 1, 0, 1 },
         });
 
@@ -244,7 +239,7 @@ void VulkanStagePool::gc() noexcept {
                 FVK_LOGD << "Destroying a staging buffer with hndl " << pair.second->buffer()
                          << utils::io::endl;
 #endif
-                destroyStage(std::move(pair.second));
+                destroyStage(pair.second);
                 continue;
             }
 
@@ -281,7 +276,7 @@ void VulkanStagePool::gc() noexcept {
 
 void VulkanStagePool::terminate() noexcept {
     for (auto& pair : mStages) {
-        destroyStage(std::move(pair.second));
+        destroyStage(pair.second);
     }
     mStages.clear();
 

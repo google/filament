@@ -40,9 +40,11 @@ namespace {
 
 } // namespace
 
+// The usage flags are determined by the binding type, and always include CopyDst to allow for
+// updating the buffer.
 WebGPUBufferObject::WebGPUBufferObject(wgpu::Device const& device,
         const BufferObjectBinding bindingType, const uint32_t byteCount)
-    : HwBufferObject{ byteCount },
+    : HwBufferObject{ byteCount, false },
       WebGPUBufferBase{ device, wgpu::BufferUsage::CopyDst | getBufferObjectUsage(bindingType),
           byteCount, "buffer_object" } {}
 

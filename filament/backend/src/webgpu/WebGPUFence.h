@@ -17,25 +17,32 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 #define TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 
+#include "WebGPUQueueManager.h"
+
 #include "DriverBase.h"
+
 #include <backend/DriverEnums.h>
 
-#include <atomic>
-
-namespace wgpu {
-class Queue;
-} // namespace wgpu
+#include <memory>
 
 namespace filament::backend {
 
-class WebGPUFence final : public HwFence {
+class WebGPUFence : public HwFence {
 public:
-    [[nodiscard]] FenceStatus getStatus();
+    WebGPUFence();
+    ~WebGPUFence();
 
-    void addMarkerToQueueState(wgpu::Queue const&);
+    // Initialize the fence with a submission state from the queue manager.
+    void setSubmissionState(std::shared_ptr<WebGPUSubmissionState> state);
+
+    // Note that getStatus cannot be const since it's implemented with wait();
+    FenceStatus getStatus();
+    FenceStatus wait(uint64_t timeout);
 
 private:
-    std::atomic<FenceStatus> mStatus{ FenceStatus::TIMEOUT_EXPIRED };
+    std::mutex mLock;
+    std::condition_variable mCond;
+    std::shared_ptr<WebGPUSubmissionState> mState;
 };
 
 } // namespace filament::backend

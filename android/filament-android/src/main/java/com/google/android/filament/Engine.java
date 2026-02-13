@@ -264,7 +264,8 @@ public class Engine {
                     config.disableHandleUseAfterFreeCheck,
                     config.preferredShaderLanguage.ordinal(),
                     config.forceGLES2Context, config.assertNativeWindowIsValid,
-                    config.gpuContextPriority.ordinal());
+                    config.gpuContextPriority.ordinal(),
+                    config.sharedUboInitialSizeInBytes);
             return this;
         }
 
@@ -525,6 +526,16 @@ public class Engine {
          * GPU context priority level. Controls GPU work scheduling and preemption.
          */
         public GpuContextPriority gpuContextPriority = GpuContextPriority.DEFAULT;
+
+        /**
+         * The initial size in bytes of the shared uniform buffer used for material instance batching.
+         *
+         * If the buffer runs out of space during a frame, it will be automatically reallocated
+         * with a larger capacity. Setting an appropriate initial size can help avoid runtime
+         * reallocations, which can cause a minor performance stutter, at the cost of higher
+         * initial memory usage.
+         */
+        public long sharedUboInitialSizeInBytes = 256 * 64;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -933,6 +944,15 @@ public class Engine {
      * @param object Object to check for validity
      * @return returns true if the specified object is valid.
      */
+    public boolean isValidMorphTargetBuffer(@NonNull MorphTargetBuffer object) {
+        return nIsValidMorphTargetBuffer(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
     public boolean isValidIndirectLight(@NonNull IndirectLight object) {
         return nIsValidIndirectLight(getNativeObject(), object.getNativeObject());
     }
@@ -1179,6 +1199,15 @@ public class Engine {
     public void destroySkinningBuffer(@NonNull SkinningBuffer skinningBuffer) {
         assertDestroy(nDestroySkinningBuffer(getNativeObject(), skinningBuffer.getNativeObject()));
         skinningBuffer.clearNativeObject();
+    }
+
+    /**
+     * Destroys a {@link MorphTargetBuffer} and frees all its associated resources.
+     * @param morphTargetBuffer the {@link MorphTargetBuffer} to destroy
+     */
+    public void destroyMorphTargetBuffer(@NonNull MorphTargetBuffer morphTargetBuffer) {
+        assertDestroy(nDestroyMorphTargetBuffer(getNativeObject(), morphTargetBuffer.getNativeObject()));
+        morphTargetBuffer.clearNativeObject();
     }
 
     /**
@@ -1472,6 +1501,7 @@ public class Engine {
     private static native boolean nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);
     private static native boolean nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);
     private static native boolean nDestroySkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
+    private static native boolean nDestroyMorphTargetBuffer(long nativeEngine, long nativeMorphTargetBuffer);
     private static native boolean nDestroyIndirectLight(long nativeEngine, long nativeIndirectLight);
     private static native boolean nDestroyMaterial(long nativeEngine, long nativeMaterial);
     private static native boolean nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);
@@ -1488,6 +1518,7 @@ public class Engine {
     private static native boolean nIsValidIndexBuffer(long nativeEngine, long nativeIndexBuffer);
     private static native boolean nIsValidVertexBuffer(long nativeEngine, long nativeVertexBuffer);
     private static native boolean nIsValidSkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
+    private static native boolean nIsValidMorphTargetBuffer(long nativeEngine, long nativeMorphTargetBuffer);
     private static native boolean nIsValidIndirectLight(long nativeEngine, long nativeIndirectLight);
     private static native boolean nIsValidMaterial(long nativeEngine, long nativeMaterial);
     private static native boolean nIsValidMaterialInstance(long nativeEngine, long nativeMaterial, long nativeMaterialInstance);
@@ -1529,7 +1560,8 @@ public class Engine {
             boolean disableHandleUseAfterFreeCheck,
             int preferredShaderLanguage,
             boolean forceGLES2Context, boolean assertNativeWindowIsValid,
-            int gpuContextPriority);
+            int gpuContextPriority,
+            long sharedUboInitialSizeInBytes);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);

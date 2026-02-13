@@ -14,6 +14,11 @@
 
 #include "src/libfuzzer/libfuzzer_mutator.h"
 
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
+#endif
+#endif
 #include <string.h>
 
 #include <algorithm>
@@ -65,6 +70,12 @@ T MutateValue(T v) {
   size_t size =
       LLVMFuzzerMutate(reinterpret_cast<uint8_t*>(&v), sizeof(v), sizeof(v));
   memset(reinterpret_cast<uint8_t*>(&v) + size, 0, sizeof(v) - size);
+  // The value from LLVMFuzzerMutate needs to be treated as initialized.
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+  __msan_unpoison(&v, sizeof(v));
+#endif
+#endif
   return v;
 }
 
@@ -93,6 +104,12 @@ std::string Mutator::MutateString(const std::string& value,
   result.resize(std::max(1, new_size));
   result.resize(LLVMFuzzerMutate(reinterpret_cast<uint8_t*>(&result[0]),
                                  value.size(), result.size()));
+  // The value from LLVMFuzzerMutate needs to be treated as initialized.
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+  __msan_unpoison(&result[0], result.size());
+#endif
+#endif
   return result;
 }
 

@@ -38,7 +38,7 @@ protected:
     // Platform Interface
 
     Driver* createDriver(void* sharedGLContext,
-            const Platform::DriverConfig& driverConfig) noexcept override;
+            const Platform::DriverConfig& driverConfig) override;
 
     int getOSVersion() const noexcept final override { return 0; }
 
@@ -61,8 +61,12 @@ protected:
     HWND mHWnd = NULL;
     HDC mWhdc = NULL;
     PIXELFORMATDESCRIPTOR mPfd = {};
-    std::vector<HGLRC> mAdditionalContexts;
     std::vector<int> mAttribs;
+
+    // For shared contexts
+    static constexpr int SHARED_CONTEXT_NUM = 2;
+    std::vector<HGLRC> mAdditionalContexts;
+    std::atomic<int> mNextFreeSharedContextIndex{0};
 };
 
 } // namespace filament::backend

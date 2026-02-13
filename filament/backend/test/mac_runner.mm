@@ -32,26 +32,34 @@ test::NativeView getNativeView() {
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 
 @property test::Backend backend;
+@property bool headlessOnly;
 
 @end
 
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-    NSView* view = [self createView];
-
-    if (self.backend == test::Backend::OPENGL) {
-        nativeView.ptr = (void*) view;
+    if (self.headlessOnly) {
+        nativeView.ptr = nullptr;
+        nativeView.width = test::WINDOW_WIDTH;
+        nativeView.height = test::WINDOW_HEIGHT;
+    } else {
+        NSView* view = [self createView];
+        switch (self.backend) {
+            case test::Backend::OPENGL:
+                nativeView.ptr = (void*) view;
+                break;
+            case test::Backend::METAL:
+            case test::Backend::VULKAN:
+            case test::Backend::WEBGPU:
+            case test::Backend::NOOP:
+                nativeView.ptr = (void*) view.layer;
+                break;
+        }
+        CGSize drawableSize = ((CAMetalLayer*) view.layer).drawableSize;
+        nativeView.width = static_cast<size_t>(drawableSize.width);
+        nativeView.height = static_cast<size_t>(drawableSize.height);
     }
-    if (self.backend == test::Backend::METAL) {
-        nativeView.ptr = (void*) view.layer;
-    }
-    if (self.backend == test::Backend::VULKAN) {
-        nativeView.ptr = (void*) view;
-    }
-    CGSize drawableSize = ((CAMetalLayer*) view.layer).drawableSize;
-    nativeView.width = static_cast<size_t>(drawableSize.width);
-    nativeView.height = static_cast<size_t>(drawableSize.height);
 
     exit(test::runTests());
 }
@@ -97,11 +105,25 @@ test::NativeView getNativeView() {
 @end
 
 int main(int argc, char* argv[]) {
-    auto backend = test::parseArgumentsForBackend(argc, argv);
-    test::initTests(backend, test::OperatingSystem::APPLE, false, argc, argv);
-    AppDelegate* delegate = [AppDelegate new];
-    delegate.backend = backend;
+    const auto arguments = test::parseArguments(argc, argv);
+    const auto operatingSystem = arguments.isContinuousIntegration ?
+            test::OperatingSystem::CONTINUOUS_INTEGRATION : test::OperatingSystem::APPLE;
+    test::initTests(arguments.backend, operatingSystem, false, argc, argv);
+
     NSApplication* app = [NSApplication sharedApplication];
+    AppDelegate* delegate = [AppDelegate new];
+    delegate.backend = arguments.backend;
+    delegate.headlessOnly = arguments.headlessOnly;
     [app setDelegate:delegate];
+
+    if (arguments.headlessOnly) {
+        // In headless mode, we don't want to start the NSApplication event loop.
+        // Instead, we can manually "finish" launching the app, which will trigger the tests to run.
+        [app finishLaunching];
+        [delegate applicationDidFinishLaunching:nil];
+        // The line above calls exit(), so we should not reach here.
+        return 0;
+    }
+
     [app run];
 }

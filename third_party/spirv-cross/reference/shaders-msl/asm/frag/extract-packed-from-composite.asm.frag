@@ -5,6 +5,14 @@
 
 using namespace metal;
 
+// Implementation of signed integer mod accurate to SPIR-V specification
+template<typename Tx, typename Ty>
+inline Tx spvSMod(Tx x, Ty y)
+{
+    Tx remainder = x - y * (x / y);
+    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
+}
+
 struct Foo
 {
     float3 a;
@@ -31,7 +39,7 @@ struct main0_out
 static inline __attribute__((always_inline))
 float4 _main(thread const float4& pos, constant buf& _15)
 {
-    int _32 = int(pos.x) % 16;
+    int _32 = spvSMod(int(pos.x), 16);
     Foo foo;
     foo.a = float3(_15.results[_32].a);
     foo.b = _15.results[_32].b;

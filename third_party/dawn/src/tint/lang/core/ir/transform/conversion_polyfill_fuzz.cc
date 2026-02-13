@@ -43,4 +43,4 @@ Result<SuccessType> ConversionPolyfillFuzzer(Module& ir,
 }  // namespace tint::core::ir::transform
 
 TINT_IR_MODULE_FUZZER(tint::core::ir::transform::ConversionPolyfillFuzzer,
-                      tint::core::ir::Capabilities{});
+                      tint::core::ir::transform::kConversionPolyfillCapabilities);

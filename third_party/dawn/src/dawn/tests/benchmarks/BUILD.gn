@@ -36,7 +36,9 @@ test("dawn_benchmarks") {
     "${dawn_root}/src/dawn/common",
     "${dawn_root}/src/dawn/native:sources",
     "${dawn_root}/src/dawn/native:static",
-    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/utils:system_utils",
+    "${dawn_root}/src/dawn/utils:test_utils",
+    "${dawn_root}/src/dawn/utils:wgpu_utils",
     "//third_party/google_benchmark",
     "//third_party/google_benchmark:benchmark_main",
   ]

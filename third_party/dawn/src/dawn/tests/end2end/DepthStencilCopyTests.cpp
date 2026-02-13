@@ -111,12 +111,6 @@ class DepthStencilCopyTests : public DawnTestWithParams<DepthStencilCopyTestPara
 
         DAWN_TEST_UNSUPPORTED_IF(!mIsFormatSupported);
 
-        // Skip formats other than Depth24PlusStencil8 if we're specifically testing with the packed
-        // depth24_unorm_stencil8 toggle.
-        DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("use_packed_depth24_unorm_stencil8_format") &&
-                                 GetParam().mTextureFormat !=
-                                     wgpu::TextureFormat::Depth24PlusStencil8);
-
         // Draw a square in the bottom left quarter of the screen.
         mVertexModule = utils::CreateShaderModule(device, R"(
             @vertex
@@ -654,6 +648,9 @@ TEST_P(DepthCopyTests, FromDepthAspectToBufferAtNonZeroOffset) {
 
 // Test copying the non-zero mip, depth-only aspect into a buffer.
 TEST_P(DepthCopyTests, FromNonZeroMipDepthAspect) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kBufferCopyOffset = 0;
     constexpr uint32_t kWidth = 9;
     constexpr uint32_t kHeight = 9;
@@ -833,11 +830,6 @@ TEST_P(DepthCopyTests_Compat, FromDepthAspectToBufferAtNonZeroOffset) {
 
 // Test copying the non-zero mip, depth-only aspect into a buffer.
 TEST_P(DepthCopyTests_Compat, FromNonZeroMipDepthAspect) {
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 4 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
-
     constexpr uint32_t kBufferCopyOffset = 0;
     constexpr uint32_t kWidth = 9;
     constexpr uint32_t kHeight = 9;
@@ -1152,6 +1144,9 @@ class StencilCopyTests : public DepthStencilCopyTests {
 
 // Test copying the stencil-only aspect into a buffer.
 TEST_P(StencilCopyTests, FromStencilAspect) {
+    // TODO(42242119): hang/crash on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kTestLevel = 0;
     constexpr uint32_t kBufferCopyOffset = 0;
     constexpr uint32_t kTestTextureSizes[][2] = {
@@ -1176,6 +1171,9 @@ TEST_P(StencilCopyTests, FromStencilAspect) {
 
 // Test copying the stencil-only aspect into a buffer at a non-zero offset
 TEST_P(StencilCopyTests, FromStencilAspectAtNonZeroOffset) {
+    // TODO(42242119): hang/crash on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kTestLevel = 0;
     constexpr std::array<uint32_t, 2> kBufferCopyOffsets = {4u, 512u};
     constexpr uint32_t kTestTextureSizes[][2] = {
@@ -1204,6 +1202,9 @@ TEST_P(StencilCopyTests, FromStencilAspectAtNonZeroOffset) {
 TEST_P(StencilCopyTests, FromNonZeroMipStencilAspect) {
     // TODO(crbug.com/dawn/2273): Failing on ANGLE/D3D11 for unknown reasons.
     DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
+
+    // TODO(42242119): hang/crash on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
 
     constexpr uint32_t kWidth = 9;
     constexpr uint32_t kHeight = 9;

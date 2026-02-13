@@ -795,87 +795,6 @@ DxilShaderAccessTracking::GetResourceFromHandle(Value *resHandle,
   return ret;
 }
 
-static bool CheckForDynamicIndexing(OP *HlslOP, LLVMContext &Ctx,
-                                    DxilModule &DM) {
-  bool FoundDynamicIndexing = false;
-
-  for (llvm::Function &F : DM.GetModule()->functions()) {
-    if (F.isDeclaration() && !F.use_empty() && OP::IsDxilOpFunc(&F)) {
-      if (F.hasName()) {
-        if (F.getName().find("createHandleForLib") != StringRef::npos) {
-          auto FunctionUses = F.uses();
-          for (auto FI = FunctionUses.begin(); FI != FunctionUses.end();) {
-            auto &FunctionUse = *FI++;
-            auto FunctionUser = FunctionUse.getUser();
-            auto instruction = cast<Instruction>(FunctionUser);
-            Value *resourceLoad =
-                instruction->getOperand(kCreateHandleForLibResOpIdx);
-            if (auto *load = cast<LoadInst>(resourceLoad)) {
-              auto *resOrGep = load->getOperand(0);
-              if (isa<GetElementPtrInst>(resOrGep)) {
-                FoundDynamicIndexing = true;
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-    if (FoundDynamicIndexing) {
-      break;
-    }
-  }
-
-  if (!FoundDynamicIndexing) {
-    auto CreateHandleFn =
-        HlslOP->GetOpFunc(DXIL::OpCode::CreateHandle, Type::getVoidTy(Ctx));
-    for (auto FI = CreateHandleFn->user_begin();
-         FI != CreateHandleFn->user_end();) {
-      auto *FunctionUser = *FI++;
-      auto instruction = cast<Instruction>(FunctionUser);
-      Value *index = instruction->getOperand(kCreateHandleResIndexOpIdx);
-      if (!isa<Constant>(index)) {
-        FoundDynamicIndexing = true;
-        break;
-      }
-    }
-  }
-
-  if (!FoundDynamicIndexing) {
-    auto CreateHandleFromBindingFn = HlslOP->GetOpFunc(
-        DXIL::OpCode::CreateHandleFromBinding, Type::getVoidTy(Ctx));
-    for (auto FI = CreateHandleFromBindingFn->user_begin();
-         FI != CreateHandleFromBindingFn->user_end();) {
-      auto *FunctionUser = *FI++;
-      auto instruction = cast<Instruction>(FunctionUser);
-      Value *index =
-          instruction->getOperand(kCreateHandleFromBindingResIndexOpIdx);
-      if (!isa<Constant>(index)) {
-        FoundDynamicIndexing = true;
-        break;
-      }
-    }
-  }
-
-  if (!FoundDynamicIndexing) {
-    auto CreateHandleFromHeapFn = HlslOP->GetOpFunc(
-        DXIL::OpCode::CreateHandleFromHeap, Type::getVoidTy(Ctx));
-    for (auto FI = CreateHandleFromHeapFn->user_begin();
-         FI != CreateHandleFromHeapFn->user_end();) {
-      auto *FunctionUser = *FI++;
-      auto instruction = cast<Instruction>(FunctionUser);
-      Value *index =
-          instruction->getOperand(kCreateHandleFromHeapHeapIndexOpIdx);
-      if (!isa<Constant>(index)) {
-        FoundDynamicIndexing = true;
-        break;
-      }
-    }
-  }
-
-  return FoundDynamicIndexing;
-}
-
 bool DxilShaderAccessTracking::runOnModule(Module &M) {
   // This pass adds instrumentation for shader access to resources
 
@@ -887,7 +806,13 @@ bool DxilShaderAccessTracking::runOnModule(Module &M) {
 
   if (m_CheckForDynamicIndexing) {
 
-    bool FoundDynamicIndexing = CheckForDynamicIndexing(HlslOP, Ctx, DM);
+    bool FoundDynamicIndexing = false;
+
+    PIXPassHelpers::ForEachDynamicallyIndexedResource(
+        DM, [&FoundDynamicIndexing](bool, Instruction *, Value *) {
+          FoundDynamicIndexing = true;
+          return false;
+        });
 
     if (FoundDynamicIndexing) {
       if (OSOverride != nullptr) {
@@ -980,13 +905,14 @@ bool DxilShaderAccessTracking::runOnModule(Module &M) {
           case DXIL::OpCode::BufferUpdateCounter:
             readWrite = ShaderAccessFlags::Counter;
             break;
+          case DXIL::OpCode::HitObject_TraceRay:
           case DXIL::OpCode::TraceRay: {
             // Read of AccelerationStructure; doesn't match function attribute
-            auto res = GetResourceFromHandle(Call->getArgOperand(1), DM);
-            if (res.accessStyle == AccessStyle::None) {
+            auto Res = GetResourceFromHandle(Call->getArgOperand(1), DM);
+            if (Res.accessStyle == AccessStyle::None) {
               continue;
             }
-            if (EmitResourceAccess(DM, res, Call, HlslOP, Ctx,
+            if (EmitResourceAccess(DM, Res, Call, HlslOP, Ctx,
                                    ShaderAccessFlags::Read)) {
               Modified = true;
             }

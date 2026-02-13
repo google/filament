@@ -5,7 +5,7 @@
       "opname" : "CubeFaceIndexAMD",
       "opcode" : 1,
       "operands" : [
-        { "kind" : "IdRef", "name" : "'P'" }
+        { "kind" : "IdRef", "name" : "P" }
       ],
       "extensions" : [ "SPV_AMD_gcn_shader" ]
     },
@@ -13,7 +13,7 @@
       "opname" : "CubeFaceCoordAMD",
       "opcode" : 2,
       "operands" : [
-        { "kind" : "IdRef", "name" : "'P'" }
+        { "kind" : "IdRef", "name" : "P" }
       ],
       "extensions" : [ "SPV_AMD_gcn_shader" ]
     },

@@ -23,6 +23,7 @@
 #include <backend/TargetBufferInfo.h>
 
 #include <filament/Viewport.h>
+#include <utils/debug.h>
 
 namespace filament {
 
@@ -33,14 +34,25 @@ namespace filament {
 struct FrameGraphRenderPass {
     static constexpr size_t ATTACHMENT_COUNT = backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2;
     struct Attachments {
-        union {
-            FrameGraphId<FrameGraphTexture> array[ATTACHMENT_COUNT] = {};
-            struct {
-                FrameGraphId<FrameGraphTexture> color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
-                FrameGraphId<FrameGraphTexture> depth;
-                FrameGraphId<FrameGraphTexture> stencil;
-            };
-        };
+        FrameGraphId<FrameGraphTexture> color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> stencil;
+
+        FrameGraphId<FrameGraphTexture>& operator[](size_t index) noexcept {
+            return const_cast<FrameGraphId<FrameGraphTexture>&>(
+                    static_cast<const Attachments*>(this)->operator[](index));
+        }
+
+        FrameGraphId<FrameGraphTexture> const& operator[](size_t index) const noexcept {
+            assert_invariant(index < ATTACHMENT_COUNT);
+            if (index < backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT) {
+                return color[index];
+            } else if (index == backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT) {
+                return depth;
+            } else {
+                return stencil;
+            }
+        }
     };
 
     struct Descriptor {

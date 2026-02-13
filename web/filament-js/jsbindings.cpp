@@ -250,6 +250,7 @@ DecodedImage decodeImage(BufferDescriptor encoded_data, int requested_ncomp) {
 
 EMSCRIPTEN_BINDINGS(jsbindings) {
 
+
 // MATH TYPES
 // ----------
 // Individual JavaScript objects for math types would be too heavy, so instead we simply accept
@@ -310,6 +311,28 @@ value_object<Box>("Box")
 value_object<filament::Aabb>("Aabb")
     .field("min", &filament::Aabb::min)
     .field("max", &filament::Aabb::max);
+
+value_object<filament::Engine::Config>("Engine$Config")
+    .field("commandBufferSizeMB", &filament::Engine::Config::commandBufferSizeMB)
+    .field("perRenderPassArenaSizeMB", &filament::Engine::Config::perRenderPassArenaSizeMB)
+    .field("driverHandleArenaSizeMB", &filament::Engine::Config::driverHandleArenaSizeMB)
+    .field("minCommandBufferSizeMB", &filament::Engine::Config::minCommandBufferSizeMB)
+    .field("perFrameCommandsSizeMB", &filament::Engine::Config::perFrameCommandsSizeMB)
+    .field("jobSystemThreadCount", &filament::Engine::Config::jobSystemThreadCount)
+    .field("metalUploadBufferSizeBytes", &filament::Engine::Config::metalUploadBufferSizeBytes)
+    .field("metalDisablePanicOnDrawableFailure", &filament::Engine::Config::metalDisablePanicOnDrawableFailure)
+    .field("disableParallelShaderCompile", &filament::Engine::Config::disableParallelShaderCompile)
+    .field("stereoscopicType", &filament::Engine::Config::stereoscopicType)
+    .field("stereoscopicEyeCount", &filament::Engine::Config::stereoscopicEyeCount)
+    .field("resourceAllocatorCacheSizeMB", &filament::Engine::Config::resourceAllocatorCacheSizeMB)
+    .field("resourceAllocatorCacheMaxAge", &filament::Engine::Config::resourceAllocatorCacheMaxAge)
+    .field("disableHandleUseAfterFreeCheck", &filament::Engine::Config::disableHandleUseAfterFreeCheck)
+    .field("preferredShaderLanguage", &filament::Engine::Config::preferredShaderLanguage)
+    .field("forceGLES2Context", &filament::Engine::Config::forceGLES2Context)
+    .field("assertNativeWindowIsValid", &filament::Engine::Config::assertNativeWindowIsValid)
+    .field("gpuContextPriority", &filament::Engine::Config::gpuContextPriority)
+    .field("sharedUboInitialSizeInBytes", &filament::Engine::Config::sharedUboInitialSizeInBytes)
+    .field("asynchronousMode", &filament::Engine::Config::asynchronousMode);
 
 value_object<filament::Renderer::ClearOptions>("Renderer$ClearOptions")
     .field("clearColor", &filament::Renderer::ClearOptions::clearColor)
@@ -375,9 +398,31 @@ register_vector<allow_raw_pointer<MaterialInstance*>>("MaterialInstanceVector");
 // CORE FILAMENT CLASSES
 // ---------------------
 
+enum_<Engine::StereoscopicType>("StereoscopicType")
+    .value("NONE", Engine::StereoscopicType::NONE)
+    .value("INSTANCED", Engine::StereoscopicType::INSTANCED)
+    .value("MULTIVIEW", Engine::StereoscopicType::MULTIVIEW);
+
+enum_<Engine::GpuContextPriority>("GpuContextPriority")
+    .value("DEFAULT", Engine::GpuContextPriority::DEFAULT)
+    .value("LOW", Engine::GpuContextPriority::LOW)
+    .value("MEDIUM", Engine::GpuContextPriority::MEDIUM)
+    .value("HIGH", Engine::GpuContextPriority::HIGH)
+    .value("REALTIME", Engine::GpuContextPriority::REALTIME);
+
+enum_<Engine::AsynchronousMode>("AsynchronousMode")
+    .value("NONE", Engine::AsynchronousMode::NONE)
+    .value("THREAD_PREFERRED", Engine::AsynchronousMode::THREAD_PREFERRED)
+    .value("AMORTIZATION", Engine::AsynchronousMode::AMORTIZATION);
+
+enum_<Engine::Config::ShaderLanguage>("ShaderLanguage")
+    .value("DEFAULT", Engine::Config::ShaderLanguage::DEFAULT)
+    .value("MSL", Engine::Config::ShaderLanguage::MSL)
+    .value("METAL_LIBRARY", Engine::Config::ShaderLanguage::METAL_LIBRARY);
+
 /// Engine ::core class:: Central manager and resource owner.
 class_<Engine>("Engine")
-    .class_function("_create", (Engine* (*)()) [] {
+    .class_function("_create", (Engine* (*)(Engine::Config)) [] (Engine::Config config) {
         EM_ASM_INT({
             const options = window.filament_glOptions;
             const context = window.filament_glContext;
@@ -385,8 +430,15 @@ class_<Engine>("Engine")
             window.filament_contextHandle = handle;
             GL.makeContextCurrent(handle);
         });
-        return Engine::create();
+        return Engine::create(Engine::Backend::DEFAULT, nullptr, nullptr, &config);
     }, allow_raw_pointers())
+
+    // Create a default Engine configuration. This is for internal use to ensure that engine
+    // creation logic in 'extensions.js' does not have to populate the default configuration
+    // variables manually.
+    .class_function("createDefaultConfig", (Engine::Config (*)()) [] {
+        return Engine::Config();
+    })
 
     .class_function("getSteadyClockTimeNano", &Engine::getSteadyClockTimeNano)
 
@@ -404,7 +456,11 @@ class_<Engine>("Engine")
 
     .function("getActiveFeatureLevel", &Engine::getActiveFeatureLevel)
 
+    .function("getBackend", &Engine::getBackend)
+
     .class_function("getMaxStereoscopicEyes", &Engine::getMaxStereoscopicEyes)
+
+    .function("getConfig", &Engine::getConfig)
 
     .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
         EM_ASM_INT({
@@ -495,8 +551,11 @@ class_<Engine>("Engine")
             (Engine* engine, utils::Entity camera) { engine->destroyCameraComponent(camera); },
             allow_raw_pointers())
 
-    .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
-        return Material::Builder().package(mbd.bd->buffer, mbd.bd->size).build(*engine);
+    .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd, Material::UboBatchingMode uboBatching), {
+        return Material::Builder()
+                .package(mbd.bd->buffer, mbd.bd->size)
+                .uboBatching(uboBatching)
+                .build(*engine);
     }), allow_raw_pointers())
     /// destroyMaterial ::method::
     /// material ::argument:: an instance of [Material]
@@ -623,11 +682,16 @@ class_<Renderer>("Renderer")
         }
         engine->execute();
     }), allow_raw_pointers())
+    .function("getUserTime", &Renderer::getUserTime)
+    .function("resetUserTime", &Renderer::resetUserTime)
+    .function("skipNextFrames", &Renderer::skipNextFrames)
+    .function("getFrameToSkipCount", &Renderer::getFrameToSkipCount)
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
     .function("getClearOptions", &Renderer::getClearOptions)
     .function("setPresentationTime", &Renderer::setPresentationTime)
     .function("setVsyncTime", &Renderer::setVsyncTime)
     .function("skipFrame", &Renderer::skipFrame)
+    .function("shouldRenderFrame", &Renderer::shouldRenderFrame)
     .function("beginFrame", EMBIND_LAMBDA(bool, (Renderer* self, SwapChain* swapChain), {
         return self->beginFrame(swapChain);
     }), allow_raw_pointers())
@@ -655,6 +719,8 @@ class_<View>("View")
     .function("setCamera", &View::setCamera, allow_raw_pointers())
     .function("hasCamera", &View::hasCamera)
     .function("setColorGrading", &View::setColorGrading, allow_raw_pointers())
+    .function("setChannelDepthClearEnabled", &View::setChannelDepthClearEnabled)
+    .function("isChannelDepthClearEnabled", &View::isChannelDepthClearEnabled)
     .function("setBlendMode", &View::setBlendMode)
     .function("getBlendMode", &View::getBlendMode)
     .function("setViewport", &View::setViewport)
@@ -668,6 +734,13 @@ class_<View>("View")
     .function("_setTemporalAntiAliasingOptions", &View::setTemporalAntiAliasingOptions)
     .function("_setScreenSpaceReflectionsOptions", &View::setScreenSpaceReflectionsOptions)
     .function("_setBloomOptions", &View::setBloomOptions)
+    .function("setShadowingEnabled", &View::setShadowingEnabled)
+    .function("setFrontFaceWindingInverted", &View::setFrontFaceWindingInverted)
+    .function("isFrontFaceWindingInverted", &View::isFrontFaceWindingInverted)
+    .function("setDynamicLightingOptions", &View::setDynamicLightingOptions)
+    .function("setRenderQuality", &View::setRenderQuality)
+    .function("setDynamicResolutionOptions", &View::setDynamicResolutionOptions)
+    .function("getDynamicResolutionOptions", &View::getDynamicResolutionOptions)
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
     .function("_setGuardBandOptions", &View::setGuardBandOptions)
@@ -687,6 +760,7 @@ class_<View>("View")
     .function("isStencilBufferEnabled", &View::isStencilBufferEnabled)
     .function("setMaterialGlobal", &View::setMaterialGlobal)
     .function("getMaterialGlobal", &View::getMaterialGlobal)
+    .function("getLastDynamicResolutionScale", &View::getLastDynamicResolutionScale)
     .function("getFogEntity", &View::getFogEntity)
     .function("clearFrameHistory", &View::clearFrameHistory);
 
@@ -766,6 +840,8 @@ class_<Camera>("Camera")
     }), allow_raw_pointers())
 
     .function("getScaling", &Camera::getScaling)
+    .function("setShift", &Camera::setShift)
+    .function("getShift", &Camera::getShift)
 
     .function("getNear", &Camera::getNear)
     .function("getCullingFar", &Camera::getCullingFar)
@@ -926,7 +1002,9 @@ class_<RenderTarget>("RenderTarget")
     })
     .function("getMipLevel", &RenderTarget::getMipLevel)
     .function("getFace", &RenderTarget::getFace)
-    .function("getLayer", &RenderTarget::getLayer);
+    .function("getLayer", &RenderTarget::getLayer)
+    .function("getTexture", &RenderTarget::getTexture, allow_raw_pointers())
+    .function("getSupportedColorAttachmentsCount", &RenderTarget::getSupportedColorAttachmentsCount);
 
 class_<RenderableBuilder>("RenderableManager$Builder")
     .BUILDER_FUNCTION("geometry", RenderableBuilder, (RenderableBuilder* builder,
@@ -1057,15 +1135,22 @@ class_<RenderableManager>("RenderableManager")
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
     .function("setLayerMask", &RenderableManager::setLayerMask)
     .function("setPriority", &RenderableManager::setPriority)
+    .function("getPriority", &RenderableManager::getPriority)
     .function("setChannel", &RenderableManager::setChannel)
+    .function("getChannel", &RenderableManager::getChannel)
     .function("setCastShadows", &RenderableManager::setCastShadows)
     .function("setReceiveShadows", &RenderableManager::setReceiveShadows)
+    .function("setScreenSpaceContactShadows", &RenderableManager::setScreenSpaceContactShadows)
     .function("isShadowCaster", &RenderableManager::isShadowCaster)
     .function("isShadowReceiver", &RenderableManager::isShadowReceiver)
     .function("setLightChannel", &RenderableManager::setLightChannel)
     .function("getLightChannel", &RenderableManager::getLightChannel)
     .function("setFogEnabled", &RenderableManager::setFogEnabled)
     .function("getFogEnabled", &RenderableManager::getFogEnabled)
+    .function("setCulling", &RenderableManager::setCulling)
+    .function("isCullingEnabled", &RenderableManager::isCullingEnabled)
+    .function("setScreenSpaceContactShadows", &RenderableManager::setScreenSpaceContactShadows)
+    .function("isScreenSpaceContactShadowsEnabled", &RenderableManager::isScreenSpaceContactShadowsEnabled)
 
     .function("setBones", EMBIND_LAMBDA(void, (RenderableManager* self,
             RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
@@ -1099,6 +1184,7 @@ class_<RenderableManager>("RenderableManager")
 
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
+    .function("getInstanceCount", &RenderableManager::getInstanceCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
     .function("clearMaterialInstanceAt", &RenderableManager::clearMaterialInstanceAt)
@@ -1113,8 +1199,10 @@ class_<RenderableManager>("RenderableManager")
     }), allow_raw_pointers())
 
     .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
+    .function("getBlendOrderAt", &RenderableManager::getBlendOrderAt)
 
     .function("setGlobalBlendOrderEnabledAt", &RenderableManager::setGlobalBlendOrderEnabledAt)
+    .function("isGlobalBlendOrderEnabledAt", &RenderableManager::isGlobalBlendOrderEnabledAt)
 
     .function("getEnabledAttributesAt", EMBIND_LAMBDA(uint32_t, (RenderableManager* self,
             RenderableManager::Instance instance, size_t primitiveIndex), {
@@ -1345,7 +1433,15 @@ class_<Material>("Material")
         return self->createInstance(name.c_str()); }), allow_raw_pointers())
     .function("getName", EMBIND_LAMBDA(std::string, (Material* self), {
         return std::string(self->getName());
+    }), allow_raw_pointers())
+    .function("getParameterTransformName", EMBIND_LAMBDA(std::string, (Material* self, std::string samplerName), {
+        const char* transformName = self->getParameterTransformName(samplerName.c_str());
+        return transformName ? std::string(transformName) : std::string();
     }), allow_raw_pointers());
+
+enum_<Material::UboBatchingMode>("Material$UboBatchingMode")
+    .value("DISABLED", Material::UboBatchingMode::DISABLED)
+    .value("DEFAULT", Material::UboBatchingMode::DEFAULT);
 
 class_<MaterialInstance>("MaterialInstance")
     .function("getName", EMBIND_LAMBDA(std::string, (MaterialInstance* self), {
@@ -1570,6 +1666,9 @@ class_<IblBuilder>("IndirectLight$Builder")
 class_<Skybox>("Skybox")
     .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); })
     .function("setColor", &Skybox::setColor)
+    .function("setLayerMask", &Skybox::setLayerMask)
+    .function("getLayerMask", &Skybox::getLayerMask)
+    .function("getIntensity", &Skybox::getIntensity)
     .function("getTexture", EMBIND_LAMBDA(Texture*, (Skybox* skybox), {
         return (Texture*) skybox->getTexture(); // cast away const to appease embind
     }), allow_raw_pointers());
@@ -1578,6 +1677,8 @@ class_<SkyBuilder>("Skybox$Builder")
     .function("_build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
+    .BUILDER_FUNCTION("priority", SkyBuilder, (SkyBuilder* builder, uint8_t priority), {
+        return &builder->priority(priority); })
     .BUILDER_FUNCTION("color", SkyBuilder, (SkyBuilder* builder, filament::math::float4 color), {
         return &builder->color(color); })
     .BUILDER_FUNCTION("environment", SkyBuilder, (SkyBuilder* builder, Texture* cubemap), {
@@ -2024,6 +2125,7 @@ struct UbershaderProvider {
 
 struct StbProvider { TextureProvider* provider; };
 struct Ktx2Provider { TextureProvider* provider; };
+struct WebpProvider { TextureProvider* provider; };
 
 class_<UbershaderProvider>("gltfio$UbershaderProvider")
     .constructor(EMBIND_LAMBDA(UbershaderProvider, (Engine* engine), {
@@ -2041,6 +2143,12 @@ class_<Ktx2Provider>("gltfio$Ktx2Provider")
     .constructor(EMBIND_LAMBDA(Ktx2Provider, (Engine* engine), {
         return Ktx2Provider { createKtx2Provider(engine) };
     }));
+
+class_<WebpProvider>("gltfio$WebpProvider")
+    .constructor(EMBIND_LAMBDA(WebpProvider, (Engine* engine), {
+        return WebpProvider { createWebpProvider(engine) };
+    }))    
+    .class_function("isWebpSupported", &isWebpSupported);
 
 class_<AssetLoader>("gltfio$AssetLoader")
 
@@ -2100,6 +2208,13 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
     .function("addKtx2Provider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
             Ktx2Provider provider), {
         self->addTextureProvider(mime.c_str(), provider.provider);
+    }), allow_raw_pointers())
+
+    .function("addWebpProvider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
+            WebpProvider provider), {
+        if (provider.provider) {
+            self->addTextureProvider(mime.c_str(), provider.provider);
+        }
     }), allow_raw_pointers())
 
     .function("hasResourceData", EMBIND_LAMBDA(bool, (ResourceLoader* self, std::string url), {

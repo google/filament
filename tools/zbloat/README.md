@@ -3,7 +3,7 @@
 This tool makes it easy to analyze the composition of Android applications that use Filament.
 
 - Filament materials are shown in the treemap if `resgen --json` was used in the build.
-- The input path can be a so file, folder, or zip archive (apk or aar).
+- The input path can be a `.so` or `.a` file, a folder, or a zip archive (apk or aar).
 - If the path is a zip or folder, interactively finds the file to analyze.
 - The generated web report is a self-contained HTML file.
 - Reports the gzipped size of all Filament materials.

@@ -95,8 +95,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = E89E1EEA671E49DBAC9D5A9C /* Build configuration list for PBXProject "backend-test" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -170,7 +168,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -223,7 +221,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -255,6 +253,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -271,7 +270,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -331,7 +330,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -363,6 +362,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -379,7 +379,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -432,7 +432,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -464,6 +464,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -478,7 +479,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -510,6 +511,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -526,7 +528,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;

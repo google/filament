@@ -296,8 +296,6 @@ int main(int argc, const char** argv) {
     tint::Vector<std::string_view, 8> args = tint::args::Vectorize(argc, argv);
     Options options;
 
-    tint::SetInternalCompilerErrorReporter(&tint::cmd::TintInternalCompilerErrorReporter);
-
     if (!ParseArgs(args, &options)) {
         std::cerr << "Failed to parse arguments.\n";
         return 1;

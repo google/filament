@@ -30,7 +30,10 @@
 
 #include <cstddef>
 
+#include "src/tint/utils/macros/compiler.h"
 #include "src/tint/utils/memory/bitcast.h"
+
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 namespace tint {
 
@@ -49,5 +52,7 @@ struct alignas(alignof(T)) AlignedStorage {
 };
 
 }  // namespace tint
+
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 #endif  // SRC_TINT_UTILS_MEMORY_ALIGNED_STORAGE_H_

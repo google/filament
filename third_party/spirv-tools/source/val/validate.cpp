@@ -22,12 +22,12 @@
 
 #include "source/binary.h"
 #include "source/diagnostic.h"
-#include "source/enum_string_mapping.h"
 #include "source/extensions.h"
 #include "source/opcode.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_endian.h"
 #include "source/spirv_target_env.h"
+#include "source/table2.h"
 #include "source/val/construct.h"
 #include "source/val/instruction.h"
 #include "source/val/validation_state.h"
@@ -367,6 +367,8 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
     if (auto error = RayReorderNVPass(*vstate, &instruction)) return error;
     if (auto error = MeshShadingPass(*vstate, &instruction)) return error;
     if (auto error = TensorLayoutPass(*vstate, &instruction)) return error;
+    if (auto error = TensorPass(*vstate, &instruction)) return error;
+    if (auto error = InvalidTypePass(*vstate, &instruction)) return error;
   }
 
   // Validate the preconditions involving adjacent instructions. e.g.

@@ -23,6 +23,7 @@
 #include "Skip.h"
 #include "TrianglePrimitive.h"
 
+#include <utils/debug.h>
 #include <utils/Hash.h>
 
 #include <fstream>
@@ -80,8 +81,7 @@ public:
 };
 
 TEST_F(ReadPixelsTest, ReadPixels) {
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Two cases fail, see b/417255941 and b/417255943");
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     // These test scenarios use a known hash of the result pixel buffer to decide pass / fail,
     // asserting an exact pixel-for-pixel match. So far, rendering on macOS and iPhone have had
     // deterministic results. Take this test with a grain of salt, however, as other platform / GPU
@@ -123,11 +123,15 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         size_t bufferDimension = getRenderTargetSize();
 
         size_t getBufferSizeBytes() const {
-            size_t components;
-            int bpp;
-            getPixelInfo(format, type, components, bpp);
-            return bufferDimension * bufferDimension * bpp;
+            return bufferDimension * bufferDimension * getBytesPerPixels();
         }
+
+        size_t getBytesPerPixels() const {
+            int bpp;
+            size_t components;
+            getPixelInfo(format, type, components, bpp);
+            return bpp;
+        };
 
         // The offset and stride set on the pixel buffer.
         size_t left = 0, top = 0, alignment = 1;
@@ -144,7 +148,21 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             const size_t width = readRect.width, height = readRect.height;
             LinearImage image(width, height, 4);
             if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
-                image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*)pixelData);
+                if (top == 0 && left == 0 && renderTargetBaseSize == readRect.width) {
+                    image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*)pixelData);
+                } else {
+                    float* pixelRef = image.getPixelRef();
+                    size_t const bpp = getBytesPerPixels();
+                    size_t const bpr = bpp * bufferDimension;
+                    for (size_t l = left; l < left + width; ++l) {
+                        for (size_t t = top; t < top + height; ++t) {
+                            for (size_t c = 0; c < 4; ++c) {
+                                pixelRef[c + (l - left) * 4 + ((t - top) * 4 * width)] =
+                                        ((uint8_t*)pixelData)[c + l * bpp + t * bpr] / 255.0f;
+                            }
+                        }
+                    }
+                }
             }
             if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
                 memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));
@@ -168,14 +186,17 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     // The normative read pixels test case. Render a white triangle over a blue background and read
     // the full viewport into a pixel buffer.
     TestCase const t0(renderTargetBaseSize);
+    TestCase::Rect const subregionRect = {
+        .x = 90,
+        .y = 403,
+        .width = 64,
+        .height = 64,
+    };
 
     // Check that a subregion of the render target can be read into a pixel buffer.
     TestCase t2(renderTargetBaseSize);
     t2.testName = "readPixels_subregion";
-    t2.readRect.x = 90;
-    t2.readRect.y = 403;
-    t2.readRect.width = 64;
-    t2.readRect.height = 64;
+    t2.readRect = subregionRect;
     t2.bufferDimension = 64;
     t2.hash = 0xcba7675a;
 
@@ -198,16 +219,17 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
     // Check that readPixels can read a region of the render target into a subregion of a large
     // buffer.
+    const size_t actualBufferSize = renderTargetBaseSize * 2;
+    constexpr size_t readOffset = 64;;
+
+    assert_invariant(renderTargetBaseSize + readOffset < actualBufferSize);
     TestCase t5(renderTargetBaseSize);
     t5.testName = "readPixels_subbuffer";
-    t5.readRect.x = 90;
-    t5.readRect.y = 403;
-    t5.readRect.width = 64;
-    t5.readRect.height = 64;
-    t5.bufferDimension = 512;
-    t5.left = 64;
-    t5.top = 64;
-    t5.hash = 0xbaefdb54;
+    t5.readRect = subregionRect;
+    t5.bufferDimension = actualBufferSize;
+    t5.left = readOffset;
+    t5.top = readOffset;
+    t5.hash = 0x64585D10;
 
     // Check that readPixels works with integer formats.
     TestCase t6(renderTargetBaseSize);
@@ -234,16 +256,15 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     TestCase const testCases[] = { t0, t2, t3, t4, t5, t6, t7, t8 };
 
     DriverApi& api = getDriverApi();
-    Cleanup cleanup(api);
 
     std::string vertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
             ShaderUniformType::None);
-    Shader floatShader(api, cleanup, ShaderConfig{
+    Shader floatShader(api, *mCleanup, ShaderConfig{
             .vertexShader = vertexShader,
             .fragmentShader = fragmentFloat,
             .uniforms = {}
     });
-    Shader uintShader(api, cleanup, ShaderConfig{
+    Shader uintShader(api, *mCleanup, ShaderConfig{
             .vertexShader = vertexShader,
             .fragmentShader = fragmentUint,
             .uniforms = {}
@@ -253,9 +274,9 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         // Create a platform-specific SwapChain and make it current.
         Handle<HwSwapChain> swapChain;
         if (t.useDefaultRT) {
-            swapChain = cleanup.add(createSwapChain());
+            swapChain = addCleanup(createSwapChain());
         } else {
-            swapChain = cleanup.add(api.createSwapChainHeadless(t.getRenderTargetSize(),
+            swapChain = addCleanup(api.createSwapChainHeadless(t.getRenderTargetSize(),
                     t.getRenderTargetSize(), 0));
         }
 
@@ -263,7 +284,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         // Create a Texture and RenderTarget to render into.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+        Handle<HwTexture> const texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D,
                 t.mipLevels, t.textureFormat, 1, renderTargetBaseSize, renderTargetBaseSize, 1,
                 usage));
 
@@ -271,11 +292,11 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         if (t.useDefaultRT) {
             // The width and height must match the width and height of the respective mip
             // level (at least for OpenGL).
-            renderTarget = cleanup.add(api.createDefaultRenderTarget());
+            renderTarget = addCleanup(api.createDefaultRenderTarget());
         } else {
             // The width and height must match the width and height of the respective mip
             // level (at least for OpenGL).
-            renderTarget = cleanup.add(api.createRenderTarget(
+            renderTarget = addCleanup(api.createRenderTarget(
                     TargetBufferFlags::COLOR, t.getRenderTargetSize(),
                     t.getRenderTargetSize(), t.samples, 0, {{ texture, uint8_t(t.mipLevel) }}, {},
                     {}));
@@ -308,11 +329,10 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         api.endRenderPass();
 
         if (t.mipLevel > 0) {
-            Cleanup localCleanup(api);
             // Render red to the first mip level to check that the backend is actually reading the
             // correct mip.
             RenderPassParams p = params;
-            Handle<HwRenderTarget> mipLevelOneRT = localCleanup.add(api.createRenderTarget(
+            Handle<HwRenderTarget> mipLevelOneRT = addCleanup(api.createRenderTarget(
                     TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1, 0,
                     {{ texture }}, {}, {}));
             p.clearColor = { 1.f, 0.f, 0.f, 1.f };
@@ -352,8 +372,6 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         api.commit(swapChain);
         api.endFrame(0);
     }
-
-    // This ensures all driver commands have finished before exiting the test.
     flushAndWait();
 }
 
@@ -362,14 +380,12 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     const int iterationCount = 100;
 
     DriverApi& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(
-            api.createSwapChainHeadless(renderTargetSize, renderTargetSize, 0));
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
-    Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
+    Shader shader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest{
             .mVertexType = VertexShaderType::Noop,
             .mFragmentType = FragmentShaderType::White,
             .mUniformType = ShaderUniformType::None
@@ -377,7 +393,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     // Create a Texture and RenderTarget to render into.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-    Handle<HwTexture> texture = cleanup.add(api.createTexture(
+    Handle<HwTexture> texture = addCleanup(api.createTexture(
             SamplerType::SAMPLER_2D,            // target
             1,                                  // levels
             TextureFormat::RGBA8,               // format
@@ -387,7 +403,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
             1,                                  // depth
             usage));                             // usage
 
-    Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
+    Handle<HwRenderTarget> renderTarget = addCleanup(api.createRenderTarget(
             TargetBufferFlags::COLOR,
             renderTargetSize,                          // width
             renderTargetSize,                          // height

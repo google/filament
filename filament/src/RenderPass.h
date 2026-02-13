@@ -25,6 +25,7 @@
 #include "details/Scene.h"
 
 #include "private/filament/Variant.h"
+#include "private/filament/EngineEnums.h"
 
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
@@ -60,6 +61,7 @@ class FMaterialInstance;
 class FRenderPrimitive;
 class RenderPassBuilder;
 class ColorPassDescriptorSet;
+struct PerRenderableData;
 
 class RenderPass {
 public:
@@ -67,7 +69,7 @@ public:
      *   Command key encoding
      *   --------------------
      *
-     *   CC    = Channel
+     *   CCC   = Channel
      *   PP    = Pass
      *   a     = alpha masking
      *   ppp   = priority
@@ -79,43 +81,43 @@ public:
      *       auto-instancing can work better
      *
      *   DEPTH command (b00)
-     *   |  |  | 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
-     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
-     *   |CC|00|00|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
-     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |  3|1| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
+     *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |CCC|0|00|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
+     *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
      *   | correctness        |      optimizations (truncation allowed)             |
      *
      *
      *   COLOR (b01) and REFRACT (b10) commands
-     *   |  | 2| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
-     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
-     *   |CC|00|01|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
-     *   |CC|00|10|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
-     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |  3|1| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
+     *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |CCC|0|01|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
+     *   |CCC|0|10|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
+     *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
      *   | correctness        |      optimizations (truncation allowed)             |
      *
      *
      *   BLENDED command (b11)
-     *   | 2| 2| 2| 2| 2|1| 3 | 2|              32                |         15    |1|
-     *   +--+--+--+--+--+-+---+--+--------------------------------+---------------+-+
-     *   |CC|00|11|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
-     *   +--+--+--+--+--+-+---+--+--------------------------------+---------------+-+
+     *   |  3|1| 2| 2| 2|1| 3 | 2|              32                |         15    |1|
+     *   +---+-+--+--+--+-+---+--+--------------------------------+---------------+-+
+     *   |CCC|0|11|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
+     *   +---+-+--+--+--+-+---+--+--------------------------------+---------------+-+
      *   | correctness                                                              |
      *
      *
-     *   pre-CUSTOM command
-     *   | 2| 2| 2| 2| 2|         22           |               32               |
-     *   +--+--+--+--+--+----------------------+--------------------------------+
-     *   |CC|00|PP|00|00|        order         |      custom command index      |
-     *   +--+--+--+--+--+----------------------+--------------------------------+
+     *   CUSTOM command (prologue)
+     *   |  3|1| 2| 2| 2|         22           |               32               |
+     *   +---+-+--+--+--+----------------------+--------------------------------+
+     *   |CCC|0|PP|00|00|        order         |      custom command index      |
+     *   +---+-+--+--+--+----------------------+--------------------------------+
      *   | correctness                                                          |
      *
      *
-     *   post-CUSTOM command
-     *   | 2| 2| 2| 2| 2|         22           |               32               |
-     *   +--+--+--+--+--+----------------------+--------------------------------+
-     *   |CC|00|PP|11|00|        order         |      custom command index      |
-     *   +--+--+--+--+--+----------------------+--------------------------------+
+     *   CUSTOM command (epilogue)
+     *   |  3|1| 2| 2| 2|         22           |               32               |
+     *   +---+-+--+--+--+----------------------+--------------------------------+
+     *   |CCC|0|PP|10|00|        order         |      custom command index      |
+     *   +---+-+--+--+--+----------------------+--------------------------------+
      *   | correctness                                                          |
      *
      *
@@ -126,6 +128,8 @@ public:
      *   +-----------------------------------------------------------------------+
      */
     using CommandKey = uint64_t;
+
+    static constexpr uint64_t CHANNEL_COUNT                 = CONFIG_RENDERPASS_CHANNEL_COUNT;
 
     static constexpr uint64_t BLEND_ORDER_MASK              = 0xFFFEllu;
     static constexpr unsigned BLEND_ORDER_SHIFT             = 1;
@@ -163,8 +167,9 @@ public:
     static constexpr uint64_t PASS_MASK                     = 0x0C00000000000000llu;
     static constexpr unsigned PASS_SHIFT                    = 58;
 
-    static constexpr uint64_t CHANNEL_MASK                  = 0xC000000000000000llu;
-    static constexpr unsigned CHANNEL_SHIFT                 = 62;
+    static constexpr unsigned CHANNEL_SHIFT                 = 61;
+    static constexpr uint64_t CHANNEL_MASK                  = (CHANNEL_COUNT - 1) << CHANNEL_SHIFT;
+
 
     static constexpr uint64_t CUSTOM_ORDER_MASK             = 0x003FFFFF00000000llu;
     static constexpr unsigned CUSTOM_ORDER_SHIFT            = 32;
@@ -184,9 +189,9 @@ public:
     };
 
     enum class CustomCommand : uint64_t {    // 2-bits max
-        PROLOG  = uint64_t(0x0) << CUSTOM_SHIFT,
-        PASS    = uint64_t(0x1) << CUSTOM_SHIFT,
-        EPILOG  = uint64_t(0x2) << CUSTOM_SHIFT
+        PROLOGUE    = uint64_t(0x0) << CUSTOM_SHIFT,
+        PASS        = uint64_t(0x1) << CUSTOM_SHIFT,
+        EPILOGUE    = uint64_t(0x2) << CUSTOM_SHIFT
     };
 
     enum class CommandTypeFlags : uint32_t {
@@ -264,7 +269,7 @@ public:
         bool hasMorphing : 1;                               //              1 bit
         bool hasHybridInstancing : 1;                       //              1 bit
 
-        uint32_t rfu[2];                                    // 16 bytes
+        uint32_t rfu[2];                                    // 8 bytes
     };
     static_assert(sizeof(PrimitiveInfo) == 56);
 
@@ -306,6 +311,10 @@ public:
     // allocated commands ARE NOT freed, they're owned by the Arena
     ~RenderPass() noexcept;
 
+    // this must be called before calling getExecutor(), but can't be called from within
+    // a render pass
+    void finalize(FEngine const& engine, backend::DriverApi& driver);
+
     // Specifies the viewport for the scissor rectangle, that is, the final scissor rect is
     // offset by the viewport's left-top and clipped to the viewport's width/height.
     void setScissorViewport(backend::Viewport const viewport) noexcept {
@@ -320,14 +329,14 @@ public:
         std::reference_wrapper<backend::DriverApi> driver;
     public:
         explicit BufferObjectHandleDeleter(backend::DriverApi& driver) noexcept : driver(driver) { }
-        void operator()(backend::BufferObjectHandle handle) noexcept;
+        void operator()(backend::BufferObjectHandle handle) const noexcept;
     };
 
     class DescriptorSetHandleDeleter {
         std::reference_wrapper<backend::DriverApi> driver;
     public:
         explicit DescriptorSetHandleDeleter(backend::DriverApi& driver) noexcept : driver(driver) { }
-        void operator()(backend::DescriptorSetHandle handle) noexcept;
+        void operator()(backend::DescriptorSetHandle handle) const noexcept;
     };
 
     using BufferObjectSharedHandle = SharedHandle<
@@ -335,6 +344,8 @@ public:
 
     using DescriptorSetSharedHandle = SharedHandle<
             backend::HwDescriptorSet, DescriptorSetHandleDeleter>;
+
+    bool isFinalized() const noexcept { return mFinalized; }
 
     /*
      * Executor holds the range of commands to execute for a given pass
@@ -345,8 +356,8 @@ public:
         friend class RenderPassBuilder;
 
         // these fields are constant after creation
-        utils::Slice<Command> mCommands;
-        utils::Slice<CustomCommandFn> mCustomCommands;
+        utils::Slice<const Command> mCommands;
+        utils::Slice<const CustomCommandFn> mCustomCommands;
         BufferObjectSharedHandle mInstancedUboHandle;
         DescriptorSetSharedHandle mInstancedDescriptorSetHandle;
         ColorPassDescriptorSet const* mColorPassDescriptorSet = nullptr;
@@ -405,12 +416,12 @@ public:
 private:
     friend class FRenderer;
     friend class RenderPassBuilder;
-    RenderPass(FEngine const& engine, backend::DriverApi& driver,
-            RenderPassBuilder const& builder) noexcept;
+    friend class RenderPassBuilder;
+    RenderPass(FEngine const& engine, backend::DriverApi& driver, RenderPassBuilder const& builder) noexcept;
 
     // This is the main function of this class, this appends commands to the pass using
     // the current camera, geometry and flags set. This can be called multiple times if needed.
-    void appendCommands(FEngine const& engine,
+    void appendCommands(FEngine const& engine, backend::DriverApi& driver,
             utils::Slice<Command> commands,
             utils::Range<uint32_t> visibleRenderables,
             CommandTypeFlags commandTypeFlags,
@@ -423,7 +434,7 @@ private:
     // Appends a custom command.
     void appendCustomCommand(Command* commands,
             uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
-            Executor::CustomCommandFn command);
+            Executor::CustomCommandFn command) const;
 
     static Command* resize(Arena& arena, Command* last) noexcept;
 
@@ -432,10 +443,7 @@ private:
             Command* begin, Command* end) noexcept;
 
     // instanceify commands then trims sentinels
-    Command* instanceify(backend::DriverApi& driver,
-            backend::DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
-            Command* begin, Command* end,
-            int32_t eyeCount) const noexcept;
+    Command* instanceify(Command* begin, Command* end, int32_t eyeCount) const noexcept;
 
     // We choose the command count per job to minimize JobSystem overhead.
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 128;
@@ -470,8 +478,12 @@ private:
     backend::Viewport mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
     Command const* /* const */ mCommandBegin = nullptr;   // Pointer to the first command
     Command const* /* const */ mCommandEnd = nullptr;     // Pointer to one past the last command
-    mutable BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
-    mutable DescriptorSetSharedHandle mInstancedDescriptorSetHandle; // a descriptor-set to hold the ubo
+    mutable std::vector<PerRenderableData> mInstancingStagingBuffer;
+    mutable std::vector<Command*> mInstancingDescriptorSetPatch;
+    BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
+    DescriptorSetSharedHandle mInstancedDescriptorSetHandle; // a descriptor-set to hold the ubo
+    bool mFinalized = false;
+
     // a vector for our custom commands
     using CustomCommandVector = utils::FixedCapacityVector<Executor::CustomCommandFn>;
     mutable CustomCommandVector mCustomCommands;

@@ -23,8 +23,8 @@ if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
 endif (POLICY CMP0141)
 
-project(absl LANGUAGES CXX VERSION 20250127)
-set(ABSL_SOVERSION "2501.0.0")
+project(absl LANGUAGES CXX)
+set(ABSL_SOVERSION 0)
 include(CTest)
 
 # Output directory is correct by default for most build setups. However, when
@@ -46,7 +46,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 set(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
 
 option(ABSL_PROPAGATE_CXX_STD
-  "Use CMake C++ standard meta features (e.g. cxx_std_14) that propagate to targets that link to Abseil"
+  "Use CMake C++ standard meta features (e.g. cxx_std_17) that propagate to targets that link to Abseil"
   ON)
 
 option(ABSL_USE_SYSTEM_INCLUDES
@@ -170,7 +170,17 @@ endif()
 add_subdirectory(absl)
 
 if(ABSL_ENABLE_INSTALL)
-  
+  # absl:lts-remove-begin(system installation is supported for LTS releases)
+  # We don't support system-wide installation
+  list(APPEND SYSTEM_INSTALL_DIRS "/usr/local" "/usr" "/opt/" "/opt/local" "c:/Program Files/${PROJECT_NAME}")
+  if(NOT DEFINED CMAKE_INSTALL_PREFIX OR CMAKE_INSTALL_PREFIX IN_LIST SYSTEM_INSTALL_DIRS)
+    message(WARNING "\
+  The default and system-level install directories are unsupported except in LTS \
+  releases of Abseil.  Please set CMAKE_INSTALL_PREFIX to install Abseil in your \
+  source or build tree directly.\
+    ")
+  endif()
+  # absl:lts-remove-end
 
   # install as a subdirectory only
   install(EXPORT ${PROJECT_NAME}Targets

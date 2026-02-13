@@ -23,18 +23,30 @@ function start_render_() {
             bash ${BUILD_COMMON_DIR}/get-mesa.sh
         fi
 
+        if [ ! -d ${GLTF_DIR} ]; then
+            cat ${RENDERDIFF_TEST_DIR}/tests/gltf_models.txt | xargs bash ${BUILD_COMMON_DIR}/get-gltf-sample-assets.sh
+        fi
+
         # Install python deps
         python3 -m venv ${VENV_DIR}
         source ${VENV_DIR}/bin/activate
 
-        NEEDED_PYTHON_DEPS=("numpy" "tifffile")
+        NEEDED_PYTHON_DEPS=()
         for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
             if ! python3 -m pip show -q "${cmd}"; then
                 python3 -m pip install ${cmd}
             fi
         done
     fi
-    CXX=`which clang++` CC=`which clang` ./build.sh -f -X ${MESA_DIR} -p desktop debug gltf_viewer
+    # -W enables the webgpu build
+    # -f forces regeneration of cmake build files
+    # -X points to the mesa directory, which contains the compiled gl and vk drivers.
+    GLTF_VIEWER_PATH="$(pwd)/out/cmake-debug/samples/gltf_viewer"
+    if [[ "$NOREBUILD" == "true" ]] && [[ -f ${GLTF_VIEWER_PATH} ]]; then
+        echo "Skipping build of gltf_viewer"
+    else
+        CXX=`which clang++` CC=`which clang` ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer
+    fi
 }
 
 function end_render_() {
@@ -49,10 +61,35 @@ function end_render_() {
 #  - Build gltf_viewer
 #  - Run a test
 
+for i in "$@"
+do
+case $i in
+    --test_filter=*)
+    TEST_FILTER="${i#*=}"
+    shift # past argument=value
+    ;;
+    --no_rebuild)
+    NOREBUILD="true"
+    shift # past argument with no value
+    ;;
+    --num_threads=*)
+    NUM_THREADS="${i#*=}"
+    shift # past argument=value
+    ;;
+    *)
+          # unknown option
+    ;;
+esac
+done
+
+
 start_render_ && \
     python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
             --gltf_viewer="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
-            --test=${RENDERDIFF_TEST_DIR}/tests/presubmit.json \
-            --output_dir=${RENDER_OUTPUT_DIR} \
-            --opengl_lib=${MESA_LIB_DIR} && \
+            --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" \
+            --output_dir="${RENDER_OUTPUT_DIR}" \
+            --opengl_lib="${MESA_LIB_DIR}" \
+            --vk_icd="${MESA_VK_ICD_PATH}" \
+            ${TEST_FILTER:+--test_filter="$TEST_FILTER"} \
+            ${NUM_THREADS:+--num_threads="$NUM_THREADS"} && \
     end_render_

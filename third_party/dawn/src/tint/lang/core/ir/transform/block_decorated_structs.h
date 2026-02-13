@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_BLOCK_DECORATED_STRUCTS_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_BLOCK_DECORATED_STRUCTS_H_
 
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -36,6 +37,9 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
+
+/// The capabilities that the transform can support.
+const Capabilities kBlockDecoratedStructsCapabilities{Capability::kAllowDuplicateBindings};
 
 /// BlockDecoratedStructs is a transform that changes the store type of a buffer to be a special
 /// structure that is recognized as needing a block decoration in SPIR-V, potentially wrapping the

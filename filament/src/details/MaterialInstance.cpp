@@ -59,8 +59,7 @@ namespace filament {
 
 using namespace backend;
 
-FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
-                                     const char* name) noexcept
+FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name) noexcept
         : mMaterial(material),
           mDescriptorSet("MaterialInstance", material->getDescriptorSetLayout()),
           mCulling(CullingMode::BACK),
@@ -71,22 +70,26 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
           mHasScissor(false),
           mIsDoubleSided(false),
           mIsDefaultInstance(false),
+          mUseUboBatching(material->useUboBatching()),
           mTransparencyMode(TransparencyMode::DEFAULT),
           mName(name ? CString(name) : material->getName()) {
-
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     // even if the material doesn't have any parameters, we allocate a small UBO because it's
     // expected by the per-material descriptor-set layout
     size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
     mUniforms = UniformBuffer(uboSize);
-    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-    driver.setDebugTag(mUbHandle.getId(), material->getName());
 
-    // set the UBO, always descriptor 0
-    mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
-        0, mUbHandle, 0, mUniforms.getSize());
+    if (mUseUboBatching) {
+        mUboData = BufferAllocator::UNALLOCATED;
+        engine.getUboManager()->manageMaterialInstance(this);
+    } else {
+        mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
+                BufferUsage::STATIC, ImmutableCString{ material->getName().c_str_safe() });
+        // set the UBO, always descriptor 0
+        mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
+                0, std::get<Handle<HwBufferObject>>(mUboData), 0, mUniforms.getSize());
+    }
 
     const RasterState& rasterState = material->getRasterState();
     // At the moment, only MaterialInstances have a stencil state, but in the future it should be
@@ -141,20 +144,24 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mHasScissor(false),
           mIsDoubleSided(other->mIsDoubleSided),
           mIsDefaultInstance(false),
+          mUseUboBatching(other->mUseUboBatching),
           mScissorRect(other->mScissorRect),
           mName(name ? CString(name) : other->mName) {
-
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
 
     mUniforms.setUniforms(other->getUniformBuffer());
-    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-    driver.setDebugTag(mUbHandle.getId(), material->getName());
 
-    // set the UBO, always descriptor 0
-    mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(),
-            0, mUbHandle, 0, mUniforms.getSize());
+    if (mUseUboBatching) {
+        mUboData = BufferAllocator::UNALLOCATED;
+        engine.getUboManager()->manageMaterialInstance(this);
+    } else {
+        mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
+                BufferUsage::DYNAMIC, ImmutableCString{ material->getName().c_str_safe() });
+        // set the UBO, always descriptor 0
+        mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
+                0, std::get<Handle<HwBufferObject>>(mUboData), 0, mUniforms.getSize());
+    }
 
     if (material->hasDoubleSidedCapability()) {
         setDoubleSided(mIsDoubleSided);
@@ -175,13 +182,13 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
             material->getId(), material->generateMaterialInstanceId());
 
     // If the original descriptor set has been commited, the copy needs to commit as well.
-    if (other->mDescriptorSet.getHandle()) {
+    if (!mUseUboBatching && other->mDescriptorSet.getHandle()) {
         mDescriptorSet.commitSlow(mMaterial->getDescriptorSetLayout(), driver);
     }
 }
 
-FMaterialInstance* FMaterialInstance::duplicate(
-        FMaterialInstance const* other, const char* name) noexcept {
+FMaterialInstance* FMaterialInstance::duplicate(FMaterialInstance const* other,
+        const char* name) noexcept {
     FMaterial const* const material = other->getMaterial();
     FEngine& engine = material->getEngine();
     return engine.createMaterialInstance(material, other, name);
@@ -192,37 +199,38 @@ FMaterialInstance::~FMaterialInstance() noexcept = default;
 void FMaterialInstance::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mDescriptorSet.terminate(driver);
-    driver.destroyBufferObject(mUbHandle);
-}
+    if (mUseUboBatching) {
+        engine.getUboManager()->unmanageMaterialInstance(this);
+    }
 
-void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driver) {
-    mHasStreamUniformAssociations = false;
-    if (!mTextureParameters.empty()) {
-        backend::BufferObjectStreamDescriptor descriptor;
-        for (auto const& [binding, p]: mTextureParameters) {
-            ssize_t offset = mMaterial->getUniformInterfaceBlock().getTransformFieldOffset(binding);
-            if (offset >= 0) {
-                mHasStreamUniformAssociations = true;
-                auto stream = p.texture->getStream()->getHandle();
-                descriptor.mStreams.push_back({uint32_t(offset), stream, BufferObjectStreamAssociationType::TRANSFORM_MATRIX});
-            }
-        }
-        if (descriptor.mStreams.size() > 0) {
-            driver.registerBufferObjectStreams(mUbHandle, std::move(descriptor));
-        }
+    auto* ubHandle = std::get_if<Handle<HwBufferObject>>(&mUboData);
+    if (ubHandle){
+        driver.destroyBufferObject(*ubHandle);
     }
 }
 
 void FMaterialInstance::commit(FEngine& engine) const {
     if (UTILS_LIKELY(mMaterial->getMaterialDomain() != MaterialDomain::SURFACE)) {
-        commit(engine.getDriverApi());
+        commit(engine.getDriverApi(), engine.getUboManager());
     }
 }
 
-void FMaterialInstance::commit(DriverApi& driver) const {
-    // update uniforms if needed
-    if (mUniforms.isDirty() || mHasStreamUniformAssociations) {
-        driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
+void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManager) const {
+    if (mUniforms.isDirty()) {
+        mUniforms.clean();
+        if (isUsingUboBatching()) {
+            if (!BufferAllocator::isValid(getAllocationId())) {
+                // The allocation hasn't happened yet, return.
+                return;
+            }
+
+            uboManager->updateSlot(driver, getAllocationId(), mUniforms.toBufferDescriptor(driver));
+        }
+        else {
+            auto* ubHandle = std::get_if<Handle<HwBufferObject>>(&mUboData);
+            assert_invariant(ubHandle != nullptr);
+            driver.updateBufferObject(*ubHandle, mUniforms.toBufferDescriptor(driver), 0);
+        }
     }
     if (!mTextureParameters.empty()) {
         for (auto const& [binding, p]: mTextureParameters) {
@@ -240,6 +248,10 @@ void FMaterialInstance::commit(DriverApi& driver) const {
 
     // TODO: eventually we should remove this in RELEASE builds
     fixMissingSamplers();
+
+    if (isUsingUboBatching() && !BufferAllocator::isValid(getAllocationId())) {
+        return;
+    }
 
     // Commit descriptors if needed (e.g. when textures are updated,or the first time)
     mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);
@@ -285,9 +297,15 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
         DescriptorType const descriptorType = descriptorSetLayout.getDescriptorType(binding);
         TextureType const textureType = texture->getTextureType();
         SamplerType const samplerType = texture->getTarget();
+        auto const& featureFlags = mMaterial->getEngine().features.engine.debug;
 
-        FILAMENT_CHECK_PRECONDITION(
-                DescriptorSet::isTextureCompatibleWithDescriptor(textureType, samplerType, descriptorType))
+        FILAMENT_CHECK_PRECONDITION(texture->getUsage() & TextureUsage::SAMPLEABLE)
+                << "Texture for parameter \"" << name << "\"" << " is not SAMPLEABLE";
+
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+                DescriptorSet::isTextureCompatibleWithDescriptor(
+                        textureType, samplerType, descriptorType),
+                featureFlags.assert_material_instance_texture_descriptor_set_compatible)
                 << "Texture format " << int(texture->getFormat())
                 << " of type " << to_string(textureType)
                 << " with sampler type " << to_string(samplerType)
@@ -380,7 +398,9 @@ const char* FMaterialInstance::getName() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void FMaterialInstance::use(FEngine::DriverApi& driver) const {
+void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
+    assert_invariant(mDescriptorSet.getHandle());
+    assert_invariant(!isUsingUboBatching() || BufferAllocator::isValid(getAllocationId()));
 
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
         std::call_once(mMissingSamplersFlag, [this] {
@@ -401,7 +421,34 @@ void FMaterialInstance::use(FEngine::DriverApi& driver) const {
         mMissingSamplerDescriptors.clear();
     }
 
-    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
+    // Checks if this variant is shared. If so, FMaterial takes responsibility for binding the
+    // descriptor sets.
+    if (mMaterial->useShared(driver, variant)) {
+        return;
+    }
+
+    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL,
+            { { mUboOffset }, driver });
+}
+
+void FMaterialInstance::assignUboAllocation(
+        const Handle<HwBufferObject>& ubHandle,
+        BufferAllocator::AllocationId id,
+        BufferAllocator::allocation_size_t offset) {
+    assert_invariant(isUsingUboBatching());
+
+    mUboData = id;
+    mUboOffset = offset;
+    if (BufferAllocator::isValid(id)) {
+        // Use dynamic offset during binding, so the offset here is always zero.
+        mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(), 0, ubHandle, 0,
+                mUniforms.getSize());
+    }
+}
+
+BufferAllocator::AllocationId FMaterialInstance::getAllocationId() const noexcept {
+    auto const* allocationId = std::get_if<BufferAllocator::AllocationId>(&mUboData);
+    return allocationId ? *allocationId : BufferAllocator::UNALLOCATED;
 }
 
 void FMaterialInstance::fixMissingSamplers() const {

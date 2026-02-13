@@ -127,23 +127,23 @@ DescriptorSetLayout getPerMaterialDescriptorSet(SamplerInterfaceBlock const& sib
     auto const& samplers = sib.getSamplerInfoList();
 
     DescriptorSetLayout layout;
-    layout.bindings.reserve(1 + samplers.size());
+    layout.descriptors.reserve(1 + samplers.size());
 
-    layout.bindings.push_back(DescriptorSetLayoutBinding { DescriptorType::UNIFORM_BUFFER,
-            ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
-            +PerMaterialBindingPoints::MATERIAL_PARAMS, DescriptorFlags::NONE, 0 });
+    layout.descriptors.push_back(DescriptorSetLayoutDescriptor{ DescriptorType::UNIFORM_BUFFER,
+        ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
+        +PerMaterialBindingPoints::MATERIAL_PARAMS, DescriptorFlags::DYNAMIC_OFFSET, 0 });
 
     for (auto const& sampler: samplers) {
-        DescriptorSetLayoutBinding layoutBinding{
+        DescriptorSetLayoutDescriptor descriptor{
             DescriptorType::SAMPLER_EXTERNAL,
             sampler.stages, sampler.binding,
             DescriptorFlags::NONE,
             0
         };
         if (sampler.type != SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
-            layoutBinding.type = descriptor_sets::getDescriptorType(sampler.type, sampler.format);
+            descriptor.type = descriptor_sets::getDescriptorType(sampler.type, sampler.format);
         }
-        layout.bindings.push_back(layoutBinding);
+        layout.descriptors.push_back(descriptor);
     }
 
     return layout;
@@ -204,16 +204,16 @@ static void collectDescriptorsForSet(DescriptorSetBindingPoints set,
         return descriptor_sets::getDescriptorName(set, binding);
     };
 
-    for (auto const& layoutBinding : descriptorSetLayout.bindings) {
-        descriptor_binding_t binding = layoutBinding.binding;
+    for (auto const& descriptor : descriptorSetLayout.descriptors) {
+        descriptor_binding_t binding = descriptor.binding;
         auto name = getDescriptorName(binding);
-        if (DescriptorSetLayoutBinding::isSampler(layoutBinding.type)) {
+        if (DescriptorSetLayoutDescriptor::isSampler(descriptor.type)) {
             auto const pos = std::find_if(descriptorSetSamplerList.begin(), descriptorSetSamplerList.end(),
                     [&](const auto& entry) { return entry.binding == binding; });
             assert_invariant(pos != descriptorSetSamplerList.end());
-            descriptors.emplace_back(name, layoutBinding, *pos);
+            descriptors.emplace_back(name, descriptor, *pos);
         } else {
-            descriptors.emplace_back(name, layoutBinding, std::nullopt);
+            descriptors.emplace_back(name, descriptor, std::nullopt);
         }
     }
 
@@ -240,7 +240,7 @@ static void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) noexc
         printf("[DS] info (%s) = [\n", getName(setIndex));
         for (auto const& descriptor : descriptors) {
             auto const& [name, info, sampler] = descriptor;
-        if (DescriptorSetLayoutBinding::isSampler(info.type)) {
+        if (DescriptorSetLayoutDescriptor::isSampler(info.type)) {
                 assert_invariant(sampler.has_value());
                 printf("    {name = %s, binding = %d, type = %.*s, count = %d, stage = %s, flags = "
                        "%s, samplerType = %s}",
@@ -283,12 +283,13 @@ static void collectDescriptorSets(const GLSLPostProcessor::Config& config, Descr
 
 } // namespace msl
 
-GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization, uint32_t flags)
-        : mOptimization(optimization),
-          mPrintShaders(flags & PRINT_SHADERS),
-          mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
-    // This should occur only once, to avoid races.
-    SpirvRemapWrapperSetUp();
+GLSLPostProcessor::GLSLPostProcessor(
+        MaterialBuilder::Optimization optimization,
+        MaterialBuilder::Workarounds workarounds,
+        uint32_t flags)
+    : mOptimization(optimization), mWorkarounds(workarounds),
+      mPrintShaders(flags & PRINT_SHADERS),
+      mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
 }
 
 GLSLPostProcessor::~GLSLPostProcessor() = default;
@@ -576,7 +577,6 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 
     //Allow non-uniform derivatives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
     const tint::spirv::reader::Options readerOpts{true};
-    tint::wgsl::writer::Options writerOpts{};
 
     tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
 
@@ -602,7 +602,7 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 #endif
     }
 
-    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
+    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead);
     /// An instance of SuccessType that can be used to check a tint Result.
     tint::SuccessType tintSuccess;
 
@@ -633,7 +633,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                                 std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl, std::string* outputWgsl) {
     using TargetLanguage = MaterialBuilder::TargetLanguage;
 
-    if (config.targetLanguage == TargetLanguage::GLSL) {
+    if (config.targetLanguage == TargetLanguage::GLSL &&
+            mOptimization == MaterialBuilder::Optimization::NONE) {
         *outputGlsl = inputShader;
         if (mPrintShaders) {
             slog.i << *outputGlsl << io::endl;
@@ -998,13 +999,16 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
 }
 
 void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) {
+
+    // Always add the CanonicalizeIds Pass.
+    // The CanonicalIds pass replaces the old SPIR-V remapper in Glslang.
+    optimizer->RegisterPass(CreateCanonicalizeIdsPass());
+
+    // run optimizer
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
         slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
     }
-
-    // Remove dead module-level objects: functions, types, vars
-    SpirvRemapWrapperRemap(spirv);
 }
 
 void GLSLPostProcessor::fixupClipDistance(
@@ -1041,25 +1045,40 @@ void GLSLPostProcessor::fixupClipDistance(
 // However, the simplification passes below are necessary when targeting Metal, otherwise the
 // result is mismatched half / float assignments in MSL.
 
-// CreateInlineExhaustivePass() expects CreateMergeReturnPass() to be run beforehand
-// (Throwing many warnings if this is not the case), but we don't consistently do so for the above
-// reasons. While running it alone may have some value, we will disable it for the new WebGPU backend
-// while minimizing other changes.
-
-
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     auto RegisterPass = [&](Optimizer::PassToken&& pass,
             MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
-        if (!(config.targetApi & apiFilter)) {
-            return;
+        // Workaround management is currently very simple, only two values are possible
+        // ALL and NONE. If the value is anything but NONE, we apply all workarounds.
+        if (config.workarounds != MaterialBuilderBase::Workarounds::NONE) {
+            if (!(config.targetApi & apiFilter)) {
+                return;
+            }
         }
+
+        // FIXME: Workaround within a workaround!!! We IGNORE config.workarounds for WEBGPU
+        //        because Tint doesn't even compile with MergeReturn/Simplification pass
+        //        active:
+        //            Tint Reader Error: warning: code is unreachable
+        //            error: no matching overload for 'operator << (i32, i32)'
+        //            2 candidate operators:
+        //             • 'operator << (T  ✓ , u32  ✗ ) -> T' where:
+        //                  ✓  'T' is 'abstract-int', 'i32' or 'u32'
+        //             • 'operator << (vecN<T>  ✗ , vecN<u32>  ✗ ) -> vecN<T>' where:
+        //                  ✗  'T' is 'abstract-int', 'i32' or 'u32'
+        if (any(config.targetApi & MaterialBuilder::TargetApi::WEBGPU)) {
+            if (!(config.targetApi & apiFilter)) {
+                return;
+            }
+        }
+
         optimizer.RegisterPass(std::move(pass));
     };
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
-    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
+    RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
@@ -1103,8 +1122,7 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    //  Disable for WebGPU, see comment above registerPerformancePasses()
-    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
+    RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateScalarReplacementPass(0));

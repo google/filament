@@ -85,7 +85,7 @@ void VirtualResource::neededByPass(PassNode* pNode) noexcept {
 
 ImportedRenderTarget::~ImportedRenderTarget() noexcept = default;
 
-ImportedRenderTarget::ImportedRenderTarget(char const* resourceName,
+ImportedRenderTarget::ImportedRenderTarget(utils::StaticString resourceName,
         FrameGraphTexture::Descriptor const& mainAttachmentDesc,
         FrameGraphRenderPass::ImportDescriptor const& importedDesc,
         Handle<HwRenderTarget> target)
@@ -95,13 +95,13 @@ ImportedRenderTarget::ImportedRenderTarget(char const* resourceName,
 }
 
 UTILS_NOINLINE
-void ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage const u) {
+void ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage const u) const {
     constexpr auto ANY_ATTACHMENT = FrameGraphTexture::Usage::COLOR_ATTACHMENT |
                                     FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
                                     FrameGraphTexture::Usage::STENCIL_ATTACHMENT;
 
     FILAMENT_CHECK_PRECONDITION(none(u & ~ANY_ATTACHMENT))
-            << "Imported render target resource \"" << name
+            << "Imported render target resource \"" << name.c_str()
             << "\" can only be used as an attachment (usage=" << utils::to_string(u).c_str() << ')';
 }
 

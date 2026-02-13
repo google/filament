@@ -18,6 +18,7 @@
 #include <string>
 
 #include "source/opcode.h"
+#include "source/table2.h"
 #include "source/val/instruction.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
@@ -67,6 +68,50 @@ bool IsSupportGuaranteedVulkan_1_2(uint32_t capability) {
   return false;
 }
 
+bool IsSupportGuaranteedVulkan_1_3(uint32_t capability) {
+  if (IsSupportGuaranteedVulkan_1_2(capability)) return true;
+  switch (spv::Capability(capability)) {
+    case spv::Capability::DotProduct:
+    case spv::Capability::DotProductInputAll:
+    case spv::Capability::DotProductInput4x8Bit:
+    case spv::Capability::DotProductInput4x8BitPacked:
+    case spv::Capability::VulkanMemoryModel:
+    case spv::Capability::VulkanMemoryModelDeviceScope:
+    case spv::Capability::PhysicalStorageBufferAddresses:
+    case spv::Capability::DemoteToHelperInvocation:
+      return true;
+    default:
+      break;
+  }
+  return false;
+}
+
+bool IsSupportGuaranteedVulkan_1_4(uint32_t capability) {
+  if (IsSupportGuaranteedVulkan_1_3(capability)) return true;
+  switch (spv::Capability(capability)) {
+    case spv::Capability::UniformBufferArrayDynamicIndexing:
+    case spv::Capability::SampledImageArrayDynamicIndexing:
+    case spv::Capability::StorageBufferArrayDynamicIndexing:
+    case spv::Capability::StorageImageArrayDynamicIndexing:
+    case spv::Capability::Int16:
+    case spv::Capability::StorageBuffer16BitAccess:
+    case spv::Capability::VariablePointers:
+    case spv::Capability::VariablePointersStorageBuffer:
+    case spv::Capability::UniformTexelBufferArrayDynamicIndexing:
+    case spv::Capability::StorageTexelBufferArrayDynamicIndexing:
+    case spv::Capability::Int8:
+    case spv::Capability::StorageBuffer8BitAccess:
+    case spv::Capability::FloatControls2:
+    case spv::Capability::SampleRateShading:
+    case spv::Capability::StorageImageExtendedFormats:
+    case spv::Capability::ImageGatherExtended:
+      return true;
+    default:
+      break;
+  }
+  return false;
+}
+
 bool IsSupportOptionalVulkan_1_0(uint32_t capability) {
   switch (spv::Capability(capability)) {
     case spv::Capability::Geometry:
@@ -100,6 +145,8 @@ bool IsSupportOptionalVulkan_1_0(uint32_t capability) {
     case spv::Capability::GeometryStreams:
     case spv::Capability::Float16:
     case spv::Capability::Int8:
+    case spv::Capability::BFloat16TypeKHR:
+    case spv::Capability::Float8EXT:
       return true;
     default:
       break;
@@ -171,6 +218,16 @@ bool IsSupportOptionalVulkan_1_2(uint32_t capability) {
   return false;
 }
 
+// Vulkan 1.3 only added required features.
+bool IsSupportOptionalVulkan_1_3(uint32_t capability) {
+  return IsSupportOptionalVulkan_1_2(capability);
+}
+
+// Vulkan 1.4 only added required features.
+bool IsSupportOptionalVulkan_1_4(uint32_t capability) {
+  return IsSupportOptionalVulkan_1_3(capability);
+}
+
 bool IsSupportGuaranteedOpenCL_1_2(uint32_t capability, bool embedded_profile) {
   switch (spv::Capability(capability)) {
     case spv::Capability::Addresses:
@@ -221,6 +278,7 @@ bool IsSupportOptionalOpenCL_1_2(uint32_t capability) {
   switch (spv::Capability(capability)) {
     case spv::Capability::ImageBasic:
     case spv::Capability::Float64:
+    case spv::Capability::Float16:
       return true;
     default:
       break;
@@ -230,16 +288,16 @@ bool IsSupportOptionalOpenCL_1_2(uint32_t capability) {
 
 // Checks if |capability| was enabled by extension.
 bool IsEnabledByExtension(ValidationState_t& _, uint32_t capability) {
-  spv_operand_desc operand_desc = nullptr;
-  _.grammar().lookupOperand(SPV_OPERAND_TYPE_CAPABILITY, capability,
-                            &operand_desc);
+  const spvtools::OperandDesc* operand_desc = nullptr;
+  spvtools::LookupOperand(SPV_OPERAND_TYPE_CAPABILITY, capability,
+                          &operand_desc);
 
   // operand_desc is expected to be not null, otherwise validator would have
   // failed at an earlier stage. This 'assert' is 'just in case'.
   assert(operand_desc);
 
-  ExtensionSet operand_exts(operand_desc->numExtensions,
-                            operand_desc->extensions);
+  ExtensionSet operand_exts(operand_desc->extensions_range.count(),
+                            operand_desc->extensions().data());
   if (operand_exts.empty()) return false;
 
   return _.HasAnyOfExtensions(operand_exts);
@@ -297,14 +355,14 @@ spv_result_t CapabilityPass(ValidationState_t& _, const Instruction* inst) {
   assert(operand.offset < inst->words().size());
 
   const uint32_t capability = inst->word(operand.offset);
-  const auto capability_str = [&_, capability]() {
-    spv_operand_desc desc = nullptr;
-    if (_.grammar().lookupOperand(SPV_OPERAND_TYPE_CAPABILITY, capability,
-                                  &desc) != SPV_SUCCESS ||
+  const auto capability_str = [capability]() {
+    const spvtools::OperandDesc* desc = nullptr;
+    if (spvtools::LookupOperand(SPV_OPERAND_TYPE_CAPABILITY, capability,
+                                &desc) != SPV_SUCCESS ||
         !desc) {
       return std::string("Unknown");
     }
-    return std::string(desc->name);
+    return std::string(desc->name().data());
   };
 
   const auto env = _.context()->target_env;
@@ -338,6 +396,24 @@ spv_result_t CapabilityPass(ValidationState_t& _, const Instruction* inst) {
       return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
              << "Capability " << capability_str()
              << " is not allowed by Vulkan 1.2 specification"
+             << " (or requires extension)";
+    }
+  } else if (env == SPV_ENV_VULKAN_1_3) {
+    if (!IsSupportGuaranteedVulkan_1_3(capability) &&
+        !IsSupportOptionalVulkan_1_3(capability) &&
+        !IsEnabledByExtension(_, capability)) {
+      return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
+             << "Capability " << capability_str()
+             << " is not allowed by Vulkan 1.3 specification"
+             << " (or requires extension)";
+    }
+  } else if (env == SPV_ENV_VULKAN_1_4) {
+    if (!IsSupportGuaranteedVulkan_1_4(capability) &&
+        !IsSupportOptionalVulkan_1_4(capability) &&
+        !IsEnabledByExtension(_, capability)) {
+      return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
+             << "Capability " << capability_str()
+             << " is not allowed by Vulkan 1.4 specification"
              << " (or requires extension)";
     }
   } else if (env == SPV_ENV_OPENCL_1_2 || env == SPV_ENV_OPENCL_EMBEDDED_1_2) {

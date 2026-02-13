@@ -38,7 +38,7 @@
 
 #include <utils/compiler.h>
 #include <utils/JobSystem.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Path.h>
 
 #include <cgltf.h>
@@ -160,7 +160,7 @@ uint8_t const* parseDataUri(const char* uri, std::string* mimeType, size_t* psiz
 inline void normalizeSkinningWeights(cgltf_data const* gltf) {
     auto normalize = [](cgltf_accessor* data) {
         if (data->type != cgltf_type_vec4 || data->component_type != cgltf_component_type_r_32f) {
-            slog.w << "Cannot normalize weights, unsupported attribute type." << io::endl;
+            LOG(WARNING) << "Cannot normalize weights, unsupported attribute type.";
             return;
         }
         uint8_t* bytes = (uint8_t*) data->buffer_view->buffer->data;
@@ -550,8 +550,14 @@ void ResourceLoader::asyncUpdateLoad() {
 std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset,
         size_t textureIndex, TextureProvider::TextureFlags flags) {
     const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[textureIndex];
-    const cgltf_image* image = srcTexture.basisu_image ?
+    const cgltf_image* image = srcTexture.webp_image ? srcTexture.webp_image : srcTexture.basisu_image ?
             srcTexture.basisu_image : srcTexture.image;
+
+    if (!image) {
+        LOG(ERROR) << "Missing texture";
+        return {};
+    }
+
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 
@@ -567,7 +573,7 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
 
     auto foundProvider = mTextureProviders.find(mime);
     if (foundProvider == mTextureProviders.end()) {
-        slog.e << "Missing texture provider for " << mime << io::endl;
+        LOG(ERROR) << "Missing texture provider for " << mime;
         return {};
     }
     TextureProvider* provider = foundProvider->second;
@@ -623,7 +629,7 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
         }
         Path fullpath = Path(mGltfPath).getParent() + uri;
         if (!fullpath.exists()) {
-            slog.e << "Unable to open " << fullpath << io::endl;
+            LOG(ERROR) << "Unable to open " << fullpath;
             return {};
         }
         using namespace std;
@@ -645,7 +651,7 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     }
 
     const char* name = srcTexture.name ? srcTexture.name : uri;
-    slog.e << "Unable to create texture " << name << ": " << provider->getPushMessage() << io::endl;
+    LOG(ERROR) << "Unable to create texture " << name << ": " << provider->getPushMessage();
     return {};
 }
 

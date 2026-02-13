@@ -46,6 +46,10 @@ dawn_add_library(
         dawn_public_config
 )
 
+if(BUILD_SHARED_LIBS)
+  target_compile_definitions(dawn_headers INTERFACE "WGPU_SHARED_LIBRARY")
+endif()
+
 if (EMSCRIPTEN)
   add_library(webgpu_c ALIAS emdawnwebgpu_c)
 else()
@@ -134,9 +138,6 @@ if (NOT EMSCRIPTEN)
       dawn::dawn_common
   )
   target_compile_definitions(dawn_proc PRIVATE "WGPU_IMPLEMENTATION")
-  if(BUILD_SHARED_LIBS)
-    target_compile_definitions(dawn_proc PUBLIC "WGPU_SHARED_LIBRARY")
-  endif()
 endif()
 
 ###############################################################################

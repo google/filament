@@ -20,36 +20,111 @@
 #include <bluevk/BlueVK.h>
 
 #include "DriverBase.h"
+#include "backend/DriverEnums.h"
+#include "backend/Platform.h"
 
 #include "vulkan/memory/Resource.h"
 
-#include <utils/Mutex.h>
-#include <utils/Condition.h>
+#include <chrono>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <shared_mutex>
+#include <utility>
+#include <vector>
 
 namespace filament::backend {
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    VulkanCmdFence(VkResult initialStatus) {
-        // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
-        // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
-        // finishes executing the command buffer, the status changes to VK_SUCCESS.
-        status.store(initialStatus);
-    }
-
+    explicit VulkanCmdFence(VkFence fence) : mFence(fence) { }
     ~VulkanCmdFence() = default;
 
-    void setStatus(VkResult value) { status.store(value); }
+    void setStatus(VkResult const value) {
+        std::lock_guard const l(mLock);
+        mStatus = value;
+        mCond.notify_all();
+    }
 
-    VkResult getStatus() { return status.load(std::memory_order_acquire); }
+    VkResult getStatus() {
+        std::shared_lock const l(mLock);
+        return mStatus;
+    }
+
+    void resetFence(VkDevice device);
+
+    FenceStatus wait(VkDevice device, uint64_t timeout,
+        std::chrono::steady_clock::time_point until);
+
+    void cancel() {
+        std::lock_guard const l(mLock);
+        mCanceled = true;
+        mCond.notify_all();
+    }
 
 private:
-    std::atomic<VkResult> status;
+    std::shared_mutex mLock; // NOLINT(*-include-cleaner)
+    std::condition_variable_any mCond;
+    bool mCanceled = false;
+    // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
+    // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
+    // finishes executing the command buffer, the status changes to VK_SUCCESS.
+    VkResult mStatus{ VK_INCOMPLETE };
+    VkFence mFence;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     VulkanFence() {}
-    std::shared_ptr<VulkanCmdFence> fence;
+
+    void setFence(std::shared_ptr<VulkanCmdFence> fence) {
+        std::lock_guard const l(lock);
+        sharedFence = std::move(fence);
+        cond.notify_all();
+    }
+
+    std::shared_ptr<VulkanCmdFence>& getSharedFence() {
+        std::lock_guard const l(lock);
+        return sharedFence;
+    }
+
+    std::pair<std::shared_ptr<VulkanCmdFence>, bool>
+            wait(std::chrono::steady_clock::time_point const until) {
+        // hold a reference so that our state doesn't disappear while we wait
+        std::unique_lock l(lock);
+        cond.wait_until(l, until, [this] {
+            return bool(sharedFence) || canceled;
+        });
+        // here mSharedFence will be null if we timed out
+        return { sharedFence, canceled };
+    }
+
+    void cancel() const {
+        std::lock_guard const l(lock);
+        if (sharedFence) {
+            sharedFence->cancel();
+        }
+        canceled = true;
+        cond.notify_all();
+    }
+
+private:
+    mutable std::mutex lock;
+    mutable std::condition_variable cond;
+    mutable bool canceled = false;
+    std::shared_ptr<VulkanCmdFence> sharedFence;
+};
+
+struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
+    struct CallbackData {
+        CallbackHandler* handler;
+        Platform::SyncCallback cb;
+        Platform::Sync* sync;
+        void* userData;
+    };
+
+    VulkanSync() {}
+    std::mutex lock;
+    std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
 };
 
 struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
@@ -58,12 +133,12 @@ struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
           mStoppingQueryIndex(stoppingIndex) {}
 
     void setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {
-        std::unique_lock<utils::Mutex> lock(mFenceMutex);
-        mFence = fence;
+        std::lock_guard const lock(mFenceMutex);
+        mFence = std::move(fence);
     }
 
     bool isCompleted() noexcept {
-        std::unique_lock<utils::Mutex> lock(mFenceMutex);
+        std::lock_guard const lock(mFenceMutex);
         // QueryValue is a synchronous call and might occur before beginTimerQuery has written
         // anything into the command buffer, which is an error according to the validation layer
         // that ships in the Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to

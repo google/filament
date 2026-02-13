@@ -8,11 +8,9 @@ RWByteAddressBuffer _13 : register(u0);
 void comp_main()
 {
     Data d1;
-    [unroll]
-    for (int _0ident = 0; _0ident < 3; _0ident++)
-    {
-        _13.Store(_0ident * 4 + 0, d1.arr[_0ident]);
-    }
+    _13.Store(0, d1.arr[0]);
+    _13.Store(4, d1.arr[1]);
+    _13.Store(8, d1.arr[2]);
 }
 
 [numthreads(1, 1, 1)]

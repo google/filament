@@ -28,11 +28,13 @@
 #include "VulkanQueryManager.h"
 #include "VulkanReadPixels.h"
 #include "VulkanSamplerCache.h"
+#include "VulkanSemaphoreManager.h"
 #include "VulkanStagePool.h"
 #include "VulkanYcbcrConversionCache.h"
 #include "vulkan/VulkanDescriptorSetCache.h"
 #include "vulkan/VulkanDescriptorSetLayoutCache.h"
 #include "vulkan/VulkanExternalImageManager.h"
+#include "vulkan/VulkanStreamedImageManager.h"
 #include "vulkan/VulkanPipelineLayoutCache.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
@@ -43,6 +45,7 @@
 #include "DriverBase.h"
 #include "private/backend/Driver.h"
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 
@@ -100,7 +103,8 @@ private:
     Dispatcher getDispatcher() const noexcept final;
 
     ShaderModel getShaderModel() const noexcept final;
-    ShaderLanguage getShaderLanguage() const noexcept final;
+    utils::FixedCapacityVector<ShaderLanguage> getShaderLanguages(
+            ShaderLanguage preferredLanguage) const noexcept final;
 
     template<typename T>
     friend class ConcreteDispatcher;
@@ -128,6 +132,8 @@ private:
     // Flush the current command buffer and reset the pipeline state.
     void endCommandRecording();
 
+    void acquireNextSwapchainImage();
+
     VulkanPlatform* mPlatform = nullptr;
     fvkmemory::ResourceManager mResourceManager;
 
@@ -139,6 +145,7 @@ private:
 
     VulkanContext& mContext;
 
+    VulkanSemaphoreManager mSemaphoreManager;
     VulkanCommands mCommands;
     VulkanPipelineLayoutCache mPipelineLayoutCache;
     VulkanPipelineCache mPipelineCache;
@@ -153,6 +160,16 @@ private:
     VulkanDescriptorSetCache mDescriptorSetCache;
     VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;
+    VulkanStreamedImageManager mStreamedImageManager;
+
+    // This maps a VulkanSwapchain to a native swapchain. VulkanSwapchain should have a copy of the
+    // Platform::Swapchain pointer, but queryFrameTimestamps() and queryCompositorTiming() are
+    // synchronous calls, making access to VulkanSwapchain unsafe (this difference vs other backends
+    // is due to the ref-counting of vulkan resources).
+    struct {
+        std::mutex lock;
+        std::unordered_map<HandleId, Platform::SwapChain*> nativeSwapchains;
+    } mTiming;
 
     // This is necessary for us to write to push constants after binding a pipeline.
     using DescriptorSetLayoutHandleList = std::array<resource_ptr<VulkanDescriptorSetLayout>,
@@ -187,7 +204,15 @@ private:
     } mAppState;
 
     bool const mIsSRGBSwapChainSupported;
+    bool const mIsMSAASwapChainSupported;
+    bool const mAcquireSwapChainInMakeCurrent;
     backend::StereoscopicType const mStereoscopicType;
+    uint8_t const mStereoscopicEyeCount;
+    backend::AsynchronousMode const mAsynchronousMode;
+
+    // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the
+    // data to process it at call time. So we store it and process it during updateStreams.
+    std::vector<resource_ptr<VulkanStream>> mStreamsWithPendingAcquiredImage;
 };
 
 } // namespace filament::backend

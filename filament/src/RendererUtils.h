@@ -65,16 +65,18 @@ public:
         math::float4 clearColor = {};
         // Clear stencil
         uint8_t clearStencil = 0u;
-        // Lod offset for the SSR passes
-        float ssrLodOffset;
         // Contact shadow enabled?
         bool hasContactShadows;
         // Screen space reflections enabled
         bool hasScreenSpaceReflectionsOrRefractions;
         // Use a depth format with a stencil component.
         bool enabledStencilBuffer;
-        // whether the screenspace reflections history buffer is initialized
-        bool screenSpaceReflectionHistoryNotReady;
+        // Backend feature level
+        backend::FeatureLevel featureLevel;
+        // Auto depth resolve supported
+        bool isAutoDepthResolveSupported;
+        // Use post-process fog
+        bool fogAsPostProcess;
     };
 
     struct ColorPassInput {

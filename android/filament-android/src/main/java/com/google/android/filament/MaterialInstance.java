@@ -538,11 +538,27 @@ public class MaterialInstance {
     }
 
     /**
+     * Sets the transparency mode for this material instance.
+     * @see Material.TransparencyMode
+     */
+    public void setTransparencyMode(@NonNull Material.TransparencyMode mode) {
+        nSetTransparencyMode(getNativeObject(), mode.ordinal());
+    }
+
+    /**
      * Returns whether double-sided lighting is enabled when the parent Material has double-sided
      * capability.
      */
     public boolean isDoubleSided() {
         return nIsDoubleSided(getNativeObject());
+    }
+
+    /**
+     * Returns the transparency mode.
+     */
+    @NonNull
+    public Material.TransparencyMode getTransparencyMode() {
+        return Material.EnumCache.sTransparencyModeValues[nGetTransparencyMode(getNativeObject())];
     }
 
     /**
@@ -982,4 +998,6 @@ public class MaterialInstance {
     private static native boolean nIsStencilWriteEnabled(long nativeMaterialInstance);
     private static native boolean nIsDepthCullingEnabled(long nativeMaterialInstance);
     private static native int nGetDepthFunc(long nativeMaterialInstance);
+    private static native void nSetTransparencyMode(long nativeMaterialInstance, int mode);
+    private static native int nGetTransparencyMode(long nativeMaterialInstance);
 }

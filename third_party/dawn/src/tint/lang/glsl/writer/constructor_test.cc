@@ -283,7 +283,7 @@ TEST_F(GlslWriterTest, Constructor_Type_Vec_SingleScalar_F32_Var) {
     auto* func = b.Function("a", ty.vec3<f32>());
     b.Append(func->Block(), [&] {  //
         auto* v = b.Var("v", 2_f);
-        b.Return(func, b.Construct(ty.vec3<f32>(), v));
+        b.Return(func, b.Construct(ty.vec3<f32>(), b.Load(v)));
     });
 
     ASSERT_TRUE(Generate()) << err_ << output_.glsl;
@@ -302,7 +302,7 @@ TEST_F(GlslWriterTest, Constructor_Type_Vec_SingleScalar_F16_Var) {
     auto* func = b.Function("a", ty.vec3<f16>());
     b.Append(func->Block(), [&] {  //
         auto* v = b.Var("v", 2_h);
-        b.Return(func, b.Construct(ty.vec3<f16>(), v));
+        b.Return(func, b.Construct(ty.vec3<f16>(), b.Load(v)));
     });
 
     ASSERT_TRUE(Generate()) << err_ << output_.glsl;

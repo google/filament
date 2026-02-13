@@ -47,8 +47,7 @@ public:
     using Job = utils::Invocable<void()>;
     using ThreadSetup = utils::Invocable<void()>;
     using ThreadCleanup = utils::Invocable<void()>;
-    void init(uint32_t threadCount,
-            ThreadSetup&& threadSetup, ThreadCleanup&& threadCleanup) noexcept;
+    void init(uint32_t threadCount, ThreadSetup&& threadSetup, ThreadCleanup&& threadCleanup);
     void terminate() noexcept;
     void queue(CompilerPriorityQueue priorityQueue, program_token_t const& token, Job&& job);
     Job dequeue(program_token_t const& token);
@@ -59,7 +58,7 @@ private:
     bool mExitRequested{ false };
     utils::Mutex mQueueLock;
     utils::Condition mQueueCondition;
-    std::array<Queue, 2> mQueues;
+    std::array<Queue, 3> mQueues;
     // lock must be held for methods below
     std::pair<Queue&, Queue::iterator> find(program_token_t const& token);
 };
@@ -67,4 +66,3 @@ private:
 } // namespace filament::backend
 
 #endif  // TNT_FILAMENT_BACKEND_COMPILERTHREADPOOL_H
-

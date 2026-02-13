@@ -57,7 +57,7 @@ struct State {
                 // A vector constructor with a single scalar argument needs to be modified to
                 // replicate the argument N times.
                 auto* vec = construct->Result()->Type()->As<core::type::Vector>();
-                if (vec &&  //
+                if ((vec != nullptr) &&  //
                     construct->Args().Length() == 1 &&
                     construct->Args()[0]->Type()->Is<core::type::Scalar>()) {
                     for (uint32_t i = 1; i < vec->Width(); i++) {
@@ -135,7 +135,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ExpandImplicitSplats(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.ExpandImplicitSplats");
+    auto result = ValidateAndDumpIfNeeded(ir, "spirv.ExpandImplicitSplats",
+                                          kExpandImplicitSplatsCapabilities);
     if (result != Success) {
         return result.Failure();
     }

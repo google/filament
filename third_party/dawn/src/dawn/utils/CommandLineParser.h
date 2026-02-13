@@ -174,7 +174,7 @@ class CommandLineParser {
         EnumOption(std::vector<std::pair<absl::string_view, E>> conversions,
                    absl::string_view name,
                    absl::string_view desc);
-        ~EnumOption() override;
+        ~EnumOption() override = default;
 
         E GetValue() const;
         std::string GetParameter() const override;
@@ -256,9 +256,6 @@ CommandLineParser::EnumOption<E>::EnumOption(
     absl::string_view name,
     absl::string_view desc)
     : Option<EnumOption<E>>(name, desc), mConversions(conversions) {}
-
-template <typename E>
-CommandLineParser::EnumOption<E>::~EnumOption<E>() = default;
 
 template <typename E>
 E CommandLineParser::EnumOption<E>::GetValue() const {

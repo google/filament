@@ -170,10 +170,6 @@ public:
     // negative value if name doesn't exist or Panic if exceptions are enabled
     ssize_t getFieldOffset(std::string_view name, size_t index) const;
 
-    // returns offset in bytes of the transform matrix for the given external texture binding
-    // returns -1 if the field doesn't exist
-    ssize_t getTransformFieldOffset(uint8_t binding) const;
-
     FieldInfo const* getFieldInfo(std::string_view name) const;
 
     bool hasField(std::string_view name) const noexcept {
@@ -201,7 +197,6 @@ private:
     utils::CString mName;
     utils::FixedCapacityVector<FieldInfo> mFieldInfoList;
     std::unordered_map<std::string_view , uint32_t> mInfoMap;
-    std::unordered_map<uint8_t, uint32_t> mTransformOffsetMap;
     uint32_t mSize = 0; // size in bytes rounded to multiple of 4
     Alignment mAlignment = Alignment::std140;
     Target mTarget = Target::UNIFORM;

@@ -58,8 +58,6 @@ tint_target_add_dependencies(tint_lang_wgsl_reader lib
   tint_lang_core_type
   tint_lang_wgsl
   tint_lang_wgsl_ast
-  tint_lang_wgsl_common
-  tint_lang_wgsl_features
   tint_lang_wgsl_program
   tint_lang_wgsl_reader_lower
   tint_lang_wgsl_resolver
@@ -100,15 +98,15 @@ tint_add_target(tint_lang_wgsl_reader_test test
 
 tint_target_add_dependencies(tint_lang_wgsl_reader_test test
   tint_lang_wgsl
-  tint_lang_wgsl_common
-  tint_lang_wgsl_features
   tint_utils
   tint_utils_containers
+  tint_utils_diagnostic
   tint_utils_ice
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
   tint_utils_rtti
+  tint_utils_text
 )
 
 tint_target_add_external_dependencies(tint_lang_wgsl_reader_test test
@@ -118,53 +116,6 @@ tint_target_add_external_dependencies(tint_lang_wgsl_reader_test test
 
 if(TINT_BUILD_WGSL_READER)
   tint_target_add_dependencies(tint_lang_wgsl_reader_test test
-    tint_lang_wgsl_reader
-  )
-endif(TINT_BUILD_WGSL_READER)
-
-endif(TINT_BUILD_WGSL_READER)
-if(TINT_BUILD_WGSL_READER)
-################################################################################
-# Target:    tint_lang_wgsl_reader_bench
-# Kind:      bench
-# Condition: TINT_BUILD_WGSL_READER
-################################################################################
-tint_add_target(tint_lang_wgsl_reader_bench bench
-  lang/wgsl/reader/reader_bench.cc
-)
-
-tint_target_add_dependencies(tint_lang_wgsl_reader_bench bench
-  tint_api_common
-  tint_lang_core
-  tint_lang_core_constant
-  tint_lang_core_ir
-  tint_lang_core_type
-  tint_lang_wgsl
-  tint_lang_wgsl_ast
-  tint_lang_wgsl_common
-  tint_lang_wgsl_features
-  tint_lang_wgsl_program
-  tint_lang_wgsl_sem
-  tint_utils
-  tint_utils_containers
-  tint_utils_diagnostic
-  tint_utils_ice
-  tint_utils_macros
-  tint_utils_math
-  tint_utils_memory
-  tint_utils_rtti
-  tint_utils_symbol
-  tint_utils_text
-)
-
-tint_target_add_external_dependencies(tint_lang_wgsl_reader_bench bench
-  "google-benchmark"
-  "src_utils"
-)
-
-if(TINT_BUILD_WGSL_READER)
-  tint_target_add_dependencies(tint_lang_wgsl_reader_bench bench
-    tint_cmd_bench_bench
     tint_lang_wgsl_reader
   )
 endif(TINT_BUILD_WGSL_READER)

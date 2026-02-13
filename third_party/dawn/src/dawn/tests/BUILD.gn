@@ -26,6 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import("../../../scripts/dawn_overrides_with_defaults.gni")
+import("../../../scripts/tint_overrides_with_defaults.gni")
 
 import("//testing/test.gni")
 import("${dawn_root}/generator/dawn_generator.gni")
@@ -142,12 +143,10 @@ if (build_with_chromium) {
 # Copy target for DXC
 ###############################################################################
 
-# When building with chromium under Windows, we need to copy the DXC from
-# Windows SDK into build folder, in order to ensure a DXC of version 1.6 is
-# available when running end-to-end tests in Chromium. Note that currently DXC
-# only provided for x86 and x64 in Windows SDK 20348.
-if (!dawn_use_built_dxc && build_with_chromium && is_win &&
-    (target_cpu == "x64" || target_cpu == "x86")) {
+# Chromium archive scripts are not able to determine whether dawn_built_dxc
+# is defined. Hence, we need to copy the DXC DLLs from the Windows SDK so the
+# scripts always have something to pick up.
+if (!dawn_use_built_dxc && build_with_chromium && is_win) {
   # The windows_sdk_path is acquired in visual_studio_version.gni.
   import("//build/config/win/visual_studio_version.gni")
 
@@ -162,7 +161,6 @@ if (!dawn_use_built_dxc && build_with_chromium && is_win &&
   # end-to-end test in Chromium.
   copy("copy_dxc_binary") {
     sources = [
-      "$windows_sdk_path/bin/$windows_sdk_version/$target_cpu/dxc.exe",
       "$windows_sdk_path/bin/$windows_sdk_version/$target_cpu/dxcompiler.dll",
       "$windows_sdk_path/bin/$windows_sdk_version/$target_cpu/dxil.dll",
     ]
@@ -196,15 +194,13 @@ template("dawn_test") {
 
     # Running Dawn tests within Chromium in Windows may require DXC, copy DXC
     # binary from Windows SDK.
-    if (build_with_chromium && is_win &&
-        (target_cpu == "x64" || target_cpu == "x86")) {
+    if (build_with_chromium && is_win) {
       if (dawn_use_built_dxc) {
         if (!defined(deps)) {
           deps = []
         }
         deps += [
           "$dawn_root/third_party/gn/dxc:copy_dxil_dll",
-          "$dawn_root/third_party/gn/dxc:dxc",
           "$dawn_root/third_party/gn/dxc:dxcompiler",
         ]
       } else {
@@ -240,7 +236,6 @@ source_set("native_mocks_sources") {
     "${dawn_root}/src/dawn:proc",
     "${dawn_root}/src/dawn/native:sources",
     "${dawn_root}/src/dawn/native:static",
-    "${dawn_root}/src/dawn/utils",
   ]
 
   # Add internal dawn native config for internal unittests.
@@ -282,7 +277,6 @@ source_set("native_mocks_sources") {
 
 dawn_test("dawn_unittests") {
   deps = [
-    ":dawn_test_support",
     ":gmock_and_gtest",
     ":mock_webgpu_gen",
     ":native_mocks_sources",
@@ -295,8 +289,11 @@ dawn_test("dawn_unittests") {
     "${dawn_root}/src/dawn/native:sources",
     "${dawn_root}/src/dawn/native:static",
     "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
-    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/utils:system_utils",
+    "${dawn_root}/src/dawn/utils:test_utils",
+    "${dawn_root}/src/dawn/utils:wgpu_utils",
     "${dawn_root}/src/dawn/wire",
+    "${dawn_root}/src/utils/chromium_test_compat",
   ]
 
   # Add internal dawn native config for internal unittests.
@@ -318,7 +315,7 @@ dawn_test("dawn_unittests") {
     "DawnNativeTest.cpp",
     "DawnNativeTest.h",
     "unittests/AsyncTaskTests.cpp",
-    "unittests/BitSetIteratorTests.cpp",
+    "unittests/BitSetRangeIteratorTests.cpp",
     "unittests/BuddyAllocatorTests.cpp",
     "unittests/BuddyMemoryAllocatorTests.cpp",
     "unittests/ChainUtilsTests.cpp",
@@ -338,6 +335,7 @@ dawn_test("dawn_unittests") {
     "unittests/ITypBitsetTests.cpp",
     "unittests/ITypSpanTests.cpp",
     "unittests/ITypVectorTests.cpp",
+    "unittests/LRUCacheTests.cpp",
     "unittests/LinkedListTests.cpp",
     "unittests/MathTests.cpp",
     "unittests/MutexProtectedTests.cpp",
@@ -471,6 +469,10 @@ dawn_test("dawn_unittests") {
     sources += [ "unittests/validation/YCbCrInfoValidationTests.cpp" ]
   }
 
+  if (tint_build_spv_reader) {
+    deps += [ "${dawn_spirv_tools_dir}:spvtools_opt" ]
+  }
+
   # When building inside Chromium, use their gtest main function because it is
   # needed to run in swarming correctly.
   if (build_with_chromium) {
@@ -511,7 +513,9 @@ source_set("test_infra_sources") {
     "${dawn_root}/src/dawn/common",
     "${dawn_root}/src/dawn/native:sources",
     "${dawn_root}/src/dawn/native:static",
-    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/utils:system_utils",
+    "${dawn_root}/src/dawn/utils:test_utils",
+    "${dawn_root}/src/dawn/utils:wgpu_utils",
     "${dawn_root}/src/dawn/wire",
   ]
 
@@ -574,7 +578,9 @@ source_set("end2end_tests_sources") {
     "${dawn_root}/src/dawn/native:headers",
     "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
     "${dawn_root}/src/dawn/platform",
-    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/utils:system_utils",
+    "${dawn_root}/src/dawn/utils:test_utils",
+    "${dawn_root}/src/dawn/utils:wgpu_utils",
     "${dawn_root}/src/dawn/wire",
   ]
 
@@ -586,6 +592,7 @@ source_set("end2end_tests_sources") {
     "end2end/AdapterPropertiesVkTests.cpp",
     "end2end/BasicTests.cpp",
     "end2end/BindGroupTests.cpp",
+    "end2end/BindingArrayTests.cpp",
     "end2end/BufferHostMappedPointerTests.cpp",
     "end2end/BufferHostMappedPointerTests.h",
     "end2end/BufferTests.cpp",
@@ -650,6 +657,8 @@ source_set("end2end_tests_sources") {
     "end2end/PipelineCachingTests.cpp",
     "end2end/PipelineLayoutTests.cpp",
     "end2end/PixelLocalStorageTests.cpp",
+    "end2end/PolyfillBuiltinSimpleTests.cpp",
+    "end2end/PrimitiveIdTests.cpp",
     "end2end/PrimitiveStateTests.cpp",
     "end2end/PrimitiveTopologyTests.cpp",
     "end2end/QueryTests.cpp",
@@ -667,15 +676,20 @@ source_set("end2end_tests_sources") {
     "end2end/ShaderAtomicTests.cpp",
     "end2end/ShaderBuiltinPartialConstArgsErrorTests.cpp",
     "end2end/ShaderF16Tests.cpp",
+    "end2end/ShaderModuleCachingTests.cpp",
+    "end2end/ShaderPrintTests.cpp",
     "end2end/ShaderTests.cpp",
     "end2end/ShaderValidationTests.cpp",
     "end2end/StorageTextureTests.cpp",
     "end2end/SubgroupMatrixTests.cpp",
     "end2end/SubgroupsTests.cpp",
     "end2end/SubresourceRenderAttachmentTests.cpp",
+    "end2end/SupportedFeatureArch.cpp",
     "end2end/Texture3DTests.cpp",
+    "end2end/TextureComponentSwizzleTests.cpp",
     "end2end/TextureCorruptionTests.cpp",
     "end2end/TextureFormatTests.cpp",
+    "end2end/TextureFormatsTier1Tests.cpp",
     "end2end/TextureShaderBuiltinTests.cpp",
     "end2end/TextureSubresourceTests.cpp",
     "end2end/TextureViewTests.cpp",
@@ -686,6 +700,10 @@ source_set("end2end_tests_sources") {
     "end2end/ViewportOrientationTests.cpp",
     "end2end/ViewportTests.cpp",
   ]
+
+  if (!is_debug) {
+    sources += [ "end2end/RuntimeTimeoutCompute.cpp" ]
+  }
 
   libs = []
 
@@ -770,7 +788,9 @@ source_set("white_box_tests_sources") {
     # Statically linked and with sources because the end2end white_box tests use Dawn internals.
     "${dawn_root}/src/dawn/native:sources",
     "${dawn_root}/src/dawn/native:static",
-    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/utils:system_utils",
+    "${dawn_root}/src/dawn/utils:test_utils",
+    "${dawn_root}/src/dawn/utils:wgpu_utils",
     "${dawn_root}/src/dawn/wire",
   ]
 
@@ -781,6 +801,7 @@ source_set("white_box_tests_sources") {
     "white_box/SharedBufferMemoryTests.h",
     "white_box/SharedTextureMemoryTests.cpp",
     "white_box/SharedTextureMemoryTests.h",
+    "white_box/WaitListEventTests.cpp",
   ]
   libs = []
 
@@ -873,10 +894,10 @@ source_set("white_box_tests_sources") {
 
 dawn_test("dawn_end2end_tests") {
   deps = [
-    ":dawn_test_support",
     ":end2end_tests_sources",
     ":test_infra_sources",
     ":white_box_tests_sources",
+    "${dawn_root}/src/utils/chromium_test_compat",
   ]
 
   sources = []
@@ -901,19 +922,22 @@ dawn_test("dawn_end2end_tests") {
 
 dawn_test("dawn_perf_tests") {
   deps = [
-    ":dawn_test_support",
     ":test_infra_sources",
     "${dawn_root}/include/dawn:cpp_headers",
     "${dawn_root}/src/dawn:proc",
     "${dawn_root}/src/dawn/common",
     "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
     "${dawn_root}/src/dawn/platform",
-    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/utils:system_utils",
+    "${dawn_root}/src/dawn/utils:test_utils",
+    "${dawn_root}/src/dawn/utils:wgpu_utils",
     "${dawn_root}/src/dawn/wire",
+    "${dawn_root}/src/utils/chromium_test_compat",
   ]
 
   sources = [
     "perf_tests/BufferUploadPerf.cpp",
+    "perf_tests/ConcurrentExecutionTest.cpp",
     "perf_tests/DawnPerfTest.cpp",
     "perf_tests/DawnPerfTest.h",
     "perf_tests/DawnPerfTestPlatform.cpp",
@@ -924,6 +948,7 @@ dawn_test("dawn_perf_tests") {
     "perf_tests/SubresourceTrackingPerf.cpp",
     "perf_tests/UniformBufferUpdatePerf.cpp",
     "perf_tests/VulkanZeroInitializeWorkgroupMemoryPerf.cpp",
+    "perf_tests/WorkgroupAtomicPerf.cpp",
   ]
 
   libs = []
@@ -940,17 +965,4 @@ dawn_test("dawn_perf_tests") {
   if (dawn_enable_metal) {
     frameworks = [ "IOSurface.framework" ]
   }
-}
-
-###############################################################################
-# Shared Dawn test code
-###############################################################################
-
-source_set("dawn_test_support") {
-  deps = [ "${dawn_root}/src/dawn/common" ]
-
-  sources = [
-    "ChromiumTestCompat.cpp",
-    "ChromiumTestCompat.h",
-  ]
 }

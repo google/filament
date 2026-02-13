@@ -31,8 +31,10 @@
 #include <mutex>
 
 #include "dawn/common/Platform.h"
+#include "dawn/common/Sha3.h"
 #include "dawn/native/Blob.h"
 #include "dawn/native/CacheResult.h"
+#include "dawn/native/Error.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
 
 namespace dawn::platform {
@@ -47,10 +49,11 @@ class InstanceBase;
 // This class should always be thread-safe because it may be called asynchronously.
 class BlobCache {
   public:
-    explicit BlobCache(const dawn::native::DawnCacheDeviceDescriptor& desc);
+    BlobCache(const dawn::native::DawnCacheDeviceDescriptor& desc, bool enableHashValidation);
 
-    // Returns empty blob if the key is not found in the cache.
-    Blob Load(const CacheKey& key);
+    // Returns empty blob if the key is not found in the cache. Returns an internal error if hash
+    // validation is enabled and the key is found but the hash validation fails.
+    ResultOrError<Blob> Load(const CacheKey& key);
 
     // Value to store must be non-empty/non-null.
     void Store(const CacheKey& key, size_t valueSize, const void* value);
@@ -65,11 +68,19 @@ class BlobCache {
         }
     }
 
+    // Generates a blob that holds the actual stored bytes which may be different depending on
+    // whether hash validation is enabled.
+    Blob GenerateActualStoredBlobForTesting(size_t valueSize, const void* value);
+
   private:
     // Non-thread safe internal implementations of load and store. Exposed callers that use
     // these helpers need to make sure that these are entered with `mMutex` held.
-    Blob LoadInternal(const CacheKey& key);
+    // If hash validation enabled:
+    //   * StoreInternal insert the hash of |value| as prefix,
+    //   * LoadInternal validate that the hash of the content after the prefix matches.
+    // This hashing and validation is transparent to the caller.
     void StoreInternal(const CacheKey& key, size_t valueSize, const void* value);
+    ResultOrError<Blob> LoadInternal(const CacheKey& key);
 
     // Validates the cache key for this version of Dawn. At the moment, this is naively checking
     // that the cache key contains the dawn version string in it.
@@ -77,6 +88,7 @@ class BlobCache {
 
     // Protects thread safety of access to mCache.
     std::mutex mMutex;
+    bool mHashValidation;
     // TODO(https://crbug.com/dawn/2365): Convert these members to `raw_ptr`.
     RAW_PTR_EXCLUSION WGPUDawnLoadCacheDataFunction mLoadFunction;
     RAW_PTR_EXCLUSION WGPUDawnStoreCacheDataFunction mStoreFunction;

@@ -119,7 +119,7 @@ struct PostProcessorRegistration {
     RegisterPostProcessor(
         Proto::descriptor(),
         [callback](protobuf::Message* message, unsigned int seed) {
-          callback(static_cast<Proto*>(message), seed);
+          callback(protobuf::DownCastMessage<Proto>(message), seed);
         });
   }
 };

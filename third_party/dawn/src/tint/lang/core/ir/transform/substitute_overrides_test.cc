@@ -32,6 +32,7 @@
 
 #include "gtest/gtest.h"
 #include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/core/ir/override.h"
 #include "src/tint/lang/core/ir/transform/helper_test.h"
 #include "src/tint/lang/core/ir/type/array_count.h"
 #include "src/tint/lang/core/ir/var.h"
@@ -932,6 +933,136 @@ $B1: {  # root
     Run(SubstituteOverrides, cfg);
 
     EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeOverrideOutOfBounds) {
+    ir::Var* v = nullptr;
+    ir::Override* o = nullptr;
+    b.Append(mod.root_block, [&] {
+        auto* x = b.Override("x", ty.u32());
+        x->SetOverrideId({2});
+        o = b.Override("y", ty.u32());
+        o->SetOverrideId({3});
+
+        auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
+    });
+
+    auto* func = b.Function("foo", ty.u32());
+    b.Append(func->Block(), [&] {
+        auto* access = b.Access(ty.ptr<workgroup, u32>(), v, o);
+        auto* load = b.Load(access);
+        b.Return(func, load);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %x:u32 = override undef @id(2)
+  %y:u32 = override undef @id(3)
+  %v:ptr<workgroup, array<u32, %x>, read_write> = var undef
+}
+
+%foo = func():u32 {
+  $B2: {
+    %5:ptr<workgroup, u32, read_write> = access %v, %y
+    %6:u32 = load %5
+    ret %6
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    SubstituteOverridesConfig cfg{};
+    cfg.map[OverrideId{2}] = 5;
+    cfg.map[OverrideId{3}] = 7;
+    auto result = RunWithFailure(SubstituteOverrides, cfg);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, R"(error: index 7 out of bounds [0..4])");
+}
+
+TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeLetOutOfBounds) {
+    ir::Var* v = nullptr;
+    b.Append(mod.root_block, [&] {
+        auto* x = b.Override("x", ty.u32());
+        x->SetOverrideId({2});
+
+        auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
+    });
+
+    auto* func = b.Function("foo", ty.u32());
+    b.Append(func->Block(), [&] {
+        auto* p = b.Let("p", v);
+        auto* access = b.Access(ty.ptr<workgroup, u32>(), p, 7_u);
+        auto* load = b.Load(access);
+        b.Return(func, load);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %x:u32 = override undef @id(2)
+  %v:ptr<workgroup, array<u32, %x>, read_write> = var undef
+}
+
+%foo = func():u32 {
+  $B2: {
+    %p:ptr<workgroup, array<u32, %x>, read_write> = let %v
+    %5:ptr<workgroup, u32, read_write> = access %p, 7u
+    %6:u32 = load %5
+    ret %6
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    SubstituteOverridesConfig cfg{};
+    cfg.map[OverrideId{2}] = 5;
+    auto result = RunWithFailure(SubstituteOverrides, cfg);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, R"(error: index 7 out of bounds [0..4])");
+}
+
+TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeOutOfBounds) {
+    ir::Var* v = nullptr;
+    b.Append(mod.root_block, [&] {
+        auto* x = b.Override("x", ty.u32());
+        x->SetOverrideId({2});
+
+        auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
+    });
+
+    auto* func = b.Function("foo", ty.u32());
+    b.Append(func->Block(), [&] {
+        auto* access = b.Access(ty.ptr<workgroup, u32>(), v, 7_u);
+        auto* load = b.Load(access);
+        b.Return(func, load);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %x:u32 = override undef @id(2)
+  %v:ptr<workgroup, array<u32, %x>, read_write> = var undef
+}
+
+%foo = func():u32 {
+  $B2: {
+    %4:ptr<workgroup, u32, read_write> = access %v, 7u
+    %5:u32 = load %4
+    ret %5
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    SubstituteOverridesConfig cfg{};
+    cfg.map[OverrideId{2}] = 5;
+    auto result = RunWithFailure(SubstituteOverrides, cfg);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, R"(error: index 7 out of bounds [0..4])");
 }
 
 TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeExpression) {

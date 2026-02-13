@@ -99,6 +99,9 @@ value_object<View::AmbientOcclusionOptions::Gtao>("View$AmbientOcclusionOptions$
     .field("sampleSliceCount", &View::AmbientOcclusionOptions::Gtao::sampleSliceCount)
     .field("sampleStepsPerSlice", &View::AmbientOcclusionOptions::Gtao::sampleStepsPerSlice)
     .field("thicknessHeuristic", &View::AmbientOcclusionOptions::Gtao::thicknessHeuristic)
+    .field("useVisibilityBitmasks", &View::AmbientOcclusionOptions::Gtao::useVisibilityBitmasks)
+    .field("constThickness", &View::AmbientOcclusionOptions::Gtao::constThickness)
+    .field("linearThickness", &View::AmbientOcclusionOptions::Gtao::linearThickness)
     ;
 
 value_object<View::AmbientOcclusionOptions>("View$AmbientOcclusionOptions")
@@ -135,6 +138,7 @@ value_object<View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOption
     .field("filterHistory", &View::TemporalAntiAliasingOptions::filterHistory)
     .field("filterInput", &View::TemporalAntiAliasingOptions::filterInput)
     .field("useYCoCg", &View::TemporalAntiAliasingOptions::useYCoCg)
+    .field("hdr", &View::TemporalAntiAliasingOptions::hdr)
     .field("boxType", &View::TemporalAntiAliasingOptions::boxType)
     .field("boxClipping", &View::TemporalAntiAliasingOptions::boxClipping)
     .field("jitterPattern", &View::TemporalAntiAliasingOptions::jitterPattern)

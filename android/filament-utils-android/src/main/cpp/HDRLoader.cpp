@@ -60,6 +60,7 @@ jlong nCreateHDRTexture(JNIEnv* env, jclass,
         .height(image->getHeight())
         .levels(0xff)
         .sampler(Texture::Sampler::SAMPLER_2D)
+        .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
         .format(textureFormat)
         .build(*engine);
 

@@ -58,8 +58,11 @@ bool ExplicitLayoutArray::Equals(const UniqueNode& other) const {
 
 std::string ExplicitLayoutArray::FriendlyName() const {
     StringStream out;
-    out << "spirv.explicit_layout_array<" << element_->FriendlyName() << ", "
-        << count_->FriendlyName() << ">";
+    out << "spirv.explicit_layout_array<" << element_->FriendlyName();
+    if (!count_->Is<core::type::RuntimeArrayCount>()) {
+        out << ", " << count_->FriendlyName();
+    }
+    out << ", stride=" << stride_ << ">";
     return out.str();
 }
 

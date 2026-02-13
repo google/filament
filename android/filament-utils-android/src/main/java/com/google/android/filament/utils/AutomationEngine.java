@@ -94,18 +94,21 @@ public class AutomationEngine {
      * Allows remote control for the viewer.
      */
     public static class ViewerOptions {
-        public float cameraAperture = 16.0f;
-        public float cameraSpeed = 125.0f;
-        public float cameraISO = 100.0f;
-        public float cameraNear = 0.1f;
-        public float cameraFar = 100.0f;
         public float groundShadowStrength = 0.75f;
         public boolean groundPlaneEnabled = false;
         public boolean skyboxEnabled = true;
-        public float cameraFocalLength = 28.0f;
-        public float cameraFocusDistance = 0.0f;
         public boolean autoScaleEnabled = true;
         public boolean autoInstancingEnabled = false;
+    }
+
+    public static class CameraSettings {
+        public float aperture = 16.0f;
+        public float shutterSpeed = 125.0f;
+        public float sensitivity = 100.0f;
+        public float near = 0.1f;
+        public float far = 100.0f;
+        public float focalLength = 28.0f;
+        public float focusDistance = 10.0f;
     }
 
     /**
@@ -175,7 +178,12 @@ public class AutomationEngine {
         }
         long nativeView = content.view.getNativeObject();
         long nativeRenderer = content.renderer.getNativeObject();
-        nTick(mNativeObject, engine.getNativeObject(), nativeView, nativeMaterialInstances, nativeRenderer, deltaTime);
+        long nativeIbl = content.indirectLight == null ? 0 : content.indirectLight.getNativeObject();
+        long nativeLm = content.lightManager == null ? 0 : content.lightManager.getNativeObject();
+        long nativeScene = content.scene == null ? 0 : content.scene.getNativeObject();
+        nTick(mNativeObject, engine.getNativeObject(), nativeView, nativeMaterialInstances,
+                nativeRenderer, nativeIbl, content.sunlight, content.assetLights, nativeLm,
+                nativeScene, deltaTime);
     }
 
     /**
@@ -229,6 +237,13 @@ public class AutomationEngine {
         return result;
     }
 
+    @NonNull
+    public CameraSettings getCameraSettings() {
+        CameraSettings result = new CameraSettings();
+        nGetCameraSettings(mNativeObject, result);
+        return result;
+    }
+
     /**
      * Gets a color grading object that corresponds to the latest settings.
      *
@@ -261,6 +276,9 @@ public class AutomationEngine {
      */
     public boolean shouldClose() { return nShouldClose(mNativeObject); }
 
+    public int getTestCount() { return nGetTestCount(mNativeObject); }
+    public int getCurrentTest() { return nGetCurrentTest(mNativeObject); }
+
     @Override
     protected void finalize() throws Throwable {
         nDestroy(mNativeObject);
@@ -274,15 +292,19 @@ public class AutomationEngine {
     private static native void nStartRunning(long nativeObject);
     private static native void nStartBatchMode(long nativeObject);
     private static native void nTick(long nativeObject, long nativeEngine,
-            long view, long[] materials, long renderer, float deltaTime);
+            long view, long[] materials, long renderer, long ibl, int sunlight, int[] assetLights,
+            long lightManager, long scene, float deltaTime);
     private static native void nApplySettings(long nativeObject, long nativeEngine,
             String jsonSettings, long view,
             long[] materials, long ibl, int sunlight, int[] assetLights, long lightManager,
             long scene, long renderer);
     private static native void nGetViewerOptions(long nativeObject, Object result);
+    private static native void nGetCameraSettings(long nativeObject, Object result);
     private static native long nGetColorGrading(long nativeObject, long nativeEngine);
     private static native void nSignalBatchMode(long nativeObject);
     private static native void nStopRunning(long nativeObject);
     private static native boolean nShouldClose(long nativeObject);
+    private static native int nGetTestCount(long nativeObject);
+    private static native int nGetCurrentTest(long nativeObject);
     private static native void nDestroy(long nativeObject);
 }

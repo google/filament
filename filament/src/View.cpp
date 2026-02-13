@@ -17,6 +17,7 @@
 #include "details/View.h"
 #include "filament/View.h"
 
+#include <stdint.h>
 
 namespace filament {
 
@@ -39,6 +40,14 @@ bool View::hasCamera() const noexcept {
 
 Camera& View::getCamera() noexcept {
     return downcast(this)->getCameraUser();
+}
+
+void View::setChannelDepthClearEnabled(uint8_t channel, bool enabled) noexcept {
+    downcast(this)->setChannelDepthClearEnabled(channel, enabled);
+}
+
+bool View::isChannelDepthClearEnabled(uint8_t channel) const noexcept {
+    return downcast(this)->isChannelDepthClearEnabled(channel);
 }
 
 void View::setViewport(Viewport const& viewport) noexcept {
@@ -75,6 +84,14 @@ const char* View::getName() const noexcept {
 
 utils::FixedCapacityVector<Camera const*> View::getDirectionalShadowCameras() const noexcept {
     return downcast(this)->getDirectionalShadowCameras();
+}
+
+void View::setFroxelVizEnabled(bool const enabled) noexcept {
+    downcast(this)->setFroxelVizEnabled(enabled);
+}
+
+View::FroxelConfigurationInfoWithAge View::getFroxelConfigurationInfo() const noexcept {
+    return downcast(this)->getFroxelConfigurationInfo();
 }
 
 void View::setShadowingEnabled(bool const enabled) noexcept {
@@ -159,6 +176,10 @@ void View::setDynamicResolutionOptions(const DynamicResolutionOptions& options) 
 
 View::DynamicResolutionOptions View::getDynamicResolutionOptions() const noexcept {
     return downcast(this)->getDynamicResolutionOptions();
+}
+
+math::float2 View::getLastDynamicResolutionScale() const noexcept {
+    return downcast(this)->getLastDynamicResolutionScale();
 }
 
 void View::setRenderQuality(const RenderQuality& renderQuality) noexcept {

@@ -1,0 +1,11 @@
+material {
+    name : clearDepth,
+    culling: none,
+    colorWrite : false,
+    depthWrite : true,
+    depthCulling : false,
+
+    vertexDomain : device,
+    shadingModel : unlit,
+    variantFilter : [ skinning, shadowReceiver, vsm, fog ],
+}

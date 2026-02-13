@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.24)
 project(LibProtobufMutator CXX)
 
 enable_language(C)
@@ -41,8 +41,6 @@ include_directories(${LIBLZMA_INCLUDE_DIRS})
 
 find_package(ZLIB)
 include_directories(${ZLIB_INCLUDE_DIRS})
-
-set(CMAKE_CXX_STANDARD 11)
 
 include_directories(${PROJECT_SOURCE_DIR})
 

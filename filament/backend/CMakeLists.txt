@@ -36,6 +36,7 @@ set(SRCS
         src/Driver.cpp
         src/Handle.cpp
         src/HandleAllocator.cpp
+        src/JobQueue.cpp
         src/ostream.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
@@ -59,6 +60,7 @@ set(PRIVATE_HDRS
         src/CompilerThreadPool.h
         src/DataReshaper.h
         src/DriverBase.h
+        src/JobQueue.h
 )
 
 # ==================================================================================================
@@ -78,6 +80,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
             src/opengl/GLTexture.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
+            src/opengl/GLMemoryMappedBuffer.cpp
+            src/opengl/GLMemoryMappedBuffer.h
             src/opengl/OpenGLBlobCache.cpp
             src/opengl/OpenGLBlobCache.h
             src/opengl/OpenGLContext.cpp
@@ -102,6 +106,10 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
         list(APPEND SRCS src/VirtualMachineEnv.cpp)
     endif ()
     if (ANDROID)
+        list(APPEND SRCS src/AndroidNdk.cpp)
+        list(APPEND SRCS src/AndroidNativeWindow.cpp)
+        list(APPEND SRCS src/AndroidSwapChainHelper.cpp)
+        list(APPEND SRCS src/AndroidFrameCallback.cpp)
         list(APPEND SRCS src/opengl/platforms/ExternalStreamManagerAndroid.cpp)
         list(APPEND SRCS src/opengl/platforms/PlatformEGLAndroid.cpp)
     elseif (IOS)
@@ -177,6 +185,7 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
+            src/vulkan/VulkanAsyncHandles.cpp
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
@@ -199,6 +208,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanDriverFactory.h
             src/vulkan/VulkanExternalImageManager.cpp
             src/vulkan/VulkanExternalImageManager.h
+            src/vulkan/VulkanStreamedImageManager.cpp
+            src/vulkan/VulkanStreamedImageManager.h
             src/vulkan/VulkanFboCache.cpp
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
@@ -215,6 +226,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
+            src/vulkan/VulkanSemaphore.cpp
+            src/vulkan/VulkanSemaphore.h
+            src/vulkan/VulkanSemaphoreManager.cpp
+            src/vulkan/VulkanSemaphoreManager.h
             src/vulkan/VulkanStagePool.cpp
             src/vulkan/VulkanStagePool.h
             src/vulkan/VulkanSwapChain.cpp
@@ -241,10 +256,21 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/StaticVector.h
     )
-    if (LINUX OR WIN32)
-        list(APPEND SRCS src/vulkan/platform/VulkanPlatformLinuxWindows.cpp)
+    if (LINUX)
+        list(APPEND SRCS
+            src/vulkan/platform/VulkanPlatformLinux.cpp
+            include/backend/platforms/VulkanPlatformLinux.h
+        )
+    elseif (WIN32)
+        list(APPEND SRCS
+            include/backend/platforms/VulkanPlatformWindows.h
+            src/vulkan/platform/VulkanPlatformWindows.cpp
+        )
     elseif (APPLE OR IOS)
-        list(APPEND SRCS src/vulkan/platform/VulkanPlatformApple.mm)
+        list(APPEND SRCS
+            include/backend/platforms/VulkanPlatformApple.h
+            src/vulkan/platform/VulkanPlatformApple.mm
+        )
     elseif (ANDROID)
         list(APPEND SRCS
             include/backend/platforms/VulkanPlatformAndroid.h
@@ -258,6 +284,12 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             include/backend/platforms/WebGPUPlatform.h
             src/webgpu/platform/WebGPUPlatform.cpp
             src/webgpu/SpdMipmapGenerator/SpdMipmapGenerator.cpp
+            src/webgpu/utils/AsyncTaskCounter.cpp
+            src/webgpu/utils/AsyncTaskCounter.h
+            src/webgpu/utils/StringPlaceholderTemplateProcessor.cpp
+            src/webgpu/utils/StringPlaceholderTemplateProcessor.h
+            src/webgpu/WebGPUBlitter.cpp
+            src/webgpu/WebGPUBlitter.h
             src/webgpu/WebGPUBufferBase.cpp
             src/webgpu/WebGPUBufferBase.h
             src/webgpu/WebGPUBufferObject.cpp
@@ -273,6 +305,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUFence.h
             src/webgpu/WebGPUIndexBuffer.cpp
             src/webgpu/WebGPUIndexBuffer.h
+            src/webgpu/WebGPUMemoryMappedBuffer.cpp
+            src/webgpu/WebGPUMemoryMappedBuffer.h
             src/webgpu/WebGPUMsaaTextureResolver.cpp
             src/webgpu/WebGPUMsaaTextureResolver.h
             src/webgpu/WebGPUPipelineCache.cpp
@@ -281,29 +315,47 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUPipelineLayoutCache.h
             src/webgpu/WebGPUProgram.cpp
             src/webgpu/WebGPUProgram.h
+            src/webgpu/WebGPUQueueManager.cpp
+            src/webgpu/WebGPUQueueManager.h
             src/webgpu/WebGPURenderPassMipmapGenerator.cpp
             src/webgpu/WebGPURenderPassMipmapGenerator.h
             src/webgpu/WebGPURenderPrimitive.h
             src/webgpu/WebGPURenderTarget.cpp
             src/webgpu/WebGPURenderTarget.h
+            src/webgpu/WebGPUStagePool.cpp
+            src/webgpu/WebGPUStagePool.h
             src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
+            src/webgpu/WebGPUSync.h
             src/webgpu/WebGPUTexture.cpp
             src/webgpu/WebGPUTexture.h
+            src/webgpu/WebGPUTextureHelpers.h
             src/webgpu/WebGPUVertexBuffer.cpp
             src/webgpu/WebGPUVertexBuffer.h
             src/webgpu/WebGPUVertexBufferInfo.cpp
             src/webgpu/WebGPUVertexBufferInfo.h
     )
     if (WIN32)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformWindows.h
+            src/webgpu/platform/WebGPUPlatformWindows.cpp
+        )
     elseif (LINUX)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformLinux.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformLinux.h
+            src/webgpu/platform/WebGPUPlatformLinux.cpp
+        )
     elseif (APPLE OR IOS)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformApple.mm)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformApple.h
+            src/webgpu/platform/WebGPUPlatformApple.mm
+        )
     elseif (ANDROID)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformAndroid.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformAndroid.h
+            src/webgpu/platform/WebGPUPlatformAndroid.cpp
+        )
     endif()
 
     if (TNT_DEV)
@@ -351,46 +403,6 @@ add_library(${TARGET}_headers INTERFACE)
 target_include_directories(${TARGET}_headers INTERFACE ${PUBLIC_HDR_DIR})
 
 # ==================================================================================================
-# Build SPIRV snippets used by the Vulkan backend.
-# ==================================================================================================
-
-set(VKSHADERS_DIR  "${CMAKE_CURRENT_BINARY_DIR}/generated/vkshaders")
-
-file(MAKE_DIRECTORY ${VKSHADERS_DIR})
-
-get_resgen_vars(${VKSHADERS_DIR} vkshaders)
-
-set(VKSHADER_BINS)
-function(build_vkshader SOURCE TARGET_PATH)
-    set(SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan/${SOURCE}")
-    set(VKSHADER_BINS ${VKSHADER_BINS} ${TARGET_PATH} PARENT_SCOPE)
-    add_custom_command(
-            OUTPUT ${TARGET_PATH}
-            COMMAND matc --raw -o ${TARGET_PATH} ${SOURCE_PATH}
-            MAIN_DEPENDENCY ${SOURCE_PATH}
-            DEPENDS matc ${SOURCE_PATH}
-            COMMENT "Building SPIR-V")
-endfunction()
-build_vkshader("BlitDepth.vs" "BlitDepthVs.spv")
-build_vkshader("BlitDepth.fs" "BlitDepthFs.spv")
-
-add_custom_command(
-        OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${VKSHADER_BINS}
-        DEPENDS resgen ${VKSHADER_BINS}
-        COMMENT "Aggregating compiled VK shaders")
-
-if (DEFINED RESGEN_SOURCE_FLAGS)
-    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
-endif()
-
-set(DUMMY_SRC "${VKSHADERS_DIR}/dummy.c")
-add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
-
-add_library(vkshaders STATIC ${DUMMY_SRC} ${RESGEN_SOURCE})
-set_target_properties(vkshaders PROPERTIES FOLDER Filament/Generated)
-
-# ==================================================================================================
 # Dependencies
 # ==================================================================================================
 
@@ -407,6 +419,7 @@ endif()
 
 if (APPLE AND NOT IOS)
     target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
+    target_link_libraries(${TARGET} PRIVATE "-framework QuartzCore")
 endif()
 
 target_link_libraries(${TARGET} PUBLIC math)
@@ -422,7 +435,7 @@ if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders smol-v)
+    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc smol-v)
     target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
 endif()
 
@@ -451,6 +464,13 @@ if (MSVC)
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
+elseif(FILAMENT_USING_GCC)
+    set(OPTIMIZATION_FLAGS
+        -ffast-math
+        -fno-finite-math-only
+        -ffp-contract=fast
+        -fvisibility-inlines-hidden
+    )
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
@@ -477,6 +497,13 @@ endif()
 
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
+elseif (FILAMENT_USING_GCC)
+    # GCC is not officially supported, so use a weaker set of warnings (incl. not using -Werror)
+    set(FILAMENT_WARNINGS
+            -Wall -Wno-unused-parameter -Wno-missing-field-initializers
+            -Wdeprecated -Wnon-virtual-dtor -Wno-strict-aliasing
+            -Wno-invalid-constexpr -Wno-parentheses -Wno-unused-variable
+    )
 else()
     set(FILAMENT_WARNINGS
             -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
@@ -486,9 +513,6 @@ else()
             -Wover-aligned -Wreorder-init-list
             -Werror
     )
-    if (CMAKE_CXX_STANDARD EQUAL 20)
-        list(APPEND FILAMENT_WARNINGS -Wno-deprecated-this-capture)
-    endif()
 endif()
 
 if (APPLE)
@@ -522,7 +546,7 @@ target_link_libraries(${TARGET} PRIVATE
 if (LINUX AND FILAMENT_SUPPORTS_WEBGPU)
     # Unclear why this needs to be explicit while other linux libs do not, but it is necessary for
     # WebGPU to build on linux.
-    target_link_libraries(${TARGET} PRIVATE -lxcb)
+    target_link_libraries(${TARGET} PRIVATE -lxcb -lX11)
 endif()
 
 # ==================================================================================================
@@ -530,7 +554,7 @@ endif()
 # ==================================================================================================
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
-install(TARGETS vkshaders ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
+install(TARGETS ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 
 if (FILAMENT_SUPPORTS_WEBGPU)
@@ -558,8 +582,12 @@ if (APPLE OR LINUX)
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
+        test/test_ReadTexture.cpp
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
+        test/test_JobQueue.cpp
+        test/test_MemoryMappedBuffer.cpp
+        test/test_MsaaSwapChain.cpp
         test/test_MRT.cpp
         test/test_PushConstants.cpp
         test/test_LoadImage.cpp
@@ -569,7 +597,19 @@ if (APPLE OR LINUX)
         test/test_Handles.cpp
         test/test_CircularBuffer.cpp
         test/test_CommandBufferQueue.cpp
+        test/test_Template.cpp
     )
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND BACKEND_TEST_SRC
+                test/test_WebGPUAsyncTaskCounter.cpp
+                test/test_WebGPUComposeSwizzle.cpp)
+    endif()
+    if (APPLE)
+        # Metal-specific tests
+        list(APPEND BACKEND_TEST_SRC
+            test/test_MetalBlitter.mm
+        )
+    endif()
     set(BACKEND_TEST_LIBS
         absl::str_format
         backend
@@ -581,6 +621,7 @@ if (APPLE OR LINUX)
         spirv-cross-glsl)
     # Create input/output directories for test result images.
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/diff_images)
     file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
 endif()
 
@@ -591,6 +632,7 @@ if (APPLE AND NOT IOS)
          test/test_RenderExternalImage.cpp)
     add_library(backend_test STATIC ${BACKEND_TEST_SRC})
     target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
+    target_compile_options(backend_test PRIVATE "-fobjc-arc")
 
     set(BACKEND_TEST_DEPS
             OSDependent
@@ -608,6 +650,10 @@ if (APPLE AND NOT IOS)
     if (NOT IOS)
         target_link_libraries(backend_test PRIVATE image imageio)
         list(APPEND BACKEND_TEST_DEPS image)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        target_link_libraries(backend_test PRIVATE webgpu_dawn dawncpp_headers)
+        list(APPEND BACKEND_TEST_DEPS webgpu_dawn dawncpp_headers)
     endif()
 
     set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
@@ -640,6 +686,9 @@ if (LINUX)
     add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
     target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
     set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        target_link_libraries(backend_test_linux PRIVATE webgpu_dawn dawncpp_headers)
+    endif()
 endif()
 
 # ==================================================================================================

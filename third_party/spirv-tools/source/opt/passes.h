@@ -21,6 +21,7 @@
 #include "source/opt/amd_ext_to_khr.h"
 #include "source/opt/analyze_live_input_pass.h"
 #include "source/opt/block_merge_pass.h"
+#include "source/opt/canonicalize_ids_pass.h"
 #include "source/opt/ccp_pass.h"
 #include "source/opt/cfg_cleanup_pass.h"
 #include "source/opt/code_sink.h"

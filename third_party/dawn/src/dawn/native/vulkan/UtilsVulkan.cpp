@@ -224,9 +224,9 @@ VkBufferImageCopy ComputeBufferImageCopyRegion(const TexelCopyBufferLayout& data
             region.imageSubresource.baseArrayLayer = 0;
             region.imageSubresource.layerCount = 1;
 
-            DAWN_ASSERT(!textureCopy.texture->GetFormat().isCompressed);
-            region.imageExtent.width = copySize.width;
-            region.imageExtent.height = copySize.height;
+            Extent3D imageExtent = ComputeTextureCopyExtent(textureCopy, copySize);
+            region.imageExtent.width = imageExtent.width;
+            region.imageExtent.height = imageExtent.height;
             region.imageExtent.depth = copySize.depthOrArrayLayers;
             break;
         }

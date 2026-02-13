@@ -172,7 +172,6 @@ spv_result_t BinaryToDot(const spv_const_context context, const uint32_t* words,
   // diagnostics.  These are programmer errors, not user errors.
   if (!diagnostic) return SPV_ERROR_INVALID_DIAGNOSTIC;
   const spvtools::AssemblyGrammar grammar(context);
-  if (!grammar.isValid()) return SPV_ERROR_INVALID_TABLE;
 
   spvtools::FriendlyNameMapper friendly_mapper(context, words, num_words);
   DotConverter converter(friendly_mapper.GetNameMapper(), out);

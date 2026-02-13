@@ -34,11 +34,13 @@ typedef struct VkIOSSurfaceCreateInfoMVK {
 typedef VkResult (VKAPI_PTR *PFN_vkCreateIOSSurfaceMVK)(VkInstance instance, const VkIOSSurfaceCreateInfoMVK* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 
 #ifndef VK_NO_PROTOTYPES
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateIOSSurfaceMVK(
     VkInstance                                  instance,
     const VkIOSSurfaceCreateInfoMVK*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface);
+#endif
 #endif
 
 #ifdef __cplusplus

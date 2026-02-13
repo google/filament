@@ -57,12 +57,49 @@ void writeResourceIds(std::ostream& os, const std::vector<ResourceId>& resources
     }
 }
 
+void writeRenderTargetInfo(std::ostream& os,
+        const std::vector<FrameGraphInfo::Pass::RenderTargetInfo>& renderTargets) {
+    os << "      \"renderTargets\": [\n";
+    for (size_t i = 0; i < renderTargets.size(); ++i) {
+        const auto& rt = renderTargets[i];
+        os << "        {\n";
+
+        auto writeAttachmentInfo =
+                [&](const char* label,
+                        const std::vector<FrameGraphInfo::Pass::AttachmentInfo>& attachments) {
+                    os << "          \"" << label << "\": [\n";
+                    for (size_t k = 0; k < attachments.size(); ++k) {
+                        const auto& att = attachments[k];
+                        os << "            { \"name\": ";
+                        writeJSONString(os, att.name.c_str());
+                        os << ", \"id\": " << att.id << " }";
+                        if (k + 1 < attachments.size()) os << ",";
+                        os << "\n";
+                    }
+                    os << "          ]";
+                };
+
+        writeAttachmentInfo("discardStart", rt.discardStart);
+        os << ",\n";
+        writeAttachmentInfo("discardEnd", rt.discardEnd);
+        os << ",\n";
+        writeAttachmentInfo("clear", rt.clear);
+        os << "\n";
+
+        os << "        }";
+        if (i + 1 < renderTargets.size()) os << ",";
+        os << "\n";
+    }
+    os << "      ]\n";
+}
+
 void writePasses(std::ostream& os, const FrameGraphInfo& frameGraph) {
     os << "  \"passes\": [\n";
     auto& passes = frameGraph.getPasses();
     for (size_t i = 0; i < passes.size(); ++i) {
         const FrameGraphInfo::Pass& pass = passes[i];
         os << "    {\n";
+        os << "      \"id\": " << pass.id << ",\n";
         os << "      \"name\": ";
         writeJSONString(os, pass.name.c_str());
         os << ",\n";
@@ -75,7 +112,10 @@ void writePasses(std::ostream& os, const FrameGraphInfo& frameGraph) {
         const std::vector<ResourceId>& writes = pass.writes;
         os << "      \"writes\": [";
         writeResourceIds(os, writes);
-        os << "]\n";
+        os << "],\n";
+
+        writeRenderTargetInfo(os, pass.renderTargets);
+        os << "\n";
 
         os << "    }";
         if (i + 1 < passes.size()) os << ",";

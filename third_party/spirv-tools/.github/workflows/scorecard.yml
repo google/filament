@@ -1,0 +1,53 @@
+name: Scorecard supply-chain security
+on:
+  # For Branch-Protection check. Only the default branch is supported. See
+  # https://github.com/ossf/scorecard/blob/main/docs/checks.md#branch-protection
+  branch_protection_rule:
+  # To guarantee Maintained check is occasionally updated. See
+  # https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained
+  schedule:
+    - cron: '36 17 * * 5'
+  push:
+    branches: [ "main" ]
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # to upload the results to code-scanning dashboard
+      id-token: write # to publish results and get a badge
+
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: "Run analysis"
+        uses: ossf/scorecard-action@05b42c624433fc40578a4040d5cf5e36ddca8cde # v2.4.2
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # To enable Branch-Protection uncomment the `repo_token` line below
+          # To create the Fine-grained PAT, follow the steps in https://github.com/ossf/scorecard-action#authentication-with-fine-grained-pat-optional.
+          # repo_token: ${{ secrets.SCORECARD_TOKEN }}
+          publish_results: true # allows the repo to include the Scorecard badge
+
+      # Upload the results as artifacts (optional). Commenting out will disable uploads of run results in SARIF
+      # format to the repository Actions tab.
+      - name: "Upload artifact"
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      # Upload the results to GitHub's code scanning dashboard.
+      - name: "Upload to code-scanning"
+        uses: github/codeql-action/upload-sarif@181d5eefc20863364f96762470ba6f862bdef56b # v3.29.2
+        with:
+          sarif_file: results.sarif

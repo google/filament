@@ -4510,7 +4510,9 @@ public:
   Expr *getControllingExpr() { return cast<Expr>(SubExprs[CONTROLLING]); }
 
   /// Whether this generic selection is result-dependent.
-  bool isResultDependent() const { return ResultIndex == -1U; }
+  bool isResultDependent() const {
+    return ResultIndex == std::numeric_limits<unsigned>::max();
+  }
 
   /// The zero-based index of the result expression's generic association in
   /// the generic selection's association list.  Defined only if the

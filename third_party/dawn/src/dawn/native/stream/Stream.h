@@ -32,15 +32,18 @@
 #include <bitset>
 #include <functional>
 #include <limits>
+#include <memory>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include <optional>
-
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "dawn/common/Platform.h"
 #include "dawn/common/TypedInteger.h"
+#include "dawn/common/ityp_array.h"
 #include "dawn/native/Error.h"
 #include "dawn/native/stream/Sink.h"
 #include "dawn/native/stream/Source.h"
@@ -98,6 +101,16 @@ template <typename T, typename... Ts>
 MaybeError StreamOut(Source* s, T* v, Ts*... vs) {
     DAWN_TRY(StreamOut(s, v));
     return StreamOut(s, vs...);
+}
+
+// Helper to call StreamIn on an empty parameter pack, e.g. for a DAWN_SERIALIZABLE struct with no
+// member. Do nothing.
+inline constexpr void StreamIn(Sink* s) {}
+
+// Helper to call StreamOut on an empty parameter pack, e.g. for a DAWN_SERIALIZABLE struct with no
+// member. Do nothing and return success.
+inline MaybeError StreamOut(Source* s) {
+    return {};
 }
 
 // Stream specialization for fundamental types.
@@ -225,6 +238,44 @@ class Stream<T, std::enable_if_t<std::is_pointer_v<T>>> {
     }
 };
 
+// Stream specialization for unique pointers. We always serialize/deserialize via value, not by
+// pointer. To handle nullptr scenarios, we always serialize whether the pointer was not nullptr,
+// followed by the contents if applicable.
+template <typename T>
+class Stream<std::unique_ptr<T>, std::enable_if_t<!std::is_pointer_v<T>>> {
+  public:
+    static void Write(stream::Sink* sink, const std::unique_ptr<T>& t) {
+        StreamIn(sink, t != nullptr);
+        if (t != nullptr) {
+            StreamIn(sink, *t);
+        }
+    }
+
+    static MaybeError Read(Source* source, std::unique_ptr<T>* t) {
+        bool notNullptr;
+        DAWN_TRY(StreamOut(source, &notNullptr));
+        if (notNullptr) {
+            // Avoid using copy or move constructor of T.
+            std::unique_ptr<T> out = std::make_unique<T>();
+            DAWN_TRY(StreamOut(source, out.get()));
+            *t = std::move(out);
+        } else {
+            *t = nullptr;
+        }
+        return {};
+    }
+};
+
+// Stream specialization for reference_wrapper. For serialization, unwrap it to the reference const
+// T& and call Write(sink, const T&).
+template <typename T>
+class Stream<std::reference_wrapper<T>> {
+  public:
+    static void Write(stream::Sink* sink, const std::reference_wrapper<T>& t) {
+        StreamIn(sink, t.get());
+    }
+};
+
 // Stream specialization for std::optional
 template <typename T>
 class Stream<std::optional<T>> {
@@ -235,6 +286,18 @@ class Stream<std::optional<T>> {
         if (hasValue) {
             StreamIn(sink, *t);
         }
+    }
+    static MaybeError Read(Source* source, std::optional<T>* t) {
+        bool hasValue;
+        DAWN_TRY(StreamOut(source, &hasValue));
+        if (hasValue) {
+            T out;
+            DAWN_TRY(StreamOut(source, &out));
+            *t = std::move(out);
+        } else {
+            t->reset();
+        }
+        return {};
     }
 };
 
@@ -304,6 +367,64 @@ class Stream<std::vector<T>> {
     }
 };
 
+// Stream specialization for std::array<T, Size> of fundamental types T.
+template <typename T, size_t Size>
+class Stream<std::array<T, Size>, std::enable_if_t<std::is_fundamental_v<T>>> {
+  public:
+    static void Write(Sink* s, const std::array<T, Size>& t) {
+        static_assert(Size > 0);
+        memcpy(s->GetSpace(sizeof(t)), t.data(), sizeof(t));
+    }
+
+    static MaybeError Read(Source* s, std::array<T, Size>* t) {
+        static_assert(Size > 0);
+        const void* ptr;
+        DAWN_TRY(s->Read(&ptr, sizeof(*t)));
+        memcpy(t->data(), ptr, sizeof(*t));
+        return {};
+    }
+};
+
+// Stream specialization for std::array<T, Size> of non-fundamental types T.
+template <typename T, size_t Size>
+class Stream<std::array<T, Size>, std::enable_if_t<!std::is_fundamental_v<T>>> {
+  public:
+    static void Write(Sink* s, const std::array<T, Size>& v) {
+        static_assert(Size > 0);
+        for (const T& it : v) {
+            StreamIn(s, it);
+        }
+    }
+
+    static MaybeError Read(Source* s, std::array<T, Size>* v) {
+        static_assert(Size > 0);
+        for (auto& el : *v) {
+            DAWN_TRY(StreamOut(s, el));
+        }
+        return {};
+    }
+};
+
+// Stream specialization for ityp::array<Index, Value, Size>.
+template <typename Index, typename Value, size_t Size>
+class Stream<ityp::array<Index, Value, Size>> {
+  public:
+    using ArrayType = ityp::array<Index, Value, Size>;
+
+    static void Write(Sink* s, const ArrayType& v) {
+        for (const Value& it : v) {
+            StreamIn(s, it);
+        }
+    }
+
+    static MaybeError Read(Source* s, ArrayType* v) {
+        for (auto& el : *v) {
+            DAWN_TRY(StreamOut(s, el));
+        }
+        return {};
+    }
+};
+
 // Stream specialization for std::pair.
 template <typename A, typename B>
 class Stream<std::pair<A, B>> {
@@ -320,26 +441,44 @@ class Stream<std::pair<A, B>> {
     }
 };
 
-// Stream specialization for std::unordered_map<K, V> which sorts the entries
-// to provide a stable ordering.
-template <typename K, typename V>
-class Stream<std::unordered_map<K, V>> {
+template <typename M>
+concept IsMapLike = std::is_same_v<M,
+                                   std::unordered_map<typename M::key_type,
+                                                      typename M::mapped_type,
+                                                      typename M::hasher,
+                                                      typename M::key_equal,
+                                                      typename M::allocator_type>> ||
+                    std::is_same_v<M,
+                                   absl::flat_hash_map<typename M::key_type,
+                                                       typename M::mapped_type,
+                                                       typename M::hasher,
+                                                       typename M::key_equal,
+                                                       typename M::allocator_type>>;
+
+// Stream specialization for std::unordered_map<K, V> and absl::flat_hash_map which sorts the
+// entries to provide a stable ordering.
+template <IsMapLike MapType>
+class Stream<MapType> {
   public:
-    static void Write(stream::Sink* sink, const std::unordered_map<K, V>& m) {
-        std::vector<std::pair<K, V>> ordered(m.begin(), m.end());
-        std::sort(
-            ordered.begin(), ordered.end(),
-            [](const std::pair<K, V>& a, const std::pair<K, V>& b) { return a.first < b.first; });
-        StreamIn(sink, ordered);
+    using ConstRefWrapper = std::reference_wrapper<const typename MapType::value_type>;
+    using RefVector = std::vector<ConstRefWrapper>;
+    static void Write(stream::Sink* sink, const MapType& m) {
+        // Use a vector of wrapped reference for sorting to avoid copying the elements.
+        RefVector refVector(m.cbegin(), m.cend());
+        std::sort(refVector.begin(), refVector.end(),
+                  [](const ConstRefWrapper& a, const ConstRefWrapper& b) {
+                      return a.get().first < b.get().first;
+                  });
+        StreamIn(sink, refVector);
     }
-    static MaybeError Read(Source* s, std::unordered_map<K, V>* m) {
-        using SizeT = decltype(std::declval<std::vector<std::pair<K, V>>>().size());
+    static MaybeError Read(Source* s, MapType* m) {
+        using SizeT = decltype(std::declval<RefVector>().size());
         SizeT size;
         DAWN_TRY(StreamOut(s, &size));
         *m = {};
         m->reserve(size);
         for (SizeT i = 0; i < size; ++i) {
-            std::pair<K, V> p;
+            std::pair<typename MapType::key_type, typename MapType::mapped_type> p;
             DAWN_TRY(StreamOut(s, &p));
             m->insert(std::move(p));
         }
@@ -347,27 +486,121 @@ class Stream<std::unordered_map<K, V>> {
     }
 };
 
-// Stream specialization for std::unordered_set<V> which sorts the entries
+template <typename S>
+concept IsSetLike = std::is_same_v<S,
+                                   std::unordered_set<typename S::key_type,
+                                                      typename S::hasher,
+                                                      typename S::key_equal,
+                                                      typename S::allocator_type>> ||
+                    std::is_same_v<S,
+                                   absl::flat_hash_set<typename S::key_type,
+                                                       typename S::hasher,
+                                                       typename S::key_equal,
+                                                       typename S::allocator_type>>;
+
+// Stream specialization for std::unordered_set<V> and absl::flat_hash_set which sorts the entries
 // to provide a stable ordering.
-template <typename V>
-class Stream<std::unordered_set<V>> {
+template <IsSetLike SetType>
+class Stream<SetType> {
   public:
-    static void Write(stream::Sink* sink, const std::unordered_set<V>& s) {
-        std::vector<V> ordered(s.begin(), s.end());
-        std::sort(ordered.begin(), ordered.end(), [](const V& a, const V& b) { return a < b; });
-        StreamIn(sink, ordered);
+    using ConstRefWrapper = std::reference_wrapper<const typename SetType::value_type>;
+    using RefVector = std::vector<ConstRefWrapper>;
+    static void Write(stream::Sink* sink, const SetType& s) {
+        // Use a vector of wrapped reference for sorting to avoid copying the elements.
+        RefVector refVector(s.cbegin(), s.cend());
+        std::sort(
+            refVector.begin(), refVector.end(),
+            [](const ConstRefWrapper& a, const ConstRefWrapper& b) { return a.get() < b.get(); });
+        StreamIn(sink, refVector);
     }
-    static MaybeError Read(Source* source, std::unordered_set<V>* s) {
-        using SizeT = decltype(std::declval<std::vector<V>>().size());
+    static MaybeError Read(Source* source, SetType* s) {
+        using SizeT = decltype(std::declval<RefVector>().size());
         SizeT size;
         DAWN_TRY(StreamOut(source, &size));
         *s = {};
         s->reserve(size);
         for (SizeT i = 0; i < size; ++i) {
-            V v;
+            typename SetType::key_type v;
             DAWN_TRY(StreamOut(source, &v));
             s->insert(std::move(v));
         }
+        return {};
+    }
+};
+
+// Stream specialization for std::variant<Types...> which read/write the type id and the typed
+// value.
+template <typename... Types>
+class Stream<std::variant<Types...>> {
+  public:
+    using VariantType = std::variant<Types...>;
+
+    static void Write(stream::Sink* sink, const VariantType& t) { WriteImpl<0, Types...>(sink, t); }
+
+    static MaybeError Read(stream::Source* source, VariantType* t) {
+        size_t typeId;
+        DAWN_TRY(StreamOut(source, &typeId));
+        if (typeId >= sizeof...(Types)) {
+            return DAWN_VALIDATION_ERROR("Invalid variant type id");
+        } else {
+            return ReadImpl<0, Types...>(source, t, typeId);
+        }
+    }
+
+  private:
+    // WriteImpl template for trying multiple possible value types
+    template <size_t N,
+              typename TryType,
+              typename... RemainingTypes,
+              typename = std::enable_if_t<sizeof...(RemainingTypes) != 0>>
+    static inline void WriteImpl(stream::Sink* sink, const VariantType& t) {
+        if (std::holds_alternative<TryType>(t)) {
+            // Record the type index
+            StreamIn(sink, N);
+            // Record the value
+            StreamIn(sink, std::get<TryType>(t));
+        } else {
+            // Try the next type
+            WriteImpl<N + 1, RemainingTypes...>(sink, t);
+        }
+    }
+    // WriteImpl template for trying the last possible type
+    template <size_t N, typename LastType>
+    static inline void WriteImpl(stream::Sink* sink, const VariantType& t) {
+        // Variant must hold the last possible type if no previous match.
+        DAWN_ASSERT(std::holds_alternative<LastType>(t));
+        // Record the type index
+        StreamIn(sink, N);
+        // Record the value
+        StreamIn(sink, std::get<LastType>(t));
+    }
+    // ReadImpl template for trying multiple possible value types
+    template <size_t N,
+              typename TryType,
+              typename... RemainingTypes,
+              typename = std::enable_if_t<sizeof...(RemainingTypes) != 0>>
+    static inline MaybeError ReadImpl(stream::Source* source, VariantType* t, size_t typeId) {
+        if (typeId == N) {
+            // Read the value
+            TryType value;
+            DAWN_TRY(StreamOut(source, &value));
+            *t = VariantType(std::move(value));
+            return {};
+        } else {
+            // Try the next type
+            return ReadImpl<N + 1, RemainingTypes...>(source, t, typeId);
+        }
+    }
+    // ReadImpl template for trying the last possible type
+    template <size_t N, typename LastType>
+    static inline MaybeError ReadImpl(stream::Source* source, VariantType* t, size_t typeId) {
+        // typeId must be the id of last possible type N if not being 0..N-1, since it has been
+        // validated in range 0..N
+        DAWN_ASSERT(typeId == N);
+        // Read the value
+        LastType value;
+        DAWN_TRY(StreamOut(source, &value));
+        *t = VariantType(std::move(value));
         return {};
     }
 };

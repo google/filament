@@ -25,14 +25,17 @@
 
 #include <backend/SamplerDescriptor.h>
 
-#include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
 
 #include <functional>
 #include <mutex>
 #include <vector>
 #include <deque>
+
+@protocol MTLTexture;
 
 namespace filament {
 namespace backend {
@@ -58,6 +61,10 @@ class MetalDriver final : public DriverBase {
 public:
     static Driver* create(PlatformMetal* platform, const Platform::DriverConfig& driverConfig);
 
+    MetalContext* getContext() { return mContext; }
+
+    using DriverBase::scheduleDestroy;
+
 private:
 
     friend class MetalSwapChain;
@@ -67,7 +74,8 @@ private:
     MetalContext* mContext;
 
     ShaderModel getShaderModel() const noexcept final;
-    ShaderLanguage getShaderLanguage() const noexcept final;
+    utils::FixedCapacityVector<ShaderLanguage> getShaderLanguages(
+            ShaderLanguage preferredLanguage) const noexcept final;
 
     // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.
     void execute(std::function<void(void)> const& fn) noexcept final;
@@ -154,7 +162,11 @@ private:
     void enumerateBoundBuffers(BufferObjectBinding bindingType,
             const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f);
 
+    void readTextureCommon(id<MTLTexture> srcTexture, uint8_t level, uint16_t layer, uint32_t x,
+            uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& data);
+
     backend::StereoscopicType const mStereoscopicType;
+    backend::AsynchronousMode const mAsynchronousMode;
 };
 
 } // namespace backend

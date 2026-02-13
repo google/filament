@@ -17,11 +17,13 @@
 #ifndef TNT_FILABRIDGE_UIBSTRUCTS_H
 #define TNT_FILABRIDGE_UIBSTRUCTS_H
 
+#include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec4.h>
 
 #include <private/filament/EngineEnums.h>
 
+#include <array>
 #include <string_view>
 
 /*
@@ -38,7 +40,8 @@ struct alignas(16) vec3 : public std::array<float, 3> {};
 struct alignas(16) vec4 : public std::array<float, 4> {};
 
 struct mat33 : public std::array<vec3, 3> {
-    mat33& operator=(math::mat3f const& rhs) noexcept {
+    // passing by value informs the compiler that rhs != *this
+    mat33& operator=(math::mat3f const rhs) noexcept {
         for (int i = 0; i < 3; i++) {
             (*this)[i][0] = rhs[i][0];
             (*this)[i][1] = rhs[i][1];
@@ -49,7 +52,8 @@ struct mat33 : public std::array<vec3, 3> {
 };
 
 struct mat44 : public std::array<vec4, 4> {
-    mat44& operator=(math::mat4f const& rhs) noexcept {
+    // passing by value informs the compiler that rhs != *this
+    mat44& operator=(math::mat4f const rhs) noexcept {
         for (int i = 0; i < 4; i++) {
             (*this)[i][0] = rhs[i][0];
             (*this)[i][1] = rhs[i][1];
@@ -76,7 +80,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f worldFromViewMatrix;    // clip    view -> world    : model matrix
     math::mat4f clipFromViewMatrix;     // clip <- view    world    : projection matrix
     math::mat4f viewFromClipMatrix;     // clip -> view    world    : inverse projection matrix
-    math::mat4f clipFromWorldMatrix[CONFIG_MAX_STEREOSCOPIC_EYES]; // clip <- view <- world
+    math::mat4f eyeFromViewMatrix[CONFIG_MAX_STEREOSCOPIC_EYES];   // clip    eye  <- view    world
+    math::mat4f clipFromWorldMatrix[CONFIG_MAX_STEREOSCOPIC_EYES]; // clip <- eye  <- view <- world
     math::mat4f worldFromClipMatrix;    // clip -> view -> world
     math::mat4f userWorldFromWorldMatrix;   // userWorld <- world
     math::float4 clipTransform;             // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE
@@ -120,6 +125,10 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::uint3 fParams;                        // stride-x, stride-y, stride-z
     int32_t lightChannels;                      // light channel bits
     math::float2 froxelCountXY;
+    int enableFroxelViz;
+    int dynReserved0;
+    int dynReserved1;
+    int dynReserved2;
 
     // IBL
     float iblLuminance;
@@ -177,6 +186,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogOneOverFarMinusNear;
     float fogNearOverFarMinusNear;
     std140::mat33 fogFromWorldMatrix;
+    math::float2 fogLinearParams; // { 1/(end-start), -start/(end-start) }
+    math::float2 fogReserved0;
 
     // --------------------------------------------------------------------------------------------
     // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
@@ -202,7 +213,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[40];
+    math::float4 reserved[22];
 };
 
 // 2 KiB == 128 float4s
@@ -224,12 +235,14 @@ struct PerRenderableData {
     math::float4 reserved[8];
 
     static uint32_t packFlagsChannels(
-            bool skinning, bool morphing, bool contactShadows, bool hasInstanceBuffer,
+            bool skinning, uint8_t morphing, bool contactShadows, bool hasInstanceBuffer,
             uint8_t channels) noexcept {
+        const uint32_t morphingFlags = uint32_t(morphing) << 9;
+
         return (skinning              ? 0x100 : 0) |
-               (morphing              ? 0x200 : 0) |
-               (contactShadows        ? 0x400 : 0) |
-               (hasInstanceBuffer     ? 0x800 : 0) |
+               morphingFlags                       |
+               (contactShadows        ? 0x1000 : 0) |
+               (hasInstanceBuffer     ? 0x2000 : 0) |
                channels;
     }
 };

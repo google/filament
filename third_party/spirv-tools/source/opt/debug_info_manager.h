@@ -143,22 +143,21 @@ class DebugInfoManager {
   bool KillDebugDeclares(uint32_t variable_id);
 
   // Generates a DebugValue instruction with value |value_id| for every local
-  // variable that is in the scope of |scope_and_line| and whose memory is
-  // |variable_id| and inserts it after the instruction |insert_pos|.
+  // variable that is in the scope of |line| and whose memory is |variable_id|
+  // and inserts it after the instruction |insert_pos|.
   // Returns whether a DebugValue is added or not.
-  bool AddDebugValueForVariable(Instruction* scope_and_line,
-                                uint32_t variable_id, uint32_t value_id,
-                                Instruction* insert_pos);
+  bool AddDebugValueForVariable(Instruction* line, uint32_t variable_id,
+                                uint32_t value_id, Instruction* insert_pos);
 
   // Creates a DebugValue for DebugDeclare |dbg_decl| and inserts it before
-  // |insert_before|. The new DebugValue has the same line and scope as
-  // |scope_and_line|, or no scope and line information if |scope_and_line|
-  // is nullptr. The new DebugValue has the same operands as DebugDeclare
-  // but it uses |value_id| for the value. Returns the created DebugValue,
+  // |insert_before|. The new DebugValue has the same line as |line} and the
+  // same scope as |dbg_decl|. The new DebugValue has the same operands as
+  // DebugDeclare but it uses |value_id| for the value. Returns the created
+  // DebugValue,
   // or nullptr if fails to create one.
   Instruction* AddDebugValueForDecl(Instruction* dbg_decl, uint32_t value_id,
                                     Instruction* insert_before,
-                                    Instruction* scope_and_line);
+                                    Instruction* line);
 
   // Erases |instr| from data structures of this class.
   void ClearDebugInfo(Instruction* instr);

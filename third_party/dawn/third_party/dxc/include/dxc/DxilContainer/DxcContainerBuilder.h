@@ -45,8 +45,7 @@ public:
     return DoBasicQueryInterface<IDxcContainerBuilder>(this, riid, ppvObject);
   }
 
-  void Init(const char *warning = nullptr) {
-    m_warning = warning;
+  void Init() {
     m_RequireValidation = false;
     m_HasPrivateData = false;
     m_HashFunction = nullptr;
@@ -67,7 +66,6 @@ private:
 
   PartList m_parts;
   CComPtr<IDxcBlob> m_pContainer;
-  const char *m_warning;
   bool m_RequireValidation;
   bool m_HasPrivateData;
   // Function to compute hash when valid dxil container is built

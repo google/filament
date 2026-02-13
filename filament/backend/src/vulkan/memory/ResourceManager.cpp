@@ -114,6 +114,18 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
         case ResourceType::VULKAN_BUFFER:
             destruct<VulkanBuffer>(Handle<VulkanBuffer>(id));
             break;
+        case ResourceType::SYNC:
+            destruct<VulkanSync>(Handle<VulkanSync>(id));
+            break;
+        case ResourceType::MEMORY_MAPPED_BUFFER:
+            destruct<VulkanMemoryMappedBuffer>(Handle<VulkanMemoryMappedBuffer>(id));
+            break;
+        case ResourceType::SEMAPHORE:
+            destruct<VulkanSemaphore>(Handle<VulkanSemaphore>(id));
+            break;
+        case ResourceType::STREAM:
+            destruct<VulkanStream>(Handle<VulkanStream>(id));
+            break;
         case ResourceType::UNDEFINED_TYPE:
             break;
     }

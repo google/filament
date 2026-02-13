@@ -274,7 +274,7 @@ const float kToastDelayDuration = 2.0f;
             self.modelView.engine, message->buffer, message->bufferByteCount, content);
     ColorGrading* const colorGrading = _automation->getColorGrading(self.modelView.engine);
     self.modelView.view->setColorGrading(colorGrading);
-    self.modelView.cameraFocalLength = _automation->getViewerOptions().cameraFocalLength;
+    self.modelView.cameraFocalLength = _automation->getSettings().camera.focalLength;
 }
 
 - (void)loadGlb:(viewer::ReceivedMessage const*)message {
@@ -318,7 +318,7 @@ const float kToastDelayDuration = 2.0f;
 
 - (void)issuePickingQuery {
     CGPoint tapLocation = [_singleTapRecognizer locationInView:self.modelView];
-    __weak typeof(self) weakSelf = self;
+    __weak decltype(self) weakSelf = self;
     [self.modelView issuePickQuery:tapLocation
                           callback:^(utils::Entity entity) {
                               NSString* name = [self.modelView getEntityName:entity];

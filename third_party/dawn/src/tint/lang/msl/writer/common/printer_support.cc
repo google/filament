@@ -73,12 +73,18 @@ std::string BuiltinToAttribute(core::BuiltinValue builtin) {
             return "sample_mask";
         case core::BuiltinValue::kPointSize:
             return "point_size";
+        case core::BuiltinValue::kSubgroupId:
+            return "simdgroup_index_in_threadgroup";
         case core::BuiltinValue::kSubgroupInvocationId:
             return "thread_index_in_simdgroup";
         case core::BuiltinValue::kSubgroupSize:
             return "threads_per_simdgroup";
         case core::BuiltinValue::kClipDistances:
             return "clip_distance";
+        case core::BuiltinValue::kPrimitiveId:
+            return "primitive_id";
+        case core::BuiltinValue::kBarycentricCoord:
+            return "barycentric_coord";
         default:
             break;
     }
@@ -129,18 +135,10 @@ SizeAndAlign MslPackedTypeSizeAndAlign(const core::type::Type* ty) {
 
         // https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
         // 2.1 Scalar Data Types
-        [&](const core::type::U32*) {
-            return SizeAndAlign{4, 4};
-        },
-        [&](const core::type::I32*) {
-            return SizeAndAlign{4, 4};
-        },
-        [&](const core::type::F32*) {
-            return SizeAndAlign{4, 4};
-        },
-        [&](const core::type::F16*) {
-            return SizeAndAlign{2, 2};
-        },
+        [&](const core::type::U32*) { return SizeAndAlign{4, 4}; },
+        [&](const core::type::I32*) { return SizeAndAlign{4, 4}; },
+        [&](const core::type::F32*) { return SizeAndAlign{4, 4}; },
+        [&](const core::type::F16*) { return SizeAndAlign{2, 2}; },
 
         [&](const core::type::Vector* vec) {
             auto num_els = vec->Width();

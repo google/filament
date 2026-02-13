@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
+#include <backend/Platform.h>
+
 #include <backend/platforms/PlatformWebGL.h>
+
+#include <cstdint>
 
 namespace filament::backend {
 
 using namespace backend;
 
 Driver* PlatformWebGL::createDriver(void* sharedGLContext,
-        const Platform::DriverConfig& driverConfig) noexcept {
-    return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
+        const DriverConfig& driverConfig) {
+    return createDefaultDriver(this, sharedGLContext, driverConfig);
 }
 
 int PlatformWebGL::getOSVersion() const noexcept {
@@ -34,7 +38,7 @@ void PlatformWebGL::terminate() noexcept {
 
 Platform::SwapChain* PlatformWebGL::createSwapChain(
         void* nativeWindow, uint64_t flags) noexcept {
-    return (SwapChain*)nativeWindow;
+    return static_cast<SwapChain*>(nativeWindow);
 }
 
 Platform::SwapChain* PlatformWebGL::createSwapChain(
@@ -43,7 +47,7 @@ Platform::SwapChain* PlatformWebGL::createSwapChain(
     return nullptr;
 }
 
-void PlatformWebGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+void PlatformWebGL::destroySwapChain(SwapChain* swapChain) noexcept {
 }
 
 bool PlatformWebGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
@@ -51,7 +55,7 @@ bool PlatformWebGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
     return true;
 }
 
-void PlatformWebGL::commit(Platform::SwapChain* swapChain) noexcept {
+void PlatformWebGL::commit(SwapChain* swapChain) noexcept {
 }
 
 } // namespace filament::backend

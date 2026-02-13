@@ -40,6 +40,7 @@ set(PUBLIC_HDRS
         include/filament/Skybox.h
         include/filament/Stream.h
         include/filament/SwapChain.h
+        include/filament/Sync.h
         include/filament/Texture.h
         include/filament/TextureSampler.h
         include/filament/ToneMapper.h
@@ -56,6 +57,7 @@ set(SRCS
         src/materials/colorGrading/colorGrading.cpp
         src/materials/dof/dof.cpp
         src/materials/flare/flare.cpp
+        src/materials/fog/fog.cpp
         src/materials/fsr/fsr.cpp
         src/materials/sgsr/sgsr.cpp
         src/materials/ssao/ssao.cpp
@@ -83,17 +85,20 @@ set(SRCS
         src/InstanceBuffer.cpp
         src/LightManager.cpp
         src/Material.cpp
+        src/MaterialCache.cpp
+        src/MaterialDefinition.cpp
         src/MaterialInstance.cpp
+        src/MaterialInstanceManager.cpp
         src/MaterialParser.cpp
         src/MorphTargetBuffer.cpp
         src/PostProcessManager.cpp
+        src/ProgramSpecialization.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
         src/RenderableManager.cpp
         src/Renderer.cpp
         src/RendererUtils.cpp
-        src/ResourceAllocator.cpp
         src/ResourceList.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
@@ -102,7 +107,9 @@ set(SRCS
         src/Skybox.cpp
         src/Stream.cpp
         src/SwapChain.cpp
+        src/Sync.cpp
         src/Texture.cpp
+        src/TextureCache.cpp
         src/ToneMapper.cpp
         src/TransformManager.cpp
         src/UniformBuffer.cpp
@@ -112,6 +119,7 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
+        src/details/BufferAllocator.cpp
         src/details/BufferObject.cpp
         src/details/Camera.cpp
         src/details/ColorGrading.cpp
@@ -131,7 +139,9 @@ set(SRCS
         src/details/Skybox.cpp
         src/details/Stream.cpp
         src/details/SwapChain.cpp
+        src/details/Sync.cpp
         src/details/Texture.cpp
+        src/details/UboManager.cpp
         src/details/VertexBuffer.cpp
         src/details/View.cpp
         src/ds/PerViewDescriptorSetUtils.cpp
@@ -150,7 +160,9 @@ set(SRCS
         src/fg/FrameGraphTexture.cpp
         src/fg/PassNode.cpp
         src/fg/ResourceNode.cpp
+        src/fg/ResourceCreationContext.cpp
         src/fsr.cpp
+        src/ZstdHelper.cpp
 )
 
 set(PRIVATE_HDRS
@@ -159,6 +171,7 @@ set(PRIVATE_HDRS
         src/Bimap.h
         src/BufferPoolAllocator.h
         src/ColorSpaceUtils.h
+        src/compact.h
         src/Culler.h
         src/DFG.h
         src/FilamentAPI-impl.h
@@ -170,22 +183,28 @@ set(PRIVATE_HDRS
         src/HwRenderPrimitiveFactory.h
         src/HwVertexBufferInfoFactory.h
         src/Intersections.h
+        src/MaterialCache.h
+        src/MaterialDefinition.h
         src/MaterialParser.h
+        src/MaterialInstanceManager.h
         src/PIDController.h
         src/PostProcessManager.h
+        src/ProgramSpecialization.h
         src/RenderPass.h
         src/RenderPrimitive.h
         src/RendererUtils.h
-        src/ResourceAllocator.h
         src/ResourceList.h
         src/ShadowMap.h
         src/ShadowMapManager.h
         src/SharedHandle.h
+        src/TextureCache.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
+        src/details/AsyncHelpers.h
+        src/details/BufferAllocator.h
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
@@ -206,6 +225,7 @@ set(PRIVATE_HDRS
         src/details/Stream.h
         src/details/SwapChain.h
         src/details/Texture.h
+        src/details/UboManager.h
         src/details/VertexBuffer.h
         src/details/View.h
         src/downcast.h
@@ -218,6 +238,7 @@ set(PRIVATE_HDRS
         src/ds/TypedUniformBuffer.h
         src/fg/Blackboard.h
         src/fg/FrameGraph.h
+        src/fg/FrameGraphDummyLink.h
         src/fg/FrameGraphId.h
         src/fg/FrameGraphPass.h
         src/fg/FrameGraphRenderPass.h
@@ -227,20 +248,23 @@ set(PRIVATE_HDRS
         src/fg/details/DependencyGraph.h
         src/fg/details/PassNode.h
         src/fg/details/Resource.h
+        src/fg/details/ResourceAllocator.h
         src/fg/details/ResourceNode.h
         src/fg/details/Utilities.h
         src/fsr.h
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h
         src/materials/fsr/ffx_fsr1_mobile.fs
+        src/ZstdHelper.h
 )
 
 set(MATERIAL_SRCS
         src/materials/antiAliasing/fxaa/fxaa.mat
         src/materials/antiAliasing/taa/taa.mat
+        src/materials/blitArray.mat
         src/materials/blitDepth.mat
         src/materials/blitLow.mat
-        src/materials/blitArray.mat
+        src/materials/clearDepth.mat
         src/materials/bloom/bloomDownsample.mat
         src/materials/bloom/bloomDownsample2x.mat
         src/materials/bloom/bloomDownsample9.mat
@@ -260,6 +284,7 @@ set(MATERIAL_SRCS
         src/materials/dof/dofTiles.mat
         src/materials/dof/dofTilesSwizzle.mat
         src/materials/flare/flare.mat
+        src/materials/fog/fog.mat
         src/materials/fsr/fsr_easu.mat
         src/materials/fsr/fsr_easu_mobile.mat
         src/materials/fsr/fsr_easu_mobileF.mat
@@ -290,6 +315,7 @@ set(MATERIAL_FL0_SRCS
 )
 
 set(MATERIAL_MULTIVIEW_SRCS
+        src/materials/clearDepth.mat
         src/materials/defaultMaterial.mat
         src/materials/skybox.mat
 )
@@ -349,7 +375,7 @@ add_definitions(
 # Generate all .filamat: default material, skyboxes, and post-process
 # ==================================================================================================
 
-if (CMAKE_CROSSCOMPILING)
+if (CMAKE_CROSSCOMPILING OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
     include(${IMPORT_EXECUTABLES})
 endif()
 
@@ -503,6 +529,14 @@ add_custom_command(
 )
 
 add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fog.filamat"
+        DEPENDS ../shaders/src/surface_fog.fs
+        DEPENDS src/materials/utils/depthUtils.fs
+        DEPENDS src/materials/utils/geometry.fs
+        APPEND
+)
+
+add_custom_command(
         OUTPUT "${MATERIAL_DIR}/sao.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
         DEPENDS src/materials/ssao/ssct.fs
@@ -603,6 +637,28 @@ add_custom_command(
         APPEND
 )
 
+file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/data/")
+
+set(output_path_dfg_bin "${GENERATION_ROOT}/generated/data/dfg.bin")
+add_custom_command(
+        OUTPUT ${output_path_dfg_bin}
+        COMMAND cmgen --quiet --size=${DFG_LUT_SIZE} --ibl-dfg-multiscatter --ibl-dfg-cloth --ibl-dfg=${output_path_dfg_bin}
+        DEPENDS cmgen
+        COMMENT "Generating DFG LUT to ${output_path_dfg_bin}"
+)
+
+set(dfg_package_name "dfg")
+get_resgen_vars(${RESOURCE_DIR} ${dfg_package_name})
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} -Z ${output_path_dfg_bin}
+        DEPENDS resgen
+        DEPENDS ${output_path_dfg_bin}
+        COMMENT "Generating DFG resource package for ${dfg_package_name}"
+)
+list(APPEND GENERATED_RESOURCE_HDRS ${RESGEN_HEADER})
+list(APPEND GENERATED_RESOURCE_SRCS ${RESGEN_SOURCE})
+
 # Add the generated resource files to the source and header lists.
 list(APPEND PRIVATE_HDRS ${GENERATED_RESOURCE_HDRS})
 list(APPEND SRCS ${GENERATED_RESOURCE_SRCS})
@@ -611,16 +667,6 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${GENERATED_RESOURCE_SRCS} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/data/")
-
-set(output_path "${GENERATION_ROOT}/generated/data/dfg.inc")
-add_custom_command(
-        OUTPUT ${output_path}
-        COMMAND cmgen --quiet --size=${DFG_LUT_SIZE} --ibl-dfg-multiscatter --ibl-dfg-cloth --ibl-dfg=${output_path}
-        DEPENDS cmgen
-        COMMENT "Generating DFG LUT ${output_path}"
-)
-list(APPEND DATA_BINS ${output_path})
 
 # ==================================================================================================
 # Includes & target definition
@@ -631,7 +677,7 @@ include_directories(${GENERATION_ROOT})
 include_directories(src)
 
 # we're building a library
-add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS} ${DATA_BINS})
+add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
@@ -648,6 +694,7 @@ target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
+target_link_libraries(${TARGET} PRIVATE zstd)
 
 if (FILAMENT_USE_ABSEIL_LOGGING)
     target_link_libraries(${TARGET} PUBLIC absl::log)
@@ -681,6 +728,13 @@ if (MSVC)
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
+elseif(FILAMENT_USING_GCC)
+    set(OPTIMIZATION_FLAGS
+        -ffast-math
+        -fno-finite-math-only
+        -ffp-contract=fast
+        -fvisibility-inlines-hidden
+    )
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
@@ -702,6 +756,18 @@ set(LINUX_COMPILER_FLAGS
 
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
+elseif (FILAMENT_USING_GCC)
+    # GCC is not officially supported, so use a weaker set of warnings (incl. not using -Werror).
+    set(FILAMENT_WARNINGS
+            -Wall -Wextra-semi -Wundef
+            -Wno-unused-parameter -Wno-missing-field-initializers
+            -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-function
+            -Wnon-virtual-dtor -Wimplicit-fallthrough
+            -Wno-strict-aliasing
+            -Wno-changes-meaning -Wno-return-type
+            -Wno-invalid-constexpr -Wno-parentheses
+            -Wno-sign-compare -Wno-deprecated-declarations
+    )
 else()
     set(FILAMENT_WARNINGS
             -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
@@ -711,13 +777,6 @@ else()
             -Wover-aligned
             -Werror
     )
-    if (CMAKE_CXX_STANDARD EQUAL 20)
-        # The lambdas for passes in PostProcessManager.cpp capture this
-        # implicitly in a way that's deprecated in c++20, but can't easily be
-        # fixed in a way that's backwards compatible with c++17:
-        # https://www.nextptr.com/tutorial/ta1430524603/capture-this-in-lambda-expression-timeline-of-change
-        list(APPEND FILAMENT_WARNINGS -Wno-deprecated-this-capture)
-    endif()
 endif()
 
 target_compile_options(${TARGET} PRIVATE

@@ -34,7 +34,7 @@ namespace analysis {
 
 // Hashing functor.
 //
-// All type pointers must be non-null.
+// All type pointers must be non-null to reach here.
 struct HashTypePointer {
   size_t operator()(const Type* type) const {
     assert(type);

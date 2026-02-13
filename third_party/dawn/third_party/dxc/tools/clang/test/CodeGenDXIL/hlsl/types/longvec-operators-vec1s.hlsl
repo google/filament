@@ -1,51 +1,23 @@
-// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=float1          %s | FileCheck %s --check-prefixes=CHECK,NODBL
-// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=int1      -DINT %s | FileCheck %s --check-prefixes=CHECK,NODBL,INT,SIG
-// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=double1   -DDBL %s | FileCheck %s --check-prefixes=CHECK
-// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=uint64_t1 -DINT %s | FileCheck %s --check-prefixes=CHECK,NODBL,INT,UNSIG
-// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=float16_t1      -enable-16bit-types %s | FileCheck %s --check-prefixes=CHECK,NODBL
-// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=int16_t1  -DINT -enable-16bit-types %s | FileCheck %s --check-prefixes=CHECK,NODBL,INT,SIG
+// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=float          %s | FileCheck %s --check-prefixes=CHECK,NODBL
+// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=int      -DINT %s | FileCheck %s --check-prefixes=CHECK,NODBL,INT,SIG
+// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=double   -DDBL %s | FileCheck %s --check-prefixes=CHECK
+// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=uint64_t -DINT %s | FileCheck %s --check-prefixes=CHECK,NODBL,INT,UNSIG
+// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=float16_t      -enable-16bit-types %s | FileCheck %s --check-prefixes=CHECK,NODBL
+// RUN: %dxc -HV 2018 -T lib_6_9 -DTYPE=int16_t  -DINT -enable-16bit-types %s | FileCheck %s --check-prefixes=CHECK,NODBL,INT,SIG
 
-// Test relevant operators on an assortment bool vector sizes and types with 6.9 native vectors.
+// Test relevant operators on vec1s in 6.9 to ensure they continue to be treated as scalars.
+
+#define VTYPE vector<TYPE, 1>
 
 // Just a trick to capture the needed type spellings since the DXC version of FileCheck can't do that explicitly.
 // CHECK: %dx.types.ResRet.[[TY:[a-z0-9]*]] = type { [[ELTY:[a-z0-9_]*]]
 // CHECK: %"class.RWStructuredBuffer<{{.*}}>" = type { [[TYPE:.*]] }
-RWStructuredBuffer<TYPE> buf;
-
-export void assignments(inout TYPE things[10], TYPE scales[10]);
-export TYPE arithmetic(inout TYPE things[11])[11];
-export bool logic(bool truth[10], TYPE consequences[10])[10];
-export TYPE index(TYPE things[10], int i, TYPE val)[10];
-
-struct Interface {
-  TYPE assigned[10];
-  TYPE arithmeticked[11];
-  bool logicked[10];
-  TYPE indexed[10];
-  TYPE scales[10];
-};
-
-#if 0
-// Requires vector loading support. Enable when available.
-RWStructuredBuffer<Interface> Input;
-RWStructuredBuffer<Interface> Output;
-
-TYPE g_val;
-
-[shader("compute")]
-[numthreads(8,1,1)]
-void main(uint GI : SV_GroupIndex) {
-  assignments(Output[GI].assigned, Input[GI].scales);
-  Output[GI].arithmeticked = arithmetic(Input[GI].arithmeticked);
-  Output[GI].logicked = logic(Input[GI].logicked, Input[GI].assigned);
-  Output[GI].indexed = index(Input[GI].indexed, GI, g_val);
-}
-#endif
+RWStructuredBuffer<VTYPE> buf;
 
 // A mixed-type overload to test overload resolution and mingle different vector element types in ops
 // Test assignment operators.
 // CHECK-LABEL: define void @"\01?assignments
-export void assignments(inout TYPE things[10]) {
+export void assignments(inout VTYPE things[10]) {
 
   // CHECK: [[buf:%.*]] = call %dx.types.ResRet.[[TY]] @dx.op.rawBufferLoad.[[TY]](i32 139, %dx.types.Handle {{%.*}}, i32 1, i32 0, i8 1, i32 {{8|4|2}})
   // CHECK: [[val0:%.*]] = extractvalue %dx.types.ResRet.[[TY]] [[buf]], 0
@@ -111,8 +83,8 @@ export void assignments(inout TYPE things[10]) {
 
 // Test arithmetic operators.
 // CHECK-LABEL: define void @"\01?arithmetic
-export TYPE arithmetic(inout TYPE things[11])[11] {
-  TYPE res[11];
+export VTYPE arithmetic(inout VTYPE things[11])[11] {
+  VTYPE res[11];
   // CHECK: [[adr0:%.*]] = getelementptr inbounds [11 x [[TYPE]]], [11 x [[TYPE]]]* %things, i32 0, i32 0
   // CHECK: [[res0:%.*]] = load [[TYPE]], [[TYPE]]* [[adr0]]
   // CHECK: [[val0:%.*]] = extractelement [[TYPE]] [[res0]], i32 0
@@ -226,7 +198,7 @@ export TYPE arithmetic(inout TYPE things[11])[11] {
 // Test logic operators.
 // Only permissable in pre-HLSL2021
 // CHECK-LABEL: define void @"\01?logic
-export bool logic(bool truth[10], TYPE consequences[10])[10] {
+export bool logic(bool truth[10], VTYPE consequences[10])[10] {
   bool res[10];
   // CHECK: [[adr0:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* %truth, i32 0, i32 0
   // CHECK: [[val0:%.*]] = load i32, i32* [[adr0]]
@@ -332,9 +304,9 @@ static const int Ix = 2;
 
 // Test indexing operators
 // CHECK-LABEL: define void @"\01?index
-export TYPE index(TYPE things[10], int i)[10] {
+export VTYPE index(VTYPE things[10], int i)[10] {
   // CHECK: [[res:%.*]] = alloca [10 x [[ELTY]]]
-  TYPE res[10];
+  VTYPE res[10];
 
   // CHECK: [[res0:%.*]] = getelementptr [10 x [[ELTY]]], [10 x [[ELTY]]]* [[res]], i32 0, i32 0
   // CHECK: store [[ELTY]] {{(0|0*\.?0*e?\+?0*|0xH0000)}}, [[ELTY]]* [[res0]]
@@ -375,7 +347,7 @@ export TYPE index(TYPE things[10], int i)[10] {
 #ifdef INT
 // Test bit twiddling operators.
 // INT-LABEL: define void @"\01?bittwiddlers
-export void bittwiddlers(inout TYPE things[13]) {
+export void bittwiddlers(inout VTYPE things[13]) {
   // INT: [[adr1:%[0-9]*]] = getelementptr inbounds [13 x [[TYPE]]], [13 x [[TYPE]]]* %things, i32 0, i32 1
   // INT: [[ld1:%[0-9]*]] = load [[TYPE]], [[TYPE]]* [[adr1]]
   // INT: [[val1:%[0-9]*]] = extractelement [[TYPE]] [[ld1]], i32 0

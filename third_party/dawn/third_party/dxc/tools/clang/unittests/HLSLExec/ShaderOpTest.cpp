@@ -10,7 +10,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // We need to keep & fix these warnings to integrate smoothly with HLK
-#pragma warning(error : 4100 4146 4242 4244 4267 4701 4389)
+#pragma warning(error : 4100 4242 4244 4267 4701 4389)
 
 #include "d3dx12.h"
 #include <atlbase.h>
@@ -258,6 +258,15 @@ void CommandListRefs::CreateForDevice(ID3D12Device *pDevice, bool compute) {
                                       IID_PPV_ARGS(&List)));
 }
 
+ShaderOpTest::ShaderOpTest() {
+  m_hFence = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+  if (m_hFence == nullptr) {
+    AtlThrow(HRESULT_FROM_WIN32(GetLastError()));
+  }
+}
+
+ShaderOpTest::~ShaderOpTest() { CloseHandle(m_hFence); }
+
 void ShaderOpTest::CopyBackResources() {
   CommandListRefs ResCommandList;
   ResCommandList.CreateForDevice(m_pDevice, m_pShaderOp->IsCompute());
@@ -423,10 +432,6 @@ void ShaderOpTest::CreateDevice() {
   CHECK_HR(m_pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE,
                                   __uuidof(ID3D12Fence), (void **)&m_pFence));
   m_pFence->SetName(L"ShaderOpTest Fence");
-  m_hFence = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-  if (m_hFence == nullptr) {
-    AtlThrow(HRESULT_FROM_WIN32(GetLastError()));
-  }
 }
 
 static void InitByteCode(D3D12_SHADER_BYTECODE *pBytecode, ID3D10Blob *pBlob) {
@@ -861,6 +866,11 @@ void ShaderOpTest::CreateShaders() {
       CHECK_HR(pLibrary->CreateBlobWithEncodingFromPinned(
           pText, (UINT32)strlen(pText), CP_UTF8, &pTextBlob));
       CHECK_HR(m_pDxcSupport->CreateInstance(CLSID_DxcCompiler, &pCompiler));
+      WEX::Logging::Log::Comment(L"Compiling shader:");
+      ShaderOpLogFmt(L"\tTarget profile: %S", S.Target);
+      if (argumentsWList.size() > 0) {
+        ShaderOpLogFmt(L"\tArguments: %S", pArguments);
+      }
       CHECK_HR(pCompiler->Compile(pTextBlob, nameW, entryPointW, targetW,
                                   (LPCWSTR *)argumentsWList.data(),
                                   (UINT32)argumentsWList.size(), nullptr, 0,
@@ -2745,6 +2755,74 @@ bool ShaderOpParser::ReadAtElementName(IXmlReader *pReader, LPCWSTR pName) {
     if (S_FALSE == CHECK_HR_RET(pReader->Read(&nt)))
       return false;
   }
+}
+
+std::shared_ptr<ShaderOpTestResult>
+RunShaderOpTestAfterParse(ID3D12Device *pDevice, dxc::DxcDllSupport &support,
+                          LPCSTR pName,
+                          st::ShaderOpTest::TInitCallbackFn pInitCallback,
+                          st::ShaderOpTest::TShaderCallbackFn pShaderCallback,
+                          std::shared_ptr<st::ShaderOpSet> ShaderOpSet) {
+  st::ShaderOp *pShaderOp;
+  if (pName == nullptr) {
+    if (ShaderOpSet->ShaderOps.size() != 1) {
+      VERIFY_FAIL(L"Expected a single shader operation.");
+    }
+    pShaderOp = ShaderOpSet->ShaderOps[0].get();
+  } else {
+    pShaderOp = ShaderOpSet->GetShaderOp(pName);
+  }
+  if (pShaderOp == nullptr) {
+    std::string msg = "Unable to find shader op ";
+    msg += pName;
+    msg += "; available ops";
+    const char sep = ':';
+    for (auto &pAvailOp : ShaderOpSet->ShaderOps) {
+      msg += sep;
+      msg += pAvailOp->Name ? pAvailOp->Name : "[n/a]";
+    }
+    CA2W msgWide(msg.c_str());
+    VERIFY_FAIL(msgWide.m_psz);
+  }
+
+  // This won't actually be used since we're supplying the device,
+  // but let's make it consistent.
+  pShaderOp->UseWarpDevice = hlsl_test::GetTestParamUseWARP(true);
+
+  std::shared_ptr<st::ShaderOpTest> test = std::make_shared<st::ShaderOpTest>();
+  test->SetDxcSupport(&support);
+  test->SetInitCallback(pInitCallback);
+  test->SetShaderCallback(pShaderCallback);
+  test->SetDevice(pDevice);
+  test->RunShaderOp(pShaderOp);
+
+  std::shared_ptr<ShaderOpTestResult> result =
+      std::make_shared<ShaderOpTestResult>();
+  result->ShaderOpSet = ShaderOpSet;
+  result->Test = test;
+  result->ShaderOp = pShaderOp;
+  return result;
+}
+
+std::shared_ptr<ShaderOpTestResult>
+RunShaderOpTestAfterParse(ID3D12Device *pDevice, dxc::DxcDllSupport &support,
+                          LPCSTR pName,
+                          st::ShaderOpTest::TInitCallbackFn pInitCallback,
+                          std::shared_ptr<st::ShaderOpSet> ShaderOpSet) {
+  return RunShaderOpTestAfterParse(pDevice, support, pName, pInitCallback,
+                                   nullptr, ShaderOpSet);
+}
+
+std::shared_ptr<ShaderOpTestResult>
+RunShaderOpTest(ID3D12Device *pDevice, dxc::DxcDllSupport &support,
+                IStream *pStream, LPCSTR pName,
+                st::ShaderOpTest::TInitCallbackFn pInitCallback) {
+  DXASSERT_NOMSG(pStream != nullptr);
+  std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
+      std::make_shared<st::ShaderOpSet>();
+  st::ParseShaderOpSetFromStream(pStream, ShaderOpSet.get());
+  return RunShaderOpTestAfterParse(pDevice, support, pName, pInitCallback,
+                                   ShaderOpSet);
 }
 
 #pragma endregion Parsing support

@@ -204,6 +204,7 @@ Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
             .height(uint32_t(1))
             .levels(0xff)
             .format(Texture::InternalFormat::RGBA8)
+            .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
             .build(mEngine);
 
     Texture::PixelBufferDescriptor defaultNormalBuffer(textureData,

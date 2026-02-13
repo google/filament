@@ -30,8 +30,7 @@
 
 #include <stdint.h>
 
-#include "src/tint/lang/core/access.h"
-#include "src/tint/lang/core/address_space.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/number.h"
 
 namespace tint::core::fluent_types {
@@ -163,7 +162,7 @@ using vec4 = vec<4, T>;
 static constexpr core::AddressSpace function = core::AddressSpace::kFunction;
 static constexpr core::AddressSpace handle = core::AddressSpace::kHandle;
 static constexpr core::AddressSpace private_ = core::AddressSpace::kPrivate;
-static constexpr core::AddressSpace push_constant = core::AddressSpace::kPushConstant;
+static constexpr core::AddressSpace immediate = core::AddressSpace::kImmediate;
 static constexpr core::AddressSpace storage = core::AddressSpace::kStorage;
 static constexpr core::AddressSpace uniform = core::AddressSpace::kUniform;
 static constexpr core::AddressSpace workgroup = core::AddressSpace::kWorkgroup;

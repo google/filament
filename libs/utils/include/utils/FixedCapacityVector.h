@@ -17,6 +17,7 @@
 #ifndef TNT_UTILS_FIXEDCAPACITYVECTOR_H
 #define TNT_UTILS_FIXEDCAPACITYVECTOR_H
 
+#include <utils/Slice.h>
 #include <utils/compiler.h>
 #include <utils/compressed_pair.h>
 
@@ -127,6 +128,14 @@ public:
         this->swap(rhs);
     }
 
+    explicit FixedCapacityVector(utils::Slice<const T> rhs,
+            const allocator_type& alloc = allocator_type())
+            : mSize(rhs.size()),
+              mCapacityAllocator(mSize, alloc) {
+        mData = this->allocator().allocate(this->capacity());
+        std::uninitialized_copy(rhs.cbegin(), rhs.cend(), begin());
+    }
+
     ~FixedCapacityVector() noexcept {
         destroy(begin(), end());
         allocator().deallocate(data(), capacity());
@@ -143,6 +152,29 @@ public:
     FixedCapacityVector& operator=(FixedCapacityVector&& rhs) noexcept {
         this->swap(rhs);
         return *this;
+    }
+
+    bool operator==(const FixedCapacityVector& rhs) const noexcept {
+        if (this == &rhs) {
+            return true;
+        }
+        if (size() != rhs.size()) {
+            return false;
+        }
+        return std::equal(begin(), end(), rhs.begin());
+    }
+
+    Slice<T> as_slice() noexcept {
+        return { begin(), end() };
+    }
+
+    Slice<const T> as_slice() const noexcept {
+        return { cbegin(), cend() };
+    }
+
+    template<typename Hash = std::hash<T>>
+    inline size_t hash() const noexcept {
+        return as_slice().template hash<Hash>();
     }
 
     allocator_type get_allocator() const noexcept {
@@ -433,5 +465,14 @@ private:
 };
 
 } // namespace utils
+
+namespace std {
+template<typename T>
+struct hash<utils::FixedCapacityVector<T>> {
+    inline size_t operator()(utils::FixedCapacityVector<T> const& lhs) const noexcept {
+        return lhs.hash();
+    }
+};
+} // namespace std
 
 #endif // TNT_UTILS_FIXEDCAPACITYVECTOR_H

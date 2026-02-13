@@ -71,6 +71,9 @@ class BreakIf final : public Castable<BreakIf, Exit> {
 
     ~BreakIf() override;
 
+    /// @copydoc Instruction::Destroy()
+    void Destroy() override;
+
     /// @copydoc Instruction::Clone()
     BreakIf* Clone(CloneContext& ctx) override;
 

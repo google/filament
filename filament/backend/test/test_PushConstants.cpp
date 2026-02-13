@@ -52,17 +52,17 @@ layout(push_constant) uniform Constants {
     float triangleScale;
     float triangleOffsetX;
     float triangleOffsetY;
-} pushConstants;
+} pushConstantsV;
 
 layout(location = 0) in vec4 mesh_position;
 void main() {
-    if (pushConstants.hideTriangle) {
+    if (pushConstantsV.hideTriangle) {
         // Test that bools are written correctly. All bits must be 0 if the bool is false.
         gl_Position = vec4(0.0);
         return;
     }
-    gl_Position = vec4(mesh_position.xy * pushConstants.triangleScale +
-            vec2(pushConstants.triangleOffsetX, pushConstants.triangleOffsetY), 0.0, 1.0);
+    gl_Position = vec4(mesh_position.xy * pushConstantsV.triangleScale +
+            vec2(pushConstantsV.triangleOffsetX, pushConstantsV.triangleOffsetY), 0.0, 1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
@@ -72,16 +72,22 @@ void main() {
 static const char* const triangleFs = R"(#version 450 core
 
 layout(push_constant) uniform Constants {
+#if defined(TARGET_VULKAN_ENVIRONMENT)
+    // offset here accounts for the size of the push constants in the vertex stage.  Vulkan has one
+    // block of memory for all stages to share.
+    layout(offset=16) float red;
+#else
     float red;
+#endif
     bool padding;       // test correct bool padding
     float green;
     float blue;
-} pushConstants;
+} pushConstantsF;
 
 precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
 void main() {
-    fragColor = vec4(pushConstants.red, pushConstants.green, pushConstants.blue, 1.0);
+    fragColor = vec4(pushConstantsF.red, pushConstantsF.green, pushConstantsF.blue, 1.0);
 })";
 
 void initPushConstants() {
@@ -91,42 +97,43 @@ void initPushConstants() {
 
     gVertConstants.reserve(4);
     gVertConstants.resize(4);
-    gVertConstants[pushConstantIndex.TRIANGLE_HIDE] = {"hideTriangle", backend::ConstantType::BOOL};
-    gVertConstants[pushConstantIndex.TRIANGLE_SCALE] = {"triangleScale", backend::ConstantType::FLOAT};
-    gVertConstants[pushConstantIndex.TRIANGLE_OFFSET_X] = {"triangleOffsetX", backend::ConstantType::FLOAT};
-    gVertConstants[pushConstantIndex.TRIANGLE_OFFSET_Y] = {"triangleOffsetY", backend::ConstantType::FLOAT};
+    gVertConstants[pushConstantIndex.TRIANGLE_HIDE] = {"pushConstantsV.hideTriangle", backend::ConstantType::BOOL};
+    gVertConstants[pushConstantIndex.TRIANGLE_SCALE] = {"pushConstantsV.triangleScale", backend::ConstantType::FLOAT};
+    gVertConstants[pushConstantIndex.TRIANGLE_OFFSET_X] = {"pushConstantsV.triangleOffsetX", backend::ConstantType::FLOAT};
+    gVertConstants[pushConstantIndex.TRIANGLE_OFFSET_Y] = {"pushConstantsV.triangleOffsetY", backend::ConstantType::FLOAT};
 
     gFragConstants.reserve(4);
     gFragConstants.resize(4);
-    gFragConstants[pushConstantIndex.RED] = {"red", backend::ConstantType::FLOAT};
-    gFragConstants[pushConstantIndex.GREEN] = {"green", backend::ConstantType::FLOAT};
-    gFragConstants[pushConstantIndex.BLUE] = {"blue", backend::ConstantType::FLOAT};
+    gFragConstants[pushConstantIndex.RED] = {"pushConstantsF.red", backend::ConstantType::FLOAT};
+    gFragConstants[pushConstantIndex.GREEN] = {"pushConstantsF.green", backend::ConstantType::FLOAT};
+    gFragConstants[pushConstantIndex.BLUE] = {"pushConstantsF.blue", backend::ConstantType::FLOAT};
 }
 
 TEST_F(BackendTest, PushConstants) {
-    SKIP_IF(Backend::OPENGL, "Push constants not supported on OpenGL");
+    SKIP_IF(Backend::WEBGPU, "Push constants not supported on WebGPU");
+    // Test is flaky on CI (but does not repro locally).
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "b/453776664");
 
     initPushConstants();
 
     auto& api = getDriverApi();
 
     api.startCapture(0);
-    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program p =
                 shaderGen.getProgramWithPushConstants(api, { gVertConstants, gFragConstants, {} });
-        ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
+        ProgramHandle program = addCleanup(api.createProgram(std::move(p)));
 
-        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
+        Handle<HwRenderTarget> renderTarget = addCleanup(api.createDefaultRenderTarget());
 
         TrianglePrimitive triangle(api);
 
@@ -178,9 +185,8 @@ TEST_F(BackendTest, PushConstants) {
 
         api.endRenderPass();
 
-        EXPECT_IMAGE(renderTarget, getExpectations(),
-                ScreenshotParams(params.viewport.width, params.viewport.height, "pushConstants",
-                        3575588741));
+        EXPECT_IMAGE(renderTarget, ScreenshotParams(params.viewport.width, params.viewport.height,
+                                           "pushConstants", 3575588741));
 
         api.commit(swapChain);
         api.endFrame(0);

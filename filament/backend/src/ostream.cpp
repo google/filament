@@ -15,7 +15,6 @@
  */
 
 #include <backend/BufferDescriptor.h>
-#include <backend/BufferObjectStreamDescriptor.h>
 #include <backend/DescriptorSetOffsetArray.h>
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
@@ -95,11 +94,7 @@ io::ostream& operator<<(io::ostream& out, ElementType type) {
 }
 
 io::ostream& operator<<(io::ostream& out, BufferUsage usage) {
-    switch (usage) {
-        CASE(BufferUsage, STATIC)
-        CASE(BufferUsage, DYNAMIC)
-    }
-    return out;
+    return out << io::hex << uint32_t(usage) << io::dec;
 }
 
 io::ostream& operator<<(io::ostream& out, CullingMode mode) {
@@ -438,10 +433,6 @@ io::ostream& operator<<(io::ostream& out, BufferDescriptor const& b) {
     << ", user=" << b.getUser() << " }";
 }
 
-io::ostream& operator<<(io::ostream& out, const BufferObjectStreamDescriptor& b) {
-    return out << "BufferObjectStreamDescriptor{ streams(" << b.mStreams.size() << ")=... }";
-}
-
 io::ostream& operator<<(io::ostream& out, PixelBufferDescriptor const& b) {
     BufferDescriptor const& base = static_cast<BufferDescriptor const&>(b);
     return out << "PixelBufferDescriptor{ " << base
@@ -499,6 +490,7 @@ io::ostream& operator<<(io::ostream& out, ShaderStage shaderStage) {
 
 io::ostream& operator<<(io::ostream& out, CompilerPriorityQueue compilerPriorityQueue) {
     switch (compilerPriorityQueue) {
+        CASE(CompilerPriorityQueue, CRITICAL)
         CASE(CompilerPriorityQueue, HIGH)
         CASE(CompilerPriorityQueue, LOW)
     }

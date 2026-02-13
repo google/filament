@@ -25,9 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/type/array.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/texture.h"
-#include "src/tint/lang/wgsl/sem/array_count.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -35,16 +38,17 @@ namespace {
 using ArrayTest = TestHelper;
 
 TEST_F(ArrayTest, CreateSizedArray) {
-    auto* a = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* b = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* c = create<Array>(create<U32>(), create<ConstantArrayCount>(3u), 4u, 8u, 32u, 16u);
-    auto* d = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 5u, 8u, 32u, 16u);
-    auto* e = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 9u, 32u, 16u);
-    auto* f = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 33u, 16u);
-    auto* g = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 33u, 17u);
+    Manager ty;
+    auto* a = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
+    auto* b = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
+    auto* c = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(3u), 4u, 8u, 32u, 16u);
+    auto* d = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 5u, 8u, 32u, 16u);
+    auto* e = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 9u, 32u, 16u);
+    auto* f = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 33u, 16u);
+    auto* g = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 33u, 17u);
 
-    EXPECT_EQ(a->ElemType(), create<U32>());
-    EXPECT_EQ(a->Count(), create<ConstantArrayCount>(2u));
+    EXPECT_EQ(a->ElemType(), ty.u32());
+    EXPECT_EQ(a->Count(), ty.Get<ConstantArrayCount>(2u));
     EXPECT_EQ(a->Align(), 4u);
     EXPECT_EQ(a->Size(), 8u);
     EXPECT_EQ(a->Stride(), 32u);
@@ -61,15 +65,16 @@ TEST_F(ArrayTest, CreateSizedArray) {
 }
 
 TEST_F(ArrayTest, CreateRuntimeArray) {
-    auto* a = create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
-    auto* b = create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
-    auto* c = create<Array>(create<U32>(), create<RuntimeArrayCount>(), 5u, 8u, 32u, 32u);
-    auto* d = create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 9u, 32u, 32u);
-    auto* e = create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 8u, 33u, 32u);
-    auto* f = create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 8u, 33u, 17u);
+    Manager ty;
+    auto* a = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
+    auto* b = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
+    auto* c = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 5u, 8u, 32u, 32u);
+    auto* d = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 9u, 32u, 32u);
+    auto* e = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 33u, 32u);
+    auto* f = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 33u, 17u);
 
-    EXPECT_EQ(a->ElemType(), create<U32>());
-    EXPECT_EQ(a->Count(), create<RuntimeArrayCount>());
+    EXPECT_EQ(a->ElemType(), ty.u32());
+    EXPECT_EQ(a->Count(), ty.Get<RuntimeArrayCount>());
     EXPECT_EQ(a->Align(), 4u);
     EXPECT_EQ(a->Size(), 8u);
     EXPECT_EQ(a->Stride(), 32u);
@@ -85,20 +90,22 @@ TEST_F(ArrayTest, CreateRuntimeArray) {
 }
 
 TEST_F(ArrayTest, Hash) {
-    auto* a = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* b = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
+    Manager ty;
+    auto* a = ty.array(ty.u32(), 2u);
+    auto* b = ty.array(ty.u32(), 2u);
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(ArrayTest, Equals) {
-    auto* a = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* b = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* c = create<Array>(create<U32>(), create<ConstantArrayCount>(3u), 4u, 8u, 32u, 16u);
-    auto* d = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 5u, 8u, 32u, 16u);
-    auto* e = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 9u, 32u, 16u);
-    auto* f = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 33u, 16u);
-    auto* g = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 33u, 17u);
+    Manager ty;
+    auto* a = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
+    auto* b = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
+    auto* c = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(3u), 4u, 8u, 32u, 16u);
+    auto* d = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 5u, 8u, 32u, 16u);
+    auto* e = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 9u, 32u, 16u);
+    auto* f = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 33u, 16u);
+    auto* g = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 33u, 17u);
 
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
@@ -110,75 +117,59 @@ TEST_F(ArrayTest, Equals) {
 }
 
 TEST_F(ArrayTest, FriendlyNameRuntimeSized) {
-    auto* arr = create<Array>(create<I32>(), create<RuntimeArrayCount>(), 0u, 4u, 4u, 4u);
+    Manager ty;
+    auto* arr = ty.runtime_array(ty.i32());
     EXPECT_EQ(arr->FriendlyName(), "array<i32>");
 }
 
 TEST_F(ArrayTest, FriendlyNameStaticSized) {
-    auto* arr = create<Array>(create<I32>(), create<ConstantArrayCount>(5u), 4u, 20u, 4u, 4u);
+    Manager ty;
+    auto* arr = ty.array(ty.i32(), 5u);
     EXPECT_EQ(arr->FriendlyName(), "array<i32, 5>");
 }
 
 TEST_F(ArrayTest, FriendlyNameRuntimeSizedNonImplicitStride) {
-    auto* arr = create<Array>(create<I32>(), create<RuntimeArrayCount>(), 0u, 4u, 8u, 4u);
+    Manager ty;
+    auto* arr = ty.runtime_array(ty.i32(), 8u);
     EXPECT_EQ(arr->FriendlyName(), "@stride(8) array<i32>");
 }
 
 TEST_F(ArrayTest, FriendlyNameStaticSizedNonImplicitStride) {
-    auto* arr = create<Array>(create<I32>(), create<ConstantArrayCount>(5u), 4u, 20u, 8u, 4u);
+    Manager ty;
+    auto* arr = ty.array(ty.i32(), 5u, 8u);
     EXPECT_EQ(arr->FriendlyName(), "@stride(8) array<i32, 5>");
 }
 
 TEST_F(ArrayTest, IsConstructable) {
-    auto* fixed_sized =
-        create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* named_override_sized = create<Array>(
-        create<U32>(), create<sem::NamedOverrideArrayCount>(nullptr), 4u, 8u, 32u, 16u);
-    auto* unnamed_override_sized = create<Array>(
-        create<U32>(), create<sem::UnnamedOverrideArrayCount>(nullptr), 4u, 8u, 32u, 16u);
-    auto* runtime_sized =
-        create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 8u, 32u, 16u);
+    Manager ty;
+    auto* fixed_sized = ty.array(ty.u32(), 2u);
+    auto* runtime_sized = ty.runtime_array(ty.u32());
 
     EXPECT_TRUE(fixed_sized->IsConstructible());
-    EXPECT_FALSE(named_override_sized->IsConstructible());
-    EXPECT_FALSE(unnamed_override_sized->IsConstructible());
     EXPECT_FALSE(runtime_sized->IsConstructible());
 }
 
 TEST_F(ArrayTest, HasCreationFixedFootprint) {
-    auto* fixed_sized =
-        create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* named_override_sized = create<Array>(
-        create<U32>(), create<sem::NamedOverrideArrayCount>(nullptr), 4u, 8u, 32u, 16u);
-    auto* unnamed_override_sized = create<Array>(
-        create<U32>(), create<sem::UnnamedOverrideArrayCount>(nullptr), 4u, 8u, 32u, 16u);
-    auto* runtime_sized =
-        create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 8u, 32u, 16u);
+    Manager ty;
+    auto* fixed_sized = ty.array(ty.u32(), 2u);
+    auto* runtime_sized = ty.runtime_array(ty.u32());
 
     EXPECT_TRUE(fixed_sized->HasCreationFixedFootprint());
-    EXPECT_FALSE(named_override_sized->HasCreationFixedFootprint());
-    EXPECT_FALSE(unnamed_override_sized->HasCreationFixedFootprint());
     EXPECT_FALSE(runtime_sized->HasCreationFixedFootprint());
 }
 
 TEST_F(ArrayTest, HasFixedFootprint) {
-    auto* fixed_sized =
-        create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* named_override_sized = create<Array>(
-        create<U32>(), create<sem::NamedOverrideArrayCount>(nullptr), 4u, 8u, 32u, 16u);
-    auto* unnamed_override_sized = create<Array>(
-        create<U32>(), create<sem::UnnamedOverrideArrayCount>(nullptr), 4u, 8u, 32u, 16u);
-    auto* runtime_sized =
-        create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 8u, 32u, 16u);
+    Manager ty;
+    auto* fixed_sized = ty.array(ty.u32(), 2u);
+    auto* runtime_sized = ty.runtime_array(ty.u32());
 
     EXPECT_TRUE(fixed_sized->HasFixedFootprint());
-    EXPECT_TRUE(named_override_sized->HasFixedFootprint());
-    EXPECT_TRUE(unnamed_override_sized->HasFixedFootprint());
     EXPECT_FALSE(runtime_sized->HasFixedFootprint());
 }
 
 TEST_F(ArrayTest, CloneSizedArray) {
-    auto* ary = create<Array>(create<U32>(), create<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
+    Manager ty;
+    auto* ary = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};
@@ -197,7 +188,8 @@ TEST_F(ArrayTest, CloneSizedArray) {
 }
 
 TEST_F(ArrayTest, CloneRuntimeArray) {
-    auto* ary = create<Array>(create<U32>(), create<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
+    Manager ty;
+    auto* ary = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

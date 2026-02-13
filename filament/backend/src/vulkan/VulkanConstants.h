@@ -169,6 +169,13 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
     #define FVK_PROFILE_MARKER(marker)
 #endif
 
+// In some instances, we want to enable systrace markers regardless of the build type (ie.e debug vs.
+// release) or the compile-time configuration (i.e. FVK_DEBUG_SYSTRACE).
+#define FVK_ALWAYS_ON_SYSTRACE_CONTEXT()      FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT)
+#define FVK_ALWAYS_ON_SYSTRACE_START(marker)  FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, marker)
+#define FVK_ALWAYS_ON_SYSTRACE_END()          FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT)
+#define FVK_ALWAYS_ON_SYSTRACE_SCOPE()        FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT)
+
 #ifndef FVK_HANDLE_ARENA_SIZE_IN_MB
 #define FVK_HANDLE_ARENA_SIZE_IN_MB 8
 #endif
@@ -213,5 +220,11 @@ constexpr static const int FVK_MAX_PIPELINE_AGE = FVK_MAX_COMMAND_BUFFERS;
 // instead it simply waits for at least FVK_MAX_COMMAND_BUFFERS submissions to occur before
 // destroying any unused pipeline object.
 static_assert(FVK_MAX_PIPELINE_AGE >= FVK_MAX_COMMAND_BUFFERS);
+
+// Indicates if the backend must be setup to allow doing a RenderDoc capture.
+//
+// If this is true, the features not supported by RenderDoc must be disabled, otherwise
+// when using RenderDoc the application will crash or will fail to do a capture.
+constexpr static const int FVK_RENDERDOC_CAPTURE_MODE = false;
 
 #endif

@@ -70,9 +70,9 @@ class IRToProgramRoundtripTest : public testing::Test {
         Source::File file("test.wgsl", std::string(input));
         auto ir_module = wgsl::reader::WgslToIR(&file, options);
         if (ir_module != Success) {
+            result.err = ir_module.Failure().reason;
             return result;
         }
-
         result.ir_pre_raise = core::ir::Disassembler(ir_module.Get()).Plain();
 
         if (auto res = tint::wgsl::writer::Raise(ir_module.Get()); res != Success) {
@@ -91,7 +91,7 @@ class IRToProgramRoundtripTest : public testing::Test {
             return result;
         }
 
-        auto output = wgsl::writer::Generate(output_program, {});
+        auto output = wgsl::writer::Generate(output_program);
         if (output != Success) {
             std::stringstream ss;
             ss << "wgsl::Generate() errored: " << output.Failure();
@@ -261,7 +261,9 @@ enable dual_source_blending;
 struct S {
   a : i32,
   @location(0u) @blend_src(0u)
-  b : u32,
+  b0 : u32,
+  @location(0u) @blend_src(1u)
+  b1 : u32,
   c : f32,
 }
 
@@ -426,23 +428,6 @@ TEST_F(IRToProgramRoundtripTest, CoreBuiltinCall_PtrArg) {
 
 fn foo() -> u32 {
   return arrayLength(&(v));
-}
-)");
-}
-
-TEST_F(IRToProgramRoundtripTest, CoreBuiltinCall_DisableDerivativeUniformity) {
-    RUN_TEST(R"(
-fn f(in : f32) {
-  let x = dpdx(in);
-  let y = dpdy(in);
-}
-)",
-             R"(
-diagnostic(off, derivative_uniformity);
-
-fn f(in : f32) {
-  let x = dpdx(in);
-  let y = dpdy(in);
 }
 )");
 }
@@ -2005,6 +1990,8 @@ var<private> v : array<i32, 4u> = array<i32, 4u>();
 TEST_F(IRToProgramRoundtripTest, ModuleScopeVar_Private_array_Zero) {
     RUN_TEST(R"(
 var<private> v : array<i32, 4u> = array<i32, 4u>(0i, 0i, 0i, 0i);
+)",
+             R"(
 var<private> v : array<i32, 4u> = array<i32, 4u>();
 )");
 }
@@ -2086,8 +2073,10 @@ var<private> v : vec3<f32> = vec3<f32>();
 
 TEST_F(IRToProgramRoundtripTest, ModuleScopeVar_Private_vec3f_Zero) {
     RUN_TEST(R"(
-var<private> v : vec3<f32> = vec3<f32>(0f);",
-             "var<private> v : vec3<f32> = vec3<f32>();
+var<private> v : vec3<f32> = vec3<f32>(0f);
+)",
+             R"(
+var<private> v : vec3<f32> = vec3<f32>();
 )");
 }
 
@@ -2112,6 +2101,8 @@ var<private> v : mat2x3<f32> = mat2x3<f32>();
 TEST_F(IRToProgramRoundtripTest, ModuleScopeVar_Private_mat2x3f_Scalars_SameValue) {
     RUN_TEST(R"(
 var<private> v : mat2x3<f32> = mat2x3<f32>(4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f);
+)",
+             R"(
 var<private> v : mat2x3<f32> = mat2x3<f32>(vec3<f32>(4.0f), vec3<f32>(4.0f));
 )");
 }
@@ -2119,6 +2110,8 @@ var<private> v : mat2x3<f32> = mat2x3<f32>(vec3<f32>(4.0f), vec3<f32>(4.0f));
 TEST_F(IRToProgramRoundtripTest, ModuleScopeVar_Private_mat2x3f_Scalars) {
     RUN_TEST(R"(
 var<private> v : mat2x3<f32> = mat2x3<f32>(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f);
+)",
+             R"(
 var<private> v : mat2x3<f32> = mat2x3<f32>(vec3<f32>(1.0f, 2.0f, 3.0f), vec3<f32>(4.0f, 5.0f, 6.0f));
 )");
 }
@@ -2133,6 +2126,8 @@ var<private> v : mat2x3<f32> = mat2x3<f32>(vec3<f32>(1.0f, 2.0f, 3.0f), vec3<f32
 TEST_F(IRToProgramRoundtripTest, ModuleScopeVar_Private_mat2x3f_Columns_SameValue) {
     RUN_TEST(R"(
 var<private> v : mat2x3<f32> = mat2x3<f32>(vec3<f32>(4.0f, 4.0f, 4.0f), vec3<f32>(4.0f, 4.0f, 4.0f));
+)",
+             R"(
 var<private> v : mat2x3<f32> = mat2x3<f32>(vec3<f32>(4.0f), vec3<f32>(4.0f));
 )");
 }
@@ -2305,6 +2300,17 @@ fn f() -> f32 {
   } else {
     return 2.0f;
   }
+}
+)",
+             R"(
+fn f() -> f32 {
+  var cond : bool = true;
+  if (cond) {
+    return 1.0f;
+  } else {
+    return 2.0f;
+  }
+  return f32();
 }
 )");
 }
@@ -2627,6 +2633,7 @@ fn f() -> i32 {
       }
     }
   }
+  return i32();
 }
 )");
 }
@@ -2753,6 +2760,44 @@ fn n() {
 fn f() {
   var i : i32 = 0i;
   for(n(); (i < 10i); i = (i + 1i)) {
+  }
+}
+)");
+}
+
+TEST_F(IRToProgramRoundtripTest, Loop_WithRequiredContinues) {
+    RUN_TEST(R"(
+var<private> v : u32;
+
+var<private> v_1 : bool;
+
+var<private> v_2 : bool;
+
+fn f() {
+  let v_3 = v_1;
+  let v_4 = v_2;
+  loop {
+    var v_5 : u32;
+    if (v_3) {
+      break;
+    } else {
+      if (v_4) {
+        v_5 = 0u;
+        continue;
+      } else {
+        v_5 = 1u;
+      }
+      if (true) {
+        v_5 = 2u;
+        continue;
+      }
+      v_5 = 3u;
+      continue;
+    }
+
+    continuing {
+      v = v_5;
+    }
   }
 }
 )");
@@ -3301,6 +3346,24 @@ fn f() -> i32 {
     }
   }
 }
+)",
+             R"(
+fn f() -> i32 {
+  var i : i32;
+  switch(i) {
+    case 0i: {
+      return i;
+    }
+    case 1i: {
+      var i_1 : i32 = (i + 1i);
+      return i_1;
+    }
+    default: {
+      return i;
+    }
+  }
+  return i32();
+}
 )");
 }
 
@@ -3320,6 +3383,24 @@ fn f() -> i32 {
       return i;
     }
   }
+}
+)",
+             R"(
+fn f() -> i32 {
+  var i : i32;
+  switch(i) {
+    case 0i: {
+      return i;
+    }
+    case 1i: {
+      let i_1 = (i + 1i);
+      return i_1;
+    }
+    default: {
+      return i;
+    }
+  }
+  return i32();
 }
 )");
 }
@@ -3434,7 +3515,14 @@ TEST_F(IRToProgramRoundtripTest, SubgroupMatrixConstruct) {
 enable chromium_experimental_subgroup_matrix;
 
 fn f() {
-  var m = subgroup_matrix_left<f32, 8, 8>>();
+  var m = subgroup_matrix_left<f32, 8, 8>();
+}
+)",
+             R"(
+enable chromium_experimental_subgroup_matrix;
+
+fn f() {
+  var m : subgroup_matrix_left<f32, 8, 8> = subgroup_matrix_left<f32, 8, 8>();
 }
 )");
 }

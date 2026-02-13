@@ -1,0 +1,4 @@
+Mako==1.3.10
+MarkupSafe==3.0.2
+PyYAML==6.0.2
+setuptools==80.9.0

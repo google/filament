@@ -30,8 +30,8 @@ namespace filament::backend {
 struct GLBufferObject : public HwBufferObject {
     using HwBufferObject::HwBufferObject;
     GLBufferObject(uint32_t size,
-            BufferObjectBinding bindingType, BufferUsage usage) noexcept
-            : HwBufferObject(size), usage(usage), bindingType(bindingType) {
+            BufferObjectBinding bindingType, BufferUsage usage, bool async) noexcept
+            : HwBufferObject(size, async), usage(usage), bindingType(bindingType) {
     }
 
     struct {
@@ -40,10 +40,12 @@ struct GLBufferObject : public HwBufferObject {
             GLenum binding;
             void* buffer;
         };
-    } gl;
-    BufferUsage usage;
-    BufferObjectBinding bindingType;
+    } gl{};
+    BufferUsage usage                   : 4;
+    BufferObjectBinding bindingType     : 4;
+    uint8_t mappingCount = 0;
     uint16_t age = 0;
+
 };
 
 } // namespace filament::backend

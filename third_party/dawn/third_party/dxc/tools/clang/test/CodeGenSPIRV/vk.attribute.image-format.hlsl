@@ -60,12 +60,6 @@ RWBuffer<int64_t> Buf_r64i;
 [[vk::image_format("r64ui")]]
 RWBuffer<uint64_t> Buf_r64ui;
 
-[[vk::image_format("r16f")]]
-// CHECK: [[ImgType:%[0-9a-zA-Z_]+]] = OpTypeImage %float 2D 2 0 0 2 R16f
-// CHECK: [[ArrayType:%[0-9a-zA-Z_]+]] = OpTypeRuntimeArray [[ImgType]]
-// CHECK: [[PtrType:%[0-9a-zA-Z_]+]] = OpTypePointer UniformConstant [[ArrayType]]
-RWTexture2D<float> Buf_r16f_bindless[];
-
 struct S {
     RWBuffer<float4> b;
 };

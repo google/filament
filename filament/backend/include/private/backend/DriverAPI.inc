@@ -74,8 +74,9 @@
 #define APPLY10(M, A, ...) EXPAND(M(A)), EXPAND(APPLY9(M, __VA_ARGS__))
 #define APPLY11(M, A, ...) EXPAND(M(A)), EXPAND(APPLY10(M, __VA_ARGS__))
 #define APPLY12(M, A, ...) EXPAND(M(A)), EXPAND(APPLY11(M, __VA_ARGS__))
-#define APPLY_N__(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, X, ...) APPLY##X
-#define APPLY(M, ...) EXPAND(EXPAND(APPLY_N__(M, __VA_ARGS__, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))(M, __VA_ARGS__))
+#define APPLY13(M, A, ...) EXPAND(M(A)), EXPAND(APPLY12(M, __VA_ARGS__))
+#define APPLY_N__(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, X, ...) APPLY##X
+#define APPLY(M, ...) EXPAND(EXPAND(APPLY_N__(M, __VA_ARGS__, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))(M, __VA_ARGS__))
 
 
 #define PAIR_ARGS_0(M, ...)
@@ -91,11 +92,12 @@
 #define PAIR_ARGS_10(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_9(M, __VA_ARGS__))
 #define PAIR_ARGS_11(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_10(M, __VA_ARGS__))
 #define PAIR_ARGS_12(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_11(M, __VA_ARGS__))
+#define PAIR_ARGS_13(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_12(M, __VA_ARGS__))
 
-#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, E10, _10, E11, _11, E12, _12, X, ...) PAIR_ARGS_##X
+#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, E10, _10, E11, _11, E12, _12, E13, _13, X, ...) PAIR_ARGS_##X
 
 #define PAIR_ARGS_N(M, ...) \
-    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 12, E, 11, E, 10, E, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
+    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 13, E, 12, E, 11, E, 10, E, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
 
 #define ARG(T, P) T P
 
@@ -107,8 +109,16 @@
 #define DECL_DRIVER_API_R_N(R, N, ...) \
     DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
+#define DECL_DRIVER_API_TAGGED_R_N(R, N, ...) \
+    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableCString&&, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableCString&&, tag))
+
 #define DECL_DRIVER_API_SYNCHRONOUS_N(R, N, ...) \
     DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
+
+#define DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(R, N, ...) \
+    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableCString, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableCString, tag))
 
 // on some compilers the ##__VA_ARGS__ hack is not supported, so we can't handle 0-parameter APIs
 // with DECL_DRIVER_API_SYNCHRONOUS_N
@@ -165,35 +175,47 @@ DECL_DRIVER_API_0(finish)
 // reset state tracking, if the driver does any state tracking (e.g. GL)
 DECL_DRIVER_API_0(resetState)
 
-DECL_DRIVER_API_N(setDebugTag,
-        backend::HandleBase::HandleId, handleId,
-        utils::CString, tag)
-
 /*
  * Creating driver objects
  * -----------------------
  */
 
-DECL_DRIVER_API_R_N(backend::VertexBufferInfoHandle, createVertexBufferInfo,
+DECL_DRIVER_API_TAGGED_R_N(backend::VertexBufferInfoHandle, createVertexBufferInfo,
         uint8_t, bufferCount,
         uint8_t, attributeCount,
         backend::AttributeArray, attributes)
 
-DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
+DECL_DRIVER_API_TAGGED_R_N(backend::VertexBufferHandle, createVertexBuffer,
         uint32_t, vertexCount,
         backend::VertexBufferInfoHandle, vbih)
 
-DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
+DECL_DRIVER_API_TAGGED_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
         uint32_t, indexCount,
         backend::BufferUsage, usage)
 
-DECL_DRIVER_API_R_N(backend::BufferObjectHandle, createBufferObject,
+DECL_DRIVER_API_TAGGED_R_N(backend::IndexBufferHandle, createIndexBufferAsync,
+        backend::ElementType, elementType,
+        uint32_t, indexCount,
+        backend::BufferUsage, usage,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_TAGGED_R_N(backend::BufferObjectHandle, createBufferObject,
         uint32_t, byteCount,
         backend::BufferObjectBinding, bindingType,
         backend::BufferUsage, usage)
 
-DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
+DECL_DRIVER_API_TAGGED_R_N(backend::BufferObjectHandle, createBufferObjectAsync,
+        uint32_t, byteCount,
+        backend::BufferObjectBinding, bindingType,
+        backend::BufferUsage, usage,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTexture,
         backend::SamplerType, target,
         uint8_t, levels,
         backend::TextureFormat, format,
@@ -203,19 +225,42 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
         uint32_t, depth,
         backend::TextureUsage, usage)
 
-DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureView,
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTextureAsync,
+        backend::SamplerType, target,
+        uint8_t, levels,
+        backend::TextureFormat, format,
+        uint8_t, samples,
+        uint32_t, width,
+        uint32_t, height,
+        uint32_t, depth,
+        backend::TextureUsage, usage,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTextureView,
         backend::TextureHandle, texture,
         uint8_t, baseLevel,
         uint8_t, levelCount)
 
-DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureViewSwizzle,
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTextureViewSwizzle,
         backend::TextureHandle, texture,
         backend::TextureSwizzle, r,
         backend::TextureSwizzle, g,
         backend::TextureSwizzle, b,
         backend::TextureSwizzle, a)
 
-DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage2,
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTextureViewSwizzleAsync,
+        backend::TextureHandle, texture,
+        backend::TextureSwizzle, r,
+        backend::TextureSwizzle, g,
+        backend::TextureSwizzle, b,
+        backend::TextureSwizzle, a,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTextureExternalImage2,
         backend::SamplerType, target,
         backend::TextureFormat, format,
         uint32_t, width,
@@ -223,7 +268,7 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage2,
         backend::TextureUsage, usage,
         backend::Platform::ExternalImageHandleRef, image)
 
-DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage,
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTextureExternalImage,
         backend::SamplerType, target,
         backend::TextureFormat, format,
         uint32_t, width,
@@ -231,7 +276,7 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage,
         backend::TextureUsage, usage,
         void*, image)
 
-DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImagePlane,
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTextureExternalImagePlane,
         backend::TextureFormat, format,
         uint32_t, width,
         uint32_t, height,
@@ -239,7 +284,7 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImagePlane,
         void*, image,
         uint32_t, plane)
 
-DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, importTexture,
         intptr_t, id,
         backend::SamplerType, target,
         uint8_t, levels,
@@ -250,17 +295,31 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
         uint32_t, depth,
         backend::TextureUsage, usage)
 
-DECL_DRIVER_API_R_N(backend::RenderPrimitiveHandle, createRenderPrimitive,
+DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, importTextureAsync,
+        intptr_t, id,
+        backend::SamplerType, target,
+        uint8_t, levels,
+        backend::TextureFormat, format,
+        uint8_t, samples,
+        uint32_t, width,
+        uint32_t, height,
+        uint32_t, depth,
+        backend::TextureUsage, usage,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_TAGGED_R_N(backend::RenderPrimitiveHandle, createRenderPrimitive,
         backend::VertexBufferHandle, vbh,
         backend::IndexBufferHandle, ibh,
         backend::PrimitiveType, pt)
 
-DECL_DRIVER_API_R_N(backend::ProgramHandle, createProgram,
+DECL_DRIVER_API_TAGGED_R_N(backend::ProgramHandle, createProgram,
         backend::Program&&, program)
 
-DECL_DRIVER_API_R_0(backend::RenderTargetHandle, createDefaultRenderTarget)
+DECL_DRIVER_API_TAGGED_R_N(backend::RenderTargetHandle, createDefaultRenderTarget)
 
-DECL_DRIVER_API_R_N(backend::RenderTargetHandle, createRenderTarget,
+DECL_DRIVER_API_TAGGED_R_N(backend::RenderTargetHandle, createRenderTarget,
         backend::TargetBufferFlags, targetBufferFlags,
         uint32_t, width,
         uint32_t, height,
@@ -270,24 +329,200 @@ DECL_DRIVER_API_R_N(backend::RenderTargetHandle, createRenderTarget,
         backend::TargetBufferInfo, depth,
         backend::TargetBufferInfo, stencil)
 
-DECL_DRIVER_API_R_0(backend::FenceHandle, createFence)
+DECL_DRIVER_API_TAGGED_R_N(backend::FenceHandle, createFence)
 
-DECL_DRIVER_API_R_N(backend::SwapChainHandle, createSwapChain,
+DECL_DRIVER_API_TAGGED_R_N(backend::SyncHandle, createSync)
+
+DECL_DRIVER_API_TAGGED_R_N(backend::SwapChainHandle, createSwapChain,
         void*, nativeWindow,
         uint64_t, flags)
 
-DECL_DRIVER_API_R_N(backend::SwapChainHandle, createSwapChainHeadless,
+DECL_DRIVER_API_TAGGED_R_N(backend::SwapChainHandle, createSwapChainHeadless,
         uint32_t, width,
         uint32_t, height,
         uint64_t, flags)
 
-DECL_DRIVER_API_R_0(backend::TimerQueryHandle, createTimerQuery)
+DECL_DRIVER_API_TAGGED_R_N(backend::TimerQueryHandle, createTimerQuery)
 
-DECL_DRIVER_API_R_N(backend::DescriptorSetLayoutHandle, createDescriptorSetLayout,
+DECL_DRIVER_API_TAGGED_R_N(backend::DescriptorSetLayoutHandle, createDescriptorSetLayout,
         backend::DescriptorSetLayout&&, info)
 
-DECL_DRIVER_API_R_N(backend::DescriptorSetHandle, createDescriptorSet,
+DECL_DRIVER_API_TAGGED_R_N(backend::DescriptorSetHandle, createDescriptorSet,
         backend::DescriptorSetLayoutHandle, dslh)
+
+DECL_DRIVER_API_TAGGED_R_N(backend::MemoryMappedBufferHandle, mapBuffer,
+        backend::BufferObjectHandle, boh,
+        size_t, offset,
+        size_t, size,
+        backend::MapBufferAccessFlags, access)
+
+/*
+ * Destroying driver objects
+ * -------------------------
+ */
+
+DECL_DRIVER_API_N(destroyVertexBuffer,          backend::VertexBufferHandle, vbh)
+DECL_DRIVER_API_N(destroyVertexBufferInfo,      backend::VertexBufferInfoHandle, vbih)
+DECL_DRIVER_API_N(destroyIndexBuffer,           backend::IndexBufferHandle, ibh)
+DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, boh)
+DECL_DRIVER_API_N(destroyRenderPrimitive,       backend::RenderPrimitiveHandle, rph)
+DECL_DRIVER_API_N(destroyProgram,               backend::ProgramHandle, ph)
+DECL_DRIVER_API_N(destroyTexture,               backend::TextureHandle, th)
+DECL_DRIVER_API_N(destroyRenderTarget,          backend::RenderTargetHandle, rth)
+DECL_DRIVER_API_N(destroySwapChain,             backend::SwapChainHandle, sch)
+DECL_DRIVER_API_N(destroyStream,                backend::StreamHandle, sh)
+DECL_DRIVER_API_N(destroyTimerQuery,            backend::TimerQueryHandle, sh)
+DECL_DRIVER_API_N(destroyFence,                 backend::FenceHandle, fh)
+DECL_DRIVER_API_N(destroySync,                  backend::SyncHandle, sh)
+DECL_DRIVER_API_N(destroyDescriptorSetLayout,   backend::DescriptorSetLayoutHandle, dslh)
+DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, dsh)
+DECL_DRIVER_API_N(unmapBuffer,                  backend::MemoryMappedBufferHandle, mmbh)
+
+/*
+ * Synchronous APIs
+ * ----------------
+ */
+
+DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
+DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(backend::StreamHandle, createStreamNative, void*, stream)
+DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(backend::StreamHandle, createStreamAcquired)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, stream, void*, image, const math::mat3f&, transform, backend::CallbackHandler*, handler, backend::StreamCallback, cb, void*, userData)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, stream, uint32_t, width, uint32_t, height)
+DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, updateStreams, backend::DriverApi*, driver)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, getFenceStatus, backend::FenceHandle, fh)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, fenceWait, backend::FenceHandle, fh, uint64_t, timeout)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, fenceCancel, backend::FenceHandle, fh)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, getPlatformSync, backend::SyncHandle, sh,
+        backend::CallbackHandler*, handler, backend::Platform::SyncCallback, cb, void*, userData)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatSupported, backend::TextureFormat, format)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isTextureSwizzleSupported)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatMipmappable, backend::TextureFormat, format)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isRenderTargetFormatSupported, backend::TextureFormat, format)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchMultiSampleSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isSRGBSwapChainSupported)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isMSAASwapChainSupported, uint32_t, samples)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedContentSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isDepthStencilBlitSupported, backend::TextureFormat, format)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAsynchronousModeEnabled)
+DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
+DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxTextureSize, backend::SamplerType, target)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxArrayTextureLayers)
+DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, tqh, uint64_t*, elapsedTime)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
+DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getUniformBufferOffsetAlignment)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isCompositorTimingSupported)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryFrameTimestamps, backend::SwapChainHandle, swapChain, uint64_t, frameId, backend::FrameTimestamps*, outFrameTimestamps)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryCompositorTiming, backend::SwapChainHandle, swapChain, backend::CompositorTiming*, outCompositorTiming)
+
+/*
+ * Updating driver objects
+ * -----------------------
+ */
+
+DECL_DRIVER_API_N(setVertexBufferObject,
+        backend::VertexBufferHandle, vbh,
+        uint32_t, index,
+        backend::BufferObjectHandle, bufferObject)
+
+DECL_DRIVER_API_R_N(backend::AsyncCallId, setVertexBufferObjectAsync,
+        backend::VertexBufferHandle, vbh,
+        uint32_t, index,
+        backend::BufferObjectHandle, bufferObject,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_N(updateIndexBuffer,
+        backend::IndexBufferHandle, ibh,
+        backend::BufferDescriptor&&, data,
+        uint32_t, byteOffset)
+
+DECL_DRIVER_API_R_N(backend::AsyncCallId, updateIndexBufferAsync,
+        backend::IndexBufferHandle, ibh,
+        backend::BufferDescriptor&&, data,
+        uint32_t, byteOffset,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_N(updateBufferObject,
+        backend::BufferObjectHandle, ibh,
+        backend::BufferDescriptor&&, data,
+        uint32_t, byteOffset)
+
+DECL_DRIVER_API_R_N(backend::AsyncCallId, updateBufferObjectAsync,
+        backend::BufferObjectHandle, ibh,
+        backend::BufferDescriptor&&, data,
+        uint32_t, byteOffset,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
+        backend::BufferObjectHandle, boh,
+        backend::BufferDescriptor&&, data,
+        uint32_t, byteOffset)
+
+DECL_DRIVER_API_N(resetBufferObject,
+        backend::BufferObjectHandle, boh)
+
+DECL_DRIVER_API_N(update3DImage,
+        backend::TextureHandle, th,
+        uint32_t, level,
+        uint32_t, xoffset,
+        uint32_t, yoffset,
+        uint32_t, zoffset,
+        uint32_t, width,
+        uint32_t, height,
+        uint32_t, depth,
+        backend::PixelBufferDescriptor&&, data)
+
+DECL_DRIVER_API_R_N(backend::AsyncCallId, update3DImageAsync,
+        backend::TextureHandle, th,
+        uint32_t, level,
+        uint32_t, xoffset,
+        uint32_t, yoffset,
+        uint32_t, zoffset,
+        uint32_t, width,
+        uint32_t, height,
+        uint32_t, depth,
+        backend::PixelBufferDescriptor&&, data,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_N(generateMipmaps,
+        backend::TextureHandle, th)
+
+DECL_DRIVER_API_N(setExternalStream,
+        backend::TextureHandle, th,
+        backend::StreamHandle, sh)
+
+DECL_DRIVER_API_N(beginTimerQuery,
+        backend::TimerQueryHandle, tqh)
+
+DECL_DRIVER_API_N(endTimerQuery,
+        backend::TimerQueryHandle, tqh)
+
+DECL_DRIVER_API_N(compilePrograms,
+        backend::CompilerPriorityQueue, priority,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
 
 DECL_DRIVER_API_N(updateDescriptorSetBuffer,
         backend::DescriptorSetHandle, dsh,
@@ -304,122 +539,20 @@ DECL_DRIVER_API_N(updateDescriptorSetTexture,
         SamplerParams, params
 )
 
-DECL_DRIVER_API_N(bindDescriptorSet,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_set_t, set,
-        backend::DescriptorSetOffsetArray&&, offsets
-)
+DECL_DRIVER_API_N(copyToMemoryMappedBuffer,
+        backend::MemoryMappedBufferHandle, mmbh,
+        size_t, offset,
+        backend::BufferDescriptor&&, data)
 
-
-/*
- * Destroying driver objects
- * -------------------------
- */
-
-DECL_DRIVER_API_N(destroyVertexBuffer,          backend::VertexBufferHandle, vbh)
-DECL_DRIVER_API_N(destroyVertexBufferInfo,      backend::VertexBufferInfoHandle, vbih)
-DECL_DRIVER_API_N(destroyIndexBuffer,           backend::IndexBufferHandle, ibh)
-DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, ibh)
-DECL_DRIVER_API_N(destroyRenderPrimitive,       backend::RenderPrimitiveHandle, rph)
-DECL_DRIVER_API_N(destroyProgram,               backend::ProgramHandle, ph)
-DECL_DRIVER_API_N(destroyTexture,               backend::TextureHandle, th)
-DECL_DRIVER_API_N(destroyRenderTarget,          backend::RenderTargetHandle, rth)
-DECL_DRIVER_API_N(destroySwapChain,             backend::SwapChainHandle, sch)
-DECL_DRIVER_API_N(destroyStream,                backend::StreamHandle, sh)
-DECL_DRIVER_API_N(destroyTimerQuery,            backend::TimerQueryHandle, sh)
-DECL_DRIVER_API_N(destroyFence,                 backend::FenceHandle, fh)
-DECL_DRIVER_API_N(destroyDescriptorSetLayout,   backend::DescriptorSetLayoutHandle, dslh)
-DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, dsh)
+DECL_DRIVER_API_N(setPushConstant,
+        backend::ShaderStage, stage,
+        uint8_t, index,
+        backend::PushConstantVariant, value)
 
 /*
- * Synchronous APIs
- * ----------------
- */
-
-DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::StreamHandle, createStreamNative, void*, stream)
-DECL_DRIVER_API_SYNCHRONOUS_0(backend::StreamHandle, createStreamAcquired)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, stream, void*, image, const math::mat3f&, transform, backend::CallbackHandler*, handler, backend::StreamCallback, cb, void*, userData)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, stream, uint32_t, width, uint32_t, height)
-DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, updateStreams, backend::DriverApi*, driver)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, getFenceStatus, backend::FenceHandle, fh)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatSupported, backend::TextureFormat, format)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isTextureSwizzleSupported)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatMipmappable, backend::TextureFormat, format)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, isRenderTargetFormatSupported, backend::TextureFormat, format)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchMultiSampleSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isSRGBSwapChainSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedContentSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, isDepthStencilBlitSupported, backend::TextureFormat, format)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
-DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
-DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxTextureSize, backend::SamplerType, target)
-DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxArrayTextureLayers)
-DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
-DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
-
-/*
- * Updating driver objects
+ * Setting rendering state
  * -----------------------
  */
-
-DECL_DRIVER_API_N(setVertexBufferObject,
-        backend::VertexBufferHandle, vbh,
-        uint32_t, index,
-        backend::BufferObjectHandle, bufferObject)
-
-DECL_DRIVER_API_N(updateIndexBuffer,
-        backend::IndexBufferHandle, ibh,
-        backend::BufferDescriptor&&, data,
-        uint32_t, byteOffset)
-
-DECL_DRIVER_API_N(updateBufferObject,
-        backend::BufferObjectHandle, ibh,
-        backend::BufferDescriptor&&, data,
-        uint32_t, byteOffset)
-
-DECL_DRIVER_API_N(registerBufferObjectStreams,
-        backend::BufferObjectHandle, ibh,
-        backend::BufferObjectStreamDescriptor&&, streams)
-
-DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
-        backend::BufferObjectHandle, ibh,
-        backend::BufferDescriptor&&, data,
-        uint32_t, byteOffset)
-
-DECL_DRIVER_API_N(resetBufferObject,
-        backend::BufferObjectHandle, ibh)
-
-DECL_DRIVER_API_N(update3DImage,
-        backend::TextureHandle, th,
-        uint32_t, level,
-        uint32_t, xoffset,
-        uint32_t, yoffset,
-        uint32_t, zoffset,
-        uint32_t, width,
-        uint32_t, height,
-        uint32_t, depth,
-        backend::PixelBufferDescriptor&&, data)
-
-DECL_DRIVER_API_N(generateMipmaps,
-        backend::TextureHandle, th)
-
-DECL_DRIVER_API_N(setExternalStream,
-        backend::TextureHandle, th,
-        backend::StreamHandle, sh)
 
 DECL_DRIVER_API_N(beginRenderPass,
         backend::RenderTargetHandle, rth,
@@ -429,17 +562,17 @@ DECL_DRIVER_API_0(endRenderPass)
 
 DECL_DRIVER_API_0(nextSubpass)
 
-DECL_DRIVER_API_N(beginTimerQuery,
-        backend::TimerQueryHandle, query)
+DECL_DRIVER_API_N(bindPipeline,
+        backend::PipelineState const&, state)
 
-DECL_DRIVER_API_N(endTimerQuery,
-        backend::TimerQueryHandle, query)
+DECL_DRIVER_API_N(bindRenderPrimitive,
+        backend::RenderPrimitiveHandle, rph)
 
-DECL_DRIVER_API_N(compilePrograms,
-        backend::CompilerPriorityQueue, priority,
-        backend::CallbackHandler*, handler,
-        backend::CallbackHandler::Callback, callback,
-        void*, user)
+DECL_DRIVER_API_N(bindDescriptorSet,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_set_t, set,
+        backend::DescriptorSetOffsetArray&&, offsets
+)
 
 /*
  * Swap chain
@@ -457,11 +590,6 @@ DECL_DRIVER_API_N(commit,
  * Setting rendering state
  * -----------------------
  */
-
-DECL_DRIVER_API_N(setPushConstant,
-        backend::ShaderStage, stage,
-        uint8_t, index,
-        backend::PushConstantVariant, value)
 
 DECL_DRIVER_API_N(insertEventMarker,
         const char*, string)
@@ -483,6 +611,16 @@ DECL_DRIVER_API_0(stopCapture)
 
 DECL_DRIVER_API_N(readPixels,
         backend::RenderTargetHandle, src,
+        uint32_t, x,
+        uint32_t, y,
+        uint32_t, width,
+        uint32_t, height,
+        backend::PixelBufferDescriptor&&, data)
+
+DECL_DRIVER_API_N(readTexture,
+        backend::TextureHandle, src,
+        uint8_t, level,
+        uint16_t, layer,
         uint32_t, x,
         uint32_t, y,
         uint32_t, width,
@@ -523,12 +661,6 @@ DECL_DRIVER_API_N(blit,
         math::uint2, srcOrigin,
         math::uint2, size)
 
-DECL_DRIVER_API_N(bindPipeline,
-        backend::PipelineState const&, state)
-
-DECL_DRIVER_API_N(bindRenderPrimitive,
-        backend::RenderPrimitiveHandle, rph)
-
 DECL_DRIVER_API_N(draw2,
         uint32_t, indexOffset,
         uint32_t, indexCount,
@@ -548,6 +680,19 @@ DECL_DRIVER_API_N(dispatchCompute,
 
 DECL_DRIVER_API_N(scissor,
         Viewport, scissor)
+
+/*
+ * Asyncronous operation helpers
+ * --------------------
+ */
+
+DECL_DRIVER_API_R_N(backend::AsyncCallId, queueCommandAsync,
+        utils::Invocable<void(void)>&&, command,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, cancelAsyncJob, backend::AsyncCallId, jobId)
 
 
 #if defined(__clang__)

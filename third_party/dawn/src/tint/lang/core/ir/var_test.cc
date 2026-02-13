@@ -74,10 +74,13 @@ TEST_F(IR_VarTest, Clone) {
     auto* v = b.Var(mod.Types().ptr(core::AddressSpace::kFunction, mod.Types().f32()));
     v->SetInitializer(b.Constant(4_f));
     v->SetBindingPoint(1, 2);
-    v->SetAttributes(IOAttributes{
-        3, 4, 5, core::BuiltinValue::kFragDepth,
-        Interpolation{core::InterpolationType::kFlat, core::InterpolationSampling::kCentroid},
-        true});
+    v->SetLocation(3);
+    v->SetBlendSrc(4);
+    v->SetColor(5);
+    v->SetBuiltin(core::BuiltinValue::kFragDepth);
+    v->SetInterpolation(
+        Interpolation{core::InterpolationType::kFlat, core::InterpolationSampling::kCentroid});
+    v->SetInvariant(true);
 
     auto* new_v = clone_ctx.Clone(v);
 

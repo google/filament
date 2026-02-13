@@ -39,6 +39,7 @@
 #include <new>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -52,8 +53,8 @@ using namespace backend;
 struct OpenGLProgram::LazyInitializationData {
     Program::DescriptorSetInfo descriptorBindings;
     Program::BindingUniformsInfo bindingUniformInfo;
-    utils::FixedCapacityVector<Program::PushConstant> vertexPushConstants;
-    utils::FixedCapacityVector<Program::PushConstant> fragmentPushConstants;
+    FixedCapacityVector<Program::PushConstant> vertexPushConstants;
+    FixedCapacityVector<Program::PushConstant> fragmentPushConstants;
 };
 
 
@@ -121,7 +122,7 @@ void OpenGLProgram::initialize(OpenGLDriver& gld) {
  * checkProgramStatus() has been successfully called.
  */
 void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint program,
-        LazyInitializationData& lazyInitializationData) noexcept {
+        LazyInitializationData& lazyInitializationData) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // from the pipeline layout we compute a mapping from {set, binding} to {binding}
@@ -141,7 +142,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     context.useProgram(program);
 
     UTILS_NOUNROLL
-    for (backend::descriptor_set_t set = 0; set < MAX_DESCRIPTOR_SET_COUNT; set++) {
+    for (descriptor_set_t set = 0; set < MAX_DESCRIPTOR_SET_COUNT; set++) {
         for (Program::Descriptor const& entry: lazyInitializationData.descriptorBindings[set]) {
             switch (entry.type) {
                 case DescriptorType::UNIFORM_BUFFER:
@@ -214,8 +215,8 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
                 case DescriptorType::INPUT_ATTACHMENT:
                     break;
             }
-            CHECK_GL_ERROR()
         }
+        CHECK_GL_ERROR()
     }
 
     if (context.isES2()) {
@@ -253,8 +254,14 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         mPushConstants.reserve(totalConstantCount);
         mPushConstantFragmentStageOffset = vertexConstants.size();
         auto const transformAndAdd = [&](Program::PushConstant const& constant) {
-            GLint const loc = glGetUniformLocation(program, constant.name.c_str());
-            mPushConstants.push_back({loc, constant.type});
+            if (!constant.name.empty()) {
+                GLint const loc = glGetUniformLocation(program, constant.name.c_str());
+                mPushConstants.push_back({loc, constant.type});
+            } else {
+                // If the constant is not named, then we assume it will not be referenced in this
+                // program.
+                mPushConstants.push_back({ -1, constant.type });
+            }
         };
         std::for_each(vertexConstants.cbegin(), vertexConstants.cend(), transformAndAdd);
         std::for_each(fragmentConstants.cbegin(), fragmentConstants.cend(), transformAndAdd);
@@ -262,19 +269,24 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
 }
 
 void OpenGLProgram::updateUniforms(
-        uint32_t index, GLuint id, void const* buffer, uint16_t age) const noexcept {
+        uint32_t const index, GLuint const id, void const* buffer,
+        uint16_t const age, uint32_t const offset) const noexcept {
     assert_invariant(mUniformsRecords);
     assert_invariant(buffer);
 
     // only update the uniforms if the UBO has changed since last time we updated
     UniformsRecord const& records = mUniformsRecords[index];
-    if (records.id == id && records.age == age) {
+    if (records.id == id && records.age == age && records.offset == offset) {
         return;
     }
     records.id = id;
     records.age = age;
+    records.offset = offset;
 
     assert_invariant(records.uniforms.size() == records.locations.size());
+
+    // apply the offset to the buffer
+    buffer = static_cast<char const*>(buffer) + offset;
 
     for (size_t i = 0, c = records.uniforms.size(); i < c; i++) {
         Program::Uniform const& u = records.uniforms[i];
@@ -323,9 +335,40 @@ void OpenGLProgram::updateUniforms(
                 glUniform4iv(loc, u.size, bi);
                 break;
 
-            case UniformType::MAT3:
-                glUniformMatrix3fv(loc, u.size, GL_FALSE, bf);
+            case UniformType::MAT3: {
+                // glUniformMatrix3fv expect a packed mat3, but the UBO is in std140
+                // also, the GLES spec says:
+                // Locations for sequential array indices are not required to be sequential.
+                // The location for "a[1]" may or may not be equal to the location for "a[0]" + 1.
+                // Furthermore, since unused elements at the end of uniform arrays may be trimmed
+                // the location of the i + 1 array element may not be valid even if the location of
+                // the i element is valid. As a direct consequence, the value of the location of
+                // "a[0]" + 1 may refer to a different uniform entirely. Applications that wish to
+                // set individual array elements should query the locations of each element
+                // separately.
+
+                struct std140 {
+                    struct mat3 : public std::array<std::array<GLfloat, 4>, 3> {
+                    };
+                };
+                std140::mat3 const* const b = reinterpret_cast<std140::mat3 const*>(bf);
+
+                struct mat3 : public std::array<std::array<GLfloat, 3>, 3> {
+                    explicit mat3(std140::mat3 const& other) noexcept
+                        : std::array<std::array<GLfloat, 3>, 3>{ {
+                            { { other[0][0], other[0][1], other[0][2] } },
+                            { { other[1][0], other[1][1], other[1][2] } },
+                            { { other[2][0], other[2][1], other[2][2] } }
+                        } } {
+                    }
+                };
+
+                std::vector<mat3> const temp{ b, b + u.size };
+                glUniformMatrix3fv(loc, u.size, GL_FALSE,
+                        reinterpret_cast<GLfloat const*>(temp.data()));
                 break;
+            }
+
             case UniformType::MAT4:
                 glUniformMatrix4fv(loc, u.size, GL_FALSE, bf);
                 break;

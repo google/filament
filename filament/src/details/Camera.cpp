@@ -24,27 +24,35 @@
 #include <filament/Camera.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Panic.h>
 
 #include <math/scalar.h>
-
+#include <math/mat4.h>
 #include <math/vec2.h>
+#include <math/vec3.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <limits>
 
 using namespace filament::math;
 using namespace utils;
 
 namespace filament {
 
-static constexpr const float MIN_APERTURE = 0.5f;
-static constexpr const float MAX_APERTURE = 64.0f;
-static constexpr const float MIN_SHUTTER_SPEED = 1.0f / 25000.0f;
-static constexpr const float MAX_SHUTTER_SPEED = 60.0f;
-static constexpr const float MIN_SENSITIVITY = 10.0f;
-static constexpr const float MAX_SENSITIVITY = 204800.0f;
+static constexpr float MIN_APERTURE = 0.5f;
+static constexpr float MAX_APERTURE = 64.0f;
+static constexpr float MIN_SHUTTER_SPEED = 1.0f / 25000.0f;
+static constexpr float MAX_SHUTTER_SPEED = 60.0f;
+static constexpr float MIN_SENSITIVITY = 10.0f;
+static constexpr float MAX_SENSITIVITY = 204800.0f;
 
 FCamera::FCamera(FEngine& engine, Entity const e)
         : mEngine(engine),
           mEntity(e) {
+    setProjection(Projection::PERSPECTIVE, -1.0, 1.0, -1.0, 1.0, 0.1, 1.0);
 }
 
 mat4 FCamera::projection(Fov const direction, double const fovInDegrees,
@@ -84,12 +92,16 @@ mat4 FCamera::projection(double const focalLengthInMillimeters,
  * All methods for setting the projection funnel through here
  */
 
-void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
-        mat4 const& c, double const near, double const far) noexcept {
+void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& projection,
+        mat4 const& projectionForCulling, double const near, double const far) noexcept {
+
+    FILAMENT_CHECK_PRECONDITION(near != far)
+            << "Camera preconditions not met in setCustomProjection(): near = far = " << near;
+
     for (auto& eyeProjection: mEyeProjection) {
-        eyeProjection = p;
+        eyeProjection = projection;
     }
-    mProjectionForCulling = c;
+    mProjectionForCulling = projectionForCulling;
     mNear = near;
     mFar = far;
 }
@@ -97,10 +109,15 @@ void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
 void UTILS_NOINLINE FCamera::setCustomEyeProjection(mat4 const* projection, size_t const count,
         mat4 const& projectionForCulling, double const near, double const far) {
     const Engine::Config& config = mEngine.getConfig();
+
+    FILAMENT_CHECK_PRECONDITION(near != far)
+            << "Camera preconditions not met in setCustomEyeProjection(): near = far = " << near;
+
     FILAMENT_CHECK_PRECONDITION(count >= config.stereoscopicEyeCount)
             << "All eye projections must be supplied together, count must be >= "
                "config.stereoscopicEyeCount ("
             << config.stereoscopicEyeCount << ")";
+
     for (int i = 0; i < config.stereoscopicEyeCount; i++) {
         mEyeProjection[i] = projection[i];
     }
@@ -290,10 +307,10 @@ CameraInfo::CameraInfo(FCamera const& camera,
     model              = mat4f{ modelMatrix };
     view               = mat4f{ inverse(modelMatrix) };
     worldTransform     = inWorldTransform;
-    zn                 = (float)camera.getNear();
-    zf                 = (float)camera.getCullingFar();
+    zn                 = float(camera.getNear());
+    zf                 = float(camera.getCullingFar());
     ev100              = Exposure::ev100(camera);
-    f                  = (float)camera.getFocalLength();
+    f                  = float(camera.getFocalLength());
     A                  = f / camera.getAperture();
     d                  = std::max(zn, camera.getFocusDistance());
 }

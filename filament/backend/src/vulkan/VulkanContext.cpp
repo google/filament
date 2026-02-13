@@ -76,5 +76,4 @@ VkImageSubresourceRange VulkanAttachment::getSubresourceRange() const {
     };
 }
 
-
 } // namespace filament::backend

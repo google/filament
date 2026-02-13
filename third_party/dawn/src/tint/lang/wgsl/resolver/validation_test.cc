@@ -28,7 +28,7 @@
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 
 #include "gmock/gmock.h"
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/wgsl/ast/assignment_statement.h"
@@ -1485,7 +1485,14 @@ TEST_F(ResolverValidationTest, WorkgroupUniformLoad_ArraySize_NamedOverride) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(error: workgroupUniformLoad must be called with an argument whose type is constructible)");
+        R"(error: no matching call to 'workgroupUniformLoad(ptr<workgroup, array<u32, size>, read_write>)'
+
+2 candidate functions:
+ • 'workgroupUniformLoad(ptr<workgroup, T, read_write>  ✗ ) -> T' where:
+      ✗  'T' is 'any concrete constructible type'
+ • 'workgroupUniformLoad(ptr<workgroup, atomic<T>, read_write>  ✗ ) -> T' where:
+      ✗  'T' is 'i32' or 'u32'
+)");
 }
 
 TEST_F(ResolverValidationTest, WorkgroupUniformLoad_ArraySize_NamedConstant) {

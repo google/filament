@@ -22,7 +22,7 @@
 #    - 'clang-format-diff.py' is in the utils directory, or env var
 #       points to it.CLANG_FORMAT_DIFF
 
-BASE_BRANCH=${1:-main}
+BASE_BRANCH=$(git merge-base main HEAD)
 
 CLANG_FORMAT=${CLANG_FORMAT:-clang-format}
 if [ ! -f "$CLANG_FORMAT" ]; then
@@ -46,6 +46,9 @@ if [ -z "${FILES_TO_CHECK}" ]; then
   echo "No source code to check for formatting."
   exit 0
 fi
+echo "Checking Formatting for the following files"
+echo "${FILES_TO_CHECK}"
+echo
 
 FORMAT_DIFF=$(git diff -U0 ${BASE_BRANCH} -- ${FILES_TO_CHECK} | python3 "${CLANG_FORMAT_DIFF}" -p1 -style=file -binary "$CLANG_FORMAT")
 

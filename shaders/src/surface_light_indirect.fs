@@ -119,8 +119,7 @@ float perceptualRoughnessToLod(float perceptualRoughness) {
     return frameUniforms.iblRoughnessOneLevel * perceptualRoughness * (2.0 - perceptualRoughness);
 }
 
-vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
-    float lod = perceptualRoughnessToLod(perceptualRoughness);
+vec3 prefilteredRadiance(const vec3 r, float lod) {
     return decodeDataForIBL(textureLod(sampler0_iblSpecular, r, lod));
 }
 
@@ -391,7 +390,8 @@ void evaluateSheenIBL(const PixelParams pixel, float diffuseAO,
     vec3 reflectance = pixel.sheenDFG * pixel.sheenColor;
     reflectance *= specularAO(shading_NoV, diffuseAO, pixel.sheenRoughness, cache);
 
-    Fr += reflectance * prefilteredRadiance(shading_reflected, pixel.sheenPerceptualRoughness);
+    Fr += reflectance * prefilteredRadiance(shading_reflected,
+            perceptualRoughnessToLod(pixel.sheenPerceptualRoughness));
 #endif
 #endif
 }
@@ -422,7 +422,8 @@ void evaluateClearCoatIBL(const PixelParams pixel, float diffuseAO,
 
         // TODO: Should we apply specularAO to the attenuation as well?
         float specularAO = specularAO(clearCoatNoV, diffuseAO, pixel.clearCoatRoughness, cache);
-        Fr += prefilteredRadiance(clearCoatR, pixel.clearCoatPerceptualRoughness) * (specularAO * Fc);
+        Fr += prefilteredRadiance(clearCoatR,
+                perceptualRoughnessToLod(pixel.clearCoatPerceptualRoughness)) * (specularAO * Fc);
     }
 #endif
 }
@@ -447,22 +448,45 @@ struct Refraction {
     float d;
 };
 
-void refractionSolidSphere(const PixelParams pixel,
-    const vec3 n, vec3 r, out Refraction ray) {
-    r = refract(r, n, pixel.etaIR);
-    float NoR = dot(n, r);
-    float d = pixel.thickness * -NoR;
-    ray.position = vec3(shading_position + r * d);
+/**
+ * Internal helper for solid sphere refraction.
+ * Optimized to take pre-calculated geometric constants to support efficient spectral dispersion.
+ */
+void refractedRaySolidSphere(const vec3 r_in, float NoR_in, float sin2Theta_in,
+        float etaIR, float etaRI, float thickness, const vec3 n, out Refraction ray) {
+
+    // Snell's Law for the first interface (entry into medium)
+    // We use the pre-calculated sin^2(theta) to solve for the internal ray direction
+    float k = 1.0 - etaIR * etaIR * sin2Theta_in;
+    vec3 rr = etaIR * r_in - (etaIR * NoR_in + sqrt(max(k, 0.0))) * n;
+
+    float NoR = dot(n, rr);
+    float d = thickness * -NoR;
+
     ray.d = d;
-    vec3 n1 = normalize(NoR * r - n * 0.5);
-    ray.direction = refract(r, n1,  pixel.etaRI);
+    ray.position = shading_position + rr * d;
+
+    // Second interface exit (Sphere fudge)
+    // Simulates the curvature of a sphere without full ray-intersection math
+    vec3 n1 = normalize(NoR * rr - n * 0.5);
+    ray.direction = refract(rr, n1, etaRI);
 }
 
-void refractionSolidBox(const PixelParams pixel,
-    const vec3 n, vec3 r, out Refraction ray) {
-    vec3 rr = refract(r, n, pixel.etaIR);
+/**
+ * Standard Solid Sphere Refraction (N=1)
+ */
+void refractionSolidSphere(float etaIR, float etaRI, float thickness,
+        const vec3 n, vec3 r, out Refraction ray) {
+    float NoR_in = dot(n, r);
+    float sin2Theta_in = 1.0 - NoR_in * NoR_in;
+    refractedRaySolidSphere(r, NoR_in, sin2Theta_in, etaIR, etaRI, thickness, n, ray);
+}
+
+void refractionSolidBox(float etaIR, float thickness,
+        const vec3 n, vec3 r, out Refraction ray) {
+    vec3 rr = refract(r, n, etaIR);
     float NoR = dot(n, rr);
-    float d = pixel.thickness / max(-NoR, 0.001);
+    float d = thickness / max(-NoR, 0.001);
     ray.position = vec3(shading_position + rr * d);
     ray.direction = r;
     ray.d = d;
@@ -473,15 +497,15 @@ void refractionSolidBox(const PixelParams pixel,
 #endif
 }
 
-void refractionThinSphere(const PixelParams pixel,
-    const vec3 n, vec3 r, out Refraction ray) {
+void refractionThinSphere(float etaIR, float uThickness,
+        const vec3 n, vec3 r, out Refraction ray) {
     float d = 0.0;
 #if defined(MATERIAL_HAS_MICRO_THICKNESS)
     // note: we need the refracted ray to calculate the distance traveled
     // we could use shading_NoV, but we would lose the dependency on ior.
-    vec3 rr = refract(r, n, pixel.etaIR);
+    vec3 rr = refract(r, n, etaIR);
     float NoR = dot(n, rr);
-    d = pixel.uThickness / max(-NoR, 0.001);
+    d = uThickness / max(-NoR, 0.001);
     ray.position = vec3(shading_position + rr * d);
 #else
     ray.position = vec3(shading_position);
@@ -490,33 +514,178 @@ void refractionThinSphere(const PixelParams pixel,
     ray.d = d;
 }
 
-vec3 evaluateRefraction(
-    const PixelParams pixel,
-    const vec3 n0, vec3 E) {
+vec3 evaluateRefraction(const PixelParams pixel, const vec3 n0, const float lod,
+    const float etaIR, const float etaRI) {
 
     Refraction ray;
 
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
-    refractionSolidSphere(pixel, n0, -shading_view, ray);
+    refractionSolidSphere(etaIR, etaRI, pixel.thickness, n0, -shading_view, ray);
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    refractionThinSphere(pixel, n0, -shading_view, ray);
+    refractionThinSphere(etaIR, pixel.uThickness, n0, -shading_view, ray);
 #else
-#error invalid REFRACTION_TYPE
+#   error invalid REFRACTION_TYPE
 #endif
 
-    // compute transmission T
-#if defined(MATERIAL_HAS_ABSORPTION)
-#if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
-    vec3 T = min(vec3(1.0), exp(-pixel.absorption * ray.d));
+    /* sample the cubemap or screen-space */
+#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
+    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
+    // which is not the case when we'll read from the screen-space buffer
+    vec3 t = prefilteredRadiance(ray.direction, lod) * frameUniforms.iblLuminance;
 #else
-    vec3 T = 1.0 - pixel.absorption;
+    // compute the point where the ray exits the medium, if needed
+    highp vec4 p = mulMat4x4Float3(getClipFromWorldMatrix(), ray.position);
+    vec2 uv = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
+    vec3 t = textureLod(sampler0_ssr, vec3(uv, 0.0), lod).rgb;
 #endif
+
+    // apply absorption
+#if defined(MATERIAL_HAS_ABSORPTION)
+    // compute transmission T
+    vec3 T = saturate(exp(-pixel.absorption * ray.d));
+    t *= T;
 #endif
+
+    return t;
+}
+
+#if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
+
+/**
+ * HIGH-FIDELITY SPECTRAL DISPERSION (N=4)
+ * ---------------------------------------
+ * This algorithm approximates the spectral integral of refracted light by sampling
+ * four optimized wavelengths and collapsing the color-matching and color-space
+ * transforms into four pre-computed 3x3 matrices (K0-K3).
+ * See tools/specgen.
+ */
+
+vec3 calculateDispersion(const PixelParams pixel, const vec3 n0, const float lod) {
+    const mat3 K0 = mat3(
+         0.00581637, 0.02312851, 0.01689631,
+        -0.11782236, 0.11316202, 0.11098148,
+        -0.45422013, 0.04493517, 0.98249798
+    ); // 486.1nm
+
+    const mat3 K1 = mat3(
+         0.14291703, 0.10429778, -0.01556522,
+        -0.27560148, 0.57678541, -0.06412244,
+         0.06839811, 0.02732891,  0.01602064
+    ); // 546.1nm
+
+    const mat3 K2 = mat3(
+        0.70106120, -0.09440402, -0.00241699,
+        0.29545674,  0.29931852, -0.04351961,
+        0.31884400, -0.05627069,  0.00083808
+    ); // 589.3nm
+
+    const mat3 K3 = mat3(
+        0.15020522, -0.03302213,  0.00108589,
+        0.09796715,  0.01073410, -0.00333946,
+        0.06697807, -0.01599341,  0.00064333
+    ); // 656.3nm
+
+    const float offsets[4] = float[](0.70795215, 0.24790980, 0.00000000, -0.29204785);
+
+    float n_base = pixel.etaRI;
+    float P = pixel.dispersion / 20.0;
+    float dispFactor = P * (n_base - 1.0);
+
+    // JITTER / DITHERING
+    // Calculate per-pixel jitter to fill the gaps between the 4 samples
+    // 0.35 is roughly the distance between the Gaussian sample points.
+    float jitter = (interleavedGradientNoise(gl_FragCoord.xy + vec2(frameUniforms.temporalNoise)) - 0.5)
+            * 0.35 * dispFactor;
+
+    // Gaussian mapping for t in [0, 1] relative to the 420-680nm range
+    float nd0 = n_base + dispFactor * offsets[0] + jitter;
+    float nd1 = n_base + dispFactor * offsets[1] + jitter;
+    float nd2 = n_base + dispFactor * offsets[2] + jitter;
+    float nd3 = n_base + dispFactor * offsets[3] + jitter;
+
+    // Compute 4 Ray Directions
+    // We unroll the refraction model logic to compute all 4 rays at once
+    Refraction r0, r1, r2, r3;
+
+    vec3 r_in = -shading_view;
+    float NoR_in = dot(n0, r_in);
+    float sin2Theta_in = 1.0 - NoR_in * NoR_in;
+    refractedRaySolidSphere(r_in, NoR_in, sin2Theta_in, 1.0 / nd0, nd0, pixel.thickness, n0, r0);
+    refractedRaySolidSphere(r_in, NoR_in, sin2Theta_in, 1.0 / nd1, nd1, pixel.thickness, n0, r1);
+    refractedRaySolidSphere(r_in, NoR_in, sin2Theta_in, 1.0 / nd2, nd2, pixel.thickness, n0, r2);
+    refractedRaySolidSphere(r_in, NoR_in, sin2Theta_in, 1.0 / nd3, nd3, pixel.thickness, n0, r3);
+
+    // Batch Texture Fetches
+    // Issuing all textureLod calls back-to-back is the key to performance here.
+    vec3 s0, s1, s2, s3;
+#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
+    s0 = prefilteredRadiance(r0.direction, lod);
+    s1 = prefilteredRadiance(r1.direction, lod);
+    s2 = prefilteredRadiance(r2.direction, lod);
+    s3 = prefilteredRadiance(r3.direction, lod);
+    float ibl = frameUniforms.iblLuminance;
+    s0 *= ibl;
+    s1 *= ibl;
+    s2 *= ibl;
+    s3 *= ibl;
+#else
+    // SSR Path: Calculate 4 UVs, then 4 Samples
+    highp mat4 clipFromWorld = getClipFromWorldMatrix();
+    vec4 p0 = mulMat4x4Float3(clipFromWorld, r0.position);
+    vec4 p1 = mulMat4x4Float3(clipFromWorld, r1.position);
+    vec4 p2 = mulMat4x4Float3(clipFromWorld, r2.position);
+    vec4 p3 = mulMat4x4Float3(clipFromWorld, r3.position);
+
+    vec2 uv0 = uvToRenderTargetUV(p0.xy * (0.5 / p0.w) + 0.5);
+    vec2 uv1 = uvToRenderTargetUV(p1.xy * (0.5 / p1.w) + 0.5);
+    vec2 uv2 = uvToRenderTargetUV(p2.xy * (0.5 / p2.w) + 0.5);
+    vec2 uv3 = uvToRenderTargetUV(p3.xy * (0.5 / p3.w) + 0.5);
+
+    s0 = textureLod(sampler0_ssr, vec3(uv0, 0.0), lod).rgb;
+    s1 = textureLod(sampler0_ssr, vec3(uv1, 0.0), lod).rgb;
+    s2 = textureLod(sampler0_ssr, vec3(uv2, 0.0), lod).rgb;
+    s3 = textureLod(sampler0_ssr, vec3(uv3, 0.0), lod).rgb;
+#endif
+
+    // Apply Absorption (Optimized: Use r1 as the representative path length)
+#if defined(MATERIAL_HAS_ABSORPTION)
+    vec3 T = saturate(exp(-pixel.absorption * r1.d));
+    s0 *= T;
+    s1 *= T;
+    s2 *= T;
+    s3 *= T;
+#endif
+
+    // 6. Spectral Integration
+    return max(K0 * s0 + K1 * s1 + K2 * s2 + K3 * s3, 0.0);
+}
+
+#endif
+
+vec3 evaluateRefraction(const PixelParams pixel, const vec3 n0, vec3 E) {
+    vec3 Ft;
+
+    // Note: We use the average IOR for the roughness lod calculation.
 
     // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
     // of 1.5 has full microfacet refraction
-    float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0,
-            saturate(pixel.etaIR * 3.0 - 2.0));
+    float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0, saturate(pixel.etaIR * 3.0 - 2.0));
+
+#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
+    float lod = perceptualRoughnessToLod(perceptualRoughness);
+#else
+    // distance to camera plane
+    const float invLog2sqrt5 = 0.8614;
+    float lod = max(0.0, (2.0 * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
+#endif
+
+#if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
+    Ft = calculateDispersion(pixel, n0, lod);
+#else
+    Ft = evaluateRefraction(pixel, n0, lod, pixel.etaIR, pixel.etaRI);
+#endif
+
+
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
     // For thin surfaces, the light will bounce off at the second interface in the direction of
     // the reflection, effectively adding to the specular, but this process will repeat itself.
@@ -528,38 +697,16 @@ vec3 evaluateRefraction(
     E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);
 #endif
 
-    /* sample the cubemap or screen-space */
-#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
-    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
-    // which is not the case when we'll read from the screen-space buffer
-    vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
-#else
-    vec3 Ft;
-
-    // compute the point where the ray exits the medium, if needed
-    vec4 p = vec4(getClipFromWorldMatrix() * vec4(ray.position, 1.0));
-    p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
-
-    // distance to camera plane
-    const float invLog2sqrt5 = 0.8614;
-    float lod = max(0.0, (2.0 * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
-    Ft = textureLod(sampler0_ssr, vec3(p.xy, 0.0), lod).rgb;
-#endif
+    // fresnel from the first interface
+    Ft *= 1.0 - E;
 
     // base color changes the amount of light passing through the boundary
     Ft *= pixel.diffuseColor;
 
-    // fresnel from the first interface
-    Ft *= 1.0 - E;
-
-    // apply absorption
-#if defined(MATERIAL_HAS_ABSORPTION)
-    Ft *= T;
-#endif
-
     return Ft;
 }
 #endif
+
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // specular layer
@@ -602,7 +749,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 E = specularDFG(pixel);
     if (ssrFr.a < 1.0) { // prevent reading the IBL if possible
         vec3 r = getReflectedVector(pixel, shading_normal);
-        Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
+        Fr = E * prefilteredRadiance(r, perceptualRoughnessToLod(pixel.perceptualRoughness));
     }
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling

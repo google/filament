@@ -20,6 +20,7 @@
 #include "downcast.h"
 
 #include "Allocators.h"
+#include "BufferPoolAllocator.h"
 #include "Culler.h"
 #include "FrameHistory.h"
 #include "FrameInfo.h"
@@ -29,8 +30,6 @@
 
 #include "ds/ColorPassDescriptorSet.h"
 #include "ds/DescriptorSet.h"
-#include "ds/PostProcessDescriptorSet.h"
-#include "ds/SsrPassDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
 #include "components/LightManager.h"
@@ -41,10 +40,7 @@
 #include "details/RenderTarget.h"
 #include "details/Scene.h"
 
-#include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
-
-#include <private/backend/DriverApi.h>
 
 #include <filament/Frustum.h>
 #include <filament/Renderer.h>
@@ -54,7 +50,6 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
-#include <utils/Allocator.h>
 #include <utils/Entity.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
@@ -68,8 +63,8 @@ namespace filament::fgviewer {
 }
 #endif
 
-#include <math/scalar.h>
 #include <math/mat4.h>
+#include <math/vec4.h>
 
 #include <array>
 #include <memory>
@@ -87,8 +82,8 @@ class JobSystem;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #elif defined(_MSC_VER)
-#pragma warning push
-#pragma warning disable : 4996
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #endif
 
 namespace filament {
@@ -168,21 +163,24 @@ public:
             const Viewport& physicalViewport,
             const Viewport& logicalViewport) const noexcept;
 
-    void prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
-            FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
+    void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
+            FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
     void prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
-    void prepareSSR(backend::Handle<backend::HwTexture> ssr, bool disableSSR,
-            float refractionLodOffset,
-            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
+    void prepareSSAO(AmbientOcclusionOptions const& options) const noexcept;
+
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr) const noexcept;
+    void prepareSSR(FEngine& engine, CameraInfo const& cameraInfo,
+            float refractionLodOffset, ScreenSpaceReflectionsOptions const& options) const noexcept;
+
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadowMapping(FEngine const& engine, bool highPrecision) const noexcept;
+    void prepareShadowMapping(FEngine const& engine, backend::Handle<backend::HwTexture> structure) const noexcept;
+    void prepareShadowMapping() const noexcept;
 
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
-    void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
-    void unbindSamplers(FEngine& engine) noexcept;
+    void commitUniforms(backend::DriverApi& driver) const noexcept;
+    void commitDescriptorSet(backend::DriverApi& driver) const noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
@@ -207,6 +205,16 @@ public:
     bool hasStereo() const noexcept {
         return mIsStereoSupported && mStereoscopicOptions.enabled;
     }
+
+    void setChannelDepthClearEnabled(uint8_t const channel, bool const enabled) noexcept {
+        mChannelDepthClearMask.set(channel, enabled);
+    }
+
+    bool isChannelDepthClearEnabled(uint8_t channel) const noexcept {
+        return mChannelDepthClearMask[channel];
+    }
+
+    utils::bitset32 getChannelDepthClearMask() const noexcept { return mChannelDepthClearMask; }
 
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
@@ -236,6 +244,12 @@ public:
         if (!mShadowMapManager) return {};
         return mShadowMapManager->getDirectionalShadowCameras();
     }
+
+    void setFroxelVizEnabled(bool const enabled) noexcept {
+        mFroxelVizEnabled = enabled;
+    }
+
+    FroxelConfigurationInfoWithAge getFroxelConfigurationInfo() const noexcept;
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
         assert_invariant(!renderTarget || !mMultiSampleAntiAliasingOptions.enabled ||
@@ -289,7 +303,7 @@ public:
         return mGuardBandOptions;
     }
 
-    void setColorGrading(FColorGrading* colorGrading) noexcept {
+    void setColorGrading(FColorGrading const* colorGrading) noexcept {
         mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
     }
 
@@ -322,6 +336,10 @@ public:
 
     DynamicResolutionOptions getDynamicResolutionOptions() const noexcept {
         return mDynamicResolution;
+    }
+
+    math::float2 getLastDynamicResolutionScale() const noexcept {
+        return mScale;
     }
 
     void setRenderQuality(RenderQuality const& renderQuality) noexcept {
@@ -432,16 +450,19 @@ public:
     backend::TargetBufferFlags getRenderTargetAttachmentMask() const noexcept {
         if (mRenderTarget == nullptr) {
             return backend::TargetBufferFlags::NONE;
-        } else {
-            return mRenderTarget->getAttachmentMask();
         }
+        return mRenderTarget->getAttachmentMask();
     }
 
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
+    ColorPassDescriptorSet& getColorPassDescriptorSet(ShadowType type) const noexcept {
+        return mColorPassDescriptorSet[type == ShadowType::PCF ? 0 : 1];
+    }
+
     ColorPassDescriptorSet& getColorPassDescriptorSet() const noexcept {
-            return mColorPassDescriptorSet[mShadowType == ShadowType::PCF ? 0 : 1];
+        return getColorPassDescriptorSet(mShadowType);
     }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
@@ -475,7 +496,7 @@ public:
         return mFogEntity;
     }
 
-    TypedUniformBuffer<PerViewUib>& getFrameUniforms() noexcept {
+    TypedUniformBuffer<PerViewUib>& getFrameUniforms() const noexcept {
         return mUniforms;
     }
 
@@ -499,7 +520,7 @@ private:
                 PickingQueryResultCallback const callback) noexcept {
             return new(std::nothrow) FPickingQuery(x, y, handler, callback);
         }
-        static void put(FPickingQuery* pQuery) noexcept {
+        static void put(FPickingQuery const* pQuery) noexcept {
             delete pQuery;
         }
         mutable FPickingQuery* next = nullptr;
@@ -509,11 +530,15 @@ private:
         backend::CallbackHandler* const handler;
         PickingQueryResultCallback const callback;
         // picking query result
-        PickingQueryResult result;
+        PickingQueryResult result{};
     };
 
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
+
+    void updateUBOs(backend::DriverApi& driver,
+            FScene::RenderableSoa& renderableData,
+            utils::Range<uint32_t> visibleRenderables) noexcept;
 
     static void prepareVisibleLights(FLightManager const& lcm,
             utils::Slice<float> scratch,
@@ -543,12 +568,14 @@ private:
 
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
-    FCamera* /* UTILS_NONNULL */ mCullingCamera = nullptr; // FIXME: should always be non-null
+    FCamera* mCullingCamera = nullptr;
     // The optional (debug) camera, used only for viewing
     FCamera* mViewingCamera = nullptr;
 
     mutable Froxelizer mFroxelizer;
     utils::JobSystem::Job* mFroxelizerSync = nullptr;
+    bool mFroxelVizEnabled = false;
+    uint32_t mFroxelConfigurationAge = 0;
 
     Viewport mViewport;
     bool mCulling = true;
@@ -582,6 +609,7 @@ private:
     const FColorGrading* mDefaultColorGrading = nullptr;
     utils::Entity mFogEntity{};
     bool mIsStereoSupported : 1;
+    utils::bitset32 mChannelDepthClearMask{};
 
     PIDController mPidController;
     DynamicResolutionOptions mDynamicResolution;
@@ -603,11 +631,17 @@ private:
     Range mVisibleRenderables;
     Range mVisibleDirectionalShadowCasters;
     Range mSpotLightShadowCasters;
-    uint32_t mRenderableUBOSize = 0;
+    uint32_t mRenderableUBOElementCount = 0;
     mutable bool mHasDirectionalLighting = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
+
+    // State shared between Scene and driver callbacks.
+    struct SharedState {
+        BufferPoolAllocator<3> mBufferPoolAllocator = {};
+    };
+    std::shared_ptr<SharedState> mSharedState;
 
     std::unique_ptr<ShadowMapManager> mShadowMapManager;
 
@@ -637,7 +671,7 @@ FILAMENT_DOWNCAST(View)
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #elif defined(_MSC_VER)
-#pragma warning pop
+#pragma warning(pop)
 #endif
 
 #endif // TNT_FILAMENT_DETAILS_VIEW_H

@@ -1,0 +1,63 @@
+# Object files
+*.o
+*.ko
+*.dSYM
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+*.framework
+*.xcframework
+
+# Executables
+/zstd
+zstdmt
+*.exe
+*.out
+*.app
+
+# Test artefacts
+tmp*
+*.zst
+*.zstd
+dictionary.
+dictionary
+NUL
+cmakebuild/
+install/
+
+# Build artefacts
+contrib/linux-kernel/linux/
+projects/
+bin/
+.buckd/
+buck-out/
+build-*
+*.gcda
+
+# IDE
+.clang_complete
+compile_flags.txt
+.clang-format
+
+# Other files
+.directory
+_codelite/
+_zstdbench/
+*.idea
+*.swp
+.DS_Store
+googletest/
+*.d
+*.vscode
+*.code-workspace
+compile_commands.json
+.clangd
+perf.data
+perf.data.old

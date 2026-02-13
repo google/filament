@@ -17,10 +17,11 @@
 #include <backend/Program.h>
 #include <backend/DriverEnums.h>
 
-#include <utils/debug.h>
 #include <utils/CString.h>
-#include <utils/ostream.h>
 #include <utils/Invocable.h>
+#include <utils/Panic.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <utility>
 
@@ -37,39 +38,41 @@ Program::Program() noexcept {  // NOLINT(modernize-use-equals-default)
 
 Program::Program(Program&& rhs) noexcept = default;
 
+Program& Program::operator=(Program&& rhs) noexcept = default;
+
 Program::~Program() noexcept = default;
 
-Program& Program::priorityQueue(CompilerPriorityQueue priorityQueue) noexcept {
+Program& Program::priorityQueue(CompilerPriorityQueue const priorityQueue) noexcept {
     mPriorityQueue = priorityQueue;
     return *this;
 }
 
 Program& Program::diagnostics(CString const& name,
-        Invocable<io::ostream&(utils::CString const& name, io::ostream&)>&& logger) {
+        Invocable<io::ostream&(CString const& name, io::ostream&)>&& logger) {
     mName = name;
     mLogger = std::move(logger);
     return *this;
 }
 
-Program& Program::shader(ShaderStage shader, void const* data, size_t size) {
+Program& Program::shader(ShaderStage shader, void const* data, size_t const size) {
     ShaderBlob blob(size);
     std::copy_n((const uint8_t *)data, size, blob.data());
     mShadersSource[size_t(shader)] = std::move(blob);
     return *this;
 }
 
-Program& Program::shaderLanguage(ShaderLanguage shaderLanguage) {
+Program& Program::shaderLanguage(ShaderLanguage const shaderLanguage) {
     mShaderLanguage = shaderLanguage;
     return *this;
 }
 
-Program& Program::descriptorBindings(backend::descriptor_set_t set,
+Program& Program::descriptorBindings(descriptor_set_t const set,
         DescriptorBindingsInfo descriptorBindings) noexcept {
     mDescriptorBindings[set] = std::move(descriptorBindings);
     return *this;
 }
 
-Program& Program::uniforms(uint32_t index, utils::CString name, UniformInfo uniforms) noexcept {
+Program& Program::uniforms(uint32_t index, CString name, UniformInfo uniforms) {
     mBindingUniformsInfo.reserve(mBindingUniformsInfo.capacity() + 1);
     mBindingUniformsInfo.emplace_back(index, std::move(name), std::move(uniforms));
     return *this;
@@ -86,17 +89,17 @@ Program& Program::specializationConstants(SpecializationConstantsInfo specConsta
 }
 
 Program& Program::pushConstants(ShaderStage stage,
-        utils::FixedCapacityVector<PushConstant> constants) noexcept {
+        FixedCapacityVector<PushConstant> constants) noexcept {
     mPushConstants[static_cast<uint8_t>(stage)] = std::move(constants);
     return *this;
 }
 
-Program& Program::cacheId(uint64_t cacheId) noexcept {
+Program& Program::cacheId(uint64_t const cacheId) noexcept {
     mCacheId = cacheId;
     return *this;
 }
 
-Program& Program::multiview(bool multiview) noexcept {
+Program& Program::multiview(bool const multiview) noexcept {
     mMultiview = multiview;
     return *this;
 }

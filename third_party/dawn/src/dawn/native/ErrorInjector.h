@@ -28,9 +28,6 @@
 #ifndef SRC_DAWN_NATIVE_ERRORINJECTOR_H_
 #define SRC_DAWN_NATIVE_ERRORINJECTOR_H_
 
-#include <stdint.h>
-#include <type_traits>
-
 namespace dawn::native {
 
 template <typename ErrorType>
@@ -62,7 +59,7 @@ InjectedErrorResult<ErrorType> MaybeInjectError(ErrorType errorType, ErrorTypes.
 
 #define INJECT_ERROR_OR_RUN(stmt, ...)                                                   \
     [&] {                                                                                \
-        if (DAWN_UNLIKELY(::dawn::native::ErrorInjectorEnabled())) {                     \
+        if (::dawn::native::ErrorInjectorEnabled()) [[unlikely]] {                       \
             /* Only used for testing and fuzzing, so it's okay if this is deoptimized */ \
             auto injectedError = ::dawn::native::MaybeInjectError(__VA_ARGS__);          \
             if (injectedError.injected) {                                                \

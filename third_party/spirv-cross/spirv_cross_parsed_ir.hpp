@@ -169,7 +169,7 @@ public:
 		~LoopLock();
 
 	private:
-		uint32_t *lock;
+		uint32_t *lock = nullptr;
 	};
 
 	// This must be held while iterating over a type ID array.

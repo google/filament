@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,9 @@
 #include <utils/debug.h>
 
 #include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <utility>
 
 #include <stddef.h>
 
@@ -31,36 +34,44 @@ using namespace utils;
 using namespace backend;
 
 FrameSkipper::FrameSkipper(size_t const latency) noexcept
-        : mLast(std::clamp(latency, size_t(1), MAX_FRAME_LATENCY) - 1) {
+        : mLatency(std::clamp(latency, size_t(1), MAX_FRAME_LATENCY) - 1) {
 }
 
 FrameSkipper::~FrameSkipper() noexcept = default;
 
 void FrameSkipper::terminate(DriverApi& driver) noexcept {
-    for (auto fence : mDelayedFences) {
+    for (auto& fence : mDelayedFences) {
         if (fence) {
-            driver.destroyFence(fence);
+            driver.destroyFence(std::move(fence));
         }
     }
 }
 
-bool FrameSkipper::beginFrame(DriverApi& driver) noexcept {
+bool FrameSkipper::shouldRenderFrame(DriverApi& driver) const noexcept {
+
+    if (UTILS_UNLIKELY(mFrameToSkip)) {
+        return false;
+    }
+
     auto& fences = mDelayedFences;
     if (fences.front()) {
         // Do we have a latency old fence?
-        auto status = driver.getFenceStatus(fences.front());
+        FenceStatus const status = driver.getFenceStatus(fences.front());
         if (UTILS_UNLIKELY(status == FenceStatus::TIMEOUT_EXPIRED)) {
             // The fence hasn't signaled yet, skip this frame
             return false;
         }
-        assert_invariant(status == FenceStatus::CONDITION_SATISFIED);
+        // If we get a FenceStatus::ERROR, it doesn't necessarily indicate a "bug", it could
+        // just be that fences are not supported. Regardless, we should return `true` in that
+        // case.
+        assert_invariant(status != FenceStatus::TIMEOUT_EXPIRED);
     }
     return true;
 }
 
-void FrameSkipper::endFrame(DriverApi& driver) noexcept {
+void FrameSkipper::submitFrame(DriverApi& driver) noexcept {
     auto& fences = mDelayedFences;
-    size_t const last = mLast;
+    size_t const last = mLatency;
 
     // pop the oldest fence and advance the other ones
     if (fences.front()) {
@@ -73,5 +84,15 @@ void FrameSkipper::endFrame(DriverApi& driver) noexcept {
 
     fences[last] = driver.createFence();
 }
+
+void FrameSkipper::skipNextFrames(size_t frameCount) noexcept {
+    frameCount = std::min(frameCount, size_t(std::numeric_limits<decltype(mFrameToSkip)>::max()));
+    mFrameToSkip = uint16_t(frameCount);
+}
+
+size_t FrameSkipper::getFrameToSkipCount() const noexcept {
+    return mFrameToSkip;
+}
+
 
 } // namespace filament

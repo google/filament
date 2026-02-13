@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'filament-plugin'
+}
+
+project.ext.isSample = true
+
+kotlin {
+    jvmToolchain(versions.jdk)
+}
+
+filament {
+    cmgenArgs = "-q --format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs/default_env"
+    iblInputFile = project.layout.projectDirectory.file("../../../third_party/environments/lightroom_14b.hdr")
+    iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
+}
+
+// don't forget to update MainACtivity.kt when/if changing this.
+tasks.register('copyDamagedHelmetGltf', Copy) {
+    from file("../../../third_party/models/DamagedHelmet/DamagedHelmet.glb")
+    into file("src/main/assets/models")
+    rename {String fileName -> "helmet.glb"}
+}
+
+preBuild.dependsOn copyDamagedHelmetGltf
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+
+android {
+    namespace 'com.google.android.filament.validation'
+
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        applicationId "com.google.android.filament.validation"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+    }
+
+    compileOptions {
+        sourceCompatibility versions.jdk
+        targetCompatibility versions.jdk
+    }
+}
+
+dependencies {
+    implementation deps.kotlin
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation deps.coroutines.core
+    implementation project(':filament-android')
+    implementation project(':gltfio-android')
+    implementation project(':filament-utils-android')
+}

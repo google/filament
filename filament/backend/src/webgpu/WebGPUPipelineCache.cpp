@@ -17,7 +17,7 @@
 #include "WebGPUPipelineCache.h"
 
 #include "WebGPUConstants.h"
-#include "WebGPUTexture.h"
+#include "WebGPUTextureHelpers.h"
 #include "WebGPUVertexBufferInfo.h"
 
 #include <backend/DriverEnums.h>
@@ -54,7 +54,7 @@ namespace {
         case CullingMode::FRONT: return wgpu::CullMode::Front;
         case CullingMode::BACK:  return wgpu::CullMode::Back;
         case CullingMode::FRONT_AND_BACK:
-            // no WegGPU equivalent of front and back
+            // WebGPU does not support culling both front and back faces simultaneously.
             FILAMENT_CHECK_POSTCONDITION(false)
                     << "WebGPU does not support CullingMode::FRONT_AND_BACK";
             return wgpu::CullMode::Undefined;
@@ -220,7 +220,7 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
     const bool requestedDepth{ any(request.targetRenderFlags & TargetBufferFlags::DEPTH) };
     const bool requestedStencil{ any(request.targetRenderFlags & TargetBufferFlags::STENCIL) };
     const bool depthOrStencilRequested{ requestedDepth || requestedStencil };
-    // depth/stencil...
+
     if (depthOrStencilRequested) {
         FILAMENT_CHECK_PRECONDITION(request.depthStencilFormat != wgpu::TextureFormat::Undefined)
                 << "Depth or Stencil requested for pipeline, but depthStencilFormat is "
@@ -293,10 +293,11 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
         },
         .primitive = {
             .topology = toWebGPU(request.primitiveType),
-            // TODO should we assume some constant format here or is there a way to get
-            //      this from PipelineState somehow or elsewhere?
-            //      Perhaps, cache/assert format from index buffers as they are requested?
-            .stripIndexFormat = wgpu::IndexFormat::Undefined,
+            // TODO This won't always be the case for the primitives bound.  But this particular field
+            //  in the pipeline struct is only meant for restarting the strip, which we don't need so far.
+            .stripIndexFormat =
+                    isStripPrimitiveType(request.primitiveType)? wgpu::IndexFormat::Uint16 :
+                                                                wgpu::IndexFormat::Undefined,
             .frontFace = request.rasterState.inverseFrontFaces ? wgpu::FrontFace::CW : wgpu::FrontFace::CCW,
             .cullMode = toWebGPU(request.rasterState.culling),
             // TODO no depth clamp in WebGPU supported directly. unclippedDepth is close, so we are
@@ -312,6 +313,11 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
         },
         .fragment = nullptr // will add below if fragment module is included
     };
+    FILAMENT_CHECK_POSTCONDITION(!isStripPrimitiveType(request.primitiveType) ||
+            pipelineDescriptor.primitive.stripIndexFormat != wgpu::IndexFormat::Undefined)
+            << "If the topology is a strip format, e.g. TriangleStrip, the stripIndexFormat cannot "
+               "be Undefined.";
+
     wgpu::FragmentState fragmentState = {};
     const wgpu::BlendState blendState {
         .color = {
@@ -332,6 +338,10 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
     // To handle this, we check if any color targets are configured for this pipeline. If not, we
     // create a pipeline *without* a fragment stage. This makes the pipeline valid for a
     // depth-only pass, allowing depth writes to proceed correctly.
+
+    // Note that this needs to be defined in the same scope as the CreateRenderpipeline call
+    std::array<wgpu::ColorTargetState, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorTargets {};
+
     if (request.fragmentShaderModule != nullptr && request.colorFormatCount > 0) {
         fragmentState.module = request.fragmentShaderModule;
         fragmentState.entryPoint = "main";
@@ -340,7 +350,6 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
         fragmentState.constantCount = 0;
         fragmentState.constants = nullptr;
         fragmentState.targetCount = request.colorFormatCount;
-        std::array<wgpu::ColorTargetState, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorTargets {};
         assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
         for (size_t targetIndex = 0; targetIndex < fragmentState.targetCount; targetIndex++) {
             wgpu::ColorTargetState& colorTarget = colorTargets[targetIndex];
@@ -365,6 +374,7 @@ bool WebGPUPipelineCache::RenderPipelineKeyEqual::operator()(RenderPipelineKey c
 }
 
 void WebGPUPipelineCache::removeExpiredPipelines() {
+    FWGPU_SYSTRACE_SCOPE();
     using Iterator = decltype(mRenderPipelines)::const_iterator;
     for (Iterator iterator{ mRenderPipelines.begin() }; iterator != mRenderPipelines.end();) {
         RenderPipelineCacheEntry const& entry{ iterator.value() };

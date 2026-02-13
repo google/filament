@@ -1,0 +1,19 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+layout(local_size_x = 32) in;
+
+layout(std430, binding = 0) buffer buffer_t {
+    uint z;
+} buf;
+
+spirv_instruction (extensions = ["SPV_KHR_expect_assume"], capabilities = [5629], id = 5630)
+void assume_true(bool condition);
+
+spirv_instruction (extensions = ["SPV_KHR_expect_assume"], capabilities = [5629], id = 5631)
+uint expect(uint value, uint exp_value);
+
+void main() {
+    assume_true(gl_WorkGroupID.x < 32);
+    buf.z = expect(gl_WorkGroupID.z, uint(0));
+}

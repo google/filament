@@ -4472,8 +4472,8 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
 
   unsigned WidestType = getWidestType();
   unsigned WidestRegister = TTI.getRegisterBitWidth(true);
-  unsigned MaxSafeDepDist = -1U;
-  if (Legal->getMaxSafeDepDistBytes() != -1U)
+  unsigned MaxSafeDepDist = std::numeric_limits<unsigned>::max();
+  if (Legal->getMaxSafeDepDistBytes() != std::numeric_limits<unsigned>::max())
     MaxSafeDepDist = Legal->getMaxSafeDepDistBytes() * 8;
   WidestRegister = ((WidestRegister < MaxSafeDepDist) ?
                     WidestRegister : MaxSafeDepDist);
@@ -4638,7 +4638,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(bool OptForSize,
     return 1;
 
   // We used the distance for the interleave count.
-  if (Legal->getMaxSafeDepDistBytes() != -1U)
+  if (Legal->getMaxSafeDepDistBytes() != std::numeric_limits<unsigned>::max())
     return 1;
 
   // Do not interleave loops with a relatively small trip count.

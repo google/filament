@@ -27,6 +27,7 @@
 #include "MetalContext.h"
 #include "MetalEnums.h"
 #include "MetalExternalImage.h"
+#include "MetalFlags.h"
 #include "MetalState.h" // for MetalState::VertexDescription
 
 #include <backend/DriverEnums.h>
@@ -48,6 +49,61 @@
 namespace filament {
 namespace backend {
 
+class MetalAttachment {
+public:
+    MetalAttachment() = default;
+    MetalAttachment(id<MTLTexture> texture, uint8_t level = 0, uint16_t layer = 0)
+            : mLevel(level),
+              mLayer(layer),
+              mTexture(texture) {
+        assert_invariant(texture);
+    }
+
+    explicit operator bool() const { return mTexture != nil; }
+
+    id<MTLTexture> getTexture() const { return mTexture; }
+
+    id<MTLTexture> getMsaaTexture() const { return mMsaaTexture; }
+
+    MTLPixelFormat getPixelFormat() const {
+        return mTexture ? mTexture.pixelFormat : MTLPixelFormatInvalid;
+    }
+
+    NSUInteger getSampleCount() const {
+        if (mMsaaTexture) {
+            return mMsaaTexture.sampleCount;
+        }
+        if (mTexture) {
+            return mTexture.sampleCount;
+        }
+        return 1u;
+    }
+
+    uint8_t getLevel() const { return mLevel; }
+    uint16_t getLayer() const { return mLayer; }
+
+    MetalAttachment withMsaaTexture(id<MTLTexture> msaa) const {
+        assert_invariant(mTexture != nil);
+        assert_invariant(mTexture.sampleCount == 1u);
+        MetalAttachment result = *this;
+        result.mMsaaTexture = msaa;
+        return result;
+    }
+
+    static MetalAttachment invalidAttachment() { return MetalAttachment(); }
+
+private:
+    uint8_t mLevel = 0;
+    uint16_t mLayer = 0;
+
+    // The main texture for this Attachment. May be single-sampled or MSAA.
+    id<MTLTexture> mTexture = nil;
+
+    // The MSAA "sidecar" texture that will resolve into mTexture.
+    // If this is non-nil, mTexture must be single-sampled.
+    id<MTLTexture> mMsaaTexture = nil;
+};
+
 class MetalSwapChain : public HwSwapChain {
 public:
 
@@ -65,14 +121,14 @@ public:
 
     ~MetalSwapChain();
 
-    // Acquires a texture that can be used to render into this SwapChain.
-    // The texture source depends on the type of SwapChain:
+    // Acquires a texture that can be used to render into this SwapChain and returns a
+    // MetalAttachment. The texture source depends on the type of SwapChain:
     //   - CAMetalLayer-backed: acquires the CAMetalDrawable and returns its texture.
     //   - Headless: lazily creates and returns a headless texture.
-    id<MTLTexture> acquireDrawable();
-
-    id<MTLTexture> acquireDepthTexture();
-    id<MTLTexture> acquireStencilTexture();
+    // May return an invalid attachemnt if a drawable cannot be acquired.
+    MetalAttachment acquireDrawable();
+    MetalAttachment acquireDepthTexture();
+    MetalAttachment acquireStencilTexture();
 
     void releaseDrawable();
 
@@ -85,8 +141,11 @@ public:
     // FrameScheduledCallback.
     void present();
 
+    void setPresentationTime(int64_t timeNs) { presentationTimeNs = timeNs; }
+
     NSUInteger getSurfaceWidth() const;
     NSUInteger getSurfaceHeight() const;
+    NSUInteger getSampleCount() const;
 
     bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
 
@@ -102,16 +161,27 @@ private:
     bool isCaMetalLayer() const { return type == SwapChainType::CAMETALLAYER; }
     bool isHeadless() const { return type == SwapChainType::HEADLESS; }
 
-    void scheduleFrameScheduledCallback();
+    void scheduleFrameScheduledCallback(int64_t presentationTimeNs);
     void scheduleFrameCompletedCallback();
 
+    MetalAttachment acquireBaseDrawable();
+
+    id<MTLTexture> ensureDepthStencilTexture(uint32_t width, uint32_t height);
+    id<MTLTexture> ensureMsaaColorTexture(MTLPixelFormat format, uint32_t width, uint32_t height,
+            uint8_t samples);
+    id<MTLTexture> ensureMsaaDepthStencilTexture(MTLPixelFormat format, uint32_t width,
+            uint32_t height, uint8_t samples);
+
     static MTLPixelFormat decideDepthStencilFormat(uint64_t flags);
-    void ensureDepthStencilTexture();
+    static id<MTLTexture> createMultisampledTexture(MetalContext const& context,
+            MTLPixelFormat format, uint32_t width, uint32_t height, uint8_t samples);
 
     MetalContext& context;
     PlatformMetal& platform;
     id<CAMetalDrawable> drawable = nil;
     id<MTLTexture> depthStencilTexture = nil;
+    id<MTLTexture> msaaColor = nil;
+    id<MTLTexture> msaaDepthStencil = nil;
     id<MTLTexture> headlessDrawable = nil;
     MTLPixelFormat depthStencilFormat = MTLPixelFormatInvalid;
     NSUInteger headlessWidth = 0;
@@ -120,8 +190,14 @@ private:
     std::shared_ptr<std::mutex> layerDrawableMutex;
     MetalExternalImage externalImage;
     SwapChainType type;
+    uint64_t flags;
 
     int64_t abandonedUntilFrame = -1;
+
+    // If zero, the next presentation should happen as soon as possible.
+    // Otherwise, this is the timestamp when the present should happen.
+    // Resets to 0 after the present.
+    int64_t presentationTimeNs = 0;
 
     // These fields store a callback to notify the client that a frame is ready for presentation. If
     // !frameScheduled.callback, then the Metal backend automatically calls presentDrawable when the
@@ -266,6 +342,16 @@ public:
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
+    void setLabel(const utils::ImmutableCString& label) {
+#if FILAMENT_METAL_DEBUG_LABELS
+        if (label.empty()) {
+            return;
+        }
+        texture.label = @(label.c_str_safe());
+        swizzledTextureView.label = @(label.c_str_safe());
+#endif
+    }
+
     MetalContext& context;
 
     // A "sidecar" texture used to implement automatic MSAA resolve.
@@ -296,51 +382,15 @@ private:
 class MetalRenderTarget : public HwRenderTarget {
 public:
 
-    class Attachment {
-    public:
-
-        friend class MetalRenderTarget;
-
-        Attachment() = default;
-        Attachment(MetalTexture* metalTexture, uint8_t level = 0, uint16_t layer = 0) :
-                level(level), layer(layer),
-                texture(metalTexture->getMtlTextureForWrite()),
-                metalTexture(metalTexture) { }
-
-        id<MTLTexture> getTexture() const {
-            return texture;
-        }
-
-        NSUInteger getSampleCount() const {
-            return texture ? texture.sampleCount : 0u;
-        }
-
-        MTLPixelFormat getPixelFormat() const {
-            return texture ? texture.pixelFormat : MTLPixelFormatInvalid;
-        }
-
-        explicit operator bool() const {
-            return texture != nil;
-        }
-
+    struct AttachmentInfo {
+        MetalTexture* texture = nullptr;
         uint8_t level = 0;
         uint16_t layer = 0;
-
-    private:
-
-        id<MTLTexture> getMSAASidecarTexture() const {
-            // This should only be called from render targets associated with a MetalTexture.
-            assert_invariant(metalTexture);
-            return metalTexture->msaaSidecar;
-        }
-
-        id<MTLTexture> texture = nil;
-        MetalTexture* metalTexture = nullptr;
     };
 
     MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, uint8_t samples,
-            Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-            Attachment depthAttachment, Attachment stencilAttachment);
+            AttachmentInfo colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
+            AttachmentInfo depthAttachment, AttachmentInfo stencilAttachment);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
 
@@ -376,12 +426,14 @@ public:
 
     math::uint2 getAttachmentSize() noexcept;
 
-    uint8_t getSamples() const { return samples; }
+    MetalAttachment getDrawColorAttachment(size_t index);
+    MetalAttachment getReadColorAttachment(size_t index);
+    MetalAttachment getDepthAttachment();
+    MetalAttachment getStencilAttachment();
 
-    Attachment getDrawColorAttachment(size_t index);
-    Attachment getReadColorAttachment(size_t index);
-    Attachment getDepthAttachment();
-    Attachment getStencilAttachment();
+    // Returns the number of samples that should be used in the pipeline state that renders to this
+    // render target. Takes into account "automagic" resolve and MSAA SwapChains.
+    NSUInteger getSampleCount() const;
 
 private:
 
@@ -391,12 +443,12 @@ private:
 
     MetalContext* context;
     bool defaultRenderTarget = false;
-    uint8_t samples = 1;
 
-    Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
-    Attachment depth = {};
-    Attachment stencil = {};
+    MetalAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    MetalAttachment depth = {};
+    MetalAttachment stencil = {};
     math::uint2 attachmentSize = {};
+    uint8_t samples = 1;
 };
 
 // MetalFence is used to implement both Fences and Syncs.
@@ -418,6 +470,8 @@ public:
     API_AVAILABLE(ios(12.0))
     void onSignal(MetalFenceSignalBlock block);
 
+    void cancel();
+
 private:
 
     MetalContext& context;
@@ -437,6 +491,10 @@ private:
     uint64_t value;
 };
 
+// TODO: Provide implementation for MetalSync.
+class MetalSync : public HwSync {
+};
+
 struct MetalTimerQuery : public HwTimerQuery {
     MetalTimerQuery() : status(std::make_shared<Status>()) {}
 
@@ -452,7 +510,7 @@ class MetalDescriptorSetLayout : public HwDescriptorSetLayout {
 public:
     MetalDescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;
 
-    const auto& getBindings() const noexcept { return mLayout.bindings; }
+    const auto& getBindings() const noexcept { return mLayout.descriptors; }
 
     size_t getDynamicOffsetCount() const noexcept { return mDynamicOffsetCount; }
 
@@ -479,6 +537,15 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
     void finalize(MetalDriver* driver);
 
+    void setLabel(const utils::ImmutableCString& l) {
+#if FILAMENT_METAL_DEBUG_LABELS
+        if (l.empty()) {
+            return;
+        }
+        label = l;
+#endif
+    }
+
     id<MTLBuffer> finalizeAndGetBuffer(MetalDriver* driver, ShaderStage stage);
 
     MetalDescriptorSetLayout* layout;
@@ -501,6 +568,30 @@ struct MetalDescriptorSet : public HwDescriptorSet {
     std::vector<std::shared_ptr<MetalExternalImage>> externalImages;
 
     std::array<TrackedMetalBuffer, Program::SHADER_TYPE_COUNT> cachedBuffer = { nil };
+
+#if FILAMENT_METAL_DEBUG_LABELS
+    utils::ImmutableCString label;
+#endif
+};
+
+
+struct MetalMemoryMappedBuffer : public HwMemoryMappedBuffer {
+    MapBufferAccessFlags access{};
+    struct {
+        MetalBufferObject* bo;
+        void* vaddr = nullptr;
+        uint32_t size = 0;
+        uint32_t offset = 0;
+    } mtl;
+
+    MetalMemoryMappedBuffer(MetalBufferObject* bo, size_t offset, size_t size,
+            MapBufferAccessFlags access) noexcept;
+
+    ~MetalMemoryMappedBuffer();
+
+    void unmap();
+
+    void copy(MetalDriver& mtld, size_t offset, BufferDescriptor&& data) const;
 };
 
 } // namespace backend

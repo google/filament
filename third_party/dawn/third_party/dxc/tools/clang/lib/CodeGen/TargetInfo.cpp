@@ -1283,7 +1283,7 @@ llvm::Value *X86_32ABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
     Addr = CGF.Builder.CreateGEP(Addr, Offset);
     llvm::Value *AsInt = CGF.Builder.CreatePtrToInt(Addr,
                                                     CGF.Int32Ty);
-    llvm::Value *Mask = llvm::ConstantInt::get(CGF.Int32Ty, -Align);
+    llvm::Value *Mask = llvm::ConstantInt::get(CGF.Int32Ty, ~Align + 1);
     Addr = CGF.Builder.CreateIntToPtr(CGF.Builder.CreateAnd(AsInt, Mask),
                                       Addr->getType(),
                                       "ap.cur.aligned");
@@ -2849,7 +2849,7 @@ static llvm::Value *EmitVAArgFromMemory(llvm::Value *VAListAddr,
     overflow_arg_area = CGF.Builder.CreateGEP(overflow_arg_area, Offset);
     llvm::Value *AsInt = CGF.Builder.CreatePtrToInt(overflow_arg_area,
                                                     CGF.Int64Ty);
-    llvm::Value *Mask = llvm::ConstantInt::get(CGF.Int64Ty, -(uint64_t)Align);
+    llvm::Value *Mask = llvm::ConstantInt::get(CGF.Int64Ty, ~Align + 1);
     overflow_arg_area =
       CGF.Builder.CreateIntToPtr(CGF.Builder.CreateAnd(AsInt, Mask),
                                  overflow_arg_area->getType(),

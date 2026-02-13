@@ -1,11 +1,11 @@
-## Building Filament
+# Building Filament
 
-### Prerequisites
+## Prerequisites
 
 To build Filament, you must first install the following tools:
 
-- CMake 3.19 (or more recent)
-- clang 14.0 (or more recent)
+- CMake 3.22.1 (or more recent)
+- clang 16.0 (or more recent)
 - [ninja 1.10](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
 Additional dependencies may be required for your operating system. Please refer to the appropriate
@@ -18,7 +18,7 @@ To build Filament for Android you must also install the following:
 - Android NDK 25.1 or higher
 - Java 17
 
-### Environment variables
+## Environment variables
 
 To build Filament for Android, make sure the environment variable `ANDROID_HOME` points to the
 location of your Android SDK.
@@ -30,7 +30,7 @@ When building for WebGL, you'll also need to set `EMSDK`. See [WebAssembly](#web
 We recommend using CLion to develop for Filament. Simply open the root directory's CMakeLists.txt
 in CLion to obtain a usable project.
 
-### Easy build
+## Easy build
 
 Once the required OS specific dependencies listed below are installed, you can use the script
 located in `build.sh` to build Filament easily on macOS and Linux.
@@ -62,7 +62,12 @@ force a clean build by adding the `-c` flag in that case.
 To install the libraries and executables in `out/debug/` and `out/release/`, add the `-i` flag.
 The script offers more features described by executing `build.sh -h`.
 
-### Filament-specific CMake Options
+For more specialized options, please also consider the following pages:
+ - `-d`: [`matdbg`](https://google.github.io/filament/dup/matdbg.html)
+ - `-t`: [`fgviewer`](https://google.github.io/filament/dup/fgviewer.html)
+ - `-b` and `-y`: [ASAN/UBSAN builds](https://google.github.io/filament/notes/asan_ubsan.html)
+
+## Filament-specific CMake Options
 
 The following CMake options are boolean options specific to Filament:
 
@@ -84,21 +89,21 @@ cmake . -DOPTION=ON       # Replace OPTION with the option name, set to ON / OFF
 
 Options can also be set with the CMake GUI.
 
-### Linux
+## Linux
 
 Make sure you've installed the following dependencies:
 
-- `clang-14` or higher
+- `clang-16` or higher
 - `libglu1-mesa-dev`
-- `libc++-14-dev` (`libcxx-devel` and `libcxx-static` on Fedora) or higher
-- `libc++abi-14-dev` (`libcxxabi-static` on Fedora) or higher
+- `libc++-16-dev` (`libcxx-devel` and `libcxx-static` on Fedora) or higher
+- `libc++abi-16-dev` (`libcxxabi-static` on Fedora) or higher
 - `ninja-build`
 - `libxi-dev`
 - `libxcomposite-dev` (`libXcomposite-devel` on Fedora)
 - `libxxf86vm-dev` (`libXxf86vm-devel` on Fedora)
 
 ```shell
-sudo apt install clang-14 libglu1-mesa-dev libc++-14-dev libc++abi-14-dev ninja-build libxi-dev libxcomposite-dev libxxf86vm-dev -y
+sudo apt install clang-16 libglu1-mesa-dev libc++-16-dev libc++abi-16-dev ninja-build libxi-dev libxcomposite-dev libxxf86vm-dev -y
 ```
 
 After dependencies have been installed, we highly recommend using the [easy build](#easy-build)
@@ -119,7 +124,7 @@ Your Linux distribution might default to `gcc` instead of `clang`, if that's the
 ```shell
 mkdir out/cmake-release
 cd out/cmake-release
-# Or use a specific version of clang, for instance /usr/bin/clang-14
+# Or use a specific version of clang, for instance /usr/bin/clang-16
 CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
   cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
@@ -129,8 +134,8 @@ solution is to use `update-alternatives` to both change the default compiler, an
 specific version of clang:
 
 ```shell
-update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 100
-update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 100
+update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
 update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
 update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 ```
@@ -143,7 +148,7 @@ ninja
 
 This will build Filament, its tests and samples, and various host tools.
 
-### macOS
+## macOS
 
 To compile Filament you must have the most recent version of Xcode installed and you need to
 make sure the command line tools are setup by running:
@@ -164,7 +169,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/fila
 ninja
 ```
 
-### iOS
+## iOS
 
 The easiest way to build Filament for iOS is to use `build.sh` and the
 `-p ios` flag. For instance to build the debug target:
@@ -175,9 +180,9 @@ The easiest way to build Filament for iOS is to use `build.sh` and the
 
 See [ios/samples/README.md](./ios/samples/README.md) for more information.
 
-### Windows
+## Windows
 
-#### Building on Windows with Visual Studio 2019 or later
+### Building on Windows with Visual Studio 2019 or later
 
 Install the following components:
 
@@ -220,7 +225,7 @@ You can also use CMake to invoke the build without opening Visual Studio. For ex
 cmake --build . --target gltf_viewer --config Release
 ```
 
-### Android
+## Android
 
 Before building Filament for Android, make sure to build Filament for your host. Some of the
 host tools are required to successfully build for Android.
@@ -237,7 +242,13 @@ foremost for `arm64-v8a`.
 
 To build Android on Windows machines, see [android/Windows.md](android/Windows.md).
 
-#### Easy Android build
+### Important: SDK location
+
+Either ensure your `ANDROID_HOME` environment variable is set or make sure the root project
+contains a `local.properties` file with the `sdk.dir` property pointing to your installation of
+the Android SDK.
+
+### Easy Android build
 
 The easiest way to build Filament for Android is to use `build.sh` and the
 `-p android` flag. For instance to build the release target:
@@ -246,9 +257,46 @@ The easiest way to build Filament for Android is to use `build.sh` and the
 ./build.sh -p android release
 ```
 
+To build a sample (such as `android/samples/sample-hello-triangle`) for an ARM 64-bit phone, you would run
+```shell
+./build.sh -p android -q arm64-v8a -k sample-hello-triangle release
+```
+
+The output APK can be found in `android/samples/sample-hello-triangle/build/outputs/apk/release/sample-hello-triangle-release-unsigned.apk`
+
 Run `build.sh -h` for more information.
 
-#### Manual builds
+### Android Studio
+
+You must use the latest stable release of Android Studio.
+
+The Android build of filament is separated into java/kotlin client APIs, a layer of jni bindings
+that bridges java/kotlin with native code, and Filament and other component code that have been compiled
+into architecture-specific libraries. Our default Android Studio gradle setup can compile java/kotlin and
+the jni bindings for you, but it will treat the filament libraries as already compiled and present on
+the system.
+
+Therefore, before compiling the sample app or any other targets, you must
+make sure that the native filament libraries have been compiled and are located at a prescribed location
+so that the jni bindings can link against them. You can do so by using the easy build script
+
+```shell
+./build.sh -p android release -q arm64-v8a
+```
+
+Note that the above step will also install host machine tools into prescribed locations.  These tools are
+required for compiling Filament assets such as materials and environment maps.
+
+Now we are ready to compile the apps.  To open the project, point Studio to the `android` folder.
+After opening the project and syncing with Gradle, select the sample of your choice
+using the drop-down widget in the toolbar. Additionally, you will need to select a deployment target.
+By doing so, Android Studio will automatically try to compile the app only for that specific
+device's architecture. So if you are targeting a new Pixel phone, make sure that the step above
+(compiling the library) is targeting ARM 64-bit (`-q arm64-v8a` ), and if you are running the app on
+an emulator on a Linux machine with an x86 64-bit chipset, you would indicate (`-q x86_64`) in the above step.
+
+
+### Manual builds
 
 Invoke CMake in a build directory of your choice, inside of filament's directory. The commands
 below show how to build Filament for ARM 64-bit (`aarch64`).
@@ -276,7 +324,7 @@ This will generate Filament's Android binaries in `out/android-release`. This lo
 to build the Android Studio projects located in `filament/android`. After install, the library
 binaries should be found in `out/android-release/filament/lib/arm64-v8a`.
 
-#### AAR
+### AAR
 
 Before you attempt to build the AAR, make sure you've compiled and installed the native libraries
 as explained in the sections above. You must have the following ABIs built in
@@ -308,7 +356,7 @@ Alternatively you can build the AAR from the command line by executing the follo
 The `-Pcom.google.android.filament.dist-dir` can be used to specify a different installation
 directory (it must match the CMake install prefix used in the previous steps).
 
-#### Using Filament's AAR
+### Using Filament's AAR
 
 Create a new module in your project and select _Import .JAR or .AAR Package_ when prompted. Make
 sure to add the newly created module as a dependency to your application.
@@ -349,7 +397,7 @@ productFlavors {
 }
 ```
 
-### WebAssembly
+## WebAssembly
 
 The core Filament library can be cross-compiled to WebAssembly from either macOS or Linux. To get
 started, follow the instructions for building Filament on your platform ([macOS](#macos) or
@@ -391,7 +439,7 @@ Alternatively, if you have node installed you can use the
 [live-server](https://www.npmjs.com/package/live-server) package, which automatically refreshes the
 web page when it detects a change.
 
-Each sample app has its own handwritten html file. Additionally the server folder contains assets
+Each sample app has its own handwritten html file. Additionally, the server folder contains assets
 such as meshes, textures, and materials.
 
 ## Running the native samples

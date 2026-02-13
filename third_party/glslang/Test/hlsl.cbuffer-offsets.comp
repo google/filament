@@ -1,0 +1,44 @@
+// Correct offsets obtained from "HLSL Constant Buffer Visualizer"
+// https://maraneshi.github.io/HLSL-ConstantBufferLayoutVisualizer/
+
+cbuffer CB {
+    float f1;
+    float3 f3a3[3];
+    float f2;
+    float f3;
+
+    float1x1 m11;
+    float1x2 m12;
+    float2x1 m21;
+    float2x2 m22;
+
+    float3x3 m33;
+    float f4;
+
+    float3x4 m34;
+    float f5;
+
+    float4x3 m43;
+    float f6;
+
+    row_major float1x1 rm11;
+    row_major float1x2 rm12;
+    row_major float2x1 rm21;
+    row_major float2x2 rm22;
+
+    row_major float3x3 rm33;
+    float f7;
+
+    row_major float3x4 rm34;
+    float f8;
+
+    row_major float4x3 rm43;
+    float f9;
+
+    float f1a3[3];
+    float f10;
+};
+
+void main()
+{
+}

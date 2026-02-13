@@ -33,12 +33,12 @@ struct GLDescriptorSetLayout : public HwDescriptorSetLayout, public DescriptorSe
     explicit GLDescriptorSetLayout(DescriptorSetLayout&& layout) noexcept
             : DescriptorSetLayout(std::move(layout)) {
 
-        std::sort(bindings.begin(), bindings.end(),
+        std::sort(descriptors.begin(), descriptors.end(),
                 [](auto&& lhs, auto&& rhs){
             return lhs.binding < rhs.binding;
         });
 
-        auto p = std::max_element(bindings.cbegin(), bindings.cend(),
+        auto p = std::max_element(descriptors.cbegin(), descriptors.cend(),
                 [](auto const& lhs, auto const& rhs) {
             return lhs.binding < rhs.binding;
         });

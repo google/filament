@@ -53,92 +53,6 @@ struct IsWGPUBitmask<TestEnum> {
 namespace dawn {
 namespace {
 
-// Tests for ScanForward
-TEST(Math, ScanForward) {
-    // 8-bit
-    // Test extrema
-    ASSERT_EQ(ScanForward(uint8_t(1)), 0u);
-    ASSERT_EQ(ScanForward(uint8_t(0x80)), 7u);
-
-    // Test with more than one bit set.
-    ASSERT_EQ(ScanForward(uint8_t(64)), 6u);
-    ASSERT_EQ(ScanForward(uint8_t(64 + 32)), 5u);
-    ASSERT_EQ(ScanForward(uint8_t(128 + 64 + 32)), 5u);
-
-    // 16-bit
-    // Test extrema
-    ASSERT_EQ(ScanForward(uint16_t(1)), 0u);
-    ASSERT_EQ(ScanForward(uint16_t(0x8000)), 15u);
-
-    // Test with more than one bit set.
-    ASSERT_EQ(ScanForward(uint16_t(256)), 8u);
-    ASSERT_EQ(ScanForward(uint16_t(256 + 32)), 5u);
-    ASSERT_EQ(ScanForward(uint16_t(1024u + 256 + 32)), 5u);
-
-    // 32-bit
-    // Test extrema
-    ASSERT_EQ(ScanForward(1u), 0u);
-    ASSERT_EQ(ScanForward(0x80000000u), 31u);
-
-    // Test with more than one bit set.
-    ASSERT_EQ(ScanForward(256u), 8u);
-    ASSERT_EQ(ScanForward(256u + 32u), 5u);
-    ASSERT_EQ(ScanForward(1024u + 256u + 32u), 5u);
-
-    // 64-bit
-    // Test extrema
-    ASSERT_EQ(ScanForward(uint64_t(1)), 0u);
-    ASSERT_EQ(ScanForward(uint64_t(0x8000000000000000ull)), 63u);
-
-    // Test with more than one bit set.
-    ASSERT_EQ(ScanForward(uint64_t(256ull)), 8u);
-    ASSERT_EQ(ScanForward(uint64_t(256ull + 32ull)), 5u);
-    ASSERT_EQ(ScanForward(uint64_t(0x800000000ull + 256ull + 32ull)), 5u);
-}
-
-// Tests for ScanReverse
-TEST(Math, ScanReverse) {
-    // 8-bit
-    // Test extrema
-    ASSERT_EQ(ScanReverse(uint8_t(1)), 0u);
-    ASSERT_EQ(ScanReverse(uint8_t(0x80)), 7u);
-
-    // Test with more than one bit set.
-    ASSERT_EQ(ScanReverse(uint8_t(64)), 6u);
-    ASSERT_EQ(ScanReverse(uint8_t(64 + 32)), 6u);
-    ASSERT_EQ(ScanReverse(uint8_t(128 + 64 + 32)), 7u);
-
-    // 16-bit
-    // Test extrema
-    ASSERT_EQ(ScanReverse(uint16_t(1)), 0u);
-    ASSERT_EQ(ScanReverse(uint16_t(0x8000)), 15u);
-
-    // Test with more than one bit set.
-    ASSERT_EQ(ScanReverse(uint16_t(256)), 8u);
-    ASSERT_EQ(ScanReverse(uint16_t(256 + 32)), 8u);
-    ASSERT_EQ(ScanReverse(uint16_t(1024u + 256 + 32)), 10u);
-
-    // 32-bit
-    // Test extrema
-    ASSERT_EQ(ScanReverse(1u), 0u);
-    ASSERT_EQ(ScanReverse(0x80000000u), 31u);
-
-    // Test with more than one bit set.
-    ASSERT_EQ(ScanReverse(256u), 8u);
-    ASSERT_EQ(ScanReverse(256u + 32u), 8u);
-    ASSERT_EQ(ScanReverse(1024u + 256u + 32u), 10u);
-
-    // 64-bit
-    // Test extrema
-    ASSERT_EQ(ScanReverse(uint64_t(1)), 0u);
-    ASSERT_EQ(ScanReverse(uint64_t(0x8000000000000000ull)), 63u);
-
-    // Test with more than one bit set.
-    ASSERT_EQ(ScanReverse(uint64_t(256ull)), 8u);
-    ASSERT_EQ(ScanReverse(uint64_t(256ull + 32ull)), 8u);
-    ASSERT_EQ(ScanReverse(uint64_t(0x800000000ull + 256ull + 32ull)), 35u);
-}
-
 // Tests for Log2
 TEST(Math, Log2) {
     // Test extrema
@@ -432,20 +346,20 @@ TEST(Math, SRGBToLinear) {
 
 // Tests for RoundUp
 TEST(Math, RoundUp) {
-    ASSERT_EQ(RoundUp(2, 2), 2u);
-    ASSERT_EQ(RoundUp(2, 4), 4u);
-    ASSERT_EQ(RoundUp(6, 2), 6u);
-    ASSERT_EQ(RoundUp(8, 4), 8u);
-    ASSERT_EQ(RoundUp(12, 6), 12u);
+    ASSERT_EQ(RoundUp(2u, 2u), 2u);
+    ASSERT_EQ(RoundUp(2u, 4u), 4u);
+    ASSERT_EQ(RoundUp(6u, 2u), 6u);
+    ASSERT_EQ(RoundUp(8u, 4u), 8u);
+    ASSERT_EQ(RoundUp(12u, 6u), 12u);
 
-    ASSERT_EQ(RoundUp(3, 3), 3u);
-    ASSERT_EQ(RoundUp(3, 5), 5u);
-    ASSERT_EQ(RoundUp(5, 3), 6u);
-    ASSERT_EQ(RoundUp(9, 5), 10u);
+    ASSERT_EQ(RoundUp(3u, 3u), 3u);
+    ASSERT_EQ(RoundUp(3u, 5u), 5u);
+    ASSERT_EQ(RoundUp(5u, 3u), 6u);
+    ASSERT_EQ(RoundUp(9u, 5u), 10u);
 
     // Test extrema
     ASSERT_EQ(RoundUp(0x7FFFFFFFFFFFFFFFull, 0x8000000000000000ull), 0x8000000000000000ull);
-    ASSERT_EQ(RoundUp(1, 1), 1u);
+    ASSERT_EQ(RoundUp(1u, 1u), 1u);
 }
 
 // Tests for IsSubset
@@ -475,41 +389,6 @@ TEST(Math, IsSubset) {
     ASSERT_TRUE(IsSubset(wgpu::TestEnum::A, wgpu::TestEnum::A | wgpu::TestEnum::B));
     ASSERT_FALSE(IsSubset(wgpu::TestEnum::C, wgpu::TestEnum::A | wgpu::TestEnum::B));
     ASSERT_FALSE(IsSubset(wgpu::TestEnum::A | wgpu::TestEnum::C, wgpu::TestEnum::A));
-}
-
-// Tests for BitCount
-TEST(Math, BitCount) {
-    // 8-bit
-    ASSERT_EQ(BitCount(uint8_t(0x00)), 0u);
-    ASSERT_EQ(BitCount(uint8_t(0x01)), 1u);
-    ASSERT_EQ(BitCount(uint8_t(0x80)), 1u);
-    ASSERT_EQ(BitCount(uint8_t(0x11)), 2u);
-    ASSERT_EQ(BitCount(uint8_t(0xAA)), 4u);
-    ASSERT_EQ(BitCount(uint8_t(0xFF)), 8u);
-
-    // 16-bit
-    ASSERT_EQ(BitCount(uint16_t(0x0000)), 0u);
-    ASSERT_EQ(BitCount(uint16_t(0x0001)), 1u);
-    ASSERT_EQ(BitCount(uint16_t(0x8000)), 1u);
-    ASSERT_EQ(BitCount(uint16_t(0x1111)), 4u);
-    ASSERT_EQ(BitCount(uint16_t(0xAAAA)), 8u);
-    ASSERT_EQ(BitCount(uint16_t(0xFFFF)), 16u);
-
-    // 32-bit
-    ASSERT_EQ(BitCount(0x00000000u), 0u);
-    ASSERT_EQ(BitCount(0x00000001u), 1u);
-    ASSERT_EQ(BitCount(0x80000000u), 1u);
-    ASSERT_EQ(BitCount(0x11111111u), 8u);
-    ASSERT_EQ(BitCount(0xAAAAAAAAu), 16u);
-    ASSERT_EQ(BitCount(0xFFFFFFFFu), 32u);
-
-    // 64-bit
-    ASSERT_EQ(BitCount(uint64_t(0x0000000000000000ull)), 0u);
-    ASSERT_EQ(BitCount(uint64_t(0x0000000000000001ull)), 1u);
-    ASSERT_EQ(BitCount(uint64_t(0x8000000000000000ull)), 1u);
-    ASSERT_EQ(BitCount(uint64_t(0x1111111111111111ull)), 16u);
-    ASSERT_EQ(BitCount(uint64_t(0xAAAAAAAAAAAAAAAAull)), 32u);
-    ASSERT_EQ(BitCount(uint64_t(0xFFFFFFFFFFFFFFFFull)), 64u);
 }
 
 }  // anonymous namespace

@@ -14,9 +14,20 @@
  * limitations under the License.
  */
 
+#include "FrameGraphId.h"
+
+#include "details/DependencyGraph.h"
+
 #include "fg/FrameGraph.h"
 #include "fg/details/PassNode.h"
 #include "fg/details/ResourceNode.h"
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/CString.h>
+
+#include <new>
+#include <cstdint>
 
 namespace filament {
 
@@ -54,7 +65,7 @@ ResourceNode* ResourceNode::getAncestorNode(ResourceNode* node) noexcept {
 }
 
 char const* ResourceNode::getName() const noexcept {
-    return mFrameGraph.getResource(resourceHandle)->name;
+    return mFrameGraph.getResource(resourceHandle)->name.c_str();
 }
 
 void ResourceNode::addOutgoingEdge(ResourceEdgeBase* edge) noexcept {
@@ -105,20 +116,20 @@ bool ResourceNode::hasWriteFrom(PassNode const* node) const noexcept {
 
 void ResourceNode::setParentReadDependency(ResourceNode* parent) noexcept {
     if (!mParentReadEdge) {
-        mParentReadEdge = new DependencyGraph::Edge(mFrameGraph.getGraph(), parent, this);
+        mParentReadEdge = new(std::nothrow) DependencyGraph::Edge(mFrameGraph.getGraph(), parent, this);
     }
 }
 
 
 void ResourceNode::setParentWriteDependency(ResourceNode* parent) noexcept {
     if (!mParentWriteEdge) {
-        mParentWriteEdge = new DependencyGraph::Edge(mFrameGraph.getGraph(), this, parent);
+        mParentWriteEdge = new(std::nothrow) DependencyGraph::Edge(mFrameGraph.getGraph(), this, parent);
     }
 }
 
 void ResourceNode::setForwardResourceDependency(ResourceNode* source) noexcept {
     assert_invariant(!mForwardedEdge);
-    mForwardedEdge = new DependencyGraph::Edge(mFrameGraph.getGraph(), this, source);
+    mForwardedEdge = new(std::nothrow) DependencyGraph::Edge(mFrameGraph.getGraph(), this, source);
 }
 
 
@@ -132,24 +143,23 @@ void ResourceNode::resolveResourceUsage(DependencyGraph& graph) noexcept {
 
 utils::CString ResourceNode::graphvizify() const noexcept {
 #ifndef NDEBUG
-    std::string s;
-    s.reserve(128);
+    utils::CString s;
 
     uint32_t const id = getId();
     const char* const nodeName = getName();
-    VirtualResource* const pResource = mFrameGraph.getResource(resourceHandle);
+    VirtualResource const* const pResource = mFrameGraph.getResource(resourceHandle);
     FrameGraph::ResourceSlot const& slot = mFrameGraph.getResourceSlot(resourceHandle);
 
     s.append("[label=\"");
     s.append(nodeName);
     s.append("\\nrefs: ");
-    s.append(std::to_string(pResource->refcount));
+    s.append(utils::to_string(pResource->refcount));
     s.append(", id: ");
-    s.append(std::to_string(id));
+    s.append(utils::to_string(id));
     s.append("\\nversion: ");
-    s.append(std::to_string(resourceHandle.version));
+    s.append(utils::to_string(resourceHandle.version));
     s.append("/");
-    s.append(std::to_string(slot.version));
+    s.append(utils::to_string(slot.version));
     if (pResource->isImported()) {
         s.append(", imported");
     }
@@ -160,9 +170,8 @@ utils::CString ResourceNode::graphvizify() const noexcept {
     s.append("style=filled, fillcolor=");
     s.append(pResource->refcount ? "skyblue" : "skyblue4");
     s.append("]");
-    s.shrink_to_fit();
 
-    return utils::CString{ s.c_str() };
+    return s;
 #else
     return {};
 #endif

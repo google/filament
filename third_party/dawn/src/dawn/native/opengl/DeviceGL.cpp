@@ -209,7 +209,34 @@ MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
     if (HasAnisotropicFiltering(gl)) {
         DAWN_GL_TRY(gl, GetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &mMaxTextureMaxAnisotropy));
     }
-    return DeviceBase::Initialize(std::move(queue));
+
+    DAWN_TRY(DeviceBase::Initialize(descriptor, std::move(queue)));
+
+    // Create internal buffers needed for workarounds.
+    if (mTextureBuiltinsBuffer.Get() == nullptr) {
+        BufferDescriptor desc = {};
+        // The uniform buffer will contain an array of vec4u so make sure that it contains the last
+        // possible vec4u entirely by rounding the size to 4 u32s. Check that the constant is indeed
+        // a multiple of 4.
+        static_assert(kGLMaxTextureImageUnitsReported % 4 == 0);
+        desc.size = kGLMaxTextureImageUnitsReported * sizeof(uint32_t);
+        desc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
+        Ref<BufferBase> buffer;
+        DAWN_TRY_ASSIGN(buffer, Buffer::CreateInternalBuffer(this, &desc, false));
+        mTextureBuiltinsBuffer = ToBackend(std::move(buffer));
+    }
+
+    if (IsToggleEnabled(Toggle::GLUseArrayLengthFromUniform) &&
+        mArrayLengthBuffer.Get() == nullptr) {
+        BufferDescriptor desc = {};
+        desc.size = kGLMaxShaderStorageBufferBindingsReported * sizeof(uint32_t);
+        desc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
+        Ref<BufferBase> buffer;
+        DAWN_TRY_ASSIGN(buffer, Buffer::CreateInternalBuffer(this, &desc, false));
+        mArrayLengthBuffer = ToBackend(std::move(buffer));
+    }
+
+    return {};
 }
 
 const GLFormat& Device::GetGLFormat(const Format& format) {
@@ -259,10 +286,8 @@ ResultOrError<Ref<SamplerBase>> Device::CreateSamplerImpl(const SamplerDescripto
 ResultOrError<Ref<ShaderModuleBase>> Device::CreateShaderModuleImpl(
     const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
     const std::vector<tint::wgsl::Extension>& internalExtensions,
-    ShaderModuleParseResult* parseResult,
-    OwnedCompilationMessages* compilationMessages) {
-    return ShaderModule::Create(this, descriptor, internalExtensions, parseResult,
-                                compilationMessages);
+    ShaderModuleParseResult* parseResult) {
+    return ShaderModule::Create(this, descriptor, internalExtensions, parseResult);
 }
 ResultOrError<Ref<SwapChainBase>> Device::CreateSwapChainImpl(Surface* surface,
                                                               SwapChainBase* previousSwapChain,
@@ -447,11 +472,11 @@ MaybeError Device::TickImpl() {
     return {};
 }
 
-MaybeError Device::CopyFromStagingToBufferImpl(BufferBase* source,
-                                               uint64_t sourceOffset,
-                                               BufferBase* destination,
-                                               uint64_t destinationOffset,
-                                               uint64_t size) {
+MaybeError Device::CopyFromStagingToBuffer(BufferBase* source,
+                                           uint64_t sourceOffset,
+                                           BufferBase* destination,
+                                           uint64_t destinationOffset,
+                                           uint64_t size) {
     return DAWN_UNIMPLEMENTED_ERROR("Device unable to copy from staging buffer.");
 }
 
@@ -465,6 +490,9 @@ MaybeError Device::CopyFromStagingToTextureImpl(const BufferBase* source,
 
 void Device::DestroyImpl() {
     DAWN_ASSERT(GetState() == State::Disconnected);
+
+    mTextureBuiltinsBuffer = nullptr;
+    mArrayLengthBuffer = nullptr;
 }
 
 uint32_t Device::GetOptimalBytesPerRowAlignment() const {
@@ -522,6 +550,14 @@ EGLDisplay Device::GetEGLDisplay() const {
 
 ContextEGL* Device::GetContext() const {
     return mContext.get();
+}
+
+const Buffer* Device::GetInternalTextureBuiltinsUniformBuffer() const {
+    return mTextureBuiltinsBuffer.Get();
+}
+
+const Buffer* Device::GetInternalArrayLengthUniformBuffer() const {
+    return mArrayLengthBuffer.Get();
 }
 
 }  // namespace dawn::native::opengl

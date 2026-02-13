@@ -7,6 +7,8 @@ option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
 option(FILAMENT_DISABLE_MATOPT "Disables material optimizations" OFF)
 option(FILAMENT_SUPPORTS_WEBGPU "Enables WebGPU on Android" OFF)
 
+set(CMAKE_CXX_STANDARD 20)
+
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
 add_library(filament STATIC IMPORTED)
@@ -49,10 +51,6 @@ add_library(bluevk STATIC IMPORTED)
 set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbluevk.a)
 
-add_library(vkshaders STATIC IMPORTED)
-set_target_properties(vkshaders PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libvkshaders.a)
-
 if (FILAMENT_SUPPORTS_WEBGPU)
         add_library(webgpu_dawn STATIC IMPORTED)
         set_target_properties(webgpu_dawn PROPERTIES IMPORTED_LOCATION
@@ -67,6 +65,10 @@ add_library(abseil STATIC IMPORTED)
 set_target_properties(abseil PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libabseil.a)
 
+add_library(zstd STATIC IMPORTED)
+set_target_properties(zstd PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libzstd.a)
+
 if (FILAMENT_ENABLE_FGVIEWER)
     add_library(fgviewer STATIC IMPORTED)
     set_target_properties(fgviewer PROPERTIES IMPORTED_LOCATION
@@ -74,6 +76,10 @@ if (FILAMENT_ENABLE_FGVIEWER)
 endif()
 
 if (FILAMENT_ENABLE_MATDBG)
+    add_library(filamat STATIC IMPORTED)
+    set_target_properties(filamat PROPERTIES IMPORTED_LOCATION
+            ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilamat.a)
+
     add_library(matdbg STATIC IMPORTED)
     set_target_properties(matdbg PROPERTIES IMPORTED_LOCATION
             ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libmatdbg.a)
@@ -122,6 +128,15 @@ add_library(filament-jni SHARED
     ../common/NioUtils.cpp
 )
 
+target_include_directories(filament-jni PRIVATE
+        ..
+        ${FILAMENT_DIR}/include
+        ../../filament/backend/include
+        ../../third_party/robin-map
+        ../../third_party/perfetto
+        ../../libs/bluevk/include
+        ../../libs/utils/include)
+
 # Ordering is significant in the following list. The PRIVATE qualifier prevents transitive deps.
 target_link_libraries(filament-jni
     PRIVATE filament-generatePrefilterMipmap
@@ -136,28 +151,26 @@ target_link_libraries(filament-jni
     PRIVATE android
     PRIVATE jnigraphics
     PRIVATE utils
-    PRIVATE perfetto
-    PRIVATE abseil
+    PRIVATE perfetto    # needed only when FILAMENT_ENABLE_PERFETTO is defined
+    PRIVATE abseil      # needed only when FILAMENT_USE_ABSEIL_LOGGING is defined
+    PRIVATE zstd
 
     # libgeometry is PUBLIC because gltfio uses it.
     PUBLIC geometry
 
-    $<$<STREQUAL:${FILAMENT_ENABLE_FGVIEWER},ON>:fgviewer>
-    $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
-    $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:filamat>
-    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
-    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:vkshaders>
-    $<$<STREQUAL:${FILAMENT_SUPPORTS_WEBGPU},ON>:webgpu_dawn>
-    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
+    PRIVATE $<$<STREQUAL:${FILAMENT_ENABLE_FGVIEWER},ON>:fgviewer>
+    PRIVATE $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
+    PRIVATE $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:filamat>
+    PRIVATE $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
+    PRIVATE $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
+    PRIVATE $<$<STREQUAL:${FILAMENT_SUPPORTS_WEBGPU},ON>:webgpu_dawn>
 )
-
-target_include_directories(filament-jni PRIVATE
-        ..
-        ${FILAMENT_DIR}/include
-        ../../filament/backend/include
-        ../../third_party/robin-map
-        ../../third_party/perfetto
-        ../../libs/utils/include)
 
 # Force a relink when the version script is changed:
 set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    add_definitions(-DFILAMENT_SUPPORTS_VULKAN=1)
+else()
+    add_definitions(-DFILAMENT_SUPPORTS_VULKAN=0)
+endif()

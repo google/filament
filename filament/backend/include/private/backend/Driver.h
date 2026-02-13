@@ -27,6 +27,8 @@
 #include <backend/AcquiredImage.h>
 
 #include <utils/CString.h>
+#include <utils/ImmutableCString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 
 #include <functional>
@@ -49,7 +51,6 @@
 namespace filament::backend {
 
 class BufferDescriptor;
-class BufferObjectStreamDescriptor;
 class CallbackHandler;
 class PixelBufferDescriptor;
 class Program;
@@ -69,9 +70,18 @@ public:
     // is where the driver can execute user callbacks.
     virtual void purge() noexcept = 0;
 
+    // Called from the engine thread (render-thread) to execute the `callback` via the `handler` if
+    // it is available. Otherwise, if `handler` is null, the `callback` is executed on the main
+    // thread via `purge()`.
+    virtual void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) = 0;
+
     virtual ShaderModel getShaderModel() const noexcept = 0;
 
-    // The shader language used for shaders for this driver, used to inform matdbg.
+    // The shader languages used for shaders for this driver in order of preference, used to inform
+    // matdbg.
+    //
+    // The `preferredLanguage` is only a hint. If the backend supports it, it will appear first in
+    // the list.
     //
     // For OpenGL, this distinguishes whether the driver's shaders are powered by ESSL1 or ESSL3.
     // This information is used by matdbg to display the correct shader code to the web UI and patch
@@ -79,7 +89,8 @@ public:
     //
     // Metal shaders can either be MSL or Metal libraries, but at time of writing, matdbg can only
     // interface with MSL.
-    virtual ShaderLanguage getShaderLanguage() const noexcept = 0;
+    virtual utils::FixedCapacityVector<ShaderLanguage> getShaderLanguages(
+            ShaderLanguage preferredLanguage) const noexcept = 0;
 
     // Returns the dispatcher. This is only called once during initialization of the CommandStream,
     // so it doesn't matter that it's virtual.

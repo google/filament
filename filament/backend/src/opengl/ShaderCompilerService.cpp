@@ -22,6 +22,7 @@
 #include "OpenGLBlobCache.h"
 #include "OpenGLDriver.h"
 
+#include <atomic>
 #include <iterator>
 #include <optional>
 #include <private/backend/BackendUtils.h>
@@ -45,7 +46,6 @@
 #include <cctype>
 #include <mutex>
 #include <memory>
-#include <string>
 #include <string_view>
 #include <thread>
 #include <utility>
@@ -59,14 +59,19 @@ namespace filament::backend {
 
 using namespace utils;
 
+// How many ticks do we wait in between compiling non-IMMEDIATE programs synchronously?
+constexpr uint32_t NUM_TICKS_BETWEEN_PROGRAMS = 16;
+// How many non-IMMEDIATE synchronous programs are we allowed to compile on the same tick?
+constexpr uint32_t MAX_NUM_SYNCHRONOUS_PROGRAMS_PER_FRAME = 1;
+
 // ------------------------------------------------------------------------------------------------
 
-static std::string to_string(bool const b) { return b ? "true" : "false"; }
-static std::string to_string(int const i) { return std::to_string(i); }
-static std::string to_string(float const f) { return "float(" + std::to_string(f) + ")"; }
+static CString to_string(bool const b) { return CString{ b ? "true" : "false" }; }
+static CString to_string(int const i) { return utils::to_string(i); }
+static CString to_string(float const f) { return "float(" + utils::to_string(f) + ")"; }
 
 static void logCompilationError(ShaderStage shaderType, const char* name, GLuint shaderId,
-        Program::ShaderBlob const& sourceCode) noexcept;
+        Program::ShaderBlob const& sourceCode);
 static void logProgramLinkError(char const* name, GLuint program) noexcept;
 
 static void process_GOOGLE_cpp_style_line_directive(OpenGLContext const& context, char* source,
@@ -74,7 +79,8 @@ static void process_GOOGLE_cpp_style_line_directive(OpenGLContext const& context
 static void process_OVR_multiview2(OpenGLContext const& context, int32_t eyeCount, char* source,
         size_t len) noexcept;
 static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
-static std::array<std::string_view, 3> splitShaderSource(std::string_view source) noexcept;
+static std::string_view process_countBits(OpenGLContext& context) noexcept;
+static std::array<std::string_view, 3> splitShaderSource(std::string_view source);
 
 // ------------------------------------------------------------------------------------------------
 
@@ -134,9 +140,27 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
 
     // Indicate this program was created from the cache blob.
     bool retrievedFromBlobCache = false;
+
+    // The current state of token. Used for THREAD_POOL mode.
+    enum class State : uint8_t {
+        // The token is currently in the queue, awaiting the start of shader compilation.
+        // From this state, the token can transition to either LOADING or CANCELED.
+        WAITING,
+        // This state indicates that shader compilation is currently underway for the token.
+        // From this state, the token can only transition to COMPLETED.
+        LOADING,
+        // This state indicates that shader compilation for the token has finished.
+        // No state transitions can occur from this state.
+        COMPLETED,
+        // This state indicates that shader compilation for the token has been canceled.
+        // No state transitions can occur from this state.
+        CANCELED,
+    };
+    std::atomic<State> state = State::WAITING;
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
+    // Notify the caller that the resource loading has concluded.
     trySubmittingCallback();
 }
 
@@ -246,6 +270,7 @@ void ShaderCompilerService::terminate() noexcept {
     mCompilerThreadPool.terminate();
 
     mRunAtNextTickOps.clear();
+    mPendingSynchronousPrograms.clear();
 
     // We could have some pending callbacks here, we need to execute them.
     // This is equivalent to calling cancelTickOp() on all active tokens.
@@ -255,6 +280,7 @@ void ShaderCompilerService::terminate() noexcept {
 ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         CString const& name, Program&& program) {
     auto& gl = mDriver.getContext();
+    CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
 
     // Create a token. A callback condition (handle) is internally created upon token creation.
     auto token = std::make_shared<OpenGLProgramToken>(*this, name);
@@ -262,12 +288,55 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         token->attributes = std::move(program.getAttributes());
     }
 
-    // Initiate program compilation.
+    if (mMode == Mode::SYNCHRONOUS) {
+        if (priorityQueue == CompilerPriorityQueue::CRITICAL ||
+                shouldCompileSynchronousProgramThisTick()) {
+            // We should immediately compile this program this frame.
+            compileProgram(token, std::move(program));
+        } else {
+            // We already exceeded the number of non-IMMEDIATE synchronous programs we're allowed to
+            // create this frame. Queue it for a future frame, sorted by priority.
+            auto const pos = std::lower_bound(mPendingSynchronousPrograms.begin(),
+                    mPendingSynchronousPrograms.end(), priorityQueue,
+                    [](PendingSynchronousProgram const& lhs,
+                            CompilerPriorityQueue const priorityQueue) {
+                        return std::get<1>(lhs).getPriorityQueue() < priorityQueue;
+                    });
+            mPendingSynchronousPrograms.emplace(pos, token, std::move(program));
+        }
+    } else {
+        // Truly asynchronous platforms can always begin compiling immediately.
+        compileProgram(token, std::move(program));
+    }
+
+    return token;
+}
+
+void ShaderCompilerService::compileProgram(
+        program_token_t const& token, Program&& program) {
+    auto& gl = mDriver.getContext();
     CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
     switch (mMode) {
         case Mode::THREAD_POOL: {
             mCompilerThreadPool.queue(priorityQueue, token,
                     [this, &gl, program = std::move(program), token]() mutable {
+                        // The compilation job has just begun. At this point, the token's state must
+                        // be either WAITING or CANCELED.
+                        assert_invariant(token->state == OpenGLProgramToken::State::WAITING ||
+                                         token->state == OpenGLProgramToken::State::CANCELED);
+                        // If the token was canceled, we exit early. If the cancellation occurs
+                        // after this check, the created GL resources will be properly cleaned up
+                        // later in the `tick`.
+                        OpenGLProgramToken::State tokenState = OpenGLProgramToken::State::WAITING;
+                        if (!token->state.compare_exchange_strong(tokenState,
+                                    OpenGLProgramToken::State::LOADING,
+                                    std::memory_order_relaxed)) {
+                            // If the token's state is not WAITING, it must be CANCELED. Other
+                            // states (LOADING or COMPLETED) are not possible here, as jobs in those
+                            // states cannot be re-added to the queue.
+                            assert_invariant(tokenState == OpenGLProgramToken::State::CANCELED);
+                            return;
+                        }
                         // Try retrieving the program from the cache first. If no program found,
                         // a normal compilation/linking process is performed.
                         if (!tryRetrievingProgram(mBlobCache, mDriver.mPlatform, program, token)) {
@@ -275,6 +344,21 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                                     program.getSpecializationConstants(), program.isMultiview(),
                                     token);
                             linkProgram(gl, token);
+                            // Check status of program linking. If it failed, errors will be logged.
+                            bool const linked = checkLinkStatusAndCleanupShaders(token);
+                            // We panic if it failed to create the program.
+#if FILAMENT_ENABLE_MATDBG
+                            if (UTILS_UNLIKELY(!linked)) {
+                                LOG(ERROR) << "OpenGL program " << token->name.c_str_safe()
+                                           << " failed to link or compile";
+                                // this will allow us to continue without crashing
+                                token->gl.program = 0;
+                            }
+#else
+                            FILAMENT_CHECK_POSTCONDITION(linked)
+                                    << "OpenGL program " << token->name.c_str_safe()
+                                    << " failed to link or compile";
+#endif
                         }
                         // Now `token->gl.program` must be populated, so we signal the completion
                         // of the linking. We don't need to check the result of the program here
@@ -284,11 +368,18 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                         // to unblock the engine thread as soon as the token is ready while
                         // performing an expensive caching operation still in the pool.
                         tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
+                        // Updates the token's state. If the token is canceled while this function
+                        // executes, this update notifies `tick` that GL resource loading is
+                        // complete, allowing `tick` to proceed with resource destruction.
+                        token->state.store(OpenGLProgramToken::State::COMPLETED,
+                                std::memory_order_relaxed);
                     });
             break;
         }
 
         case Mode::SYNCHRONOUS:
+            mNumProgramsCreatedSynchronouslyThisTick++;
+            UTILS_FALLTHROUGH;
         case Mode::ASYNCHRONOUS: {
             // Try retrieving the program from the cache first. If no program found,
             // a normal compilation/linking process is performed.
@@ -324,8 +415,6 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
             assert_invariant(false);
         }
     }
-
-    return token;
 }
 
 GLuint ShaderCompilerService::getProgram(program_token_t& token) {
@@ -346,27 +435,33 @@ GLuint ShaderCompilerService::getProgram(program_token_t& token) {
 
     assert_invariant(token);// This function should be called when the token is still alive.
 
-    // Finalize any pending shader compilation tasks only when the token was created without cache.
     if (token->compiler.mMode == Mode::THREAD_POOL) {
-        auto const job = token->compiler.mCompilerThreadPool.dequeue(token);
-        if (!job) {
-            // It's likely that the job was already completed. But it may be still being
-            // executed at this moment. Just try waiting for it to avoid a race.
-            token->wait();
+        // Attempt to cancel the token. If the token's resource loading has already begun, the
+        // token will be monitored via the `mCanceledTokens` until completion so that it proceeds
+        // with resource destruction afterward.
+        OpenGLProgramToken::State tokenState = OpenGLProgramToken::State::WAITING;
+        if (!token->state.compare_exchange_strong(tokenState, OpenGLProgramToken::State::CANCELED,
+                    std::memory_order_relaxed)) {
+            assert_invariant(tokenState == OpenGLProgramToken::State::LOADING ||
+                             tokenState == OpenGLProgramToken::State::COMPLETED);
+            token->compiler.mCanceledTokens.push_back(token);
         }
+    } else {
+        token->compiler.cancelTickOp(token);
+        token->compiler.cancelPendingSynchronousProgram(token);
     }
 
-    cleanupProgramAndShaders(token);
-
-    // Cleanup the token.
-    token->compiler.cancelTickOp(token);
     token = nullptr; // This will try submitting a callback handle to the callback manager.
 }
 
 void ShaderCompilerService::tick() {
-    // we don't need to run executeTickOps() if we're using the thread-pool
-    if (UTILS_UNLIKELY(mMode != Mode::THREAD_POOL)) {
+    if (mMode == Mode::THREAD_POOL) {
+        handleCanceledTokensForThreadPool();
+    } else {
         executeTickOps();
+    }
+    if (UTILS_UNLIKELY(mMode == Mode::SYNCHRONOUS)) {
+        compilePendingSynchronousPrograms();
     }
 }
 
@@ -394,25 +489,35 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
     assert_invariant(token);// This function should be called when the token is still alive.
 
     ensureTokenIsReady(token);
+
+#if !FILAMENT_ENABLE_MATDBG
     assert_invariant(token->gl.program);
-
-    // Check status of program linking. If it failed, errors will be logged.
-    bool const linked = checkLinkStatusAndCleanupShaders(token);
-
-    // We panic if it failed to create the program.
-    FILAMENT_CHECK_POSTCONDITION(linked)
-            << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
-
-    // The program is successfully created. Try caching the program blob. In the THREAD_POOL mode,
-    // caching is performed in the pool.
-    if (mMode != Mode::THREAD_POOL) {
-        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
-    }
+#endif
 
     GLuint const program = token->gl.program;
 
-    // Cleanup the token.
-    token->compiler.cancelTickOp(token);
+    if (mMode != Mode::THREAD_POOL) {
+        // Check status of program linking. If it failed, errors will be logged.
+        bool const linked = checkLinkStatusAndCleanupShaders(token);
+#if FILAMENT_ENABLE_MATDBG
+        if (UTILS_UNLIKELY(!linked)) {
+            LOG(ERROR)
+                << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
+            token->gl.program = 0;
+        }
+#else
+        // We panic if it failed to create the program.
+        FILAMENT_CHECK_POSTCONDITION(linked)
+                << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
+#endif
+        // The program has been successfully created. Try caching the program blob for
+        // non-THREAD_POOL modes. In the THREAD_POOL mode, caching is performed in the pool.
+        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
+        // The token could be present in the tick op list at this point. Ensure the token is not in
+        // the tick op list.(b/394319326)
+        token->compiler.cancelTickOp(token);
+    }
+
     token = nullptr;
 
     return program;
@@ -443,9 +548,9 @@ void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
             // just log warnings here instead of repeatedly checking compile status. If this turns
             // out to be a real issue later, we would need to consider doing the canonical way.
             if (!isCompileCompleted(token)) {
-                LOG(WARNING)
+                LOG(INFO)
                         << "Shader compilation for OpenGL program " << token->name.c_str_safe()
-                        << " is not completed yet. The following program link may not succeed.";
+                        << " is not completed yet. The following program link may be slow.";
             }
 
             linkProgram(mDriver.getContext(), token);
@@ -453,9 +558,12 @@ void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
         }
 
         case Mode::SYNCHRONOUS: {
-            // We must not have called the TickOp yet until now. Call now to have
-            // `token->gl.program` ready to use.
-            tick();
+            // This program might still be in the queue, so try to compile it now.
+            compilePendingSynchronousProgramNow(token);
+            // If the program was just compiled on the above line, or the program was compiled but
+            // the tick ops weren't yet executed, we must execute them to populate
+            // `token->gl.program`.
+            executeTickOps();
             break;
         }
 
@@ -467,8 +575,43 @@ void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
 
 // ------------------------------------------------------------------------------------------------
 
+void ShaderCompilerService::handleCanceledTokensForThreadPool() {
+    for (auto it = mCanceledTokens.begin(); it != mCanceledTokens.end();) {
+        auto token = *it;
+        OpenGLProgramToken::State tokenState = token->state.load(std::memory_order_relaxed);
+
+        if (tokenState != OpenGLProgramToken::State::COMPLETED) {
+            ++it;
+            continue;
+        }
+
+        mCompilerThreadPool.queue(CompilerPriorityQueue::LOW, token,
+                [token]() mutable {
+                    assert_invariant(token->state == OpenGLProgramToken::State::COMPLETED);
+                    for (GLuint& shader: token->gl.shaders) {
+                        if (!shader) {
+                            continue;
+                        }
+                        if (token->gl.program) {
+                            glDetachShader(token->gl.program, shader);
+                        }
+                        glDeleteShader(shader);
+                        shader = 0;
+                    }
+                    if (token->gl.program) {
+                        glDeleteProgram(token->gl.program);
+                        token->gl.program = 0;
+                    }
+                });
+
+        it = mCanceledTokens.erase(it);
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
 void ShaderCompilerService::runAtNextTick(CompilerPriorityQueue priority,
-        program_token_t const& token, Job job) noexcept {
+        program_token_t const& token, Job job) {
     // insert items in order of priority and at the end of the range
     auto& ops = mRunAtNextTickOps;
     auto const pos = std::lower_bound(ops.begin(), ops.end(), priority,
@@ -496,7 +639,7 @@ bool ShaderCompilerService::cancelTickOp(program_token_t const& token) noexcept 
     return false;
 }
 
-void ShaderCompilerService::executeTickOps() noexcept {
+void ShaderCompilerService::executeTickOps() {
     auto& ops = mRunAtNextTickOps;
     auto it = ops.begin();
     while (it != ops.end()) {
@@ -512,30 +655,90 @@ void ShaderCompilerService::executeTickOps() noexcept {
     FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "ShaderCompilerService Jobs", ops.size());
 }
 
+bool ShaderCompilerService::shouldCompileSynchronousProgramThisTick() const noexcept {
+    return mDriver.getDriverConfig().disableAmortizedShaderCompile ||
+            (mNumProgramsCreatedSynchronouslyThisTick < MAX_NUM_SYNCHRONOUS_PROGRAMS_PER_FRAME &&
+                    mNumTicksUntilNextSynchronousProgram == 0);
+}
+
+void ShaderCompilerService::compilePendingSynchronousPrograms() {
+    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+        return;
+    }
+
+    auto it = mPendingSynchronousPrograms.begin();
+    while (it != mPendingSynchronousPrograms.end() && shouldCompileSynchronousProgramThisTick()) {
+        compileProgram(std::get<0>(*it), std::move(std::get<1>(*it)));
+        it = mPendingSynchronousPrograms.erase(it);
+    }
+    if (mNumProgramsCreatedSynchronouslyThisTick) {
+        mNumTicksUntilNextSynchronousProgram = NUM_TICKS_BETWEEN_PROGRAMS;
+        mNumProgramsCreatedSynchronouslyThisTick = 0u;
+    } else if (mNumTicksUntilNextSynchronousProgram) {
+        mNumTicksUntilNextSynchronousProgram--;
+    }
+}
+
+void ShaderCompilerService::compilePendingSynchronousProgramNow(
+        program_token_t const& token) {
+    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+        return;
+    }
+
+    auto pos = std::find_if(mPendingSynchronousPrograms.begin(),
+            mPendingSynchronousPrograms.end(), [&](PendingSynchronousProgram const& item) {
+                return std::get<0>(item) == token;
+            });
+    if (pos != mPendingSynchronousPrograms.end()) {
+        compileProgram(std::get<0>(*pos), std::move(std::get<1>(*pos)));
+        mPendingSynchronousPrograms.erase(pos);
+    }
+}
+
+void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t const& token) noexcept {
+    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+        return;
+    }
+
+    // We do a linear search here, but this is rare, and we know the list is pretty small.
+    auto const pos = std::find_if(mPendingSynchronousPrograms.begin(),
+            mPendingSynchronousPrograms.end(), [&](const auto& item) {
+                return std::get<0>(item) == token;
+            });
+    if (pos != mPendingSynchronousPrograms.end()) {
+        mPendingSynchronousPrograms.erase(pos);
+        return;
+    }
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT,
+            "ShaderCompilerService Pending Programs", mPendingSynchronousPrograms.size());
+}
+
 /* static */ void ShaderCompilerService::compileShaders(OpenGLContext& context,
         Program::ShaderSource shadersSource,
         FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
-        bool multiview, program_token_t const& token) noexcept {
+        bool multiview, program_token_t const& token) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    auto const appendSpecConstantString = +[](std::string& s, Program::SpecializationConstant const& sc) {
-        s += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
-        s += std::visit([](auto&& arg) { return to_string(arg); }, sc.value);
-        s += '\n';
-        return s;
-    };
+    auto const appendSpecConstantString =
+            +[](CString& s, size_t id, Program::SpecializationConstant const& sc) {
+                s += "#define SPIRV_CROSS_CONSTANT_ID_" + utils::to_string(id) + ' ';
+                s += std::visit([](auto&& arg) { return to_string(arg); }, sc);
+                s += '\n';
+                return s;
+            };
 
-    std::string specializationConstantString;
-    int32_t numViews = 2;
-    for (auto const& sc: specializationConstants) {
-        appendSpecConstantString(specializationConstantString, sc);
-        if (sc.id == 8) {
-            // This constant must match
-            // ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT
-            // which we can't use here because it's defined in EngineEnums.h.
-            // (we're breaking layering here, but it's for the good cause).
-            numViews = std::get<int32_t>(sc.value);
-        }
+    CString specializationConstantString;
+    // This constant must match
+    // ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT
+    // which we can't use here because it's defined in EngineEnums.h.
+    // (we're breaking layering here, but it's for the good cause).
+    constexpr size_t CONFIG_STEREO_EYE_COUNT = 8;
+    int32_t numViews = specializationConstants.size() >= CONFIG_STEREO_EYE_COUNT
+                               ? std::get<int32_t>(specializationConstants[CONFIG_STEREO_EYE_COUNT])
+                               : 2;
+    for (size_t id = 0; id < specializationConstants.size(); id++) {
+        appendSpecConstantString(specializationConstantString, id, specializationConstants[id]);
     }
     if (!specializationConstantString.empty()) {
         specializationConstantString += '\n';
@@ -577,6 +780,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
 
             // add support for ARB_shading_language_packing if needed
             auto const packingFunctions = process_ARB_shading_language_packing(context);
+            auto const countBitsFunctions = process_countBits(context);
 
             // split shader source, so we can insert the specialization constants and the packing
             // functions
@@ -587,9 +791,11 @@ void ShaderCompilerService::executeTickOps() noexcept {
                 version = "#version 310 es\n";
             }
 
-            std::array<std::string_view, 5> sources = {
-                version, prolog, specializationConstantString, packingFunctions,
-                { body.data(), body.size() - 1 }// null-terminated
+            std::array<std::string_view, 6> sources = {
+                version, prolog,
+                { specializationConstantString.data(), specializationConstantString.size() },
+                packingFunctions, countBitsFunctions,
+                { body.data(), body.size() - 1 } // null-terminated
             };
 
             // Some of the sources may be zero-length. Remove them as to avoid passing lengths of
@@ -599,8 +805,8 @@ void ShaderCompilerService::executeTickOps() noexcept {
                     [](std::string_view s) { return !s.empty(); });
             size_t const count = std::distance(sources.begin(), partitionPoint);
 
-            std::array<const char*, 5> shaderStrings;
-            std::array<GLint, 5> lengths;
+            std::array<const char*, 6> shaderStrings;
+            std::array<GLint, 6> lengths;
             for (size_t j = 0; j < count; j++) {
                 shaderStrings[j] = sources[j].data();
                 lengths[j] = GLint(sources[j].size());
@@ -638,7 +844,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
     return true;
 }
 
-/* static */ void ShaderCompilerService::checkCompileStatus(program_token_t const& token) noexcept {
+/* static */ void ShaderCompilerService::checkCompileStatus(program_token_t const& token) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     UTILS_NOUNROLL
@@ -660,7 +866,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
 }
 
 /* static */ void ShaderCompilerService::linkProgram(OpenGLContext const& context,
-        program_token_t const& token) noexcept {
+        program_token_t const& token) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // Shader compilation should be completed by now. Check the status and log errors on failure.
@@ -749,30 +955,12 @@ void ShaderCompilerService::executeTickOps() noexcept {
     cache.insert(platform, token->key, token->gl.program);
 }
 
-/* static */ void ShaderCompilerService::cleanupProgramAndShaders(
-        program_token_t const& token) noexcept {
-    for (GLuint& shader: token->gl.shaders) {
-        if (!shader) {
-            continue;
-        }
-        if (token->gl.program) {
-            glDetachShader(token->gl.program, shader);
-        }
-        glDeleteShader(shader);
-        shader = 0;
-    }
-    if (token->gl.program) {
-        glDeleteProgram(token->gl.program);
-        token->gl.program = 0;
-    }
-}
-
 // ------------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
 /* static */ void logCompilationError(ShaderStage shaderType, const char* name,
         GLuint const shaderId,
-        UTILS_UNUSED_IN_RELEASE Program::ShaderBlob const& sourceCode) noexcept {
+        UTILS_UNUSED_IN_RELEASE Program::ShaderBlob const& sourceCode) {
 
     // Collects the current GL error for additional context. While often redundant,
     // errors like `GL_CONTEXT_LOST` can occur asynchronously after `glCompileShader`.
@@ -806,16 +994,18 @@ UTILS_NOINLINE
         sourceCode.size() };
     size_t lc = 1;
     size_t start = 0;
-    std::string line;
+    CString line;
     while (true) {
         size_t const end = shader.find('\n', start);
-        if (end == std::string::npos) {
-            line = shader.substr(start);
+        if (end == std::string_view::npos) {
+            auto sv = shader.substr(start);
+            line = { sv.data(), sv.size() };
         } else {
-            line = shader.substr(start, end - start);
+            auto sv = shader.substr(start, end - start);
+            line = { sv.data(), sv.size() };
         }
         LOG(ERROR) << lc++ << ":   " << line.c_str();
-        if (end == std::string::npos) {
+        if (end == std::string_view::npos) {
             break;
         }
         start = end + 1;
@@ -896,6 +1086,29 @@ UTILS_NOINLINE
         }
     }
 }
+
+/* static */ std::string_view process_countBits(OpenGLContext& context) noexcept {
+    using namespace std::literals;
+    // bitCount is available in GL 4.0 and GLES 3.1.
+    if (context.isAtLeastGL<4, 0>() || context.isAtLeastGLES<3, 1>()) {
+        return ""sv;
+    }
+
+    // GLES 2.0 does not support bitwise operations or unsigned integers.
+    if (context.isES2()) {
+        return ""sv;
+    }
+
+    return R"(
+// https://graphics.stanford.edu/%7Eseander/bithacks.html
+int bitCount(highp uint value) {
+    value = value - ((value >> 1u) & 0x55555555u);
+    value = (value & 0x33333333u) + ((value >> 2u) & 0x33333333u);
+    return int(((value + (value >> 4u) & 0xF0F0F0Fu) * 0x1010101u) >> 24u);
+}
+)"sv;
+}
+
 
 // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 (appeared in 4.2) and
 // macOS doesn't support GL_ARB_shading_language_packing
@@ -1016,7 +1229,7 @@ mediump vec4 unpackSnorm4x8(highp uint v) {
 // - the version line
 // - extensions
 // - everything else
-/* static */ std::array<std::string_view, 3> splitShaderSource(std::string_view source) noexcept {
+/* static */ std::array<std::string_view, 3> splitShaderSource(std::string_view source) {
     auto const version_start = source.find("#version");
     assert_invariant(version_start != std::string_view::npos);
 

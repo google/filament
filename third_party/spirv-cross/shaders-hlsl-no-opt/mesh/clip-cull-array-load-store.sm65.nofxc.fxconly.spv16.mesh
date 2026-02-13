@@ -1,0 +1,26 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+layout(triangles, max_vertices = 3, max_primitives = 1) out;
+
+out gl_MeshPerVertexEXT
+{
+	float gl_ClipDistance[4];
+} gl_MeshVerticesEXT[];
+
+void write_clip_distance(inout float v[4])
+{
+	v[0] += 1.0;
+	v[1] += 2.0;
+	v[2] += 3.0;
+	v[3] += 4.0;
+}
+
+void main()
+{
+	SetMeshOutputsEXT(3, 1);
+	gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0] = 4.0;
+	gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[1] = 4.0;
+	gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[2] = 4.0;
+	gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[3] = 4.0;
+	write_clip_distance(gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance);
+}

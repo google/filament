@@ -1,0 +1,13 @@
+{
+  # Paths to gn_args_locations.json relative to the directory containing mb_config.pyl.
+  # Such json files contain maps of
+  # builder group -> builder ID -> file path of "gn-args.json" generated from starlark.
+  'gn_args_locations_files': [
+      '../config/global/generated/builders/gn_args_locations.json',
+  ],
+  # configs and mixins are not expected to be used since Dawn specifies its
+  # GN args via Starlark. However, mb.py assumes that these keys exist, so have
+  # empty dicts for each.
+  'configs': {},
+  'mixins': {},
+}

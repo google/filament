@@ -27,7 +27,8 @@
 
 #include "src/tint/lang/core/type/sampler.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/texture.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -35,9 +36,10 @@ namespace {
 using SamplerTest = TestHelper;
 
 TEST_F(SamplerTest, Creation) {
-    auto* a = create<Sampler>(SamplerKind::kSampler);
-    auto* b = create<Sampler>(SamplerKind::kSampler);
-    auto* c = create<Sampler>(SamplerKind::kComparisonSampler);
+    Manager ty;
+    auto* a = ty.sampler();
+    auto* b = ty.sampler();
+    auto* c = ty.comparison_sampler();
 
     EXPECT_EQ(a->Kind(), SamplerKind::kSampler);
     EXPECT_EQ(c->Kind(), SamplerKind::kComparisonSampler);
@@ -50,16 +52,18 @@ TEST_F(SamplerTest, Creation) {
 }
 
 TEST_F(SamplerTest, Hash) {
-    auto* a = create<Sampler>(SamplerKind::kSampler);
-    auto* b = create<Sampler>(SamplerKind::kSampler);
+    Manager ty;
+    auto* a = ty.sampler();
+    auto* b = ty.sampler();
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(SamplerTest, Equals) {
-    auto* a = create<Sampler>(SamplerKind::kSampler);
-    auto* b = create<Sampler>(SamplerKind::kSampler);
-    auto* c = create<Sampler>(SamplerKind::kComparisonSampler);
+    Manager ty;
+    auto* a = ty.sampler();
+    auto* b = ty.sampler();
+    auto* c = ty.comparison_sampler();
 
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
@@ -77,7 +81,8 @@ TEST_F(SamplerTest, FriendlyNameComparisonSampler) {
 }
 
 TEST_F(SamplerTest, Clone) {
-    auto* a = create<Sampler>(SamplerKind::kSampler);
+    Manager ty;
+    auto* a = ty.sampler();
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

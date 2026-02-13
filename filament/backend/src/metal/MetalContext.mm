@@ -95,6 +95,38 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
     }
 }
 
+void logMTLCommandBufferError(MTLCommandBufferError error) {
+#define MTL_COMMAND_ERROR_CASE(ERR)                                                                \
+    if (error == (ERR)) {                                                                          \
+        LOG(ERROR) << "Filament Metal error: " #ERR ".";                                           \
+        return;                                                                                    \
+    }
+
+#if !defined(FILAMENT_IOS)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorDeviceRemoved)
+#endif
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorNone)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorInternal)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorTimeout)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorPageFault)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorAccessRevoked)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorNotPermitted)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorOutOfMemory)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorInvalidResource)
+
+    if (@available(macOS 11.0, *)) {
+        MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorMemoryless)
+    }
+
+    if (@available(iOS 15.0, macOS 12.0, *)) {
+        MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorStackOverflow)
+    }
+
+    LOG(ERROR) << "Filament Metal unknown error.";
+
+#undef MTL_COMMAND_ERROR_CASE
+}
+
 id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
     if (context->pendingCommandBuffer) {
         return context->pendingCommandBuffer;
@@ -102,7 +134,7 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
     context->pendingCommandBuffer = [context->commandQueue commandBuffer];
     // It's safe for this block to capture the context variable. MetalDriver::terminate will ensure
     // all frames and their completion handlers finish before context is deallocated.
-    uint64_t thisCommandBufferId = context->pendingCommandBufferId;
+    const uint64_t thisCommandBufferId = context->pendingCommandBufferId;
     [context->pendingCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
         context->resourceTracker.clearResources((__bridge void*) buffer);
 
@@ -117,6 +149,11 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
                                 "storage mode.";
                 context->memorylessLimitsReached = true;
             }
+        }
+
+        if (UTILS_UNLIKELY(errorCode != MTLCommandBufferErrorNone)) {
+            logMTLCommandBufferError(errorCode);
+            context->commandBufferErrors.push(buffer.error);
         }
     }];
     FILAMENT_CHECK_POSTCONDITION(context->pendingCommandBuffer)

@@ -17,18 +17,18 @@
 #include "details/Scene.h"
 
 #include "Allocators.h"
-#include "BufferPoolAllocator.h"
 
-#include "backend/Handle.h"
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
 
 #include "details/Engine.h"
-#include "details/InstanceBuffer.h"
 #include "details/Skybox.h"
 
+#include <backend/Handle.h>
+
 #include <private/filament/UibStructs.h>
+
 #include <private/utils/Tracing.h>
 
 #include <filament/Box.h>
@@ -70,7 +70,7 @@ namespace filament {
 // ------------------------------------------------------------------------------------------------
 
 FScene::FScene(FEngine& engine) :
-        mEngine(engine), mSharedState(std::make_shared<SharedState>()) {
+        mEngine(engine) {
 }
 
 FScene::~FScene() noexcept = default;
@@ -232,13 +232,16 @@ void FScene::prepare(JobSystem& js,
             sceneData.elementAt<INSTANCES>(index)           = rcm.getInstancesInfo(ri);
             sceneData.elementAt<WORLD_AABB_CENTER>(index)   = worldAABB.center;
             sceneData.elementAt<VISIBLE_MASK>(index)        = 0;
-            sceneData.elementAt<CHANNELS>(index)            = rcm.getChannels(ri);
+            sceneData.elementAt<CHANNELS>(index)            = rcm.getLightChannels(ri);
             sceneData.elementAt<LAYERS>(index)              = rcm.getLayerMask(ri);
             sceneData.elementAt<WORLD_AABB_EXTENT>(index)   = worldAABB.halfExtent;
             //sceneData.elementAt<PRIMITIVES>(index)          = {}; // already initialized, Slice<>
             sceneData.elementAt<SUMMED_PRIMITIVE_COUNT>(index) = 0;
             //sceneData.elementAt<UBO>(index)                 = {}; // not needed here
             sceneData.elementAt<USER_DATA>(index)           = scale;
+
+
+            sceneData.elementAt<SKINNING_STATE>(index) = rcm.getSkinning(ri);
         }
     };
 
@@ -342,6 +345,7 @@ void FScene::prepare(JobSystem& js,
             sceneData.data<LAYERS>()[i] = 0;
             sceneData.data<VISIBLE_MASK>()[i] = 0;
             sceneData.data<VISIBILITY_STATE>()[i] = {};
+            sceneData.data<SKINNING_STATE>()[i] = {};
         }
     }
 
@@ -360,6 +364,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         PerRenderableData& uboData = sceneData.elementAt<UBO>(i);
 
         auto const visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
+        auto const skinning = sceneData.elementAt<SKINNING_STATE>(i);
         auto const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
         auto const ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
 
@@ -389,8 +394,8 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         uboData.worldFromModelNormalMatrix = m;
 
         uboData.flagsChannels = PerRenderableData::packFlagsChannels(
-                visibility.skinning,
-                visibility.morphing,
+                skinning.skinning,
+                static_cast<uint8_t>(skinning.morphType),
                 visibility.screenSpaceContactShadows,
                 sceneData.elementAt<INSTANCES>(i).buffer != nullptr,
                 sceneData.elementAt<CHANNELS>(i));
@@ -404,65 +409,6 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
 
         mHasContactShadows = mHasContactShadows || visibility.screenSpaceContactShadows;
     }
-}
-
-void FScene::updateUBOs(
-        Range<uint32_t> visibleRenderables,
-        Handle<HwBufferObject> renderableUbh) noexcept {
-    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-    FEngine::DriverApi& driver = mEngine.getDriverApi();
-
-    // don't allocate more than 16 KiB directly into the render stream
-    static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
-    const size_t count = visibleRenderables.size();
-    PerRenderableData* buffer = [&]{
-        if (count >= MAX_STREAM_ALLOCATION_COUNT) {
-            // use the heap allocator
-            auto& bufferPoolAllocator = mSharedState->mBufferPoolAllocator;
-            return static_cast<PerRenderableData*>(bufferPoolAllocator.get(count * sizeof(PerRenderableData)));
-        } else {
-            // allocate space into the command stream directly
-            return driver.allocatePod<PerRenderableData>(count);
-        }
-    }();
-
-    PerRenderableData const* const uboData = mRenderableData.data<UBO>();
-    mat4f const* const worldTransformData = mRenderableData.data<WORLD_TRANSFORM>();
-
-    // prepare each InstanceBuffer.
-    FRenderableManager::InstancesInfo const* instancesData = mRenderableData.data<INSTANCES>();
-    for (uint32_t const i : visibleRenderables) {
-        auto& instancesInfo = instancesData[i];
-        if (UTILS_UNLIKELY(instancesInfo.buffer)) {
-            instancesInfo.buffer->prepare(
-                    mEngine, worldTransformData[i], uboData[i]);
-        }
-    }
-
-    // copy our data into the UBO for each visible renderable
-    for (uint32_t const i : visibleRenderables) {
-        buffer[i] = uboData[i];
-    }
-
-    // We capture state shared between Scene and the update buffer callback, because the Scene could
-    // be destroyed before the callback executes.
-    std::weak_ptr<SharedState>* const weakShared = new(std::nothrow) std::weak_ptr(mSharedState);
-
-    // update the UBO
-    driver.resetBufferObject(renderableUbh);
-    driver.updateBufferObjectUnsynchronized(renderableUbh, {
-            buffer, count * sizeof(PerRenderableData),
-            +[](void* p, size_t const s, void* user) {
-                std::weak_ptr<SharedState>* const weakShared =
-                        static_cast<std::weak_ptr<SharedState>*>(user);
-                if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
-                    if (auto state = weakShared->lock()) {
-                        state->mBufferPoolAllocator.put(p);
-                    }
-                }
-                delete weakShared;
-            }, weakShared
-    }, 0);
 }
 
 void FScene::terminate(FEngine&) {
@@ -496,7 +442,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
     auto const* UTILS_RESTRICT shadowInfo       = lightData.data<SHADOW_INFO>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = size; i < c; ++i) {
         const size_t gpuIndex = i - DIRECTIONAL_LIGHTS_COUNT;
-        auto li = instances[i];
+        auto const li = instances[i];
         lp[gpuIndex].positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp[gpuIndex].direction            = directions[i];
         lp[gpuIndex].reserved1            = {};
@@ -626,7 +572,7 @@ bool FScene::hasContactShadows() const noexcept {
 
     // find out if at least one light has contact-shadow enabled
     // TODO: we could cache the result of this Loop in the LightManager
-    auto& lcm = mEngine.getLightManager();
+    auto const& lcm = mEngine.getLightManager();
     const auto *pFirst = mLightData.begin<LIGHT_INSTANCE>();
     const auto *pLast = mLightData.end<LIGHT_INSTANCE>();
     while (pFirst != pLast) {

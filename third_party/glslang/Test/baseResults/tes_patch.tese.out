@@ -1,0 +1,61 @@
+tes_patch.tese
+ERROR: 0:7: 'location' : the aliases sharing the location 1 must be the same basic type and interpolation qualification
+ERROR: 1 compilation errors.  No code generated.
+
+
+Shader version: 430
+Requested GL_ARB_enhanced_layouts
+input primitive = isolines
+vertex spacing = none
+triangle order = none
+using point mode
+ERROR: node is still EOpNull!
+0:12  Function Definition: main( ( global void)
+0:12    Function Parameters: 
+0:14    Sequence
+0:14      Sequence
+0:14        move second child to first child ( temp 4-component vector of float)
+0:14          'result' ( temp 4-component vector of float)
+0:14          direct index ( temp 4-component vector of float)
+0:14            'tcs_tes' ( in 32-element array of 4-component vector of float)
+0:14            Constant:
+0:14              0 (const int)
+0:18      add second child into first child ( temp 4-component vector of float)
+0:18        'tes_gs' ( out 4-component vector of float)
+0:18        'result' ( temp 4-component vector of float)
+0:?   Linker Objects
+0:?     'gohan' (layout( location=1 component=0) in 32-element array of 2-component vector of float)
+0:?     'goten' (layout( location=1 component=2) patch in 2-component vector of float)
+0:?     'tcs_tes' ( in 32-element array of 4-component vector of float)
+0:?     'tes_gs' ( out 4-component vector of float)
+
+
+Linked tessellation evaluation stage:
+
+
+Shader version: 430
+Requested GL_ARB_enhanced_layouts
+input primitive = isolines
+vertex spacing = equal_spacing
+triangle order = ccw
+using point mode
+ERROR: node is still EOpNull!
+0:12  Function Definition: main( ( global void)
+0:12    Function Parameters: 
+0:14    Sequence
+0:14      Sequence
+0:14        move second child to first child ( temp 4-component vector of float)
+0:14          'result' ( temp 4-component vector of float)
+0:14          direct index ( temp 4-component vector of float)
+0:14            'tcs_tes' ( in 32-element array of 4-component vector of float)
+0:14            Constant:
+0:14              0 (const int)
+0:18      add second child into first child ( temp 4-component vector of float)
+0:18        'tes_gs' ( out 4-component vector of float)
+0:18        'result' ( temp 4-component vector of float)
+0:?   Linker Objects
+0:?     'gohan' (layout( location=1 component=0) in 32-element array of 2-component vector of float)
+0:?     'goten' (layout( location=1 component=2) patch in 2-component vector of float)
+0:?     'tcs_tes' ( in 32-element array of 4-component vector of float)
+0:?     'tes_gs' ( out 4-component vector of float)
+

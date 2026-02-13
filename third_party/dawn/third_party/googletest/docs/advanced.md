@@ -349,7 +349,8 @@ void AbslStringify(Sink& sink, EnumWithStringify e) {
 {: .callout .note}
 Note: `AbslStringify()` utilizes a generic "sink" buffer to construct its
 string. For more information about supported operations on `AbslStringify()`'s
-sink, see go/abslstringify.
+sink, see
+[the `AbslStringify()` documentation](https://abseil.io/docs/cpp/guides/abslstringify).
 
 `AbslStringify()` can also use `absl::StrFormat`'s catch-all `%v` type specifier
 within its own format strings to perform type deduction. `Point` above could be
@@ -403,7 +404,8 @@ EXPECT_TRUE(IsCorrectPointIntVector(point_ints))
 ```
 
 For more details regarding `AbslStringify()` and its integration with other
-libraries, see go/abslstringify.
+libraries, see
+[the documentation](https://abseil.io/docs/cpp/guides/abslstringify).
 
 ## Regular Expression Syntax
 
@@ -1448,17 +1450,19 @@ are two cases to consider:
 To test them, we use the following special techniques:
 
 *   Both static functions and definitions/declarations in an unnamed namespace
-    are only visible within the same translation unit. To test them, you can
-    `#include` the entire `.cc` file being tested in your `*_test.cc` file.
-    (#including `.cc` files is not a good way to reuse code - you should not do
-    this in production code!)
+    are only visible within the same translation unit. To test them, move the
+    private code into the `foo::internal` namespace, where `foo` is the
+    namespace your project normally uses, and put the private declarations in a
+    `*-internal.h` file. Your production `.cc` files and your tests are allowed
+    to include this internal header, but your clients are not. This way, you can
+    fully test your internal implementation without leaking it to your clients.
 
-    However, a better approach is to move the private code into the
-    `foo::internal` namespace, where `foo` is the namespace your project
-    normally uses, and put the private declarations in a `*-internal.h` file.
-    Your production `.cc` files and your tests are allowed to include this
-    internal header, but your clients are not. This way, you can fully test your
-    internal implementation without leaking it to your clients.
+{: .callout .note}
+NOTE: It is also technically *possible* to `#include` the entire `.cc` file
+being tested in your `*_test.cc` file to test static functions and
+definitions/declarations in an unnamed namespace. However, this technique is
+**not recommended** by this documentation and it is only presented here for the
+sake of completeness.
 
 *   Private class members are only accessible from within the class or by
     friends. To access a class' private members, you can declare your test
@@ -1471,10 +1475,7 @@ To test them, we use the following special techniques:
 
     Another way to test private members is to refactor them into an
     implementation class, which is then declared in a `*-internal.h` file. Your
-    clients aren't allowed to include this header but your tests can. Such is
-    called the
-    [Pimpl](https://www.gamedev.net/articles/programming/general-and-gameplay-programming/the-c-pimpl-r1794/)
-    (Private Implementation) idiom.
+    clients aren't allowed to include this header but your tests can.
 
     Or, you can declare an individual test as a friend of your class by adding
     this line in the class body:
@@ -1942,6 +1943,21 @@ test case is linked in.
 
 Note that *any* test case linked in makes the program valid for the purpose of
 this check. In particular, even a disabled test case suffices.
+
+### Enforcing Running At Least One Test Case
+
+In addition to enforcing that tests are defined in the binary with
+`--gtest_fail_if_no_test_linked`, it is also possible to enforce that a test
+case was actually executed to ensure that resources are not consumed by tests
+that do nothing.
+
+To catch such optimization opportunities, run the test program with the
+`--gtest_fail_if_no_test_selected` flag or set the
+`GTEST_FAIL_IF_NO_TEST_SELECTED` environment variable to a value other than `0`.
+
+A test is considered selected if it begins to run, even if it is later skipped
+via `GTEST_SKIP`. Thus, `DISABLED` tests do not count as selected and neither do
+tests that are not matched by `--gtest_filter`.
 
 ### Repeating the Tests
 

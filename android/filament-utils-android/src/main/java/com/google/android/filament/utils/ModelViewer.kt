@@ -16,6 +16,9 @@
 
 package com.google.android.filament.utils
 
+import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
@@ -26,6 +29,7 @@ import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
 import kotlinx.coroutines.*
 import java.nio.Buffer
+import java.nio.ByteBuffer
 
 private const val kNearPlane = 0.05f     // 5 cm
 private const val kFarPlane = 1000.0f    // 1 km
@@ -118,6 +122,8 @@ class ModelViewer(
     private val eyePos = DoubleArray(3)
     private val target = DoubleArray(3)
     private val upward = DoubleArray(3)
+
+    private var debugFrameCallback: ((Bitmap) -> Unit)? = null
 
     init {
         renderer = engine.createRenderer()
@@ -305,8 +311,37 @@ class ModelViewer(
         // Render the scene, unless the renderer wants to skip the frame.
         if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
             renderer.render(view)
+
+            debugFrameCallback?.let {
+                val viewport = view.viewport
+                val bitmap = Bitmap.createBitmap(viewport.width, viewport.height,
+                        Bitmap.Config.ARGB_8888)
+                val buffer = ByteBuffer.allocateDirect(viewport.width * viewport.height * 4)
+
+                val handler = Handler(Looper.getMainLooper())
+                val pixelBufferDescriptor = Texture.PixelBufferDescriptor(buffer,
+                        Texture.Format.RGBA, Texture.Type.UBYTE, 1, 0, 0, 0, handler) {
+                    buffer.rewind()
+                    bitmap.copyPixelsFromBuffer(buffer)
+                    it(bitmap)
+                }
+                renderer.readPixels(viewport.left, viewport.bottom, viewport.width,
+                                    viewport.height, pixelBufferDescriptor)
+                debugFrameCallback = null
+            }
+
             renderer.endFrame()
         }
+    }
+
+    /*
+     * Sets a callback that will be invoked with the next rendered frame as a Bitmap. Note that this
+     * is a one-time callback.
+     *
+     *  @param callback   callback to be invoked with a rendered frame as [Bitmap]
+     */
+    fun debugGetNextFrameCallback(callback: (Bitmap) -> Unit) {
+        debugFrameCallback = callback
     }
 
     private fun populateScene(asset: FilamentAsset) {

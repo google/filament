@@ -23,7 +23,7 @@
 #include <filament/LightManager.h>
 #include <filament/Options.h>
 
-#include <iterator>
+
 #include <private/filament/EngineEnums.h>
 
 #include "components/RenderableManager.h"
@@ -32,6 +32,8 @@
 #include "details/DebugRegistry.h"
 #include "details/Texture.h"
 #include "details/View.h"
+
+#include "ds/DescriptorSet.h"
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
@@ -57,6 +59,7 @@
 #include <array>
 #include <cmath>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <new>
 #include <memory>
@@ -70,7 +73,8 @@ using namespace backend;
 using namespace math;
 
 ShadowMapManager::ShadowMapManager(FEngine& engine)
-    : mIsDepthClampSupported(engine.getDriverApi().isDepthClampSupported()) {
+    : mIsDepthClampSupported(engine.getDriverApi().isDepthClampSupported()),
+      mDisableBlitIntoTextureArray(engine.getDriverApi().isWorkaroundNeeded(Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY)) {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
             &engine.debug.shadowmap.visualize_cascades);
@@ -122,6 +126,7 @@ void ShadowMapManager::terminate(FEngine& engine) {
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::update(
+        DriverApi& driver,
         Builder const& builder,
         FEngine& engine, FView& view,
         CameraInfo const& cameraInfo,
@@ -136,7 +141,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
     if (UTILS_UNLIKELY(!mInitialized)) {
         mInitialized = true;
         // initialize our ShadowMap array in-place
-        mShadowUbh = engine.getDriverApi().createBufferObject(mShadowUb.getSize(),
+        mShadowUbh = driver.createBufferObject(mShadowUb.getSize(),
                 BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
         UTILS_NOUNROLL
         for (auto& entry: mShadowMapCache) {
@@ -334,7 +339,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
                 builder.sideEffect();
             },
-            [=, passBuilder = passBuilder,
+            [=, this,
+                    passBuilder = passBuilder,
                     &engine = const_cast<FEngine /*const*/ &>(engine), // FIXME: we want this const
                     &view = const_cast<FView const&>(view)]
                     (FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
@@ -411,13 +417,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         renderPassFlags |= RenderPass::HAS_DEPTH_CLAMP;
                     }
 
-                    RenderPass const pass = passBuilder
+                    RenderPass pass = passBuilder
                             .renderFlags(RenderPass::HAS_DEPTH_CLAMP, renderPassFlags)
                             .camera(cameraInfo.getPosition(), cameraInfo.getForwardVector())
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
                             .build(engine, driver);
+
+                    pass.finalize(engine, driver);
 
                     entry.executor = pass.getExecutor();
 
@@ -433,6 +441,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                 // Finally update our UBO in one batch
                 if (mShadowUb.isDirty()) {
+                    mShadowUb.clean();
                     driver.updateBufferObject(mShadowUbh,
                             mShadowUb.toBufferDescriptor(driver), 0);
                 }
@@ -560,14 +569,19 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         // if we know there are no visible shadows, we can skip rendering, but
                         // we need the render-pass to clear/initialize the shadow-map
                         // Note: this is always true for directional/cascade shadows.
-                        if (curr->shadowMap->hasVisibleShadows()) {
-                            curr->shadowMap->bind(driver);
-                            curr->executor.overrideScissor(curr->shadowMap->getScissor());
+                        if (ShadowMap const* const shadowMap = curr->shadowMap; shadowMap->hasVisibleShadows()) {
+                            shadowMap->bind(driver);
+                            curr->executor.overrideScissor(shadowMap->getScissor());
                             curr->executor.execute(engine, driver);
                         }
                     }
 
                     driver.endRenderPass();
+
+                    // unbind all descriptor sets to avoid false dependencies with the next pass
+                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_RENDERABLE);
+                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
                 });
 
         first = last;
@@ -984,7 +998,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             lightData.data<FScene::SHADOW_INFO>());
 
     ShadowTechnique shadowTechnique{};
-    utils::Slice<ShadowMap> const spotShadowMaps = getSpotShadowMaps();
+    utils::Slice<const ShadowMap> spotShadowMaps = getSpotShadowMaps();
     if (!spotShadowMaps.empty()) {
         shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         for (ShadowMap const& shadowMap : spotShadowMaps) {
@@ -1041,11 +1055,11 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
         ShadowMap* pShadowMap) mutable {
         // Allocate shadowmap from our Atlas Allocator
         auto const& options = pShadowMap->getShadowOptions();
-        auto [layer, pos] = allocator.allocate(options->mapSize);
-        assert_invariant(layer >= 0);
-        assert_invariant(!pos.empty());
-        pShadowMap->setAllocation(layer, pos);
-        layersNeeded = std::max(uint8_t(layer + 1), layersNeeded);
+        auto allocation = allocator.allocate(options->mapSize);
+        assert_invariant(allocation.isValid());
+        assert_invariant(!allocation.viewport.empty());
+        pShadowMap->setAllocation(allocation.layer, allocation.viewport);
+        layersNeeded = std::max(uint8_t(allocation.layer + 1), layersNeeded);
     };
 
     std::function const allocateFromTextureArray =
@@ -1073,7 +1087,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
             ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
 
     uint8_t msaaSamples = vsmShadowOptions.msaaSamples;
-    if (engine.getDriverApi().isWorkaroundNeeded(Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY)) {
+    if (mDisableBlitIntoTextureArray) {
         msaaSamples = 1;
     }
 
@@ -1101,7 +1115,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     engine.debug.shadowmap.display_shadow_texture_level_count = mipLevels;
 
     mTextureAtlasRequirements = {
-            (uint16_t)maxDimension,
+            uint16_t(maxDimension),
             layersNeeded,
             mipLevels,
             msaaSamples,

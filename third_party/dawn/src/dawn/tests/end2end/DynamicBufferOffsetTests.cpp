@@ -43,18 +43,17 @@ constexpr uint32_t kBindingSize = 8;
 
 class DynamicBufferOffsetTests : public DawnTest {
   protected:
-    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
         // TODO(crbug.com/383593270): Enable all the limits.
-        wgpu::Limits required = {};
         required.maxStorageBuffersInFragmentStage = supported.maxStorageBuffersInFragmentStage;
         required.maxStorageBuffersPerShaderStage = supported.maxStorageBuffersPerShaderStage;
-        return required;
     }
 
     void SetUp() override {
         DawnTest::SetUp();
 
-        DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+        DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
         mMinUniformBufferOffsetAlignment = GetSupportedLimits().minUniformBufferOffsetAlignment;
 
@@ -257,6 +256,9 @@ TEST_P(DynamicBufferOffsetTests, BasicRenderPipeline) {
 
 // Have non-zero dynamic offsets.
 TEST_P(DynamicBufferOffsetTests, SetDynamicOffsetsRenderPipeline) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     wgpu::RenderPipeline pipeline = CreateRenderPipeline();
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
@@ -299,6 +301,9 @@ TEST_P(DynamicBufferOffsetTests, BasicComputePipeline) {
 
 // Have non-zero dynamic offsets.
 TEST_P(DynamicBufferOffsetTests, SetDynamicOffsetsComputePipeline) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     wgpu::ComputePipeline pipeline = CreateComputePipeline();
 
     std::array<uint32_t, 2> offsets = {mMinUniformBufferOffsetAlignment,
@@ -320,6 +325,9 @@ TEST_P(DynamicBufferOffsetTests, SetDynamicOffsetsComputePipeline) {
 
 // Test basic inherit on render pipeline
 TEST_P(DynamicBufferOffsetTests, BasicInheritRenderPipeline) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
             @vertex
             fn main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4f {
@@ -421,6 +429,9 @@ TEST_P(DynamicBufferOffsetTests, InheritDynamicOffsetsRenderPipeline) {
     // TODO(crbug.com/40287156): Remove when test is no longer flaky on Pixel 6
     DAWN_SUPPRESS_TEST_IF(IsVulkan() && IsAndroid() && IsARM());
 
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     // Using default pipeline and setting dynamic offsets
     wgpu::RenderPipeline pipeline = CreateRenderPipeline();
     wgpu::RenderPipeline testPipeline = CreateRenderPipeline(true);
@@ -450,6 +461,9 @@ TEST_P(DynamicBufferOffsetTests, InheritDynamicOffsetsRenderPipeline) {
 
 // Test inherit dynamic offsets on compute pipeline
 TEST_P(DynamicBufferOffsetTests, InheritDynamicOffsetsComputePipeline) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     wgpu::ComputePipeline pipeline = CreateComputePipeline();
     wgpu::ComputePipeline testPipeline = CreateComputePipeline(true);
 

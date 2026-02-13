@@ -13,8 +13,9 @@ set(DAWN_SPIRV_TOOLS_DIR ${EXTERNAL}/spirv-tools/)
 set(DAWN_SPIRV_HEADERS_DIR ${EXTERNAL}/spirv-headers)
 set(DAWN_GLSLANG_DIR ${EXTERNAL}/glslang/)
 set(DAWN_DXC_ENABLE_ASSERTS_IN_NDEBUG OFF)
-
+set(DAWN_BUILD_MONOLITHIC_LIBRARY STATIC)
 set(TINT_BUILD_CMD_TOOLS OFF)
+set(DAWN_ENABLE_VULKAN ON)
 
 if (FILAMENT_BUILD_FILAMAT)
     set(TINT_BUILD_SPV_READER ON)
@@ -51,9 +52,6 @@ if (ANDROID AND FILAMENT_BUILD_FILAMAT)
         tint_lang_spirv_writer
         tint_lang_wgsl
         tint_lang_wgsl_ast
-        tint_lang_wgsl_ast_transform
-        tint_lang_wgsl_common
-        tint_lang_wgsl_features
         tint_lang_wgsl_intrinsic
         tint_lang_wgsl_ir
         tint_lang_wgsl_program
@@ -63,11 +61,9 @@ if (ANDROID AND FILAMENT_BUILD_FILAMAT)
         tint_lang_wgsl_writer_ast_printer
         tint_lang_wgsl_writer_ir_to_program
         tint_lang_wgsl_writer_raise
-        tint_results
         tint_utils
         tint_utils_diagnostic
         tint_utils_ice
-        tint_utils_result
         tint_utils_rtti
         tint_utils_strconv
         tint_utils_symbol

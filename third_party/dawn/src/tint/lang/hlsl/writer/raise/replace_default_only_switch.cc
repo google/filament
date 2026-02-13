@@ -98,7 +98,9 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ReplaceDefaultOnlySwitch(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "hlsl.ReplaceDefaultOnlySwitch");
+    auto result = ValidateAndDumpIfNeeded(
+        ir, "hlsl.ReplaceDefaultOnlySwitch",
+        core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings});
     if (result != Success) {
         return result.Failure();
     }

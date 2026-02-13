@@ -38,6 +38,7 @@
 
 #include "dawn/common/Constants.h"
 #include "dawn/common/FutureUtils.h"
+#include "dawn/common/StringViewUtils.h"
 #include "dawn/common/ityp_span.h"
 #include "dawn/native/BlitBufferToDepthStencil.h"
 #include "dawn/native/Buffer.h"
@@ -55,7 +56,6 @@
 #include "dawn/native/QuerySet.h"
 #include "dawn/native/RenderPassEncoder.h"
 #include "dawn/native/RenderPipeline.h"
-#include "dawn/native/SystemEvent.h"
 #include "dawn/native/Texture.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "dawn/platform/tracing/TraceEvent.h"
@@ -110,10 +110,11 @@ class ErrorQueue : public QueueBase {
         DAWN_UNREACHABLE();
     }
     bool HasPendingCommands() const override { DAWN_UNREACHABLE(); }
-    MaybeError SubmitPendingCommands() override { DAWN_UNREACHABLE(); }
+    MaybeError SubmitPendingCommandsImpl() override { DAWN_UNREACHABLE(); }
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override { DAWN_UNREACHABLE(); }
     void ForceEventualFlushOfCommands() override { DAWN_UNREACHABLE(); }
-    ResultOrError<bool> WaitForQueueSerial(ExecutionSerial serial, Nanoseconds timeout) override {
+    ResultOrError<ExecutionSerial> WaitForQueueSerialImpl(ExecutionSerial waitSerial,
+                                                          Nanoseconds timeout) override {
         DAWN_UNREACHABLE();
     }
     MaybeError WaitForIdleForDestruction() override { DAWN_UNREACHABLE(); }
@@ -179,6 +180,7 @@ Future QueueBase::APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& ca
     struct WorkDoneEvent final : public EventManager::TrackedEvent {
         std::optional<WGPUQueueWorkDoneStatus> mEarlyStatus;
         WGPUQueueWorkDoneCallback mCallback;
+        std::string mMessage;
         raw_ptr<void> mUserdata1;
         raw_ptr<void> mUserdata2;
 
@@ -197,7 +199,7 @@ Future QueueBase::APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& ca
                       wgpu::QueueWorkDoneStatus earlyStatus)
             : TrackedEvent(static_cast<wgpu::CallbackMode>(callbackInfo.mode),
                            queue,
-                           kBeginningOfGPUTime),
+                           queue->GetCompletedCommandSerial()),
               mEarlyStatus(ToAPI(earlyStatus)),
               mCallback(callbackInfo.callback),
               mUserdata1(callbackInfo.userdata1),
@@ -214,7 +216,8 @@ Future QueueBase::APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& ca
                 status = mEarlyStatus.value();
             }
 
-            mCallback(status, mUserdata1.ExtractAsDangling(), mUserdata2.ExtractAsDangling());
+            mCallback(status, ToOutputStringView(mMessage), mUserdata1.ExtractAsDangling(),
+                      mUserdata2.ExtractAsDangling());
         }
     };
 
@@ -226,9 +229,7 @@ Future QueueBase::APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& ca
     {
         // TODO(crbug.com/dawn/831) Manually acquire device lock instead of relying on code-gen for
         // re-entrancy.
-        auto deviceLock(GetDevice()->GetScopedLock());
-
-        // Note: if the callback is spontaneous, it may get called in here.
+        auto deviceGuard = GetDevice()->GetGuard();
         if (GetDevice()->ConsumedError(GetDevice()->ValidateIsAlive())) {
             event = AcquireRef(
                 new WorkDoneEvent(callbackInfo, this, wgpu::QueueWorkDoneStatus::Success));
@@ -240,6 +241,7 @@ Future QueueBase::APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& ca
         }
     }
 
+    // Note: if the callback is spontaneous, it may get called in here.
     FutureID futureID = GetInstance()->GetEventManager()->TrackEvent(std::move(event));
 
     return {futureID};
@@ -585,7 +587,9 @@ MaybeError QueueBase::SubmitInternal(uint32_t commandCount, CommandBufferBase* c
     }
     DAWN_ASSERT(!IsError());
 
+    mInSubmit = true;
     DAWN_TRY(SubmitImpl(commandCount, commands));
+    mInSubmit = false;
 
     // Call Tick() to flush pending work.
     DAWN_TRY(device->Tick());

@@ -54,6 +54,10 @@ bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
     }
 
     auto [start, end] = mContainer.getChunkRange(materialTag);
+    if (start == end) {
+        return false;
+    }
+
     Unflattener unflattener(start, end);
 
     mUnflattener = unflattener;
@@ -97,7 +101,7 @@ bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
 
 bool MaterialChunk::getTextShader(Unflattener unflattener,
         BlobDictionary const& dictionary, ShaderContent& shaderContent,
-        ShaderModel shaderModel, Variant variant, ShaderStage shaderStage) {
+        ShaderModel shaderModel, Variant variant, ShaderStage shaderStage) const {
     if (mBase == nullptr) {
         return false;
     }
@@ -140,10 +144,9 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
         }
         const auto& content = dictionary[lineIndex];
 
-        // Replace null with newline.
+        // remove the terminating null character.
         memcpy(&shaderContent[cursor], content.data(), content.size() - 1);
         cursor += content.size() - 1;
-        shaderContent[cursor++] = '\n';
     }
 
     // Write the terminating null character.
@@ -154,7 +157,7 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
 }
 
 bool MaterialChunk::getBinaryShader(BlobDictionary const& dictionary,
-        ShaderContent& shaderContent, ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage) {
+        ShaderContent& shaderContent, ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage) const {
 
     if (mBase == nullptr) {
         return false;
@@ -179,7 +182,7 @@ bool MaterialChunk::hasShader(ShaderModel model, Variant variant, ShaderStage st
 }
 
 bool MaterialChunk::getShader(ShaderContent& shaderContent, BlobDictionary const& dictionary,
-        ShaderModel shaderModel, filament::Variant variant, ShaderStage stage) {
+        ShaderModel shaderModel, filament::Variant variant, ShaderStage stage) const {
     switch (mMaterialTag) {
         case filamat::ChunkType::MaterialGlsl:
         case filamat::ChunkType::MaterialEssl1:
@@ -230,4 +233,3 @@ void MaterialChunk::visitShaders(
 }
 
 } // namespace filaflat
-

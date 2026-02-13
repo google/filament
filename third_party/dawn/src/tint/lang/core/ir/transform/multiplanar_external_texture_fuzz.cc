@@ -44,4 +44,4 @@ Result<SuccessType> MultiplanarExternalTextureFuzzer(
 }  // namespace tint::core::ir::transform
 
 TINT_IR_MODULE_FUZZER(tint::core::ir::transform::MultiplanarExternalTextureFuzzer,
-                      tint::core::ir::Capabilities{});
+                      tint::core::ir::transform::kMultiplanarExternalTextureCapabilities);

@@ -27,7 +27,7 @@
 
 #include "test_layer.h"
 
-#include "vk_dispatch_table_helper.h"
+#include "generated/vk_dispatch_table_helper.h"
 
 // export the enumeration functions instance|device+layer|extension
 #if !defined(TEST_LAYER_EXPORT_ENUMERATE_FUNCTIONS)

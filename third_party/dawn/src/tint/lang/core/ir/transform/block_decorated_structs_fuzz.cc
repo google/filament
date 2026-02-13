@@ -41,4 +41,4 @@ Result<SuccessType> BlockDecoratedStructsFuzzer(Module& ir, const fuzz::ir::Cont
 }  // namespace tint::core::ir::transform
 
 TINT_IR_MODULE_FUZZER(tint::core::ir::transform::BlockDecoratedStructsFuzzer,
-                      tint::core::ir::Capabilities{});
+                      tint::core::ir::transform::kBlockDecoratedStructsCapabilities);

@@ -1,10 +1,30 @@
 // https://gpuweb.github.io/gpuweb/wgsl/#texel-formats
 enum texel_format {
+  r8unorm
+  r8snorm
+  r8uint
+  r8sint
+  rg8unorm
+  rg8snorm
+  rg8uint
+  rg8sint
+  r16unorm
+  r16snorm
+  r16uint
+  r16sint
+  r16float
+  rg16unorm
+  rg16snorm
+  rg16uint
+  rg16sint
+  rg16float
   bgra8unorm
   rgba8unorm
   rgba8snorm
   rgba8uint
   rgba8sint
+  rgba16unorm
+  rgba16snorm
   rgba16uint
   rgba16sint
   rgba16float
@@ -17,7 +37,7 @@ enum texel_format {
   rgba32uint
   rgba32sint
   rgba32float
-
-  // requires chromium_internal_graphite
-  r8unorm
+  rgb10a2uint
+  rgb10a2unorm
+  rg11b10ufloat
 }

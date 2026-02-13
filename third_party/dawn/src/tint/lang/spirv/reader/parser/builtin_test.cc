@@ -1697,5 +1697,2854 @@ TEST_F(SpirvParserTest, OuterProductVec3Vec2) {
 )");
 }
 
+TEST_F(SpirvParserTest, NonUniformAll) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformVote
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformAll %bool %uint_3 %true
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = subgroupAll true
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformAny) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformVote
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformAny %bool %uint_3 %true
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = subgroupAny true
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformElect) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformVote
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformElect %bool %uint_3
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = subgroupElect
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcast_Constant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBroadcast %bool %uint_3 %true %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_broadcast 3u, true, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcast_Constant_BoolVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3bool = OpTypeVector %bool 3
+         %12 = OpConstantComposite %v3bool %true %false %true
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBroadcast %v3bool %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_broadcast 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcast_Constant_NumericScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBroadcast %uint %uint_3 %uint_3 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_broadcast 3u, 3u, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcast_Constant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBroadcast %v3uint %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_broadcast 3u, vec3<u32>(1u, 3u, 1u), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcast_NonConstant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %7 = OpCopyObject %v3uint %12
+          %8 = OpGroupNonUniformBroadcast %v3uint %uint_3 %7 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = let vec3<u32>(1u, 3u, 1u)
+    %3:vec3<u32> = spirv.group_non_uniform_broadcast 3u, %2, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcastFirst_Constant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBroadcastFirst %bool %uint_3 %true
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_broadcast_first 3u, true
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcastFirst_Constant_BoolVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+     %v3bool = OpTypeVector %bool 3
+         %12 = OpConstantComposite %v3bool %true %false %true
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBroadcastFirst %v3bool %uint_3 %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_broadcast_first 3u, vec3<bool>(true, false, true)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcastFirst_Constant_NumericScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBroadcastFirst %uint %uint_3 %uint_3
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_broadcast_first 3u, 3u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBroadcastFirst_Constant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBroadcastFirst %v3uint %uint_3 %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_broadcast_first 3u, vec3<u32>(1u, 3u, 1u)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBallot) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformBallot
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+     %v4uint = OpTypeVector %uint 4
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBallot %v4uint %uint_3 %true
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec4<u32> = subgroupBallot true
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformQuadBroadcast_Constant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformQuadBroadcast %bool %uint_3 %true %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_quad_broadcast 3u, true, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformQuadBroadcast_Constant_BoolVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3bool = OpTypeVector %bool 3
+         %12 = OpConstantComposite %v3bool %true %false %true
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformQuadBroadcast %v3bool %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_quad_broadcast 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformQuadBroadcast_Constant_NumericScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformQuadBroadcast %uint %uint_3 %uint_3 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_quad_broadcast 3u, 3u, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformQuadBroadcast_Constant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformQuadBroadcast %v3uint %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_quad_broadcast 3u, vec3<u32>(1u, 3u, 1u), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformQuadSwap_Constant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformQuadSwap %bool %uint_3 %true %uint_0
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_quad_swap 3u, true, 0u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformQuadSwap_Constant_BoolVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3bool = OpTypeVector %bool 3
+         %12 = OpConstantComposite %v3bool %true %false %true
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformQuadSwap %v3bool %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_quad_swap 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformQuadSwap_Constant_NumericScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformQuadSwap %uint %uint_3 %uint_1 %uint_2
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_quad_swap 3u, 1u, 2u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformQuadSwap_Constant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformQuadSwap %v3uint %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_quad_swap 3u, vec3<u32>(1u, 3u, 1u), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffle_Constant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffle %bool %uint_3 %true %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_shuffle 3u, true, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffle_NonConstant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %7 = OpCopyObject %bool %true
+          %8 = OpGroupNonUniformShuffle %bool %uint_3 %7 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = let true
+    %3:bool = spirv.group_non_uniform_shuffle 3u, %2, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffle_Constant_BoolVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3bool = OpTypeVector %bool 3
+         %12 = OpConstantComposite %v3bool %true %false %true
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffle %v3bool %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_shuffle 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffle_Constant_NumericScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffle %uint %uint_3 %uint_3 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_shuffle 3u, 3u, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffle_Constant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffle %v3uint %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_shuffle 3u, vec3<u32>(1u, 3u, 1u), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleXor_Constant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleXor %bool %uint_3 %true %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_shuffle_xor 3u, true, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleXor_Constant_BoolVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3bool = OpTypeVector %bool 3
+         %12 = OpConstantComposite %v3bool %true %false %true
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleXor %v3bool %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_shuffle_xor 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleXor_Constant_NumericScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleXor %uint %uint_3 %uint_3 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_shuffle_xor 3u, 3u, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleXor_Constant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleXor %v3uint %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_shuffle_xor 3u, vec3<u32>(1u, 3u, 1u), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleDown_Constant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffleRelative
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleDown %bool %uint_3 %true %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_shuffle_down 3u, true, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleDown_Constant_BoolVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffleRelative
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3bool = OpTypeVector %bool 3
+         %12 = OpConstantComposite %v3bool %true %false %true
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleDown %v3bool %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_shuffle_down 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleDown_Constant_NumericScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffleRelative
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleDown %uint %uint_3 %uint_3 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_shuffle_down 3u, 3u, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleDown_Constant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffleRelative
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleDown %v3uint %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_shuffle_down 3u, vec3<u32>(1u, 3u, 1u), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleUp_Constant_BoolScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffleRelative
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleUp %bool %uint_3 %true %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_shuffle_up 3u, true, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleUp_Constant_BoolVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffleRelative
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+      %false = OpConstantFalse %bool
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3bool = OpTypeVector %bool 3
+         %12 = OpConstantComposite %v3bool %true %false %true
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleUp %v3bool %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_shuffle_up 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleUp_Constant_NumericScalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffleRelative
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleUp %uint %uint_3 %uint_3 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_shuffle_up 3u, 3u, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformShuffleUp_Constant_NumericVector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffleRelative
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformShuffleUp %v3uint %uint_3 %12 %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_shuffle_up 3u, vec3<u32>(1u, 3u, 1u), 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformSMin_Scalar_i32) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformSMin %int %uint_3 Reduce %int_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = spirv.group_non_uniform_s_min 3u, 0u, 1i
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformSMin_Vector_i32) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformSMin %v3int %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = spirv.group_non_uniform_s_min 3u, 0u, vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformSMin_Scalar_u32) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformSMin %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_s_min 3u, 0u, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformSMin_Vector_u32) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformSMin %v3uint %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_s_min 3u, 0u, vec3<u32>(1u, 3u, 1u)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformUMin_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformUMin %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupMin 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformUMin_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformUMin %v3uint %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = subgroupMin vec3<u32>(1u, 3u, 1u)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMin_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMin %float %uint_3 Reduce %float_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:f32 = subgroupMin 1.0f
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMin_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %float_3 = OpConstant %float 3
+    %v3float = OpTypeVector %float 3
+         %12 = OpConstantComposite %v3float %float_1 %float_3 %float_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMin %v3float %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<f32> = subgroupMin vec3<f32>(1.0f, 3.0f, 1.0f)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformSMax_Scalar_i32) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformSMax %int %uint_3 Reduce %int_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = spirv.group_non_uniform_s_max 3u, 0u, 1i
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformSMax_Vector_i32) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformSMax %v3int %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = spirv.group_non_uniform_s_max 3u, 0u, vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformSMax_Scalar_u32) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformSMax %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_s_max 3u, 0u, 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformSMax_Vector_u32) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformSMax %v3uint %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_s_max 3u, 0u, vec3<u32>(1u, 3u, 1u)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformUMax_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformUMax %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupMax 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformUMax_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_3 %uint_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformUMax %v3uint %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = subgroupMax vec3<u32>(1u, 3u, 1u)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMax_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMax %float %uint_3 Reduce %float_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:f32 = subgroupMax 1.0f
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMax_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %float_3 = OpConstant %float 3
+    %v3float = OpTypeVector %float 3
+         %12 = OpConstantComposite %v3float %float_1 %float_3 %float_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMax %v3float %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<f32> = subgroupMax vec3<f32>(1.0f, 3.0f, 1.0f)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIAdd_Reduce_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIAdd %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupAdd 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIAdd_Reduce_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIAdd %v3int %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupAdd vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFAdd_Reduce_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFAdd %float %uint_3 Reduce %float_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:f32 = subgroupAdd 1.0f
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFAdd_Reduce_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %float_3 = OpConstant %float 3
+    %v3float = OpTypeVector %float 3
+         %12 = OpConstantComposite %v3float %float_1 %float_3 %float_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFAdd %v3float %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<f32> = subgroupAdd vec3<f32>(1.0f, 3.0f, 1.0f)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIAdd_InclusiveScan_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIAdd %uint %uint_3 InclusiveScan %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupInclusiveAdd 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIAdd_InclusiveScan_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIAdd %v3int %uint_3 InclusiveScan %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupInclusiveAdd vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFAdd_InclusiveScan_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFAdd %float %uint_3 InclusiveScan %float_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:f32 = subgroupInclusiveAdd 1.0f
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFAdd_InclusiveScan_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %float_3 = OpConstant %float 3
+    %v3float = OpTypeVector %float 3
+         %12 = OpConstantComposite %v3float %float_1 %float_3 %float_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFAdd %v3float %uint_3 InclusiveScan %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<f32> = subgroupInclusiveAdd vec3<f32>(1.0f, 3.0f, 1.0f)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIAdd_ExclusiveScan_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIAdd %uint %uint_3 ExclusiveScan %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupExclusiveAdd 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIAdd_ExclusiveScan_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIAdd %v3int %uint_3 ExclusiveScan %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupExclusiveAdd vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFAdd_ExclusiveScan_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFAdd %float %uint_3 ExclusiveScan %float_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:f32 = subgroupExclusiveAdd 1.0f
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFAdd_ExclusiveScan_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %float_3 = OpConstant %float 3
+    %v3float = OpTypeVector %float 3
+         %12 = OpConstantComposite %v3float %float_1 %float_3 %float_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFAdd %v3float %uint_3 ExclusiveScan %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<f32> = subgroupExclusiveAdd vec3<f32>(1.0f, 3.0f, 1.0f)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIMul_Reduce_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIMul %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupMul 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIMul_Reduce_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIMul %v3int %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupMul vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMul_Reduce_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMul %float %uint_3 Reduce %float_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:f32 = subgroupMul 1.0f
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMul_Reduce_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %float_3 = OpConstant %float 3
+    %v3float = OpTypeVector %float 3
+         %12 = OpConstantComposite %v3float %float_1 %float_3 %float_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMul %v3float %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<f32> = subgroupMul vec3<f32>(1.0f, 3.0f, 1.0f)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIMul_InclusiveScan_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIMul %uint %uint_3 InclusiveScan %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupInclusiveMul 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIMul_InclusiveScan_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIMul %v3int %uint_3 InclusiveScan %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupInclusiveMul vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMul_InclusiveScan_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMul %float %uint_3 InclusiveScan %float_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:f32 = subgroupInclusiveMul 1.0f
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMul_InclusiveScan_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %float_3 = OpConstant %float 3
+    %v3float = OpTypeVector %float 3
+         %12 = OpConstantComposite %v3float %float_1 %float_3 %float_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMul %v3float %uint_3 InclusiveScan %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<f32> = subgroupInclusiveMul vec3<f32>(1.0f, 3.0f, 1.0f)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIMul_ExclusiveScan_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIMul %uint %uint_3 ExclusiveScan %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupExclusiveMul 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformIMul_ExclusiveScan_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformIMul %v3int %uint_3 ExclusiveScan %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupExclusiveMul vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMul_ExclusiveScan_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMul %float %uint_3 ExclusiveScan %float_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:f32 = subgroupExclusiveMul 1.0f
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformFMul_ExclusiveScan_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %float_3 = OpConstant %float 3
+    %v3float = OpTypeVector %float 3
+         %12 = OpConstantComposite %v3float %float_1 %float_3 %float_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformFMul %v3float %uint_3 ExclusiveScan %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<f32> = subgroupExclusiveMul vec3<f32>(1.0f, 3.0f, 1.0f)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBitwiseAnd_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBitwiseAnd %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupAnd 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBitwiseAnd_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBitwiseAnd %v3int %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupAnd vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBitwiseOr_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBitwiseOr %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupOr 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBitwiseOr_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBitwiseOr %v3int %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupOr vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBitwiseXor_Scalar) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %v3uint = OpTypeVector %uint 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBitwiseXor %uint %uint_3 Reduce %uint_1
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupXor 1u
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
+TEST_F(SpirvParserTest, NonUniformBitwiseXor_Vector) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+      %v3int = OpTypeVector %int 3
+         %12 = OpConstantComposite %v3int %int_1 %int_3 %int_1
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+          %8 = OpGroupNonUniformBitwiseXor %v3int %uint_3 Reduce %12
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupXor vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)",
+                  SPV_ENV_VULKAN_1_1);
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader

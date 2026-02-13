@@ -28,55 +28,92 @@
 import("../../../scripts/dawn_overrides_with_defaults.gni")
 import("../../../scripts/tint_overrides_with_defaults.gni")
 
+import("${dawn_root}/generator/dawn_generator.gni")
 import("${dawn_root}/scripts/dawn_features.gni")
 
 ###############################################################################
 # Utils for tests and samples
 ###############################################################################
 
-static_library("utils") {
+dawn_json_generator("dawn_utils_gen") {
+  target = "dawn_utils"
+  outputs = [
+    "src/dawn/utils/ComboLimits.h",
+    "src/dawn/utils/ComboLimits.cpp",
+  ]
+}
+
+static_library("wgpu_utils") {
   configs += [
+    "${dawn_root}/include/dawn:public",
     "${dawn_root}/src/dawn/common:internal_config",
     "${dawn_root}/src/tint:tint_public_config",
   ]
 
-  sources = [
-    "BinarySemaphore.cpp",
-    "BinarySemaphore.h",
+  sources = get_target_outputs(":dawn_utils_gen")
+  sources += [
     "ComboRenderBundleEncoderDescriptor.cpp",
     "ComboRenderBundleEncoderDescriptor.h",
     "ComboRenderPipelineDescriptor.cpp",
     "ComboRenderPipelineDescriptor.h",
+    "TextureUtils.cpp",
+    "TextureUtils.h",
+    "WGPUHelpers.cpp",
+    "WGPUHelpers.h",
+  ]
+
+  public_deps = [
+    ":abseil",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn/common",
+  ]
+  deps = [ ":dawn_utils_gen" ]
+}
+
+static_library("test_utils") {
+  configs += [ "${dawn_root}/src/dawn/common:internal_config" ]
+
+  sources = [
+    "BinarySemaphore.cpp",
+    "BinarySemaphore.h",
+    "TerribleCommandBuffer.cpp",
+    "TerribleCommandBuffer.h",
+    "TestUtils.cpp",
+    "TestUtils.h",
+    "WireHelper.cpp",
+    "WireHelper.h",
+  ]
+
+  public_deps = [
+    ":abseil",
+    ":wgpu_utils",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/native:headers",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+    "${dawn_root}/src/dawn/wire",
+  ]
+}
+
+static_library("system_utils") {
+  configs += [ "${dawn_root}/src/dawn/common:internal_config" ]
+
+  sources = [
     "CommandLineParser.cpp",
     "CommandLineParser.h",
     "PlatformDebugLogger.h",
     "SystemUtils.cpp",
     "SystemUtils.h",
-    "TerribleCommandBuffer.cpp",
-    "TerribleCommandBuffer.h",
-    "TestUtils.cpp",
-    "TestUtils.h",
-    "TextureUtils.cpp",
-    "TextureUtils.h",
     "Timer.h",
-    "WGPUHelpers.cpp",
-    "WGPUHelpers.h",
-    "WireHelper.cpp",
-    "WireHelper.h",
   ]
-  deps = [
-    "${dawn_root}/src/dawn:proc",
+
+  public_deps = [
+    ":abseil",
     "${dawn_root}/src/dawn/common",
-    "${dawn_root}/src/dawn/native:headers",
-    "${dawn_root}/src/dawn/wire",
   ]
 
-  libs = []
   frameworks = []
-
-  if (tint_build_spv_reader) {
-    deps += [ "${dawn_spirv_tools_dir}:spvtools_opt" ]
-  }
 
   if (is_win && !dawn_is_winuwp) {
     sources += [ "WindowsDebugLogger.cpp" ]
@@ -102,12 +139,6 @@ static_library("utils") {
   } else {
     sources += [ "PosixTimer.cpp" ]
   }
-
-  public_deps = [
-    ":abseil",
-    "${dawn_root}/include/dawn:cpp_headers",
-    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
-  ]
 }
 
 group("abseil") {
@@ -119,6 +150,7 @@ group("abseil") {
   } else {
     public_deps = [
       "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_map",
+      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_set",
       "${dawn_root}/third_party/gn/abseil-cpp:span",
       "${dawn_root}/third_party/gn/abseil-cpp:str_format",
       "${dawn_root}/third_party/gn/abseil-cpp:string_view",

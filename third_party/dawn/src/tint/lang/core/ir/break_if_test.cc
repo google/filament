@@ -129,5 +129,18 @@ TEST_F(IR_BreakIfTest, SetLoop) {
     EXPECT_THAT(loop2->Exits(), testing::ElementsAre(brk));
 }
 
+TEST_F(IR_BreakIfTest, Destroy) {
+    auto* loop = b.Loop();
+    auto* cond = b.Constant(true);
+    auto* inst = b.BreakIf(loop, cond);
+
+    ASSERT_EQ(1u, loop->Body()->InboundSiblingBranches().Length());
+    EXPECT_EQ(inst, loop->Body()->InboundSiblingBranches()[0]);
+
+    inst->Destroy();
+
+    EXPECT_EQ(0u, loop->Body()->InboundSiblingBranches().Length());
+}
+
 }  // namespace
 }  // namespace tint::core::ir

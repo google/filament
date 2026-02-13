@@ -17,20 +17,31 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H
 #define TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H
 
-#include "WebGPUConstants.h"
-
 #include <webgpu/webgpu_cpp.h>
 
-#include <array>
 #include <cstdint>
 
 namespace filament::backend {
 
 class BufferDescriptor;
+class WebGPUQueueManager;
+class WebGPUStagePool;
 
+/**
+  * A base class for WebGPU buffer objects, providing common functionality for creating and
+  * updating GPU buffers.
+  */
 class WebGPUBufferBase /* intended to be extended */ {
 public:
-    void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Queue const&);
+    /**
+     * IMPORTANT NOTE: when reusing a buffers with command encoders in the caller logic,
+     * e.g. the WebGPU driver/backend, make sure to flush (submit) pending commands (draws, etc.) to
+     * the GPU prior to calling this blit, because texture updates may otherwise (unintentionally)
+     * happen after draw commands encoded in the encoder. Submitting any commands up to this point
+     * ensures the calls happen in the expected sequence.
+     */
+    void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Device const& device,
+            WebGPUQueueManager* const webGPUQueueManager, WebGPUStagePool* const webGPUStagePool);
 
     [[nodiscard]] wgpu::Buffer const& getBuffer() const { return mBuffer; }
 
@@ -39,8 +50,6 @@ protected:
 
 private:
     const wgpu::Buffer mBuffer;
-    // FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS (e.g. 4) bytes to hold any extra chunk we need.
-    std::array<uint8_t, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS> mRemainderChunk{};
 };
 
 } // namespace filament::backend

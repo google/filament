@@ -31,12 +31,11 @@ class VulkanSamplerCache;
 class VulkanDescriptorSetLayoutCache;
 class VulkanDescriptorSetCache;
 
-// Manages the logic of external images and their quirks wrt Vulikan.
+// Manages the logic of external images and their quirks wrt Vulkan.
 class VulkanExternalImageManager {
 public:
 
     VulkanExternalImageManager(
-            VulkanPlatform* platform,
             VulkanSamplerCache* samplerCache,
             VulkanYcbcrConversionCache* ycbcrConversionCache,
             VulkanDescriptorSetCache* setCache,
@@ -46,8 +45,6 @@ public:
 
     void terminate();
 
-    void onBeginFrame();
-
     using SetArray = std::array<fvkmemory::resource_ptr<VulkanDescriptorSet>,
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
@@ -55,10 +52,6 @@ public:
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
     using VkLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
-
-    // Returns  bitmask to indicate whether or not to use the external sampler version of each
-    // descriptor set.
-    fvkutils::DescriptorSetMask prepareBindSets(LayoutArray const& layouts, SetArray const& sets);
 
     void removeDescriptorSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
 
@@ -70,7 +63,7 @@ public:
                              uint8_t bindingPoint);
 
     void addExternallySampledTexture(fvkmemory::resource_ptr<VulkanTexture> external,
-            Platform::ExternalImageHandleRef platformHandleRef);
+            VkSamplerYcbcrConversion const conversion);
 
     void removeExternallySampledTexture(fvkmemory::resource_ptr<VulkanTexture> image);
 
@@ -81,20 +74,19 @@ public:
 
     struct ImageData {
         fvkmemory::resource_ptr<VulkanTexture> image;
-        Platform::ExternalImageHandle platformHandle;
-        bool hasBeenValidated = false; // indicates whether the image has been validated *this frame*
         VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
     };
 
+    // - Update the descriptor set layout with the external samplers. This layout will be assign the
+    // respective immutable samplers to the layout.
+    // - Switch from binding the base layout to the new one.
+    // - Create a new descriptor set based on the new layout and copy the old descriptor set
+    // bindings that don't use external samplers.
+    // - Update the bindings that use external samplers.
+    void updateSetAndLayout(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
+
 private:
-    bool hasExternalSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
 
-    void updateSetAndLayout(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-            fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
-
-    void updateImage(ImageData* imageData);
-
-    VulkanPlatform* mPlatform;
     VulkanSamplerCache* mSamplerCache;
     VulkanYcbcrConversionCache* mYcbcrConversionCache;
     VulkanDescriptorSetCache* mDescriptorSetCache;
@@ -107,8 +99,7 @@ private:
         uint8_t binding = 0;
         fvkmemory::resource_ptr<VulkanTexture> image;
         fvkmemory::resource_ptr<VulkanDescriptorSet> set;
-        SamplerParams samplerParams;
-        bool bound = false;
+        VkSampler sampler = VK_NULL_HANDLE;
     };
 
     // Use vectors instead of hash maps because we only expect small number of entries.

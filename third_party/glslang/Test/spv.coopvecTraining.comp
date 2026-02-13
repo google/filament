@@ -1,0 +1,30 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_NV_cooperative_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer MatrixBuf {
+    float16_t matrixData[];
+} matrixBuf;
+
+layout(set = 0, binding = 0) buffer MatrixBuf2 {
+    int8_t matrixData[];
+} matrixBuf2;
+
+layout(constant_id = 0) const int matrixLayout = gl_CooperativeVectorMatrixLayoutInferencingOptimalNV;
+
+void main()
+{
+    coopvecNV<float16_t, 8> v0;
+    coopvecNV<float16_t, 5> v1;
+
+    coopVecOuterProductAccumulateNV(v0, v1, matrixBuf.matrixData, 100, 128, matrixLayout, gl_ComponentTypeFloat16NV);
+    coopVecOuterProductAccumulateNV(v0, v1, matrixBuf2.matrixData, 100, 128, gl_CooperativeVectorMatrixLayoutInferencingOptimalNV, gl_ComponentTypeFloat16NV);
+
+    coopVecReduceSumAccumulateNV(v0, matrixBuf.matrixData, 100);
+    coopVecReduceSumAccumulateNV(v0, matrixBuf2.matrixData, 100);
+}

@@ -17,38 +17,85 @@
 #ifndef TNT_FILAMAT_LINEDICTIONARY_H
 #define TNT_FILAMAT_LINEDICTIONARY_H
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
+
+namespace utils::io {
+class ostream;
+}
 
 namespace filamat {
 
-// Establish a line <-> id mapping. Use for shader compression when each shader is sliced in lines
-// and each line encoded into a 16 bit id.
 class LineDictionary {
 public:
-    LineDictionary() = default;
+    using index_t = uint32_t;
+
+    LineDictionary();
+    ~LineDictionary() noexcept;
 
     // Due to the presence of unique_ptr, disallow copy construction but allow move construction.
     LineDictionary(LineDictionary const&) = delete;
     LineDictionary(LineDictionary&&) = default;
 
-    void addText(const std::string& text) noexcept;
-    size_t getLineCount() const;
+    // Adds text to the dictionary, parsing it into lines.
+    void addText(std::string_view text) noexcept;
 
+    // Returns the total number of unique lines stored in the dictionary.
+    size_t getDictionaryLineCount() const {
+        return mStrings.size();
+    }
+
+    // Checks if the dictionary is empty.
     bool isEmpty() const noexcept {
         return mStrings.empty();
     }
 
-    std::string_view getString(size_t index) const noexcept;
-    size_t getIndex(std::string_view s) const noexcept;
+    // Retrieves a string by its index.
+    std::string const& getString(index_t index) const noexcept;
+
+    // Retrieves the indices of lines that match the given string view.
+    std::vector<index_t> getIndices(std::string_view const& line) const noexcept;
+
+    // Prints statistics about the dictionary to the given output stream.
+    void printStatistics(utils::io::ostream& stream) const noexcept;
+
+    // conveniences...
+    size_t size() const {
+        return getDictionaryLineCount();
+    }
+
+    bool empty() const noexcept {
+        return isEmpty();
+    }
+
+    std::string const& operator[](index_t const index) const noexcept {
+        return getString(index);
+    }
 
 private:
-    void addLine(const std::string&& line) noexcept;
+    // Adds a single line to the dictionary.
+    void addLine(std::string_view line) noexcept;
 
-    std::unordered_map<std::string_view, size_t> mLineIndices;
+    // Trims leading whitespace from a string view.
+    static std::string_view ltrim(std::string_view s);
+
+    // Splits a string view into a vector of string views based on delimiters.
+    static std::vector<std::string_view> splitString(std::string_view line);
+
+    // Finds a pattern within a string view starting from an offset.
+    static std::pair<size_t, size_t> findPattern(std::string_view line, size_t offset);
+
+    struct LineInfo {
+        index_t index;
+        uint32_t count;
+    };
+
+    std::unordered_map<std::string_view, LineInfo> mLineIndices;
     std::vector<std::unique_ptr<std::string>> mStrings;
 };
 

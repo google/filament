@@ -146,7 +146,7 @@ namespace {
   private:
     Liveness MarkIfNotLive(RetOrArg Use, UseVector &MaybeLiveUses);
     Liveness SurveyUse(const Use *U, UseVector &MaybeLiveUses,
-                       unsigned RetValNum = -1U);
+                       unsigned RetValNum = ~0U);
     Liveness SurveyUses(const Value *V, UseVector &MaybeLiveUses);
 
     void SurveyFunction(const Function &F);
@@ -442,7 +442,7 @@ DAE::Liveness DAE::SurveyUse(const Use *U,
       // that U is really a use of an insertvalue instruction that uses the
       // original Use.
       const Function *F = RI->getParent()->getParent();
-      if (RetValNum != -1U) {
+      if (RetValNum != ~0U) {
         RetOrArg Use = CreateRet(F, RetValNum);
         // We might be live, depending on the liveness of Use.
         return MarkIfNotLive(Use, MaybeLiveUses);

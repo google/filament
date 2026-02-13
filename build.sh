@@ -75,6 +75,12 @@ function print_help {
     echo "    -S type"
     echo "        Enable stereoscopic rendering where type is one of [instanced|multiview]. This is only"
     echo "        meant for building the samples."
+    echo "    -P"
+    echo "        Enable perfetto traces on Android. Disabled by default on the Release build, enabled otherwise."
+    echo "    -y build_type"
+    echo "        Build the filament dependent tools (matc, resgen) separately from the project. This will set"
+    echo "        the tools as prebuilts that filament target will then use to build. The built_type option"
+    echo "        (debug|release) is meant to indicate the type of build of the resulting prebuilts."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -152,11 +158,7 @@ function print_fgviewer_help {
 }
 
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
-FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g | cut -f 1 -d ".")}
-
-# Requirements
-CMAKE_MAJOR=3
-CMAKE_MINOR=19
+FILAMENT_NDK_VERSION=$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g | cut -f 1 -d ".")
 
 # Internal variables
 ISSUE_CLEAN=false
@@ -208,6 +210,7 @@ MATOPT_GRADLE_OPTION=""
 
 ASAN_UBSAN_OPTION=""
 COVERAGE_OPTION=""
+ENABLE_PERFETTO=""
 
 BACKEND_DEBUG_FLAG_OPTION=""
 
@@ -217,6 +220,11 @@ OSMESA_OPTION=""
 
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
+
+ISSUE_SPLIT_BUILD=false
+SPLIT_BUILD_TYPE=""
+PREBUILT_TOOLS_DIR=""
+IMPORT_EXECUTABLES_DIR_OPTION="-DIMPORT_EXECUTABLES_DIR=out"
 
 BUILD_GENERATOR=Ninja
 BUILD_COMMAND=ninja
@@ -243,6 +251,37 @@ function build_clean_aggressive {
     git clean -qfX android
 }
 
+function build_tools_for_split_build {
+    local build_type_arg=$1
+    local lc_build_type=$(echo "${build_type_arg}" | tr '[:upper:]' '[:lower:]')
+    PREBUILT_TOOLS_DIR="out/prebuilt-tools-${lc_build_type}"
+
+    echo "Building tools for split build (${lc_build_type}) in ${PREBUILT_TOOLS_DIR}..."
+    mkdir -p "${PREBUILT_TOOLS_DIR}"
+
+    pushd "${PREBUILT_TOOLS_DIR}" > /dev/null
+
+    local lc_name=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
+    local architectures=""
+    if [[ "${lc_name}" == "darwin" ]]; then
+        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            architectures="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+        fi
+    fi
+
+    cmake \
+        -G "${BUILD_GENERATOR}" \
+        -DFILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR=${PREBUILT_TOOLS_DIR} \
+        -DCMAKE_BUILD_TYPE="${build_type_arg}" \
+        ${WEBGPU_OPTION} \
+        ${architectures} \
+        ../..
+
+    ${BUILD_COMMAND} ${WEB_HOST_TOOLS}
+
+    popd > /dev/null
+}
+
 function build_desktop_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local build_targets=$2
@@ -266,7 +305,7 @@ function build_desktop_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "${BUILD_GENERATOR}" \
-            -DIMPORT_EXECUTABLES_DIR=out \
+            ${IMPORT_EXECUTABLES_DIR_OPTION} \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             ${EGL_ON_LINUX_OPTION} \
@@ -332,7 +371,7 @@ function build_webgl_with_target {
         source "${EMSDK}/emsdk_env.sh"
         cmake \
             -G "${BUILD_GENERATOR}" \
-            -DIMPORT_EXECUTABLES_DIR=out \
+            ${IMPORT_EXECUTABLES_DIR_OPTION} \
             -DCMAKE_TOOLCHAIN_FILE="${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../webgl-${lc_target}/filament" \
@@ -405,7 +444,7 @@ function build_android_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "${BUILD_GENERATOR}" \
-            -DIMPORT_EXECUTABLES_DIR=out \
+            ${IMPORT_EXECUTABLES_DIR_OPTION} \
             -DCMAKE_BUILD_TYPE="$1" \
             -DFILAMENT_NDK_VERSION="${FILAMENT_NDK_VERSION}" \
             -DCMAKE_INSTALL_PREFIX="../android-${lc_target}/filament" \
@@ -417,6 +456,7 @@ function build_android_target {
             ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
+            ${ENABLE_PERFETTO} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -516,11 +556,14 @@ function build_android {
         archive_android "Release"
     fi
 
+    local root_dir=$(pwd)
+
     pushd android > /dev/null
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+            -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
@@ -533,6 +576,7 @@ function build_android {
 
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+            -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
             :filamat-android:assembleDebug
@@ -541,6 +585,7 @@ function build_android {
             for sample in ${ANDROID_SAMPLES}; do
                 ./gradlew \
                     -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+                   -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
                     -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
                     ${MATOPT_GRADLE_OPTION} \
                     :samples:${sample}:assembleDebug
@@ -573,6 +618,7 @@ function build_android {
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+            -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
@@ -585,6 +631,7 @@ function build_android {
 
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+            -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
             :filamat-android:assembleRelease
@@ -593,6 +640,7 @@ function build_android {
             for sample in ${ANDROID_SAMPLES}; do
                 ./gradlew \
                     -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+                    -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
                     -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
                     ${MATOPT_GRADLE_OPTION} \
                     :samples:${sample}:assembleRelease
@@ -638,7 +686,7 @@ function build_ios_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "${BUILD_GENERATOR}" \
-            -DIMPORT_EXECUTABLES_DIR=out \
+            ${IMPORT_EXECUTABLES_DIR_OPTION} \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
             -DIOS_ARCH="${arch}" \
@@ -810,7 +858,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:" opt; do
+while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
     case ${opt} in
         h)
             print_help
@@ -958,6 +1006,9 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:" opt; do
         V)  COVERAGE_OPTION="-DFILAMENT_ENABLE_COVERAGE=ON"
             echo "Enabled coverage"
             ;;
+        P)  ENABLE_PERFETTO="-DFILAMENT_ENABLE_PERFETTO=ON"
+            echo "Enabled perfetto"
+            ;;
         x)  BACKEND_DEBUG_FLAG_OPTION="-DFILAMENT_BACKEND_DEBUG_FLAG=${OPTARG}"
             ;;
         S)  case $(echo "${OPTARG}" | tr '[:upper:]' '[:lower:]') in
@@ -975,6 +1026,20 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:" opt; do
             esac
             ;;
         X)  OSMESA_OPTION="-DFILAMENT_OSMESA_PATH=${OPTARG}"
+            ;;
+        y)
+            ISSUE_SPLIT_BUILD=true
+            SPLIT_BUILD_TYPE=${OPTARG}
+            case $(echo "${SPLIT_BUILD_TYPE}" | tr '[:upper:]' '[:lower:]') in
+                debug|release)
+                    ;;
+                *)
+                    echo "Unknown build type for -y: ${SPLIT_BUILD_TYPE}"
+                    echo "Build type must be one of [debug|release]"
+                    echo ""
+                    exit 1
+                    ;;
+            esac
             ;;
         \?)
             echo "Invalid option: -${OPTARG}" >&2
@@ -1009,6 +1074,13 @@ for arg; do
 done
 
 validate_build_command
+
+if [[ "${ISSUE_SPLIT_BUILD}" == "true" ]]; then
+    # Capitalize first letter of SPLIT_BUILD_TYPE
+    SPLIT_BUILD_TYPE_CAPITALIZED="$(echo ${SPLIT_BUILD_TYPE:0:1} | tr '[:lower:]' '[:upper:]')${SPLIT_BUILD_TYPE:1}"
+    build_tools_for_split_build "${SPLIT_BUILD_TYPE_CAPITALIZED}"
+    IMPORT_EXECUTABLES_DIR_OPTION="-DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=${PREBUILT_TOOLS_DIR}"
+fi
 
 if [[ "${ISSUE_CLEAN}" == "true" ]]; then
     build_clean

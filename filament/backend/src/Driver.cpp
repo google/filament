@@ -28,7 +28,9 @@
 #include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/JobSystem.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <math/half.h>
 #include <math/vec2.h>
@@ -47,10 +49,12 @@ using namespace filament::math;
 
 namespace filament::backend {
 
-DriverBase::DriverBase() noexcept {
+DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
+    : mDriverConfig(driverConfig) {
     if constexpr (UTILS_HAS_THREADING) {
         // This thread services user callbacks
         mServiceThread = std::thread([this]() {
+            JobSystem::setThreadName("ServiceThread");
             do {
                 auto& serviceThreadCondition = mServiceThreadCondition;
                 auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
@@ -77,14 +81,8 @@ DriverBase::DriverBase() noexcept {
 
 DriverBase::~DriverBase() noexcept {
     assert_invariant(mCallbacks.empty());
-    assert_invariant(mServiceThreadCallbackQueue.empty());
     if constexpr (UTILS_HAS_THREADING) {
-        // quit our service thread
-        std::unique_lock<std::mutex> lock(mServiceThreadLock);
-        mExitRequested = true;
-        mServiceThreadCondition.notify_one();
-        lock.unlock();
-        mServiceThread.join();
+        stopServiceThread();
     }
 }
 
@@ -131,7 +129,7 @@ void DriverBase::purge() noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
+void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) {
     auto const handler = buffer.getHandler();
     scheduleCallback(handler, [buffer = std::move(buffer)]() {
         // user callback is called when BufferDescriptor gets destroyed
@@ -140,7 +138,7 @@ void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
 
 // This is called from an async driver method so it's in the GL thread, but purge is called
 // on the user thread. This is typically called 0 or 1 times per frame.
-void DriverBase::scheduleRelease(AcquiredImage const& image) noexcept {
+void DriverBase::scheduleRelease(AcquiredImage const& image) {
     scheduleCallback(image.handler, [callback = image.callback, image = image.image, userData = image.userData]() {
         callback(image, userData);
     });
@@ -180,6 +178,22 @@ void DriverBase::debugCommandEnd(CommandStream* cmds, bool synchronous,
         }
     }
 }
+
+#if UTILS_HAS_THREADING
+void DriverBase::stopServiceThread() noexcept {
+    if (!mServiceThread.joinable()) {
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(mServiceThreadLock);
+        mExitRequested = true;
+    }
+    mServiceThreadCondition.notify_one();
+    mServiceThread.join();
+    assert_invariant(mServiceThreadCallbackQueue.empty());
+}
+#endif
 
 size_t Driver::getElementTypeSize(ElementType type) noexcept {
     switch (type) {

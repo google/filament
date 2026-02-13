@@ -186,7 +186,7 @@ bool ScalarReplacementPass::ReplaceWholeDebugDeclare(
     Instruction* added_dbg_value =
         context()->get_debug_info_mgr()->AddDebugValueForDecl(
             dbg_decl, /*value_id=*/var->result_id(),
-            /*insert_before=*/insert_before, /*scope_and_line=*/dbg_decl);
+            /*insert_before=*/insert_before, /*line=*/dbg_decl);
 
     if (added_dbg_value == nullptr) return false;
     added_dbg_value->AddOperand(

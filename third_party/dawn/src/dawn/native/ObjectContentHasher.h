@@ -75,6 +75,13 @@ class ObjectContentHasher {
         }
     };
 
+    template <typename T, size_t N>
+    struct RecordImpl<std::array<T, N>> {
+        static constexpr void Call(ObjectContentHasher* recorder, const std::array<T, N>& array) {
+            recorder->RecordIterable<std::array<T, N>>(array);
+        }
+    };
+
     template <typename T, typename E>
     struct RecordImpl<std::map<T, E>> {
         static constexpr void Call(ObjectContentHasher* recorder, const std::map<T, E>& map) {

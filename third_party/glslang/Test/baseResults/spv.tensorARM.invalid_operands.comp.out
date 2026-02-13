@@ -1,0 +1,6 @@
+spv.tensorARM.invalid_operands.comp
+ERROR: 0:11: 'tensorOps' : tensor operands argument must be a constant integral expression 
+ERROR: 1 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

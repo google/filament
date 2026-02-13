@@ -62,6 +62,9 @@ SpirvContext::~SpirvContext() {
   for (auto *raType : runtimeArrayTypes)
     raType->~RuntimeArrayType();
 
+  for (auto *npaType : nodePayloadArrayTypes)
+    npaType->~NodePayloadArrayType();
+
   for (auto *fnType : functionTypes)
     fnType->~FunctionType();
 
@@ -273,6 +276,19 @@ SpirvContext::getRuntimeArrayType(const SpirvType *elemType,
   return *(inserted.first);
 }
 
+const NodePayloadArrayType *
+SpirvContext::getNodePayloadArrayType(const SpirvType *elemType,
+                                      const ParmVarDecl *nodeDecl) {
+  NodePayloadArrayType type(elemType, nodeDecl);
+  auto found = nodePayloadArrayTypes.find(&type);
+  if (found != nodePayloadArrayTypes.end())
+    return *found;
+
+  auto inserted = nodePayloadArrayTypes.insert(
+      new (this) NodePayloadArrayType(elemType, nodeDecl));
+  return *(inserted.first);
+}
+
 const StructType *
 SpirvContext::getStructType(llvm::ArrayRef<StructType::FieldInfo> fields,
                             llvm::StringRef name, bool isReadOnly,
@@ -326,6 +342,29 @@ const HybridPointerType *SpirvContext::getPointerType(QualType pointee,
   const HybridPointerType *result = new (this) HybridPointerType(pointee, sc);
   hybridPointerTypes.push_back(result);
   return result;
+}
+
+const ForwardPointerType *
+SpirvContext::getForwardPointerType(QualType pointee) {
+  assert(hlsl::IsVKBufferPointerType(pointee));
+
+  auto foundPointee = forwardPointerTypes.find(pointee);
+  if (foundPointee != forwardPointerTypes.end()) {
+    return foundPointee->second;
+  }
+
+  return forwardPointerTypes[pointee] = new (this) ForwardPointerType(pointee);
+}
+
+const SpirvPointerType *SpirvContext::getForwardReference(QualType type) {
+  return forwardReferences[type];
+}
+
+void SpirvContext::registerForwardReference(
+    QualType type, const SpirvPointerType *pointerType) {
+  assert(pointerType->getStorageClass() ==
+         spv::StorageClass::PhysicalStorageBuffer);
+  forwardReferences[type] = pointerType;
 }
 
 FunctionType *

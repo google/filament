@@ -271,6 +271,54 @@ static constexpr std::array<wgpu::TextureFormat, 2> kDepthAndStencilFormats = {
     wgpu::TextureFormat::Depth32FloatStencil8,
 };
 
+constexpr std::array<wgpu::TextureFormat, 3> kTier1TestFormats8Bit = {
+    wgpu::TextureFormat::R8Snorm, wgpu::TextureFormat::RG8Snorm, wgpu::TextureFormat::RGBA8Snorm};
+
+#ifndef __EMSCRIPTEN__
+constexpr std::array<wgpu::TextureFormat, 6> kTier1TestFormats16Bit = {
+    wgpu::TextureFormat::R16Unorm,    wgpu::TextureFormat::R16Snorm,
+    wgpu::TextureFormat::RG16Unorm,   wgpu::TextureFormat::RG16Snorm,
+    wgpu::TextureFormat::RGBA16Unorm, wgpu::TextureFormat::RGBA16Snorm};
+
+constexpr std::array<wgpu::TextureFormat, 23> kTier1AdditionalStorageFormats = {
+    wgpu::TextureFormat::R16Unorm,     wgpu::TextureFormat::R16Snorm,
+    wgpu::TextureFormat::RG16Unorm,    wgpu::TextureFormat::RG16Snorm,
+    wgpu::TextureFormat::RGBA16Unorm,  wgpu::TextureFormat::RGBA16Snorm,
+    wgpu::TextureFormat::R8Unorm,      wgpu::TextureFormat::R8Snorm,
+    wgpu::TextureFormat::R8Uint,       wgpu::TextureFormat::R8Sint,
+    wgpu::TextureFormat::RG8Unorm,     wgpu::TextureFormat::RG8Snorm,
+    wgpu::TextureFormat::RG8Uint,      wgpu::TextureFormat::RG8Sint,
+    wgpu::TextureFormat::R16Uint,      wgpu::TextureFormat::R16Sint,
+    wgpu::TextureFormat::R16Float,     wgpu::TextureFormat::RG16Uint,
+    wgpu::TextureFormat::RG16Sint,     wgpu::TextureFormat::RG16Float,
+    wgpu::TextureFormat::RGB10A2Uint,  wgpu::TextureFormat::RGB10A2Unorm,
+    wgpu::TextureFormat::RG11B10Ufloat};
+
+constexpr std::array<wgpu::TextureFormat, 10> kTier1AdditionalRenderableFormats = {
+    wgpu::TextureFormat::R8Snorm,     wgpu::TextureFormat::RG8Snorm,
+    wgpu::TextureFormat::RGBA8Snorm,  wgpu::TextureFormat::R16Unorm,
+    wgpu::TextureFormat::R16Snorm,    wgpu::TextureFormat::RG16Unorm,
+    wgpu::TextureFormat::RG16Snorm,   wgpu::TextureFormat::RGBA16Unorm,
+    wgpu::TextureFormat::RGBA16Snorm, wgpu::TextureFormat::RG11B10Ufloat};
+
+constexpr std::array<wgpu::TextureFormat, 15> kTier2AdditionalStorageFormats = {
+    wgpu::TextureFormat::R8Unorm,    wgpu::TextureFormat::R8Uint,
+    wgpu::TextureFormat::R8Sint,     wgpu::TextureFormat::RGBA8Unorm,
+    wgpu::TextureFormat::RGBA8Uint,  wgpu::TextureFormat::RGBA8Sint,
+    wgpu::TextureFormat::R16Uint,    wgpu::TextureFormat::R16Sint,
+    wgpu::TextureFormat::R16Float,   wgpu::TextureFormat::RGBA16Uint,
+    wgpu::TextureFormat::RGBA16Sint, wgpu::TextureFormat::RGBA16Float,
+    wgpu::TextureFormat::RGBA32Uint, wgpu::TextureFormat::RGBA32Sint,
+    wgpu::TextureFormat::RGBA32Float};
+
+constexpr std::array<wgpu::TextureFormat, 10> kTier2AdditionalIntStorageFormats = {
+    wgpu::TextureFormat::R8Uint,     wgpu::TextureFormat::R8Sint,
+    wgpu::TextureFormat::RGBA8Uint,  wgpu::TextureFormat::RGBA8Sint,
+    wgpu::TextureFormat::R16Uint,    wgpu::TextureFormat::R16Sint,
+    wgpu::TextureFormat::RGBA16Uint, wgpu::TextureFormat::RGBA16Sint,
+    wgpu::TextureFormat::RGBA32Uint, wgpu::TextureFormat::RGBA32Sint};
+#endif  // __EMSCRIPTEN__
+
 class SubsamplingFactor {
   public:
     constexpr SubsamplingFactor(uint32_t horizontal, uint32_t vertical)
@@ -307,10 +355,10 @@ bool TextureFormatSupportsMultisampling(const wgpu::Device& device,
 bool TextureFormatSupportsResolveTarget(const wgpu::Device& device,
                                         wgpu::TextureFormat textureFormat);
 
-#ifndef __EMSCRIPTEN__
 bool IsUnorm16TextureFormat(wgpu::TextureFormat textureFormat);
 bool IsSnorm16TextureFormat(wgpu::TextureFormat textureFormat);
 
+#ifndef __EMSCRIPTEN__
 bool IsMultiPlanarFormat(wgpu::TextureFormat textureFormat);
 uint32_t GetMultiPlaneTextureBitDepth(wgpu::TextureFormat textureFormat);
 uint32_t GetMultiPlaneTextureNumPlanes(wgpu::TextureFormat textureFormat);
@@ -323,7 +371,10 @@ uint32_t GetTexelBlockSizeInBytes(wgpu::TextureFormat textureFormat);
 uint32_t GetTextureFormatBlockWidth(wgpu::TextureFormat textureFormat);
 uint32_t GetTextureFormatBlockHeight(wgpu::TextureFormat textureFormat);
 
-const char* GetWGSLColorTextureComponentType(wgpu::TextureFormat textureFormat);
+enum class WGSLComponentType { Float32, Int32, Uint32 };
+WGSLComponentType GetWGSLColorTextureComponentType(wgpu::TextureFormat textureFormat);
+const char* GetWGSLColorTextureComponentTypeStr(wgpu::TextureFormat textureFormat);
+
 const char* GetWGSLImageFormatQualifier(wgpu::TextureFormat textureFormat);
 uint32_t GetTextureComponentCount(wgpu::TextureFormat textureFormat);
 

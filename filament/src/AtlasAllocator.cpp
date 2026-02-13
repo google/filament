@@ -72,8 +72,56 @@ AtlasAllocator::Allocation AtlasAllocator::allocate(size_t const textureSize) no
         result.viewport.width  = dimension;
         result.viewport.height = dimension;
         result.layer = loc.code >> (2 * layer);
+        result.code = loc.code;
+        result.level = loc.l;
     }
     return result;
+}
+
+void AtlasAllocator::free(Allocation const& allocation) noexcept {
+    if (UTILS_UNLIKELY(!allocation.isValid())) {
+        return;
+    }
+
+    // 1. Mark the node as unallocated
+    const size_t i = QuadTreeUtils::index(allocation.level, allocation.code);
+    Node& node = mQuadTree[i];
+
+    // In debug builds, ensure we are freeing something that was actually allocated
+    assert_invariant(node.isAllocated());
+    assert_invariant(!node.hasChildren());
+
+    node.allocated = false;
+
+    // 2. Coalesce up the tree
+    // We walk up to the root. If a parent's children count drops to 0, it means all its children are free.
+    // However, we don't mark the parent as 'allocated' (that would mean it's occupied by a larger block).
+    // We just ensure the parent knows it has one less child.
+    // The 'allocated' flag is only true if a specific block is claimed.
+    // The 'children' count tracks how many sub-blocks are claimed or split.
+
+    int8_t currentL = allocation.level;
+    uint16_t currentCode = allocation.code;
+
+    while (currentL > 0) {
+        const size_t p = QuadTreeUtils::parent(currentL, currentCode);
+        Node& parent = mQuadTree[p];
+
+        // The parent must have children (since we just came from one)
+        assert_invariant(parent.hasChildren());
+
+        parent.children--;
+
+        // If the parent still has children, we stop coalescing because this branch is still partially in use.
+        if (parent.hasChildren()) {
+            break;
+        }
+
+        // If the parent has no more children, it is now a candidate for being allocated as a larger block later.
+        // We continue up the tree to update its parent.
+        currentL--;
+        currentCode >>= 2;
+    }
 }
 
 void AtlasAllocator::clear(size_t const maxTextureSize) noexcept {

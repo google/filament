@@ -26,7 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <sstream>
-#include "src/tint/lang/wgsl/diagnostic_severity.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/ls/server.h"
 
 #include "langsvr/lsp/comparators.h"

@@ -30,19 +30,20 @@
 
 #include <utility>
 
-#include "src/tint/lang/core/access.h"
-#include "src/tint/lang/core/address_space.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/number.h"
-#include "src/tint/lang/core/texel_format.h"
 #include "src/tint/lang/core/type/atomic.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/external_texture.h"
+#include "src/tint/lang/core/type/input_attachment.h"
 #include "src/tint/lang/core/type/multisampled_texture.h"
 #include "src/tint/lang/core/type/sampler.h"
+#include "src/tint/lang/core/type/string.h"
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/core/type/subgroup_matrix.h"
+#include "src/tint/lang/core/type/texel_buffer.h"
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/lang/core/type/unique_node.h"
 #include "src/tint/utils/containers/unique_allocator.h"
@@ -80,7 +81,7 @@ namespace tint::core::type {
 static constexpr inline core::Access DefaultAccessFor(core::AddressSpace space) {
     switch (space) {
         case core::AddressSpace::kIn:
-        case core::AddressSpace::kPushConstant:
+        case core::AddressSpace::kImmediate:
         case core::AddressSpace::kUniform:
         case core::AddressSpace::kHandle:
             return core::Access::kRead;
@@ -286,6 +287,11 @@ class Manager final {
     const core::type::StorageTexture* storage_texture(TextureDimension dim,
                                                       core::TexelFormat format,
                                                       core::Access access);
+
+    /// @param format the texel format of the texel buffer
+    /// @param access the access control type of the texel buffer
+    /// @returns a texel buffer type with the provided params
+    const core::type::TexelBuffer* texel_buffer(core::TexelFormat format, core::Access access);
 
     /// @param dim the dimensionality of the texture
     /// @returns a depth texture type with the provided params
@@ -620,6 +626,14 @@ class Manager final {
     const core::type::Sampler* comparison_sampler() {
         return Get<core::type::Sampler>(core::type::SamplerKind::kComparisonSampler);
     }
+
+    /// @returns an input attachment type
+    const core::type::InputAttachment* input_attachment(const core::type::Type* inner) {
+        return Get<core::type::InputAttachment>(inner);
+    }
+
+    /// @returns a string type
+    const core::type::String* String() { return Get<core::type::String>(); }
 
     /// A structure member descriptor.
     struct StructMemberDesc {

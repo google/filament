@@ -21,14 +21,18 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compressed_pair.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/ImmutableCString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Hash.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/InternPool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/MonotonicRingMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
         ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/ostream.h
@@ -36,9 +40,11 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StaticString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Status.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Systrace.h
         ${PUBLIC_HDR_DIR}/${TARGET}/sstream.h
@@ -60,13 +66,16 @@ set(SRCS
         src/ashmem.cpp
         src/debug.cpp
         src/Allocator.cpp
+        src/AsyncJobQueue.cpp
         src/CallStack.cpp
         src/CString.cpp
         src/CountDownLatch.cpp
         src/CyclicBarrier.cpp
         src/EntityManager.cpp
         src/EntityManagerImpl.h
+        src/FeatureFlagManager.cpp
         src/FixedCapacityVectorBase.cpp
+        src/ImmutableCString.cpp
         src/Invocable.cpp
         src/JobSystem.cpp
         src/Log.cpp
@@ -78,6 +87,7 @@ set(SRCS
         src/sstream.cpp
         src/string.cpp
         src/ThreadUtils.cpp
+        src/Status.cpp
 )
 
 if (WIN32)
@@ -87,7 +97,9 @@ if (ANDROID)
     list(APPEND SRCS src/android/ThermalManager.cpp)
     list(APPEND SRCS src/android/PerformanceHintManager.cpp)
     list(APPEND SRCS src/android/Systrace.cpp)
-    list(APPEND SRCS src/android/Tracing.cpp)
+    if (FILAMENT_ENABLE_PERFETTO)
+        list(APPEND SRCS src/android/Tracing.cpp)
+    endif()
 endif()
 if (LINUX OR ANDROID)
     list(APPEND SRCS src/linux/Condition.cpp)
@@ -117,7 +129,9 @@ if (ANDROID)
     target_link_libraries(${TARGET} PUBLIC log)
     target_link_libraries(${TARGET} PRIVATE dl)
     target_link_libraries(${TARGET} PUBLIC android)
-    target_link_libraries(${TARGET} PUBLIC perfetto)
+    if (FILAMENT_ENABLE_PERFETTO)
+        target_link_libraries(${TARGET} PUBLIC perfetto)
+    endif()
 endif()
 
 if (WIN32)
@@ -153,51 +167,59 @@ endif()
 # Test executables
 # ==================================================================================================
 
-set(TEST_SRCS
-        test/test_algorithm.cpp
-        test/test_Allocators.cpp
-        test/test_bitset.cpp
-        test/test_CountDownLatch.cpp
-        test/test_CString.cpp
-        test/test_CyclicBarrier.cpp
-        test/test_Entity.cpp
-        test/test_FixedCapacityVector.cpp
-        test/test_FixedCircularBuffer.cpp
-        test/test_Hash.cpp
-        test/test_JobSystem.cpp
-        test/test_QuadTreeArray.cpp
-        test/test_RangeMap.cpp
-        test/test_StructureOfArrays.cpp
-        test/test_sstream.cpp
-        test/test_string.cpp
-        test/test_utils_main.cpp
-        test/test_Zip2Iterator.cpp
-        test/test_BinaryTreeArray.cpp
-)
+if (FILAMENT_BUILD_TESTING)
+    set(TEST_SRCS
+            test/test_algorithm.cpp
+            test/test_Allocators.cpp
+            test/test_bitset.cpp
+            test/test_CountDownLatch.cpp
+            test/test_CString.cpp
+            test/test_ImmutableCString.cpp
+            test/test_CyclicBarrier.cpp
+            test/test_Entity.cpp
+            test/test_FixedCapacityVector.cpp
+            test/test_FixedCircularBuffer.cpp
+            test/test_Hash.cpp
+            test/test_InternPool.cpp
+            test/test_JobSystem.cpp
+            test/test_MonotonicRingMap.cpp
+            test/test_QuadTreeArray.cpp
+            test/test_RangeMap.cpp
+            test/test_RefCountedMap.cpp
+            test/test_Slice.cpp
+            test/test_StructureOfArrays.cpp
+            test/test_sstream.cpp
+            test/test_string.cpp
+            test/test_utils_main.cpp
+            test/test_Zip2Iterator.cpp
+            test/test_BinaryTreeArray.cpp
+            test/test_Status.cpp
+    )
 
-if (WEBGL_PTHREADS)
-    target_compile_definitions(${TARGET} PUBLIC -DFILAMENT_WASM_THREADS)
-endif()
-
-# The Path tests are platform-specific
-if (NOT WEBGL)
-    if (WIN32)
-        list(APPEND TEST_SRCS test/test_WinPath.cpp)
-    else()
-        list(APPEND TEST_SRCS test/test_Path.cpp)
+    if (WEBGL_PTHREADS)
+        target_compile_definitions(${TARGET} PUBLIC -DFILAMENT_WASM_THREADS)
     endif()
+
+    # The Path tests are platform-specific
+    if (NOT WEBGL)
+        if (WIN32)
+            list(APPEND TEST_SRCS test/test_WinPath.cpp)
+        else()
+            list(APPEND TEST_SRCS test/test_Path.cpp)
+        endif()
+    endif()
+
+    add_executable(test_${TARGET} ${TEST_SRCS})
+
+    target_link_libraries(test_${TARGET} PRIVATE gtest utils tsl math)
+    set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 endif()
-
-add_executable(test_${TARGET} ${TEST_SRCS})
-
-target_link_libraries(test_${TARGET} PRIVATE gtest utils tsl math)
-set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 
 # ==================================================================================================
 # Benchmarks
 # ==================================================================================================
 
-if (NOT WEBGL)
+if (FILAMENT_BUILD_TESTING AND NOT WEBGL)
 
     add_library(benchmark_${TARGET}_callee SHARED benchmark/benchmark_callee.cpp)
     set_target_properties(benchmark_${TARGET}_callee PROPERTIES FOLDER Benchmarks)

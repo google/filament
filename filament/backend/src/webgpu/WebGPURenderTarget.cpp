@@ -41,9 +41,9 @@ namespace filament::backend {
 namespace {
 
 /**
- * Panics if the number of samples in the original attachment textures do not match.
- * @return The number of samples in the original attachment textures (the number/count in each one).
- *         Returns 0 if there are no attachments.
+ * Creates MSAA sidecar textures for attachments if necessary.
+ * This function also verifies that all attachments have the same sample count.
+ * @return The number of samples per attachment.
  */
 [[nodiscard]] uint8_t createMsaaSidecarTextures(const uint8_t renderTargetSampleCount,
         const TargetBufferFlags targetFlags, MRT const& colorAttachments,
@@ -100,9 +100,6 @@ namespace {
                 sampleCountPerAttachment = texture->samples;
                 firstAttachment = false;
             }
-            FILAMENT_CHECK_PRECONDITION(texture->samples == sampleCountPerAttachment)
-                    << target.name << " attachment texture has " << +texture->samples
-                    << " but the other attachment(s) have " << +sampleCountPerAttachment;
             if (renderTargetSampleCount > 1 && sampleCountPerAttachment == 1) {
                 texture->createMsaaSidecarTextureIfNotAlreadyCreated(renderTargetSampleCount,
                         device);
@@ -125,7 +122,7 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
       mDefaultRenderTarget{ false },
       mTargetFlags{ targetFlags },
       mSamples{ samples },
-      mLayerCount{ layerCount },
+      mLayerCount{ layerCount <= 0 ? static_cast<uint8_t>(1) : layerCount },
       mColorAttachments{ colorAttachmentsMRT },
       mDepthAttachment{ depthAttachmentInfo },
       mStencilAttachment{ stencilAttachmentInfo },
@@ -136,11 +133,13 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
     mColorAttachmentDesc.reserve(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
 
-// Default constructor for the default render target
+// Constructor for the default render target
 WebGPURenderTarget::WebGPURenderTarget()
     : HwRenderTarget{ 0, 0 },
       mDefaultRenderTarget{ true },
-      mTargetFlags{ TargetBufferFlags::NONE },
+      // starting with the initial assumption that the default render target has a single color
+      // attachment and a depth attachment, not necessarily a depth attachment
+      mTargetFlags{ TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH },
       mSamples{ 1 },
       mLayerCount{ 1 },
       mSampleCountPerAttachment{ 1 } {}
@@ -180,19 +179,19 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
         FILAMENT_CHECK_PRECONDITION(std::all_of(customColorMsaaSidecarTextureViews,
                 customColorMsaaSidecarTextureViews + customColorTextureViewCount,
                 [](wgpu::TextureView const& msaaView) { return msaaView != nullptr; }))
-                << "A color or depth/stencil attachment texture has a MSAA sidecar but at least "
+                << "A color or depth/stencil attachment texture has an MSAA sidecar but at least "
                    "one other color attachment texture does not.";
         FILAMENT_CHECK_PRECONDITION(customDepthStencilMsaaSidecarTextureView != nullptr)
-                << "The color attachment texture(s) have MSAA sidecar(s) but the depth/stencil "
+                << "The color attachment texture(s) have MSAA sidecars but the depth/stencil "
                    "texture does not.";
     } else {
         FILAMENT_CHECK_PRECONDITION(std::all_of(customColorMsaaSidecarTextureViews,
                 customColorMsaaSidecarTextureViews + customColorTextureViewCount,
                 [](wgpu::TextureView const& msaaView) { return msaaView == nullptr; }))
-                << "A color or depth/stencil attachment texture does not have a MSAA sidecar but "
+                << "A color or depth/stencil attachment texture does not have an MSAA sidecar but "
                    "at least one color attachment texture does.";
         FILAMENT_CHECK_PRECONDITION(customDepthStencilMsaaSidecarTextureView == nullptr)
-                << "Custom color textures for the render target do not have MSAA sidecar(s) but "
+                << "Custom color textures for the render target do not have MSAA sidecars but "
                    "the depth/stencil texture does.";
     }
 

@@ -1,0 +1,31 @@
+name: 'Get Vulkan SDK'
+description: 'Installs Vulkan SDK'
+runs:
+  using: 'composite'
+  steps:
+    - uses: ./.github/actions/dep-versions
+    - name: Get Vulkan SDK
+      uses: actions/cache@v3
+      id: cache-vulkan-sdk
+      with:
+        path: ~/VulkanSDK
+        key: vulkansdk-${{ env.GITHUB_VULKANSDK_VERSION }}-2-${{ runner.os }}
+    - name: Download Vulkan SDK
+      if: steps.cache-vulkan-sdk.outputs.cache-hit != 'true'
+      run: |
+        source ${{ github.workspace }}/build/common/get-vulkan-sdk.sh
+        download_vulkan_installer
+      shell: bash
+    - name: Unpack Vulkan SDK
+      if: steps.cache-vulkan-sdk.outputs.cache-hit != 'true'
+      run: |
+        source ${{ github.workspace }}/build/common/get-vulkan-sdk.sh
+        unpack_vulkan_installer
+      shell: bash
+    - name: Run Vulkan SDK setup
+      run: |
+        pushd .
+        cd ~/VulkanSDK/${GITHUB_VULKANSDK_VERSION}
+        sudo ./install_vulkan.py
+        popd
+      shell: bash

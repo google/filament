@@ -29,19 +29,18 @@ int callFunction3() {
   CALL_FUNCTION_3;
 }
 
+
+// CHECK: [[main:%[0-9]+]] = OpExtInst %void [[set]] DebugSource
+// CHECK: [[c3:%[0-9]+]] = OpExtInst %void [[set]] DebugCompilationUnit 1 4 [[main]] HLSL
+// CHECK-NOT: DebugCompilationUnit
 // CHECK: [[s3:%[0-9]+]] = OpExtInst %void [[set]] DebugSource
-// CHECK: [[c3:%[0-9]+]] = OpExtInst %void [[set]] DebugCompilationUnit 1 4 [[s3]] HLSL
 // CHECK: {{%[0-9]+}} = OpExtInst %void [[set]] DebugFunction [[f3]] {{%[0-9]+}} [[s3]] 3 1 [[c3]]
 
 // CHECK: [[s2:%[0-9]+]] = OpExtInst %void [[set]] DebugSource
-// CHECK: [[c2:%[0-9]+]] = OpExtInst %void [[set]] DebugCompilationUnit 1 4 [[s2]] HLSL
-// CHECK: {{%[0-9]+}} = OpExtInst %void [[set]] DebugFunction [[f2]] {{%[0-9]+}} [[s2]] 2 1 [[c2]]
+// CHECK: {{%[0-9]+}} = OpExtInst %void [[set]] DebugFunction [[f2]] {{%[0-9]+}} [[s2]] 2 1 [[c3]]
 
 // CHECK: [[s1:%[0-9]+]] = OpExtInst %void [[set]] DebugSource
-// CHECK: [[c1:%[0-9]+]] = OpExtInst %void [[set]] DebugCompilationUnit 1 4 [[s1]] HLSL
-// CHECK: {{%[0-9]+}} = OpExtInst %void [[set]] DebugFunction [[f1]] {{%[0-9]+}} [[s1]] 1 1 [[c1]]
-
-// CHECK: {{%[0-9]+}} = OpExtInst %void [[set]] DebugSource
+// CHECK: {{%[0-9]+}} = OpExtInst %void [[set]] DebugFunction [[f1]] {{%[0-9]+}} [[s1]] 1 1 [[c3]]
 
 void main() {
   callFunction1();

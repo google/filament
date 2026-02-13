@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/WebGPUPlatform.h>
+#include <backend/platforms/WebGPUPlatformApple.h>
 
 #include <utils/Panic.h>
 #include <utils/ostream.h>
@@ -34,11 +34,16 @@
 
 namespace filament::backend {
 
-std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
+std::vector<wgpu::RequestAdapterOptions> WebGPUPlatformApple::getAdapterOptions() {
     constexpr std::array powerPreferences = {
         wgpu::PowerPreference::HighPerformance,
         wgpu::PowerPreference::LowPower };
-    constexpr std::array backendTypes = { wgpu::BackendType::Metal };
+    constexpr std::array backendTypes = {
+        wgpu::BackendType::Metal,
+        // To enable software rasterization on MacOS, we need to ensure Vulkan adapters are
+        // available.
+        wgpu::BackendType::Vulkan,
+    };
     constexpr std::array forceFallbackAdapters = { false, true };
     constexpr size_t totalCombinations =
             powerPreferences.size() * backendTypes.size() * forceFallbackAdapters.size();
@@ -58,7 +63,7 @@ std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
     return requests;
 }
 
-wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+wgpu::Extent2D WebGPUPlatformApple::getSurfaceExtent(void* nativeWindow) const {
     // Both IOS and MacOS expects CAMetalLayer.
     CAMetalLayer* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
     return wgpu::Extent2D{
@@ -67,7 +72,7 @@ wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
     };
 }
 
-wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
+wgpu::Surface WebGPUPlatformApple::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     wgpu::Surface surface = nullptr;
     // Both IOS and MacOS expects CAMetalLayer.
     CAMetalLayer* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
@@ -82,4 +87,4 @@ wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags
     return surface;
 }
 
-}// namespace filament::backend
+} // namespace filament::backend

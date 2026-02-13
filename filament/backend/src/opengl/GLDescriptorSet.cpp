@@ -33,6 +33,7 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -49,13 +50,13 @@
 namespace filament::backend {
 
 GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle dslh,
-        GLDescriptorSetLayout const* layout) noexcept
+        GLDescriptorSetLayout const* layout)
         : descriptors(layout->maxDescriptorBinding + 1),
           dslh(std::move(dslh)) {
 
     // We have allocated enough storage for all descriptors. Now allocate the empty descriptor
     // themselves.
-    for (auto const& entry : layout->bindings) {
+    for (auto const& entry : layout->descriptors) {
         size_t const index = entry.binding;
 
         // now we'll initialize the alternative for each way we can handle this descriptor.
@@ -156,8 +157,9 @@ void GLDescriptorSet::update(OpenGLContext&,
             arg.bo = bo;
             arg.offset = uint32_t(offset);
         } else {
-            // API usage error. User asked to update the wrong type of descriptor.
-            PANIC_PRECONDITION("descriptor %d is not a buffer", +binding);
+            // User asked to update the wrong type of descriptor. This should never happen
+            // because we're checking that on the filament side
+            LOG(ERROR) << "descriptor " << +binding << " is not a buffer";
         }
     }, descriptors[binding].desc);
 }
@@ -214,8 +216,9 @@ void GLDescriptorSet::update(OpenGLContext& gl, HandleAllocatorGL& handleAllocat
                 arg.params = params;
             }
         } else {
-            // API usage error. User asked to update the wrong type of descriptor.
-            PANIC_PRECONDITION("descriptor %d is not a texture", +binding);
+            // User asked to update the wrong type of descriptor. This should never happen
+            // because we're checking that on the filament side
+            LOG(ERROR) << "descriptor " << +binding << " is not a texture";
         }
     }, descriptors[binding].desc);
 }
@@ -300,13 +303,10 @@ void GLDescriptorSet::bind(
                     offset += offsets[dynamicOffsetIndex++];
                 }
                 if (arg.bo) {
-                    auto buffer = static_cast<char const*>(arg.bo->gl.buffer) + offset;
-                    p.updateUniforms(bindingPoint, arg.bo->gl.id, buffer, arg.bo->age);
+                    p.updateUniforms(bindingPoint, arg.bo->gl.id, arg.bo->gl.buffer, arg.bo->age, offset);
                 }
             } else if constexpr (std::is_same_v<T, Sampler>) {
                 GLuint const unit = p.getTextureUnit(set, binding);
-
-
                 if (arg.handle) {
                     GLTexture const* const t = handleAllocator.handle_cast<GLTexture*>(arg.handle);
                     gl.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
@@ -372,10 +372,10 @@ void GLDescriptorSet::validate(HandleAllocatorGL& allocator,
 
         UTILS_UNUSED_IN_RELEASE
         bool const pipelineLayoutMatchesDescriptorSetLayout = std::equal(
-                dsl->bindings.begin(), dsl->bindings.end(),
-                cur->bindings.begin(),
-                [](DescriptorSetLayoutBinding const& lhs,
-                        DescriptorSetLayoutBinding const& rhs) {
+                dsl->descriptors.begin(), dsl->descriptors.end(),
+                cur->descriptors.begin(),
+                [](DescriptorSetLayoutDescriptor const& lhs,
+                        DescriptorSetLayoutDescriptor const& rhs) {
                     return lhs.type == rhs.type &&
                            lhs.stageFlags == rhs.stageFlags &&
                            lhs.binding == rhs.binding &&

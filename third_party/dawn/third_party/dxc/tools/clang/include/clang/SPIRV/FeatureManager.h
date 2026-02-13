@@ -57,6 +57,7 @@ enum class Extension {
   KHR_ray_query,
   EXT_shader_image_int64,
   KHR_physical_storage_buffer,
+  AMD_shader_enqueue,
   KHR_vulkan_memory_model,
   NV_compute_shader_derivatives,
   KHR_compute_shader_derivatives,
@@ -64,6 +65,7 @@ enum class Extension {
   KHR_maximal_reconvergence,
   KHR_float_controls,
   NV_shader_subgroup_partitioned,
+  KHR_quad_control,
   Unknown,
 };
 

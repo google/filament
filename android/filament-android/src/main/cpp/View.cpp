@@ -76,6 +76,12 @@ Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass, jlong n
     view->setVisibleLayers((uint8_t) select, (uint8_t) value);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_View_nGetVisibleLayers(JNIEnv*, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return view->getVisibleLayers();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetShadowingEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;
@@ -145,6 +151,15 @@ Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jcla
     options.sharpness = sharpness;
     options.quality = (View::QualityLevel)quality;
     view->setDynamicResolutionOptions(options);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nGetLastDynamicResolutionScale(JNIEnv *env, jclass, jlong nativeView, jfloatArray out_) {
+    jfloat* out = env->GetFloatArrayElements(out_, nullptr);
+    View *view = (View *) nativeView;
+    math::float2 result = view->getLastDynamicResolutionScale();
+    std::copy_n(result.v, 2, out);
+    env->ReleaseFloatArrayElements(out_, out, 0);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -356,6 +371,7 @@ Java_com_google_android_filament_View_nSetFogOptions(JNIEnv *, jclass , jlong na
     view->setFogOptions(options);
 }
 
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetBlendMode(JNIEnv *, jclass , jlong nativeView, jint blendMode) {
     View* view = (View*) nativeView;
@@ -428,6 +444,18 @@ JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_View_nIsShadowingEnabled(JNIEnv *, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return (jboolean)view->isShadowingEnabled();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetFrustumCullingEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setFrustumCullingEnabled(enabled);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsFrustumCullingEnabled(JNIEnv*, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return (jboolean)view->isFrustumCullingEnabled();
 }
 
 extern "C"
@@ -553,4 +581,21 @@ Java_com_google_android_filament_View_nClearFrameHistory(JNIEnv *env, jclass cla
     View *view = (View *) nativeView;
     Engine *engine = (Engine *) nativeEngine;
     view->clearFrameHistory(*engine);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetChannelDepthClearEnabled(JNIEnv *, jclass ,
+        jlong nativeView, jint channel, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setChannelDepthClearEnabled((uint8_t) channel, (bool) enabled);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsChannelDepthClearEnabled(JNIEnv *env, jclass clazz,
+        jlong nativeView, jint channel) {
+    // TODO: implement nIsChannelDepthClearEnabled()
+    View* view = (View*) nativeView;
+    return (jboolean)view->isChannelDepthClearEnabled((uint8_t) channel);
 }

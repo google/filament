@@ -1,0 +1,42 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _4;
+
+struct _4
+{
+    int _m0;
+    device int* _m1;
+};
+
+struct _16
+{
+    device _4* _m0;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+static inline __attribute__((always_inline))
+void _43(device _4* __restrict _10, int _44, device int* __restrict _12, device int* __restrict device * __restrict _13, device int* __restrict _14)
+{
+}
+
+static inline __attribute__((always_inline))
+void _40(device _4* _6, int _41, device int* _7, device int* device * _8, device int* _9)
+{
+    _43(_6, _41, _7, _8, _9);
+    _6->_m0 = _41;
+    *_7 = _41;
+    *_9 = _41;
+    *_8 = _9;
+}
+
+kernel void main0(constant _16& _32 [[buffer(0)]])
+{
+    _40(_32._m0, 40, &_32._m0->_m0, &_32._m0->_m1, _32._m0->_m1);
+}
+

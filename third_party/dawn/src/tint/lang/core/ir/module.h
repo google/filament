@@ -47,6 +47,12 @@
 
 namespace tint::core::ir {
 
+// Wrappers around the base TINT_ICE() macros that use the ice_callback attached to the module.
+#define TINT_IR_ICE(module) TINT_ICE(module.ice_callback)
+#define TINT_IR_UNREACHABLE(module) TINT_UNREACHABLE(module.ice_callback)
+#define TINT_IR_UNIMPLEMENTED(module) TINT_UNIMPLEMENTED(module.ice_callback)
+#define TINT_IR_ASSERT(module, condition) TINT_ASSERT((condition), module.ice_callback)
+
 /// Main module class for the IR.
 class Module {
     /// Program Id required to create other components
@@ -178,6 +184,10 @@ class Module {
     /// @returns the functions in the module, in dependency order
     Vector<const Function*, 16> DependencyOrderedFunctions() const;
 
+    /// Removes `func` from the module and destroys it.
+    /// @param func the function to destroy
+    void Destroy(Function* func);
+
     /// The block allocator
     BlockAllocator<Block> blocks;
 
@@ -195,6 +205,9 @@ class Module {
 
     /// The map of core::constant::Value to their ir::Constant.
     Hashmap<const core::constant::Value*, ir::Constant*, 16> constants;
+
+    /// An optional callback to receive an ICE generated while processing this module.
+    InternalCompilerErrorCallback ice_callback;
 
   private:
     /// @returns the next instruction id for this module

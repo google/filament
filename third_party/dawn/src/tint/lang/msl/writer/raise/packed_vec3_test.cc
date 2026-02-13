@@ -2732,7 +2732,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Struct_NonDefaultOffset) {
                 /* offset */ 64u, /* align */ 4u, /* size */ 16u, core::IOAttributes{}),
             ty.Get<core::type::StructMember>(
                 mod.symbols.Register("mat3"), ty.mat4x3<f32>(), /* index */ 3u,
-                /* offset */ 128u, /* align */ 16u, /* size */ 48u, core::IOAttributes{}),
+                /* offset */ 128u, /* align */ 16u, /* size */ 64u, core::IOAttributes{}),
             ty.Get<core::type::StructMember>(
                 mod.symbols.Register("mat2"), ty.mat3x2<f32>(), /* index */ 4u,
                 /* offset */ 256u, /* align */ 8u, /* size */ 24u, core::IOAttributes{}),
@@ -3752,6 +3752,170 @@ $B1: {  # root
     %p:ptr<workgroup, atomic<u32>, read_write> = let %3
     %5:u32 = atomicLoad %p
     ret %5
+  }
+}
+)";
+
+    Run(PackedVec3);
+
+    EXPECT_EQ(expect, str());
+}
+
+// Workgroup is the only address space that requires packed types that supports bool types.
+// These are rewritten as packed_vec3<u32> types since MSL does not support packed bool vectors.
+TEST_F(MslWriter_PackedVec3Test, WorkgroupVar_Vec3_Bool) {
+    auto* var = b.Var<workgroup, vec3<bool>>("v");
+    mod.root_block->Append(var);
+
+    auto* func = b.Function("foo", ty.vec3<bool>());
+    b.Append(func->Block(), [&] {  //
+        b.Store(var, b.Zero<vec3<bool>>());
+        b.Return(func, b.Load(var));
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, vec3<bool>, read_write> = var undef
+}
+
+%foo = func():vec3<bool> {
+  $B2: {
+    store %v, vec3<bool>(false)
+    %3:vec3<bool> = load %v
+    ret %3
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<workgroup, __packed_vec3<u32>, read_write> = var undef
+}
+
+%foo = func():vec3<bool> {
+  $B2: {
+    %3:vec3<u32> = convert vec3<bool>(false)
+    %4:__packed_vec3<u32> = msl.convert %3
+    store %v, %4
+    %5:__packed_vec3<u32> = load %v
+    %6:vec3<u32> = msl.convert %5
+    %7:vec3<bool> = convert %6
+    ret %7
+  }
+}
+)";
+
+    Run(PackedVec3);
+
+    EXPECT_EQ(expect, str());
+}
+
+// Workgroup is the only address space that requires packed types that supports bool types.
+// These are rewritten as packed_vec3<u32> types since MSL does not support packed bool vectors.
+TEST_F(MslWriter_PackedVec3Test, WorkgroupVar_Vec3_Bool_VectorElementLoadAndStore) {
+    auto* var = b.Var<workgroup, vec3<bool>>("v");
+    mod.root_block->Append(var);
+
+    auto* func = b.Function("foo", ty.void_());
+    b.Append(func->Block(), [&] {  //
+        auto* el = b.LoadVectorElement(var, 0_u);
+        b.StoreVectorElement(var, 1_u, el);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, vec3<bool>, read_write> = var undef
+}
+
+%foo = func():void {
+  $B2: {
+    %3:bool = load_vector_element %v, 0u
+    store_vector_element %v, 1u, %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<workgroup, __packed_vec3<u32>, read_write> = var undef
+}
+
+%foo = func():void {
+  $B2: {
+    %3:u32 = load_vector_element %v, 0u
+    %4:bool = convert %3
+    %5:u32 = convert %4
+    store_vector_element %v, 1u, %5
+    ret
+  }
+}
+)";
+
+    Run(PackedVec3);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_PackedVec3Test, WorkgroupVar_Struct_Vec3_Bool_VectorElementLoadAndStore) {
+    auto* s = ty.Struct(mod.symbols.New("S"), {
+                                                  {mod.symbols.Register("data"), ty.vec3<bool>()},
+                                              });
+    auto* var = b.Var("v", ty.ptr<workgroup>(s));
+    mod.root_block->Append(var);
+
+    auto* func = b.Function("foo", ty.void_());
+    b.Append(func->Block(), [&] {  //
+        auto* ptr = b.Access(ty.ptr<workgroup, vec3<bool>>(), var, 0_u);
+        auto* el = b.LoadVectorElement(ptr, 0_u);
+        b.StoreVectorElement(ptr, 1_u, el);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  data:vec3<bool> @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<workgroup, S, read_write> = var undef
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<workgroup, vec3<bool>, read_write> = access %v, 0u
+    %4:bool = load_vector_element %3, 0u
+    store_vector_element %3, 1u, %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(16) {
+  data:vec3<bool> @offset(0)
+}
+
+S_packed_vec3 = struct @align(16) {
+  data:__packed_vec3<u32> @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<workgroup, S_packed_vec3, read_write> = var undef
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<workgroup, __packed_vec3<u32>, read_write> = access %v, 0u
+    %4:u32 = load_vector_element %3, 0u
+    %5:bool = convert %4
+    %6:u32 = convert %5
+    store_vector_element %3, 1u, %6
+    ret
   }
 }
 )";

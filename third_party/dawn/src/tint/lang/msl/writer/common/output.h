@@ -30,7 +30,6 @@
 
 #include <cstdint>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace tint::msl::writer {
@@ -59,10 +58,10 @@ struct Output {
         /// The z-component
         uint32_t z = 0;
 
-        /// A map from entry point name to a list of dynamic workgroup allocations.
+        /// A list of dynamic workgroup allocations.
         /// Each entry in the vector is the size of the workgroup allocation that
         /// should be created for that index.
-        std::unordered_map<std::string, std::vector<uint32_t>> allocations;
+        std::vector<uint32_t> allocations;
 
         /// The needed workgroup storage size
         size_t storage_size = 0;

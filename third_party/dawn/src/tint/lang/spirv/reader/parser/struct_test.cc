@@ -331,12 +331,12 @@ INSTANTIATE_TEST_SUITE_P(
         LocationCase{
             "OpMemberDecorate %str 0 Location 2 "
             "OpMemberDecorate %str 0 NoPerspective ",
-            "tint_symbol:vec4<f32> @offset(0), @location(2), @interpolate(linear, center)",
+            "tint_symbol:vec4<f32> @offset(0), @location(2), @interpolate(linear)",
         },
         LocationCase{
             "OpMemberDecorate %str 0 Location 3 "
             "OpMemberDecorate %str 0 Flat ",
-            "tint_symbol:vec4<f32> @offset(0), @location(3), @interpolate(flat, center)",
+            "tint_symbol:vec4<f32> @offset(0), @location(3), @interpolate(flat)",
         },
         LocationCase{
             "OpMemberDecorate %str 0 Location 4 "
@@ -354,5 +354,332 @@ INSTANTIATE_TEST_SUITE_P(
             "OpMemberDecorate %str 0 Centroid ",
             "tint_symbol:vec4<f32> @offset(0), @location(6), @interpolate(linear, centroid)",
         }));
+
+TEST_F(SpirvParserTest, Struct_MemberDecoration_VertexOutput_U32) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpCapability SampleRateShading
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpMemberDecorate %str 0 Location 1
+       %void = OpTypeVoid
+        %u32 = OpTypeInt 32 0
+        %str = OpTypeStruct %u32
+    %fn_type = OpTypeFunction %void
+
+%_ptr_Output = OpTypePointer Output %str
+        %var = OpVariable %_ptr_Output Output
+
+       %main = OpFunction %void None %fn_type
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+tint_symbol_1 = struct @align(4) {
+  tint_symbol:u32 @offset(0), @location(1), @interpolate(flat)
+}
+
+$B1: {  # root
+  %1:ptr<__out, tint_symbol_1, read_write> = var undef
+}
+
+%main = @fragment func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
+
+TEST_F(SpirvParserTest, Struct_MemberDecoration_VertexOutput_I32) {
+    EXPECT_IR(R"(
+                 OpCapability Shader
+                 OpCapability SampleRateShading
+                 OpMemoryModel Logical GLSL450
+                 OpEntryPoint Fragment %main "main"
+                 OpExecutionMode %main OriginUpperLeft
+                 OpMemberDecorate %str 0 Location 1
+         %void = OpTypeVoid
+          %i32 = OpTypeInt 32 1
+          %str = OpTypeStruct %i32
+      %fn_type = OpTypeFunction %void
+
+  %_ptr_Output = OpTypePointer Output %str
+          %var = OpVariable %_ptr_Output Output
+
+         %main = OpFunction %void None %fn_type
+   %main_start = OpLabel
+                 OpReturn
+                 OpFunctionEnd
+  )",
+              R"(
+tint_symbol_1 = struct @align(4) {
+  tint_symbol:i32 @offset(0), @location(1), @interpolate(flat)
+}
+
+$B1: {  # root
+  %1:ptr<__out, tint_symbol_1, read_write> = var undef
+}
+
+%main = @fragment func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
+
+TEST_F(SpirvParserTest, Struct_MemberDecoration_VertexOutput_Vec3_I32) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpCapability SampleRateShading
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpMemberDecorate %str 0 Location 1
+       %void = OpTypeVoid
+        %i32 = OpTypeInt 32 1
+      %v3i32 = OpTypeVector %i32 3
+        %str = OpTypeStruct %v3i32
+    %fn_type = OpTypeFunction %void
+
+%_ptr_Output = OpTypePointer Output %str
+        %var = OpVariable %_ptr_Output Output
+
+       %main = OpFunction %void None %fn_type
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+tint_symbol_1 = struct @align(16) {
+  tint_symbol:vec3<i32> @offset(0), @location(1), @interpolate(flat)
+}
+
+$B1: {  # root
+  %1:ptr<__out, tint_symbol_1, read_write> = var undef
+}
+
+%main = @fragment func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
+
+TEST_F(SpirvParserTest, Struct_MemberDecoration_VertexOutput_F32) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpCapability SampleRateShading
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpMemberDecorate %str 0 Location 1
+       %void = OpTypeVoid
+        %f32 = OpTypeFloat 32
+        %str = OpTypeStruct %f32
+    %fn_type = OpTypeFunction %void
+
+%_ptr_Output = OpTypePointer Output %str
+        %var = OpVariable %_ptr_Output Output
+
+       %main = OpFunction %void None %fn_type
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+tint_symbol_1 = struct @align(4) {
+  tint_symbol:f32 @offset(0), @location(1)
+}
+
+$B1: {  # root
+  %1:ptr<__out, tint_symbol_1, read_write> = var undef
+}
+
+%main = @fragment func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
+
+TEST_F(SpirvParserTest, Struct_SomeNonWritableMembers) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_storage_buffer_storage_class"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberDecorate %str 1 NonWritable
+               OpMemberDecorate %str 0 Offset 0
+               OpMemberDecorate %str 1 Offset 4
+               OpDecorate %str Block
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %void = OpTypeVoid
+        %i32 = OpTypeInt 32 1
+        %str = OpTypeStruct %i32 %i32
+        %ptr = OpTypePointer StorageBuffer %str
+    %ep_type = OpTypeFunction %void
+
+        %var = OpVariable %ptr StorageBuffer
+       %main = OpFunction %void None %ep_type
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+tint_symbol_2 = struct @align(4) {
+  tint_symbol:i32 @offset(0)
+  tint_symbol_1:i32 @offset(4)
+}
+
+$B1: {  # root
+  %1:ptr<storage, tint_symbol_2, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
+
+TEST_F(SpirvParserTest, Struct_AllNonWritableMembers) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_storage_buffer_storage_class"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberDecorate %str 0 NonWritable
+               OpMemberDecorate %str 1 NonWritable
+               OpMemberDecorate %str 0 Offset 0
+               OpMemberDecorate %str 1 Offset 4
+               OpDecorate %str Block
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %void = OpTypeVoid
+        %i32 = OpTypeInt 32 1
+        %str = OpTypeStruct %i32 %i32
+        %ptr = OpTypePointer StorageBuffer %str
+    %ep_type = OpTypeFunction %void
+
+        %var = OpVariable %ptr StorageBuffer
+       %main = OpFunction %void None %ep_type
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+tint_symbol_2 = struct @align(4) {
+  tint_symbol:i32 @offset(0)
+  tint_symbol_1:i32 @offset(4)
+}
+
+$B1: {  # root
+  %1:ptr<storage, tint_symbol_2, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
+
+TEST_F(SpirvParserTest, Struct_AllNonWritableMembers_BufferBlock) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberDecorate %str 0 NonWritable
+               OpMemberDecorate %str 1 NonWritable
+               OpMemberDecorate %str 0 Offset 0
+               OpMemberDecorate %str 1 Offset 4
+               OpDecorate %str BufferBlock
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %void = OpTypeVoid
+        %i32 = OpTypeInt 32 1
+        %str = OpTypeStruct %i32 %i32
+        %ptr = OpTypePointer Uniform %str
+    %ep_type = OpTypeFunction %void
+
+        %var = OpVariable %ptr Uniform
+       %main = OpFunction %void None %ep_type
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+tint_symbol_2 = struct @align(4) {
+  tint_symbol:i32 @offset(0)
+  tint_symbol_1:i32 @offset(4)
+}
+
+$B1: {  # root
+  %1:ptr<storage, tint_symbol_2, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
+
+TEST_F(SpirvParserTest, Struct_Coherent) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberDecorate %str 0 NonWritable
+               OpMemberDecorate %str 1 NonWritable
+               OpMemberDecorate %str 0 Coherent
+               OpMemberDecorate %str 0 Offset 0
+               OpMemberDecorate %str 1 Offset 4
+               OpDecorate %str Block
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %void = OpTypeVoid
+        %i32 = OpTypeInt 32 1
+        %str = OpTypeStruct %i32 %i32
+        %ptr = OpTypePointer Uniform %str
+    %ep_type = OpTypeFunction %void
+
+        %var = OpVariable %ptr Uniform
+       %main = OpFunction %void None %ep_type
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+tint_symbol_2 = struct @align(4) {
+  tint_symbol:i32 @offset(0)
+  tint_symbol_1:i32 @offset(4)
+}
+
+$B1: {  # root
+  %1:ptr<uniform, tint_symbol_2, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
 
 }  // namespace tint::spirv::reader

@@ -1,26 +1,10 @@
-// Copyright (c) 2014-2024 The Khronos Group Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and/or associated documentation files (the "Materials"),
-// to deal in the Materials without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Materials, and to permit persons to whom the
-// Materials are furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Materials.
-//
-// MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS KHRONOS
-// STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS SPECIFICATIONS AND
-// HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/
-//
-// THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM,OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE USE OR OTHER DEALINGS
-// IN THE MATERIALS.
+// SPDX-FileCopyrightText: 2014-2024 The Khronos Group Inc.
+// SPDX-License-Identifier: MIT
+// 
+// MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS
+// KHRONOS STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS
+// SPECIFICATIONS AND HEADER INFORMATION ARE LOCATED AT
+//    https://www.khronos.org/registry/
 
 #pragma once
 #ifndef JSON_TO_SPIRV
@@ -102,6 +86,7 @@ enum OperandClass {
     OperandCooperativeMatrixReduce,
     OperandTensorClampMode,
     OperandTensorAddressingOperands,
+    OperandTensorOperands,
     OperandInitializationModeQualifier,
     OperandHostAccessQualifier,
     OperandLoadCacheControl,
@@ -147,6 +132,7 @@ public:
     void setOptional();
     OperandClass getClass(int op) const { return opClass[op]; }
     const char* getDesc(int op) const { return desc[op].c_str(); }
+    void setDesc(int op, const std::string& d) { desc[op] = d; }
     bool isOptional(int op) const { return optional[op]; }
     int getNum() const { return (int)opClass.size(); }
 

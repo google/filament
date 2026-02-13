@@ -75,6 +75,11 @@ void MultiInBlock::SetParams(std::initializer_list<BlockParam*> params) {
     }
 }
 
+void MultiInBlock::AddParam(BlockParam* param) {
+    params_.Push(param);
+    param->SetBlock(this);
+}
+
 void MultiInBlock::AddInboundSiblingBranch(ir::Terminator* node) {
     TINT_ASSERT(node != nullptr);
     inbound_sibling_branches_.Push(node);

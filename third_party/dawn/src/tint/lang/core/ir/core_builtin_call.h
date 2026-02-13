@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include "src/tint/lang/core/builtin_fn.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/intrinsic/dialect.h"
 #include "src/tint/lang/core/intrinsic/table_data.h"
 #include "src/tint/lang/core/ir/builtin_call.h"

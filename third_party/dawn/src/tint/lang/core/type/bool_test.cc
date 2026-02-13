@@ -25,8 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/type/bool.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/texture.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -34,31 +36,36 @@ namespace {
 using BoolTest = TestHelper;
 
 TEST_F(BoolTest, Creation) {
-    auto* a = create<Bool>();
-    auto* b = create<Bool>();
+    Manager ty;
+    auto* a = ty.bool_();
+    auto* b = ty.bool_();
     EXPECT_EQ(a, b);
 }
 
 TEST_F(BoolTest, Hash) {
-    auto* a = create<Bool>();
-    auto* b = create<Bool>();
+    Manager ty;
+    auto* a = ty.bool_();
+    auto* b = ty.bool_();
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(BoolTest, Equals) {
-    auto* a = create<Bool>();
-    auto* b = create<Bool>();
+    Manager ty;
+    auto* a = ty.bool_();
+    auto* b = ty.bool_();
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(Void{}));
 }
 
 TEST_F(BoolTest, FriendlyName) {
+    Manager ty;
     Bool b;
     EXPECT_EQ(b.FriendlyName(), "bool");
 }
 
 TEST_F(BoolTest, Clone) {
-    auto* a = create<Bool>();
+    Manager ty;
+    auto* a = ty.bool_();
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};
 

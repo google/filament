@@ -22,6 +22,6 @@
 
 namespace filament {
 
-utils::Slice<StaticMaterialInfo> getTaaMaterialList() noexcept;
+utils::Slice<const StaticMaterialInfo> getTaaMaterialList() noexcept;
 
 } // namespace filament

@@ -49,6 +49,8 @@ tint_add_target(tint_lang_spirv_writer_raise lib
   lang/spirv/writer/raise/fork_explicit_layout_types.h
   lang/spirv/writer/raise/handle_matrix_arithmetic.cc
   lang/spirv/writer/raise/handle_matrix_arithmetic.h
+  lang/spirv/writer/raise/keep_binding_array_as_pointer.cc
+  lang/spirv/writer/raise/keep_binding_array_as_pointer.h
   lang/spirv/writer/raise/merge_return.cc
   lang/spirv/writer/raise/merge_return.h
   lang/spirv/writer/raise/pass_matrix_by_pointer.cc
@@ -66,7 +68,6 @@ tint_add_target(tint_lang_spirv_writer_raise lib
 tint_target_add_dependencies(tint_lang_spirv_writer_raise lib
   tint_api_common
   tint_lang_core
-  tint_lang_core_common
   tint_lang_core_constant
   tint_lang_core_intrinsic
   tint_lang_core_ir
@@ -116,6 +117,7 @@ tint_add_target(tint_lang_spirv_writer_raise_test test
   lang/spirv/writer/raise/expand_implicit_splats_test.cc
   lang/spirv/writer/raise/fork_explicit_layout_types_test.cc
   lang/spirv/writer/raise/handle_matrix_arithmetic_test.cc
+  lang/spirv/writer/raise/keep_binding_array_as_pointer_test.cc
   lang/spirv/writer/raise/merge_return_test.cc
   lang/spirv/writer/raise/pass_matrix_by_pointer_test.cc
   lang/spirv/writer/raise/remove_unreachable_in_loop_continuing_test.cc

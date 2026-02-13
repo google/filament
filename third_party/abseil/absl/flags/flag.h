@@ -35,6 +35,7 @@
 
 #include "absl/base/attributes.h"
 #include "absl/base/config.h"
+#include "absl/base/nullability.h"
 #include "absl/base/optimization.h"
 #include "absl/flags/commandlineflag.h"
 #include "absl/flags/config.h"
@@ -94,7 +95,7 @@ using Flag = flags_internal::Flag<T>;
 //   // FLAGS_firstname is a Flag of type `std::string`
 //   std::string first_name = absl::GetFlag(FLAGS_firstname);
 template <typename T>
-ABSL_MUST_USE_RESULT T GetFlag(const absl::Flag<T>& flag) {
+[[nodiscard]] T GetFlag(const absl::Flag<T>& flag) {
   return flags_internal::FlagImplPeer::InvokeGet<T>(flag);
 }
 
@@ -106,7 +107,7 @@ ABSL_MUST_USE_RESULT T GetFlag(const absl::Flag<T>& flag) {
 // thread-safe, but is potentially expensive. Avoid setting flags in general,
 // but especially within performance-critical code.
 template <typename T>
-void SetFlag(absl::Flag<T>* flag, const T& v) {
+void SetFlag(absl::Flag<T>* absl_nonnull flag, const T& v) {
   flags_internal::FlagImplPeer::InvokeSet(*flag, v);
 }
 
@@ -114,7 +115,7 @@ void SetFlag(absl::Flag<T>* flag, const T& v) {
 // convertible to `T`. E.g., use this overload to pass a "const char*" when `T`
 // is `std::string`.
 template <typename T, typename V>
-void SetFlag(absl::Flag<T>* flag, const V& v) {
+void SetFlag(absl::Flag<T>* absl_nonnull flag, const V& v) {
   T value(v);
   flags_internal::FlagImplPeer::InvokeSet(*flag, value);
 }

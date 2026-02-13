@@ -19,14 +19,12 @@
 
 #include <vector>
 #include <functional>
-#include <optional>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
 #include "backend/Handle.h"
 #include "backend/DriverApiForward.h"
-#include "BackendTest.h"
 
 class RenderFrame {
 public:
@@ -68,6 +66,11 @@ private:
     std::vector<filament::backend::ProgramHandle> mPrograms;
     std::vector<filament::backend::TextureHandle> mTextures;
     std::vector<filament::backend::RenderTargetHandle> mRenderTargets;
+    std::vector<filament::backend::RenderPrimitiveHandle> mRenderPrimitives;
+    std::vector<filament::backend::VertexBufferInfoHandle> mVertexBufferInfos;
+    std::vector<filament::backend::VertexBufferHandle> mVertexBuffers;
+    std::vector<filament::backend::IndexBufferHandle> mIndexBuffers;
+    std::vector<filament::backend::MemoryMappedBufferHandle> mMemoryMappedBuffers;
 
     std::vector<std::function<void()>> mCallbacks;
 };

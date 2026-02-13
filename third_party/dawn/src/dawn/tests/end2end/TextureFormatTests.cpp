@@ -253,7 +253,7 @@ class TextureFormatTest : public DawnTest {
             })");
 
         // Compute the WGSL type of the texture's data.
-        const char* type = utils::GetWGSLColorTextureComponentType(sampleFormatInfo.format);
+        const char* type = utils::GetWGSLColorTextureComponentTypeStr(sampleFormatInfo.format);
 
         std::ostringstream fsSource;
         fsSource << "@group(0) @binding(0) var myTexture : texture_2d<" << type << ">;\n";
@@ -823,7 +823,7 @@ TEST_P(TextureFormatTest, RGBA8UnormSrgb) {
 // Test the BGRA8UnormSrgb format
 TEST_P(TextureFormatTest, BGRA8UnormSrgb) {
     // BGRA8UnormSrgb is unsupported in Compatibility mode
-    DAWN_SUPPRESS_TEST_IF(IsCompatibilityMode());
+    DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode());
 
     uint8_t maxValue = std::numeric_limits<uint8_t>::max();
     std::vector<uint8_t> textureData = {0, 1, maxValue, 64, 35, 68, 152, 168};
@@ -903,7 +903,7 @@ TEST_P(TextureFormatTest, RGB10A2Unorm) {
 // Test the RG11B10Ufloat format
 TEST_P(TextureFormatTest, RG11B10Ufloat) {
     // sampling test also requires format to be color-renderable
-    DAWN_SUPPRESS_TEST_IF(!IsRG11B10UfloatRenderableSupported());
+    DAWN_TEST_UNSUPPORTED_IF(!IsRG11B10UfloatRenderableSupported());
     // TODO(crbug.com/388318201): expected: 0xf87e0000, actual: 0xfffff800
     DAWN_SUPPRESS_TEST_IF(IsD3D11());
 

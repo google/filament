@@ -1,3 +1,5 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 package(
     default_visibility = ["//visibility:public"],
 )
@@ -121,6 +123,11 @@ filegroup(
     srcs = ["include/spirv/unified1/extinst.spv-amd-shader-trinary-minmax.grammar.json"],
 )
 
+filegroup(
+    name = "spirv_ext_inst_tosa_001000_1",
+    srcs = ["include/spirv/unified1/extinst.tosa.001000.1.grammar.json"],
+)
+
 cc_library(
     name = "spirv_common_headers",
     hdrs = [
@@ -136,6 +143,7 @@ cc_library(
         "include/spirv/unified1/NonSemanticShaderDebugInfo100.h",
         "include/spirv/unified1/NonSemanticVkspReflection.h",
         "include/spirv/unified1/OpenCL.std.h",
+        "include/spirv/unified1/TOSA.001000.1.h",
     ],
     includes = ["include"],
 )
@@ -175,4 +183,3 @@ cc_library(
     includes = ["include"],
     deps = [":spirv_common_headers"],
 )
-

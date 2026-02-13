@@ -16,6 +16,7 @@
 
 #include "VulkanPipelineCache.h"
 
+#include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
@@ -34,12 +35,60 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanPipelineCache::VulkanPipelineCache(VkDevice device)
-    : mDevice(device) {
+namespace {
+
+using utils::JobSystem;
+
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedbackInfo) {
+    VkPipelineCreationFeedback const& pipelineInfo = *feedbackInfo.pPipelineCreationFeedback;
+    if (!(pipelineInfo.flags & VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT)) {
+        return;
+    }
+
+    bool const isCacheHit =
+            (pipelineInfo.flags & VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT);
+    FVK_LOGD << "Pipeline build stats - Cache hit: " << isCacheHit
+             << ", Time: " << pipelineInfo.duration / 1000000.0 << "ms";
+
+    for (uint32_t i = 0; i < feedbackInfo.pipelineStageCreationFeedbackCount; ++i) {
+        VkPipelineCreationFeedback const& stageInfo = feedbackInfo.pPipelineStageCreationFeedbacks[i];
+        if (!(stageInfo.flags & VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT)) {
+            continue;
+        }
+
+        bool const isVertexShader = (i == 0);
+        bool const isCacheHit = (stageInfo.flags &
+                                 VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT);
+        FVK_LOGD << (isVertexShader ? "Vertex" : "Fragment")
+                 << " shader build stats - Cache hit: " << isCacheHit
+                 << ", Time: " << stageInfo.duration / 1000000.0 << "ms";
+    }
+}
+#endif
+
+} // namespace
+
+VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context)
+        : mDevice(device),
+          mCallbackManager(driver),
+          mContext(context) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
     };
     bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
+
+    if (mContext.shouldUsePipelineCachePrewarming()) {
+        mCompilerThreadPool.init(
+            /*threadCount=*/1,
+            []() {
+                JobSystem::setThreadName("CompilerThreadPool");
+                // This thread should be lower priority than the main thread.
+                JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+            }, []() {
+                // No cleanup required.
+            });
+    }
 }
 
 void VulkanPipelineCache::bindLayout(VkPipelineLayout layout) noexcept {
@@ -54,9 +103,12 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
         pipeline.lastUsed = mCurrentTime;
         return &pipeline;
     }
-    auto ret = createPipeline();
-    ret->lastUsed = mCurrentTime;
-    return ret;
+    PipelineCacheEntry cacheEntry {
+        .handle = createPipeline(mPipelineRequirements),
+        .lastUsed = mCurrentTime,
+    };
+    assert_invariant(cacheEntry.handle != VK_NULL_HANDLE && "Pipeline handle is VK_NULL_HANDLE");
+    return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
 void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
@@ -74,70 +126,154 @@ void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     }
 }
 
-VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() noexcept {
-    assert_invariant(mPipelineRequirements.shaders[0] && "Vertex shader is not bound.");
-    assert_invariant(mPipelineRequirements.layout && "No pipeline layout specified");
+void VulkanPipelineCache::asyncPrewarmCache(
+        resource_ptr<VulkanProgram> vprogram,
+        VkPipelineLayout layout,
+        StereoscopicType stereoscopicType,
+        uint8_t stereoscopicViewCount,
+        CompilerPriorityQueue priority) {
+    PipelineKey key {
+        .shaders = {
+            vprogram->getVertexShader(),
+            vprogram->getFragmentShader(),
+        },
+        // We're using dynamic rendering, so this should be empty.
+        .renderPass = VK_NULL_HANDLE,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .subpassIndex = 0,
+        // We're using vertex input dynamic state, so these should be empty.
+        .vertexAttributes = {},
+        .vertexBuffers = {},
+        // Create a reasonable default raster state; we're assuming this is not cached.
+        .rasterState = {
+            .cullMode = VK_CULL_MODE_NONE,
+            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+            .depthBiasEnable = VK_FALSE,
+            .blendEnable = VK_FALSE,
+            .depthWriteEnable = VK_FALSE,
+            .alphaToCoverageEnable = VK_FALSE,
+            .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+            .dstColorBlendFactor = VK_BLEND_FACTOR_ONE,
+            .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+            .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+            .colorWriteMask = 0,
+            .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+            .depthClamp = VK_FALSE,
+            .colorTargetCount = 1,
+            .colorBlendOp = BlendEquation::SUBTRACT,
+            .alphaBlendOp = BlendEquation::SUBTRACT,
+            .depthCompareOp = SamplerCompareFunc::L,
+            .depthBiasConstantFactor = 0.f,
+            .depthBiasSlopeFactor = 0.f,
+        },
+        .layout = layout,
+    };
+    PipelineDynamicOptions dynamicOptions {
+        .useDynamicVertexInputState = true,
+        .useDynamicRenderPasses = true,
+        .stereoscopicType = stereoscopicType,
+        .stereoscopicViewCount = stereoscopicViewCount,
+    };
+
+    CallbackManager::Handle cmh = mCallbackManager.get();
+    auto token = std::make_shared<ProgramToken>();
+    // Note: we keep a ref to vprogram in this lambda so that the shader modules don't get
+    // destroyed before we call createPipeline(). We can catch this in some cases, to avoid
+    // compiling too many unnecessary already-destroyed-materials.
+    mCompilerThreadPool.queue(priority, token, [this, vprogram, key, dynamicOptions, cmh]() mutable {
+        if (vprogram->isParallelCompilationCanceled()) {
+            FVK_LOGD << "Skipping prewarm for a program that has been destroyed already.";
+            return;
+        }
+
+        VkPipeline pipeline = createPipeline(key, dynamicOptions);
+        mCallbackManager.put(cmh);
+        // We don't actually need this pipeline, we just wanted to force the driver to cache
+        // the pipeline's information.
+        if (pipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(mDevice, pipeline, VKALLOC);
+        } else {
+            FVK_LOGW << "Failed to create a pipeline during prewarming, draw-time pipeline "
+                        "creation may fail.";
+        }
+    });
+}
+
+VkPipeline VulkanPipelineCache::createPipeline(
+        const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions) noexcept {
+    assert_invariant(key.shaders[0] && "Vertex shader is not bound.");
+    assert_invariant(key.layout && "No pipeline layout specified");
 
     VkPipelineShaderStageCreateInfo shaderStages[SHADER_MODULE_COUNT];
     shaderStages[0] = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = mPipelineRequirements.shaders[0],
+        .module = key.shaders[0],
         .pName = "main",
     };
     shaderStages[1] = shaderStages[0];
     shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shaderStages[1].module = mPipelineRequirements.shaders[1];
+    shaderStages[1].module = key.shaders[1];
 
     bool const hasFragmentShader = shaderStages[1].module != VK_NULL_HANDLE;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
     VkPipelineColorBlendStateCreateInfo colorBlendState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .attachmentCount = mPipelineRequirements.rasterState.colorTargetCount,
+        .attachmentCount = key.rasterState.colorTargetCount,
         .pAttachments = colorBlendAttachments,
     };
 
-    // Expand our size-optimized structs into the proper Vk structs.
-    uint32_t numVertexAttribs = 0;
-    uint32_t numVertexBuffers = 0;
-
+    VkPipelineVertexInputStateCreateInfo vertexInputState;
     VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT];
     VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];
-    for (uint32_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
-        if (mPipelineRequirements.vertexAttributes[i].format > 0) {
-            vertexAttributes[numVertexAttribs++] = mPipelineRequirements.vertexAttributes[i];
+    if (!dynamicOptions.useDynamicVertexInputState) {
+        uint32_t numVertexAttribs = 0;
+        uint32_t numVertexBuffers = 0;
+
+        for (uint32_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
+            if (key.vertexAttributes[i].format > 0) {
+                vertexAttributes[numVertexAttribs++] = key.vertexAttributes[i];
+            }
+            if (key.vertexBuffers[i].stride > 0) {
+                vertexBuffers[numVertexBuffers++] = key.vertexBuffers[i];
+            }
         }
-        if (mPipelineRequirements.vertexBuffers[i].stride > 0) {
-            vertexBuffers[numVertexBuffers++] = mPipelineRequirements.vertexBuffers[i];
-        }
+        vertexInputState = {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+            .vertexBindingDescriptionCount = numVertexBuffers,
+            .pVertexBindingDescriptions = vertexBuffers,
+            .vertexAttributeDescriptionCount = numVertexAttribs,
+            .pVertexAttributeDescriptions = vertexAttributes,
+        };
     }
-    VkPipelineVertexInputStateCreateInfo vertexInputState = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = numVertexBuffers,
-        .pVertexBindingDescriptions = vertexBuffers,
-        .vertexAttributeDescriptionCount = numVertexAttribs,
-        .pVertexAttributeDescriptions = vertexAttributes,
-    };
+
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = (VkPrimitiveTopology) mPipelineRequirements.topology,
+        .topology = (VkPrimitiveTopology) key.topology,
     };
     VkPipelineViewportStateCreateInfo viewportState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         .viewportCount = 1,
         .scissorCount = 1,
     };
-    VkDynamicState dynamicStateEnables[] = {
+
+    constexpr size_t maxDynamicStates = 3;
+    size_t numDynamicStates = 2;
+    VkDynamicState enabledDynamicStates[maxDynamicStates] = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR,
     };
+    if (dynamicOptions.useDynamicVertexInputState) {
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_VERTEX_INPUT_EXT;
+    }
     VkPipelineDynamicStateCreateInfo dynamicState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = 2,
-        .pDynamicStates = dynamicStateEnables,
+        .dynamicStateCount = static_cast<uint32_t>(numDynamicStates),
+        .pDynamicStates = enabledDynamicStates,
     };
-    auto const& raster = mPipelineRequirements.rasterState;
+
+    auto const& raster = key.rasterState;
     VkPipelineRasterizationStateCreateInfo vkRaster = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         .depthClampEnable = raster.depthClamp,
@@ -158,9 +294,12 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .alphaToCoverageEnable = raster.alphaToCoverageEnable,
         .alphaToOneEnable = VK_FALSE,
     };
+    bool const enableDepthTest =
+        raster.depthCompareOp != SamplerCompareFunc::A ||
+        raster.depthWriteEnable;
     VkPipelineDepthStencilStateCreateInfo vkDs = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable = VK_TRUE,
+        .depthTestEnable = enableDepthTest ? VK_TRUE : VK_FALSE,
         .depthWriteEnable = raster.depthWriteEnable,
         .depthCompareOp = fvkutils::getCompareOp(raster.depthCompareOp),
         .depthBoundsTestEnable = VK_FALSE,
@@ -182,7 +321,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .stageCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1,
         .pStages = shaderStages,
-        .pVertexInputState = &vertexInputState,
+        .pVertexInputState = dynamicOptions.useDynamicVertexInputState ? nullptr : &vertexInputState,
         .pInputAssemblyState = &inputAssemblyState,
         .pViewportState = &viewportState,
         .pRasterizationState = &vkRaster,
@@ -190,9 +329,9 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         .pDepthStencilState = &vkDs,
         .pColorBlendState = &colorBlendState,
         .pDynamicState = &dynamicState,
-        .layout = mPipelineRequirements.layout,
-        .renderPass = mPipelineRequirements.renderPass,
-        .subpass = mPipelineRequirements.subpassIndex,
+        .layout = key.layout,
+        .renderPass = key.renderPass,
+        .subpass = key.subpassIndex,
     };
 
     // There are no color attachments if there is no bound fragment shader.  (e.g. shadow map gen)
@@ -216,21 +355,65 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         }
     }
 
-    #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-        FVK_LOGD << "vkCreateGraphicsPipelines with shaders = ("
-                 << shaderStages[0].module << ", " << shaderStages[1].module << ")";
-    #endif
-    PipelineCacheEntry cacheEntry = {
-        .lastUsed = mCurrentTime,
+    VkPipelineRenderingCreateInfoKHR renderingInfo {};
+    VkFormat pipelineRenderingColorFormats[] = {VK_FORMAT_UNDEFINED};
+    if (dynamicOptions.useDynamicRenderPasses) {
+        renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+        renderingInfo.pNext = pipelineCreateInfo.pNext;
+        // Fill values in with empty values where we do not already have values.
+        renderingInfo.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+        renderingInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+        // If multiview, create a bitmask with bits representing each enabled view set to 1;
+        // otherwise, set the view mask to 0.
+        renderingInfo.viewMask = dynamicOptions.stereoscopicType == StereoscopicType::MULTIVIEW ?
+            (1 << dynamicOptions.stereoscopicViewCount) - 1 : 0;
+
+        if (hasFragmentShader) {
+            renderingInfo.colorAttachmentCount = 1;
+            renderingInfo.pColorAttachmentFormats = pipelineRenderingColorFormats;
+        }
+
+        pipelineCreateInfo.pNext = &renderingInfo;
+    }
+
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+    FVK_LOGD << "vkCreateGraphicsPipelines with shaders = (" << shaderStages[0].module << ", "
+             << shaderStages[1].module << ")";
+
+    VkPipelineCreationFeedback stageFeedbacks[SHADER_MODULE_COUNT] = {};
+    VkPipelineCreationFeedback pipelineFeedback = {};
+    VkPipelineCreationFeedbackCreateInfo feedbackInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_CREATION_FEEDBACK_CREATE_INFO_EXT,
+        .pNext = nullptr,
+        .pPipelineCreationFeedback = &pipelineFeedback,
+        .pipelineStageCreationFeedbackCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1,
+        .pPipelineStageCreationFeedbacks = stageFeedbacks,
     };
+
+    if (mContext.pipelineCreationFeedbackSupported()) {
+        feedbackInfo.pNext = pipelineCreateInfo.pNext;
+        pipelineCreateInfo.pNext = &feedbackInfo;
+    }
+#endif
+    VkPipeline pipeline;
     VkResult error = vkCreateGraphicsPipelines(mDevice, mPipelineCache, 1, &pipelineCreateInfo,
-            VKALLOC, &cacheEntry.handle);
+            VKALLOC, &pipeline);
+
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+    FVK_LOGD << "vkCreateGraphicsPipelines with shaders = (" << shaderStages[0].module << ", "
+             << shaderStages[1].module << ")";
+
+    if (mContext.pipelineCreationFeedbackSupported()) {
+        printPipelineFeedbackInfo(feedbackInfo);
+    }
+#endif
+
     assert_invariant(error == VK_SUCCESS);
     if (error != VK_SUCCESS) {
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
-        return nullptr;
+        return VK_NULL_HANDLE;
     }
-    return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
+    return pipeline;
 }
 
 void VulkanPipelineCache::bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept {
@@ -267,9 +450,17 @@ void VulkanPipelineCache::bindVertexArray(VkVertexInputAttributeDescription cons
             mPipelineRequirements.vertexAttributes[i] = attribDesc[i];
             mPipelineRequirements.vertexBuffers[i] = bufferDesc[i];
         } else {
-            mPipelineRequirements.vertexAttributes[i] = {};
-            mPipelineRequirements.vertexBuffers[i] = {};
+            mPipelineRequirements.vertexAttributes[i] = VertexInputAttributeDescription{};
+            mPipelineRequirements.vertexBuffers[i] = VertexInputBindingDescription{};
         }
+    }
+}
+
+void VulkanPipelineCache::addCachePrewarmCallback(CallbackHandler* handler,
+                                                  const CallbackHandler::Callback callback,
+                                                  void* user) {
+    if (callback) {
+        mCallbackManager.setCallback(handler, callback, user);
     }
 }
 
@@ -283,6 +474,9 @@ void VulkanPipelineCache::terminate() noexcept {
     }
     mPipelines.clear();
     resetBoundPipeline();
+
+    mCallbackManager.terminate();
+    mCompilerThreadPool.terminate();
 
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
 }

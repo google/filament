@@ -27,9 +27,7 @@ if (FIND_PACKAGE_TESTING)
         message(FATAL_ERROR "VulkanHeaders_VERSION not defined!")
     endif()
     message(STATUS "VulkanHeaders_VERSION = ${VulkanHeaders_VERSION}")
-endif()
-
-if (NOT FIND_PACKAGE_TESTING)
+else()
     # Consuming vulkan-headers via add_subdirectory should NOT add installation code to the parent CMake project.
     if (DEFINED CMAKE_INSTALL_INCLUDEDIR)
         message(FATAL_ERROR "CMAKE_INSTALL_INCLUDEDIR was defined!")

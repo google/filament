@@ -21,6 +21,11 @@
 
 #ifdef __ANDROID__
 #include <android/bitmap.h>
+#include <android/hardware_buffer_jni.h>
+#include <backend/platforms/PlatformEGLAndroid.h>
+#   if FILAMENT_SUPPORTS_VULKAN
+#       include <backend/platforms/VulkanPlatformAndroid.h>
+#   endif
 #endif
 
 #include <filament/Engine.h>
@@ -166,6 +171,13 @@ Java_com_google_android_filament_Texture_nBuilderSwizzle(JNIEnv *, jclass ,
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     builder->swizzle(
             (Texture::Swizzle)r, (Texture::Swizzle)g, (Texture::Swizzle)b, (Texture::Swizzle)a);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Texture_nBuilderSamples(JNIEnv*, jclass,
+        jlong nativeBuilder, jint samples) {
+    Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
+    builder->samples((uint8_t) samples);
 }
 
 extern "C"
@@ -388,6 +400,57 @@ Java_com_google_android_filament_Texture_nSetExternalImage(JNIEnv*, jclass, jlon
     texture->setExternalImage(*engine, (void*)eglImage);
 }
 
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Texture_nSetExternalImageByAHB(JNIEnv *env, jclass clazz,
+        jlong nativeTexture, jlong nativeEngine, jobject ahb) {
+    Texture *texture = (Texture *) nativeTexture;
+    Engine *engine = (Engine *) nativeEngine;
+
+#ifdef __ANDROID__
+    Platform* platform = engine->getPlatform();
+    AHardwareBuffer* nativeBuffer = nullptr;
+    if (__builtin_available(android 26, *)) {
+        nativeBuffer = AHardwareBuffer_fromHardwareBuffer(env, ahb);
+    }
+    if (!nativeBuffer) {
+        // either we're not on Android 26, or ahb wasn't a AHardwareBuffer
+        return JNI_FALSE;
+    }
+
+    if (engine->getBackend() == Backend::OPENGL) {
+        // CAVEAT: we assume that Backend::OPENGL on Android implies PlatformEGLAndroid.
+#if UTILS_HAS_RTTI
+        if (!dynamic_cast<PlatformEGLAndroid*>(platform)) {
+            return JNI_FALSE;
+        }
+#endif
+        auto* eglPlatform = (PlatformEGLAndroid*) platform;
+        auto ref = eglPlatform->createExternalImage(nativeBuffer, false);
+        texture->setExternalImage(*engine, ref);
+    }
+
+#if FILAMENT_SUPPORTS_VULKAN
+    else if (engine->getBackend() == Backend::VULKAN) {
+        // CAVEAT: we assume that Backend::VULKAN on Android implies VulkanPlatformAndroid.
+#if UTILS_HAS_RTTI
+        if (!dynamic_cast<VulkanPlatformAndroid*>(platform)) {
+            return JNI_FALSE;
+        }
+#endif
+        auto* vulkanPlatform = (VulkanPlatformAndroid*) platform;
+        auto ref = vulkanPlatform->createExternalImage(nativeBuffer, false);
+        texture->setExternalImage(*engine, ref);
+    }
+#endif // FILAMENT_SUPPORTS_VULKAN
+    // success!
+    return JNI_TRUE;
+#else
+    // other platforms could come here
+    return JNI_FALSE;
+#endif // __ANDROID__
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Texture_nSetExternalStream(JNIEnv*, jclass,
         jlong nativeTexture, jlong nativeEngine, jlong nativeStream) {
@@ -607,3 +670,4 @@ Java_com_google_android_filament_android_TextureHelper_nSetBitmapWithCallback(JN
 }
 
 #endif
+

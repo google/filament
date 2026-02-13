@@ -172,7 +172,7 @@ TEST_F(GlslWriterTest, AccessNested) {
     Vector members_a{
         ty.Get<core::type::StructMember>(b.ir.symbols.New("d"), ty.i32(), 0u, 0u, 4u, 4u,
                                          core::IOAttributes{}),
-        ty.Get<core::type::StructMember>(b.ir.symbols.New("e"), ty.array<f32, 3>(), 1u, 4u, 4u, 4u,
+        ty.Get<core::type::StructMember>(b.ir.symbols.New("e"), ty.array<f32, 3>(), 1u, 4u, 4u, 12u,
                                          core::IOAttributes{}),
     };
     auto* a_strct = ty.Struct(b.ir.symbols.New("A"), std::move(members_a));
@@ -182,7 +182,7 @@ TEST_F(GlslWriterTest, AccessNested) {
                                          core::IOAttributes{}),
         ty.Get<core::type::StructMember>(b.ir.symbols.New("b"), ty.f32(), 1u, 4u, 4u, 4u,
                                          core::IOAttributes{}),
-        ty.Get<core::type::StructMember>(b.ir.symbols.New("c"), a_strct, 2u, 8u, 8u, 8u,
+        ty.Get<core::type::StructMember>(b.ir.symbols.New("c"), a_strct, 2u, 8u, 8u, 16u,
                                          core::IOAttributes{}),
     };
     auto* s_strct = ty.Struct(b.ir.symbols.New("S"), std::move(members_s));
@@ -2354,9 +2354,10 @@ int g() {
 }
 void foo() {
   int arr[4] = int[4](0, 0, 0, 0);
-  uint v = min(uint((f() + 1)), 3u);
+  uint v = uint(f());
+  uint v_1 = min(uint(int((v + uint(1)))), 3u);
   int y = g();
-  int x = arr[v];
+  int x = arr[v_1];
 }
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {

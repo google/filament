@@ -18,6 +18,8 @@
 #define TNT_FILAMENT_DRIVER_METALBUFFER_H
 
 #include "MetalContext.h"
+#include "MetalFlags.h"
+#include "MetalUtils.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/platforms/PlatformMetal.h>
@@ -163,7 +165,7 @@ public:
          size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
-    [[nodiscard]] bool wasAllocationSuccessful() const noexcept { return mBuffer || mCpuBuffer; }
+    [[nodiscard]] bool wasAllocationSuccessful() const noexcept { return mBuffer; }
 
     MetalBuffer(const MetalBuffer& rhs) = delete;
     MetalBuffer& operator=(const MetalBuffer& rhs) = delete;
@@ -183,13 +185,20 @@ public:
      * Denotes that this buffer is used for a draw call ensuring that its allocation remains valid
      * until the end of the current frame.
      *
-     * @return The MTLBuffer representing the current state of the buffer to bind, or nil if there
-     * is no device allocation.
+     * @return The MTLBuffer representing the current state of the buffer to bind, it never returns
+     * nil.
      *
      */
     id<MTLBuffer> getGpuBufferForDraw() noexcept;
 
-    void* getCpuBuffer() const noexcept { return mCpuBuffer; }
+    void setLabel(const utils::ImmutableCString& label) {
+#if FILAMENT_METAL_DEBUG_LABELS
+        if (label.empty()) {
+            return;
+        }
+        mBuffer.get().label = @(label.c_str_safe());
+#endif
+    }
 
     enum Stage : uint8_t {
         VERTEX      = 1u << 0u,
@@ -224,7 +233,6 @@ private:
     UploadStrategy mUploadStrategy;
     TrackedMetalBuffer mBuffer;
     size_t mBufferSize = 0;
-    void* mCpuBuffer = nullptr;
     MetalContext& mContext;
 };
 
@@ -250,18 +258,8 @@ public:
     // In practice, MetalRingBuffer is used for argument buffers, which are kept in the constant
     // address space. Constant buffers have specific alignment requirements when specifying an
     // offset.
-#if defined(FILAMENT_IOS)
-#if TARGET_OS_SIMULATOR
-    // The iOS simulator has differing alignment requirements.
-    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 256;
-#else
-    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 4;
-#endif  // TARGET_OS_SIMULATOR
-#else
-    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 32;
-#endif
     static inline auto computeSlotSize(MTLSizeAndAlign layout) {
-         return align(align(layout.size, layout.align), METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT);
+         return align(align(layout.size, layout.align), getUniformBufferOffsetAlignment());
     }
 
     MetalRingBuffer(id<MTLDevice> device, MTLResourceOptions options, MTLSizeAndAlign layout,

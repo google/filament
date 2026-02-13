@@ -1,4 +1,4 @@
-name: Presubmit
+name: 'Presubmit CI'
 
 on:
   push:
@@ -19,14 +19,14 @@ jobs:
       - uses: ./.github/actions/mac-prereq
       - name: Run build script
         run: |
-          cd build/mac && printf "y" | ./build.sh presubmit
+          cd build/mac && printf "y" | ./build.sh presubmit-with-test
       - name: Test material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
 
   build-desktop-linux:
     name: build-linux
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -108,8 +108,7 @@ jobs:
         uses: ./.github/actions/get-commit-msg
       - name: Check for manual edits to /docs
         run: |
-          COMMIT_ID=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | sed "s/commit //g")
-          bash docs_src/build/presubmit_check.sh ${COMMIT_ID}
+          bash docs_src/build/presubmit_check.sh ${{ steps.get_commit_msg.outputs.hash }}
 
   test-renderdiff:
     name: test-renderdiff
@@ -118,37 +117,43 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/get-gltf-assets
+      - uses: ./.github/actions/get-mesa
+      - uses: ./.github/actions/get-vulkan-sdk
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - uses: ./.github/actions/mac-prereq
-      - name: Cache Mesa and deps
-        uses: actions/cache@v4
-        with:
-          path: mesa
-          key: ${{ runner.os }}-mesa-deps-2-${{ vars.MESA_VERSION }}
       - name: Prerequisites
         run: |
-          bash build/common/get-mesa.sh
-          pip install tifffile numpy
+          # Must have at least clang-16 for a webgpu/dawn build.
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+        shell: bash
       - name: Render and compare
         id: render_compare
+        env:
+          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
         run: |
           TEST_DIR=test/renderdiff
           source ${TEST_DIR}/src/preamble.sh
-          start_
-          GOLDEN_BRANCH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | python3 ${TEST_DIR}/src/commit_msg.py)
-          bash ${TEST_DIR}/generate.sh && \
-              python3 ${TEST_DIR}/src/golden_manager.py \
+          set -eux
+          GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 ${TEST_DIR}/src/commit_msg.py)
+          bash ${TEST_DIR}/generate.sh
+          # Build diffimg tool
+          ./build.sh release diffimg
+
+          python3 ${TEST_DIR}/src/golden_manager.py \
                   --branch=${GOLDEN_BRANCH} \
                   --output=${GOLDEN_OUTPUT_DIR}
 
-          # Note that we need to upload the output even if comparison fails, so we undo `set -ex`
-          end_
+          # Note that we need to upload the output even if comparison fails, so we undo `set -eux`
+          set +eux
 
           python3 ${TEST_DIR}/src/compare.py \
               --src=${GOLDEN_OUTPUT_DIR} \
               --dest=${RENDER_OUTPUT_DIR} \
-              --out=${DIFF_OUTPUT_DIR} 2>&1 | tee compare_output.txt
+              --out=${DIFF_OUTPUT_DIR} \
+              --diffimg="$(pwd)/out/cmake-release/tools/diffimg/diffimg" \
+              --test="${TEST_DIR}/tests/presubmit.json" 2>&1 | tee compare_output.txt
 
           if grep "Failed" compare_output.txt > /dev/null; then
              DELIMITER="EOF_FILE_CONTENT_$(date +%s)" # Using timestamp to make it more unique
@@ -156,6 +161,7 @@ jobs:
              cat compare_output.txt >> "$GITHUB_OUTPUT"
              echo "$DELIMITER" >> "$GITHUB_OUTPUT"
           fi
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result
@@ -170,14 +176,14 @@ jobs:
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
-    runs-on: 'ubuntu-24.04-8core'
+    runs-on: 'ubuntu-24.04-16core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
       - name: Run build script
-        run: ./build.sh -W debug test_filamat filament
+        run: ./build.sh -W debug test_filamat filament gltf_viewer
       - name: Run test
         run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
 
@@ -201,3 +207,23 @@ jobs:
           ./build.sh -p desktop debug gltf_viewer
       - name: Run test
         run: bash test/code-correctness/test.sh
+
+  test-backend:
+    name: test-backend
+    runs-on: macos-14-xlarge
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/get-mesa
+      - uses: ./.github/actions/get-vulkan-sdk
+      - name: Prerequisites
+        run: |
+          # Must have at least clang-16 for a webgpu/dawn build.
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+        shell: bash
+      - name: Run backend tests
+        shell: bash
+        run: |
+          bash test/backend/test.sh

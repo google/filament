@@ -47,7 +47,8 @@ struct DxilResourceProperties {
     uint8_t SamplerCmpOrHasCounter : 1;
 
     // BYTE 2
-    uint8_t Reserved2;
+    uint8_t IsReorderCoherent : 1;
+    uint8_t Reserved2 : 7;
 
     // BYTE 3
     uint8_t Reserved3;

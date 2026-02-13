@@ -41,8 +41,8 @@
 tint_add_target(tint_lang_spirv_ir lib
   lang/spirv/ir/builtin_call.cc
   lang/spirv/ir/builtin_call.h
-  lang/spirv/ir/image_from_texture.cc
-  lang/spirv/ir/image_from_texture.h
+  lang/spirv/ir/copy_logical.cc
+  lang/spirv/ir/copy_logical.h
   lang/spirv/ir/literal_operand.cc
   lang/spirv/ir/literal_operand.h
 )
@@ -56,7 +56,6 @@ tint_target_add_dependencies(tint_lang_spirv_ir lib
   tint_lang_core_type
   tint_lang_spirv
   tint_lang_spirv_intrinsic
-  tint_lang_spirv_type
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic

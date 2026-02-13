@@ -366,6 +366,13 @@ Java_com_google_android_filament_RenderableManager_nSetPriority(JNIEnv*, jclass,
     rm->setPriority((RenderableManager::Instance) i, (uint8_t) priority);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderableManager_nGetPriority(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jint) rm->getPriority((RenderableManager::Instance) i);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetChannel(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jint channel) {
@@ -373,11 +380,25 @@ Java_com_google_android_filament_RenderableManager_nSetChannel(JNIEnv*, jclass,
     rm->setChannel((RenderableManager::Instance) i, (uint8_t) channel);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderableManager_nGetChannel(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jint) rm->getChannel((RenderableManager::Instance) i);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetCulling(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jboolean enabled) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     rm->setCulling((RenderableManager::Instance) i, enabled);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_RenderableManager_nIsCullingEnabled(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jboolean) rm->isCullingEnabled((RenderableManager::Instance) i);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -429,6 +450,13 @@ Java_com_google_android_filament_RenderableManager_nIsShadowReceiver(JNIEnv*, jc
     return (jboolean) rm->isShadowReceiver((RenderableManager::Instance) i);
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_RenderableManager_nIsScreenSpaceContactShadowsEnabled(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jboolean) rm->isScreenSpaceContactShadowsEnabled((RenderableManager::Instance) i);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nGetAxisAlignedBoundingBox(JNIEnv* env,
         jclass, jlong nativeRenderableManager, jint i, jfloatArray center_,
@@ -448,6 +476,13 @@ Java_com_google_android_filament_RenderableManager_nGetPrimitiveCount(JNIEnv*, j
         jlong nativeRenderableManager, jint i) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     return (jint) rm->getPrimitiveCount((RenderableManager::Instance) i);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderableManager_nGetInstanceCount(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jint) rm->getInstanceCount((RenderableManager::Instance) i);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -493,12 +528,26 @@ Java_com_google_android_filament_RenderableManager_nSetBlendOrderAt(JNIEnv*, jcl
             (uint16_t) blendOrder);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderableManager_nGetBlendOrderAt(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint primitiveIndex) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jint) rm->getBlendOrderAt((RenderableManager::Instance) i, (size_t) primitiveIndex);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetGlobalBlendOrderEnabledAt(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jint primitiveIndex, jboolean enabled) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     rm->setGlobalBlendOrderEnabledAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
             (bool) enabled);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_RenderableManager_nIsGlobalBlendOrderEnabledAt(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint primitiveIndex) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jboolean) rm->isGlobalBlendOrderEnabledAt((RenderableManager::Instance) i, (size_t) primitiveIndex);
 }
 
 extern "C" JNIEXPORT jint JNICALL

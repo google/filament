@@ -101,6 +101,16 @@ static constexpr uint64_t SWAP_CHAIN_HAS_STENCIL_BUFFER         = SWAP_CHAIN_CON
  */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
 
+/**
+ * Indicates that the SwapChain is configured to use Multi-Sample Anti-Aliasing (MSAA) with the
+ * given sample points within each pixel. Only supported when isMSAASwapChainSupported(4) is
+ * true.
+ *
+ * This is only supported by EGL(Android). Other GL platforms (GLX, WGL, etc) don't support it
+ * because the swapchain MSAA settings must be configured before window creation.
+ */
+static constexpr uint64_t SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES      = 0x80;
+
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
 static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
@@ -187,6 +197,7 @@ constexpr std::string_view to_string(Backend const backend) noexcept {
  * - The Metal backend can prefer precompiled Metal libraries, while falling back to MSL.
  */
 enum class ShaderLanguage {
+    UNSPECIFIED = -1,
     ESSL1 = 0,
     ESSL3 = 1,
     SPIRV = 2,
@@ -209,6 +220,8 @@ constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) noex
             return "Metal precompiled library";
         case ShaderLanguage::WGSL:
             return "WGSL";
+        case ShaderLanguage::UNSPECIFIED:
+            return "Unspecified";
     }
     return "UNKNOWN";
 }
@@ -486,7 +499,7 @@ using descriptor_set_t = uint8_t;
 
 using descriptor_binding_t = uint8_t;
 
-struct DescriptorSetLayoutBinding {
+struct DescriptorSetLayoutDescriptor {
     static bool isSampler(DescriptorType type) noexcept {
         return int(type) <= int(DescriptorType::SAMPLER_EXTERNAL);
     }
@@ -500,8 +513,8 @@ struct DescriptorSetLayoutBinding {
     DescriptorFlags flags = DescriptorFlags::NONE;
     uint16_t count = 0;
 
-    friend bool operator==(DescriptorSetLayoutBinding const& lhs,
-            DescriptorSetLayoutBinding const& rhs) noexcept {
+    friend bool operator==(DescriptorSetLayoutDescriptor const& lhs,
+            DescriptorSetLayoutDescriptor const& rhs) noexcept {
         return lhs.type == rhs.type &&
                lhs.flags == rhs.flags &&
                lhs.count == rhs.count &&
@@ -546,12 +559,21 @@ constexpr TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
 }
 
 /**
- * Frequency at which a buffer is expected to be modified and used. This is used as an hint
- * for the driver to make better decisions about managing memory internally.
+ * How the buffer will be used.
  */
 enum class BufferUsage : uint8_t {
-    STATIC,      //!< content modified once, used many times
-    DYNAMIC,     //!< content modified frequently, used many times
+    STATIC              = 0,    //!< (legacy) content modified once, used many times
+    DYNAMIC             = 1,    //!< (legacy) content modified frequently, used many times
+    DYNAMIC_BIT         = 0x1,  //!< buffer can be modified frequently, used many times
+    SHARED_WRITE_BIT    = 0x04, //!< buffer can be memory mapped for write operations
+};
+
+/**
+ * How the buffer will be mapped.
+ */
+enum class MapBufferAccessFlags : uint8_t {
+    WRITE_BIT               = 0x2,  //!< buffer is mapped from writing
+    INVALIDATE_RANGE_BIT    = 0x4,  //!< the mapped range content is lost
 };
 
 /**
@@ -617,6 +639,15 @@ enum class ShaderModel : uint8_t {
 };
 static constexpr size_t SHADER_MODEL_COUNT = 2;
 
+constexpr std::string_view to_string(ShaderModel model) noexcept {
+    switch (model) {
+        case ShaderModel::MOBILE:
+            return "mobile";
+        case ShaderModel::DESKTOP:
+            return "desktop";
+    }
+}
+
 /**
  * Primitive types
  */
@@ -628,6 +659,18 @@ enum class PrimitiveType : uint8_t {
     TRIANGLES      = 4,    //!< triangles
     TRIANGLE_STRIP = 5     //!< triangle strip
 };
+
+[[nodiscard]] constexpr bool isStripPrimitiveType(const PrimitiveType type) {
+    switch (type) {
+        case PrimitiveType::POINTS:
+        case PrimitiveType::LINES:
+        case PrimitiveType::TRIANGLES:
+            return false;
+        case PrimitiveType::LINE_STRIP:
+        case PrimitiveType::TRIANGLE_STRIP:
+            return true;
+    }
+}
 
 /**
  * Supported uniform types
@@ -670,11 +713,29 @@ enum class Precision : uint8_t {
     DEFAULT
 };
 
+union ConstantValue {
+    int32_t i;
+    float f;
+    bool b;
+};
+
 /**
  * Shader compiler priority queue
+ *
+ * On platforms which support parallel shader compilation, compilation requests will be processed in
+ * order of priority, then insertion order. See Material::compile().
  */
 enum class CompilerPriorityQueue : uint8_t {
+    /** We need this program NOW.
+     *
+     * When passed as an argument to Material::compile(), if the platform doesn't support parallel
+     * compilation, but does support amortized shader compilation, the given shader program will be
+     * synchronously compiled.
+     */
+    CRITICAL,
+    /** We will need this program soon. */
     HIGH,
+    /** We will need this program eventually. */
     LOW
 };
 
@@ -948,98 +1009,99 @@ enum class CompressedPixelDataType : uint16_t {
  *
  * @see Texture
  */
+// The [index] comments indicate the corresponding uint16_t values.
 enum class TextureFormat : uint16_t {
     // 8-bits per element
-    R8, R8_SNORM, R8UI, R8I, STENCIL8,
+    R8, R8_SNORM, R8UI, R8I, STENCIL8, // [0 - 4]
 
     // 16-bits per element
-    R16F, R16UI, R16I,
-    RG8, RG8_SNORM, RG8UI, RG8I,
-    RGB565,
-    RGB9_E5, // 9995 is actually 32 bpp but it's here for historical reasons.
-    RGB5_A1,
-    RGBA4,
-    DEPTH16,
+    R16F, R16UI, R16I, // [5 - 7]
+    RG8, RG8_SNORM, RG8UI, RG8I, // [8 - 11]
+    RGB565, // [12]
+    RGB9_E5, // 9995 is actually 32 bpp but it's here for historical reasons. [13]
+    RGB5_A1, // [14]
+    RGBA4, // [15]
+    DEPTH16, // [16]
 
     // 24-bits per element
-    RGB8, SRGB8, RGB8_SNORM, RGB8UI, RGB8I,
-    DEPTH24,
+    RGB8, SRGB8, RGB8_SNORM, RGB8UI, RGB8I, // [17 - 21]
+    DEPTH24, // [22]
 
     // 32-bits per element
-    R32F, R32UI, R32I,
-    RG16F, RG16UI, RG16I,
-    R11F_G11F_B10F,
-    RGBA8, SRGB8_A8,RGBA8_SNORM,
-    UNUSED, // used to be rgbm
-    RGB10_A2, RGBA8UI, RGBA8I,
-    DEPTH32F, DEPTH24_STENCIL8, DEPTH32F_STENCIL8,
+    R32F, R32UI, R32I, // [23 - 25]
+    RG16F, RG16UI, RG16I, // [26 - 28]
+    R11F_G11F_B10F, // [29]
+    RGBA8, SRGB8_A8,RGBA8_SNORM, // [30 - 32]
+    UNUSED, // used to be rgbm [33]
+    RGB10_A2, RGBA8UI, RGBA8I, // [34 - 36]
+    DEPTH32F, DEPTH24_STENCIL8, DEPTH32F_STENCIL8, // [37 - 39]
 
     // 48-bits per element
-    RGB16F, RGB16UI, RGB16I,
+    RGB16F, RGB16UI, RGB16I, // [40 - 42]
 
     // 64-bits per element
-    RG32F, RG32UI, RG32I,
-    RGBA16F, RGBA16UI, RGBA16I,
+    RG32F, RG32UI, RG32I, // [43 - 45]
+    RGBA16F, RGBA16UI, RGBA16I, // [46 - 48]
 
     // 96-bits per element
-    RGB32F, RGB32UI, RGB32I,
+    RGB32F, RGB32UI, RGB32I, // [49 - 51]
 
     // 128-bits per element
-    RGBA32F, RGBA32UI, RGBA32I,
+    RGBA32F, RGBA32UI, RGBA32I, // [52 - 54]
 
     // compressed formats
 
     // Mandatory in GLES 3.0 and GL 4.3
-    EAC_R11, EAC_R11_SIGNED, EAC_RG11, EAC_RG11_SIGNED,
-    ETC2_RGB8, ETC2_SRGB8,
-    ETC2_RGB8_A1, ETC2_SRGB8_A1,
-    ETC2_EAC_RGBA8, ETC2_EAC_SRGBA8,
+    EAC_R11, EAC_R11_SIGNED, EAC_RG11, EAC_RG11_SIGNED, // [55 - 58]
+    ETC2_RGB8, ETC2_SRGB8, // [59 - 60]
+    ETC2_RGB8_A1, ETC2_SRGB8_A1, // [61 - 62]
+    ETC2_EAC_RGBA8, ETC2_EAC_SRGBA8, // [63 - 64]
 
     // Available everywhere except Android/iOS
-    DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA,
-    DXT1_SRGB, DXT1_SRGBA, DXT3_SRGBA, DXT5_SRGBA,
+    DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA, // [65 - 68]
+    DXT1_SRGB, DXT1_SRGBA, DXT3_SRGBA, DXT5_SRGBA, // [69 - 72]
 
     // ASTC formats are available with a GLES extension
-    RGBA_ASTC_4x4,
-    RGBA_ASTC_5x4,
-    RGBA_ASTC_5x5,
-    RGBA_ASTC_6x5,
-    RGBA_ASTC_6x6,
-    RGBA_ASTC_8x5,
-    RGBA_ASTC_8x6,
-    RGBA_ASTC_8x8,
-    RGBA_ASTC_10x5,
-    RGBA_ASTC_10x6,
-    RGBA_ASTC_10x8,
-    RGBA_ASTC_10x10,
-    RGBA_ASTC_12x10,
-    RGBA_ASTC_12x12,
-    SRGB8_ALPHA8_ASTC_4x4,
-    SRGB8_ALPHA8_ASTC_5x4,
-    SRGB8_ALPHA8_ASTC_5x5,
-    SRGB8_ALPHA8_ASTC_6x5,
-    SRGB8_ALPHA8_ASTC_6x6,
-    SRGB8_ALPHA8_ASTC_8x5,
-    SRGB8_ALPHA8_ASTC_8x6,
-    SRGB8_ALPHA8_ASTC_8x8,
-    SRGB8_ALPHA8_ASTC_10x5,
-    SRGB8_ALPHA8_ASTC_10x6,
-    SRGB8_ALPHA8_ASTC_10x8,
-    SRGB8_ALPHA8_ASTC_10x10,
-    SRGB8_ALPHA8_ASTC_12x10,
-    SRGB8_ALPHA8_ASTC_12x12,
+    RGBA_ASTC_4x4, // [73]
+    RGBA_ASTC_5x4, // [74]
+    RGBA_ASTC_5x5, // [75]
+    RGBA_ASTC_6x5, // [76]
+    RGBA_ASTC_6x6, // [77]
+    RGBA_ASTC_8x5, // [78]
+    RGBA_ASTC_8x6, // [79]
+    RGBA_ASTC_8x8, // [80]
+    RGBA_ASTC_10x5, // [81]
+    RGBA_ASTC_10x6, // [82]
+    RGBA_ASTC_10x8, // [83]
+    RGBA_ASTC_10x10, // [84]
+    RGBA_ASTC_12x10, // [85]
+    RGBA_ASTC_12x12, // [86]
+    SRGB8_ALPHA8_ASTC_4x4, // [87]
+    SRGB8_ALPHA8_ASTC_5x4, // [88]
+    SRGB8_ALPHA8_ASTC_5x5, // [89]
+    SRGB8_ALPHA8_ASTC_6x5, // [90]
+    SRGB8_ALPHA8_ASTC_6x6, // [91]
+    SRGB8_ALPHA8_ASTC_8x5, // [92]
+    SRGB8_ALPHA8_ASTC_8x6, // [93]
+    SRGB8_ALPHA8_ASTC_8x8, // [94]
+    SRGB8_ALPHA8_ASTC_10x5, // [95]
+    SRGB8_ALPHA8_ASTC_10x6, // [96]
+    SRGB8_ALPHA8_ASTC_10x8, // [97]
+    SRGB8_ALPHA8_ASTC_10x10, // [98]
+    SRGB8_ALPHA8_ASTC_12x10, // [99]
+    SRGB8_ALPHA8_ASTC_12x12, // [100]
 
     // RGTC formats available with a GLES extension
-    RED_RGTC1,              // BC4 unsigned
-    SIGNED_RED_RGTC1,       // BC4 signed
-    RED_GREEN_RGTC2,        // BC5 unsigned
-    SIGNED_RED_GREEN_RGTC2, // BC5 signed
+    RED_RGTC1,              // BC4 unsigned [101]
+    SIGNED_RED_RGTC1,       // BC4 signed [102]
+    RED_GREEN_RGTC2,        // BC5 unsigned [103]
+    SIGNED_RED_GREEN_RGTC2, // BC5 signed [104]
 
     // BPTC formats available with a GLES extension
-    RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
-    RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
-    RGBA_BPTC_UNORM,        // BC7
-    SRGB_ALPHA_BPTC_UNORM,  // BC7 sRGB
+    RGB_BPTC_SIGNED_FLOAT,  // BC6H signed [105]
+    RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned [106]
+    RGBA_BPTC_UNORM,        // BC7 [107]
+    SRGB_ALPHA_BPTC_UNORM,  // BC7 sRGB [108]
 };
 
 TextureType getTextureType(TextureFormat format) noexcept;
@@ -1056,6 +1118,7 @@ enum class TextureUsage : uint16_t {
     BLIT_SRC            = 0x0040,            //!< Texture can be used the source of a blit()
     BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
     PROTECTED           = 0x0100,            //!< Texture can be used for protected content
+    GEN_MIPMAPPABLE     = 0x0200,            //!< Texture can be used with generateMipmaps()
     DEFAULT             = UPLOADABLE | SAMPLEABLE,   //!< Default texture usage
     ALL_ATTACHMENTS     = COLOR_ATTACHMENT | DEPTH_ATTACHMENT | STENCIL_ATTACHMENT | SUBPASS_INPUT,   //!< Mask of all attachments
 };
@@ -1323,7 +1386,7 @@ static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
 
 struct DescriptorSetLayout {
     std::variant<utils::StaticString, utils::CString, std::monostate> label;
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
+    utils::FixedCapacityVector<DescriptorSetLayoutDescriptor> descriptors;
 };
 
 //! blending equation function
@@ -1619,7 +1682,7 @@ static_assert(sizeof(StencilState::StencilOperations) == 5u,
 static_assert(sizeof(StencilState) == 12u,
         "StencilState size not what was intended");
 
-using FrameScheduledCallback = utils::Invocable<void(backend::PresentCallable)>;
+using FrameScheduledCallback = utils::Invocable<void(PresentCallable)>;
 
 enum class Workaround : uint16_t {
     // The EASU pass must split because shader compiler flattens early-exit branch
@@ -1641,9 +1704,23 @@ enum class Workaround : uint16_t {
     // prevents these stutters by not precaching depth variants of the default material for those
     // particular browsers.
     DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL,
+    // Emulate an sRGB swapchain in shader code.
+    EMULATE_SRGB_SWAPCHAIN,
 };
 
-using StereoscopicType = backend::Platform::StereoscopicType;
+using StereoscopicType = Platform::StereoscopicType;
+
+using FrameTimestamps = Platform::FrameTimestamps;
+
+using CompositorTiming = Platform::CompositorTiming;
+
+using AsynchronousMode = Platform::AsynchronousMode;
+
+using AsyncCallId = uint32_t;
+
+static constexpr AsyncCallId InvalidAsyncCallId = std::numeric_limits<AsyncCallId>::max();
+
+using AsynchronousMode = Platform::AsynchronousMode;
 
 } // namespace filament::backend
 
@@ -1657,6 +1734,11 @@ template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::StencilFace>
         : public std::true_type {};
+template<> struct utils::EnableBitMaskOperators<filament::backend::BufferUsage>
+        : public std::true_type {};
+template<> struct utils::EnableBitMaskOperators<filament::backend::MapBufferAccessFlags>
+        : public std::true_type {};
+
 template<> struct utils::EnableIntegerOperators<filament::backend::TextureCubemapFace>
         : public std::true_type {};
 template<> struct utils::EnableIntegerOperators<filament::backend::FeatureLevel>

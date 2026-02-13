@@ -29,13 +29,12 @@
 #include <bluevk/BlueVK.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <memory>
 
 using namespace bluevk;
 
 namespace filament::backend {
 
-struct VulkanHeadlessSwapChain;
-struct VulkanSurfaceSwapChain;
 class VulkanCommands;
 
 // A wrapper around the platform implementation of swapchain.
@@ -47,7 +46,7 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
 
     ~VulkanSwapChain();
 
-    void present();
+    void present(DriverBase& driver);
 
     // Acquire a new image from the swapchain. If the image is not available it would wait until it
     // is.
@@ -79,6 +78,18 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
     inline bool isProtected() noexcept {
         return mPlatform->isProtected(swapChain);
     }
+
+    inline void setFrameScheduledCallback(CallbackHandler* handler,
+            FrameScheduledCallback&& callback) noexcept {
+        if (!callback) {
+            mFrameScheduled.handler = nullptr;
+            mFrameScheduled.callback.reset();
+            return;
+        }
+        mFrameScheduled.handler = handler;
+        mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+    }
+
 private:
 	static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
 
@@ -94,9 +105,16 @@ private:
     bool const mFlushAndWaitOnResize;
     bool const mTransitionSwapChainImageLayoutForPresent;
 
+    // These fields store a callback to notify the client that Filament is commiting a frame.
+    struct {
+        CallbackHandler* handler = nullptr;
+        std::shared_ptr<FrameScheduledCallback> callback;
+    } mFrameScheduled;
+
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
     // transitions, which are useful here.
     utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanTexture>> mColors;
+    utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanSemaphore>> mFinishedDrawing;
     fvkmemory::resource_ptr<VulkanTexture> mDepth;
     VkExtent2D mExtent;
     uint32_t mLayerCount;

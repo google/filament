@@ -152,7 +152,6 @@ cc_library(
 
 cc_library(
     name = "log_entry",
-    srcs = ["log_entry.cc"],
     hdrs = ["log_entry.h"],
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
@@ -492,6 +491,7 @@ cc_test(
         ":check",
         ":log",
         ":scoped_mock_log",
+        "//absl/base:config",
         "//absl/log/internal:test_matchers",
         "//absl/strings",
         "//absl/strings:str_format",

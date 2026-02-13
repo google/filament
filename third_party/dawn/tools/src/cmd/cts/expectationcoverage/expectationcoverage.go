@@ -118,9 +118,9 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	startTime := time.Now()
 	var expectationPath string
 	if c.flags.checkCompatExpectations {
-		expectationPath = common.DefaultCompatExpectationsPath()
+		expectationPath = common.DefaultCompatExpectationsPath(cfg.OsWrapper)
 	} else {
-		expectationPath = common.DefaultExpectationsPath()
+		expectationPath = common.DefaultExpectationsPath(cfg.OsWrapper)
 	}
 	content, err := getTrimmedContent(expectationPath,
 		individualExpectations,

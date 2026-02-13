@@ -98,6 +98,21 @@ struct RuntimeArrayTypeMapInfo {
   }
 };
 
+// Provides DenseMapInfo for NodePayloadArrayType so we can create a DenseSet of
+// node payload array types.
+struct NodePayloadArrayTypeMapInfo {
+  static inline NodePayloadArrayType *getEmptyKey() { return nullptr; }
+  static inline NodePayloadArrayType *getTombstoneKey() { return nullptr; }
+  static unsigned getHashValue(const NodePayloadArrayType *Val) {
+    return llvm::hash_combine(Val->getElementType(), Val->getNodeDecl());
+  }
+  static bool isEqual(const NodePayloadArrayType *LHS,
+                      const NodePayloadArrayType *RHS) {
+    // Either both are null, or both should have the same underlying type.
+    return (LHS == RHS) || (LHS && RHS && *LHS == *RHS);
+  }
+};
+
 // Provides DenseMapInfo for ImageType so we can create a DenseSet of
 // image types.
 struct ImageTypeMapInfo {
@@ -270,6 +285,9 @@ public:
   const RuntimeArrayType *
   getRuntimeArrayType(const SpirvType *elemType,
                       llvm::Optional<uint32_t> arrayStride);
+  const NodePayloadArrayType *
+  getNodePayloadArrayType(const SpirvType *elemType,
+                          const ParmVarDecl *nodeDecl);
 
   const StructType *getStructType(
       llvm::ArrayRef<StructType::FieldInfo> fields, llvm::StringRef name,
@@ -317,6 +335,13 @@ public:
 
   const HybridPointerType *getPointerType(QualType pointee, spv::StorageClass);
 
+  const ForwardPointerType *getForwardPointerType(QualType pointee);
+
+  const SpirvPointerType *getForwardReference(QualType type);
+
+  void registerForwardReference(QualType type,
+                                const SpirvPointerType *pointerType);
+
   /// Generates (or reuses an existing) OpString for the given string literal.
   SpirvString *getSpirvString(llvm::StringRef str);
 
@@ -339,6 +364,7 @@ public:
   bool isDS() const { return curShaderModelKind == ShaderModelKind::Domain; }
   bool isCS() const { return curShaderModelKind == ShaderModelKind::Compute; }
   bool isLib() const { return curShaderModelKind == ShaderModelKind::Library; }
+  bool isNode() const { return curShaderModelKind == ShaderModelKind::Node; }
   bool isRay() const {
     return curShaderModelKind >= ShaderModelKind::RayGeneration &&
            curShaderModelKind <= ShaderModelKind::Callable;
@@ -430,6 +456,31 @@ public:
            instructionsWithLoweredType.end();
   }
 
+  void registerDispatchGridIndex(const RecordDecl *decl, unsigned index) {
+    auto iter = dispatchGridIndices.find(decl);
+    if (iter == dispatchGridIndices.end()) {
+      dispatchGridIndices[decl] = index;
+    }
+  }
+
+  llvm::Optional<unsigned> getDispatchGridIndex(const RecordDecl *decl) {
+    auto iter = dispatchGridIndices.find(decl);
+    if (iter != dispatchGridIndices.end()) {
+      return iter->second;
+    }
+    return llvm::None;
+  }
+
+  void registerNodeDeclPayloadType(const NodePayloadArrayType *type,
+                                   const ParmVarDecl *decl) {
+    nodeDecls[decl] = type;
+  }
+
+  const NodePayloadArrayType *getNodeDeclPayloadType(const ParmVarDecl *decl) {
+    auto iter = nodeDecls.find(decl);
+    return iter == nodeDecls.end() ? nullptr : iter->second;
+  }
+
 private:
   /// \brief The allocator used to create SPIR-V entity objects.
   ///
@@ -474,10 +525,14 @@ private:
   llvm::DenseSet<const ArrayType *, ArrayTypeMapInfo> arrayTypes;
   llvm::DenseSet<const RuntimeArrayType *, RuntimeArrayTypeMapInfo>
       runtimeArrayTypes;
+  llvm::DenseSet<const NodePayloadArrayType *, NodePayloadArrayTypeMapInfo>
+      nodePayloadArrayTypes;
   llvm::SmallVector<const StructType *, 8> structTypes;
   llvm::SmallVector<const HybridStructType *, 8> hybridStructTypes;
   llvm::DenseMap<const SpirvType *, SCToPtrTyMap> pointerTypes;
   llvm::SmallVector<const HybridPointerType *, 8> hybridPointerTypes;
+  llvm::MapVector<QualType, const ForwardPointerType *> forwardPointerTypes;
+  llvm::MapVector<QualType, const SpirvPointerType *> forwardReferences;
   llvm::DenseSet<FunctionType *, FunctionTypeMapInfo> functionTypes;
   llvm::DenseMap<unsigned, SpirvIntrinsicType *> spirvIntrinsicTypesById;
   llvm::SmallVector<const SpirvIntrinsicType *, 8> spirvIntrinsicTypes;
@@ -497,6 +552,9 @@ private:
   /// recursively.
   llvm::StringMap<RichDebugInfo> debugInfo;
   SpirvDebugInstruction *currentLexicalScope;
+
+  // Mapping from graphics node input record types to member decoration maps.
+  llvm::MapVector<const RecordDecl *, unsigned> dispatchGridIndices;
 
   // Mapping from SPIR-V type to debug type instruction.
   // The purpose is not to generate several DebugType* instructions for the same
@@ -529,6 +587,10 @@ private:
 
   // Set of instructions that already have lowered SPIR-V types.
   llvm::DenseSet<const SpirvInstruction *> instructionsWithLoweredType;
+
+  // Mapping from shader entry function parameter declaration to node payload
+  // array type.
+  llvm::MapVector<const ParmVarDecl *, const NodePayloadArrayType *> nodeDecls;
 };
 
 } // end namespace spirv

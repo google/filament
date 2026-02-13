@@ -44,6 +44,7 @@ Matrix::Matrix(const Vector* column_type, uint32_t columns)
                Flag::kConstructable,
                Flag::kCreationFixedFootprint,
                Flag::kFixedFootprint,
+               Flag::kHostShareable,
            }),
       subtype_(column_type->Type()),
       column_type_(column_type),

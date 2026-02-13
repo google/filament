@@ -17,14 +17,18 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H
 #define TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H
 
+#include "AndroidNdk.h"
+
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
+
+#include <utils/compiler.h>
 
 #include <android/hardware_buffer.h>
 
 namespace filament::backend {
 
-class VulkanPlatformAndroid : public VulkanPlatform {
+class VulkanPlatformAndroid : public VulkanPlatform, public AndroidNdk {
 public:
     ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
             bool sRGB) noexcept;
@@ -36,29 +40,69 @@ public:
         TextureUsage usage;  // Texture usage flags
     };
 
+    VulkanPlatformAndroid();
+
+    ~VulkanPlatformAndroid() noexcept override;
+
     ExternalImageDescAndroid UTILS_PUBLIC getExternalImageDesc(
             ExternalImageHandleRef externalImage) const noexcept;
 
-    virtual ExternalImageMetadata extractExternalImageMetadata(
+    ExternalImageMetadata extractExternalImageMetadata(
             ExternalImageHandleRef image) const override;
 
-    virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const override;
+    ImageData createVkImageFromExternal(ExternalImageHandleRef image) const override;
+
+    /**
+     * Converts a sync to an external file descriptor, if possible. Accepts an
+     * opaque handle to a sync, as well as a pointer to where the fd should be
+     * stored.
+     * @param sync The sync to be converted to a file descriptor.
+     * @param fd   A pointer to where the file descriptor should be stored.
+     * @return `true` on success, `false` on failure. The default implementation
+     *         returns `false`.
+     */
+    bool convertSyncToFd(Sync* sync, int* fd) const noexcept;
+
+    int getOSVersion() const noexcept override;
+
+    void terminate() override;
+
+    Driver* createDriver(void* sharedContext,
+        DriverConfig const& driverConfig) override;
+
+
+    bool isCompositorTimingSupported() const noexcept override;
+
+    bool queryCompositorTiming(SwapChain const* swapchain,
+            CompositorTiming* outCompositorTiming) const noexcept override;
+
+    bool setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept override;
+
+    bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+            FrameTimestamps* outFrameTimestamps) const noexcept override;
 
 protected:
-    virtual ExtensionSet getSwapchainInstanceExtensions() const override;
+    ExtensionSet getSwapchainInstanceExtensions() const override;
 
-    using SurfaceBundle = VulkanPlatform::SurfaceBundle;
-    virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
+    using SurfaceBundle = SurfaceBundle;
+    SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
             uint64_t flags) const noexcept override;
 
+    VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept override;
+
 private:
-    struct ExternalImageVulkanAndroid : public Platform::ExternalImage {
+    struct AndroidDetails;
+
+    struct ExternalImageVulkanAndroid : public ExternalImage {
         AHardwareBuffer* aHardwareBuffer = nullptr;
         bool sRGB = false;
 
     protected:
         ~ExternalImageVulkanAndroid() override;
     };
+
+    AndroidDetails& mAndroidDetails;
+    int mOSVersion{};
 };
 
 }// namespace filament::backend

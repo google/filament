@@ -1,7 +1,4 @@
-- [Ubershader Archive Files](#ubershader-archive-files)
-- [Ubershader Spec Files](#ubershader-spec-files)
-
-# Ubershader Archive Files
+# uberz
 
 An ubershader archive provides a way to bundle up a set of `filamat` files along with some metadata
 that conveys which glTF features each material can handle. It is a file that has been compressed

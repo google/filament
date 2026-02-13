@@ -18,6 +18,7 @@
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
@@ -208,6 +209,14 @@ Java_com_google_android_filament_Engine_nDestroySkinningBuffer(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nDestroyMorphTargetBuffer(JNIEnv*, jclass,
+                jlong nativeEngine, jlong nativeMorphTargetBuffer) {
+    Engine* engine = (Engine*) nativeEngine;
+    MorphTargetBuffer* mtb = (MorphTargetBuffer*) nativeMorphTargetBuffer;
+    return engine->destroy(mtb);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Engine_nDestroyIndirectLight(JNIEnv*, jclass,
         jlong nativeEngine, jlong nativeIndirectLight) {
     Engine* engine = (Engine*) nativeEngine;
@@ -326,6 +335,13 @@ Java_com_google_android_filament_Engine_nIsValidSkinningBuffer(JNIEnv*, jclass,
         jlong nativeEngine, jlong nativeSkinningBuffer) {
     Engine* engine = (Engine *)nativeEngine;
     return (jboolean)engine->isValid((SkinningBuffer*)nativeSkinningBuffer);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidMorphTargetBuffer(JNIEnv*, jclass,
+                jlong nativeEngine, jlong nativeMorphTargetBuffer) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean) engine->isValid((MorphTargetBuffer*) nativeMorphTargetBuffer);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -557,7 +573,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         jboolean disableHandleUseAfterFreeCheck,
         jint preferredShaderLanguage,
         jboolean forceGLES2Context, jboolean assertNativeWindowIsValid,
-        jint gpuContextPriority) {
+        jint gpuContextPriority,
+        jlong sharedUboInitialSizeInBytes) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -576,6 +593,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .forceGLES2Context = (bool) forceGLES2Context,
             .assertNativeWindowIsValid = (bool) assertNativeWindowIsValid,
             .gpuContextPriority = (Engine::GpuContextPriority) gpuContextPriority,
+            .sharedUboInitialSizeInBytes = (uint32_t) sharedUboInitialSizeInBytes,
     };
     builder->config(&config);
 }

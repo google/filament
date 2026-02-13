@@ -40,4 +40,7 @@ const char* const E_SPV_QCOM_image_processing = "SPV_QCOM_image_processing";
 //SPV_QCOM_image_processing2
 const char* const E_SPV_QCOM_image_processing2 = "SPV_QCOM_image_processing2";
 
+//SPV_QCOM_tile_shading
+const char* const E_SPV_QCOM_tile_shading = "SPV_QCOM_tile_shading";
+
 #endif  // #ifndef GLSLextQCOM_H

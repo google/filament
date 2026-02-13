@@ -22,7 +22,6 @@
 #include "private/backend/Driver.h"
 
 #include <backend/BufferDescriptor.h>
-#include <backend/BufferObjectStreamDescriptor.h>
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -61,7 +60,7 @@ class CommandBase {
 protected:
     using Execute = Dispatcher::Execute;
 
-    constexpr explicit CommandBase(Execute execute) noexcept : mExecute(execute) {}
+    constexpr explicit CommandBase(Execute const execute) noexcept : mExecute(execute) {}
 
 public:
     // alignment of all Commands in the CommandStream
@@ -70,7 +69,7 @@ public:
     }
 
     // executes this command and returns the next one
-    inline CommandBase* execute(Driver& driver) {
+    CommandBase* execute(Driver& driver) {
         // returning the next command by output parameter allows the compiler to perform the
         // tail-call optimization in the function called by mExecute, however that comes at
         // a cost here (writing and reading the stack at each iteration), in the end it's
@@ -80,7 +79,7 @@ public:
         return reinterpret_cast<CommandBase*>(reinterpret_cast<intptr_t>(this) + next);
     }
 
-    inline ~CommandBase() noexcept = default;
+    ~CommandBase() noexcept = default;
 
 private:
     Execute mExecute;
@@ -135,7 +134,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
 
     public:
         template<typename M, typename D>
-        static inline void execute(M&& method, D&& driver, CommandBase* base, intptr_t* next) {
+        static void execute(M&& method, D&& driver, CommandBase* base, intptr_t* next) {
             Command* self = static_cast<Command*>(base);
             *next = align(sizeof(Command));
 #if DEBUG_COMMAND_STREAM
@@ -147,15 +146,15 @@ struct CommandType<void (Driver::*)(ARGS...)> {
         }
 
         // A command can be moved
-        inline Command(Command&& rhs) noexcept = default;
+        Command(Command&& rhs) noexcept = default;
 
         template<typename... A>
-        inline explicit constexpr Command(Execute execute, A&& ... args)
+        explicit constexpr Command(Execute const execute, A&& ... args) noexcept
                 : CommandBase(execute), mArgs(std::forward<A>(args)...) {
         }
 
         // placement new declared as "throw" to avoid the compiler's null-check
-        inline void* operator new(std::size_t, void* ptr) {
+        void* operator new(std::size_t, void* ptr) noexcept {
             assert_invariant(ptr);
             return ptr;
         }
@@ -171,8 +170,9 @@ class CustomCommand : public CommandBase {
     std::function<void()> mCommand;
     static void execute(Driver&, CommandBase* base, intptr_t* next);
 public:
-    inline CustomCommand(CustomCommand&& rhs) = default;
-    inline explicit CustomCommand(std::function<void()> cmd)
+    CustomCommand(CustomCommand&& rhs) = default;
+
+    explicit CustomCommand(std::function<void()> cmd)
             : CommandBase(execute), mCommand(std::move(cmd)) { }
 };
 
@@ -184,7 +184,7 @@ class NoopCommand : public CommandBase {
         *next = static_cast<NoopCommand*>(self)->mNext;
     }
 public:
-    inline constexpr explicit NoopCommand(void* next) noexcept
+    constexpr explicit NoopCommand(void* next) noexcept
             : CommandBase(execute), mNext(intptr_t((char *)next - (char *)this)) { }
 };
 
@@ -197,15 +197,18 @@ public:
     #define DEBUG_COMMAND_END(methodName, sync) mDriver.debugCommandEnd(this, sync, #methodName)
 #else
     #define DEBUG_COMMAND_BEGIN(methodName, sync, ...)
-    #define DEBUG_COMMAND_END(methodName, sync)
+    // For the line "AutoExecute callOnExit([=, this](){",
+    // "this" will be unused for release build since DEBUG_COMMAND_END is a no-op. So we add the
+    // following workaround.
+    #define DEBUG_COMMAND_END(methodName, sync) ((void)(this));
 #endif
 
 class CommandStream {
     template<typename T>
     struct AutoExecute {
         T closure;
-        inline explicit AutoExecute(T&& closure) : closure(std::forward<T>(closure)) {}
-        inline ~AutoExecute() { closure(); }
+        explicit AutoExecute(T&& closure) : closure(std::forward<T>(closure)) {}
+        ~AutoExecute() { closure(); }
     };
 
 public:
@@ -218,7 +221,7 @@ public:
 
 public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
-    inline void methodName(paramsDecl) {                                                        \
+    inline void methodName(paramsDecl) noexcept {                                               \
         DEBUG_COMMAND_BEGIN(methodName, false, params);                                         \
         using Cmd = COMMAND_TYPE(methodName);                                                   \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
@@ -227,16 +230,16 @@ public:
     }
 
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)                    \
-    inline RetType methodName(paramsDecl) {                                                     \
+    inline RetType methodName(paramsDecl) noexcept {                                            \
         DEBUG_COMMAND_BEGIN(methodName, true, params);                                          \
-        AutoExecute callOnExit([=](){                                                           \
+        AutoExecute callOnExit([=, this](){                                                     \
             DEBUG_COMMAND_END(methodName, true);                                                \
         });                                                                                     \
         return apply(&Driver::methodName, mDriver, std::forward_as_tuple(params));              \
     }
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                         \
-    inline RetType methodName(paramsDecl) {                                                     \
+    inline RetType methodName(paramsDecl) noexcept {                                            \
         DEBUG_COMMAND_BEGIN(methodName, false, params);                                         \
         RetType result = mDriver.methodName##S();                                               \
         using Cmd = COMMAND_TYPE(methodName##R);                                                \
@@ -252,7 +255,7 @@ public:
     // This is for debugging only. Currently, CircularBuffer can only be written from a
     // single thread. In debug builds we assert this condition.
     // Call this first in the render loop.
-    inline void debugThreading() noexcept {
+    void debugThreading() noexcept {
 #ifndef NDEBUG
         mThreadId = utils::ThreadUtils::getThreadId();
 #endif
@@ -278,11 +281,11 @@ public:
      */
     template<typename PodType,
             typename = typename std::enable_if<std::is_trivially_destructible<PodType>::value>::type>
-    inline PodType* allocatePod(
+    PodType* allocatePod(
             size_t count = 1, size_t alignment = alignof(PodType)) noexcept;
 
 private:
-    inline void* allocateCommand(size_t size) {
+    void* allocateCommand(size_t const size) noexcept {
         assert_invariant(utils::ThreadUtils::isThisThread(mThreadId));
         return mCurrentBuffer.allocate(size);
     }

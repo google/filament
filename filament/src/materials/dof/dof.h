@@ -22,6 +22,6 @@
 
 namespace filament {
 
-utils::Slice<StaticMaterialInfo> getDofMaterialList() noexcept;
+utils::Slice<const StaticMaterialInfo> getDofMaterialList() noexcept;
 
 } // namespace filament

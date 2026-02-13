@@ -1937,7 +1937,8 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
       } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
           ConstantInt *CI = cast<ConstantInt>(II->getArgOperand(1));
-          uint64_t DontKnow = CI->isZero() ? -1ULL : 0;
+          uint64_t DontKnow =
+              CI->isZero() ? std::numeric_limits<uint64_t>::max() : 0;
           ReplaceInstUsesWith(*I, ConstantInt::get(I->getType(), DontKnow));
         }
       }
