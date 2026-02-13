@@ -2481,6 +2481,7 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& pipelineState,
     // Push state changes to the VulkanPipelineCache instance. This is fast and does not make VK calls.
     mPipelineCache.bindProgram(program);
     mPipelineCache.bindRasterState(vulkanRasterState);
+    mPipelineCache.bindStencilState(pipelineState.stencilState);
     mPipelineCache.bindPrimitiveTopology(topology);
     mPipelineCache.bindVertexArray(attribDesc, bufferDesc, vbi->getAttributeCount());
 
