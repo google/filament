@@ -840,19 +840,6 @@ void VulkanTexture::setLayout(VkImageSubresourceRange const& range, VulkanLayout
     }
 }
 
-void VulkanTexture::setYcbcrConversion(VkSamplerYcbcrConversion conversion) {
-    // Note that this comparison is valid because we only ever create VkSamplerYcbcrConversion from
-    // a cache.  So for each set of parameters, there is exactly one conversion (similar to
-    // samplers).
-    VulkanTextureState::Ycbcr ycbcr = {
-        .conversion = conversion,
-    };
-    if (mState->mYcbcr != ycbcr) {
-        mState->mYcbcr = ycbcr;
-        mState->clearCachedImageViews();
-    }
-}
-
 VulkanLayout VulkanTexture::getLayout(uint32_t layer, uint32_t level) const {
     assert_invariant(level <= 0xffff && layer <= 0xffff);
     const uint32_t key = (layer << 16) | level;
