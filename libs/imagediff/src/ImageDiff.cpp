@@ -25,6 +25,7 @@
 #include <vector>
 
 // JSMN inclusion
+#define JSMN_STATIC
 #include <jsmn.h>
 
 namespace imagediff {

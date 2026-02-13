@@ -22,7 +22,7 @@
 #include <fgviewer/JsonWriter.h>
 
 #include <utils/FixedCapacityVector.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
 
 #include <CivetServer.h>
@@ -43,7 +43,7 @@ auto const& kSuccessHeader = DebugServer::kSuccessHeader;
 auto const& kErrorHeader = DebugServer::kErrorHeader;
 
 auto const error = [](int line, std::string const& uri) {
-    utils::slog.e << "[fgviewer] DebugServer: 404 at line " << line << ": " << uri << utils::io::endl;
+    LOG(ERROR) << "[fgviewer] DebugServer: 404 at line " << line << ": " << uri;
     return false;
 };
 

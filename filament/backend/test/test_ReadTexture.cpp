@@ -41,6 +41,17 @@ void main() {
 }
 )");
 
+std::string fragmentCoord(R"(#version 450 core
+layout(location = 0) out vec4 fragColor;
+void main() {
+    // gl_FragCoord.xy is in pixels. (0.5, 0.5) is the center of the bottom-left pixel.
+    // We want to map this to a color to verify orientation.
+    // Red varies with X, Green varies with Y.
+    // We assume a 64x64 texture for this test.
+    vec2 coord = gl_FragCoord.xy / 64.0;
+    fragColor = vec4(coord.x, coord.y, 0.0, 1.0);
+}
+)");
 }
 
 namespace test {
@@ -51,8 +62,6 @@ public:
 };
 
 TEST_F(ReadTextureTest, ReadTexture2D) {
-    SKIP_IF_NOT(Backend::VULKAN, "Only implemented for Vulkan for now");
-
     DriverApi& api = getDriverApi();
     const size_t textureSize = 64;
 
@@ -146,8 +155,6 @@ TEST_F(ReadTextureTest, ReadTexture2D) {
 }
 
 TEST_F(ReadTextureTest, ReadTextureArray) {
-    SKIP_IF_NOT(Backend::VULKAN, "Only implemented for Vulkan for now");
-
     DriverApi& api = getDriverApi();
     const size_t textureSize = 64;
     const uint16_t layers = 2;
@@ -212,6 +219,110 @@ TEST_F(ReadTextureTest, ReadTextureArray) {
         flushAndWait();
         EXPECT_TRUE(finished);
     }
+}
+
+TEST_F(ReadTextureTest, ReadTextureXCoordinates) {
+    SKIP_IF(Backend::OPENGL, "readTexture not implemented for OpenGL");
+
+    DriverApi& api = getDriverApi();
+    const size_t textureSize = 64;
+
+    Handle<HwSwapChain> swapChain =
+            addCleanup(api.createSwapChainHeadless(textureSize, textureSize, 0));
+    api.makeCurrent(swapChain, swapChain);
+
+    auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE | TextureUsage::BLIT_SRC;
+    Handle<HwTexture> const texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, textureSize, textureSize, 1, usage));
+
+    Handle<HwRenderTarget> renderTarget = addCleanup(api.createRenderTarget(
+            TargetBufferFlags::COLOR, textureSize, textureSize, 1, 0, { { texture, 0 } }, {}, {}));
+
+    // Draw a full-screen quad (using a large triangle)
+    TrianglePrimitive triangle(api);
+    const math::float2 fsVertices[3] = { { -1.0f, -1.0f }, { 3.0f, -1.0f }, { -1.0f, 3.0f } };
+    triangle.updateVertices(fsVertices);
+
+    std::string vertexShader =
+            SharedShaders::getVertexShaderText(VertexShaderType::Noop, ShaderUniformType::None);
+    Shader shader(api, *mCleanup,
+            ShaderConfig{
+                .vertexShader = vertexShader,
+                .fragmentShader = fragmentCoord,
+                .uniforms = {},
+            });
+
+    RenderPassParams params = getClearColorRenderPass(math::float4(0));
+    params.viewport.width = textureSize;
+    params.viewport.height = textureSize;
+
+    api.beginFrame(0, 0, 0);
+    api.beginRenderPass(renderTarget, params);
+
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
+    state.primitiveType = PrimitiveType::TRIANGLES;
+    state.vertexBufferInfo = triangle.getVertexBufferInfo();
+    api.bindPipeline(state);
+    api.bindRenderPrimitive(triangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
+
+    api.endRenderPass();
+
+    // Read texture back
+    size_t bufferSize = textureSize * textureSize * 4;
+    void* buffer = calloc(1, bufferSize);
+
+    struct UserData {
+        bool finished = false;
+    } userData;
+
+    PixelBufferDescriptor descriptor(
+            buffer, bufferSize, PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, textureSize,
+            [](void* buffer, size_t size, void* user) {
+                UserData* data = (UserData*) user;
+                data->finished = true;
+
+                uint8_t* pixels = (uint8_t*) buffer;
+                const size_t width = 64;
+                const size_t height = 64;
+
+                // Check Bottom-Left (0, 0) -> Should be black (0, 0, 0)
+                // In buffer, this is at index 0
+                // Y=0, X=0
+                EXPECT_NEAR(pixels[0], 0, 5);
+                EXPECT_NEAR(pixels[1], 0, 5);
+
+                // Check Bottom-Right (1, 0) -> Should be Red (255, 0, 0)
+                // Y=0, X=63
+                size_t br_idx = (63) * 4;
+                EXPECT_NEAR(pixels[br_idx], 255, 5);
+                EXPECT_NEAR(pixels[br_idx + 1], 0, 5);
+
+                // Check Top-Left (0, 1) -> Should be Green (0, 255, 0)
+                // Y=63, X=0
+                size_t tl_idx = (63 * width) * 4;
+                EXPECT_NEAR(pixels[tl_idx], 0, 5);
+                EXPECT_NEAR(pixels[tl_idx + 1], 255, 5);
+
+                // Check Top-Right (1, 1) -> Should be Yellow (255, 255, 0)
+                // Y=63, X=63
+                size_t tr_idx = (63 * width + 63) * 4;
+                EXPECT_NEAR(pixels[tr_idx], 255, 5);
+                EXPECT_NEAR(pixels[tr_idx + 1], 255, 5);
+
+                free(buffer);
+            },
+            &userData);
+
+    api.readTexture(texture, 0, 0, 0, 0, textureSize, textureSize, std::move(descriptor));
+
+    api.commit(swapChain);
+    api.endFrame(0);
+
+    flushAndWait();
+
+    EXPECT_TRUE(userData.finished);
 }
 
 } // namespace test

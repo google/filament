@@ -57,6 +57,7 @@ set(SRCS
         src/materials/colorGrading/colorGrading.cpp
         src/materials/dof/dof.cpp
         src/materials/flare/flare.cpp
+        src/materials/fog/fog.cpp
         src/materials/fsr/fsr.cpp
         src/materials/sgsr/sgsr.cpp
         src/materials/ssao/ssao.cpp
@@ -283,6 +284,7 @@ set(MATERIAL_SRCS
         src/materials/dof/dofTiles.mat
         src/materials/dof/dofTilesSwizzle.mat
         src/materials/flare/flare.mat
+        src/materials/fog/fog.mat
         src/materials/fsr/fsr_easu.mat
         src/materials/fsr/fsr_easu_mobile.mat
         src/materials/fsr/fsr_easu_mobileF.mat
@@ -313,6 +315,7 @@ set(MATERIAL_FL0_SRCS
 )
 
 set(MATERIAL_MULTIVIEW_SRCS
+        src/materials/clearDepth.mat
         src/materials/defaultMaterial.mat
         src/materials/skybox.mat
 )
@@ -522,6 +525,14 @@ add_custom_command(
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dofCombine.filamat"
         DEPENDS src/materials/dof/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fog.filamat"
+        DEPENDS ../shaders/src/surface_fog.fs
+        DEPENDS src/materials/utils/depthUtils.fs
+        DEPENDS src/materials/utils/geometry.fs
         APPEND
 )
 

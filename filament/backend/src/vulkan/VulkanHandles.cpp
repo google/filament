@@ -207,7 +207,8 @@ VulkanDescriptorSet::~VulkanDescriptorSet() {
 
 VulkanDescriptorSet::VulkanDescriptorSet(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
         OnRecycle&& onRecycleFn, VkDescriptorSet vkSet)
-    : dynamicUboMask(layout->bitmask.dynamicUbo),
+    : boundLayout(layout->getVkLayout()),
+      dynamicUboMask(layout->bitmask.dynamicUbo),
       uniqueDynamicUboCount(layout->count.dynamicUbo),
       mLayout(layout),
       mCurrentSetIndex(0) {

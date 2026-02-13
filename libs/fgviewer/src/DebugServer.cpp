@@ -18,10 +18,11 @@
 #include <fgviewer/FrameGraphInfo.h>
 
 #include "ApiHandler.h"
+#include "WebSocketHandler.h"
 
 #include <CivetServer.h>
 
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Mutex.h>
 #include <utils/ostream.h>
 
@@ -97,7 +98,7 @@ public:
             return true;
         }
 #endif
-        slog.e << "[fgviewer] DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
+        LOG(ERROR) << "[fgviewer] DebugServer: bad request at line " <<  __LINE__ << ": " << uri;
         return false;
     }
 private:
@@ -137,17 +138,18 @@ DebugServer::DebugServer(int port) {
     if (!mServer->getContext()) {
         delete mServer;
         mServer = nullptr;
-        slog.e << "[fgviewer] Unable to start DebugServer, see civetweb.txt for details." << io::endl;
+        LOG(ERROR) << "[fgviewer] Unable to start DebugServer, see civetweb.txt for details.";
         return;
     }
 
     mFileHandler = new FileRequestHandler(this);
     mApiHandler = new ApiHandler(this);
+    mWebSocketHandler = new WebSocketHandler(this);
 
     mServer->addHandler("/api", mApiHandler);
     mServer->addHandler("", mFileHandler);
 
-    slog.i << "[fgviewer] DebugServer listening at http://localhost:" << port << io::endl;
+    LOG(INFO) << "[fgviewer] DebugServer listening at http://localhost:" << port;
 }
 
 DebugServer::~DebugServer() {
@@ -155,6 +157,7 @@ DebugServer::~DebugServer() {
 
     delete mFileHandler;
     delete mApiHandler;
+    delete mWebSocketHandler;
     delete mServer;
 }
 
@@ -176,7 +179,7 @@ void DebugServer::update(ViewHandle h, FrameGraphInfo info) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
     const auto it = mViews.find(h);
     if (it == mViews.end()) {
-        slog.w << "[fgviewer] Received update for unknown handle " << h;
+        LOG(WARNING) << "[fgviewer] Received update for unknown handle " << h;
         return;
     }
 

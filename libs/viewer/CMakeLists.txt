@@ -23,8 +23,6 @@ set(SRCS
         src/Settings.cpp
         src/Settings_generated.cpp
         src/Settings_generated.h
-        src/TIFFExport.cpp
-        src/TIFFExport.h
         src/ViewerGui.cpp
 )
 
@@ -32,7 +30,7 @@ set(SRCS
 # Include and target definitions
 # ==================================================================================================
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
-target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn civetweb)
+target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn civetweb imageio-lite)
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
@@ -59,7 +57,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/viewer DESTINATION include)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (FILAMENT_BUILD_TESTING AND NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_executable(test_settings tests/test_settings.cpp)
     target_link_libraries(test_settings PRIVATE ${TARGET} gtest)
     set_target_properties(test_settings PROPERTIES FOLDER Tests)
