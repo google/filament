@@ -26,6 +26,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/GenerationalArena.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Hash.h
         ${PUBLIC_HDR_DIR}/${TARGET}/InternPool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
@@ -178,6 +179,7 @@ set(TEST_SRCS
         test/test_Entity.cpp
         test/test_FixedCapacityVector.cpp
         test/test_FixedCircularBuffer.cpp
+        test/test_GenerationalArena.cpp
         test/test_Hash.cpp
         test/test_InternPool.cpp
         test/test_JobSystem.cpp
