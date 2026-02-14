@@ -798,16 +798,19 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                 cmd.info.rasterState.culling = cullingMode;
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
-                cmd.info.rasterState.depthWrite = (1 // only keep bit 0
-                        & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE)
-                                                     | isPickingVariant)
-                                                   & !(filterTranslucentObjects & translucent)
-                                                   & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
-                                                  | writeDepthForShadowCasters;
+                cmd.info.rasterState.depthWrite =
+                        (1 // only keep bit 0
+                                & (mi->isDepthWriteEnabled() |
+                                          (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) |
+                                          isPickingVariant) &
+                                !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage)) |
+                        writeDepthForShadowCasters;
 
                 *curr = cmd;
                 // cancel command if both front and back faces are culled
                 curr->key |= select(cullingMode == CullingMode::FRONT_AND_BACK);
+                // cancel command if asked to filter translucent objects
+                curr->key |= select(filterTranslucentObjects & translucent);
             }
 
             ++curr;
