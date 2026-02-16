@@ -264,8 +264,9 @@ FEngine::FEngine(Builder const& builder) :
         mLightManager(*this),
         mCameraManager(*this),
         mCommandBufferQueue(
+               builder->mConfig.minCommandBufferSizeMB * MiB,
                 builder->mConfig.minCommandBufferSizeMB * MiB,
-                builder->mConfig.commandBufferSizeMB * MiB,
+//                builder->mConfig.commandBufferSizeMB * MiB,
                 builder->mPaused),
         mPerRenderPassArena(
                 "FEngine::mPerRenderPassAllocator",
@@ -277,6 +278,7 @@ FEngine::FEngine(Builder const& builder) :
         mMainThreadId(ThreadUtils::getThreadId()),
         mConfig(builder->mConfig)
 {
+
     // update all the features flags specified in the builder
     for (auto const& [feature, value] : builder->mFeatureFlags) {
         auto* const p = getFeatureFlagPtr(feature.c_str_safe(), true);
@@ -347,7 +349,6 @@ void FEngine::init() {
 
     LOG(INFO) << "Backend feature level: " << int(driverApi.getFeatureLevel());
     LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
-
 
     mResourceAllocatorDisposer = std::make_shared<TextureCacheDisposer>(driverApi);
 
@@ -744,12 +745,13 @@ void FEngine::prepare(DriverApi& driver) {
                     if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
                         // If the remaining space is less than half the capacity, we flush right
                         // away to allow some headroom for commands that might come later.
-                        if (UTILS_UNLIKELY(driver.getCircularBuffer().getUsed() > capacity / 2)) {
+                        if (UTILS_UNLIKELY(driver.getCircularBuffer().getUsed() > capacity / 2) && false) {
                             flush();
                         }
                         item->commit(driver, uboManager);
                     }
                 });
+
     }
 
     if (useUboBatching) {

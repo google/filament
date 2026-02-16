@@ -36,12 +36,19 @@
 #include <iostream>
 #include <string>// for printing usage/help
 
+#include "filament/MaterialInstance.h"
 #include "generated/resources/resources.h"
 #include "generated/resources/monkey.h"
+
+#include <utils/Log.h>
 
 using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
+
+namespace {
+std::vector<MaterialInstance*> instances;
+}
 
 using Backend = Engine::Backend;
 
@@ -152,6 +159,19 @@ int main(int argc, char** argv) {
         auto& tcm = engine->getTransformManager();
         auto ti = tcm.getInstance(app.mesh.renderable);
         tcm.setTransform(ti, app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+
+        static int count = 0;
+        constexpr int allSize = 12000;
+        if (count++ == 5) {
+            for (size_t i = 0; i < allSize; ++i) {
+                auto mi = app.materialInstance = app.material->createInstance();
+                mi->setParameter("baseColor", RgbType::LINEAR, float3{0.8});
+                mi->setParameter("metallic", 1.0f);
+                mi->setParameter("roughness", 0.4f);
+                mi->setParameter("reflectance", 0.5f);
+                instances.push_back(mi);
+            }
+        }
     });
 
     FilamentApp::get().run(app.config, setup, cleanup);

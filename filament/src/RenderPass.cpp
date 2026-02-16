@@ -901,6 +901,10 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
     size_t const capacity = engine.getMinCommandBufferSize();
     CircularBuffer const& circularBuffer = driver.getCircularBuffer();
 
+    utils::slog.e <<"circularBuffer: " << circularBuffer.size() << " used: " <<
+        circularBuffer.getUsed() <<
+        " commandCount: " << last - first << utils::io::endl;
+
     // b/479079631: Log the number of commands in this render pass.
     size_t const commandCount = last - first;
     if (Platform* platform = engine.getPlatform(); platform->hasDebugUpdateStatFunc()) {
