@@ -19,20 +19,145 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
+#include <math/scalar.h>
+#include <math/half.h>
+
+#include <utils/debug.h>
+#include <utils/Logger.h>
+
+#include <cstdint>
 #include <cstring>
 #include <stddef.h>
 #include <stdint.h>
 
-#include <math/scalar.h>
-
-#include <utils/debug.h>
-
 namespace filament {
 namespace backend {
+
+namespace {
 
 // Provides an alpha value when expanding 3-channel images to 4-channel.
 // Also used as a normalization scale when converting between numeric types.
 template<typename componentType> inline componentType getMaxValue();
+
+template<> inline constexpr float getMaxValue() { return 1.0f; }
+template<> inline constexpr int32_t getMaxValue() { return 0x7fffffff; }
+template<> inline constexpr uint32_t getMaxValue() { return 0xffffffff; }
+template<> inline constexpr uint16_t getMaxValue() { return 0x3c00; } // 0x3c00 is 1.0 in half-float.
+template<> inline constexpr uint8_t getMaxValue() { return 0xff; }
+template<> inline math::half getMaxValue() { return math::half(1.0f); }
+
+template<typename srcComponentType, typename dstComponentType, uint8_t srcChannelCount,
+        uint8_t dstChannelCount>
+void reshapeImageKernel(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
+        size_t srcBytesPerRow, size_t dstRowOffset, size_t dstColumnOffset, size_t dstBytesPerRow,
+        size_t width, size_t height, bool swizzle) {
+    constexpr size_t minChannelCount = math::min(srcChannelCount, dstChannelCount);
+    const dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
+    const srcComponentType srcMaxValue = getMaxValue<srcComponentType>();
+    double const mFactor = dstMaxValue / ((double) srcMaxValue);
+    assert_invariant(minChannelCount <= 4);
+    UTILS_ASSUME(minChannelCount <= 4);
+    dest += (dstRowOffset * dstBytesPerRow);
+
+    const int inds[4] = { swizzle ? 2 : 0, 1, swizzle ? 0 : 2, 3 };
+    for (size_t row = 0; row < height; ++row) {
+        const srcComponentType* in = (const srcComponentType*) src;
+        dstComponentType* out = (dstComponentType*) dest + (dstColumnOffset * dstChannelCount);
+        for (size_t column = 0; column < width; ++column) {
+            for (size_t channel = 0; channel < minChannelCount; ++channel) {
+                if constexpr (std::is_same_v<dstComponentType, srcComponentType>) {
+                    out[channel] = in[inds[channel]];
+                } else {
+                    // convert to double then clamp and cast to dst type.
+                    out[channel] = static_cast<dstComponentType>(std::clamp(
+                            in[inds[channel]] * mFactor, 0.0,
+                            static_cast<double>(std::numeric_limits<dstComponentType>::max())));
+                }
+            }
+            if constexpr (srcChannelCount == 1 && (dstChannelCount == 3 || dstChannelCount == 4)) {
+                // For the special case of src-channel-count=1, dst-channel-count=3/4, we assume
+                // the output should be a grayscale image with alpha=1 and the gray value is set
+                // to the src value. This is useful for producing a grayscale image from a depth
+                // map.
+                for (size_t channel = 1; channel < 3; ++channel) {
+                    out[channel] = out[0];
+                }
+                if constexpr (dstChannelCount == 4) {
+                    out[3] = dstMaxValue;
+                }
+            } else {
+                for (size_t channel = srcChannelCount; channel < dstChannelCount; ++channel) {
+                    out[channel] = dstMaxValue;
+                }
+            }
+            in += srcChannelCount;
+            out += dstChannelCount;
+        }
+        src += srcBytesPerRow;
+        dest += dstBytesPerRow;
+    }
+}
+
+// Converts a n-channel image of UBYTE, INT, UINT, HALF, or FLOAT to a different type.
+template<typename dstComponentType, typename srcComponentType>
+static void reshapeImageImpl(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
+        size_t srcBytesPerRow, size_t srcChannelCount, size_t dstRowOffset, size_t dstColumnOffset,
+        size_t dstBytesPerRow, size_t dstChannelCount, size_t width, size_t height, bool swizzle) {
+
+    static_assert(!std::is_same_v<dstComponentType, math::half>);
+
+    void (*impl)(uint8_t* dest, const uint8_t* src, size_t srcBytesPerRow, size_t srcRowOffset,
+            size_t srcColumnOffset, size_t dstBytesPerRow, size_t width, size_t height,
+            bool swizzle) = nullptr;
+
+    auto channelCountError = [srcChannelCount, dstChannelCount]() {
+        LOG(ERROR) << "DataReshaper: src/dst channel count not supported : " << srcChannelCount
+                   << "/" << dstChannelCount;
+    };
+
+    if (srcChannelCount == 1) {
+        switch (dstChannelCount) {
+            case 1: impl = reshapeImageKernel<srcComponentType, dstComponentType, 1, 1>; break;
+            case 2: impl = reshapeImageKernel<srcComponentType, dstComponentType, 1, 2>; break;
+            case 3: impl = reshapeImageKernel<srcComponentType, dstComponentType, 1, 3>; break;
+            case 4: impl = reshapeImageKernel<srcComponentType, dstComponentType, 1, 4>; break;
+            default: channelCountError(); break;
+        }
+    } else if (srcChannelCount == 2) {
+        switch (dstChannelCount) {
+            case 1: impl = reshapeImageKernel<srcComponentType, dstComponentType, 2, 1>; break;
+            case 2: impl = reshapeImageKernel<srcComponentType, dstComponentType, 2, 2>; break;
+            case 3: impl = reshapeImageKernel<srcComponentType, dstComponentType, 2, 3>; break;
+            case 4: impl = reshapeImageKernel<srcComponentType, dstComponentType, 2, 4>; break;
+            default: channelCountError(); break;
+        }
+    } else if (srcChannelCount == 3) {
+        switch (dstChannelCount) {
+            case 1: impl = reshapeImageKernel<srcComponentType, dstComponentType, 3, 1>; break;
+            case 2: impl = reshapeImageKernel<srcComponentType, dstComponentType, 3, 2>; break;
+            case 3: impl = reshapeImageKernel<srcComponentType, dstComponentType, 3, 3>; break;
+            case 4: impl = reshapeImageKernel<srcComponentType, dstComponentType, 3, 4>; break;
+            default: channelCountError(); break;
+        }
+    } else if (srcChannelCount == 4) {
+        switch (dstChannelCount) {
+            case 1: impl = reshapeImageKernel<srcComponentType, dstComponentType, 4, 1>; break;
+            case 2: impl = reshapeImageKernel<srcComponentType, dstComponentType, 4, 2>; break;
+            case 3: impl = reshapeImageKernel<srcComponentType, dstComponentType, 4, 3>; break;
+            case 4: impl = reshapeImageKernel<srcComponentType, dstComponentType, 4, 4>; break;
+            default: channelCountError(); break;
+        }
+    } else {
+        channelCountError();
+    }
+
+    if (impl) {
+        impl(dest, src, srcBytesPerRow, dstRowOffset, dstColumnOffset, dstBytesPerRow, width,
+                height, swizzle);
+    }
+}
+
+} // anonymous namespace
 
 class DataReshaper {
 public:
@@ -77,50 +202,8 @@ public:
     }
 
     // Converts a n-channel image of UBYTE, INT, UINT, or FLOAT to a different type.
-    template<typename dstComponentType, typename srcComponentType>
-    static void reshapeImage(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
-            size_t srcBytesPerRow,
-            size_t srcChannelCount,
-            size_t dstRowOffset, size_t dstColumnOffset,
-            size_t dstBytesPerRow, size_t dstChannelCount,
-            size_t width, size_t height, bool swizzle) {
-        // TODO: there's a fast-path where memcpy will work but currently not being taken advantage
-        // of.
-
-        const dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
-        const srcComponentType srcMaxValue = getMaxValue<srcComponentType>();
-        const size_t minChannelCount = math::min(srcChannelCount, dstChannelCount);
-        assert_invariant(minChannelCount <= 4);
-        UTILS_ASSUME(minChannelCount <= 4);
-        dest += (dstRowOffset * dstBytesPerRow);
-        const int inds[4] = { swizzle ? 2 : 0, 1, swizzle ? 0 : 2, 3 };
-        for (size_t row = 0; row < height; ++row) {
-            const srcComponentType* in = (const srcComponentType*) src;
-            dstComponentType* out = (dstComponentType*)dest + (dstColumnOffset * dstChannelCount);
-            for (size_t column = 0; column < width; ++column) {
-                for (size_t channel = 0; channel < minChannelCount; ++channel) {
-                    if constexpr (std::is_same_v<dstComponentType, srcComponentType>) {
-                        out[channel] = in[inds[channel]];
-                    } else {
-                        // FIXME: beware of overflows in the multiply
-                        // FIXME: probably not correct for _INTEGER src/dst
-                        out[channel] = in[inds[channel]] * dstMaxValue / srcMaxValue;
-                    }
-                }
-                for (size_t channel = srcChannelCount; channel < dstChannelCount; ++channel) {
-                    out[channel] = dstMaxValue;
-                }
-                in += srcChannelCount;
-                out += dstChannelCount;
-            }
-            src += srcBytesPerRow;
-            dest += dstBytesPerRow;
-        }
-    }
-
-    // Converts a n-channel image of UBYTE, INT, UINT, or FLOAT to a different type.
     static bool reshapeImage(PixelBufferDescriptor* UTILS_RESTRICT dst, PixelDataType srcType,
-            uint32_t srcChannelCount,  const uint8_t* UTILS_RESTRICT srcBytes, int srcBytesPerRow,
+            uint32_t srcChannelCount, const uint8_t* UTILS_RESTRICT srcBytes, int srcBytesPerRow,
             int width, int height, bool swizzle) {
         size_t dstChannelCount;
         switch (dst->format) {
@@ -132,13 +215,14 @@ public:
             case PixelDataFormat::RG: dstChannelCount = 2; break;
             case PixelDataFormat::RGB: dstChannelCount = 3; break;
             case PixelDataFormat::RGBA: dstChannelCount = 4; break;
-            default: return false;
+            default:
+                LOG(ERROR) << "DataReshaper: unsupported dst->format: " << (int) dst->format;
+                return false;
         }
         void (*reshaper)(uint8_t* dest, const uint8_t* src, size_t srcBytesPerRow,
-                size_t srcChannelCount,
-                size_t srcRowOffset, size_t srcColumnOffset,
-                size_t dstBytesPerRow, size_t dstChannelCount,
-                size_t width, size_t height, bool swizzle) = nullptr;
+                size_t srcChannelCount, size_t srcRowOffset, size_t srcColumnOffset,
+                size_t dstBytesPerRow, size_t dstChannelCount, size_t width, size_t height,
+                bool swizzle) = nullptr;
         constexpr auto UBYTE = PixelDataType::UBYTE;
         constexpr auto FLOAT = PixelDataType::FLOAT;
         constexpr auto UINT = PixelDataType::UINT;
@@ -148,70 +232,83 @@ public:
             case UBYTE:
                 switch (srcType) {
                     case UBYTE:
-                        reshaper = reshapeImage<uint8_t, uint8_t>;
+                        reshaper = reshapeImageImpl<uint8_t, uint8_t>;
                         if (dst->format == PixelDataFormat::RGBA &&
                                 dstChannelCount == srcChannelCount && !swizzle && dst->top == 0 &&
                                 dst->left == 0) {
                             reshaper = copyImage;
                         }
                         break;
-                    case FLOAT: reshaper = reshapeImage<uint8_t, float>; break;
-                    case INT: reshaper = reshapeImage<uint8_t, int32_t>; break;
-                    case UINT: reshaper = reshapeImage<uint8_t, uint32_t>; break;
-                    default: return false;
+                    case FLOAT: reshaper = reshapeImageImpl<uint8_t, float>; break;
+                    case INT: reshaper = reshapeImageImpl<uint8_t, int32_t>; break;
+                    case UINT: reshaper = reshapeImageImpl<uint8_t, uint32_t>; break;
+                    case HALF: reshaper = reshapeImageImpl<uint8_t, math::half>; break;
+                    default:
+                        LOG(ERROR) << "DataReshaper: UBYTE dst, unsupported srcType: "
+                                   << (int) srcType;
+                        return false;
                 }
                 break;
             case FLOAT:
                 switch (srcType) {
-                    case UBYTE: reshaper = reshapeImage<float, uint8_t>; break;
-                    case FLOAT: reshaper = reshapeImage<float, float>; break;
-                    case INT: reshaper = reshapeImage<float, int32_t>; break;
-                    case UINT: reshaper = reshapeImage<float, uint32_t>; break;
-                    default: return false;
+                    case UBYTE: reshaper = reshapeImageImpl<float, uint8_t>; break;
+                    case FLOAT: reshaper = reshapeImageImpl<float, float>; break;
+                    case INT: reshaper = reshapeImageImpl<float, int32_t>; break;
+                    case UINT: reshaper = reshapeImageImpl<float, uint32_t>; break;
+                    default:
+                        LOG(ERROR) << "DataReshaper: FLOAT dst, unsupported srcType: "
+                                   << (int) srcType;
+                        return false;
                 }
                 break;
             case INT:
                 switch (srcType) {
-                    case UBYTE: reshaper = reshapeImage<int32_t, uint8_t>; break;
-                    case FLOAT: reshaper = reshapeImage<int32_t, float>; break;
-                    case INT: reshaper = reshapeImage<int32_t, int32_t>; break;
-                    case UINT: reshaper = reshapeImage<int32_t, uint32_t>; break;
-                    default: return false;
+                    case UBYTE: reshaper = reshapeImageImpl<int32_t, uint8_t>; break;
+                    case FLOAT: reshaper = reshapeImageImpl<int32_t, float>; break;
+                    case INT: reshaper = reshapeImageImpl<int32_t, int32_t>; break;
+                    case UINT: reshaper = reshapeImageImpl<int32_t, uint32_t>; break;
+                    default:
+                        LOG(ERROR)
+                                << "DataReshaper: INT dst, unsupported srcType: " << (int) srcType;
+                        return false;
                 }
                 break;
             case UINT:
                 switch (srcType) {
-                    case UBYTE: reshaper = reshapeImage<uint32_t, uint8_t>; break;
-                    case FLOAT: reshaper = reshapeImage<uint32_t, float>; break;
-                    case INT: reshaper = reshapeImage<uint32_t, int32_t>; break;
-                    case UINT: reshaper = reshapeImage<uint32_t, uint32_t>; break;
-                    default: return false;
+                    case UBYTE: reshaper = reshapeImageImpl<uint32_t, uint8_t>; break;
+                    case FLOAT: reshaper = reshapeImageImpl<uint32_t, float>; break;
+                    case INT: reshaper = reshapeImageImpl<uint32_t, int32_t>; break;
+                    case UINT: reshaper = reshapeImageImpl<uint32_t, uint32_t>; break;
+                    default:
+                        LOG(ERROR)
+                                << "DataReshaper: UINT dst, unsupported srcType: " << (int) srcType;
+                        return false;
                 }
                 break;
             case HALF:
                 switch (srcType) {
-                    case HALF: reshaper = copyImage; break;
-                    default: return false;
+                    case HALF:
+                        reshaper = copyImage;
+                        break;
+                    default:
+                        LOG(ERROR)
+                                << "DataReshaper: HALF dst, unsupported srcType: " << (int) srcType;
+                        return false;
                 }
                 break;
             default:
+                LOG(ERROR) << "DataReshaper: unsupported dst->type: " << (int) dst->type;
                 return false;
         }
         uint8_t* dstBytes = (uint8_t*) dst->buffer;
         const int dstBytesPerRow = PixelBufferDescriptor::computeDataSize(dst->format, dst->type,
                 dst->stride ? dst->stride : width, 1, dst->alignment);
-        reshaper(dstBytes, srcBytes, srcBytesPerRow, srcChannelCount,
-                dst->top, dst->left, dstBytesPerRow,
-                dstChannelCount, width, height, swizzle);
+        reshaper(dstBytes, srcBytes, srcBytesPerRow, srcChannelCount, dst->top, dst->left,
+                dstBytesPerRow, dstChannelCount, width, height, swizzle);
+
         return true;
     }
 };
-
-template<> inline float getMaxValue() { return 1.0f; }
-template<> inline int32_t getMaxValue() { return 0x7fffffff; }
-template<> inline uint32_t getMaxValue() { return 0xffffffff; }
-template<> inline uint16_t getMaxValue() { return 0x3c00; } // 0x3c00 is 1.0 in half-float.
-template<> inline uint8_t getMaxValue() { return 0xff; }
 
 } // namespace backend
 } // namespace filament
