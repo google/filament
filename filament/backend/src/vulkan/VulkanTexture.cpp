@@ -368,6 +368,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     bool const isProtected = any(tusage & TextureUsage::PROTECTED);
     VkImageCreateInfo imageInfo{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .flags = isProtected ? VK_IMAGE_CREATE_PROTECTED_BIT : VkImageCreateFlags(0),
         .imageType = target == SamplerType::SAMPLER_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
         .format = vkFormat,
         .extent = {w, h, depth},

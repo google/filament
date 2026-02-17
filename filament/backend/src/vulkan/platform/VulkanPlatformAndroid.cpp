@@ -381,7 +381,8 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
         VkImageCreateInfo const imageInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .pNext = &externalCreateInfo,
-            .flags = isFormatSrgb(metadata.format) ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT : 0u,
+            .flags = (isFormatSrgb(metadata.format) ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT : 0u) |
+                     (any(metadata.filamentUsage & TextureUsage::PROTECTED) ? VK_IMAGE_CREATE_PROTECTED_BIT),
             .imageType = VK_IMAGE_TYPE_2D,
             // For non external images, use the same format as the AHB, which isn't in SRGB
             // Fix VUID-VkMemoryAllocateInfo-pNext-02387
