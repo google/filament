@@ -199,17 +199,21 @@ Sonatype's <a href="https://central.sonatype.org/">Central Publisher Portal</a>.
 <p>The new Central Publisher Portal does not officially support Gradle. However, Sonatype provides a
 staging API compatibility service, which works with Filament's Gradle setup.</p>
 <hr />
-<h3 id="1-upload-to-the-staging-api-compatibility-service"><a class="header" href="#1-upload-to-the-staging-api-compatibility-service">1. Upload to the Staging API Compatibility Service</a></h3>
+<h3 id="1-upload-to-the-central-publisher-portal"><a class="header" href="#1-upload-to-the-central-publisher-portal">1. Upload to the Central Publisher Portal</a></h3>
+<p>To upload the artifacts, it is important to run both of these Gradle tasks together in a single
+command. This ensures the staging repository is created and closed automatically.</p>
 <pre><code class="language-bash">cd android
-./gradlew publishToSonatype
+./gradlew publishToSonatype closeSonatypeStagingRepository
 </code></pre>
-<h3 id="2-move-the-repository-to-the-central-publisher-portal"><a class="header" href="#2-move-the-repository-to-the-central-publisher-portal">2. Move the Repository to the Central Publisher Portal</a></h3>
-<p>We have a script to automate this. It reads the <code>sonatypeUsername</code> and <code>sonatypePassword</code> from your
-<code>~/.gradle/gradle.properties</code> file.</p>
+<h4 id="troubleshooting-manual-staging"><a class="header" href="#troubleshooting-manual-staging">Troubleshooting: Manual Staging</a></h4>
+<p>If you ran <code>publishToSonatype</code> by itself, the repository will remain open and won't appear in the
+portal correctly. You can fix this by running our automation script, which uses the
+<code>sonatypeUsername</code> and <code>sonatypePassword</code> from your ~/.gradle/gradle.properties file:</p>
 <pre><code class="language-bash">python3 build/common/close-sonatype-staging-repository.py
 </code></pre>
-<h3 id="3-publish-the-release-on-sonatype"><a class="header" href="#3-publish-the-release-on-sonatype">3. Publish the Release on Sonatype</a></h3>
-<p>Navigate to <a href="https://central.sonatype.com/publishing/deployments">Maven Central Repository Deployments</a>.</p>
+<h3 id="2-publish-the-release-on-sonatype"><a class="header" href="#2-publish-the-release-on-sonatype">2. Publish the Release on Sonatype</a></h3>
+<p>Once the upload is successful, you must manually trigger the final release. Navigate to <a href="https://central.sonatype.com/publishing/deployments">Maven
+Central Repository Deployments</a>.</p>
 <p>Here, you should see a new deployment with a <strong>Validated</strong> status and all your artifacts listed. Click
 the <strong>Publish</strong> button to publish the artifacts. It typically takes around 5 minutes after clicking
 <strong>Publish</strong> for the artifacts to go live.</p>

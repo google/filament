@@ -3,18 +3,20 @@
 // see: Real-time Atmospheric Effects in Games (Carsten Wenzel)
 //------------------------------------------------------------------------------
 
-vec4 fog(vec4 color, highp vec3 view) {
+#if MATERIAL_FEATURE_LEVEL > 0
+
+vec4 fog(highp vec3 view, const mediump samplerCube fogColorTexture) {
     // note: d can be +inf with the skybox
     highp float d = length(view);
 
     // early exit for object "in front" of the fog
     if (d < frameUniforms.fogStart) {
-        return color;
+        return vec4(0);
     }
 
     // fogCutOffDistance is set to +inf to disable the cutoff distance
     if (d > frameUniforms.fogCutOffDistance) {
-        return color;
+        return vec4(0);
     }
 
     // .x = density
@@ -55,7 +57,7 @@ vec4 fog(vec4 color, highp vec3 view) {
         // a rigid transform, so we can take the transpose instead of the inverse, and for the
         // same reason we can use it directly instead of taking the cof() to transform a vector.
         highp mat3 worldFromUserWorldMatrix = transpose(mat3(frameUniforms.userWorldFromWorldMatrix));
-        fogColor *= textureLod(sampler0_fog, worldFromUserWorldMatrix * view, lod).rgb;
+        fogColor *= textureLod(fogColorTexture, worldFromUserWorldMatrix * view, lod).rgb;
     }
 #endif
 
@@ -78,38 +80,29 @@ vec4 fog(vec4 color, highp vec3 view) {
         fogColor += sunColor * (sunInscattering * (1.0 - sunTransmittance));
     }
 
-#if   defined(BLEND_MODE_OPAQUE)
-    // nothing to do here
-#elif defined(BLEND_MODE_TRANSPARENT)
-    fogColor *= color.a;
-#elif defined(BLEND_MODE_ADD)
-    fogColor = vec3(0.0);
-#elif defined(BLEND_MODE_MASKED)
-    // nothing to do here
-#elif defined(BLEND_MODE_MULTIPLY)
-    // FIXME: unclear what to do here
-#elif defined(BLEND_MODE_SCREEN)
-    // FIXME: unclear what to do here
-#endif
-
-    color.rgb = color.rgb * (1.0 - fogOpacity) + fogColor;
-
-    return color;
+    return vec4(fogColor, fogOpacity);
 }
 
+#endif  // MATERIAL_FEATURE_LEVEL > 0
+
 // A linear approximation of the fog function
-vec4 fogLinear(vec4 color, highp vec3 view) {
+vec4 fogLinear(highp vec3 view
+#if MATERIAL_FEATURE_LEVEL > 0
+    , const mediump samplerCube fogColorTexture
+#endif
+)
+{
     // note: d can be +inf with the skybox
     highp float d = length(view);
 
     // early exit for object "in front" of the fog
     if (d < frameUniforms.fogStart) {
-        return color;
+        return vec4(0);
     }
 
     // fogCutOffDistance is set to +inf to disable the cutoff distance
     if (d > frameUniforms.fogCutOffDistance) {
-        return color;
+        return vec4(0);
     }
 
     // compute fog color
@@ -126,27 +119,11 @@ vec4 fogLinear(vec4 color, highp vec3 view) {
         // a rigid transform, so we can take the transpose instead of the inverse, and for the
         // same reason we can use it directly instead of taking the cof() to transform a vector.
         highp mat3 worldFromUserWorldMatrix = transpose(mat3(frameUniforms.userWorldFromWorldMatrix));
-        fogColor *= textureLod(sampler0_fog, worldFromUserWorldMatrix * view, minMaxMip.x).rgb;
+        fogColor *= textureLod(fogColorTexture, worldFromUserWorldMatrix * view, minMaxMip.x).rgb;
     }
 #endif
 
     fogColor *= frameUniforms.iblLuminance * fogOpacity;
 
-#if   defined(BLEND_MODE_OPAQUE)
-    // nothing to do here
-#elif defined(BLEND_MODE_TRANSPARENT)
-    fogColor *= color.a;
-#elif defined(BLEND_MODE_ADD)
-    fogColor = vec3(0.0);
-#elif defined(BLEND_MODE_MASKED)
-    // nothing to do here
-#elif defined(BLEND_MODE_MULTIPLY)
-    // FIXME: unclear what to do here
-#elif defined(BLEND_MODE_SCREEN)
-    // FIXME: unclear what to do here
-#endif
-
-    color.rgb = color.rgb * (1.0 - fogOpacity) + fogColor;
-
-    return color;
+    return vec4(fogColor, fogOpacity);
 }

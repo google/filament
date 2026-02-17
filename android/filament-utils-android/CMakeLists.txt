@@ -22,6 +22,10 @@ add_library(image STATIC IMPORTED)
 set_target_properties(image PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libimage.a)
 
+add_library(imageio-lite STATIC IMPORTED)
+set_target_properties(imageio-lite PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libimageio-lite.a)
+
 add_library(ktxreader STATIC IMPORTED)
 set_target_properties(ktxreader PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libktxreader.a)
@@ -29,6 +33,10 @@ set_target_properties(ktxreader PROPERTIES IMPORTED_LOCATION
 add_library(viewer STATIC IMPORTED)
 set_target_properties(viewer PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libviewer.a)
+
+add_library(imagediff STATIC IMPORTED)
+set_target_properties(imagediff PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libimagediff.a)
 
 add_library(civetweb STATIC IMPORTED)
 set_target_properties(civetweb PROPERTIES IMPORTED_LOCATION
@@ -57,6 +65,7 @@ add_library(filament-utils-jni SHARED
         src/main/cpp/IBLPrefilterContext.cpp
         src/main/cpp/Utils.cpp
         src/main/cpp/Manipulator.cpp
+        src/main/cpp/ImageDiff.cpp
         src/main/cpp/RemoteServer.cpp
 
         ${IMAGEIO_DIR}/include/imageio/ImageDecoder.h
@@ -74,6 +83,7 @@ target_include_directories(filament-utils-jni PRIVATE
         ${FILAMENT_DIR}/include
         ../../filament/backend/include
         ${IMAGEIO_DIR}/include
+        ../../libs/imagediff/include
         ../../libs/utils/include)
 
 set_target_properties(filament-utils-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
@@ -85,10 +95,13 @@ target_link_libraries(filament-utils-jni
         PRIVATE camutils
         PRIVATE iblprefilter
         PRIVATE image
+        PRIVATE imageio-lite
         PRIVATE filament-jni
         PRIVATE ktxreader
         PRIVATE viewer
+        PRIVATE imagediff
         PRIVATE log
         PRIVATE utils
         PRIVATE perfetto        # needed only when FILAMENT_ENABLE_PERFETTO is defined
+        PRIVATE jnigraphics     # needed for AndroidBitmap_* functions in ImageDiff
 )

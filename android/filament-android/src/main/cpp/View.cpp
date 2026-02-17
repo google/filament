@@ -76,6 +76,12 @@ Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass, jlong n
     view->setVisibleLayers((uint8_t) select, (uint8_t) value);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_View_nGetVisibleLayers(JNIEnv*, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return view->getVisibleLayers();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetShadowingEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;
@@ -438,6 +444,18 @@ JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_View_nIsShadowingEnabled(JNIEnv *, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return (jboolean)view->isShadowingEnabled();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetFrustumCullingEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setFrustumCullingEnabled(enabled);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsFrustumCullingEnabled(JNIEnv*, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return (jboolean)view->isFrustumCullingEnabled();
 }
 
 extern "C"

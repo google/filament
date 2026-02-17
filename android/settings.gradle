@@ -21,5 +21,6 @@ include ':samples:sample-texture-view'
 include ':samples:sample-texture-target'
 include ':samples:sample-textured-object'
 include ':samples:sample-transparent-view'
+include ':samples:sample-render-validation'
 
 rootProject.name = 'filament'

@@ -194,10 +194,20 @@ public:
         return bool(mSets[mCurrentSetIndex].fenceStatus);
     }
 
+    // The current layout used by the descriptor set. This one will match the bindings, including
+    // external samplers data. 
+    // This will not necessarilly be the same as `mLayout`.
+    VkDescriptorSetLayout boundLayout = VK_NULL_HANDLE;
+
     fvkmemory::resource_ptr<VulkanDescriptorSetLayout> getLayout() const { return mLayout; }
 
     fvkutils::UniformBufferBitmask const& dynamicUboMask;
     uint8_t const uniqueDynamicUboCount;
+    
+    // Flag to indicate if the current layout needs to be recreated or not.
+    // This should only set to `true` when a external sampler image is bound to the descriptor set.
+    bool isLayoutDirty = false;
+    bool isAnExternalSamplerBound = false;
 
 private:
     friend class VulkanDescriptorSetCache;
@@ -263,6 +273,14 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
     ~VulkanProgram();
 
     /**
+     * Cancels any parallel compilation jobs that have not yet run for this
+     * program.
+     */
+    inline void cancelParallelCompilation() {
+        mParallelCompilationCanceled.store(true, std::memory_order_release);
+    }
+
+    /**
      * Writes out any queued push constants using the provided VkPipelineLayout.
      *
      * @param layout The layout that is to be used along with these push constants,
@@ -282,6 +300,17 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
 
     inline VkPushConstantRange const* getPushConstantRanges() const {
         return mInfo->pushConstantDescription.getVkRanges();
+    }
+
+    /**
+     * Returns true if parallel compilation is canceled, false if not. Parallel
+     * compilation will be canceled if this program is destroyed before relevant
+     * pipelines are created.
+     *
+     * @return true if parallel compilation should run for this program, false if not
+     */
+    inline bool isParallelCompilationCanceled() const {
+        return mParallelCompilationCanceled.load(std::memory_order_acquire);
     }
 
     inline void writePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
@@ -320,6 +349,7 @@ private:
 
     PipelineInfo* mInfo;
     VkDevice mDevice = VK_NULL_HANDLE;
+    std::atomic<bool> mParallelCompilationCanceled { false };
     std::vector<PushConstantInfo> mQueuedPushConstants;
 };
 

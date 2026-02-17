@@ -289,8 +289,7 @@ void VulkanDescriptorSetCache::unbind(uint8_t setIndex) {
 }
 
 void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
-        VkPipelineLayout pipelineLayout, fvkutils::DescriptorSetMask const& useExternalSamplers,
-        fvkutils::DescriptorSetMask const& setMask) {
+        VkPipelineLayout pipelineLayout, fvkutils::DescriptorSetMask const& setMask) {
     // setMask indicates the set of descriptor sets the driver wants to bind, curMask is the
     // actual set of sets that *needs* to be bound.
     fvkutils::DescriptorSetMask curMask = setMask;
@@ -306,8 +305,7 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
         auto& lastBoundSets = mLastBoundInfo.boundSets;
         curMask.forEachSetBit([&](size_t index) {
             auto& set = updateSets[index];
-            if (set == lastBoundSets[index] && !useExternalSamplers[index] &&
-                    set->uniqueDynamicUboCount == 0) {
+            if (set == lastBoundSets[index] && set->uniqueDynamicUboCount == 0) {
                 curMask.unset(index);
             }
         });
@@ -357,17 +355,18 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
 }
 
 void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-        uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture,
-        VkSampler sampler, VkDescriptorSetLayout externalSamplerLayout) noexcept {
+        uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler,
+        VkDescriptorSetLayout externalSamplerLayout) noexcept {
 
     // We have to update a bound set for two use cases
     //   - streaming API (a changing feed of AHardwareBuffer)
     //   - external samplers - potential changing of dataspace per-frame
-    if (UTILS_UNLIKELY(set->isBound())) {
+
+    // TODO: Fix the stream flow case base on the above comment!!
+    if (set->isAnExternalSamplerBound) {
         auto layout = set->getLayout();
         // Build a new descriptor set from the new layout
-        auto genLayout = externalSamplerLayout != VK_NULL_HANDLE ?
-                externalSamplerLayout : layout->getVkLayout();
+        VkDescriptorSetLayout const genLayout = set->boundLayout;
         VkDescriptorSet const newSet = getVkSet(layout->count, genLayout);
         Bitmask const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
         Bitmask samplers = layout->bitmask.sampler;
