@@ -258,7 +258,21 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 }
 
                 driver.beginRenderPass(out.target, out.params);
+                Platform* platform = engine.getPlatform();
+                CircularBuffer const& circularBuffer = driver.getCircularBuffer();
+                // b/479079631: Log the current command buffer size before and after executing the
+                // render pass.
+                if (platform->hasDebugUpdateStatFunc()) {
+                    platform->debugUpdateStat(
+                            "filament.renderer.color_pass.command_buffer_used_start",
+                            circularBuffer.getUsed());
+                }
                 passExecutor.execute(engine, driver);
+                if (platform->hasDebugUpdateStatFunc()) {
+                    platform->debugUpdateStat(
+                            "filament.renderer.color_pass.command_buffer_used_end",
+                            circularBuffer.getUsed());
+                }
                 driver.endRenderPass();
 
                 // unbind all descriptor sets to avoid false dependencies with the next pass

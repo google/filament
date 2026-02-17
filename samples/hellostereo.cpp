@@ -160,6 +160,12 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 }
 
 int main(int argc, char** argv) {
+
+#if !defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+    std::cerr << "This sample only works with multiview enabled.\n";
+    exit(1);
+#endif
+
     App app{};
     app.config.title = "stereoscopic rendering";
     handleCommandLineArguments(argc, argv, &app);

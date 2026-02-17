@@ -49,6 +49,8 @@ option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
 
 option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
+option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
+
 option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filament" OFF)
 
 option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
@@ -606,6 +608,23 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
 else()
     option(FILAMENT_DISABLE_MATOPT "Disable material optimizations" ON)
 endif()
+
+# This only affects the prebuilt shader files in gltfio and samples, not filament library.
+# The value can be either "instanced", "multiview", or "none"
+set(FILAMENT_SAMPLES_STEREO_TYPE "none" CACHE STRING
+    "Stereoscopic type that shader files in gltfio and samples are built for."
+)
+string(TOLOWER "${FILAMENT_SAMPLES_STEREO_TYPE}" FILAMENT_SAMPLES_STEREO_TYPE)
+if (NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced"
+    AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview"
+    AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "none")
+    message(FATAL_ERROR "Invalid stereo type: \"${FILAMENT_SAMPLES_STEREO_TYPE}\" choose either \"instanced\",  \"multiview\", or \"none\" ")
+endif ()
+
+# Compiling samples for multiview implies enabling multiview feature as well.
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    set(FILAMENT_ENABLE_MULTIVIEW ON)
+endif ()
 
 # Define backend flag for debug only
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT FILAMENT_BACKEND_DEBUG_FLAG STREQUAL "")

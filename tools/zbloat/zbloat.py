@@ -82,7 +82,7 @@ def choose_from_zip(path: Path):
     val = input("Which dso should be analyzed? Type a number. ")
     chosen_filename = paths[int(val)][0]
     result_path = z.extract(chosen_filename, TEMPDIR)
-    if DEBUG: os.system(f'cp {result_path} .')
+    if DEBUG: subprocess.run(['cp', str(result_path), '.'])
     return result_path
 
 
@@ -195,22 +195,22 @@ def main(args):
 
     print('Running nm... (this might take a while)')
     with open(f"{TEMPDIR}/nm.out", "w") as nm_out:
-        subprocess.run(f'nm -C -S {path}', shell=True, check=True, stdout=nm_out)
+        subprocess.run(['nm', '-C', '-S', str(path)], check=True, stdout=nm_out)
     if DEBUG:
-        subprocess.run(f'cp {TEMPDIR}/nm.out .', shell=True)
+        subprocess.run(['cp', f'{TEMPDIR}/nm.out', '.'])
 
     print('Running objdump...')
     with open(f"{TEMPDIR}/objdump.out", "w") as objdump_out:
-        subprocess.run(f'objdump -h {path}', shell=True, check=True, stdout=objdump_out)
+        subprocess.run(['objdump', '-h', str(path)], check=True, stdout=objdump_out)
     if DEBUG:
-        subprocess.run(f'cp {TEMPDIR}/objdump.out .', shell=True)
+        subprocess.run(['cp', f'{TEMPDIR}/objdump.out', '.'])
 
     print('Generating treemap JSON...')
     with open(f"{TEMPDIR}/syms.json", "w") as syms_json_out:
-        subprocess.run(f'python3 {SCRIPTDIR}/evmar_bloat.py syms', shell=True, check=True,
+        subprocess.run(['python3', f'{SCRIPTDIR}/evmar_bloat.py', 'syms'], check=True,
                        cwd=TEMPDIR, stdout=syms_json_out)
     with open(f"{TEMPDIR}/sections.json", "w") as sections_json_out:
-        subprocess.run(f'python3 {SCRIPTDIR}/evmar_bloat.py sections', shell=True, check=True,
+        subprocess.run(['python3', f'{SCRIPTDIR}/evmar_bloat.py', 'sections'], check=True,
                        cwd=TEMPDIR, stdout=sections_json_out)
 
     # Splice the materials JSON into the sections JSON.
