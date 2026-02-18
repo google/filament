@@ -46,12 +46,41 @@ template<> inline constexpr uint16_t getMaxValue() { return 0x3c00; } // 0x3c00 
 template<> inline constexpr uint8_t getMaxValue() { return 0xff; }
 template<> inline math::half getMaxValue() { return math::half(1.0f); }
 
-template<typename srcComponentType, typename dstComponentType, uint8_t srcChannelCount,
-        uint8_t dstChannelCount>
-void reshapeImageKernel(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
-        size_t srcBytesPerRow, size_t dstRowOffset, size_t dstColumnOffset, size_t dstBytesPerRow,
-        size_t width, size_t height, bool swizzle) {
-    constexpr size_t minChannelCount = math::min(srcChannelCount, dstChannelCount);
+// We use template below to reduce code duplication across the different input/output
+// type/channle-count permutations. Morever, templates help us reduce the number of conditionals
+// in the inner-loop of the reshape operation. However, this needs to be a carefully considered
+// because too many templated params will cause a large binary size increase.
+
+// Note that we intentionally do not want to expand the template params to include the channel count
+// because of the size increase.
+template<typename dstComponentType, bool hasAlpha>
+void grayscaleFill(dstComponentType* dst, uint8_t, uint8_t) {
+    for (size_t channel = 1; channel < 3; ++channel) {
+        dst[channel] = dst[0];
+    }
+    if constexpr (hasAlpha) {
+        dst[3] = getMaxValue<dstComponentType>();
+    }
+}
+
+// Note that we intentionally do not want to expand the template params to include the channel count
+// because of the size increase.
+template<typename dstComponentType>
+inline void maxValFill(dstComponentType* dst, uint8_t srcChannelCount, uint8_t dstChannelCount) {
+    dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
+    for (size_t channel = srcChannelCount; channel < dstChannelCount; ++channel) {
+        dst[channel] = dstMaxValue;
+    }
+}
+
+// Converts a n-channel image of UBYTE, INT, UINT, HALF, or FLOAT to a different type.
+template<typename dstComponentType, typename srcComponentType>
+void reshapeImageImpl(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
+        size_t srcBytesPerRow, size_t srcChannelCount, size_t dstRowOffset, size_t dstColumnOffset,
+        size_t dstBytesPerRow, size_t dstChannelCount, size_t width, size_t height, bool swizzle) {
+
+    static_assert(!std::is_same_v<dstComponentType, math::half>);
+    const size_t minChannelCount = math::min(srcChannelCount, dstChannelCount);
     const dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
     const srcComponentType srcMaxValue = getMaxValue<srcComponentType>();
     double const mFactor = dstMaxValue / ((double) srcMaxValue);
@@ -59,12 +88,21 @@ void reshapeImageKernel(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTR
     UTILS_ASSUME(minChannelCount <= 4);
     dest += (dstRowOffset * dstBytesPerRow);
 
+    void (*fill)(dstComponentType*, uint8_t, uint8_t);
+    if (srcChannelCount == 1 && dstChannelCount == 3) {
+        fill = grayscaleFill<dstComponentType, false>;
+    } else if (srcChannelCount == 1 && dstChannelCount == 4) {
+        fill = grayscaleFill<dstComponentType, true>;
+    } else {
+        fill = maxValFill<dstComponentType>;
+    }
+
     const int inds[4] = { swizzle ? 2 : 0, 1, swizzle ? 0 : 2, 3 };
     for (size_t row = 0; row < height; ++row) {
         const srcComponentType* in = (const srcComponentType*) src;
         dstComponentType* out = (dstComponentType*) dest + (dstColumnOffset * dstChannelCount);
         for (size_t column = 0; column < width; ++column) {
-            for (size_t channel = 0; channel < minChannelCount; ++channel) {
+            for (uint8_t channel = 0; channel < minChannelCount; ++channel) {
                 if constexpr (std::is_same_v<dstComponentType, srcComponentType>) {
                     out[channel] = in[inds[channel]];
                 } else {
@@ -74,86 +112,14 @@ void reshapeImageKernel(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTR
                             static_cast<double>(std::numeric_limits<dstComponentType>::max())));
                 }
             }
-            if constexpr (srcChannelCount == 1 && (dstChannelCount == 3 || dstChannelCount == 4)) {
-                // For the special case of src-channel-count=1, dst-channel-count=3/4, we assume
-                // the output should be a grayscale image with alpha=1 and the gray value is set
-                // to the src value. This is useful for producing a grayscale image from a depth
-                // map.
-                for (size_t channel = 1; channel < 3; ++channel) {
-                    out[channel] = out[0];
-                }
-                if constexpr (dstChannelCount == 4) {
-                    out[3] = dstMaxValue;
-                }
-            } else {
-                for (size_t channel = srcChannelCount; channel < dstChannelCount; ++channel) {
-                    out[channel] = dstMaxValue;
-                }
-            }
+
+            // This will fill in all the channels that are not copied.
+            fill(out, srcChannelCount, dstChannelCount);
             in += srcChannelCount;
             out += dstChannelCount;
         }
         src += srcBytesPerRow;
         dest += dstBytesPerRow;
-    }
-}
-
-// Converts a n-channel image of UBYTE, INT, UINT, HALF, or FLOAT to a different type.
-template<typename dstComponentType, typename srcComponentType>
-static void reshapeImageImpl(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
-        size_t srcBytesPerRow, size_t srcChannelCount, size_t dstRowOffset, size_t dstColumnOffset,
-        size_t dstBytesPerRow, size_t dstChannelCount, size_t width, size_t height, bool swizzle) {
-
-    static_assert(!std::is_same_v<dstComponentType, math::half>);
-
-    void (*impl)(uint8_t* dest, const uint8_t* src, size_t srcBytesPerRow, size_t srcRowOffset,
-            size_t srcColumnOffset, size_t dstBytesPerRow, size_t width, size_t height,
-            bool swizzle) = nullptr;
-
-    auto channelCountError = [srcChannelCount, dstChannelCount]() {
-        LOG(ERROR) << "DataReshaper: src/dst channel count not supported : " << srcChannelCount
-                   << "/" << dstChannelCount;
-    };
-
-    if (srcChannelCount == 1) {
-        switch (dstChannelCount) {
-            case 1: impl = reshapeImageKernel<srcComponentType, dstComponentType, 1, 1>; break;
-            case 2: impl = reshapeImageKernel<srcComponentType, dstComponentType, 1, 2>; break;
-            case 3: impl = reshapeImageKernel<srcComponentType, dstComponentType, 1, 3>; break;
-            case 4: impl = reshapeImageKernel<srcComponentType, dstComponentType, 1, 4>; break;
-            default: channelCountError(); break;
-        }
-    } else if (srcChannelCount == 2) {
-        switch (dstChannelCount) {
-            case 1: impl = reshapeImageKernel<srcComponentType, dstComponentType, 2, 1>; break;
-            case 2: impl = reshapeImageKernel<srcComponentType, dstComponentType, 2, 2>; break;
-            case 3: impl = reshapeImageKernel<srcComponentType, dstComponentType, 2, 3>; break;
-            case 4: impl = reshapeImageKernel<srcComponentType, dstComponentType, 2, 4>; break;
-            default: channelCountError(); break;
-        }
-    } else if (srcChannelCount == 3) {
-        switch (dstChannelCount) {
-            case 1: impl = reshapeImageKernel<srcComponentType, dstComponentType, 3, 1>; break;
-            case 2: impl = reshapeImageKernel<srcComponentType, dstComponentType, 3, 2>; break;
-            case 3: impl = reshapeImageKernel<srcComponentType, dstComponentType, 3, 3>; break;
-            case 4: impl = reshapeImageKernel<srcComponentType, dstComponentType, 3, 4>; break;
-            default: channelCountError(); break;
-        }
-    } else if (srcChannelCount == 4) {
-        switch (dstChannelCount) {
-            case 1: impl = reshapeImageKernel<srcComponentType, dstComponentType, 4, 1>; break;
-            case 2: impl = reshapeImageKernel<srcComponentType, dstComponentType, 4, 2>; break;
-            case 3: impl = reshapeImageKernel<srcComponentType, dstComponentType, 4, 3>; break;
-            case 4: impl = reshapeImageKernel<srcComponentType, dstComponentType, 4, 4>; break;
-            default: channelCountError(); break;
-        }
-    } else {
-        channelCountError();
-    }
-
-    if (impl) {
-        impl(dest, src, srcBytesPerRow, dstRowOffset, dstColumnOffset, dstBytesPerRow, width,
-                height, swizzle);
     }
 }
 
