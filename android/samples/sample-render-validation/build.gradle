@@ -26,7 +26,8 @@ tasks.register('copyDamagedHelmetGltf', Copy) {
 preBuild.dependsOn copyDamagedHelmetGltf
 
 clean.doFirst {
-    delete "src/main/assets"
+    delete "src/main/assets/envs"
+    delete "src/main/assets/models"
 }
 
 android {

@@ -17,36 +17,35 @@
 package com.google.android.filament.validation
 
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.Choreographer
 import android.view.SurfaceView
 import android.view.View
 import android.view.WindowManager
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
+import com.google.android.filament.utils.KTX1Loader
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.google.android.filament.utils.KTX1Loader
-import com.google.android.filament.IndirectLight
-import com.google.android.filament.Skybox
-import android.graphics.Color
 import java.io.File
-import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.nio.ByteBuffer
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.Spinner
-import android.widget.AdapterView
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : Activity(), ValidationRunner.Callback {
 
@@ -62,13 +61,18 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private lateinit var choreographer: Choreographer
     private lateinit var modelViewer: ModelViewer
     private lateinit var statusTextView: TextView
+    private lateinit var testResultsHeader: TextView
     private lateinit var resultsContainer: LinearLayout
     private lateinit var inputManager: ValidationInputManager
     private var currentInput: ValidationInputManager.ValidationInput? = null
-    private lateinit var modeSpinner: Spinner
-    private lateinit var runButton: Button
-    private var resultManager: ValidationResultManager? = null
 
+    // UI Elements
+    private lateinit var runButton: Button
+    private lateinit var helpButton: ImageButton
+    private lateinit var exportButton: Button
+    private lateinit var exportResultsButton: Button
+
+    private var resultManager: ValidationResultManager? = null
     private var validationRunner: ValidationRunner? = null
 
     // Frame callback
@@ -89,24 +93,38 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         surfaceView.holder.setFixedSize(512, 512)
 
         statusTextView = findViewById(R.id.status_text)
-        modeSpinner = findViewById(R.id.mode_spinner)
-        runButton = findViewById(R.id.run_button)
+        testResultsHeader = findViewById(R.id.test_results_header)
         resultsContainer = findViewById(R.id.results_container)
 
-        // Setup Spinner
-        val modes = arrayOf("Run Validation", "Generate Goldens")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        modeSpinner.adapter = adapter
+        runButton = findViewById(R.id.run_button)
+        helpButton = findViewById(R.id.help_button)
+        exportButton = findViewById(R.id.export_button)
+        exportResultsButton = findViewById(R.id.export_results_button)
 
         // Setup Run Button
         runButton.setOnClickListener {
             currentInput?.let { input ->
-                val generateGoldens = modeSpinner.selectedItemPosition == 1
-                val newInput = input.copy(generateGoldens = generateGoldens)
-                startValidation(newInput)
+                // Always use the generateGoldens flag from the intent/input
+                startValidation(input)
             }
         }
+
+        // Setup Export Test Button
+        exportButton.setOnClickListener {
+            exportTestBundleAction()
+        }
+
+        // Setup Export Results Button
+        exportResultsButton.setOnClickListener {
+            exportTestResultsAction()
+        }
+
+        // Setup Help Button
+        helpButton.setOnClickListener {
+            showHelpDialog()
+        }
+
+        updateInfoButtonVisibility()
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -118,6 +136,105 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         createIndirectLight()
 
         handleIntent()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                // Set the current to the one we just used to run the test.
+                currentInput = inputManager.resolveConfig(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to resolve config", e)
+                statusTextView.text = "Error: ${e.message}"
+            }
+        }
+    }
+
+    private fun updateInfoButtonVisibility() {
+        val baseDir = getExternalFilesDir(null) ?: filesDir
+        val files = baseDir.listFiles { _, name -> name.endsWith(".zip") }
+        val hasZips = files?.isNotEmpty() == true
+        Log.i(TAG, "updateInfoButtonVisibility: baseDir=${baseDir.absolutePath}, zipCount=${files?.size ?: 0}, visible=$hasZips")
+        runOnUiThread {
+            helpButton.visibility = if (hasZips) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun showHelpDialog() {
+        val exportDir = getExternalFilesDir(null) ?: filesDir
+        // Filter out result zips (starting with "results_") to only show test bundles
+        val zips = exportDir.listFiles { _, name ->
+            name.endsWith(".zip") && !name.startsWith("results_")
+        }?.sortedByDescending { it.lastModified() } ?: emptyList()
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Select Test Bundle")
+
+        val items = zips.map { it.name }.toTypedArray()
+
+        builder.setItems(items) { dialog, which ->
+            val selectedFile = zips[which]
+            loadZipBundle(selectedFile)
+            dialog.dismiss()
+        }
+
+        builder.setPositiveButton("Close", null)
+        builder.setNeutralButton("ADB Info") { _, _ ->
+            val path = exportDir.absolutePath
+            val message = StringBuilder()
+
+            message.append("Storage Path: $path\n\n")
+
+            message.append("--- PULL FROM DEVICE ---\n")
+            message.append("adb pull $path/<filename> .\n")
+            message.append("\nIf 'Permission Denied', use:\n")
+            message.append("adb shell \"run-as $packageName cat files/<filename>\" > <filename>\n\n")
+
+            message.append("--- PUSH TO DEVICE ---\n")
+            message.append("1. adb push <filename> /sdcard/Download/\n")
+            message.append("2. adb shell \"run-as $packageName cp /sdcard/Download/<filename> files/\"\n")
+            message.append("\nNote: Use underscores instead of spaces in <filename>.")
+
+            AlertDialog.Builder(this)
+                .setTitle("ADB Transfer Info")
+                .setMessage(message.toString())
+                .setPositiveButton("OK", null)
+                .show()
+        }
+
+        builder.show()
+    }
+
+    private fun loadZipBundle(file: File) {
+         statusTextView.text = "Loading ${file.name}..."
+         CoroutineScope(Dispatchers.Main).launch {
+             try {
+                 val config = inputManager.loadFromZip(file)
+                 val baseDir = getExternalFilesDir(null) ?: filesDir
+                 val outputDir = File(baseDir, "validation_results").apply { mkdirs() }
+
+                 // Clear existing results UI and state
+                 resultsContainer.removeAllViews()
+                 resultManager = null
+
+                 val newInput = ValidationInputManager.ValidationInput(
+                     config = config,
+                     outputDir = outputDir,
+                     generateGoldens = false,
+                     autoRun = false,
+                     autoExport = false,
+                     autoExportResults = false,
+                     sourceZip = file
+                 )
+
+                 currentInput = newInput
+                 statusTextView.text = "Loaded ${config.name}"
+                 Log.i(TAG, "Setting header to: Test Results: ${config.name}")
+                 testResultsHeader.text = "Test Results: ${config.name}"
+
+             } catch (e: Exception) {
+                 Log.e(TAG, "Failed to load zip", e)
+                 statusTextView.text = "Error: ${e.message}"
+             }
+         }
     }
 
     private fun createIndirectLight() {
@@ -156,12 +273,17 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val input = inputManager.resolveConfig(intent)
-                currentInput = input
 
-                // Sync spinner with intent
-                modeSpinner.setSelection(if (input.generateGoldens) 1 else 0)
+                // Update header
+                Log.i(TAG, "handleIntent: Setting header to: Test Results: ${input.config.name}")
+                testResultsHeader.text = "Test Results: ${input.config.name}"
 
-                startValidation(input)
+                if (input.autoRun) {
+                    startValidation(input)
+                } else {
+                    // Just show status
+                    statusTextView.text = "Ready: ${input.config.name}"
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to resolve config", e)
                 statusTextView.text = "Error: ${e.message}"
@@ -175,15 +297,14 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             Log.i(TAG, "Starting validation with config: ${input.config.name}")
             Log.i(TAG, "Output dir: ${input.outputDir.absolutePath}")
 
+            testResultsHeader.text = "Test Results: ${input.config.name}"
+
             resultManager = ValidationResultManager(input.outputDir)
 
             validationRunner = ValidationRunner(this, modelViewer, input.config, resultManager!!)
             validationRunner?.callback = this
             validationRunner?.generateGoldens = input.generateGoldens
             validationRunner?.start()
-
-            // Sync spinner in case it was called programmatically or changed implicitly
-            modeSpinner.setSelection(if (input.generateGoldens) 1 else 0)
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start validation", e)
@@ -194,6 +315,13 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     override fun onResume() {
         super.onResume()
         choreographer.postFrameCallback(frameScheduler)
+        updateInfoButtonVisibility()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent()
     }
 
     override fun onPause() {
@@ -275,6 +403,47 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         runOnUiThread {
             statusTextView.text = "All tests finished!"
             Log.i(TAG, "All tests finished")
+
+            if (currentInput?.autoExport == true) {
+                exportTestBundleAction()
+            }
+            if (currentInput?.autoExportResults == true) {
+                exportTestResultsAction()
+            }
+        }
+    }
+
+    private fun exportTestBundleAction() {
+        currentInput?.let { input ->
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val rm = resultManager ?: ValidationResultManager(input.outputDir)
+            val zip = rm.exportTestBundle(input.config, timestamp)
+            if (zip != null) {
+                val msg = "Exported Bundle: ${zip.name}"
+                statusTextView.text = msg
+                Log.i(TAG, "Exported test bundle to ${zip.absolutePath}")
+                updateInfoButtonVisibility()
+            } else {
+                statusTextView.text = "Export Bundle failed"
+                Log.e(TAG, "Export Bundle failed")
+            }
+        }
+    }
+
+    private fun exportTestResultsAction() {
+        currentInput?.let { input ->
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val rm = resultManager ?: ValidationResultManager(input.outputDir)
+            val zip = rm.exportTestResults(input.sourceZip, timestamp)
+            if (zip != null) {
+                val msg = "Exported Results: ${zip.name}"
+                statusTextView.text = msg
+                Log.i(TAG, "Exported results to ${zip.absolutePath}")
+                updateInfoButtonVisibility()
+            } else {
+                statusTextView.text = "Export Results failed"
+                Log.e(TAG, "Export Results failed")
+            }
         }
     }
 
@@ -301,50 +470,3 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         }
     }
 }
-
-/*
- * Scripts for reference:
- *
- * generate_goldens.sh:
- * --------------------
- * #!/bin/bash
- * set -e
- *
- * # Config path (on device)
- * CONFIG_PATH=$1
- * if [ -z "$CONFIG_PATH" ]; then
- *     echo "Usage: $0 <device_config_path>"
- *     echo "Example: $0 /sdcard/Android/data/com.google.android.filament.validation/files/default_test.json"
- *     exit 1
- * fi
- *
- * echo "Starting Golden Generation for $CONFIG_PATH..."
- * adb shell am force-stop com.google.android.filament.validation
- * adb shell am start -n com.google.android.filament.validation/.MainActivity \
- *     -e test_config "$CONFIG_PATH" \
- *     --ez generate_goldens true
- *
- * echo "Check device or logcat for progress."
- * echo "adb logcat -s FilamentValidation:I ValidationRunner:I"
- * echo "To pull results: ./samples/sample-render-validation/pull_goldens.sh"
- *
- * pull_goldens.sh:
- * ----------------
- * #!/bin/bash
- * set -e
- *
- * # Default destination is local golden directory relative to script
- * SCRIPT_DIR=$(cd $(dirname $0); pwd)
- * DEST_DIR=${1:-"$SCRIPT_DIR/golden"}
- *
- * echo "Pulling goldens to $DEST_DIR..."
- * mkdir -p "$DEST_DIR"
- *
- * # Path on device
- * DEVICE_GOLDEN_DIR="/storage/emulated/0/Android/data/com.google.android.filament.validation/files/golden/."
- *
- * adb pull "$DEVICE_GOLDEN_DIR" "$DEST_DIR"
- *
- * echo "Done."
- * ls -l "$DEST_DIR"
- */

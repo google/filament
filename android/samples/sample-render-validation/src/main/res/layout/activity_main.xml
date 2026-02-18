@@ -46,21 +46,42 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingTop="10dp"
-                android:paddingBottom="10dp">
-
-                <Spinner
-                    android:id="@+id/mode_spinner"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                android:paddingBottom="10dp"
+                android:gravity="center_vertical">
 
                 <Button
                     android:id="@+id/run_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Run Test" />
+
+                <Button
+                    android:id="@+id/export_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Run" />
+                    android:text="Export Test"
+                    android:layout_marginStart="8dp"/>
+
+                <ImageButton
+                    android:id="@+id/help_button"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@android:drawable/ic_menu_agenda"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:contentDescription="Select Test Bundle"
+                    android:layout_marginStart="8dp"/>
+
+                <Button
+                    android:id="@+id/export_results_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Export Result"
+                    android:layout_marginStart="8dp"/>
             </LinearLayout>
 
             <TextView
+                android:id="@+id/test_results_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Test Results"

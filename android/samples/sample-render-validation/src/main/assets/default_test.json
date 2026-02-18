@@ -1,0 +1,60 @@
+{
+  "name": "Default Test",
+  "backends": [
+    "opengl"
+  ],
+  "tests": [
+    {
+      "name": "basic",
+      "models": [
+        "DamagedHelmet"
+      ],
+      "rendering": {
+        "camera": {
+          "horizontalFov": 45.0,
+          "lookAt": [
+            0,
+            0,
+            0
+          ]
+        },
+        "view": {
+          "dithering": "NONE"
+        }
+      },
+      "tolerance": {
+        "maxAbsDiff": 0.0001,
+        "maxFailingPixelsFraction": 0.0
+      }
+    },
+    {
+      "name": "iblRotated",
+      "models": [
+        "DamagedHelmet"
+      ],
+      "rendering": {
+        "camera": {
+          "horizontalFov": 45.0,
+          "lookAt": [
+            0,
+            0,
+            0
+          ]
+        },
+        "lighting": {
+          "iblRotation": 180.0
+        },
+        "view": {
+          "dithering": "NONE"
+        }
+      },
+      "tolerance": {
+        "maxAbsDiff": 0.0001,
+        "maxFailingPixelsFraction": 0.0
+      }
+    }
+  ],
+  "models": {
+    "DamagedHelmet": "helmet.glb"
+  }
+}

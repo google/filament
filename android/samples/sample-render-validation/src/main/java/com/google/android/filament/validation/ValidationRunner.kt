@@ -233,7 +233,36 @@ class ValidationRunner(
 
          // Golden path
          val modelFile = File(config.models.get(modelName)!!)
-         val goldenFile = modelFile.parentFile!!.parentFile!!.resolve("golden/${testFullName}.png")
+         val modelParent = modelFile.parentFile!!
+         
+         // Search for golden in:
+         // 1. ../golden/ (standard structure)
+         // 2. ../goldens/ (exported structure, sibling of models)
+         // 3. ./goldens/ (backup)
+         
+         val searchPaths = mutableListOf<File>()
+         modelParent.parentFile?.let { 
+             searchPaths.add(it.resolve("golden"))
+             searchPaths.add(it.resolve("goldens"))
+         }
+         searchPaths.add(modelParent.resolve("goldens"))
+         
+         var goldenFile: File? = null
+         for (path in searchPaths) {
+             val f = path.resolve("${testFullName}.png")
+             if (f.exists()) {
+                 goldenFile = f
+                 break
+             }
+         }
+         
+         if (goldenFile != null) {
+             Log.i("ValidationRunner", "Found golden at ${goldenFile.absolutePath}")
+         } else {
+             Log.w("ValidationRunner", "Golden not found for $testFullName. Searched in: ${searchPaths.joinToString { it.absolutePath }}")
+             // Fallback to old behavior for reference if everything else fails
+             goldenFile = modelParent.parentFile?.resolve("golden/${testFullName}.png") ?: File("nonexistent")
+         }
 
          Thread {
              try {
@@ -245,14 +274,15 @@ class ValidationRunner(
                 var diffMetric = 0f
 
                 if (generateGoldens) {
-                    goldenFile.parentFile?.mkdirs()
-                    FileOutputStream(goldenFile).use { out ->
+                    val targetGolden = goldenFile ?: modelParent.parentFile?.resolve("golden/${testFullName}.png") ?: File(modelParent, "golden/${testFullName}.png")
+                    targetGolden.parentFile?.mkdirs()
+                    FileOutputStream(targetGolden).use { out ->
                         flipped.compress(Bitmap.CompressFormat.PNG, 100, out)
                     }
                     passed = true // Generating goldens always passes if successful
                     callback?.onStatusChanged("Golden generated")
                 } else {
-                    if (goldenFile.exists()) {
+                    if (goldenFile != null && goldenFile.exists()) {
                         val golden = android.graphics.BitmapFactory.decodeFile(goldenFile.absolutePath)
                         if (golden != null) {
                             callback?.onImageResult("Golden", golden)
@@ -273,7 +303,7 @@ class ValidationRunner(
                             callback?.onStatusChanged("Failed to load golden")
                         }
                     } else {
-                        Log.w("ValidationRunner", "Golden not found: ${goldenFile.absolutePath}")
+                        Log.w("ValidationRunner", "Golden not found: ${goldenFile?.absolutePath}")
                         callback?.onStatusChanged("Golden not found")
                     }
                 }
