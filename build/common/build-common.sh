@@ -39,6 +39,11 @@ if [[ "$TARGET" == "presubmit-with-test" ]]; then
     RUN_TESTS=-u
 fi
 
+if [[ "$TARGET" == "presubmit-with-archive" ]]; then
+    BUILD_RELEASE=release
+    GENERATE_ARCHIVES=-a
+fi
+
 if [[ "$TARGET" == "debug" ]]; then
     BUILD_DEBUG=debug
     GENERATE_ARCHIVES=-a

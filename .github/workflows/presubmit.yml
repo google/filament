@@ -67,7 +67,16 @@ jobs:
         # Only build 1 64 bit target during presubmit to cut down build times during presubmit
         # Continuous builds will build everything
         run: |
-          cd build/android && printf "y" | ./build.sh presubmit arm64-v8a
+          pushd .
+          cd build/android && printf "y" | ./build.sh presubmit-with-archive arm64-v8a
+          popd
+      - name: Check artifact sizes
+        run: |
+          python3 test/sizeguard/dump_artifact_size.py out/*.aar > current_size.json
+          python3 test/sizeguard/check_size.py current_size.json \
+              --target-branch origin/main \
+              --threshold 20480 \
+              --artifacts filament-android-release.aar/jni/arm64-v8a/libfilament-jni.so
 
   build-ios:
     name: build-iOS
