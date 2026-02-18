@@ -66,7 +66,7 @@ backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext,
         return nullptr;
     }
 
-    return PlatformEGL::createDriver(sharedContext, driverConfig);
+    return PlatformEGL::createDriverBase(sharedContext, driverConfig, true /* initFirstByQuery */);
 }
 
 } // namespace filament

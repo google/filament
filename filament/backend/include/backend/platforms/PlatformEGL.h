@@ -84,6 +84,22 @@ protected:
     Driver* createDriver(void* sharedContext, const DriverConfig& driverConfig) override;
 
     /**
+     * The implementation of *createDriver*.
+     * @param sharedContext an optional shared context. This is not meaningful with all graphic
+     *                      APIs and platforms.
+     *                      For EGL platforms, this is an EGLContext.
+     *
+     * @param driverConfig  specifies driver initialization parameters
+     *
+     * @param initFirstbyquery determines the order of initialization. If true, then we'd query by
+     *                         eglQueryDevicesEXT first instead of using the default display. Useful
+     *                         for headless egl initialization.
+     * @return nullptr on failure, or a pointer to the newly created driver.
+     */
+    Driver* createDriverBase(void* sharedContext, const DriverConfig& driverConfig,
+            bool initFirstByQuery);
+
+    /**
      * This returns zero. This method can be overridden to return something more useful.
      * @return zero
      */

@@ -120,17 +120,28 @@ bool PlatformEGL::isOpenGL() const noexcept {
 PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
 
 Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) {
+    return createDriverBase(sharedContext, driverConfig, false /* initFirstByQuery */);
+}
+
+Driver* PlatformEGL::createDriverBase(void* sharedContext, const DriverConfig& driverConfig,
+        bool initFirstByQuery) {
     static constexpr int kMaxNumEGLDevices = 32;
 
     EGLint major, minor;
     EGLBoolean initialized = false;
 
-    PFNEGLQUERYDEVICESEXTPROC const eglQueryDevicesEXT =
-        PFNEGLQUERYDEVICESEXTPROC(eglGetProcAddress("eglQueryDevicesEXT"));
-    PFNEGLGETPLATFORMDISPLAYEXTPROC const getPlatformDisplay =
-        PFNEGLGETPLATFORMDISPLAYEXTPROC(eglGetProcAddress("eglGetPlatformDisplay"));
+    using InitFunc = std::function<void()>;
 
-    if (eglQueryDevicesEXT != nullptr && getPlatformDisplay != nullptr) {
+    InitFunc queryInit = [&]() {
+        PFNEGLQUERYDEVICESEXTPROC const eglQueryDevicesEXT =
+                PFNEGLQUERYDEVICESEXTPROC(eglGetProcAddress("eglQueryDevicesEXT"));
+        PFNEGLGETPLATFORMDISPLAYEXTPROC const getPlatformDisplay =
+                PFNEGLGETPLATFORMDISPLAYEXTPROC(eglGetProcAddress("eglGetPlatformDisplay"));
+
+        if (!eglQueryDevicesEXT || !getPlatformDisplay) {
+            return;
+        }
+
         EGLint numDevices = 0;
         EGLDeviceEXT eglDevices[kMaxNumEGLDevices];
         if (eglQueryDevicesEXT(kMaxNumEGLDevices, eglDevices, &numDevices)) {
@@ -139,12 +150,27 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
                 initialized = eglInitialize(mEGLDisplay, &major, &minor);
             }
         }
+    };
+
+    InitFunc defaultInit = [&]() {
+        mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+        initialized = eglInitialize(mEGLDisplay, &major, &minor);
+    };
+
+    // The order by which we check for display/device does matter because certain platforms have
+    // multiple displays/devices. We either return the first queried (and successfully init'd
+    // display) or just use the default display. Deciding which init path should go first is
+    // determined by the bool *initFirstByQuery*..
+    std::array<InitFunc, 2> initFuncs{ defaultInit, queryInit };
+    if (initFirstByQuery) {
+        std::swap(initFuncs[0], initFuncs[1]);
     }
 
-    if (!initialized) {
-        mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-        assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
-        initialized = eglInitialize(mEGLDisplay, &major, &minor);
+    for (auto& initFunc: initFuncs) {
+        if (initialized) {
+            break;
+        }
+        initFunc();
     }
 
     if (UTILS_UNLIKELY(!initialized)) {
