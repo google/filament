@@ -26,6 +26,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.zip.ZipFile
 
 /**
  * Handles the retrieval and preparation of test configuration and assets.
@@ -42,7 +43,11 @@ class ValidationInputManager(private val context: Context) {
     data class ValidationInput(
         val config: RenderTestConfig,
         val outputDir: File,
-        val generateGoldens: Boolean
+        val generateGoldens: Boolean,
+        val autoRun: Boolean = false,
+        val autoExport: Boolean = false,
+        val autoExportResults: Boolean = false,
+        val sourceZip: File? = null
     )
 
     /**
@@ -53,22 +58,111 @@ class ValidationInputManager(private val context: Context) {
         val testConfigPath = intent.getStringExtra("test_config")
         val urlConfig = intent.getStringExtra("url_config")
         val urlModelsBase = intent.getStringExtra("url_models_base")
+        val zipPath = intent.getStringExtra("zip_path")
         val generateGoldens = intent.getBooleanExtra("generate_goldens", false)
+        val autoRun = intent.getBooleanExtra("auto_run", false)
+        val autoExport = intent.getBooleanExtra("auto_export", false)
+        val autoExportResults = intent.getBooleanExtra("auto_export_results", false)
         val outputPath = intent.getStringExtra("output_path")
 
-        val outputDir = if (outputPath != null) {
-            File(outputPath).apply { mkdirs() }
+        Log.i(TAG, "Resolving config with outputPath: $outputPath")
+
+        val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+        Log.i(TAG, "Base directory for resolution: ${baseDir.absolutePath}")
+        
+        val outputDir = if (!outputPath.isNullOrBlank()) {
+            val file = File(outputPath)
+            val resolved = if (file.isAbsolute) {
+                file
+            } else {
+                File(baseDir, outputPath)
+            }
+            
+            // Critical check: if resolved is root or very short, it's likely wrong
+            if (resolved.absolutePath == "/" || resolved.parent == null) {
+                Log.w(TAG, "Resolved outputDir is root ($resolved), defaulting to app-specific dir")
+                File(baseDir, "validation_results")
+            } else {
+                resolved
+            }
         } else {
-            File(context.getExternalFilesDir(null), "validation_results").apply { mkdirs() }
+            File(baseDir, "validation_results")
+        }
+        
+        if (!outputDir.exists() && !outputDir.mkdirs()) {
+            Log.e(TAG, "Failed to create outputDir: ${outputDir.absolutePath}")
+        }
+        Log.i(TAG, "Final outputDir: ${outputDir.absolutePath}")
+
+        val sourceZipFile = if (zipPath != null) {
+            val file = File(zipPath)
+            if (file.isAbsolute) {
+                file
+            } else {
+                File(baseDir, zipPath)
+            }
+        } else {
+            null
         }
 
         val config = when {
+            sourceZipFile != null && sourceZipFile.exists() -> loadFromZip(sourceZipFile)
             urlConfig != null -> downloadConfig(urlConfig, urlModelsBase)
             testConfigPath != null -> ConfigParser.parseFromPath(testConfigPath)
             else -> extractDefaultAssets()
         }
 
-        return@withContext ValidationInput(config, outputDir, generateGoldens)
+        return@withContext ValidationInput(config, outputDir, generateGoldens, autoRun, autoExport, autoExportResults, sourceZipFile)
+    }
+
+    suspend fun loadFromZip(zipFile: File): RenderTestConfig {
+        Log.i(TAG, "Unzipping validation bundle: ${zipFile.absolutePath}")
+        // Use a unique cache dir based on timestamp or just overwrite a common one
+        // Overwriting is safer to avoid filling up disk, but we must ensure we don't conflict with current run
+        val baseCacheDir = context.externalCacheDir ?: context.cacheDir
+        val cacheDir = File(baseCacheDir, "unzipped_validation")
+        if (cacheDir.exists()) cacheDir.deleteRecursively()
+        cacheDir.mkdirs()
+
+        Log.i(TAG, "Using cacheDir: ${cacheDir.absolutePath}")
+
+        ZipFile(zipFile).use { zip ->
+            val entries = zip.entries()
+            while (entries.hasMoreElements()) {
+                val entry = entries.nextElement()
+                val entryFile = File(cacheDir, entry.name)
+                // specific check to avoid zip slip vulnerability (though low risk here)
+                if (!entryFile.canonicalPath.startsWith(cacheDir.canonicalPath)) {
+                    throw SecurityException("Zip entry is outside of the target dir: ${entry.name}")
+                }
+                
+                if (entry.isDirectory) {
+                    entryFile.mkdirs()
+                } else {
+                    entryFile.parentFile?.mkdirs()
+                    zip.getInputStream(entry).use { input ->
+                         FileOutputStream(entryFile).use { output ->
+                             input.copyTo(output)
+                         }
+                    }
+                }
+            }
+        }
+        
+        // Find config.json
+        // We look for a file ending in .json within the unzipped structure
+        // Exclude results.json if it happened to be there
+        val jsonFiles = cacheDir.walkTopDown()
+            .filter { it.isFile && it.extension == "json" && it.name != "results.json" }
+            .toList()
+            
+        if (jsonFiles.isEmpty()) throw IllegalStateException("No config.json found in zip")
+        
+        // Prefer one named config.json or take the first one
+        val configFile = jsonFiles.find { it.name == "config.json" } ?: jsonFiles.first()
+
+        Log.i(TAG, "Parsed config from ${configFile.absolutePath}")
+        return ConfigParser.parseFromPath(configFile.absolutePath)
     }
 
     private suspend fun extractDefaultAssets(): RenderTestConfig {
@@ -90,9 +184,9 @@ class ValidationInputManager(private val context: Context) {
         // Copy DamagedHelmet.glb
         val modelsDir = File(filesDir, "models")
         modelsDir.mkdirs()
-        val modelOut = File(modelsDir, "DamagedHelmet.glb")
+        val modelOut = File(modelsDir, "helmet.glb")
 
-        assetManager.open("DamagedHelmet.glb").use { input ->
+        assetManager.open("models/helmet.glb").use { input ->
             FileOutputStream(modelOut).use { output ->
                 input.copyTo(output)
             }
