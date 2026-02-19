@@ -17,7 +17,6 @@
 #include <backend/platforms/PlatformEGLHeadless.h>
 
 #include <bluegl/BlueGL.h>
-#include "../gl_headers.h"
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
