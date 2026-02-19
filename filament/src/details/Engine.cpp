@@ -462,8 +462,22 @@ void FEngine::init() {
 #endif
     {
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
-        defaultMaterialBuilder.package(
-                MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+        switch (mConfig.stereoscopicType) {
+            case StereoscopicType::NONE:
+            case StereoscopicType::INSTANCED:
+                defaultMaterialBuilder.package(
+                        MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+                break;
+            case StereoscopicType::MULTIVIEW:
+#ifdef FILAMENT_ENABLE_MULTIVIEW
+                defaultMaterialBuilder.package(
+                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA,
+                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
+#else
+                assert_invariant(false);
+#endif
+                break;
+        }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
     }
 
@@ -721,14 +735,21 @@ void FEngine::prepare(DriverApi& driver) {
     }
 
     UboManager* uboManager = mUboManager;
+    size_t const capacity = getMinCommandBufferSize();
     for (auto& materialInstanceList: mMaterialInstances) {
-        materialInstanceList.second.forEach([&driver, uboManager](FMaterialInstance const* item) {
-            // post-process materials instances must be commited explicitly because their
-            // parameters are typically not set at this point in time.
-            if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
-                item->commit(driver, uboManager);
-            }
-        });
+        materialInstanceList.second.forEach(
+                [this, &driver, uboManager, capacity](FMaterialInstance const* item) {
+                    // post-process materials instances must be commited explicitly because their
+                    // parameters are typically not set at this point in time.
+                    if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
+                        // If the remaining space is less than half the capacity, we flush right
+                        // away to allow some headroom for commands that might come later.
+                        if (UTILS_UNLIKELY(driver.getCircularBuffer().getUsed() > capacity / 2)) {
+                            flush();
+                        }
+                        item->commit(driver, uboManager);
+                    }
+                });
     }
 
     if (useUboBatching) {

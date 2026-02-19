@@ -263,6 +263,14 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
     ~VulkanProgram();
 
     /**
+     * Cancels any parallel compilation jobs that have not yet run for this
+     * program.
+     */
+    inline void cancelParallelCompilation() {
+        mParallelCompilationCanceled.store(true, std::memory_order_release);
+    }
+
+    /**
      * Writes out any queued push constants using the provided VkPipelineLayout.
      *
      * @param layout The layout that is to be used along with these push constants,
@@ -282,6 +290,17 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
 
     inline VkPushConstantRange const* getPushConstantRanges() const {
         return mInfo->pushConstantDescription.getVkRanges();
+    }
+
+    /**
+     * Returns true if parallel compilation is canceled, false if not. Parallel
+     * compilation will be canceled if this program is destroyed before relevant
+     * pipelines are created.
+     *
+     * @return true if parallel compilation should run for this program, false if not
+     */
+    inline bool isParallelCompilationCanceled() const {
+        return mParallelCompilationCanceled.load(std::memory_order_acquire);
     }
 
     inline void writePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
@@ -320,6 +339,7 @@ private:
 
     PipelineInfo* mInfo;
     VkDevice mDevice = VK_NULL_HANDLE;
+    std::atomic<bool> mParallelCompilationCanceled { false };
     std::vector<PushConstantInfo> mQueuedPushConstants;
 };
 
