@@ -135,7 +135,7 @@ public:
         math::mat4f lightSpace{};
         math::float4 lightFromWorldZ{};
         math::float4 scissorNormalized{};
-        float texelSizeAtOneMeterWs{};
+        math::float2 texelSizeAtOneMeterWs{};
     };
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
@@ -319,8 +319,8 @@ private:
 
     math::float4 getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo) const noexcept;
 
-    static float texelSizeWorldSpace(const math::mat3f& clipFromWorld, uint16_t shadowDimension) noexcept;
-    static float texelSizeWorldSpace(const math::mat4f& clipFromWorld, uint16_t shadowDimension) noexcept;
+    static math::float2 texelSizeWorldSpace(const math::mat3f& clipFromWorld, uint16_t shadowDimension) noexcept;
+    static math::float2 texelSizeWorldSpace(const math::mat4f& clipFromWorld, uint16_t shadowDimension) noexcept;
 
     static constexpr Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },

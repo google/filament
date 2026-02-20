@@ -299,10 +299,9 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         math::mat4f lightFromWorldMatrix;       // 64
         math::float4 lightFromWorldZ;           // 16
         math::float4 scissorNormalized;         // 16
-        float texelSizeAtOneMeter;              //  4
         float bulbRadiusLs;                     //  4
         float nearOverFarMinusNear;             //  4
-        float normalBias;                       //  4
+        math::float2 normalBias;                //  4
         bool elvsm;                             //  4
         uint32_t layer;                         //  4
         uint32_t reserved1;                     //  4
