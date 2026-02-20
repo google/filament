@@ -3823,15 +3823,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 auto const& inDesc = resources.getDescriptor(data.in);
                 auto width = inDesc.width;
                 assert_invariant(width == inDesc.height);
-                int const dim = width >> (level + 1);
+                uint32_t const dim = std::max(1u, width >> (level + 1));
 
                 auto& material = getPostProcessMaterial("vsmMipmap");
                 FMaterial const* const ma = material.getMaterial(mEngine, driver);
 
-                // When generating shadow map mip levels, we want to preserve the 1 texel border.
-                // (note clearing never respects the scissor in Filament)
                 auto const pipeline = getPipelineState(ma);
-                backend::Viewport const scissor = { 1u, 1u, dim - 2u, dim - 2u };
+                backend::Viewport const scissor = { 0, 0, dim, dim };
 
                 FMaterialInstance* const mi = getMaterialInstance(ma);
                 mi->setParameter("color", in, SamplerParams{

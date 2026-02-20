@@ -2121,7 +2121,7 @@ public class View {
          */
         public boolean highPrecision = false;
         /**
-         * VSM minimum variance scale, must be positive.
+         * @deprecated has no effect.
          */
         public float minVarianceScale = 0.5f;
         /**

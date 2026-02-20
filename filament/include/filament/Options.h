@@ -735,7 +735,7 @@ struct VsmShadowOptions {
     bool highPrecision = false;
 
     /**
-     * VSM minimum variance scale, must be positive.
+     * @deprecated has no effect.
      */
     float minVarianceScale = 0.5f;
 
