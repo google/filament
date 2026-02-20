@@ -742,17 +742,16 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 
                 // Texel size is constant for directional light (although that's not true when LISPSM
                 // is used, but in that case we're pretending it is).
-                const float wsTexelSize = shaderParameters.texelSizeAtOneMeterWs;
+                float2 const wsTexelSize = shaderParameters.texelSizeAtOneMeterWs;
 
                 auto& s = mShadowUb.edit();
                 s.shadows[shadowIndex].layer = shadowMap.getLayer();
                 s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
                 s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
-                s.shadows[shadowIndex].normalBias = normalBias * wsTexelSize;
-                s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSize;
+                s.shadows[shadowIndex].normalBias = wsTexelSize * normalBias;
                 s.shadows[shadowIndex].elvsm = options.vsm.elvsm;
                 s.shadows[shadowIndex].bulbRadiusLs =
-                        mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
+                        mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / length(wsTexelSize);
 
                 shadowTechnique |= ShadowTechnique::SHADOW_MAP;
                 cascadeHasVisibleShadows |= 0x1u << i;
@@ -833,7 +832,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engin
     // and if we need to generate it, update all the UBO data
     if (shadowMap.hasVisibleShadows()) {
         const size_t shadowIndex = shadowMap.getShadowIndex();
-        const float wsTexelSizeAtOneMeter = shaderParameters.texelSizeAtOneMeterWs;
+        const float2 wsTexelSizeAtOneMeter = shaderParameters.texelSizeAtOneMeterWs;
         // note: normalBias is set to zero for VSM
         const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
 
@@ -845,12 +844,11 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engin
         s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
-        s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].nearOverFarMinusNear = float(n / (f - n));
         s.shadows[shadowIndex].elvsm = options->vsm.elvsm;
         s.shadows[shadowIndex].bulbRadiusLs =
                 mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
-                        / wsTexelSizeAtOneMeter;
+                        / length(wsTexelSizeAtOneMeter);
 
     }
 }
@@ -926,7 +924,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
     // and if we need to generate it, update all the UBO data
     if (shadowMap.hasVisibleShadows()) {
         const size_t shadowIndex = shadowMap.getShadowIndex();
-        const float wsTexelSizeAtOneMeter = shaderParameters.texelSizeAtOneMeterWs;
+        const float2 wsTexelSizeAtOneMeter = shaderParameters.texelSizeAtOneMeterWs;
         // note: normalBias is set to zero for VSM
         const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
 
@@ -938,12 +936,11 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
-        s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].nearOverFarMinusNear = float(n / (f - n));
         s.shadows[shadowIndex].elvsm = options->vsm.elvsm;
         s.shadows[shadowIndex].bulbRadiusLs =
                 mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
-                        / wsTexelSizeAtOneMeter;
+                        / length(wsTexelSizeAtOneMeter);
     }
 }
 
