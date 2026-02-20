@@ -590,6 +590,9 @@ void FEngine::shutdown() {
     DLOG(INFO) << "CircularBuffer: High watermark " << wm / 1024 << " KiB (" << wmpct << "%)";
 #endif
 
+    /* Destroy any leftover items in the cache. */
+    mMaterialCache.terminate(*this);
+
     DriverApi& driver = getDriverApi();
 
     /*
