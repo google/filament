@@ -155,10 +155,11 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::RGBA16UI:          return VK_FORMAT_R16G16B16A16_UINT;
         case TextureFormat::RGBA16I:           return VK_FORMAT_R16G16B16A16_SINT;
 
-        // 96-bits per element.
-        case TextureFormat::RGB32F:            return VK_FORMAT_R32G32B32_SFLOAT;
-        case TextureFormat::RGB32UI:           return VK_FORMAT_R32G32B32_UINT;
-        case TextureFormat::RGB32I:            return VK_FORMAT_R32G32B32_SINT;
+        // 96-bits per element. In practice, very few GPU vendors support these. So, we simply
+        // always reshape them into 128-bit formats.
+        case TextureFormat::RGB32F:            return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case TextureFormat::RGB32UI:           return VK_FORMAT_R32G32B32A32_UINT;
+        case TextureFormat::RGB32I:            return VK_FORMAT_R32G32B32A32_SINT;
 
         // 128-bits per element.
         case TextureFormat::RGBA32F:           return VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -629,6 +630,19 @@ VkCompareOp getCompareOp(SamplerCompareFunc func) {
         case Compare::NE: return VK_COMPARE_OP_NOT_EQUAL;
         case Compare::A:  return VK_COMPARE_OP_ALWAYS;
         case Compare::N:  return VK_COMPARE_OP_NEVER;
+    }
+}
+
+VkStencilOp getStencilOp(StencilOperation op) {
+    switch (op) {
+        case StencilOperation::KEEP:      return VK_STENCIL_OP_KEEP;
+        case StencilOperation::ZERO:      return VK_STENCIL_OP_ZERO;
+        case StencilOperation::REPLACE:   return VK_STENCIL_OP_REPLACE;
+        case StencilOperation::INCR:      return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+        case StencilOperation::INCR_WRAP: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+        case StencilOperation::DECR:      return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+        case StencilOperation::DECR_WRAP: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+        case StencilOperation::INVERT:    return VK_STENCIL_OP_INVERT;
     }
 }
 

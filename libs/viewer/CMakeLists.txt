@@ -34,6 +34,12 @@ target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn c
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced")
+    add_definitions(-DFILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
+elseif (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    add_definitions(-DFILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+endif ()
+
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================
@@ -51,7 +57,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/viewer DESTINATION include)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (FILAMENT_BUILD_TESTING AND NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_executable(test_settings tests/test_settings.cpp)
     target_link_libraries(test_settings PRIVATE ${TARGET} gtest)
     set_target_properties(test_settings PROPERTIES FOLDER Tests)

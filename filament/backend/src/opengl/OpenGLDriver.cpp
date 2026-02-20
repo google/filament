@@ -1912,7 +1912,9 @@ void OpenGLDriver::createDefaultRenderTargetR(
     rt->gl.isDefault = true;
     rt->gl.fbo = 0; // the actual id is resolved at binding time
     rt->gl.samples = 1;
-    // FIXME: these flags should reflect the actual attachments present
+    // for the default render target, the attachments (i.e. targets) are unknown until the swapChain is bound
+    // (via OpenGLPlatform::makeCurrent()). Here we initialize the field with some reasonable defaults, but
+    // these will be ignored in begin/endRenderPass()
     rt->targets = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
     mHandleAllocator.associateTagToHandle(rth.getId(), std::move(tag));
 }
@@ -2104,6 +2106,13 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
 
+    // TODO: This is a bit fragile, instead we should ask the SwapChain for its actual attachments.
+    //       But this requires an API change in the platform. So we can do that later if needed.
+    sc->attachments = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+    if (flags & SWAP_CHAIN_CONFIG_HAS_STENCIL_BUFFER) {
+        sc->attachments |= TargetBufferFlags::STENCIL;
+    }
+
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
     FILAMENT_CHECK_POSTCONDITION(sc->swapChain) << "createSwapChain(" << nativeWindow << ", "
@@ -2125,6 +2134,13 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
+
+    // TODO: This is a bit fragile, instead we should ask the SwapChain for its actual attachments.
+    //       But this requires an API change in the platform. So we can do that later if needed.
+    sc->attachments = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+    if (flags & SWAP_CHAIN_CONFIG_HAS_STENCIL_BUFFER) {
+        sc->attachments |= TargetBufferFlags::STENCIL;
+    }
 
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
@@ -3607,6 +3623,8 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
         case StreamType::NATIVE:
             mPlatform.detach(t->hwStream->stream);
             // ^ this deletes the texture id
+            // We still need to call unbind to update the bookkeeping.
+            gl.unbindTexture(t->gl.target, t->gl.id);
             break;
         case StreamType::ACQUIRED:
             gl.unbindTexture(t->gl.target, t->gl.id);
@@ -3702,8 +3720,10 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     assert_invariant(!rt->gl.isDefault || mCurrentDrawSwapChain);
     mRec709OutputColorspace = rt->gl.isDefault ? mCurrentDrawSwapChain->rec709 : false;
 
-    const TargetBufferFlags clearFlags = params.flags.clear & rt->targets;
-    TargetBufferFlags discardFlags = params.flags.discardStart & rt->targets;
+    // for the default renderTarget the attachments come from the current swapChain
+    TargetBufferFlags const rtAttachments = rt->gl.isDefault ? mCurrentDrawSwapChain->attachments : rt->targets;
+    TargetBufferFlags const clearFlags = params.flags.clear & rtAttachments;
+    TargetBufferFlags discardFlags = params.flags.discardStart & rtAttachments;
 
     GLuint const fbo = gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     CHECK_GL_FRAMEBUFFER_STATUS(GL_FRAMEBUFFER)
@@ -3768,7 +3788,8 @@ void OpenGLDriver::endRenderPass(int) {
 
     GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
-    TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd & rt->targets;
+    TargetBufferFlags const rtAttachments = rt->gl.isDefault ? mCurrentDrawSwapChain->attachments : rt->targets;
+    TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd & rtAttachments;
     if (rt->gl.fbo_read) {
         resolvePass(ResolveAction::STORE, rt, discardFlags);
     }

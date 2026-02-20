@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.69.1'
+    implementation 'com.google.android.filament:filament-android:1.69.3'
 }
 ```
 
@@ -39,19 +39,18 @@ Here are all the libraries available in the group `com.google.android.filament`:
 
 | Artifact      | Description   |
 | ------------- | ------------- |
-| [![filament-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg?subject=filament-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android)  | The Filament rendering engine itself. |
-| [![filament-android-debug](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android-debug/badge.svg?subject=filament-android-debug)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android-debug)  | Debug version of `filament-android`. |
-| [![gltfio-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android/badge.svg?subject=gltfio-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android) | A glTF 2.0 loader for Filament, depends on `filament-android`. |
-| [![filament-utils-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android/badge.svg?subject=filament-utils-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android) | KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`. |
-| [![filamat-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android/badge.svg?subject=filamat-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android) | A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer and supports both OpenGL and Vulkan. |
-| [![filamat-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite/badge.svg?subject=filamat-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite) | A much smaller alternative to `filamat-android` that can only generate OpenGL shaders. It does not provide validation or optimizations. |
+| [![filament-android](https://img.shields.io/maven-central/v/com.google.android.filament/filament-android?label=filament-android&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/filament-android)  | The Filament rendering engine itself. |
+| [![filament-android-debug](https://img.shields.io/maven-central/v/com.google.android.filament/filament-android-debug?label=filament-android-debug&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/filament-android-debug)  | Debug version of `filament-android`. |
+| [![gltfio-android](https://img.shields.io/maven-central/v/com.google.android.filament/gltfio-android?label=gltfio-android&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/gltfio-android) | A glTF 2.0 loader for Filament, depends on `filament-android`. |
+| [![filament-utils-android](https://img.shields.io/maven-central/v/com.google.android.filament/filament-utils-android?label=filament-utils-android&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/filament-utils-android) | KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`. |
+| [![filamat-android](https://img.shields.io/maven-central/v/com.google.android.filament/filamat-android?label=filamat-android&color=green)](https://mvnrepository.com/artifact/com.google.android.filament/filamat-android) | A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer and supports both OpenGL and Vulkan. |
 
 ### iOS
 
 iOS projects can use CocoaPods to install the latest release:
 
 ```shell
-pod 'Filament', '~> 1.69.1'
+pod 'Filament', '~> 1.69.3'
 ```
 
 ## Documentation
@@ -89,7 +88,8 @@ pod 'Filament', '~> 1.69.1'
 - OpenGL ES 3.0+ for Android and iOS
 - Metal for macOS and iOS
 - Vulkan 1.0 for Android, Linux, macOS, and Windows
-- WebGL 2.0 for all platforms
+- WebGPU for Android, Linux, macOS, and Windows
+- WebGL 2.0 for all browsers supporting it
 
 ### Rendering
 
@@ -124,7 +124,7 @@ pod 'Filament', '~> 1.69.1'
 
 - HDR bloom
 - Depth of field bokeh
-- Multiple tone mappers: generic (customizable), ACES, filmic, etc.
+- Multiple tone mappers: PBR Neutral, AgX, generic (customizable), ACES, filmic, etc.
 - Color and tone management: luminance scaling, gamut mapping
 - Color grading: exposure, night adaptation, white balance, channel mixer,
   shadows/mid-tones/highlights, ASC CDL, contrast, saturation, etc.
@@ -158,15 +158,16 @@ pod 'Filament', '~> 1.69.1'
   - [x] KHR_draco_mesh_compression
   - [x] KHR_lights_punctual
   - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_dispersion
   - [x] KHR_materials_emissive_strength
   - [x] KHR_materials_ior
   - [x] KHR_materials_pbrSpecularGlossiness
   - [x] KHR_materials_sheen
+  - [x] KHR_materials_specular
   - [x] KHR_materials_transmission
   - [x] KHR_materials_unlit
   - [x] KHR_materials_variants
   - [x] KHR_materials_volume
-  - [x] KHR_materials_specular
   - [x] KHR_mesh_quantization
   - [x] KHR_texture_basisu
   - [x] KHR_texture_transform
@@ -331,7 +332,7 @@ and tools.
   - `filamesh`:               Mesh converter
   - `glslminifier`:           Minifies GLSL source code
   - `matc`:                   Material compiler
-  - `filament-matp`:          Material parser
+  - `matedit`:                Material editor for compiled materials
   - `matinfo`                 Displays information about materials compiled with `matc`
   - `mipgen`                  Generates a series of miplevels from a source image
   - `normal-blending`:        Tool to blend normal maps

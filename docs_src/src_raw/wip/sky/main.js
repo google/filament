@@ -218,6 +218,7 @@ class App {
     const exposure = this.getExposure();
     const preExposedIntensity = this.params.sunIntensity * exposure;
     this.skybox.setSunIntensity(preExposedIntensity);
+    this.skybox.setExposure(exposure); // Update Skybox Exposure Uniform
 
     // Moon Exposure
     if (this.mParams) {
@@ -389,7 +390,7 @@ class App {
     };
 
     mwFolder.add(this.mwParams, 'enabled').name('Enabled').onChange(updateMW);
-    mwFolder.add(this.mwParams, 'intensity', 0.0, 5.0).onChange(updateMW);
+    mwFolder.add(this.mwParams, 'intensity', 0.0, 100.0).onChange(updateMW);
     mwFolder.add(this.mwParams, 'saturation', 0.0, 2.0).onChange(updateMW);
     mwFolder.add(this.mwParams, 'blackPoint', 0.0, 0.5).name('Black Point').onChange(updateMW);
     mwFolder.add(this.mwParams, 'siderealTime', 0.0, 24.0).name('Sidereal Time').listen().onChange(updateMW);
@@ -464,18 +465,23 @@ class App {
     const starFolder = gui.addFolder('Stars');
     this.sParams = {
       enabled: true,
-      density: 0.001
+      density: 0.001,
+      intensity: 0.0 // 2^0 = 1.0
     };
     // Initialize defaults (Density 0.001, Enabled True)
     sky.setStarControl(0.001, true);
+    sky.setStarIntensity(Math.pow(2.0, 0.0));
 
     const updateStars = () => {
       sky.setStarControl(this.sParams.density, this.sParams.enabled);
+      sky.setStarIntensity(Math.pow(2.0, this.sParams.intensity));
     };
 
     starFolder.add(this.sParams, 'enabled').name('Enabled').onChange(updateStars);
     starFolder.add(this.sParams, 'density', 0.0, 0.01, 0.0001).name('Density').onChange(updateStars);
+    starFolder.add(this.sParams, 'intensity', 0.0, 24.0).name('Intensity (Exp)').onChange(updateStars);
     starFolder.close();
+    this.updateStars = updateStars;
 
     const artFolder = gui.addFolder('Artistic');
     // Set Horizon Glow default to 0.0
@@ -489,7 +495,7 @@ class App {
     artFolder.add(sky.msFactors, 2, 0.0, 1.0).name('Horizon Glow').onChange(v => sky.setHorizonGlow(v));
     artFolder.add(sky, 'contrast', 0.1, 2.0).onChange(v => sky.setContrast(v));
 
-    artFolder.addColor(sky, 'nightColor').onChange(v => sky.setNightColor(v));
+
 
     const shmFolder = artFolder.addFolder('Shimmer');
     // Set Shimmer Strength default to 0.0
@@ -502,7 +508,7 @@ class App {
     const camFolder = gui.addFolder('Camera');
     camFolder.add(this.params, 'focalLength', 8.0, 300.0).name('Focal Length').onChange(() => this.updateCameraProjection());
     camFolder.add(this.params, 'aperture', 1.4, 32.0).onChange(() => this.updateCameraExposure());
-    camFolder.add(this.params, 'shutterSpeed', 1.0, 1000.0).onChange(() => this.updateCameraExposure());
+    camFolder.add(this.params, 'shutterSpeed', 0.05, 1000.0).onChange(() => this.updateCameraExposure());
     camFolder.add(this.params, 'iso', 50.0, 3200.0).onChange(() => this.updateCameraExposure());
 
     const bloomFolder = camFolder.addFolder('Bloom');
@@ -692,13 +698,15 @@ class App {
     const s = this.sParams;
     const b = this.bParams;
     const m = this.mParams;
+    const mw = this.mwParams;
     const sk = this.skybox;
 
     return {
       p: { a: p.aperture, ss: p.shutterSpeed, i: p.iso, st: p.sunTheta, sp: p.sunPhi, fl: p.focalLength, si: p.sunIntensity },
       c: { v: c.volumetrics, co: c.coverage, d: c.density, h: c.height, s: c.speed, e: c.evolution },
       w: { dt: w.derivativeTrick, st: w.strength, s: w.speed, o: w.octaves },
-      s: { e: s.enabled, d: s.density },
+      s: { e: s.enabled, d: s.density, i: s.intensity },
+      mw: { e: mw.enabled, i: mw.intensity, s: mw.saturation, bp: mw.blackPoint, st: mw.siderealTime, l: mw.latitude },
       b: { e: b.enabled, lf: b.lensFlare },
       m: { e: m.enabled, az: m.azimuth, h: m.height, r: m.radius, i: m.intensity },
       cm: { t: this.camState.theta, p: this.camState.phi },
@@ -723,6 +731,7 @@ class App {
     const c = state.c;
     const w = state.w;
     const s = state.s;
+    const mw = state.mw;
     const b = state.b;
     const m = state.m;
     const k = state.k;
@@ -757,6 +766,18 @@ class App {
     if (s) {
       if (s.e !== undefined) this.sParams.enabled = s.e;
       if (s.d !== undefined) this.sParams.density = s.d;
+      if (s.i !== undefined) this.sParams.intensity = s.i;
+      if (this.updateStars) this.updateStars();
+    }
+
+    if (mw) {
+      if (mw.e !== undefined) this.mwParams.enabled = mw.e;
+      if (mw.i !== undefined) this.mwParams.intensity = mw.i;
+      if (mw.s !== undefined) this.mwParams.saturation = mw.s;
+      if (mw.bp !== undefined) this.mwParams.blackPoint = mw.bp;
+      if (mw.st !== undefined) this.mwParams.siderealTime = mw.st;
+      if (mw.l !== undefined) this.mwParams.latitude = mw.l;
+      if (this.updateMW) this.updateMW();
     }
 
     if (b) {

@@ -72,6 +72,10 @@ VkFormat transformVkFormat(VkFormat format, bool sRGB) {
     return format;
 }
 
+bool isFormatSrgb(VkFormat format) {
+  return format == VK_FORMAT_R8G8B8A8_SRGB || format == VK_FORMAT_R8G8B8_SRGB;
+}
+
 bool isProtectedFromUsage(uint64_t usage) {
     return usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
 }
@@ -367,17 +371,22 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
             .pViewFormats = formats,
         };
 
-        if (fvkExternalImage->sRGB) {
+        if (isFormatSrgb(metadata.format)) {
             formats[0] = metadata.format;
             formats[1] = transformVkFormat(metadata.format, /*sRGB=*/false);
             imageFormatListInfo.pNext = externalCreateInfo.pNext;
             externalCreateInfo.pNext = &imageFormatListInfo;
         }
 
+        VkImageCreateFlags imageFlags =
+                (isFormatSrgb(metadata.format) ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT : 0u) |
+                (any(metadata.filamentUsage & TextureUsage::PROTECTED)
+                                ? VK_IMAGE_CREATE_PROTECTED_BIT
+                                : 0u);
         VkImageCreateInfo const imageInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .pNext = &externalCreateInfo,
-            .flags = fvkExternalImage->sRGB ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT : 0u,
+            .flags = imageFlags,
             .imageType = VK_IMAGE_TYPE_2D,
             // For non external images, use the same format as the AHB, which isn't in SRGB
             // Fix VUID-VkMemoryAllocateInfo-pNext-02387

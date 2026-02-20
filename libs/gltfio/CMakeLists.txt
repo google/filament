@@ -79,6 +79,13 @@ set(TRANSPARENCY default)
 
 set(UBERZ_OUTPUT_PATH "${RESOURCE_DIR}/default.uberz")
 
+set (MATC_FLAGS ${MATC_BASE_FLAGS})
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=instanced)
+elseif (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=multiview)
+endif ()
+
 function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
     set(DEST "${RESOURCE_DIR}/${NAME}")
     configure_file(materials/${SRC}.mat.in "${DEST}.mat" COPYONLY)
@@ -95,7 +102,7 @@ function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
 
     add_custom_command(
         OUTPUT "${NAME}.filamat"
-        COMMAND matc ${MATC_BASE_FLAGS} ${TEMPLATE_ARGS} -o "${NAME}.filamat" "${NAME}.mat"
+        COMMAND matc ${MATC_FLAGS} ${TEMPLATE_ARGS} -o "${NAME}.filamat" "${NAME}.mat"
         DEPENDS matc "${DEST}.mat"
         WORKING_DIRECTORY ${RESOURCE_DIR}
         COMMENT "Compiling material ${NAME}")
@@ -218,38 +225,40 @@ endif()
 # Tests
 # ==================================================================================================
 
-set(GLTF_TEST_FILES)
-function(add_test_gltf SOURCE TARGET)
-    set(source_path "${ROOT_DIR}/${SOURCE}")
-    set(target_path "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}")
-    add_custom_command(
-        OUTPUT ${target_path}
-        DEPENDS ${source_path}
-        COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${target_path}
-    )
-    list(APPEND GLTF_TEST_FILES "${target_path}")
-    set(GLTF_TEST_FILES ${GLTF_TEST_FILES} PARENT_SCOPE)
-endfunction()
+if (FILAMENT_BUILD_TESTING)
+    set(GLTF_TEST_FILES)
+    function(add_test_gltf SOURCE TARGET)
+        set(source_path "${ROOT_DIR}/${SOURCE}")
+        set(target_path "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}")
+        add_custom_command(
+            OUTPUT ${target_path}
+            DEPENDS ${source_path}
+            COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${target_path}
+        )
+        list(APPEND GLTF_TEST_FILES "${target_path}")
+        set(GLTF_TEST_FILES ${GLTF_TEST_FILES} PARENT_SCOPE)
+    endfunction()
 
-add_test_gltf("third_party/models/AnimatedMorphCube/AnimatedMorphCube.glb" "AnimatedMorphCube.glb")
-add_test_gltf("third_party/models/DamagedHelmet/DamagedHelmetWebp.glb" "DamagedHelmetWebp.glb")
+    add_test_gltf("third_party/models/AnimatedMorphCube/AnimatedMorphCube.glb" "AnimatedMorphCube.glb")
+    add_test_gltf("third_party/models/DamagedHelmet/DamagedHelmetWebp.glb" "DamagedHelmetWebp.glb")
 
-add_custom_target(test_gltfio_files DEPENDS ${GLTF_TEST_FILES})
+    add_custom_target(test_gltfio_files DEPENDS ${GLTF_TEST_FILES})
 
-# The following tests rely on private APIs that are stripped
-# away in Release builds
-if (TNT_DEV AND NOT WEBGL AND NOT ANDROID AND NOT IOS)
-    set(TEST_TARGET test_gltfio)
+    # The following tests rely on private APIs that are stripped
+    # away in Release builds
+    if (TNT_DEV AND NOT WEBGL AND NOT ANDROID AND NOT IOS)
+        set(TEST_TARGET test_gltfio)
 
-    add_executable(${TEST_TARGET} test/gltfio_test.cpp)
-    add_dependencies(${TEST_TARGET} test_gltfio_files)
-    set_property(TARGET test_gltfio PROPERTY LINK_LIBRARIES)
+        add_executable(${TEST_TARGET} test/gltfio_test.cpp)
+        add_dependencies(${TEST_TARGET} test_gltfio_files)
+        set_property(TARGET test_gltfio PROPERTY LINK_LIBRARIES)
 
-    target_link_libraries(${TEST_TARGET} PRIVATE ${TARGET} gtest uberarchive)
-    if (NOT MSVC)
-        target_compile_options(${TEST_TARGET} PRIVATE ${GLTFIO_WARNINGS})
+        target_link_libraries(${TEST_TARGET} PRIVATE ${TARGET} gtest uberarchive)
+        if (NOT MSVC)
+            target_compile_options(${TEST_TARGET} PRIVATE ${GLTFIO_WARNINGS})
+        endif()
+        set_target_properties(${TEST_TARGET} PROPERTIES FOLDER Tests)
     endif()
-    set_target_properties(${TEST_TARGET} PROPERTIES FOLDER Tests)
 endif()
 
 # ==================================================================================================
