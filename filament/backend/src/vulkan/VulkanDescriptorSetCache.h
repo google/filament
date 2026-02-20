@@ -55,12 +55,7 @@ public:
             VkDeviceSize size) noexcept;
 
     void updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
-            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler,
-            VkDescriptorSetLayout externalSamplerLayout = VK_NULL_HANDLE) noexcept;
-
-    void updateSamplerForExternalSamplerSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
-            fvkmemory::resource_ptr<VulkanTexture> texture) noexcept;
-
+            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler) noexcept;
 
     void updateInputAttachment(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             VulkanAttachment const& attachment) noexcept;
@@ -75,6 +70,9 @@ public:
 
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
+
+    void cloneSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+            fvkutils::SamplerBitmask samplerMask) noexcept;
 
     // This method is meant to be used with external samplers
     VkDescriptorSet getVkSet(DescriptorCount const& count, VkDescriptorSetLayout vklayout);
