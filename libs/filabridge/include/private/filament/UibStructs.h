@@ -166,7 +166,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // VSM shadows [variant: VSM]
     // --------------------------------------------------------------------------------------------
     float vsmExponent;
-    float vsmDepthScale;
+    float vsmMaxMoment;
     float vsmLightBleedReduction;
     uint32_t shadowSamplingType;                // 0: vsm, 1: dpcf
 
@@ -302,9 +302,9 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         float bulbRadiusLs;                     //  4
         float nearOverFarMinusNear;             //  4
         math::float2 normalBias;                //  4
-        bool elvsm;                             //  4
-        uint32_t layer;                         //  4
-        uint32_t reserved1;                     //  4
+        bool elvsm;                             //  4   // could be 1 bit
+        uint32_t layer;                         //  4   // could be 8 bits
+        float vsmExponent;                      //  4   // could be fp16
         uint32_t reserved2;                     //  4
     };
     ShadowData shadows[CONFIG_MAX_SHADOWMAPS];
