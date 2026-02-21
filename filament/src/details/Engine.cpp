@@ -746,6 +746,12 @@ void FEngine::prepare(DriverApi& driver) {
                         // away to allow some headroom for commands that might come later.
                         if (UTILS_UNLIKELY(driver.getCircularBuffer().getUsed() > capacity / 2)) {
                             flush();
+
+                            // In single-threaded mode, we have to call execute() to drain the command
+                            // buffer to really free up space
+                            if constexpr (!UTILS_HAS_THREADING) {
+                                execute();
+                            }
                         }
                         item->commit(driver, uboManager);
                     }
