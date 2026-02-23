@@ -100,6 +100,9 @@
     "test/backend/README.md": {
         "dest": "dup/test_ci_backend.md"
     },
+    "test/sizeguard/README.md": {
+        "dest": "dup/test_ci_sizeguard.md"
+    },
     "filament/backend/test/README.md": {
         "dest": "dup/backend_test.md"
     }

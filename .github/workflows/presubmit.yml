@@ -70,13 +70,20 @@ jobs:
           pushd .
           cd build/android && printf "y" | ./build.sh presubmit-with-archive arm64-v8a
           popd
+      - id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
       - name: Check artifact sizes
         run: |
           python3 test/sizeguard/dump_artifact_size.py out/*.aar > current_size.json
+          BYPASS_ARG=""
+          if python3 test/sizeguard/check_bypass.py ${{ steps.get_commit_msg.outputs.hash }}; then
+              BYPASS_ARG="--bypass"
+          fi
           python3 test/sizeguard/check_size.py current_size.json \
               --target-branch origin/main \
               --threshold 20480 \
-              --artifacts filament-android-release.aar/jni/arm64-v8a/libfilament-jni.so
+              --artifacts filament-android-release.aar/jni/arm64-v8a/libfilament-jni.so \
+              $BYPASS_ARG
 
   build-ios:
     name: build-iOS
