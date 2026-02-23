@@ -639,8 +639,8 @@ private:
     template <typename T, typename F>
     static inline void update_state(T& state, T const& expected, F functor, bool force = false) noexcept {
         if (UTILS_UNLIKELY(force || state != expected)) {
-            state = expected;
             functor();
+            state = expected;
         }
     }
 
