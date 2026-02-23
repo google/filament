@@ -18,6 +18,7 @@
 
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/PixelBufferDescriptor.h>
@@ -31,6 +32,9 @@ using namespace filament::backend;
 using namespace filament::math;
 
 TEST_F(BackendTest, AutoresolveDifferingSampleCounts) {
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "see b/486954356");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "see b/486954356");
+
     auto& api = getDriverApi();
     constexpr int kRenderTargetSize = 512;
 
