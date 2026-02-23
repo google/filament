@@ -57,11 +57,11 @@ TEST_F(BackendTest, AutoresolveDifferingSampleCounts) {
             TextureFormat::RGBA8, 1, kRenderTargetSize, kRenderTargetSize, 1,
             TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
 
-    // First render pass: render a red triangle to a RenderTarget with 4 samples.
+    // First render pass: render a red triangle to a RenderTarget with 8 samples.
     {
         Handle<HwRenderTarget> renderTarget =
                 addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR, kRenderTargetSize,
-                        kRenderTargetSize, 4, 1, { { texture } }, {}, {}));
+                        kRenderTargetSize, 8, 1, { { texture } }, {}, {}));
 
         shader.uploadUniform(api, ubuffer,
                 SimpleMaterialParams{
@@ -82,12 +82,12 @@ TEST_F(BackendTest, AutoresolveDifferingSampleCounts) {
         api.commit(swapChain);
     }
 
-    // Second render pass: render a green triangle to a RenderTarget with 2 samples, attached to
+    // Second render pass: render a green triangle to a RenderTarget with 4 samples, attached to
     // the same texture.
     {
         Handle<HwRenderTarget> renderTarget =
                 addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR, kRenderTargetSize,
-                        kRenderTargetSize, 2, 1, { { texture } }, {}, {}));
+                        kRenderTargetSize, 4, 1, { { texture } }, {}, {}));
 
         shader.uploadUniform(api, ubuffer,
                 SimpleMaterialParams{
