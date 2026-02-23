@@ -1975,17 +1975,19 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     rpkey.initialDepthLayout = currentDepthLayout;
     rpkey.subpassMask = uint8_t(params.subpassMask);
 
-    VkRenderPass renderPass = mFramebufferCache.getRenderPass(rpkey);
+    fvkmemory::resource_ptr<VulkanRenderPass> renderPass =
+        mFramebufferCache.getRenderPass(rpkey, &mResourceManager);
     mPipelineCache.bindRenderPass(renderPass, 0);
 
     // Create the VkFramebuffer or fetch it from cache.
     VulkanFboCache::FboKey fbkey = rt->getFboKey();
-    fbkey.renderPass = renderPass;
+    fbkey.renderPass = renderPass->getRenderPass();
     fbkey.layers = 1;
 
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
-    VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
+    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
+        mFramebufferCache.getFramebuffer(fbkey, &mResourceManager);
 
 // Assign a label to the framebuffer for debugging purposes.
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS | FVK_DEBUG_DEBUG_UTILS)
@@ -1998,12 +2000,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     // The current command buffer now has references to the render target and its attachments.
     commandBuffer->acquire(rt);
+    commandBuffer->acquire(renderPass);
+    commandBuffer->acquire(vkfb);
 
     // Populate the structures required for vkCmdBeginRenderPass.
     VkRenderPassBeginInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = renderPass,
-        .framebuffer = vkfb,
+        .renderPass = renderPass->getRenderPass(),
+        .framebuffer = vkfb->getFramebuffer(),
 
         // The renderArea field constrains the LoadOp, but scissoring does not.
         // Therefore, we do not set the scissor rect here, we only need it in draw().
@@ -2058,7 +2062,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     mCurrentRenderPass = {
         .commandBuffer = commandBuffer,
         .renderTarget = rt,
-        .renderPass = renderPassInfo.renderPass,
+        .renderPass = renderPass,
         .params = params,
         .currentSubpass = 0,
     };
@@ -2078,8 +2082,7 @@ void VulkanDriver::endRenderPass(int) {
     rt->emitBarriersEndRenderPass(*mCurrentRenderPass.commandBuffer);
 
     mCurrentRenderPass.renderTarget = {};
-    mCurrentRenderPass.renderPass = VK_NULL_HANDLE;
-
+    mCurrentRenderPass.renderPass = {};
     mCurrentRenderPass.commandBuffer = nullptr;
 }
 
