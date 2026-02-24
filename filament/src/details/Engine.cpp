@@ -798,6 +798,12 @@ void FEngine::submitFrame() {
 void FEngine::flush() {
     // flush the command buffer
     flushCommandBuffer(mCommandBufferQueue);
+    
+    // In single-threaded mode, we have to call execute() to drain the command
+    // buffer to really free up space
+    if constexpr (!UTILS_HAS_THREADING) {
+        execute();
+    }
 }
 
 void FEngine::flushAndWait() {
