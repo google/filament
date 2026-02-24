@@ -79,7 +79,7 @@ bool CommandBufferQueue::isExitRequested() const {
 }
 
 
-void CommandBufferQueue::flush() {
+void CommandBufferQueue::flush(std::function<void(void*, void*)> const& debugPrintHistogram) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     CircularBuffer& circularBuffer = mCircularBuffer;
@@ -106,6 +106,11 @@ void CommandBufferQueue::flush() {
     std::unique_lock lock(mLock);
 
     // circular buffer is too small, we corrupted the stream
+    if (UTILS_VERY_UNLIKELY(used > mFreeSpace)) {
+        if (debugPrintHistogram) {
+            debugPrintHistogram(begin, end);
+        }
+    }
     FILAMENT_CHECK_POSTCONDITION(used <= mFreeSpace) <<
             "Backend CommandStream overflow. Commands are corrupted and unrecoverable.\n"
             "Please increase minCommandBufferSizeMB inside the Config passed to Engine::create.\n"

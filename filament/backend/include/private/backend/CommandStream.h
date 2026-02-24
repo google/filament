@@ -56,6 +56,7 @@ namespace filament::backend {
 
 class CommandBase {
     static constexpr size_t FILAMENT_OBJECT_ALIGNMENT = alignof(std::max_align_t);
+    friend class CommandStream;
 
 protected:
     using Execute = Dispatcher::Execute;
@@ -168,8 +169,8 @@ struct CommandType<void (Driver::*)(ARGS...)> {
 
 class CustomCommand : public CommandBase {
     std::function<void()> mCommand;
-    static void execute(Driver&, CommandBase* base, intptr_t* next);
 public:
+    static void execute(Driver&, CommandBase* base, intptr_t* next);
     CustomCommand(CustomCommand&& rhs) = default;
 
     explicit CustomCommand(std::function<void()> cmd)
@@ -179,11 +180,12 @@ public:
 // ------------------------------------------------------------------------------------------------
 
 class NoopCommand : public CommandBase {
+public:
     intptr_t mNext;
     static void execute(Driver&, CommandBase* self, intptr_t* next) noexcept {
         *next = static_cast<NoopCommand*>(self)->mNext;
     }
-public:
+
     constexpr explicit NoopCommand(void* next) noexcept
             : CommandBase(execute), mNext(intptr_t((char *)next - (char *)this)) { }
 };
@@ -218,6 +220,32 @@ public:
     CommandStream& operator=(CommandStream const& rhs) noexcept = delete;
 
     CircularBuffer const& getCircularBuffer() const noexcept { return mCurrentBuffer; }
+
+    using Execute = Dispatcher::Execute;
+    struct CommandInfo {
+        size_t size;
+        const char* name;
+    };
+    std::unordered_map<Execute, CommandInfo> mCommands;
+
+    void initializeLookup() {
+#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
+#define DECL_DRIVER_API(methodName, paramsDecl, params)                                            \
+    mCommands[mDispatcher.methodName##_] = { CommandBase::align(sizeof(COMMAND_TYPE(methodName))), \
+        #methodName };
+#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                            \
+    mCommands[mDispatcher.methodName##_] = {                                                       \
+        CommandBase::align(sizeof(COMMAND_TYPE(methodName##R))), #methodName                       \
+    };
+
+#include "private/backend/DriverAPI.inc"
+
+        mCommands[CustomCommand::execute] = { CommandBase::align(sizeof(CustomCommand)),
+            "CustomCommand" };
+
+        // NoopCommands have variable size. We will handle them specially using their mNext pointer.
+        mCommands[NoopCommand::execute] = { 0, "NoopCommand" };
+    }
 
 public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
@@ -262,6 +290,11 @@ public:
     }
 
     void execute(void* buffer);
+
+    void debugIterateCommands(void* head, void* tail,
+            std::function<void(CommandInfo const& info)> const& callback);
+
+    void debugPrintHistogram(void* head, void* tail);
 
     /*
      * queueCommand() allows to queue a lambda function as a command.

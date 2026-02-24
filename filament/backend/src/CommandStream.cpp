@@ -30,10 +30,12 @@
 #include <utils/ostream.h>
 #include <utils/sstream.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
@@ -83,6 +85,8 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
     __system_property_get("debug.filament.perfcounters", property);
     mUsePerformanceCounter = bool(atoi(property));
 #endif
+
+    initializeLookup();
 }
 
 void CommandStream::execute(void* buffer) {
@@ -124,6 +128,52 @@ void CommandStream::execute(void* buffer) {
                     counters.getInstructions() / counters.getBranchMisses());
         }
     }
+}
+
+void CommandStream::debugIterateCommands(void* head, void* tail,
+        std::function<void(CommandInfo const& info)> const& callback) {
+    CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(head);
+    auto p = base;
+    while (UTILS_LIKELY(p)) {
+        if (p >= tail) {
+            break;
+        }
+        Execute e = p->mExecute;
+
+        if (e == NoopCommand::execute) {
+            NoopCommand* noop = static_cast<NoopCommand*>(p);
+            size_t size = noop->mNext;
+            callback({ size, "NoopCommand" });
+            p = reinterpret_cast<CommandBase*>(reinterpret_cast<char*>(p) + size);
+            continue;
+        }
+
+        if (auto it = mCommands.find(e); it != mCommands.end()) {
+            size_t size = it->second.size;
+            callback(it->second);
+            p = reinterpret_cast<CommandBase*>(reinterpret_cast<char*>(p) + size);
+        } else {
+            LOG(ERROR) << "Cannot find command in lookup table";
+            return;
+        }
+    }
+}
+
+void CommandStream::debugPrintHistogram(void* head, void* tail) {
+    std::unordered_map<std::string_view, int> histogram;
+    debugIterateCommands(head, tail,
+            [&](CommandInfo const& info) { histogram[std::string_view(info.name)]++; });
+
+    std::vector<std::pair<std::string_view, int>> sorted_histogram(histogram.begin(),
+            histogram.end());
+    std::sort(sorted_histogram.begin(), sorted_histogram.end(),
+            [](auto const& a, auto const& b) { return a.second > b.second; });
+
+    LOG(INFO) << "Command stream histogram:";
+    for (auto const& [name, count]: sorted_histogram) {
+        LOG(INFO) << name << ": " << count;
+    }
+    LOG(INFO) << "";
 }
 
 void CommandStream::queueCommand(std::function<void()> command) {

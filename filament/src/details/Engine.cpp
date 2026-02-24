@@ -920,7 +920,9 @@ int FEngine::loop() {
 
 void FEngine::flushCommandBuffer(CommandBufferQueue& commandBufferQueue) const {
     getDriver().purge();
-    commandBufferQueue.flush();
+    commandBufferQueue.flush([this](void* begin, void* end) {
+        const_cast<FEngine*>(this)->getDriverApi().debugPrintHistogram(begin, end);
+    });
 }
 
 const FMaterial* FEngine::getSkyboxMaterial() const noexcept {
