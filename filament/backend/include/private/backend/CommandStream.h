@@ -221,6 +221,7 @@ public:
 
     CircularBuffer const& getCircularBuffer() const noexcept { return mCurrentBuffer; }
 
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
     using Execute = Dispatcher::Execute;
     struct CommandInfo {
         size_t size;
@@ -248,6 +249,7 @@ public:
         // NoopCommands have variable size. We will handle them specially using their mNext pointer.
         mCommands[NoopCommand::execute] = { 0, "NoopCommand", currentIndex++ };
     }
+#endif
 
 public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
@@ -293,10 +295,12 @@ public:
 
     void execute(void* buffer);
 
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
     void debugIterateCommands(void* head, void* tail,
             std::function<void(CommandInfo const& info)> const& callback);
 
     void debugPrintHistogram(void* head, void* tail);
+#endif
 
     /*
      * queueCommand() allows to queue a lambda function as a command.

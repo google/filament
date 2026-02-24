@@ -921,7 +921,10 @@ int FEngine::loop() {
 void FEngine::flushCommandBuffer(CommandBufferQueue& commandBufferQueue) const {
     getDriver().purge();
     commandBufferQueue.flush([this](void* begin, void* end) {
-        const_cast<FEngine*>(this)->getDriverApi().debugPrintHistogram(begin, end);
+        UTILS_UNUSED FEngine* engine = const_cast<FEngine*>(this);
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
+        engine->getDriverApi().debugPrintHistogram(begin, end);
+#endif
     });
 }
 

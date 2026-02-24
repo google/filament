@@ -30,12 +30,15 @@
 #include <utils/ostream.h>
 #include <utils/sstream.h>
 
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
 #include <algorithm>
+#include <vector>
+#endif
+
 #include <cstddef>
 #include <functional>
 #include <string>
 #include <utility>
-#include <vector>
 
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
@@ -86,7 +89,9 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
     mUsePerformanceCounter = bool(atoi(property));
 #endif
 
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
     initializeLookup();
+#endif
 }
 
 void CommandStream::execute(void* buffer) {
@@ -130,6 +135,7 @@ void CommandStream::execute(void* buffer) {
     }
 }
 
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
 void CommandStream::debugIterateCommands(void* head, void* tail,
         std::function<void(CommandInfo const& info)> const& callback) {
     CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(head);
@@ -192,6 +198,7 @@ void CommandStream::debugPrintHistogram(void* head, void* tail) {
     LOG(INFO) << "CS hist: " << short_histogram;
     LOG(INFO) << "";
 }
+#endif
 
 void CommandStream::queueCommand(std::function<void()> command) {
     new(allocateCommand(CustomCommand::align(sizeof(CustomCommand)))) CustomCommand(std::move(command));

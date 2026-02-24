@@ -106,11 +106,13 @@ void CommandBufferQueue::flush(std::function<void(void*, void*)> const& debugPri
     std::unique_lock lock(mLock);
 
     // circular buffer is too small, we corrupted the stream
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
     if (UTILS_VERY_UNLIKELY(used > mFreeSpace)) {
         if (debugPrintHistogram) {
             debugPrintHistogram(begin, end);
         }
     }
+#endif
     FILAMENT_CHECK_POSTCONDITION(used <= mFreeSpace) <<
             "Backend CommandStream overflow. Commands are corrupted and unrecoverable.\n"
             "Please increase minCommandBufferSizeMB inside the Config passed to Engine::create.\n"
