@@ -143,7 +143,8 @@ void CommandStream::debugIterateCommands(void* head, void* tail,
         if (e == NoopCommand::execute) {
             NoopCommand* noop = static_cast<NoopCommand*>(p);
             size_t size = noop->mNext;
-            callback({ size, "NoopCommand" });
+            int noopIndex = mCommands[NoopCommand::execute].index;
+            callback({ size, "NoopCommand", noopIndex });
             p = reinterpret_cast<CommandBase*>(reinterpret_cast<char*>(p) + size);
             continue;
         }
@@ -161,8 +162,11 @@ void CommandStream::debugIterateCommands(void* head, void* tail,
 
 void CommandStream::debugPrintHistogram(void* head, void* tail) {
     std::unordered_map<std::string_view, int> histogram;
-    debugIterateCommands(head, tail,
-            [&](CommandInfo const& info) { histogram[std::string_view(info.name)]++; });
+    std::unordered_map<int, int> index_histogram;
+    debugIterateCommands(head, tail, [&](CommandInfo const& info) {
+        histogram[std::string_view(info.name)]++;
+        index_histogram[info.index]++;
+    });
 
     std::vector<std::pair<std::string_view, int>> sorted_histogram(histogram.begin(),
             histogram.end());
@@ -173,6 +177,19 @@ void CommandStream::debugPrintHistogram(void* head, void* tail) {
     for (auto const& [name, count]: sorted_histogram) {
         LOG(INFO) << name << ": " << count;
     }
+
+    std::vector<std::pair<int, int>> sorted_index_histogram(index_histogram.begin(),
+            index_histogram.end());
+    std::sort(sorted_index_histogram.begin(), sorted_index_histogram.end(),
+            [](auto const& a, auto const& b) { return a.second > b.second; });
+
+    std::string short_histogram = "";
+    for (size_t i = 0, n = sorted_index_histogram.size(); i < n; ++i) {
+        short_histogram += std::to_string(sorted_index_histogram[i].first) + ":" +
+                           std::to_string(sorted_index_histogram[i].second);
+        short_histogram += (i < n - 1) ? ";" : ".";
+    }
+    LOG(INFO) << "CS hist: " << short_histogram;
     LOG(INFO) << "";
 }
 

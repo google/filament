@@ -225,26 +225,28 @@ public:
     struct CommandInfo {
         size_t size;
         const char* name;
+        int index;
     };
     std::unordered_map<Execute, CommandInfo> mCommands;
 
     void initializeLookup() {
+        int currentIndex = 0;
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                            \
     mCommands[mDispatcher.methodName##_] = { CommandBase::align(sizeof(COMMAND_TYPE(methodName))), \
-        #methodName };
+        #methodName, currentIndex++ };
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                            \
     mCommands[mDispatcher.methodName##_] = {                                                       \
-        CommandBase::align(sizeof(COMMAND_TYPE(methodName##R))), #methodName                       \
+        CommandBase::align(sizeof(COMMAND_TYPE(methodName##R))), #methodName, currentIndex++       \
     };
 
 #include "private/backend/DriverAPI.inc"
 
         mCommands[CustomCommand::execute] = { CommandBase::align(sizeof(CustomCommand)),
-            "CustomCommand" };
+            "CustomCommand", currentIndex++ };
 
         // NoopCommands have variable size. We will handle them specially using their mNext pointer.
-        mCommands[NoopCommand::execute] = { 0, "NoopCommand" };
+        mCommands[NoopCommand::execute] = { 0, "NoopCommand", currentIndex++ };
     }
 
 public:
