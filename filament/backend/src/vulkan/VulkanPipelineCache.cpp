@@ -462,7 +462,7 @@ void VulkanPipelineCache::bindStencilState(StencilState const& stencilState) noe
 void VulkanPipelineCache::bindRenderPass(
         fvkmemory::resource_ptr<VulkanRenderPass> renderPass,
         int subpassIndex) noexcept {
-    mPipelineRequirements.renderPass = renderPass->getRenderPass();
+    mPipelineRequirements.renderPass = renderPass->getVkRenderPass();
     mPipelineRequirements.subpassIndex = subpassIndex;
 }
 

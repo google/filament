@@ -392,7 +392,7 @@ void VulkanFboCache::gc() noexcept {
     }
 
     for (RenderPassMap::iterator iter = mRenderPassCache.begin(); iter != mRenderPassCache.end(); ) {
-        const VkRenderPass handle = iter->second.handle->getRenderPass();
+        const VkRenderPass handle = iter->second.handle->getVkRenderPass();
         if (iter->second.timestamp < evictTime && handle && mRenderPassRefCount[handle] == 0) {
             // erase(iterator) returns the iterator to the next element.
             iter = mRenderPassCache.erase(iter);

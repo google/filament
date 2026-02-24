@@ -589,7 +589,7 @@ struct VulkanFramebuffer : public fvkmemory::Resource {
     VulkanFramebuffer(VkDevice device, VkFramebuffer framebuffer);
     ~VulkanFramebuffer();
 
-    inline VkFramebuffer getFramebuffer() const noexcept {
+    inline VkFramebuffer getVkFramebuffer() const noexcept {
         return mFramebuffer;
     }
 
@@ -602,7 +602,7 @@ struct VulkanRenderPass : public fvkmemory::Resource {
     VulkanRenderPass(VkDevice device, VkRenderPass renderPass);
     ~VulkanRenderPass();
 
-    inline VkRenderPass getRenderPass() const noexcept {
+    inline VkRenderPass getVkRenderPass() const noexcept {
         return mRenderPass;
     }
 

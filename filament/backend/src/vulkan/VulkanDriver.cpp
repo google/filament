@@ -1976,18 +1976,18 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     rpkey.subpassMask = uint8_t(params.subpassMask);
 
     fvkmemory::resource_ptr<VulkanRenderPass> renderPass =
-        mFramebufferCache.getRenderPass(rpkey, &mResourceManager);
+            mFramebufferCache.getRenderPass(rpkey, &mResourceManager);
     mPipelineCache.bindRenderPass(renderPass, 0);
 
     // Create the VkFramebuffer or fetch it from cache.
     VulkanFboCache::FboKey fbkey = rt->getFboKey();
-    fbkey.renderPass = renderPass->getRenderPass();
+    fbkey.renderPass = renderPass->getVkRenderPass();
     fbkey.layers = 1;
 
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
     fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
-        mFramebufferCache.getFramebuffer(fbkey, &mResourceManager);
+            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager);
 
 // Assign a label to the framebuffer for debugging purposes.
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS | FVK_DEBUG_DEBUG_UTILS)
@@ -2006,8 +2006,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // Populate the structures required for vkCmdBeginRenderPass.
     VkRenderPassBeginInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = renderPass->getRenderPass(),
-        .framebuffer = vkfb->getFramebuffer(),
+        .renderPass = renderPass->getVkRenderPass(),
+        .framebuffer = vkfb->getVkFramebuffer(),
 
         // The renderArea field constrains the LoadOp, but scissoring does not.
         // Therefore, we do not set the scissor rect here, we only need it in draw().
