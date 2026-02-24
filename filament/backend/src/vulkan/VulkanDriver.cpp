@@ -2332,7 +2332,7 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 
     // Note: blitDEPRECATED is only used for Renderer::copyFrame()
 
-    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
             << "blitDEPRECATED() cannot be invoked inside a render pass.";
 
     FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
