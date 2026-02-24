@@ -2247,7 +2247,7 @@ void VulkanDriver::resolve(
         Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer) {
     FVK_SYSTRACE_SCOPE();
 
-    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
             << "resolve() cannot be invoked inside a render pass.";
 
     auto srcTexture = resource_ptr<VulkanTexture>::cast(&mResourceManager, src);
@@ -2290,7 +2290,7 @@ void VulkanDriver::blit(
         math::uint2 size) {
     FVK_SYSTRACE_SCOPE();
 
-    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
             << "blit() cannot be invoked inside a render pass.";
 
     auto srcTexture = resource_ptr<VulkanTexture>::cast(&mResourceManager, src);
