@@ -60,7 +60,8 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
     CodeGenerator::generateDefine(out, "VARIANT_HAS_SHADOWING",
             litVariants && filament::Variant::isShadowReceiverVariant(variant));
     CodeGenerator::generateDefine(out, "VARIANT_HAS_VSM",
-            filament::Variant::isVSMVariant(variant));
+            filament::Variant::isShadowSampler2DVariant(variant) ||
+            filament::Variant::isDepthMomentsVariant(variant));
     CodeGenerator::generateDefine(out, "VARIANT_HAS_STEREO",
             hasStereo(variant, featureLevel));
     CodeGenerator::generateDefine(out, "VARIANT_DEPTH",
