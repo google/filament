@@ -114,6 +114,24 @@ Doing the above has multiple effects:
 - If the PR is merged, then there is another workflow that will merge `my-pr-branch-golden`
   to the `main` branch of the golden repo.
 
+### Automated update via commit message
+
+Alternatively, if you are confident in your changes and want the CI to handle the update
+for you, you can use the following tag in your commit message:
+
+- In the commit message of your working branch on `filament`, add the following line:
+  ```
+  RDIFF_ACCEPT_NEW_GOLDENS
+  ```
+
+This has the following effects:
+- The presubmit test `test-renderdiff` will be bypassed (it will not perform rendering or
+  comparison).
+- When the PR is merged, the postsubmit CI will automatically:
+    1. Build Filament and generate the new images.
+    2. Upload them to a temporary branch in `filament-assets`.
+    3. Merge that branch into `main`.
+
 ## Viewing test results
 
 We provide a viewer for looking at the result of a test run. The viewer is a webapp that can

@@ -565,7 +565,7 @@ void VulkanRenderTarget::transformViewportToPlatform(VkViewport* bounds) const {
     flipVertically(bounds, getExtent().height);
 }
 
-uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
+uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPassContext& pass) const {
     if (!mOffscreen) {
         return 1;
     }
@@ -714,5 +714,19 @@ VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
     : HwRenderPrimitive{ .type = pt },
       vertexBuffer(vb),
       indexBuffer(ib) {}
+
+VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkFramebuffer framebuffer)
+    : mDevice(device), mFramebuffer(framebuffer) {}
+
+VulkanFramebuffer::~VulkanFramebuffer() {
+    vkDestroyFramebuffer(mDevice, mFramebuffer, VKALLOC);
+}
+
+VulkanRenderPass::VulkanRenderPass(VkDevice device, VkRenderPass renderPass)
+    : mDevice(device), mRenderPass(renderPass) {}
+
+VulkanRenderPass::~VulkanRenderPass() {
+    vkDestroyRenderPass(mDevice, mRenderPass, VKALLOC);
+}
 
 } // namespace filament::backend
