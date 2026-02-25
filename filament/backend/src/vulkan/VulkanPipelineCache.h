@@ -123,7 +123,8 @@ public:
     void bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept;
     void bindRasterState(RasterState const& rasterState) noexcept;
     void bindStencilState(StencilState const& stencilState) noexcept;
-    void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
+    void bindRenderPass(fvkmemory::resource_ptr<VulkanRenderPass> renderPass,
+            int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
     void bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
             VkVertexInputBindingDescription const* bufferDesc, uint8_t count);

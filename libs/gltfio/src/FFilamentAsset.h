@@ -60,10 +60,12 @@
 #define GLTFIO_WARN(msg) slog.w << msg << io::endl
 #endif
 
+#ifndef GLTFIO_USE_FILESYSTEM
 #if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(FILAMENT_IOS)
 #define GLTFIO_USE_FILESYSTEM 0
 #else
 #define GLTFIO_USE_FILESYSTEM 1
+#endif
 #endif
 
 namespace utils {
