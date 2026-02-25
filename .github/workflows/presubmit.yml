@@ -126,18 +126,24 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/mac-prereq
-      - uses: ./.github/actions/get-gltf-assets
-      - uses: ./.github/actions/get-mesa
-      - uses: ./.github/actions/get-vulkan-sdk
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - name: Prerequisites
+      - name: Check if accepting new goldens
+        id: check_accept
+        env:
+          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
         run: |
-          # Must have at least clang-16 for a webgpu/dawn build.
-          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          if echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py --mode=accept_new_goldens; then
+            echo "accept=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "accept=false" >> "$GITHUB_OUTPUT"
+          fi
         shell: bash
+      - name: Renderdiff Generate
+        if: steps.check_accept.outputs.accept != 'true'
+        uses: ./.github/actions/renderdiff-generate
       - name: Render and compare
+        if: steps.check_accept.outputs.accept != 'true'
         id: render_compare
         env:
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
@@ -146,9 +152,6 @@ jobs:
           source ${TEST_DIR}/src/preamble.sh
           set -eux
           GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 ${TEST_DIR}/src/commit_msg.py)
-          bash ${TEST_DIR}/generate.sh
-          # Build diffimg tool
-          ./build.sh release diffimg
 
           python3 ${TEST_DIR}/src/golden_manager.py \
                   --branch=${GOLDEN_BRANCH} \
@@ -172,10 +175,12 @@ jobs:
           fi
         shell: bash
       - uses: actions/upload-artifact@v4
+        if: steps.check_accept.outputs.accept != 'true'
         with:
           name: presubmit-renderdiff-result
           path: ./out/renderdiff
       - name: Compare result
+        if: steps.check_accept.outputs.accept != 'true'
         run: |
           ERROR_STR="${{ steps.render_compare.outputs.err }}"
           if [ -n "${ERROR_STR}" ]; then
