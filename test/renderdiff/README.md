@@ -80,6 +80,7 @@ it in the following fashion
 
 ### Using a script to update the golden repo
 
+- Make sure you've completed the steps in 'Setting up python'
 - Run interactive mode in the `update_golden.py` script.
   ```
   python3 test/renderdiff/src/update_golden.py
