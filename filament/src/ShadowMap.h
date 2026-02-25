@@ -319,11 +319,8 @@ private:
 
     math::float4 getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo) const noexcept;
 
-    static float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture,
-            uint16_t shadowDimension) noexcept;
-
-    static float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF,
-            uint16_t shadowDimension) noexcept;
+    static float texelSizeWorldSpace(const math::mat3f& clipFromWorld, uint16_t shadowDimension) noexcept;
+    static float texelSizeWorldSpace(const math::mat4f& clipFromWorld, uint16_t shadowDimension) noexcept;
 
     static constexpr Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },
