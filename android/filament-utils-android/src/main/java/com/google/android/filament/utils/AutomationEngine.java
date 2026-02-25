@@ -178,7 +178,12 @@ public class AutomationEngine {
         }
         long nativeView = content.view.getNativeObject();
         long nativeRenderer = content.renderer.getNativeObject();
-        nTick(mNativeObject, engine.getNativeObject(), nativeView, nativeMaterialInstances, nativeRenderer, deltaTime);
+        long nativeIbl = content.indirectLight == null ? 0 : content.indirectLight.getNativeObject();
+        long nativeLm = content.lightManager == null ? 0 : content.lightManager.getNativeObject();
+        long nativeScene = content.scene == null ? 0 : content.scene.getNativeObject();
+        nTick(mNativeObject, engine.getNativeObject(), nativeView, nativeMaterialInstances,
+                nativeRenderer, nativeIbl, content.sunlight, content.assetLights, nativeLm,
+                nativeScene, deltaTime);
     }
 
     /**
@@ -287,7 +292,8 @@ public class AutomationEngine {
     private static native void nStartRunning(long nativeObject);
     private static native void nStartBatchMode(long nativeObject);
     private static native void nTick(long nativeObject, long nativeEngine,
-            long view, long[] materials, long renderer, float deltaTime);
+            long view, long[] materials, long renderer, long ibl, int sunlight, int[] assetLights,
+            long lightManager, long scene, float deltaTime);
     private static native void nApplySettings(long nativeObject, long nativeEngine,
             String jsonSettings, long view,
             long[] materials, long ibl, int sunlight, int[] assetLights, long lightManager,

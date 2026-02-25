@@ -65,6 +65,8 @@ option(FILAMENT_SUPPORTS_WEBP_TEXTURES "Enable webp texture support for Filament
 # On the regular filament build (where size is of less concern), we enable GTAO by default.
 option(FILAMENT_DISABLE_GTAO "Disable GTAO" OFF)
 
+option(FILAMENT_BUILD_TESTING "Build tests" ON)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -974,6 +976,7 @@ if (IS_HOST_PLATFORM)
 
     add_subdirectory(${TOOLS}/cmgen)
     add_subdirectory(${TOOLS}/cso-lut)
+    add_subdirectory(${TOOLS}/diffimg)
     add_subdirectory(${TOOLS}/filamesh)
     add_subdirectory(${TOOLS}/glslminifier)
     add_subdirectory(${TOOLS}/matc)

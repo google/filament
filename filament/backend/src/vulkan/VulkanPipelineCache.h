@@ -122,6 +122,7 @@ public:
     void bindLayout(VkPipelineLayout layout) noexcept;
     void bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept;
     void bindRasterState(RasterState const& rasterState) noexcept;
+    void bindStencilState(StencilState const& stencilState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
     void bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
@@ -186,8 +187,8 @@ private:
         VertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; //  128 : 28
         VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
         RasterState rasterState;                                                  //  16  : 284
-        uint32_t padding;                                                         //  4   : 300
-        VkPipelineLayout layout;                                                  //  8   : 304
+        StencilState stencilState;                                                //  12  : 300
+        VkPipelineLayout layout;                                                  //  8   : 312
     };
 
     // Provides information about any dynamic state that should be used in creation of the
@@ -203,7 +204,7 @@ private:
         uint8_t stereoscopicViewCount = 2;
     };
 
-    static_assert(sizeof(PipelineKey) == 312, "PipelineKey must not have implicit padding.");
+    static_assert(sizeof(PipelineKey) == 320, "PipelineKey must not have implicit padding.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;
 

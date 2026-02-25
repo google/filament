@@ -633,6 +633,19 @@ VkCompareOp getCompareOp(SamplerCompareFunc func) {
     }
 }
 
+VkStencilOp getStencilOp(StencilOperation op) {
+    switch (op) {
+        case StencilOperation::KEEP:      return VK_STENCIL_OP_KEEP;
+        case StencilOperation::ZERO:      return VK_STENCIL_OP_ZERO;
+        case StencilOperation::REPLACE:   return VK_STENCIL_OP_REPLACE;
+        case StencilOperation::INCR:      return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+        case StencilOperation::INCR_WRAP: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+        case StencilOperation::DECR:      return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+        case StencilOperation::DECR_WRAP: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+        case StencilOperation::INVERT:    return VK_STENCIL_OP_INVERT;
+    }
+}
+
 VkBlendFactor getBlendFactor(BlendFunction mode) {
     switch (mode) {
         case BlendFunction::ZERO:                  return VK_BLEND_FACTOR_ZERO;

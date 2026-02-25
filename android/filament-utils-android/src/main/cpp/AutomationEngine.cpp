@@ -71,8 +71,10 @@ Java_com_google_android_filament_utils_AutomationEngine_nStartBatchMode(JNIEnv* 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclass klass,
         jlong nativeAutomation, jlong nativeEngine,
-        jlong view, jlongArray materials, jlong renderer, jfloat deltaTime) {
+        jlong view, jlongArray materials, jlong renderer, jlong nativeIbl, jint sunlightEntity,
+        jintArray assetLights, jlong nativeLm, jlong scene, jfloat deltaTime) {
     using MaterialPointer = MaterialInstance*;
+
     jsize materialCount = 0;
     jlong* longMaterials = nullptr;
     MaterialPointer* ptrMaterials = nullptr;
@@ -84,18 +86,37 @@ Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclas
             ptrMaterials[i] = (MaterialPointer) longMaterials[i];
         }
     }
+
+    jsize lightCount = 0;
+    jint* intLights = nullptr;
+    if (assetLights) {
+        lightCount = env->GetArrayLength(assetLights);
+        intLights = env->GetIntArrayElements(assetLights, nullptr);
+    }
+
+    static_assert(sizeof(jint) == sizeof(Entity));
+
     AutomationEngine* automation = (AutomationEngine*) nativeAutomation;
     AutomationEngine::ViewerContent content = {
         .view = (View*) view,
         .renderer = (Renderer*) renderer,
         .materials = ptrMaterials,
         .materialCount = (size_t) materialCount,
+        .lightManager = (LightManager*) nativeLm,
+        .scene = (Scene*) scene,
+        .indirectLight = (IndirectLight*) nativeIbl,
+        .sunlight = (Entity&) sunlightEntity,
+        .assetLights = (Entity*) intLights,
+        .assetLightCount = (size_t) lightCount,
     };
     Engine* engine = (Engine*)nativeEngine;
     automation->tick(engine, content, deltaTime);
     if (longMaterials) {
         env->ReleaseLongArrayElements(materials, longMaterials, 0);
         delete[] ptrMaterials;
+    }
+    if (intLights) {
+        env->ReleaseIntArrayElements(assetLights, intLights, 0);
     }
 }
 

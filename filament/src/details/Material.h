@@ -378,8 +378,14 @@ private:
             Variant variant = {}) const noexcept;
 
     bool isSharedVariant(Variant const variant) const {
-        return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
-               !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant);
+        // HACK: The default material "should" have VSM | DEP, but then we'd have to compile it as a
+        // lit material, which would increase binary size. Perhaps we could specially compile it
+        // with this variant, but with the shader program cache in active development, the days of
+        // the default material are numbered anyway.
+        constexpr Variant::type_t vsmAndDep = Variant::VSM | Variant::DEP;
+        return mDefinition.materialDomain == MaterialDomain::SURFACE && !mIsDefaultMaterial &&
+               !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant) &&
+               (variant.key & vsmAndDep) != vsmAndDep;
     }
 
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
