@@ -1117,16 +1117,16 @@ bool ShadowMap::intersectSegmentWithPlanarQuad(float3& UTILS_RESTRICT p,
     return hit;
 }
 
-float ShadowMap::texelSizeWorldSpace(const mat3f& clipFromWorld, uint16_t shadowDimension) noexcept {
+float2 ShadowMap::texelSizeWorldSpace(const mat3f& clipFromWorld, uint16_t shadowDimension) noexcept {
     // The Jacobian of the transformation from texture-to-world is the matrix itself for
     // orthographic projections. We just need to inverse shadowMapFromWorld,
     // which is guaranteed to be orthographic.
     // The two first columns give us how a texel maps in world-space.
     float const oneTexel = 2.0f / float(shadowDimension);
-    const mat3f worldFromClip(inverse(clipFromWorld));
-    const float3 Jx = worldFromClip[0];
-    const float3 Jy = worldFromClip[1];
-    const float s = std::max(length(Jx), length(Jy)) * oneTexel;
+    mat3f const worldFromClip(inverse(clipFromWorld));
+    float3 const Jx = worldFromClip[0];
+    float3 const Jy = worldFromClip[1];
+    float2 const s = float2{ length(Jx), length(Jy) } * oneTexel;
     return s;
 }
 
@@ -1171,13 +1171,13 @@ static mat3f jacobian(mat4f const& M, float3 const& p) noexcept {
     return (M_sub - t_cross_w / T.w) / T.w;
 }
 
-float ShadowMap::texelSizeWorldSpace(mat4f const& S, uint16_t const shadowDimension) noexcept {
+float2 ShadowMap::texelSizeWorldSpace(mat4f const& S, uint16_t const shadowDimension) noexcept {
     // The Jacobian is not constant, so we evaluate it in the center of the shadow-map texture.
     // It might be better to do this computation in the vertex shader.
     float3 const p = { 0.0f, 0.0f, 0.0f }; // clip-space
     float const oneTexel = 2.0f / float(shadowDimension);
     mat3f const J = jacobian(inverse(S), p);
-    const float s = std::max(length(J[0]), length(J[1])) * oneTexel;
+    float2 const s = float2{ length(J[0]), length(J[1]) } * oneTexel;
     return s;
 }
 

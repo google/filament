@@ -111,7 +111,7 @@ highp vec4 getSpotLightSpacePosition(int index, highp vec3 dir, highp float zLig
     highp mat4 lightFromWorldMatrix = shadowUniforms.shadows[index].lightFromWorldMatrix;
 
     // for spotlights, the bias depends on z
-    float bias = shadowUniforms.shadows[index].normalBias * zLight;
+    highp vec2 bias = shadowUniforms.shadows[index].normalBias * zLight;
 
     return computeLightSpacePosition(getWorldPosition(), getWorldGeometricNormalVector(),
             dir, bias, lightFromWorldMatrix);
