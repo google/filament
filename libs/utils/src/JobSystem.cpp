@@ -99,9 +99,10 @@ namespace utils {
 
 void JobSystem::setThreadName(const char* name) noexcept {
 #if defined(__linux__)
-    char buf[16];
-    strncpy(buf, name, 15);
-    buf[15] = '\0';
+    constexpr size_t MAX_PTHREAD_NAME_LEN = 16;
+    char buf[MAX_PTHREAD_NAME_LEN];
+    strncpy(buf, name, MAX_PTHREAD_NAME_LEN - 1);
+    buf[MAX_PTHREAD_NAME_LEN - 1] = '\0';
     pthread_setname_np(pthread_self(), buf);
 #elif defined(__APPLE__)
     pthread_setname_np(name);
