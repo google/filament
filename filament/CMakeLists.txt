@@ -56,6 +56,7 @@ set(SRCS
         src/materials/bloom/bloom.cpp
         src/materials/colorGrading/colorGrading.cpp
         src/materials/dof/dof.cpp
+        src/materials/evsm/evsm.cpp
         src/materials/flare/flare.cpp
         src/materials/fog/fog.cpp
         src/materials/fsr/fsr.cpp
@@ -283,6 +284,8 @@ set(MATERIAL_SRCS
         src/materials/dof/dofMipmap.mat
         src/materials/dof/dofTiles.mat
         src/materials/dof/dofTilesSwizzle.mat
+        src/materials/evsm/gaussian.mat
+        src/materials/evsm/vsmMipmap.mat
         src/materials/flare/flare.mat
         src/materials/fog/fog.mat
         src/materials/fsr/fsr_easu.mat
@@ -299,7 +302,6 @@ set(MATERIAL_SRCS
         src/materials/ssao/mipmapDepth.mat
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
-        src/materials/vsmMipmap.mat
 )
 
 if (NOT FILAMENT_DISABLE_GTAO)
@@ -634,6 +636,12 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/separableGaussianBlur.filamat"
         DEPENDS src/materials/separableGaussianBlur.vs
         DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/gaussian.filamat"
+        DEPENDS src/materials/evsm/gaussian.fs
         APPEND
 )
 

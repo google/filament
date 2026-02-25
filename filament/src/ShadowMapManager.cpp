@@ -30,6 +30,7 @@
 
 #include "details/Camera.h"
 #include "details/DebugRegistry.h"
+#include "details/MaterialInstance.h"
 #include "details/Texture.h"
 #include "details/View.h"
 
@@ -42,6 +43,7 @@
 
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
+#include <backend/PipelineState.h>
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -53,6 +55,7 @@
 #include <math/half.h>
 #include <math/mat4.h>
 #include <math/vec4.h>
+#include <math/vec2.h>
 #include <math/scalar.h>
 
 #include <algorithm>
@@ -63,14 +66,17 @@
 #include <limits>
 #include <new>
 #include <memory>
+#include <utility>
 
 #include <stdint.h>
 #include <stddef.h>
+
 
 namespace filament {
 
 using namespace backend;
 using namespace math;
+using namespace utils;
 
 ShadowMapManager::ShadowMapManager(FEngine& engine)
     : mIsDepthClampSupported(engine.getDriverApi().isDepthClampSupported()),
@@ -248,13 +254,13 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         struct ShadowPass {  // 112 bytes
             mutable RenderPass::Executor executor;
             ShadowMap* shadowMap;
-            utils::Range<uint32_t> range;
+            Range<uint32_t> range;
             FScene::VisibleMaskType visibilityMask;
         };
         // the actual shadow map atlas (currently a 2D texture array)
         FrameGraphId<FrameGraphTexture> shadows;
         // a RenderPass per shadow map
-        utils::FixedCapacityVector<ShadowPass> passList;
+        FixedCapacityVector<ShadowPass> passList;
     };
 
     auto& prepareShadowPass = fg.addPass<PrepareShadowPassData>("Prepare Shadow Pass",
@@ -453,7 +459,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
     fg.getBlackboard()["shadowmap"] = prepareShadowPass->shadows;
 
     struct ShadowPassData {
-        FrameGraphId<FrameGraphTexture> tempBlurSrc{};  // temporary shadowmap when blurring
         FrameGraphId<FrameGraphTexture> output;
         uint32_t rt{};
     };
@@ -464,10 +469,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         auto const& entry = *first;
 
         const uint8_t layer = entry.shadowMap->getLayer();
-        const auto& options = entry.shadowMap->getShadowOptions();
         const auto msaaSamples = textureRequirements.msaaSamples;
-        const bool blur = entry.shadowMap->hasVisibleShadows() &&
-                view.hasVSM() && options.vsm.blurWidth > 0.0f;
 
         auto last = first;
         // loop over each shadow pass to find its layer range
@@ -475,8 +477,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
             ++last;
         }
 
-        assert_invariant(mFeatureShadowAllocator ||
-            std::distance(first, last) == 1);
+        assert_invariant(mFeatureShadowAllocator || std::distance(first, last) == 1);
 
         // And render all shadow pass of a given layer as a single render pass
         auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
@@ -511,28 +512,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         // we need to clear the shadow map with the max EVSM moments
                         renderTargetDesc.clearColor = textureRequirements.clearColor;
                         renderTargetDesc.samples = msaaSamples;
-
-                        if (UTILS_UNLIKELY(blur)) {
-                            // Temporary (resolved) texture used to render the shadowmap when blurring
-                            // is needed -- it'll be used as the source of the blur.
-                            data.tempBlurSrc = builder.createTexture("Temporary Shadowmap", {
-                                    .width = textureRequirements.size,
-                                    .height = textureRequirements.size,
-                                    .format = textureRequirements.format
-                            });
-
-                            data.tempBlurSrc = builder.write(data.tempBlurSrc,
-                                    FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-
-                            data.rt = builder.declareRenderPass("Temp Shadow RT", {
-                                    .attachments = {
-                                            .color = { data.tempBlurSrc },
-                                            .depth = depth },
-                                    .clearColor = textureRequirements.clearColor,
-                                    .samples = msaaSamples,
-                                    .clearFlags = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH
-                            });
-                        }
                     } else {
                         // the shadowmap layer
                         data.output = builder.write(data.output, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
@@ -541,11 +520,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     }
 
                     // finally, create the shadowmap render target -- one per layer.
-                    auto rt = builder.declareRenderPass("Shadow RT", renderTargetDesc);
-
-                    // render either directly into the shadowmap, or to the temporary texture for
-                    // blurring.
-                    data.rt = blur ? data.rt : rt;
+                    data.rt = builder.declareRenderPass("Shadow RT", renderTargetDesc);
                 },
                 [=, &engine](FrameGraphResources const& resources,
                         auto const& data, DriverApi& driver) {
@@ -580,27 +555,21 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
                 });
 
-        first = last;
-
         // now emit the blurring passes if needed
-        if (UTILS_UNLIKELY(blur)) {
-            auto& ppm = engine.getPostProcessManager();
-
-            // FIXME: this `options` is for the first shadowmap in the list, but it applies to
-            //        the whole layer. Blurring should happen per shadowmap, not for the whole
-            //        layer.
-
-            // FIXME: this Gaussian blur is not precise enough for EVSM
-
-            const float blurWidth = options.vsm.blurWidth;
-            if (blurWidth > 0.0f) {
-                const float sigma = (blurWidth + 1.0f) / 6.0f;
-                size_t kernelWidth = size_t(std::ceil((blurWidth - 5.0f) / 4.0f));
-                kernelWidth = kernelWidth * 4 + 5;
-                ppm.gaussianBlurPass(fg,
-                        shadowPass->tempBlurSrc,
-                        shadowPass->output,
-                        false, kernelWidth, sigma);
+        if (UTILS_UNLIKELY(view.hasVSM())) {
+            auto list = FixedCapacityVector<ShadowMap const*>::with_capacity(std::distance(first, last));
+            for (auto curr = first; curr != last; curr++) {
+                auto const sm = curr->shadowMap;
+                const float blurWidth = sm->getShadowOptions().vsm.blurWidth;
+                if (sm->hasVisibleShadows() && blurWidth > 0.0f) {
+                    list.push_back(sm);
+                }
+            }
+            if (!list.empty()) {
+                // horizontal passes...
+                auto const horizontal = gaussianBlurSeparatedPass(engine, fg, shadowPass->output, {}, list, {1, 0});
+                // vertical passes...
+                gaussianBlurSeparatedPass(engine, fg, horizontal, shadowPass->output, std::move(list), {0, 1});
             }
         }
 
@@ -608,14 +577,190 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         // or indirectly via anisotropic filtering.
         // So generate the mipmaps for each layer
         if (UTILS_UNLIKELY(textureRequirements.levels > 1)) {
-            auto& ppm = engine.getPostProcessManager();
             for (size_t level = 0; level < textureRequirements.levels - 1; level++) {
-                ppm.vsmMipmapPass(fg, prepareShadowPass->shadows, layer, level, textureRequirements.clearColor);
+                // TODO: we could take a list of scissor maybe
+                vsmMipmapPass(engine, fg, prepareShadowPass->shadows, layer, level, textureRequirements.clearColor);
             }
         }
+
+        // next batch of passes
+        first = last;
     }
 
     return prepareShadowPass->shadows;
+}
+
+FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianBlurSeparatedPass(
+        FEngine& engine,
+        FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> const input,
+        FrameGraphId<FrameGraphTexture> output,
+        FixedCapacityVector<ShadowMap const*> shadowMapList,
+        int2 const dir) {
+
+    struct BlurPassData {
+        FrameGraphId<FrameGraphTexture> in;
+        FrameGraphId<FrameGraphTexture> out;
+        FixedCapacityVector<ShadowMap const*> list;
+    };
+
+    auto const& separatedBlurPasses = fg.addPass<BlurPassData>("Separated Gaussian Blur Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                auto const inDesc = builder.getDescriptor(input);
+                data.list = std::move(shadowMapList);
+                data.in = builder.sample(input);
+                if (!output) {
+                    auto outDesc = inDesc;
+                    outDesc.type = SamplerType::SAMPLER_2D_ARRAY;
+                    outDesc.levels = 1;
+                    outDesc.depth = 1;
+                    output = builder.createTexture("Temporary Separated Blur Texture", outDesc);
+                } else {
+                    // TODO: When we write back into the destination, we need to preserve its content
+                    //       because we don't know if we will write all of it or just parts (b/c it's
+                    //       an atlas). We could avoid this if we knew we didn't care about what's not
+                    //       written in this pass. This read() forces preservation of the content.
+                    output = builder.read(output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                }
+                data.out = builder.declareRenderPass(output);
+            },
+        [=, &engine](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            using FGTSD = FrameGraphTexture::SubResourceDescriptor;
+            FGTSD const& inSubDesc = resources.getSubResourceDescriptor(data.in);
+            auto hwOutRT = resources.getRenderPassInfo(0);
+            auto hwIn = resources.getTexture(data.in);
+
+            auto& ppm = engine.getPostProcessManager();
+            ppm.bindPostProcessDescriptorSet(driver);
+            ppm.bindPerRenderableDescriptorSet(driver);
+
+            // get the material
+            auto const& separableGaussianBlur = ppm.getPostProcessMaterial("gaussian");
+            auto const ma = separableGaussianBlur.getMaterial(engine, driver);
+
+            // Generates half of a Gaussian kernel (center + one side)
+            auto generateGaussianWeights = [](std::array<float, 32>& weights,
+                    int const radius, float const sigma) {
+                float sum = 0.0f;
+                for (int i = 0; i <= radius; ++i) {
+                    weights[i] = std::exp(-(float(i * i) / (2.0f * sigma * sigma)));
+                    sum += (i == 0) ? weights[i] : (2.0f * weights[i]);
+                }
+                float const invSum = 1.0f / sum;
+                for (int i = 0; i <= radius; ++i) {
+                    weights[i] *= invSum;
+                }
+            };
+
+            auto miList = FixedCapacityVector<FMaterialInstance*>::with_capacity(data.list.size());
+
+            // set-up all the MaterialInstance for each shadow map
+            for (ShadowMap const* const shadowMap : data.list) {
+                std::array<float, 32> kernel;
+                float const blurWidth = shadowMap->getShadowOptions().vsm.blurWidth;
+                float const sigma = blurWidth / 2.5f;
+                int const radius = std::min(int(std::ceil(blurWidth)), 31);
+                generateGaussianWeights(kernel, radius, sigma);
+
+                backend::Viewport const scissor = shadowMap->getScissor();
+                auto const mi = ppm.getMaterialInstanceManager().getMaterialInstance(ma);
+                mi->setScissor(scissor);
+                mi->setParameter("input", hwIn, SamplerParams{
+                    .filterMag = SamplerMagFilter::NEAREST,
+                    .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
+                });
+                mi->setParameter("kernel", kernel.data(), radius + 1);
+                mi->setParameter("bounds",
+                    dir.x * int2{ scissor.left,   scissor.left   + scissor.width  - 1 } +
+                    dir.y * int2{ scissor.bottom, scissor.bottom + scissor.height - 1 });
+                mi->setParameter("dir", dir);
+                mi->setParameter("layer", int32_t(inSubDesc.layer));
+                mi->setParameter("radius", radius);
+                mi->commit(driver, engine.getUboManager());
+                miList.push_back(mi);
+            }
+
+            // Do all the horizontal or vertical blur passes for this layer at once
+            driver.beginRenderPass(hwOutRT.target, hwOutRT.params);
+            for (auto const mi : miList) {
+                mi->use(driver);
+                driver.scissor(mi->getScissor());
+                driver.draw(ppm.getPipelineState(ma), engine.getFullScreenRenderPrimitive(), 0, 3, 1);
+            }
+            driver.endRenderPass();
+
+            ppm.unbindAllDescriptorSets(driver);
+        });
+
+    return separatedBlurPasses->out;
+}
+
+FrameGraphId<FrameGraphTexture> ShadowMapManager::vsmMipmapPass(
+        FEngine& engine,
+        FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> const input, uint8_t layer, size_t const level,
+        float4 clearColor) noexcept {
+
+    struct VsmMipData {
+        FrameGraphId<FrameGraphTexture> in;
+    };
+
+    auto const& depthMipmapPass = fg.addPass<VsmMipData>("EVSM Mipmap Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.in = builder.sample(input);
+                auto out = builder.createSubresource(data.in, "EVSM Mipmap level", {
+                        .level = uint8_t(level + 1), .layer = layer });
+                out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                builder.declareRenderPass(builder.getName(input), {
+                    .attachments = { .color = { out }},
+                    .clearColor = clearColor,
+                    .clearFlags = TargetBufferFlags::COLOR
+                });
+            },
+            [=, &engine](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) {
+
+                auto in = driver.createTextureView(resources.getTexture(data.in), level, 1);
+                auto out = resources.getRenderPassInfo();
+
+                auto const& inDesc = resources.getDescriptor(data.in);
+                auto width = inDesc.width;
+                assert_invariant(width == inDesc.height);
+                uint32_t const dim = std::max(1u, width >> (level + 1));
+
+                auto& ppm = engine.getPostProcessManager();
+                ppm.bindPostProcessDescriptorSet(driver);
+                ppm.bindPerRenderableDescriptorSet(driver);
+
+                auto& material = ppm.getPostProcessMaterial("vsmMipmap");
+                FMaterial const* const ma = material.getMaterial(engine, driver);
+
+                auto const pipeline = ppm.getPipelineState(ma);
+                backend::Viewport const scissor = { 0, 0, dim, dim };
+
+                auto const mi = ppm.getMaterialInstanceManager().getMaterialInstance(ma);
+                mi->setParameter("color", in, SamplerParams{
+                        .filterMag = SamplerMagFilter::NEAREST,
+                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
+                });
+                mi->setParameter("layer", uint32_t(layer));
+                mi->commit(driver, engine.getUboManager());
+
+
+                // Do all the horizontal or vertical blur passes for this layer at once
+                driver.beginRenderPass(out.target, out.params);
+                {
+                    mi->use(driver);
+                    driver.scissor(scissor);
+                    driver.draw(pipeline, engine.getFullScreenRenderPrimitive(), 0, 3, 1);
+                }
+                driver.endRenderPass();
+
+                driver.destroyTexture(in); // `in` is just a view on `data.in`
+                ppm.unbindAllDescriptorSets(driver);
+            });
+
+    return depthMipmapPass->in;
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,
@@ -647,7 +792,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     };
 
     bool hasVisibleShadows = false;
-    utils::Slice<ShadowMap> const cascadedShadowMaps = getCascadedShadowMap();
+    Slice<ShadowMap> const cascadedShadowMaps = getCascadedShadowMap();
     if (!cascadedShadowMaps.empty()) {
         // Even if we have more than one cascade, we cull directional shadow casters against the
         // entire camera frustum, as if we only had a single cascade.
@@ -853,7 +998,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engin
 
 void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap,
         FEngine const& engine, FView const& view,
-        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+        FScene::RenderableSoa& renderableData, Range<uint32_t> range,
         FScene::LightSoa const& lightData) noexcept {
     auto& lcm = engine.getLightManager();
 
@@ -945,7 +1090,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
 }
 
 void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView const& view,
-        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> const range,
+        FScene::RenderableSoa& renderableData, Range<uint32_t> const range,
         FScene::LightSoa const& lightData) noexcept {
 
     uint8_t const face = shadowMap.getFace();
@@ -995,7 +1140,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             lightData.data<FScene::SHADOW_INFO>());
 
     ShadowTechnique shadowTechnique{};
-    utils::Slice<const ShadowMap> const spotShadowMaps = getSpotShadowMaps();
+    Slice<const ShadowMap> const spotShadowMaps = getSpotShadowMaps();
     if (!spotShadowMaps.empty()) {
         shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         for (ShadowMap const& shadowMap : spotShadowMaps) {
@@ -1192,11 +1337,11 @@ void ShadowMapManager::updateNearFarPlanes(mat4f* projection,
     p[3].z = (sf * F.w - sn * N.w) * 0.5f;
 }
 
-utils::FixedCapacityVector<Camera const*>
+FixedCapacityVector<Camera const*>
 ShadowMapManager::getDirectionalShadowCameras() const noexcept {
     if (!mInitialized) return {};
     auto const csm = getCascadedShadowMap();
-    auto result = utils::FixedCapacityVector<Camera const*>::with_capacity(csm.size());
+    auto result = FixedCapacityVector<Camera const*>::with_capacity(csm.size());
     for (ShadowMap const& sm : csm) {
         result.push_back(sm.hasVisibleShadows() ? sm.getDebugCamera() : nullptr);
     }

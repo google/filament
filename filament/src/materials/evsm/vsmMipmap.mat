@@ -9,10 +9,6 @@ material {
         {
             type : int,
             name : layer
-        },
-        {
-            type : float,
-            name : uvscale
         }
     ],
     outputs : [
