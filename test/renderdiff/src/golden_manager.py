@@ -16,6 +16,7 @@ import os
 import shutil
 import re
 import sys
+import tempfile
 
 from utils import execute, ArgParseImpl, mkdir_p
 
@@ -99,10 +100,11 @@ class GoldenManager:
     code, old_commit = execute(f'git log --format=%B -n 1', cwd=assets_dir)
     if tag and len(tag) > 0:
       old_commit += f'\nFILAMENT={tag}'
-      COMMIT_FILE = '/tmp/golden_commit.txt'
-      with open(COMMIT_FILE, 'w') as f:
+      with tempfile.NamedTemporaryFile('w', delete=False) as f:
         f.write(old_commit)
-      self._git_exec(f'commit --amend -F {COMMIT_FILE}')
+        commit_file = f.name
+      self._git_exec(f'commit --amend -F {commit_file}')
+      os.remove(commit_file)
 
     # Do the actual merge
     self._git_exec(f'checkout main')
@@ -139,11 +141,11 @@ class GoldenManager:
           os.path.join(rdiff_dir, f))
         self._git_exec(f'add {os.path.join(GOLDENS_DIR, f)}')
 
-    TMP_GOLDEN_COMMIT_FILE = '/tmp/golden_commit.txt'
-
-    with open(TMP_GOLDEN_COMMIT_FILE, 'w') as f:
+    with tempfile.NamedTemporaryFile('w', delete=False) as f:
       f.write(commit_msg)
-    self._git_exec(f'commit -a -F {TMP_GOLDEN_COMMIT_FILE}')
+      tmp_golden_commit_file = f.name
+    self._git_exec(f'commit -a -F {tmp_golden_commit_file}')
+    os.remove(tmp_golden_commit_file)
     if push_to_remote and \
        (self.access_token_ or self.access_type_ == ACCESS_TYPE_SSH):
       self._git_exec(f'push -f origin {branch}')
