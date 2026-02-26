@@ -37,16 +37,6 @@ void erasep(std::vector<T>& v, std::function<bool(T const&)> f) {
     v.erase(newEnd, v.end());
 }
 
-using ImageData = VulkanExternalImageManager::VulkanExternalImageManager::ImageData;
-ImageData& findImage(std::vector<ImageData>& images,
-        fvkmemory::resource_ptr<VulkanTexture> texture) {
-    auto itr = std::find_if(images.begin(), images.end(), [&](ImageData const& data) {
-        return data.image == texture;
-    });
-    assert_invariant(itr != images.end());
-    return *itr;
-}
-
 }// namespace
 
 VulkanExternalImageManager::VulkanExternalImageManager(VulkanSamplerCache* samplerCache,
@@ -61,7 +51,6 @@ VulkanExternalImageManager::~VulkanExternalImageManager() = default;
 
 void VulkanExternalImageManager::terminate() {
     mSetBindings.clear();
-    mImages.clear();
 }
 
 void VulkanExternalImageManager::updateSetAndLayout(
@@ -94,11 +83,12 @@ void VulkanExternalImageManager::updateSetAndLayout(
     fvkmemory::resource_ptr<VulkanDescriptorSetLayout> const& layout = set->getLayout();
     set->boundLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
             actualExternalSamplers, outSamplers);
+
+    mDescriptorSetCache->cloneSet(set, actualExternalSamplers);
+
     // Update the external samplers in the set
     for (auto& [binding, sampler, image]: samplerAndBindings) {
-        // We cannot call updateSamplerForExternalSamplerSet because some samplers are non NULL
-        // (RGB) and we cannot do a combined update with a NULL sampler.
-        mDescriptorSetCache->updateSampler(set, binding, image, sampler, set->boundLayout);
+        mDescriptorSetCache->updateSampler(set, binding, image, sampler);
     }
 }
 
@@ -137,8 +127,6 @@ void VulkanExternalImageManager::removeDescriptorSet(
 void VulkanExternalImageManager::bindExternallySampledTexture(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t bindingPoint,
         fvkmemory::resource_ptr<VulkanTexture> image, SamplerParams samplerParams) {
-    // Should we do duplicate validation here?
-    auto& imageData = findImage(mImages, image);
     // according to spec, these must match chromaFilter
     // https://registry.khronos.org/vulkan/specs/latest/man/html/VkSamplerCreateInfo.html#VUID-VkSamplerCreateInfo-minFilter-01645
     samplerParams.filterMag = SamplerMagFilter::NEAREST;
@@ -153,34 +141,10 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
 
     VkSampler const sampler = mSamplerCache->getSampler({
         .sampler = samplerParams,
-        .conversion = imageData.conversion,
+        .conversion = image->getYcbcrConversion(),
     });
 
-    mSetBindings.push_back({ bindingPoint, imageData.image, set, sampler });
-}
-
-void VulkanExternalImageManager::addExternallySampledTexture(
-        fvkmemory::resource_ptr<VulkanTexture> image, VkSamplerYcbcrConversion const conversion) {
-    mImages.push_back({
-        .image = image,
-        .conversion = conversion,
-    });
-}
-
-void VulkanExternalImageManager::removeExternallySampledTexture(
-        fvkmemory::resource_ptr<VulkanTexture> image) {
-    erasep<SetBindingInfo>(mSetBindings,
-            [&](auto const& bindingInfo) { return (bindingInfo.image == image); });
-    erasep<ImageData>(mImages, [&](auto const& imageData) {
-        return imageData.image == image;
-    });
-}
-
-bool VulkanExternalImageManager::isExternallySampledTexture(
-        fvkmemory::resource_ptr<VulkanTexture> image) const {
-    return std::find_if(mImages.begin(), mImages.end(), [&](auto const& imageData) {
-        return imageData.image == image;
-    }) != mImages.end();
+    mSetBindings.push_back({ bindingPoint, image, set, sampler });
 }
 
 void VulkanExternalImageManager::clearTextureBinding(
