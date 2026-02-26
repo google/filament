@@ -115,8 +115,12 @@ JNIEnv* VirtualMachineEnv::getEnvironmentSlow() {
     args.version = JNI_VERSION_1_6;
     args.group = nullptr;
     char threadName[16]; // pthread_getname_np returns at most 16 bytes
-    if (pthread_getname_np(pthread_self(), threadName, sizeof(threadName)) == 0) {
-        args.name = threadName;
+    if (__builtin_available(android 26, *)) {
+        if (pthread_getname_np(pthread_self(), threadName, sizeof(threadName)) == 0) {
+            args.name = threadName;
+        } else {
+            args.name = nullptr;
+        }
     } else {
         args.name = nullptr;
     }
