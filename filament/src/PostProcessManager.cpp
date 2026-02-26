@@ -802,7 +802,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
 
                 // use our special SSR variant, it can only be applied to object that have
                 // the SCREEN_SPACE ReflectionMode.
-                passBuilder.variant(Variant{ Variant::SPECIAL_SSR });
+                passBuilder.variant(Variant{ Variant::SPECIAL_SSR_VARIANT });
 
                 // generate all our drawing commands, except blended objects.
                 passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
