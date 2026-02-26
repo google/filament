@@ -564,170 +564,170 @@ endif()
 # ==================================================================================================
 # Test
 # ==================================================================================================
-option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
+if (FILAMENT_BUILD_TESTING)
+    option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
 
-if (APPLE OR LINUX)
-    set(BACKEND_TEST_SRC
-        test/BackendTest.cpp
-        test/ShaderGenerator.cpp
-        test/TrianglePrimitive.cpp
-        test/Arguments.cpp
-        test/ImageExpectations.cpp
-        test/Lifetimes.cpp
-        test/PlatformRunner.cpp
-        test/Shader.cpp
-        test/SharedShaders.cpp
-        test/Skip.cpp
-        test/test_Autoresolve.cpp
-        test/test_FeedbackLoops.cpp
-        test/test_Blit.cpp
-        test/test_MissingRequiredAttributes.cpp
-        test/test_ReadPixels.cpp
-        test/test_ReadTexture.cpp
-        test/test_BufferUpdates.cpp
-        test/test_Callbacks.cpp
-        test/test_JobQueue.cpp
-        test/test_MemoryMappedBuffer.cpp
-        test/test_MsaaSwapChain.cpp
-        test/test_MRT.cpp
-        test/test_PushConstants.cpp
-        test/test_LoadImage.cpp
-        test/test_StencilBuffer.cpp
-        test/test_Scissor.cpp
-        test/test_MipLevels.cpp
-        test/test_Handles.cpp
-        test/test_CircularBuffer.cpp
-        test/test_CommandBufferQueue.cpp
-        test/test_Template.cpp
-    )
-    if (FILAMENT_SUPPORTS_WEBGPU)
-        list(APPEND BACKEND_TEST_SRC
-                test/test_WebGPUAsyncTaskCounter.cpp
-                test/test_WebGPUComposeSwizzle.cpp)
-    endif()
-    if (APPLE)
-        # Metal-specific tests
-        list(APPEND BACKEND_TEST_SRC
-            test/test_MetalBlitter.mm
+    if (APPLE OR LINUX)
+        set(BACKEND_TEST_SRC
+            test/BackendTest.cpp
+            test/ShaderGenerator.cpp
+            test/TrianglePrimitive.cpp
+            test/Arguments.cpp
+            test/ImageExpectations.cpp
+            test/Lifetimes.cpp
+            test/PlatformRunner.cpp
+            test/Shader.cpp
+            test/SharedShaders.cpp
+            test/Skip.cpp
+            test/test_Autoresolve.cpp
+            test/test_FeedbackLoops.cpp
+            test/test_Blit.cpp
+            test/test_MissingRequiredAttributes.cpp
+            test/test_ReadPixels.cpp
+            test/test_ReadTexture.cpp
+            test/test_BufferUpdates.cpp
+            test/test_Callbacks.cpp
+            test/test_JobQueue.cpp
+            test/test_MemoryMappedBuffer.cpp
+            test/test_MsaaSwapChain.cpp
+            test/test_MRT.cpp
+            test/test_PushConstants.cpp
+            test/test_LoadImage.cpp
+            test/test_StencilBuffer.cpp
+            test/test_Scissor.cpp
+            test/test_MipLevels.cpp
+            test/test_Handles.cpp
+            test/test_CircularBuffer.cpp
+            test/test_CommandBufferQueue.cpp
+            test/test_Template.cpp
         )
-    endif()
-    set(BACKEND_TEST_LIBS
-        absl::str_format
-        backend
-        getopt
-        gtest
-        imageio
-        filamat
-        SPIRV
-        spirv-cross-glsl)
-    # Create input/output directories for test result images.
-    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
-    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/diff_images)
-    file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
-endif()
-
-# TODO: Disabling IOS test due to breakage wrt glslang update
-if (APPLE AND NOT IOS)
-    # TODO: we should expand this test to Linux and other platforms.
-    list(APPEND BACKEND_TEST_SRC
-         test/test_RenderExternalImage.cpp)
-    add_library(backend_test STATIC ${BACKEND_TEST_SRC})
-    target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
-    target_compile_options(backend_test PRIVATE "-fobjc-arc")
-
-    set(BACKEND_TEST_DEPS
-            OSDependent
-            SPIRV
-            SPIRV-Tools
-            SPIRV-Tools-opt
-            backend_test
+        if (FILAMENT_SUPPORTS_WEBGPU)
+            list(APPEND BACKEND_TEST_SRC
+                    test/test_WebGPUAsyncTaskCounter.cpp
+                    test/test_WebGPUComposeSwizzle.cpp)
+        endif()
+        if (APPLE)
+            # Metal-specific tests
+            list(APPEND BACKEND_TEST_SRC
+                test/test_MetalBlitter.mm
+            )
+        endif()
+        set(BACKEND_TEST_LIBS
+            absl::str_format
+            backend
             getopt
             gtest
-            glslang
-            spirv-cross-core
-            spirv-cross-glsl
-            spirv-cross-msl)
-
-    if (NOT IOS)
-        target_link_libraries(backend_test PRIVATE image imageio)
-        list(APPEND BACKEND_TEST_DEPS image)
-    endif()
-    if (FILAMENT_SUPPORTS_WEBGPU)
-        target_link_libraries(backend_test PRIVATE webgpu_dawn dawncpp_headers)
-        list(APPEND BACKEND_TEST_DEPS webgpu_dawn dawncpp_headers)
+            imageio
+            filamat
+            SPIRV
+            spirv-cross-glsl)
+        # Create input/output directories for test result images.
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/diff_images)
+        file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
     endif()
 
-    set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
-    combine_static_libs(backend_test "${BACKEND_TEST_COMBINED_OUTPUT}" "${BACKEND_TEST_DEPS}")
+    # TODO: Disabling IOS test due to breakage wrt glslang update
+    if (APPLE AND NOT IOS)
+        # TODO: we should expand this test to Linux and other platforms.
+        list(APPEND BACKEND_TEST_SRC
+            test/test_RenderExternalImage.cpp)
+        add_library(backend_test STATIC ${BACKEND_TEST_SRC})
+        target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
+        target_compile_options(backend_test PRIVATE "-fobjc-arc")
 
-    set(BACKEND_TEST_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}backend_test${CMAKE_STATIC_LIBRARY_SUFFIX})
+        set(BACKEND_TEST_DEPS
+                OSDependent
+                SPIRV
+                SPIRV-Tools
+                SPIRV-Tools-opt
+                backend_test
+                getopt
+                gtest
+                glslang
+                spirv-cross-core
+                spirv-cross-glsl
+                spirv-cross-msl)
 
-    if (INSTALL_BACKEND_TEST)
-        install(FILES "${BACKEND_TEST_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${BACKEND_TEST_LIB_NAME})
-        install(FILES test/PlatformRunner.h DESTINATION include/backend_test)
+        if (NOT IOS)
+            target_link_libraries(backend_test PRIVATE image imageio)
+            list(APPEND BACKEND_TEST_DEPS image)
+        endif()
+        if (FILAMENT_SUPPORTS_WEBGPU)
+            target_link_libraries(backend_test PRIVATE webgpu_dawn dawncpp_headers)
+            list(APPEND BACKEND_TEST_DEPS webgpu_dawn dawncpp_headers)
+        endif()
+
+        set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
+        combine_static_libs(backend_test "${BACKEND_TEST_COMBINED_OUTPUT}" "${BACKEND_TEST_DEPS}")
+
+        set(BACKEND_TEST_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}backend_test${CMAKE_STATIC_LIBRARY_SUFFIX})
+
+        if (INSTALL_BACKEND_TEST)
+            install(FILES "${BACKEND_TEST_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${BACKEND_TEST_LIB_NAME})
+            install(FILES test/PlatformRunner.h DESTINATION include/backend_test)
+        endif()
+
+        set_target_properties(backend_test PROPERTIES FOLDER Tests)
+
+        if (APPLE AND NOT IOS)
+            add_executable(backend_test_mac test/mac_runner.mm)
+            target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
+            # Because each test case is a separate file, the -force_load flag is necessary to prevent the
+            # linker from removing "unused" symbols.
+            target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
+            set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
+
+            # This is needed after XCode 15.3
+            set_target_properties(backend_test_mac PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
+            set_target_properties(backend_test_mac PROPERTIES INSTALL_RPATH /usr/local/lib)
+        endif()
     endif()
 
-    set_target_properties(backend_test PROPERTIES FOLDER Tests)
+    if (LINUX)
+        add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
+        target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
+        set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
+        if (FILAMENT_SUPPORTS_WEBGPU)
+            target_link_libraries(backend_test_linux PRIVATE webgpu_dawn dawncpp_headers)
+        endif()
+    endif()
+
+    # ==================================================================================================
+    # Compute tests
+    #
+    #if (NOT IOS AND NOT WEBGL)
+    #
+    #add_executable(compute_test
+    #        test/ComputeTest.cpp
+    #        test/Arguments.cpp
+    #        test/test_ComputeBasic.cpp
+    #        )
+    #
+    #target_link_libraries(compute_test PRIVATE
+    #        backend
+    #        getopt
+    #        gtest
+    #        )
+    #
+    #set_target_properties(compute_test PROPERTIES FOLDER Tests)
+    #
+    #endif()
+
+    # ==================================================================================================
+    # Metal utils tests
 
     if (APPLE AND NOT IOS)
-       add_executable(backend_test_mac test/mac_runner.mm)
-       target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
-       # Because each test case is a separate file, the -force_load flag is necessary to prevent the
-       # linker from removing "unused" symbols.
-       target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
-       set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
+        add_executable(metal_utils_test test/MetalTest.mm)
 
-       # This is needed after XCode 15.3
-       set_target_properties(backend_test_mac PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
-       set_target_properties(backend_test_mac PROPERTIES INSTALL_RPATH /usr/local/lib)
+        target_compile_options(metal_utils_test PRIVATE "-fobjc-arc")
+
+        target_link_libraries(metal_utils_test PRIVATE
+                backend
+                getopt
+                gtest
+                )
+
+        set_target_properties(metal_utils_test PROPERTIES FOLDER Tests)
     endif()
-endif()
-
-if (LINUX)
-    add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
-    target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
-    set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
-    if (FILAMENT_SUPPORTS_WEBGPU)
-        target_link_libraries(backend_test_linux PRIVATE webgpu_dawn dawncpp_headers)
-    endif()
-endif()
-
-# ==================================================================================================
-# Compute tests
-#
-#if (NOT IOS AND NOT WEBGL)
-#
-#add_executable(compute_test
-#        test/ComputeTest.cpp
-#        test/Arguments.cpp
-#        test/test_ComputeBasic.cpp
-#        )
-#
-#target_link_libraries(compute_test PRIVATE
-#        backend
-#        getopt
-#        gtest
-#        )
-#
-#set_target_properties(compute_test PROPERTIES FOLDER Tests)
-#
-#endif()
-
-# ==================================================================================================
-# Metal utils tests
-
-if (APPLE AND NOT IOS)
-
-add_executable(metal_utils_test test/MetalTest.mm)
-
-target_compile_options(metal_utils_test PRIVATE "-fobjc-arc")
-
-target_link_libraries(metal_utils_test PRIVATE
-        backend
-        getopt
-        gtest
-        )
-
-set_target_properties(metal_utils_test PROPERTIES FOLDER Tests)
-
 endif()
