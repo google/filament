@@ -76,7 +76,7 @@ into **branch** of `filament-assets`. This branch is paired with a PR or commit 
 
 As an example, imagine I am working on a PR, and I've uploaded my change, which is in a
 branch called `my-pr-branch`, to `filament`. This PR requires updating the golden. We would do
-it in the following fashion
+it in the following fashion on a macOS machine:
 
 ### Using a script to update the golden repo
 

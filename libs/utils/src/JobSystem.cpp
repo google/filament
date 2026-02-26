@@ -17,6 +17,7 @@
 // TODO: Clean-up. We shouldn't need this #ifndef here, but a client has requested that perfetto be
 // disabled due to size increase.  In their case, this flag would be defined across targets. Hence
 // we guard below with an #ifndef.
+#include <cstring>
 #ifndef FILAMENT_TRACING_ENABLED
 // Note: The overhead of TRACING is not negligible especially with parallel_for().
 #define FILAMENT_TRACING_ENABLED false
@@ -98,7 +99,11 @@ namespace utils {
 
 void JobSystem::setThreadName(const char* name) noexcept {
 #if defined(__linux__)
-    pthread_setname_np(pthread_self(), name);
+    constexpr size_t MAX_PTHREAD_NAME_LEN = 16;
+    char buf[MAX_PTHREAD_NAME_LEN];
+    strncpy(buf, name, MAX_PTHREAD_NAME_LEN - 1);
+    buf[MAX_PTHREAD_NAME_LEN - 1] = '\0';
+    pthread_setname_np(pthread_self(), buf);
 #elif defined(__APPLE__)
     pthread_setname_np(name);
 #elif defined(WIN32)
