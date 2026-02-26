@@ -48,10 +48,11 @@ std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept
         if (variant.key & Variant::DEP) variantString += "DEP|";
         if (variant.key & Variant::DEP) {
             if (variant.key & Variant::PCK) variantString += "PCK|";
+            if (variant.key & Variant::MNT) variantString += "MNT|";
         } else {
             if (variant.key & Variant::FOG) variantString += "FOG|";
+            if (variant.key & Variant::S2D) variantString += "S2D|";
         }
-        if (variant.key & Variant::VSM) variantString += "VSM|";
         if (variant.key & Variant::STE) variantString += "STE|";
         variantString = variantString.substr(0, variantString.length() - 1);
     }
