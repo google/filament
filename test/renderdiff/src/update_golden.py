@@ -64,19 +64,19 @@ def _do_update(golden_manager, config):
 
 def _same_image_diffimg(diffimg_path, img1, img2):
   cmd = [diffimg_path, img1, img2]
-  try:
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    output = result.stdout.strip()
-    if not output:
-      return False
+  result = subprocess.run(cmd, capture_output=True, text=True)
+  if result.returncode != 0:
+    raise RuntimeError(f"diffimg failed with return code {result.returncode}:\n{result.stderr}")
 
-    try:
-      res_json = json.loads(output)
-      return res_json.get('passed', False)
-    except json.JSONDecodeError:
-      return False
-  except Exception:
-    return False
+  output = result.stdout.strip()
+  if not output:
+    raise RuntimeError("diffimg produced no output")
+
+  try:
+    res_json = json.loads(output)
+    return res_json.get('passed', False)
+  except json.JSONDecodeError as e:
+    raise RuntimeError(f"Failed to parse diffimg output: {e}\nOutput: {output}")
 
 def _get_deletes_updates(update_dir, golden_dir, diffimg_path):
   ret_delete = []
@@ -93,13 +93,13 @@ def _get_deletes_updates(update_dir, golden_dir, diffimg_path):
     # However, update_golden typically only updates/adds based on the new render set.
     # But strict sync might imply deleting missing ones.
     # The original logic was: delete = list(base - new).
-    delete = list(base - new)
+    delete_files = list(base_files - new_files)
 
     # Files in new but not in base are definitely updates (additions)
-    update = list(new - base)
+    update_files = list(new_files - base_files)
 
     # Files in both need comparison
-    for fpath in base.intersection(new_files):
+    for fpath in base_files.intersection(new_files):
       base_fpath = os.path.join(golden_dir, fpath)
       new_fpath = os.path.join(update_dir, fpath)
 
@@ -110,10 +110,10 @@ def _get_deletes_updates(update_dir, golden_dir, diffimg_path):
           is_different = _file_as_str(new_fpath) != _file_as_str(base_fpath)
 
       if is_different:
-        update.append(fpath)
+        ret_update.append(fpath)
 
-    ret_update += update
-    ret_delete += delete
+    ret_update += update_files
+    ret_delete += delete_files
 
   return ret_delete, ret_update
 
@@ -179,7 +179,7 @@ if __name__ == "__main__":
   parser = ArgParseImpl()
   parser.add_argument('--branch', help='Branch of the golden repo to write to')
   parser.add_argument('--golden-repo-token', help='Access token for the golden repo')
-  parser.add_argument('--push-to-remote', action="store_true", help='Access token for the golden repo')
+  parser.add_argument('--push-to-remote', action="store_true", help='Push the golden repo changes to remote')
   parser.add_argument('--diffimg', help='Path to the diffimg tool',
                       default='./out/cmake-release/tools/diffimg/diffimg')
 
