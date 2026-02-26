@@ -10,16 +10,27 @@ jobs:
   # a branch on filament-assets.
   update-renderdiff-goldens:
     name: update-renderdiff-goldens
-    runs-on: 'ubuntu-24.04-4core'
+    runs-on: 'macos-14-xlarge'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/linux-prereq
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - name: Build diffimg
-        run: ./build.sh release diffimg
+      - name: Check if accepting new goldens
+        id: check_accept
+        env:
+          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
+        run: |
+          if echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py --mode=accept_new_goldens; then
+            echo "accept=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "accept=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+      - name: Renderdiff Generate for new goldens
+        if: steps.check_accept.outputs.accept == 'true'
+        uses: ./.github/actions/renderdiff-generate
       - name: Run update script
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
@@ -27,10 +38,24 @@ jobs:
         run: |
           GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py)
           COMMIT_HASH="${{ steps.get_commit_msg.outputs.hash }}"
+
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git config --global credential.helper cache
+
+          if [[ "${{ steps.check_accept.outputs.accept }}" == "true" ]]; then
+              SHORT_HASH="${COMMIT_HASH:0:8}"
+              GOLDEN_BRANCH="accept-goldens-${SHORT_HASH}"
+              echo "Generating new goldens for branch ${GOLDEN_BRANCH}"
+              python3 test/renderdiff/src/update_golden.py \
+                  --branch=${GOLDEN_BRANCH} \
+                  --source=$(pwd)/out/renderdiff/renders \
+                  --commit-msg="Auto-update goldens from ${COMMIT_HASH}" \
+                  --push-to-remote \
+                  --golden-repo-token=${GH_TOKEN}
+          fi
+
           if [[ "${GOLDEN_BRANCH}" != "main" ]]; then
-              git config --global user.email "filament.bot@gmail.com"
-              git config --global user.name "Filament Bot"
-              git config --global credential.helper cache
               echo "branch==${GOLDEN_BRANCH}"
               echo "hash==${COMMIT_HASH}"
               python3 test/renderdiff/src/update_golden.py --branch=${GOLDEN_BRANCH} \
