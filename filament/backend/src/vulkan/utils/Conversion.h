@@ -53,6 +53,7 @@ uint32_t getBytesPerPixel(TextureFormat format);
 uint8_t getTexelBlockSize(VkFormat format);
 
 VkCompareOp getCompareOp(SamplerCompareFunc func);
+VkStencilOp getStencilOp(StencilOperation op);
 VkBlendFactor getBlendFactor(BlendFunction mode);
 VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);

@@ -166,6 +166,7 @@ void VulkanPipelineCache::asyncPrewarmCache(
             .depthBiasConstantFactor = 0.f,
             .depthBiasSlopeFactor = 0.f,
         },
+        .stencilState = {},
         .layout = layout,
     };
     PipelineDynamicOptions dynamicOptions {
@@ -297,24 +298,45 @@ VkPipeline VulkanPipelineCache::createPipeline(
     bool const enableDepthTest =
         raster.depthCompareOp != SamplerCompareFunc::A ||
         raster.depthWriteEnable;
+    // Stencil must be enabled if we're testing OR writing to the stencil buffer.
+    auto const& stencil = key.stencilState;
+    bool const enableStencilTest =
+        stencil.front.stencilFunc != StencilState::StencilFunction::A ||
+        stencil.back.stencilFunc != StencilState::StencilFunction::A ||
+        stencil.front.stencilOpDepthFail != StencilOperation::KEEP ||
+        stencil.back.stencilOpDepthFail != StencilOperation::KEEP ||
+        stencil.front.stencilOpStencilFail != StencilOperation::KEEP ||
+        stencil.back.stencilOpStencilFail != StencilOperation::KEEP ||
+        stencil.front.stencilOpDepthStencilPass != StencilOperation::KEEP ||
+        stencil.back.stencilOpDepthStencilPass != StencilOperation::KEEP ||
+        stencil.stencilWrite;
     VkPipelineDepthStencilStateCreateInfo vkDs = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = enableDepthTest ? VK_TRUE : VK_FALSE,
         .depthWriteEnable = raster.depthWriteEnable,
         .depthCompareOp = fvkutils::getCompareOp(raster.depthCompareOp),
         .depthBoundsTestEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE,
+        .stencilTestEnable = enableStencilTest ? VK_TRUE : VK_FALSE,
         .minDepthBounds = 0.0f,
         .maxDepthBounds = 0.0f,
     };
-    vkDs.front = vkDs.back = {
-        .failOp = VK_STENCIL_OP_KEEP,
-        .passOp = VK_STENCIL_OP_KEEP,
-        .depthFailOp = VK_STENCIL_OP_KEEP,
-        .compareOp = VK_COMPARE_OP_ALWAYS,
-        .compareMask = 0u,
-        .writeMask = 0u,
-        .reference = 0u,
+    vkDs.front = {
+        .failOp = fvkutils::getStencilOp(stencil.front.stencilOpStencilFail),
+        .passOp = fvkutils::getStencilOp(stencil.front.stencilOpDepthStencilPass),
+        .depthFailOp = fvkutils::getStencilOp(stencil.front.stencilOpDepthFail),
+        .compareOp = fvkutils::getCompareOp(stencil.front.stencilFunc),
+        .compareMask = stencil.front.readMask,
+        .writeMask = (uint32_t) (stencil.stencilWrite ? stencil.front.writeMask : 0u),
+        .reference = (uint32_t) stencil.front.ref,
+    };
+    vkDs.back = {
+        .failOp = fvkutils::getStencilOp(stencil.back.stencilOpStencilFail),
+        .passOp = fvkutils::getStencilOp(stencil.back.stencilOpDepthStencilPass),
+        .depthFailOp = fvkutils::getStencilOp(stencil.back.stencilOpDepthFail),
+        .compareOp = fvkutils::getCompareOp(stencil.back.stencilFunc),
+        .compareMask = stencil.back.readMask,
+        .writeMask = (uint32_t) (stencil.stencilWrite ? stencil.back.writeMask : 0u),
+        .reference = (uint32_t) stencil.back.ref,
     };
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
@@ -433,8 +455,14 @@ void VulkanPipelineCache::bindRasterState(RasterState const& rasterState) noexce
     mPipelineRequirements.rasterState = rasterState;
 }
 
-void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept {
-    mPipelineRequirements.renderPass = renderPass;
+void VulkanPipelineCache::bindStencilState(StencilState const& stencilState) noexcept {
+    mPipelineRequirements.stencilState = stencilState;
+}
+
+void VulkanPipelineCache::bindRenderPass(
+        fvkmemory::resource_ptr<VulkanRenderPass> renderPass,
+        int subpassIndex) noexcept {
+    mPipelineRequirements.renderPass = renderPass->getVkRenderPass();
     mPipelineRequirements.subpassIndex = subpassIndex;
 }
 

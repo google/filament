@@ -123,6 +123,63 @@ void reshapeImageImpl(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRIC
     }
 }
 
+struct UnpackerR11G11B10 {
+    static void unpack(const uint8_t* src, float* out) {
+        uint32_t p;
+        std::memcpy(&p, src, 4);
+
+        using R11 = math::fp<0, 5, 6>;
+        using G11 = math::fp<0, 5, 6>;
+        using B10 = math::fp<0, 5, 5>;
+
+        out[0] = R11::tof(R11(uint16_t((p >> 21) & 0x7FF)));
+        out[1] = G11::tof(G11(uint16_t((p >> 10) & 0x7FF)));
+        out[2] = B10::tof(B10(uint16_t(p & 0x3FF)));
+    }
+};
+
+template<typename dstComponentType, typename Unpacker, bool Swizzle>
+static void reshapeImagePacked(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
+        size_t srcBytesPerRow, size_t srcChannelCount, size_t dstRowOffset, size_t dstColumnOffset,
+        size_t dstBytesPerRow, size_t dstChannelCount, size_t width, size_t height, bool /*swizzle*/) {
+
+    dest += (dstRowOffset * dstBytesPerRow);
+    const dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
+
+    for (size_t row = 0; row < height; ++row) {
+        const uint8_t* inPtr = src;
+        dstComponentType* out = (dstComponentType*) dest + (dstColumnOffset * dstChannelCount);
+
+        for (size_t column = 0; column < width; ++column) {
+            float rgba[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+            Unpacker::unpack(inPtr, rgba);
+
+            if constexpr (Swizzle) {
+                std::swap(rgba[0], rgba[2]);
+            }
+
+            for (size_t c = 0; c < dstChannelCount; ++c) {
+                if constexpr (std::is_same_v<dstComponentType, float>) {
+                    out[c] = rgba[c];
+                } else if constexpr (std::is_same_v<dstComponentType, math::half>) {
+                    out[c] = math::half(rgba[c]);
+                } else {
+                    out[c] = static_cast<dstComponentType>(std::clamp(
+                        static_cast<double>(rgba[c]) * static_cast<double>(dstMaxValue),
+                        0.0,
+                        static_cast<double>(std::numeric_limits<dstComponentType>::max())
+                    ));
+                }
+            }
+
+            inPtr += 4;
+            out += dstChannelCount;
+        }
+        src += srcBytesPerRow;
+        dest += dstBytesPerRow;
+    }
+}
+
 } // anonymous namespace
 
 class DataReshaper {
@@ -194,6 +251,8 @@ public:
         constexpr auto UINT = PixelDataType::UINT;
         constexpr auto INT = PixelDataType::INT;
         constexpr auto HALF = PixelDataType::HALF;
+        constexpr auto UINT_10F_11F_11F_REV = PixelDataType::UINT_10F_11F_11F_REV;
+
         switch (dst->type) {
             case UBYTE:
                 switch (srcType) {
@@ -209,6 +268,10 @@ public:
                     case INT: reshaper = reshapeImageImpl<uint8_t, int32_t>; break;
                     case UINT: reshaper = reshapeImageImpl<uint8_t, uint32_t>; break;
                     case HALF: reshaper = reshapeImageImpl<uint8_t, math::half>; break;
+                    case UINT_10F_11F_11F_REV:
+                        if (swizzle) reshaper = reshapeImagePacked<uint8_t, UnpackerR11G11B10, true>;
+                        else reshaper = reshapeImagePacked<uint8_t, UnpackerR11G11B10, false>;
+                        break;
                     default:
                         LOG(ERROR) << "DataReshaper: UBYTE dst, unsupported srcType: "
                                    << (int) srcType;
@@ -221,6 +284,10 @@ public:
                     case FLOAT: reshaper = reshapeImageImpl<float, float>; break;
                     case INT: reshaper = reshapeImageImpl<float, int32_t>; break;
                     case UINT: reshaper = reshapeImageImpl<float, uint32_t>; break;
+                    case UINT_10F_11F_11F_REV:
+                        if (swizzle) reshaper = reshapeImagePacked<float, UnpackerR11G11B10, true>;
+                        else reshaper = reshapeImagePacked<float, UnpackerR11G11B10, false>;
+                        break;
                     default:
                         LOG(ERROR) << "DataReshaper: FLOAT dst, unsupported srcType: "
                                    << (int) srcType;
@@ -233,6 +300,10 @@ public:
                     case FLOAT: reshaper = reshapeImageImpl<int32_t, float>; break;
                     case INT: reshaper = reshapeImageImpl<int32_t, int32_t>; break;
                     case UINT: reshaper = reshapeImageImpl<int32_t, uint32_t>; break;
+                    case UINT_10F_11F_11F_REV:
+                        if (swizzle) reshaper = reshapeImagePacked<int32_t, UnpackerR11G11B10, true>;
+                        else reshaper = reshapeImagePacked<int32_t, UnpackerR11G11B10, false>;
+                        break;
                     default:
                         LOG(ERROR)
                                 << "DataReshaper: INT dst, unsupported srcType: " << (int) srcType;
@@ -245,6 +316,10 @@ public:
                     case FLOAT: reshaper = reshapeImageImpl<uint32_t, float>; break;
                     case INT: reshaper = reshapeImageImpl<uint32_t, int32_t>; break;
                     case UINT: reshaper = reshapeImageImpl<uint32_t, uint32_t>; break;
+                    case UINT_10F_11F_11F_REV:
+                        if (swizzle) reshaper = reshapeImagePacked<uint32_t, UnpackerR11G11B10, true>;
+                        else reshaper = reshapeImagePacked<uint32_t, UnpackerR11G11B10, false>;
+                        break;
                     default:
                         LOG(ERROR)
                                 << "DataReshaper: UINT dst, unsupported srcType: " << (int) srcType;
@@ -255,6 +330,10 @@ public:
                 switch (srcType) {
                     case HALF:
                         reshaper = copyImage;
+                        break;
+                    case UINT_10F_11F_11F_REV:
+                        if (swizzle) reshaper = reshapeImagePacked<math::half, UnpackerR11G11B10, true>;
+                        else reshaper = reshapeImagePacked<math::half, UnpackerR11G11B10, false>;
                         break;
                     default:
                         LOG(ERROR)

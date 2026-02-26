@@ -3623,6 +3623,8 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
         case StreamType::NATIVE:
             mPlatform.detach(t->hwStream->stream);
             // ^ this deletes the texture id
+            // We still need to call unbind to update the bookkeeping.
+            gl.unbindTexture(t->gl.target, t->gl.id);
             break;
         case StreamType::ACQUIRED:
             gl.unbindTexture(t->gl.target, t->gl.id);

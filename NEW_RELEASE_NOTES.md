@@ -6,3 +6,6 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- engine: fix crash when using variance shadow maps
+- materials: better shadow normal-bias calculations [⚠️ **New Material Version**]

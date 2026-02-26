@@ -578,6 +578,7 @@ if (APPLE OR LINUX)
         test/Shader.cpp
         test/SharedShaders.cpp
         test/Skip.cpp
+        test/test_Autoresolve.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp

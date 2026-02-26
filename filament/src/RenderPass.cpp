@@ -568,7 +568,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
     if constexpr (isDepthPass) {
         cmd.info.materialVariant = variant;
         cmd.info.rasterState = {};
-        cmd.info.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isVSMVariant(variant);
+        cmd.info.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isDepthMomentsVariant(variant);
         cmd.info.rasterState.depthWrite = true;
         cmd.info.rasterState.depthFunc = RasterState::DepthFunc::GE;
         cmd.info.rasterState.alphaToCoverage = false;
@@ -616,7 +616,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         bool const hasSkinningOrMorphing = hasSkinning || hasMorphing;
 
         // if we are already an SSR variant, the SRE bit is already set
-        static_assert(Variant::SPECIAL_SSR & Variant::SRE);
+        static_assert(Variant::SPECIAL_SSR_VARIANT & Variant::SRE);
         Variant renderableVariant{ variant };
 
         // we can't have SSR and shadowing together by construction
@@ -798,16 +798,19 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                 cmd.info.rasterState.culling = cullingMode;
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
-                cmd.info.rasterState.depthWrite = (1 // only keep bit 0
-                        & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE)
-                                                     | isPickingVariant)
-                                                   & !(filterTranslucentObjects & translucent)
-                                                   & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
-                                                  | writeDepthForShadowCasters;
+                cmd.info.rasterState.depthWrite =
+                        (1 // only keep bit 0
+                                & (mi->isDepthWriteEnabled() |
+                                          (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) |
+                                          isPickingVariant) &
+                                !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage)) |
+                        writeDepthForShadowCasters;
 
                 *curr = cmd;
                 // cancel command if both front and back faces are culled
                 curr->key |= select(cullingMode == CullingMode::FRONT_AND_BACK);
+                // cancel command if asked to filter translucent objects
+                curr->key |= select(filterTranslucentObjects & translucent);
             }
 
             ++curr;
