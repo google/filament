@@ -1706,6 +1706,8 @@ enum class Workaround : uint16_t {
     DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL,
     // Emulate an sRGB swapchain in shader code.
     EMULATE_SRGB_SWAPCHAIN,
+    // Workaround for AMD Vulkan drivers on Windows crashing when SSR history is detached.
+    BLIT_SSR_HISTORY,
 };
 
 using StereoscopicType = Platform::StereoscopicType;

@@ -952,6 +952,9 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         chainStruct(&context.mPhysicalDeviceFeatures, &globalPriorityFeatures);
     }
 
+    // Obtain and store driver info
+    chainStruct(&context.mPhysicalDeviceProperties, &context.mDriverProperties);
+
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
     // physicalDeviceFeatures.
     vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
