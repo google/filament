@@ -780,10 +780,16 @@ void VulkanTexture::samplerToAttachmentBarrier(VulkanCommandBuffer* commands,
     VkCommandBuffer const cmdbuf = commands->buffer();
     VkImageLayout const layout =
             fvkutils::getVkLayout(getLayout(range.baseArrayLayer, range.baseMipLevel));
+
+    const bool isDepth = fvkutils::isVkDepthFormat(mState->mVkFormat);
+
     VkImageMemoryBarrier barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstAccessMask = static_cast<VkAccessFlags>(isDepth ? (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+                                 : (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)),
         .oldLayout = layout,
         .newLayout = layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -791,9 +797,13 @@ void VulkanTexture::samplerToAttachmentBarrier(VulkanCommandBuffer* commands,
         .image = mState->mTextureImage,
         .subresourceRange = range,
     };
+
+    VkPipelineStageFlags dstStage = isDepth ? (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                                               VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)
+                                            : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
     vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
-                    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            dstStage,
             0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
@@ -802,9 +812,13 @@ void VulkanTexture::attachmentToSamplerBarrier(VulkanCommandBuffer* commands,
     VkCommandBuffer const cmdbuf = commands->buffer();
     VkImageLayout const layout
             = fvkutils::getVkLayout(getLayout(range.baseArrayLayer, range.baseMipLevel));
+
+    const bool isDepth = fvkutils::isVkDepthFormat(mState->mVkFormat);
+
     VkImageMemoryBarrier barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .srcAccessMask = static_cast<VkAccessFlags>(isDepth ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+                                 : VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT),
         .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         .oldLayout = layout,
         .newLayout = layout,
@@ -813,7 +827,12 @@ void VulkanTexture::attachmentToSamplerBarrier(VulkanCommandBuffer* commands,
         .image = mState->mTextureImage,
         .subresourceRange = range,
     };
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+
+    VkPipelineStageFlags srcStage = isDepth ? (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                                               VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)
+                                            : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    vkCmdPipelineBarrier(cmdbuf, srcStage,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 

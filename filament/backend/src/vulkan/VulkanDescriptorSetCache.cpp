@@ -332,6 +332,7 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
 void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
+    prepareForUpdate(set);
     VkDescriptorBufferInfo const info = {
         .buffer = bufferObject->getVkBuffer(),
         .offset = offset,
@@ -368,20 +369,15 @@ void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescr
         // Build a new descriptor set from the new layout
         VkDescriptorSetLayout const genLayout = set->boundLayout;
         VkDescriptorSet const newSet = getVkSet(layout->count, genLayout);
-        Bitmask const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
-        Bitmask samplers = layout->bitmask.sampler;
-        samplers.unset(binding);
 
-        // Each bitmask denotes a binding index, and separated into two stages - vertex and buffer
-        // We fold the two stages into just the lower half of the bits to denote a combined set of
-        // bindings.
-        Bitmask const copyBindings = foldBitsInHalf(ubo | samplers);
         VkDescriptorSet const srcSet = set->getVkSet();
-        copySet(srcSet, newSet, copyBindings);
+        copySet(srcSet, newSet, layout);
         set->addNewSet(newSet,
                 [this, layoutCount = layout->count, genLayout, newSet](VulkanDescriptorSet*) {
                     this->manualRecycle(layoutCount, genLayout, newSet);
                 });
+    } else {
+        prepareForUpdate(set);
     }
 
     VkDescriptorSet const vkset = set->getVkSet();
@@ -448,21 +444,41 @@ void VulkanDescriptorSetCache::manualRecycle(VulkanDescriptorSetLayout::Count co
 
 void VulkanDescriptorSetCache::gc() { mStashedSets = {}; }
 
+void VulkanDescriptorSetCache::prepareForUpdate(
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set) noexcept {
+    if (set->isBound()) {
+        auto layout = set->getLayout();
+        VkDescriptorSetLayout const vklayout = set->boundLayout;
+        VkDescriptorSet const newSet = mDescriptorPool->obtainSet(layout->count, vklayout);
+        copySet(set->getVkSet(), newSet, layout);
+        set->addNewSet(newSet,
+                [this, layoutCount = layout->count, vklayout, newSet](VulkanDescriptorSet*) {
+                    this->manualRecycle(layoutCount, vklayout, newSet);
+                });
+    }
+}
+
 void VulkanDescriptorSetCache::copySet(VkDescriptorSet srcSet, VkDescriptorSet dstSet,
-        fvkutils::SamplerBitmask bindings) const {
-    // TODO: fix the size for better memory management
+        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) const {
+    Bitmask const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
+    Bitmask const samplers = layout->bitmask.sampler;
+    Bitmask const inputAttachments = layout->bitmask.inputAttachment;
+    Bitmask const bindings = foldBitsInHalf(ubo | samplers | inputAttachments);
+
     std::vector<VkCopyDescriptorSet> copies;
     bindings.forEachSetBit([&](size_t index) {
         copies.push_back({
-            .sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
-            .srcSet = srcSet,
-            .srcBinding = (uint32_t) index,
-            .dstSet = dstSet,
-            .dstBinding = (uint32_t) index,
-            .descriptorCount = 1,
+                .sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
+                .srcSet = srcSet,
+                .srcBinding = (uint32_t) index,
+                .dstSet = dstSet,
+                .dstBinding = (uint32_t) index,
+                .descriptorCount = 1,
         });
     });
-    vkUpdateDescriptorSets(mDevice, 0, nullptr, copies.size(), copies.data());
+    if (!copies.empty()) {
+        vkUpdateDescriptorSets(mDevice, 0, nullptr, (uint32_t) copies.size(), copies.data());
+    }
 }
 
 

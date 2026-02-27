@@ -100,6 +100,12 @@ private:
     GcList mThreadSafeGcList;
     GcList mGcList;
 
+    struct FrameGcList {
+        GcList threadSafeGcList;
+        GcList gcList;
+    };
+    std::vector<FrameGcList> mFramesGcList;
+
     template<typename D>
     friend struct resource_ptr;
 

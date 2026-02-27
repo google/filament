@@ -90,8 +90,10 @@ public:
     void resetCachedState() noexcept { mLastBoundInfo = {}; }
 
 private:
+    void prepareForUpdate(fvkmemory::resource_ptr<VulkanDescriptorSet> set) noexcept;
+
     void copySet(VkDescriptorSet srcSet, VkDescriptorSet destSet,
-            fvkutils::SamplerBitmask copyBindings) const;
+            fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) const;
 
     class DescriptorInfinitePool;
 

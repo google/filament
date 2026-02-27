@@ -260,8 +260,8 @@ void VulkanDescriptorSet::gc() {
 
 void VulkanDescriptorSet::addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn) {
     gc();
-    mCurrentSetIndex = mSets.size();
     mSets.push_back({ vkSet, std::move(onRecycleFn) });
+    mCurrentSetIndex = (uint8_t) (mSets.size() - 1);
 }
 
 PushConstantDescription::PushConstantDescription(backend::Program const& program) {

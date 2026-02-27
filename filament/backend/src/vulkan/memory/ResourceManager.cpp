@@ -41,23 +41,55 @@ void ResourceManager::gc() noexcept {
         list.clear();
     };
 
+    FrameGcList frameGc;
+
     {
         // Note that we're not copying mThreadSafeGcList because the objects here do not have
         // resource_ptrs to other handle objects, so their desctruction would not add more elements
         // to mThreadSafeGcList.
         std::unique_lock<utils::Mutex> lock(mThreadSafeGcListMutex);
-        destroyAll(mThreadSafeGcList);
+        std::swap(frameGc.threadSafeGcList, mThreadSafeGcList);
     }
 
-    GcList gcs;
-    std::swap(gcs, mGcList);
-    destroyAll(gcs);
+    std::swap(frameGc.gcList, mGcList);
+
+    mFramesGcList.push_back(std::move(frameGc));
+
+    if (mFramesGcList.size() > 4) {
+        FrameGcList oldest = std::move(mFramesGcList.front());
+        mFramesGcList.erase(mFramesGcList.begin());
+        destroyAll(oldest.threadSafeGcList);
+        destroyAll(oldest.gcList);
+    }
     FVK_SYSTRACE_END();
 }
 
 void ResourceManager::terminate() noexcept {
-    while (!mThreadSafeGcList.empty() || !mGcList.empty()) {
-        gc();
+    auto destroyAll = [this](GcList& list) {
+        for (auto const& [type, id]: list) {
+            destroyWithType(type, id);
+        }
+        list.clear();
+    };
+
+    while (!mThreadSafeGcList.empty() || !mGcList.empty() || !mFramesGcList.empty()) {
+        if (!mFramesGcList.empty()) {
+            FrameGcList oldest = std::move(mFramesGcList.front());
+            mFramesGcList.erase(mFramesGcList.begin());
+            destroyAll(oldest.threadSafeGcList);
+            destroyAll(oldest.gcList);
+        }
+
+        GcList threadSafeList;
+        {
+            std::unique_lock<utils::Mutex> lock(mThreadSafeGcListMutex);
+            std::swap(threadSafeList, mThreadSafeGcList);
+        }
+        destroyAll(threadSafeList);
+
+        GcList gcs;
+        std::swap(gcs, mGcList);
+        destroyAll(gcs);
     }
 }
 

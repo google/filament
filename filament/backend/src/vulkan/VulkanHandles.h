@@ -191,7 +191,8 @@ public:
     void referencedBy(VulkanCommandBuffer& commands);
 
     bool isBound() const {
-        return bool(mSets[mCurrentSetIndex].fenceStatus);
+        auto const& set = mSets[mCurrentSetIndex];
+        return set.fenceStatus && set.fenceStatus->getStatus() != VK_SUCCESS;
     }
 
     // The current layout used by the descriptor set. This one will match the bindings, including
