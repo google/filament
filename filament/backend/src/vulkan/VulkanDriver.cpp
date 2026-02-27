@@ -1913,9 +1913,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     auto rt = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, rth);
 
-    VulkanCommandBuffer* commandBuffer = rt->isProtected() ?
-           &mCommands.getProtected() : &mCommands.get();
-
     // Filament has the expectation that the contents of the swap chain are not preserved on the
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
@@ -1929,6 +1926,11 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             acquireNextSwapchainImage();
         }
     }
+
+    // Note that this needs to come after the acquireNextswapchainImage() above because that path
+    // might flush the current command buffer.
+    VulkanCommandBuffer* commandBuffer =
+            rt->isProtected() ? &mCommands.getProtected() : &mCommands.get();
 
     // Note that retrieving the extent must come after the acquireNextSwapchainImage() above;
     // otherwise it might be 0.
