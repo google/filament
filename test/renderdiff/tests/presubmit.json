@@ -54,6 +54,8 @@
         {
             "name": "Transimssion",
             "description": "transmission",
+            // Disable transmission for webgpu because it seems flaky (b/488070152)
+            "backends": ["opengl", "vulkan"],
             "apply_presets": ["base", "transmission_models"],
             "rendering": {
                 "camera.focalLength": 52.0

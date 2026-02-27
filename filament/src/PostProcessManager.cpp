@@ -225,7 +225,6 @@ const PostProcessManager::JitterSequence<32>
 
 PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
-          mFixedMaterialInstanceIndex {},
           mWorkaroundSplitEasu(false),
           mWorkaroundAllowReadOnlyAncillaryFeedbackLoop(false) {
     // don't use Engine here, it's not fully initialized yet
@@ -455,7 +454,6 @@ Handle<HwTexture> PostProcessManager::getZeroTextureArray() const {
 
 void PostProcessManager::resetForRender() {
     mMaterialInstanceManager.reset();
-    mFixedMaterialInstanceIndex = {};
 }
 
 void PostProcessManager::unbindAllDescriptorSets(DriverApi& driver) noexcept {
@@ -2552,11 +2550,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     auto const& material = getPostProcessMaterial("colorGradingAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine, driver, variant);
     // the UBO has been set and committed in colorGradingPrepareSubpass()
-    int32_t const fixedIndex = colorGradingConfig.translucent
-                                       ? mFixedMaterialInstanceIndex.colorGradingTranslucent
-                                       : mFixedMaterialInstanceIndex.colorGradingOpaque;
-
-    FMaterialInstance const* mi = mMaterialInstanceManager.getMaterialInstance(ma, fixedIndex);
+    FMaterialInstance const* mi = mMaterialInstanceManager.getMaterialInstance(ma, colorGradingConfig.translucent);
     mi->use(driver);
     auto const pipeline = getPipelineState(ma, variant);
     driver.nextSubpass();
@@ -2567,8 +2561,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp const op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     auto const ma = material.getMaterial(mEngine, driver, PostProcessVariant::OPAQUE);
-    auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
-    mFixedMaterialInstanceIndex.customResolve = fixedIndex;
+    auto* const mi = mMaterialInstanceManager.getMaterialInstance(ma, 0);
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver, getUboManager());
 }
@@ -2580,8 +2573,7 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine, driver);
     // the UBO has been set and committed in customResolvePrepareSubpass()
-    FMaterialInstance const* mi = mMaterialInstanceManager.getMaterialInstance(ma,
-            mFixedMaterialInstanceIndex.customResolve);
+    FMaterialInstance const* mi = mMaterialInstanceManager.getMaterialInstance(ma, 0);
     mi->use(driver);
 
     auto const pipeline = getPipelineState(ma);
@@ -2620,9 +2612,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
 void PostProcessManager::clearAncillaryBuffersPrepare(DriverApi& driver,
         Variant::type_t variant) noexcept {
     auto const& material = getPostProcessMaterial("clearDepth");
-    auto ma = material.getMaterial(mEngine, driver, variant);
-    auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
-    mFixedMaterialInstanceIndex.clearDepth = fixedIndex;
+    auto const ma = material.getMaterial(mEngine, driver, variant);
+    auto const mi = mMaterialInstanceManager.getMaterialInstance(ma, 0);
     mi->commit(driver, getUboManager());
 }
 
@@ -2640,8 +2631,7 @@ void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
     FMaterial const* const ma = material.getMaterial(mEngine, driver, variant);
 
     // the UBO has been set and committed in clearAncillaryBuffersPrepare()
-    FMaterialInstance const* const mi = mMaterialInstanceManager.getMaterialInstance(ma,
-            mFixedMaterialInstanceIndex.clearDepth);
+    FMaterialInstance const* const mi = mMaterialInstanceManager.getMaterialInstance(ma, 0);
     mi->use(driver);
 
     auto pipeline = getPipelineState(ma, variant);
@@ -2960,11 +2950,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
                                                ? PostProcessVariant::TRANSLUCENT
                                                : PostProcessVariant::OPAQUE;
     ma = material.getMaterial(mEngine, driver, variant);
-    FMaterialInstance* mi = nullptr;
-    int32_t& fixedIndex = colorGradingConfig.translucent
-                                  ? mFixedMaterialInstanceIndex.colorGradingTranslucent
-                                  : mFixedMaterialInstanceIndex.colorGradingOpaque;
-    std::tie(mi, fixedIndex) = mMaterialInstanceManager.getFixedMaterialInstance(ma);
+    FMaterialInstance* mi = mMaterialInstanceManager.getMaterialInstance(ma, colorGradingConfig.translucent);
 
     const SamplerParams params = SamplerParams{
             .filterMag = SamplerMagFilter::LINEAR,
