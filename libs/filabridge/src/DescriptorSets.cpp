@@ -216,7 +216,7 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
 DescriptorSetLayout getPerViewDescriptorSetLayout(
         MaterialDomain const domain,
         bool const isLit, bool const isSSR, bool const hasFog,
-        bool const isVSM) noexcept {
+        bool const isShadowSampler2D) noexcept {
 
     switch (domain) {
         case MaterialDomain::SURFACE: {
@@ -255,7 +255,7 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
             }
 
             // change the SHADOW_MAP descriptor type for VSM
-            if (isVSM) {
+            if (isShadowSampler2D) {
                 auto const pos = std::find_if(layout.descriptors.begin(), layout.descriptors.end(),
                         [](auto const& v) {
                             return v.binding == PerViewBindingPoints::SHADOW_MAP;
@@ -285,8 +285,7 @@ DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
         return ssrVariantDescriptorSetLayout;
     }
     // We need to filter out all the descriptors not included in the "resolved" layout below
-    return getPerViewDescriptorSetLayout(domain, isLit, isSSR, hasFog,
-            Variant::isVSMVariant(variant));
+    return getPerViewDescriptorSetLayout(domain, isLit, isSSR, hasFog, Variant::isShadowSampler2DVariant(variant));
 }
 
 DescriptorType getDescriptorType(SamplerType const type, SamplerFormat const format) {
