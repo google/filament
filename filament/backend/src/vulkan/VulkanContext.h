@@ -121,6 +121,10 @@ public:
         return mPhysicalDeviceProperties.properties.vendorID;
     }
 
+    inline char const* getDriverName() const noexcept {
+        return mDriverProperties.driverName;
+    }
+
     /**
      * Fetches a list of pre-registered external formats for prewarming the Vulkan
      * pipeline cache.
@@ -216,6 +220,9 @@ private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+    };
+    VkPhysicalDeviceDriverProperties mDriverProperties = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
     };
     VkPhysicalDeviceVulkan11Features mPhysicalDeviceVk11Features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,

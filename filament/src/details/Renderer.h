@@ -219,6 +219,7 @@ private:
     bool mIsFrameBufferFetchSupported : 1;
     bool mIsFrameBufferFetchMultiSampleSupported : 1;
     bool mIsAutoDepthResolveSupported : 1;
+    bool const mWorkaroundBlitSsrHistory : 1;
     Epoch mUserEpoch;
     math::float4 mShaderUserTime{};
     DisplayInfo mDisplayInfo;

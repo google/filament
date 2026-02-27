@@ -104,6 +104,8 @@ FRenderer::FRenderer(FEngine& engine) :
         mIsFrameBufferFetchSupported(false),
         mIsFrameBufferFetchMultiSampleSupported(false),
         mIsAutoDepthResolveSupported(false),
+        mWorkaroundBlitSsrHistory(
+                engine.getDriverApi().isWorkaroundNeeded(Workaround::BLIT_SSR_HISTORY)),
         mUserEpoch(engine.getEngineEpoch()),
         mResourceAllocator(std::make_unique<TextureCache>(
                 engine.getSharedResourceAllocatorDisposer(),
@@ -1337,21 +1339,38 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
         struct ExportSSRHistoryData {
             FrameGraphId<FrameGraphTexture> history;
         };
-        // FIXME: should we use the TAA-modified cameraInfo here or not? (we are).
         mat4 const projection = cameraInfo.projection * cameraInfo.getUserViewMatrix();
-        fg.addPass<ExportSSRHistoryData>("Export SSR history",
+
+        // we can't use colorPassOutput here because it could be tonemapped
+        FrameGraphId<FrameGraphTexture> history = colorPassOutput.linearColor;
+
+        if (mWorkaroundBlitSsrHistory) {
+            history = ppm.blit(fg, false, history,
+                    { 0, 0, colorBufferDesc.width, colorBufferDesc.height },
+                    {
+                        .width = colorBufferDesc.width,
+                        .height = colorBufferDesc.height,
+                        .format = config.hdrFormat,
+                    },
+                    SamplerMagFilter::LINEAR, SamplerMinFilter::LINEAR);
+        }
+
+        fg.addPass<ExportSSRHistoryData>(
+                mWorkaroundBlitSsrHistory ? "Export SSR history (Blit Workaround)"
+                                          : "Export SSR history",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     // We need to use sideEffect here to ensure this pass won't be culled.
                     // The "output" of this pass is going to be used during the next frame as
                     // an "import".
                     builder.sideEffect();
-
-                    // we can't use colorPassOutput here because it could be tonemapped
-                    data.history = builder.sample(colorPassOutput.linearColor); // FIXME: an access must be declared for detach(), why?
-                }, [&view, projection](FrameGraphResources const& resources, auto const& data) {
+                    data.history = builder.sample(history);
+                },
+                [&view, projection](FrameGraphResources const& resources, auto const& data) {
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
                     current.ssr.projection = projection;
+
+                    // FIXME: an access must be declared for detach(), why?
                     resources.detach(data.history, &current.ssr.color, &current.ssr.desc);
                 });
     }

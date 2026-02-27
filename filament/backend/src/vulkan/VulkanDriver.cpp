@@ -49,6 +49,7 @@
 
 #include <chrono>
 #include <mutex>
+#include <string_view>
 
 using namespace bluevk;
 
@@ -1656,6 +1657,17 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             return false;
         case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
             return false;
+        case Workaround::BLIT_SSR_HISTORY: {
+#if defined(WIN32)
+            // AMD GPU on windows crashes when SSR is enabled. It's root-caused to be writing to the
+            // SSR  history texture. We blit the history instead of using the linear output of the
+            // color pass. See Issue #9680.
+            std::string_view deviceName{ mContext.getDriverName() };
+            return deviceName.find("AMD proprietary driver") != std::string_view::npos;
+#else
+            return false;
+#endif
+        }
         default:
             return false;
     }
