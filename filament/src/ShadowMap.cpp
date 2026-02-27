@@ -62,6 +62,8 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept
         : mPerShadowMapUniforms(engine),
           mShadowType(ShadowType::DIRECTIONAL),
           mHasVisibleShadows(false),
+          mVsm(false),
+          mReservedBit(false),
           mFace(0) {
     Entity entities[2];
     engine.getEntityManager().create(2, entities);
@@ -85,7 +87,7 @@ void ShadowMap::terminate(FEngine& engine) {
 
 ShadowMap::~ShadowMap() = default;
 
-void ShadowMap::initialize(size_t const lightIndex, ShadowType const shadowType,
+void ShadowMap::initialize(size_t const lightIndex, ShadowType const shadowType, bool const vsm,
         uint16_t const shadowIndex, uint8_t const face,
         LightManager::ShadowOptions const* options) {
     mLightIndex = lightIndex;
@@ -93,6 +95,7 @@ void ShadowMap::initialize(size_t const lightIndex, ShadowType const shadowType,
     mOptions = options;
     mShadowType = shadowType;
     mFace = face;
+    mVsm = vsm;
 }
 
 mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 up,
@@ -1181,9 +1184,8 @@ float2 ShadowMap::texelSizeWorldSpace(mat4f const& S, uint16_t const shadowDimen
     return s;
 }
 
-template<typename Casters, typename Receivers>
-void ShadowMap::visitScene(const FScene& scene, uint32_t const visibleLayers,
-        Casters casters, Receivers receivers) noexcept {
+template<typename Visitor>
+void ShadowMap::visitScene(const FScene& scene, uint32_t const visibleLayers, Visitor visitor) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     using State = FRenderableManager::Visibility;
@@ -1196,14 +1198,11 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t const visibleLayers,
     size_t const c = soa.size();
     for (size_t i = 0; i < c; i++) {
         if (layers[i] & visibleLayers) {
-            const Aabb aabb{ worldAABBCenter[i] - worldAABBExtent[i],
-                             worldAABBCenter[i] + worldAABBExtent[i] };
-            if (visibility[i].castShadows) {
-                casters(aabb, visibleMasks[i]);
-            }
-            if (visibility[i].receiveShadows) {
-                receivers(aabb, visibleMasks[i]);
-            }
+            Aabb const aabb{
+                worldAABBCenter[i] - worldAABBExtent[i],
+                worldAABBCenter[i] + worldAABBExtent[i]
+            };
+            visitor(aabb, visibleMasks[i], visibility[i]);
         }
     }
 }
@@ -1222,13 +1221,15 @@ ShadowMap::SceneInfo::SceneInfo(
     wsShadowCastersVolume = {};
     wsShadowReceiversVolume = {};
     visitScene(scene, visibleLayers,
-            [&](Aabb caster, Culler::result_type) {
-                wsShadowCastersVolume.min = min(wsShadowCastersVolume.min, caster.min);
-                wsShadowCastersVolume.max = max(wsShadowCastersVolume.max, caster.max);
-            },
-            [&](Aabb receiver, Culler::result_type) {
-                wsShadowReceiversVolume.min = min(wsShadowReceiversVolume.min, receiver.min);
-                wsShadowReceiversVolume.max = max(wsShadowReceiversVolume.max, receiver.max);
+            [this](Aabb const& aabb, Culler::result_type, FRenderableManager::Visibility const visibility) {
+                if (visibility.castShadows) {
+                    wsShadowCastersVolume.min = min(wsShadowCastersVolume.min, aabb.min);
+                    wsShadowCastersVolume.max = max(wsShadowCastersVolume.max, aabb.max);
+                }
+                if (visibility.receiveShadows) {
+                    wsShadowReceiversVolume.min = min(wsShadowReceiversVolume.min, aabb.min);
+                    wsShadowReceiversVolume.max = max(wsShadowReceiversVolume.max, aabb.max);
+                }
             }
     );
 }
@@ -1242,18 +1243,20 @@ void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene const& scene,
     sceneInfo.lsCastersNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     sceneInfo.lsReceiversNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     visitScene(scene, sceneInfo.visibleLayers,
-            [&](Aabb caster, Culler::result_type) {
-                auto r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, caster);
-                sceneInfo.lsCastersNearFar.x = max(sceneInfo.lsCastersNearFar.x, r.max.z);
-                sceneInfo.lsCastersNearFar.y = min(sceneInfo.lsCastersNearFar.y, r.min.z);
-            },
-            [&](Aabb receiver, Culler::result_type const vis) {
-                // account only for objects that are visible by the camera
-                auto mask = 1u << VISIBLE_RENDERABLE_BIT;
-                if ((vis & mask) == mask) {
-                    auto r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, receiver);
-                    sceneInfo.lsReceiversNearFar.x = max(sceneInfo.lsReceiversNearFar.x, r.max.z);
-                    sceneInfo.lsReceiversNearFar.y = min(sceneInfo.lsReceiversNearFar.y, r.min.z);
+            [&](Aabb const& aabb, Culler::result_type const vis, FRenderableManager::Visibility const visibility) {
+                if (visibility.castShadows) {
+                    auto const r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, aabb);
+                    sceneInfo.lsCastersNearFar.x = max(sceneInfo.lsCastersNearFar.x, r.max.z);
+                    sceneInfo.lsCastersNearFar.y = min(sceneInfo.lsCastersNearFar.y, r.min.z);
+                }
+                if (visibility.castShadows) {
+                    // account only for objects that are visible by the camera
+                    constexpr auto mask = 1u << VISIBLE_RENDERABLE_BIT;
+                    if ((vis & mask) == mask) {
+                        auto r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, aabb);
+                        sceneInfo.lsReceiversNearFar.x = max(sceneInfo.lsReceiversNearFar.x, r.max.z);
+                        sceneInfo.lsReceiversNearFar.y = min(sceneInfo.lsReceiversNearFar.y, r.min.z);
+                    }
                 }
             }
     );
@@ -1268,15 +1271,15 @@ void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
     sceneInfo.lsCastersNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     // account only for objects that are visible by both the camera and the light
     visitScene(scene, sceneInfo.visibleLayers,
-            [&](Aabb caster, Culler::result_type const vis) {
-                auto mask = VISIBLE_DYN_SHADOW_RENDERABLE;
-                if ((vis & mask) == mask) {
-                    auto r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, caster);
-                    sceneInfo.lsCastersNearFar.x = std::max(sceneInfo.lsCastersNearFar.x, r.max.z);  // near
-                    sceneInfo.lsCastersNearFar.y = std::min(sceneInfo.lsCastersNearFar.y, r.min.z);  // far
+            [&](Aabb const& aabb, Culler::result_type const vis, FRenderableManager::Visibility const visibility) {
+                if (visibility.castShadows) {
+                    constexpr auto mask = VISIBLE_DYN_SHADOW_RENDERABLE;
+                    if ((vis & mask) == mask) {
+                        auto const r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, aabb);
+                        sceneInfo.lsCastersNearFar.x = std::max(sceneInfo.lsCastersNearFar.x, r.max.z);  // near
+                        sceneInfo.lsCastersNearFar.y = std::min(sceneInfo.lsCastersNearFar.y, r.min.z);  // far
+                    }
                 }
-            },
-            [&](Aabb receiver, Culler::result_type) {
             }
     );
 }
@@ -1286,47 +1289,56 @@ void ShadowMap::setAllocation(uint8_t const layer, backend::Viewport viewport) n
 }
 
 backend::Viewport ShadowMap::getViewport() const noexcept {
-    // We set a viewport with a 1-texel border for when we index outside the texture.
-    // This happens only for directional lights when "focus shadow casters" is used,
-    // or when shadowFar is smaller than the camera far.
-    // For spot- and point-lights we also use a 1-texel border, so that bilinear filtering
-    // can work properly if the shadowmap is in an atlas (and we can't rely on h/w clamp).
+    // This is used for calculating the light space; in particular, if the shadowmap is in a 2D atlas, this
+    // returns the valid area of the shadowmap. By definition all values must be integer.
+
+    // We set a viewport with a 1-texel border for when we index outside the texture, which should only happen for
+    // directional lights when "focus shadow casters" is used, or when shadowFar is smaller than the camera far.
+    // For directional lights, the border is filed with "fully lit".
+    //
+    // For point-lights, we also use a 1-texel border, but for a different reason; the border is filled with data
+    // so that bilinear (PCF) filtering works properly.
+    //
+    // Spot-light a treated like point lights (the border will be filled with "fully-lit" anyways)
+
     const uint32_t dim = mOptions->mapSize;
     const uint16_t border = 1u;
     return { mOffset.x + border, mOffset.y + border, dim - 2u * border, dim - 2u * border };
 }
 
 backend::Viewport ShadowMap::getScissor() const noexcept {
-    // We set a viewport with a 1-texel border for when we index outside the texture.
-    // This happens only for directional lights when "focus shadow casters" is used,
-    // or when shadowFar is smaller than the camera far.
-    // For spot- and point-lights we also use a 1-texel border, so that bilinear filtering
-    // can work properly if the shadowmap is in an atlas (and we can't rely on h/w clamp), so we
-    // don't scissor the border, so it gets filled with correct neighboring texels.
+    // This is used while rendering the shadowmap.
+
     const uint32_t dim = mOptions->mapSize;
     const uint16_t border = 1u;
-    switch (mShadowType) {
-        case ShadowType::DIRECTIONAL:
-            return { mOffset.x + border, mOffset.y + border, dim - 2u * border, dim - 2u * border };
+    switch (mShadowType) { // NOLINT(*-multiway-paths-covered)
+        case ShadowType::DIRECTIONAL: {
+            // Don't render anything into the border; it's already filled with "fully lit".
+            return {mOffset.x + border, mOffset.y + border, dim - 2u * border, dim - 2u * border};
+        }
         case ShadowType::SPOT:
-        case ShadowType::POINT:
-            return { mOffset.x, mOffset.y, dim, dim };
+        case ShadowType::POINT: {
+            // Render into the border (which will get the adjacent faces texels)
+            return {mOffset.x, mOffset.y, dim, dim};
+        }
     }
+    return {};
 }
 
 float4 ShadowMap::getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo) const noexcept {
-    float border; // shadowmap border in texels
-    switch (mShadowType) {
+    // This is used to clamp the texture coordinates when sampling the shadowmap
+
+    float border = 0; // shadowmap border in texels
+    switch (mShadowType) { // NOLINT(*-multiway-paths-covered)
         case ShadowType::DIRECTIONAL:
-            // For directional lights, we need to allow the sampling to reach the border, it
-            // happens when "focus shadow casters" is used for instance.
+            // For directional lights, we need to allow the sampling to reach the center of border texels,
+            // but no further, so we don't read into the adjacent texture in the 2D atlas (taking bilinear filtering
+            // into account).
             border = 0.5f;
             break;
         case ShadowType::SPOT:
         case ShadowType::POINT:
-            // For spot and point light, this is equal to the viewport. i.e. the valid
-            // texels are inside the viewport (w/ 1-texel border), the border will be used
-            // for bilinear filtering.
+            // For point-light, the border is only needed for bilinear filtering (of the other faces)
             border = 1.0f;
             break;
     }
@@ -1355,8 +1367,8 @@ void ShadowMap::prepareCamera(Transaction const& transaction,
 }
 
 void ShadowMap::prepareViewport(Transaction const& transaction,
-        backend::Viewport const& viewport) noexcept {
-    ShadowMapDescriptorSet::prepareViewport(transaction, viewport);
+        backend::Viewport const& physicalViewport, backend::Viewport const& logicalViewport) noexcept {
+    ShadowMapDescriptorSet::prepareViewport(transaction, physicalViewport, logicalViewport);
 }
 
 void ShadowMap::prepareTime(Transaction const& transaction,
@@ -1370,8 +1382,8 @@ void ShadowMap::prepareMaterialGlobals(Transaction const& transaction,
 }
 
 void ShadowMap::prepareShadowMapping(Transaction const& transaction,
-        bool const highPrecision) noexcept {
-    ShadowMapDescriptorSet::prepareShadowMapping(transaction, highPrecision);
+        float const vsmExponent, float const vsmMaxMoment) noexcept {
+    ShadowMapDescriptorSet::prepareShadowMapping(transaction, vsmExponent, vsmMaxMoment);
 }
 
 ShadowMapDescriptorSet::Transaction ShadowMap::open(DriverApi& driver) noexcept {

@@ -128,7 +128,7 @@ public:
     static math::mat4f getPointLightViewMatrix(backend::TextureCubemapFace face,
             math::float3 position) noexcept;
 
-    void initialize(size_t lightIndex, ShadowType shadowType, uint16_t shadowIndex, uint8_t face,
+    void initialize(size_t lightIndex, ShadowType shadowType, bool vsm, uint16_t shadowIndex, uint8_t face,
             LightManager::ShadowOptions const* options);
 
     struct ShaderParameters {
@@ -173,7 +173,10 @@ public:
     static void updateSceneInfoSpot(const math::mat4f& Mv, FScene const& scene,
             SceneInfo& sceneInfo);
 
-    LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
+    LightManager::ShadowOptions const& getShadowOptions() const noexcept {
+            assert_invariant(mOptions);
+            return *mOptions;
+    }
     size_t getLightIndex() const { return mLightIndex; }
     uint16_t getShadowIndex() const { return mShadowIndex; }
     void setAllocation(uint8_t layer, backend::Viewport viewport) noexcept;
@@ -193,13 +196,13 @@ public:
     static void prepareCamera(Transaction const& transaction,
             FEngine const& engine, const CameraInfo& cameraInfo) noexcept;
     static void prepareViewport(Transaction const& transaction,
-            backend::Viewport const& viewport) noexcept;
+            backend::Viewport const& physicalViewport, backend::Viewport const& logicalViewport) noexcept;
     static void prepareTime(Transaction const& transaction,
             FEngine const& engine, math::float4 const& userTime) noexcept;
     static void prepareMaterialGlobals(Transaction const& transaction,
             std::array<math::float4, 4> const& materialGlobals) noexcept;
     static void prepareShadowMapping(Transaction const& transaction,
-            bool highPrecision) noexcept;
+            float vsmExponent, float vsmMaxMoment) noexcept;
     static ShadowMapDescriptorSet::Transaction open(backend::DriverApi& driver) noexcept;
     void commit(Transaction& transaction, FEngine& engine, backend::DriverApi& driver) const noexcept;
     void bind(backend::DriverApi& driver) const noexcept;
@@ -273,9 +276,8 @@ private:
     static inline math::float4 computeBoundingSphere(
             math::float3 const* vertices, size_t count) noexcept;
 
-    template<typename Casters, typename Receivers>
-    static void visitScene(FScene const& scene, uint32_t visibleLayers,
-            Casters casters, Receivers receivers) noexcept;
+    template<typename Visitor>
+    static void visitScene(FScene const& scene, uint32_t visibleLayers, Visitor visitor) noexcept;
 
     static inline Aabb compute2DBounds(const math::mat4f& lightView,
             math::float3 const* wsVertices, size_t count) noexcept;
@@ -349,9 +351,11 @@ private:
     uint8_t mLayer = 0;         // our layer in the shadowMap texture       // 1
     ShadowType mShadowType  : 2;                                            // :2
     bool mHasVisibleShadows : 1;                                            // :1
+    bool mVsm               : 1;                                            // :1
+    UTILS_UNUSED bool mReservedBit : 1;                                     // :1
     uint8_t mFace           : 3;                                            // :3
     math::ushort2 mOffset{};                                                // 4
-    UTILS_UNUSED uint8_t reserved[4];                                       // 4
+    UTILS_UNUSED uint8_t reserved[4] = {};                                  // 4
 };
 
 } // namespace filament

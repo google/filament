@@ -76,6 +76,7 @@
 #include <cmath>
 #include <chrono>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <new>
 #include <ratio>
@@ -1131,8 +1132,6 @@ void FView::prepareShadowMapping() const noexcept {
         uniforms = mShadowMapManager->getShadowMappingUniforms();
     }
 
-    constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
-    constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCF = 0u;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSM = 1u;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
@@ -1148,8 +1147,8 @@ void FView::prepareShadowMapping() const noexcept {
             break;
         case ShadowType::VSM:
             s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_EVSM;
-            s.vsmExponent = mVsmShadowOptions.highPrecision ? high : low;
-            s.vsmDepthScale = mVsmShadowOptions.minVarianceScale * 0.01f * s.vsmExponent;
+            s.vsmExponent = 0; // this is only used when rendering the shadowmap, not when using it
+            s.vsmMaxMoment = ShadowMapManager::getMaxMomentEVSM(mVsmShadowOptions);
             s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
             break;
         case ShadowType::DPCF:
