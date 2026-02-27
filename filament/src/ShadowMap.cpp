@@ -213,12 +213,14 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
      * Final shadow map transform
      */
 
-    // Final shadow transform (focused warped light-space)
+    // Final shadow transform (focused warped light-space), world space to clip space
     const mat4f S = F * (W * LMpMv);
 
     // Computes St the transform to use in the shader to access the shadow map texture
     // i.e. it transforms a world-space vertex to a texture coordinate in the shadowmap
     const auto [Mt, Mn] = getTextureCoordsMapping(shadowMapInfo, getViewport());
+
+    // world space to texture atlas space
     const mat4f St = highPrecisionMultiply(Mt, S);
 
     ShaderParameters shaderParameters;
@@ -226,14 +228,12 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 
     // note: in texelSizeWorldSpace() below, we can use Mb * Mt * F * W because
     // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
-    // if Wp[3][1] is 0, then LISPSM was cancelled.
+    // if Wp[3][1] is 0, then LiSPSM was canceled.
     if (useLispsm && Wp[3][1] != 0.0f) {
-        shaderParameters.texelSizeAtOneMeterWs =
-                texelSizeWorldSpace(Wp, mat4f(Mt * F), shadowMapInfo.shadowDimension);
+        shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpace(S, shadowMapInfo.shadowDimension);
     } else {
         // We know we're using an ortho projection
-        shaderParameters.texelSizeAtOneMeterWs =
-                texelSizeWorldSpace(St.upperLeft(), shadowMapInfo.shadowDimension);
+        shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpace(S.upperLeft(), shadowMapInfo.shadowDimension);
     }
     if (!shadowMapInfo.vsm) {
         shaderParameters.lightSpace = St;
@@ -1117,84 +1117,67 @@ bool ShadowMap::intersectSegmentWithPlanarQuad(float3& UTILS_RESTRICT p,
     return hit;
 }
 
-float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture,
-        uint16_t shadowDimension) noexcept {
+float2 ShadowMap::texelSizeWorldSpace(const mat3f& clipFromWorld, uint16_t shadowDimension) noexcept {
     // The Jacobian of the transformation from texture-to-world is the matrix itself for
-    // orthographic projections. We just need to inverse worldToShadowTexture,
+    // orthographic projections. We just need to inverse shadowMapFromWorld,
     // which is guaranteed to be orthographic.
     // The two first columns give us how a texel maps in world-space.
-    const float ures = 1.0f / float(shadowDimension);
-    const float vres = 1.0f / float(shadowDimension);
-    const mat3f shadowTextureToWorld(inverse(worldToShadowTexture));
-    const float3 Jx = shadowTextureToWorld[0];
-    const float3 Jy = shadowTextureToWorld[1];
-    const float s = std::max(length(Jx) * ures, length(Jy) * vres);
+    float const oneTexel = 2.0f / float(shadowDimension);
+    mat3f const worldFromClip(inverse(clipFromWorld));
+    float3 const Jx = worldFromClip[0];
+    float3 const Jy = worldFromClip[1];
+    float2 const s = float2{ length(Jx), length(Jy) } * oneTexel;
     return s;
 }
 
-float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF,
-        uint16_t shadowDimension) noexcept {
-    // Here we compute the Jacobian of inverse(MbMtF * Wp).
-    // The expression below has been computed with Mathematica. However, it's not very hard,
-    // albeit error-prone, to do it by hand because MbMtF is a linear transform.
-    // So we really only need to calculate the Jacobian of inverse(Wp) at inverse(MbMtF).
-    //
-    // Because we're only interested in the length of the columns of the Jacobian, we can use
-    // Mb * Mt * F * Wp instead of the full expression Mb * Mt * F * Wp * Wv * L * Mp * Mv,
-    // because Wv * L * Mp * Mv is a rigid transform, which doesn't affect the length of
-    // the Jacobian's column vectors.
+/**
+ * Calculates the Jacobian matrix J = ∂(u,v,d)/∂(x,y,z) for a 4x4 perspective projection.
+ *
+ * Given a view-space point P = [x, y, z, 1]^T and a projection matrix M,
+ * the projected homogeneous coordinates are [X, Y, Z, W]^T = M * P.
+ * The resulting NDC coordinates are u = X/W, v = Y/W, and depth d = Z/W.
+ *
+ * To find the Jacobian on the CPU, we apply the quotient rule to each component:
+ * ∂(X/W) / ∂xi = ( (∂X/∂xi) * W - X * (∂W/∂xi) ) / W^2
+ *
+ * In matrix form, this can be expressed as:
+ * J = (1/W) * [ M_sub - (1/W) * (T ⊗ w_grad) ]
+ *
+ * Where:
+ * - W: The homogeneous w-component after projection (usually -z for standard mats).
+ * - M_sub: The top-left 3x3 submatrix of M.
+ * - T: The column vector [X, Y, Z]^T (pre-perspective divide).
+ * - w_grad: The row vector [m30, m31, m32] (the first three elements of M's last row).
+ * - ⊗: The outer product, resulting in a 3x3 matrix.
+ *
+ * This Jacobian describes the local "stretch" of the projection. For LiSPSM or
+ * shadow mapping, the inverse Jacobian J^-1 provides the world-space footprint
+ * of a shadow texel, which is essential for calculating an accurate,
+ * non-constant depth bias to eliminate shadow acne.
+ *
+ * @param M The 4x4 projection matrix.
+ * @param p The 3D point in view-space where the Jacobian is evaluated.
+ * @return A 3x3 matrix representing the partial derivatives of (u,v,d) w.r.t (x,y,z).
+ */
+static mat3f jacobian(mat4f const& M, float3 const& p) noexcept {
+    float4 const T = M * p;
+    mat3f const M_sub = M.upperLeft();
+    float3 const w_grad = { M[0].w, M[1].w, M[2].w };
+    mat3f const t_cross_w{
+        w_grad.x * T.xyz,
+        w_grad.y * T.xyz,
+        w_grad.z * T.xyz
+    };
+    return (M_sub - t_cross_w / T.w) / T.w;
+}
 
+float2 ShadowMap::texelSizeWorldSpace(mat4f const& S, uint16_t const shadowDimension) noexcept {
     // The Jacobian is not constant, so we evaluate it in the center of the shadow-map texture.
     // It might be better to do this computation in the vertex shader.
-    float3 const p = { 0.5f, 0.5f, 0.0f };
-
-    const float ures = 1.0f / float(shadowDimension);
-    const float vres = 1.0f / float(shadowDimension);
-    const float dres = 1.0f / 65536.0f;
-
-    constexpr bool JACOBIAN_ESTIMATE = false;
-    if constexpr (JACOBIAN_ESTIMATE) {
-        // This estimates the Jacobian -- this is a lot heavier. This is mostly for reference
-        // and testing.
-        const mat4f Si(inverse(MbMtF * Wp));
-        const float3 p0 = mat4f::project(Si, p);
-        const float3 p1 = mat4f::project(Si, p + float3{ 1, 0, 0 } * ures);
-        const float3 p2 = mat4f::project(Si, p + float3{ 0, 1, 0 } * vres);
-        const float3 p3 = mat4f::project(Si, p + float3{ 0, 0, 1 } * dres);
-        const float3 Jx = p1 - p0;
-        const float3 Jy = p2 - p0;
-        const float3 UTILS_UNUSED Jz = p3 - p0;
-        const float s = std::max(length(Jx), length(Jy));
-        return s;
-    }
-
-    const float n = Wp[0][0];
-    const float A = Wp[1][1];
-    const float B = Wp[3][1];
-    const float sx = MbMtF[0][0];
-    const float sy = MbMtF[1][1];
-    const float sz = MbMtF[2][2];
-    const float ox = MbMtF[3][0];
-    const float oy = MbMtF[3][1];
-    const float oz = MbMtF[3][2];
-
-    const float X = p.x - ox;
-    const float Y = p.y - oy;
-    const float Z = p.z - oz;
-
-    const float dz = A * sy - Y;
-    const float nsxsz = n * sx * sz;
-    const float j = -(B * sy) / (nsxsz * dz * dz);
-    const mat3f J(mat3f::row_major_init{
-            j * dz * sz,    j * X * sz,     0.0f,
-            0.0f,           j * nsxsz,      0.0f,
-            0.0f,           j * Z * sx,     j * dz * sx
-    });
-
-    float3 const Jx = J[0] * ures;
-    float3 const Jy = J[1] * vres;
-    UTILS_UNUSED float3 const Jz = J[2] * dres;
-    const float s = std::max(length(Jx), length(Jy));
+    float3 const p = { 0.0f, 0.0f, 0.0f }; // clip-space
+    float const oneTexel = 2.0f / float(shadowDimension);
+    mat3f const J = jacobian(inverse(S), p);
+    float2 const s = float2{ length(J[0]), length(J[1]) } * oneTexel;
     return s;
 }
 
