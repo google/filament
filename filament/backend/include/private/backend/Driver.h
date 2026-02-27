@@ -48,6 +48,11 @@
 
 #define FILAMENT_DEBUG_COMMANDS              FILAMENT_DEBUG_COMMANDS_NONE
 
+// Upon command stream overflow, print a histogram of commands
+#ifndef FILAMENT_DEBUG_COMMANDS_HISTOGRAM
+#define FILAMENT_DEBUG_COMMANDS_HISTOGRAM 0
+#endif
+
 namespace filament::backend {
 
 class BufferDescriptor;

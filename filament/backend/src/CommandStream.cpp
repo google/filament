@@ -30,6 +30,11 @@
 #include <utils/ostream.h>
 #include <utils/sstream.h>
 
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
+#include <algorithm>
+#include <vector>
+#endif
+
 #include <cstddef>
 #include <functional>
 #include <string>
@@ -83,6 +88,10 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
     __system_property_get("debug.filament.perfcounters", property);
     mUsePerformanceCounter = bool(atoi(property));
 #endif
+
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
+    initializeLookup();
+#endif
 }
 
 void CommandStream::execute(void* buffer) {
@@ -125,6 +134,71 @@ void CommandStream::execute(void* buffer) {
         }
     }
 }
+
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
+void CommandStream::debugIterateCommands(void* head, void* tail,
+        std::function<void(CommandInfo const& info)> const& callback) {
+    CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(head);
+    auto p = base;
+    while (UTILS_LIKELY(p)) {
+        if (p >= tail) {
+            break;
+        }
+        Execute e = p->mExecute;
+
+        if (e == NoopCommand::execute) {
+            NoopCommand* noop = static_cast<NoopCommand*>(p);
+            size_t size = noop->mNext;
+            int noopIndex = mCommands[NoopCommand::execute].index;
+            callback({ size, "NoopCommand", noopIndex });
+            p = reinterpret_cast<CommandBase*>(reinterpret_cast<char*>(p) + size);
+            continue;
+        }
+
+        if (auto it = mCommands.find(e); it != mCommands.end()) {
+            size_t size = it->second.size;
+            callback(it->second);
+            p = reinterpret_cast<CommandBase*>(reinterpret_cast<char*>(p) + size);
+        } else {
+            LOG(ERROR) << "Cannot find command in lookup table";
+            return;
+        }
+    }
+}
+
+void CommandStream::debugPrintHistogram(void* head, void* tail) {
+    std::unordered_map<std::string_view, int> histogram;
+    std::unordered_map<int, int> index_histogram;
+    debugIterateCommands(head, tail, [&](CommandInfo const& info) {
+        histogram[std::string_view(info.name)]++;
+        index_histogram[info.index]++;
+    });
+
+    std::vector<std::pair<std::string_view, int>> sorted_histogram(histogram.begin(),
+            histogram.end());
+    std::sort(sorted_histogram.begin(), sorted_histogram.end(),
+            [](auto const& a, auto const& b) { return a.second > b.second; });
+
+    LOG(INFO) << "Command stream histogram:";
+    for (auto const& [name, count]: sorted_histogram) {
+        LOG(INFO) << name << ": " << count;
+    }
+
+    std::vector<std::pair<int, int>> sorted_index_histogram(index_histogram.begin(),
+            index_histogram.end());
+    std::sort(sorted_index_histogram.begin(), sorted_index_histogram.end(),
+            [](auto const& a, auto const& b) { return a.second > b.second; });
+
+    std::string short_histogram = "";
+    for (size_t i = 0, n = sorted_index_histogram.size(); i < n; ++i) {
+        short_histogram += std::to_string(sorted_index_histogram[i].first) + ":" +
+                           std::to_string(sorted_index_histogram[i].second);
+        short_histogram += (i < n - 1) ? ";" : ".";
+    }
+    LOG(INFO) << "CS hist: " << short_histogram;
+    LOG(INFO) << "";
+}
+#endif
 
 void CommandStream::queueCommand(std::function<void()> command) {
     new(allocateCommand(CustomCommand::align(sizeof(CustomCommand)))) CustomCommand(std::move(command));

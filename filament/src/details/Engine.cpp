@@ -926,7 +926,12 @@ int FEngine::loop() {
 
 void FEngine::flushCommandBuffer(CommandBufferQueue& commandBufferQueue) const {
     getDriver().purge();
-    commandBufferQueue.flush();
+    commandBufferQueue.flush([this](void* begin, void* end) {
+        UTILS_UNUSED FEngine* engine = const_cast<FEngine*>(this);
+#if FILAMENT_DEBUG_COMMANDS_HISTOGRAM
+        engine->getDriverApi().debugPrintHistogram(begin, end);
+#endif
+    });
 }
 
 const FMaterial* FEngine::getSkyboxMaterial() const noexcept {
