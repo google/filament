@@ -1706,11 +1706,11 @@ export enum View$Dithering {
 export enum View$ShadowType {
     PCF, // /** percentage-closer filtered shadows (default) */
 
-    VSM, // /** variance shadows */
+    VSM, // /** exponential variance shadows (EVSM) */
 
-    DPCF, // /** PCF with contact hardening simulation */
+    DPCF, // /** @deprecated falls back to PCSS */
 
-    PCSS, // /** PCF with soft shadows and contact hardening */
+    PCSS, // /** EVSM with soft shadows and contact hardening */
 
     PCFd,
 }
@@ -1757,21 +1757,18 @@ export interface View$VsmShadowOptions {
 }
 
 /**
- * View-level options for DPCF and PCSS Shadowing.
+ * View-level options for PCSS Shadowing.
  * @see #setSoftShadowOptions
  * <b>Warning:</b> This API is still experimental and subject to change.
  */
 export interface View$SoftShadowOptions {
     /**
-     * Globally scales the penumbra of all DPCF and PCSS shadows
+     * Globally scales the penumbra of all PCSS shadows
      * Acceptable values are greater than 0
      */
     penumbraScale?: number;
     /**
-     * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
-     * This effectively controls the strength of contact hardening effect and is useful for
-     * artistic purposes. Higher values make the shadows become softer faster.
-     * Acceptable values are equal to or greater than 1.
+     * @deprecated has no effect
      */
     penumbraRatioScale?: number;
 }

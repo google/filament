@@ -60,9 +60,8 @@ using namespace backend;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept
         : mPerShadowMapUniforms(engine),
-          mShadowType(ShadowType::DIRECTIONAL),
+          mShadowLightType(ShadowLightType::DIRECTIONAL),
           mHasVisibleShadows(false),
-          mVsm(false),
           mReservedBit(false),
           mFace(0) {
     Entity entities[2];
@@ -87,15 +86,14 @@ void ShadowMap::terminate(FEngine& engine) {
 
 ShadowMap::~ShadowMap() = default;
 
-void ShadowMap::initialize(size_t const lightIndex, ShadowType const shadowType, bool const vsm,
+void ShadowMap::initialize(size_t const lightIndex, ShadowLightType const shadowType,
         uint16_t const shadowIndex, uint8_t const face,
         LightManager::ShadowOptions const* options) {
     mLightIndex = lightIndex;
     mShadowIndex = shadowIndex;
     mOptions = options;
-    mShadowType = shadowType;
+    mShadowLightType = shadowType;
     mFace = face;
-    mVsm = vsm;
 }
 
 mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 up,
@@ -1311,13 +1309,13 @@ backend::Viewport ShadowMap::getScissor() const noexcept {
 
     const uint32_t dim = mOptions->mapSize;
     const uint16_t border = 1u;
-    switch (mShadowType) { // NOLINT(*-multiway-paths-covered)
-        case ShadowType::DIRECTIONAL: {
+    switch (mShadowLightType) { // NOLINT(*-multiway-paths-covered)
+        case ShadowLightType::DIRECTIONAL: {
             // Don't render anything into the border; it's already filled with "fully lit".
             return {mOffset.x + border, mOffset.y + border, dim - 2u * border, dim - 2u * border};
         }
-        case ShadowType::SPOT:
-        case ShadowType::POINT: {
+        case ShadowLightType::SPOT:
+        case ShadowLightType::POINT: {
             // Render into the border (which will get the adjacent faces texels)
             return {mOffset.x, mOffset.y, dim, dim};
         }
@@ -1329,15 +1327,15 @@ float4 ShadowMap::getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo) const
     // This is used to clamp the texture coordinates when sampling the shadowmap
 
     float border = 0; // shadowmap border in texels
-    switch (mShadowType) { // NOLINT(*-multiway-paths-covered)
-        case ShadowType::DIRECTIONAL:
+    switch (mShadowLightType) { // NOLINT(*-multiway-paths-covered)
+        case ShadowLightType::DIRECTIONAL:
             // For directional lights, we need to allow the sampling to reach the center of border texels,
             // but no further, so we don't read into the adjacent texture in the 2D atlas (taking bilinear filtering
             // into account).
             border = 0.5f;
             break;
-        case ShadowType::SPOT:
-        case ShadowType::POINT:
+        case ShadowLightType::SPOT:
+        case ShadowLightType::POINT:
             // For point-light, the border is only needed for bilinear filtering (of the other faces)
             border = 1.0f;
             break;

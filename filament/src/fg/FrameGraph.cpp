@@ -79,7 +79,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
 
 FrameGraph::FrameGraph(TextureCacheInterface& resourceAllocator, Mode const mode)
         : mResourceAllocator(resourceAllocator),
-          mArena("FrameGraph Arena", 262144),
+          mArena("FrameGraph Arena", 524288),
           mMode(mode),
           mResourceSlots(mArena),
           mResources(mArena),

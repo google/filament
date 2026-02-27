@@ -125,8 +125,6 @@ public:
 
     void prepareShadowPCF(TextureHandle texture) noexcept;
 
-    void prepareShadowDPCF(TextureHandle texture) noexcept;
-
     void prepareShadowPCSS(TextureHandle texture) noexcept;
 
     void prepareShadowPCFDebug(TextureHandle texture) noexcept;

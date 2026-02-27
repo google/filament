@@ -168,7 +168,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH },
             { "cascades",                  0, Type::INT                     },
-            { "shadowPenumbraRatioScale",  0, Type::FLOAT                   },
+            { "reservedLight0",            0, Type::FLOAT                   },
             { "lightFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------

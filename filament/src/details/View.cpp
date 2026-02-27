@@ -598,7 +598,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
      */
     scene->prepare(js, rootArenaScope,
             cameraInfo.worldTransform,
-            hasVSM());
+            hasVSM() || hasPCSS());
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -1114,8 +1114,7 @@ void FView::prepareShadowMapping(FEngine const& engine, Handle<HwTexture> textur
             getColorPassDescriptorSet().prepareShadowVSM(texture, mVsmShadowOptions);
             break;
         case ShadowType::DPCF:
-            getColorPassDescriptorSet().prepareShadowDPCF(texture);
-            break;
+            UTILS_FALLTHROUGH;
         case ShadowType::PCSS:
             getColorPassDescriptorSet().prepareShadowPCSS(texture);
             break;
@@ -1134,8 +1133,7 @@ void FView::prepareShadowMapping() const noexcept {
 
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCF = 0u;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSM = 1u;
-    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
-    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 2u;
     auto& s = mUniforms.edit();
     s.cascadeSplits = uniforms.cascadeSplits;
     s.ssContactShadowDistance = uniforms.ssContactShadowDistance;
@@ -1152,12 +1150,12 @@ void FView::prepareShadowMapping() const noexcept {
             s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
             break;
         case ShadowType::DPCF:
-            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
-            s.shadowPenumbraRatioScale = mSoftShadowOptions.penumbraRatioScale;
-            break;
+            UTILS_FALLTHROUGH;
         case ShadowType::PCSS:
             s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
-            s.shadowPenumbraRatioScale = mSoftShadowOptions.penumbraRatioScale;
+            s.vsmExponent = 0; // this is only used when rendering the shadowmap, not when using it
+            s.vsmMaxMoment = ShadowMapManager::getMaxMomentEVSM(mVsmShadowOptions);
+            s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
             break;
         case ShadowType::PCFd:
             s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;

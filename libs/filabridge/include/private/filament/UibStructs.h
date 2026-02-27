@@ -159,7 +159,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 0-3: cascade count
     // bit 8-11: cascade has visible shadows
     int32_t cascades;
-    float shadowPenumbraRatioScale;     // For DPCF or PCSS, scale penumbra ratio for artistic use
+    float reservedLight0;
     math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
 
     // --------------------------------------------------------------------------------------------

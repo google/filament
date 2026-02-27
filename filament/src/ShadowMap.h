@@ -68,7 +68,7 @@ static constexpr Culler::result_type VISIBLE_DYN_SHADOW_RENDERABLE = 1u << VISIB
 class ShadowMap {
 public:
 
-    enum class ShadowType : uint8_t {
+    enum class ShadowLightType : uint8_t {
         DIRECTIONAL,
         SPOT,
         POINT
@@ -128,7 +128,7 @@ public:
     static math::mat4f getPointLightViewMatrix(backend::TextureCubemapFace face,
             math::float3 position) noexcept;
 
-    void initialize(size_t lightIndex, ShadowType shadowType, bool vsm, uint16_t shadowIndex, uint8_t face,
+    void initialize(size_t lightIndex, ShadowLightType shadowType, uint16_t shadowIndex, uint8_t face,
             LightManager::ShadowOptions const* options);
 
     struct ShaderParameters {
@@ -185,11 +185,14 @@ public:
     backend::Viewport getViewport() const noexcept;
     backend::Viewport getScissor() const noexcept;
 
-    bool isDirectionalShadow() const noexcept { return mShadowType == ShadowType::DIRECTIONAL; }
-    bool isSpotShadow() const noexcept { return mShadowType == ShadowType::SPOT; }
-    bool isPointShadow() const noexcept { return mShadowType == ShadowType::POINT; }
-    ShadowType getShadowType() const noexcept { return mShadowType; }
+    bool isDirectionalShadow() const noexcept { return mShadowLightType == ShadowLightType::DIRECTIONAL; }
+    bool isSpotShadow() const noexcept { return mShadowLightType == ShadowLightType::SPOT; }
+    bool isPointShadow() const noexcept { return mShadowLightType == ShadowLightType::POINT; }
+    ShadowLightType getShadowType() const noexcept { return mShadowLightType; }
     uint8_t getFace() const noexcept { return mFace; }
+
+    void setWrapExponent(float wrapExponent) noexcept { mWrapExponent = wrapExponent; }
+    float getWrapExponent() const noexcept { return mWrapExponent; }
 
     using Transaction = ShadowMapDescriptorSet::Transaction;
 
@@ -338,7 +341,7 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    mutable ShadowMapDescriptorSet mPerShadowMapUniforms;                   // 48
+    mutable ShadowMapDescriptorSet mPerShadowMapUniforms;                   // 64
 
     FCamera* mCamera = nullptr;                                             //  8
     FCamera* mDebugCamera = nullptr;                                        //  8
@@ -349,13 +352,13 @@ private:
     uint32_t mLightIndex = 0;   // which light are we shadowing             // 4
     uint16_t mShadowIndex = 0;  // our index in the shadowMap vector        // 2
     uint8_t mLayer = 0;         // our layer in the shadowMap texture       // 1
-    ShadowType mShadowType  : 2;                                            // :2
+    ShadowLightType mShadowLightType  : 2;                                  // :2
     bool mHasVisibleShadows : 1;                                            // :1
-    bool mVsm               : 1;                                            // :1
     UTILS_UNUSED bool mReservedBit : 1;                                     // :1
     uint8_t mFace           : 3;                                            // :3
     math::ushort2 mOffset{};                                                // 4
-    UTILS_UNUSED uint8_t reserved[4] = {};                                  // 4
+    float mWrapExponent = 0.0f;                                             // 4
+    UTILS_UNUSED float mReserved = 0.0f;                                    // 4
 };
 
 } // namespace filament

@@ -30,6 +30,7 @@ namespace filament {
 static const StaticMaterialInfo sMaterialList[] = {
     {"vsmMipmap", MATERIAL(EVSM, VSMMIPMAP)},
     {"gaussian", MATERIAL(EVSM, GAUSSIAN)},
+    {"gaussianMipmap", MATERIAL(EVSM, GAUSSIANMIPMAP)},
 };
 
 utils::Slice<const StaticMaterialInfo> getEvsmMaterialList() noexcept {

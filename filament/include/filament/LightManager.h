@@ -372,10 +372,13 @@ public:
         } vsm;
 
         /**
-         * Light bulb radius used for soft shadows. Currently, this is only used when DPCF or PCSS is
-         * enabled. (2cm by default).
+         * Light bulb radius used for soft shadows. This is only used PCSS.
+         * A negative value is used to use a default value for each light type.
+         * SUN: 0.0093 (Earth's Sun)
+         * DIRECTIONAL: 1.0 (1m area light)
+         * POINT / SPOT: 0.06 (A19 bulb)
          */
-        float shadowBulbRadius = 0.02f;
+        float shadowBulbRadius = -1.0f;
 
         /**
          * Transforms the shadow direction. Must be a unit quaternion.

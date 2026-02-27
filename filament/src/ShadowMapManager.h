@@ -83,7 +83,7 @@ public:
 
     using ShadowMappingUniforms = ShadowMappingUniforms;
 
-    using ShadowType = ShadowMap::ShadowType;
+    using ShadowLightType = ShadowMap::ShadowLightType;
 
     enum class ShadowTechnique : uint8_t {
         NONE = 0x0u,
@@ -97,7 +97,7 @@ public:
         uint32_t mSpotShadowMapCount = 0;
         struct ShadowMap {
             size_t lightIndex;
-            ShadowType shadowType;
+            ShadowLightType shadowType;
             uint16_t shadowIndex;
             uint8_t face;
             LightManager::ShadowOptions const* options;
@@ -121,7 +121,7 @@ public:
             std::unique_ptr<ShadowMapManager>& inOutShadowMapManager);
 
     static void terminate(FEngine& engine,
-            std::unique_ptr<ShadowMapManager>& shadowMapManager);
+            std::unique_ptr<ShadowMapManager> const& shadowMapManager);
 
     size_t getMaxShadowMapCount() const noexcept;
 
@@ -145,6 +145,12 @@ public:
         utils::FixedCapacityVector<ShadowMap const*> shadowMapList,
         math::int2 dir);
 
+    FrameGraphId<FrameGraphTexture> gaussianMipmapPass(
+            FEngine& engine,
+            FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+            math::float4 clearColor) noexcept;
+
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(
             FEngine& engine,
             FrameGraph& fg,
@@ -167,29 +173,30 @@ public:
     static float getMaxMomentEVSM(VsmShadowOptions const& vsmShadowOptions) noexcept {
         return vsmShadowOptions.highPrecision ?
                 std::numeric_limits<float>::max() :
-                std::numeric_limits<math::half>::max();
-    }
-
-    static float getMaxWrapExponentEVSM(VsmShadowOptions const& vsmShadowOptions) noexcept {
-        constexpr float low  = 5.2f;  // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
-        constexpr float high = 40.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
-        return vsmShadowOptions.highPrecision ? high : low;
-    }
-
-    static float getWrapExponentEVSM(
-            VsmShadowOptions const& vsmShadowOptions,
-            LightManager::ShadowOptions const& options) noexcept {
-        constexpr float ABSOLUTE_FILTER_LIMIT = 42.0f;
-        float const targetExponent = getMaxWrapExponentEVSM(vsmShadowOptions);
-        float const effectiveFilterRadius = std::max(1.0f, options.vsm.blurWidth);
-        float const filterCeiling = ABSOLUTE_FILTER_LIMIT / effectiveFilterRadius;
-        return std::min(targetExponent, filterCeiling);
+                float(std::numeric_limits<math::half>::max());
     }
 
 private:
     explicit ShadowMapManager(FEngine& engine);
 
     void terminate(FEngine& engine);
+
+    /**
+     * Computes the optimal EVSM exponent (c) to maximize precision while
+     * mathematically preventing +Inf overflows and Exponential Domination.
+     *
+     * @param isFp16Target      True if the shadow map format is GL_HALF_FLOAT.
+     * @param isPcss            True if the light uses Variance Soft Shadows (PCSS).
+     * @param lightSizeInTexels The projected size of the light source (used for PCSS).
+     * @param maxMipLevel       The maximum LOD available in the mip chain (used for PCSS).
+     * @param standardBlurRadius The fixed radius of the Gaussian blur pass (used for standard EVSM).
+     */
+    static float computeDynamicVsmExponent(
+            bool isFp16Target,
+            bool isPcss,
+            float lightSizeInTexels,
+            int maxMipLevel,
+            float standardBlurRadius) noexcept;
 
     static void updateNearFarPlanes(math::mat4f* projection,
             float nearDistance, float farDistance) noexcept;
@@ -208,12 +215,12 @@ private:
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
-    static void cullSpotShadowMap(ShadowMap const& map,
+    static void cullSpotShadowMap(ShadowMap const& shadowMap,
             FEngine const& engine, FView const& view,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
             FScene::LightSoa const& lightData) noexcept;
 
-    void preparePointShadowMap(ShadowMap& map,
+    void preparePointShadowMap(ShadowMap& shadowMap,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
             FScene::LightSoa const& lightData) const noexcept;
 

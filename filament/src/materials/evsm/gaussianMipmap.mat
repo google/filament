@@ -1,0 +1,44 @@
+material {
+    name : gaussian,
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : color,
+            precision: high
+        },
+        {
+            type : int4,
+            name : srcRect,
+            precision: high
+        },
+        {
+            type : int4,
+            name : dstRect,
+            precision: high
+        },
+        {
+            type : int,
+            name : layer
+        }
+    ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4,
+            precision : high
+        }
+    ],
+    constants : [
+    ],
+    variables : [
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false,
+    culling: none
+}
+
+fragment {
+    #include "gaussianMipmap.fs"
+}

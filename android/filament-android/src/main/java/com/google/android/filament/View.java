@@ -2080,11 +2080,11 @@ public class View {
     public enum ShadowType {
         /** percentage-closer filtered shadows (default) */
         PCF,
-        /** variance shadows */
+        /** exponential variance shadows (EVSM) */
         VSM,
-        /** PCF with contact hardening simulation */
+        /** @deprecated falls back to PCSS */
         DPCF,
-        /** PCF with soft shadows and contact hardening */
+        /** EVSM with soft shadows and contact hardening */
         PCSS,
         PCFd,
     }
@@ -2131,21 +2131,18 @@ public class View {
     }
 
     /**
-     * View-level options for DPCF and PCSS Shadowing.
+     * View-level options for PCSS Shadowing.
      * @see #setSoftShadowOptions
      * <b>Warning:</b> This API is still experimental and subject to change.
      */
     public static class SoftShadowOptions {
         /**
-         * Globally scales the penumbra of all DPCF and PCSS shadows
+         * Globally scales the penumbra of all PCSS shadows
          * Acceptable values are greater than 0
          */
         public float penumbraScale = 1.0f;
         /**
-         * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
-         * This effectively controls the strength of contact hardening effect and is useful for
-         * artistic purposes. Higher values make the shadows become softer faster.
-         * Acceptable values are equal to or greater than 1.
+         * @deprecated has no effect
          */
         public float penumbraRatioScale = 1.0f;
     }
