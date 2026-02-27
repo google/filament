@@ -261,3 +261,62 @@ TEST(RefCountedMapTest, SmartPointerType_PanicsIfGetsNullValue) {
     ASSERT_DEATH(map.get(1), "");
 }
 #endif // GTEST_HAS_DEATH_TEST
+
+TEST(RefCountedMapTest, LruRecycling) {
+    RefCountedMap<KeyType, SmartPointerType> map("RefCountedMapTest", 1);
+    bool factoryCalled = false;
+    auto factory = [&]() {
+        factoryCalled = true;
+        return std::make_unique<size_t>(100);
+    };
+
+    // 1. Acquire K1. Ref=1.
+    ValueType* v1 = map.acquire(1, factory);
+    ASSERT_NE(v1, nullptr);
+    EXPECT_EQ(*v1, 100);
+    EXPECT_TRUE(factoryCalled);
+
+    // 2. Release K1. Ref=0. Should move to LRU.
+    map.release(1);
+    // map.empty() checks mMap. mMap should be empty.
+    EXPECT_TRUE(map.empty());
+
+    // 3. Acquire K1 again. Should come from LRU.
+    factoryCalled = false;
+    ValueType* v2 = map.acquire(1, factory);
+    ASSERT_NE(v2, nullptr);
+    EXPECT_EQ(*v2, 100);
+    // Factory should NOT be called.
+    EXPECT_FALSE(factoryCalled);
+    // The underlying pointer (ValueType*) should be the same.
+    EXPECT_EQ(v1, v2);
+
+    // 4. Release K1.
+    map.release(1);
+}
+
+TEST(RefCountedMapTest, ClearLruCache) {
+    RefCountedMap<KeyType, ValueType> map("RefCountedMapTest", 2);
+    int destroyed = 0;
+    auto releaser = [&](ValueType& v) { destroyed++; };
+
+    // Acquire and release two items to fill LRU
+    map.acquire(1, []{ return 10; });
+    map.release(1, releaser);
+    map.acquire(2, []{ return 20; });
+    map.release(2, releaser);
+
+    // LRU size 2. Destoyed 0.
+    EXPECT_EQ(destroyed, 0);
+
+    map.clearLruCache(releaser);
+
+    EXPECT_EQ(destroyed, 2);
+
+    // Check they are gone (revival fails)
+    bool factoryCalled = false;
+    map.acquire(1, [&]{ factoryCalled = true; return 11; });
+    EXPECT_TRUE(factoryCalled);
+
+    map.release(1, releaser);
+}
