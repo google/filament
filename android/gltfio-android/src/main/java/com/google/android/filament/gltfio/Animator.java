@@ -37,9 +37,26 @@ import java.nio.Buffer;
  */
 public class Animator {
     private long mNativeObject;
+    private boolean mIsOwner = false;
 
     Animator(long nativeObject) {
         mNativeObject = nativeObject;
+    }
+
+    /**
+     * Creates an Animator that can manipulate animations in the provided FilamentAsset.
+     * <p>
+     * <strong>Important:</strong> This Animator manages native resources that must be 
+     * explicitly freed by calling {@link #destroy()} when no longer needed. Failing to 
+     * call {@link #destroy()} will result in native memory leaks.
+     * </p>
+     *
+     * @param asset The FilamentAsset containing the animations
+     * @param instance The FilamentInstance to animate
+     */
+    public Animator(FilamentAsset asset, FilamentInstance instance) {
+        mNativeObject = nCreateAnimatorFromAssetAndInstance(asset.getNativeObject(), instance.getNativeObject());
+        mIsOwner = true;
     }
 
     /**
@@ -126,6 +143,19 @@ public class Animator {
         return nGetAnimationName(getNativeObject(), animationIndex);
     }
 
+    /**
+     * Explicitly destroys this Animator and frees all its associated native resources.
+     * The object will be unusable after this call.
+     */
+    public void destroy() {
+        if (mNativeObject != 0) {
+            if (mIsOwner) {
+                nDestroyAnimator(mNativeObject);
+            }
+            mNativeObject = 0;
+        }
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Using Animator on destroyed asset");
@@ -137,6 +167,8 @@ public class Animator {
         mNativeObject = 0;
     }
 
+    private static native long nCreateAnimatorFromAssetAndInstance(long nativeAsset, long nativeInstance);
+    private static native void nDestroyAnimator(long nativeAnimator);
     private static native void nApplyAnimation(long nativeAnimator, int index, float time);
     private static native void nUpdateBoneMatrices(long nativeAnimator);
     private static native void nApplyCrossFade(long nativeAnimator, int animIndex, float animTime, float alpha);
