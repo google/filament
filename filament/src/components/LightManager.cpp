@@ -254,7 +254,24 @@ void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& opti
     params.options.shadowFar = std::max(options.shadowFar, 0.0f);
     params.options.shadowNearHint = std::max(options.shadowNearHint, 0.0f);
     params.options.shadowFarHint = std::max(options.shadowFarHint, 0.0f);
+    params.options.polygonOffsetConstant = std::max(options.polygonOffsetConstant, 0.0f);
+    params.options.polygonOffsetSlope = std::max(options.polygonOffsetSlope, 0.0f);
     params.options.vsm.blurWidth = std::max(0.0f, options.vsm.blurWidth);
+    if (params.options.shadowBulbRadius < 0.0f) {
+        switch (getLightType(i).type) { // NOLINT(*-multiway-paths-covered)
+            case Type::SUN:
+                params.options.shadowBulbRadius = 0.0093;
+                break;
+            case Type::DIRECTIONAL:
+                params.options.shadowBulbRadius = 1.0;
+                break;
+            case Type::POINT:
+            case Type::FOCUSED_SPOT:
+            case Type::SPOT:
+                params.options.shadowBulbRadius = 0.06;
+                break;
+        }
+    }
 }
 
 void FLightManager::setLightChannel(Instance const i, unsigned int const channel, bool const enable) noexcept {

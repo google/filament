@@ -76,6 +76,7 @@
 #include <cmath>
 #include <chrono>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <new>
 #include <ratio>
@@ -597,7 +598,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
      */
     scene->prepare(js, rootArenaScope,
             cameraInfo.worldTransform,
-            hasVSM());
+            hasVSM() || hasPCSS());
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -1113,8 +1114,7 @@ void FView::prepareShadowMapping(FEngine const& engine, Handle<HwTexture> textur
             getColorPassDescriptorSet().prepareShadowVSM(texture, mVsmShadowOptions);
             break;
         case ShadowType::DPCF:
-            getColorPassDescriptorSet().prepareShadowDPCF(texture);
-            break;
+            UTILS_FALLTHROUGH;
         case ShadowType::PCSS:
             getColorPassDescriptorSet().prepareShadowPCSS(texture);
             break;
@@ -1131,12 +1131,9 @@ void FView::prepareShadowMapping() const noexcept {
         uniforms = mShadowMapManager->getShadowMappingUniforms();
     }
 
-    constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
-    constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCF = 0u;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSM = 1u;
-    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
-    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 2u;
     auto& s = mUniforms.edit();
     s.cascadeSplits = uniforms.cascadeSplits;
     s.ssContactShadowDistance = uniforms.ssContactShadowDistance;
@@ -1148,17 +1145,17 @@ void FView::prepareShadowMapping() const noexcept {
             break;
         case ShadowType::VSM:
             s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_EVSM;
-            s.vsmExponent = mVsmShadowOptions.highPrecision ? high : low;
-            s.vsmDepthScale = mVsmShadowOptions.minVarianceScale * 0.01f * s.vsmExponent;
+            s.vsmExponent = 0; // this is only used when rendering the shadowmap, not when using it
+            s.vsmMaxMoment = ShadowMapManager::getMaxMomentEVSM(mVsmShadowOptions);
             s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
             break;
         case ShadowType::DPCF:
-            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
-            s.shadowPenumbraRatioScale = mSoftShadowOptions.penumbraRatioScale;
-            break;
+            UTILS_FALLTHROUGH;
         case ShadowType::PCSS:
             s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
-            s.shadowPenumbraRatioScale = mSoftShadowOptions.penumbraRatioScale;
+            s.vsmExponent = 0; // this is only used when rendering the shadowmap, not when using it
+            s.vsmMaxMoment = ShadowMapManager::getMaxMomentEVSM(mVsmShadowOptions);
+            s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
             break;
         case ShadowType::PCFd:
             s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;

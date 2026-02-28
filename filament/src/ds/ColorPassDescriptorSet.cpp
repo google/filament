@@ -407,12 +407,12 @@ void ColorPassDescriptorSet::prepareShadowPCF(Handle<HwTexture> texture) noexcep
             });
 }
 
-void ColorPassDescriptorSet::prepareShadowDPCF(Handle<HwTexture> texture) noexcept {
-    setSampler(+PerViewBindingPoints::SHADOW_MAP, texture, {});
-}
-
 void ColorPassDescriptorSet::prepareShadowPCSS(Handle<HwTexture> texture) noexcept {
-    setSampler(+PerViewBindingPoints::SHADOW_MAP, texture, {});
+    setSampler(+PerViewBindingPoints::SHADOW_MAP,
+            texture, SamplerParams{
+                    .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
+            });
 }
 
 void ColorPassDescriptorSet::prepareShadowPCFDebug(Handle<HwTexture> texture) noexcept {

@@ -978,7 +978,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     if (view.needsShadowMap()) {
         Variant shadowVariant(Variant::DEPTH_VARIANT);
-        shadowVariant.setDepthMoments(view.getShadowType() == ShadowType::VSM);
+        shadowVariant.setDepthMoments(view.hasVSM() || view.hasPCSS());
 
         auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime,
                 RenderPassBuilder{ commandArena }

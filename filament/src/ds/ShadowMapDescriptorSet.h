@@ -66,7 +66,7 @@ public:
             float bias) noexcept;
 
     static void prepareViewport(Transaction const& transaction,
-            backend::Viewport const& viewport) noexcept;
+            backend::Viewport const& physicalViewport, backend::Viewport const& logicalViewport) noexcept;
 
     static void prepareTime(Transaction const& transaction,
             FEngine const& engine, math::float4 const& userTime) noexcept;
@@ -75,7 +75,7 @@ public:
             std::array<math::float4, 4> const& materialGlobals) noexcept;
 
     static void prepareShadowMapping(Transaction const& transaction,
-            bool highPrecision) noexcept;
+            float vsmExponent, float vsmMaxMoment) noexcept;
 
     static Transaction open(backend::DriverApi& driver) noexcept;
 

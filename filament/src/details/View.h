@@ -199,8 +199,7 @@ public:
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
     bool hasVSM() const noexcept { return mShadowType == ShadowType::VSM; }
-    bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
-    bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
+    bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS || mShadowType == ShadowType::DPCF; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
     bool hasStereo() const noexcept {
         return mIsStereoSupported && mStereoscopicOptions.enabled;

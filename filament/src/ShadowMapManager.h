@@ -47,9 +47,13 @@
 #include <utils/Slice.h>
 
 #include <math/mat4.h>
+#include <math/half.h>
+#include <math/vec2.h>
 #include <math/vec4.h>
 
+#include <algorithm>
 #include <array>
+#include <limits>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -79,7 +83,7 @@ public:
 
     using ShadowMappingUniforms = ShadowMappingUniforms;
 
-    using ShadowType = ShadowMap::ShadowType;
+    using ShadowLightType = ShadowMap::ShadowLightType;
 
     enum class ShadowTechnique : uint8_t {
         NONE = 0x0u,
@@ -93,7 +97,7 @@ public:
         uint32_t mSpotShadowMapCount = 0;
         struct ShadowMap {
             size_t lightIndex;
-            ShadowType shadowType;
+            ShadowLightType shadowType;
             uint16_t shadowIndex;
             uint8_t face;
             LightManager::ShadowOptions const* options;
@@ -117,7 +121,7 @@ public:
             std::unique_ptr<ShadowMapManager>& inOutShadowMapManager);
 
     static void terminate(FEngine& engine,
-            std::unique_ptr<ShadowMapManager>& shadowMapManager);
+            std::unique_ptr<ShadowMapManager> const& shadowMapManager);
 
     size_t getMaxShadowMapCount() const noexcept;
 
@@ -133,6 +137,27 @@ public:
             RenderPassBuilder const& passBuilder,
             FView& view, CameraInfo const& mainCameraInfo, math::float4 const& userTime) noexcept;
 
+    FrameGraphId<FrameGraphTexture> gaussianBlurSeparatedPass(
+        FEngine& engine,
+        FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> output,
+        utils::FixedCapacityVector<ShadowMap const*> shadowMapList,
+        math::int2 dir);
+
+    FrameGraphId<FrameGraphTexture> gaussianMipmapPass(
+            FEngine& engine,
+            FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+            math::float4 clearColor) noexcept;
+
+    FrameGraphId<FrameGraphTexture> vsmMipmapPass(
+            FEngine& engine,
+            FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+            math::float4 clearColor) noexcept;
+
+
     // valid after calling update() above
     ShadowMappingUniforms getShadowMappingUniforms() const noexcept {
         return mShadowMappingUniforms;
@@ -145,10 +170,33 @@ public:
     // for debugging only
     utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
+    static float getMaxMomentEVSM(VsmShadowOptions const& vsmShadowOptions) noexcept {
+        return vsmShadowOptions.highPrecision ?
+                std::numeric_limits<float>::max() :
+                float(std::numeric_limits<math::half>::max());
+    }
+
 private:
     explicit ShadowMapManager(FEngine& engine);
 
     void terminate(FEngine& engine);
+
+    /**
+     * Computes the optimal EVSM exponent (c) to maximize precision while
+     * mathematically preventing +Inf overflows and Exponential Domination.
+     *
+     * @param isFp16Target      True if the shadow map format is GL_HALF_FLOAT.
+     * @param isPcss            True if the light uses Variance Soft Shadows (PCSS).
+     * @param lightSizeInTexels The projected size of the light source (used for PCSS).
+     * @param maxMipLevel       The maximum LOD available in the mip chain (used for PCSS).
+     * @param standardBlurRadius The fixed radius of the Gaussian blur pass (used for standard EVSM).
+     */
+    static float computeDynamicVsmExponent(
+            bool isFp16Target,
+            bool isPcss,
+            float lightSizeInTexels,
+            int maxMipLevel,
+            float standardBlurRadius) noexcept;
 
     static void updateNearFarPlanes(math::mat4f* projection,
             float nearDistance, float farDistance) noexcept;
@@ -167,12 +215,12 @@ private:
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
-    static void cullSpotShadowMap(ShadowMap const& map,
+    static void cullSpotShadowMap(ShadowMap const& shadowMap,
             FEngine const& engine, FView const& view,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
             FScene::LightSoa const& lightData) noexcept;
 
-    void preparePointShadowMap(ShadowMap& map,
+    void preparePointShadowMap(ShadowMap& shadowMap,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
             FScene::LightSoa const& lightData) const noexcept;
 
@@ -216,6 +264,7 @@ private:
         uint8_t levels = 0;
         uint8_t msaaSamples = 1;
         backend::TextureFormat format = backend::TextureFormat::DEPTH16;
+        math::float4 clearColor{};
     } mTextureAtlasRequirements;
 
     SoftShadowOptions mSoftShadowOptions;

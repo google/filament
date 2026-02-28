@@ -28,9 +28,11 @@
 
 #include <utils/debug.h>
 
+#include <math/half.h>
 #include <math/vec4.h>
 
 #include <array>
+#include <limits>
 
 namespace filament {
 
@@ -74,8 +76,8 @@ void ShadowMapDescriptorSet::prepareLodBias(Transaction const& transaction, floa
 }
 
 void ShadowMapDescriptorSet::prepareViewport(Transaction const& transaction,
-        backend::Viewport const& viewport) noexcept {
-    PerViewDescriptorSetUtils::prepareViewport(edit(transaction), viewport, viewport);
+        backend::Viewport const& physicalViewport, backend::Viewport const& logicalViewport) noexcept {
+    PerViewDescriptorSetUtils::prepareViewport(edit(transaction), physicalViewport, logicalViewport);
     // TODO: offset calculation is now different
 }
 
@@ -90,11 +92,10 @@ void ShadowMapDescriptorSet::prepareMaterialGlobals(Transaction const& transacti
 }
 
 void ShadowMapDescriptorSet::prepareShadowMapping(Transaction const& transaction,
-        bool const highPrecision) noexcept {
+        float const vsmExponent, float const vsmMaxMoment) noexcept {
     auto& s = edit(transaction);
-    constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
-    constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
-    s.vsmExponent = highPrecision ? high : low;
+    s.vsmExponent = vsmExponent;
+    s.vsmMaxMoment = vsmMaxMoment;
 }
 
 ShadowMapDescriptorSet::Transaction ShadowMapDescriptorSet::open(DriverApi& driver) noexcept {

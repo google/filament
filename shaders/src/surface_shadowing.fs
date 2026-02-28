@@ -5,11 +5,15 @@
 // Keep this in sync with PerViewUniforms.h
 #define SHADOW_SAMPLING_RUNTIME_PCF     0u
 #define SHADOW_SAMPLING_RUNTIME_EVSM    1u
-#define SHADOW_SAMPLING_RUNTIME_DPCF    2u
-#define SHADOW_SAMPLING_RUNTIME_PCSS    3u
+#define SHADOW_SAMPLING_RUNTIME_PCSS    2u
 
 #define SHADOW_SAMPLING_PCF_HARD        0
 #define SHADOW_SAMPLING_PCF_LOW         1
+
+// number of samples for PCSS w/ EVSM, must be 1 or 5
+#define SHADOW_SAMPLING_PCSS_TAPS       5
+// whether to use a rotated noise (1) or not (0)
+#define SHADOW_SAMPLING_PCSS_NOISE      1
 
 //------------------------------------------------------------------------------
 // PCF Shadow Sampling
@@ -83,48 +87,6 @@ float ShadowSample_PCF(const mediump sampler2DArray map,
     return step(0.0, position.z - textureLod(map, vec3(tc, layer), 0.0).r);
 }
 
-//------------------------------------------------------------------------------
-// DPCF sampling
-//------------------------------------------------------------------------------
-
-// Poisson disk generated with 'poisson-disk-generator' tool from
-// https://github.com/corporateshark/poisson-disk-generator by Sergey Kosarevsky
-/*const*/ mediump vec2 poissonDisk[64] = vec2[]( // don't use 'const' b/c of OSX GL compiler bug
-    vec2(0.511749, 0.547686), vec2(0.58929, 0.257224), vec2(0.165018, 0.57663), vec2(0.407692, 0.742285),
-    vec2(0.707012, 0.646523), vec2(0.31463, 0.466825), vec2(0.801257, 0.485186), vec2(0.418136, 0.146517),
-    vec2(0.579889, 0.0368284), vec2(0.79801, 0.140114), vec2(-0.0413185, 0.371455), vec2(-0.0529108, 0.627352),
-    vec2(0.0821375, 0.882071), vec2(0.17308, 0.301207), vec2(-0.120452, 0.867216), vec2(0.371096, 0.916454),
-    vec2(-0.178381, 0.146101), vec2(-0.276489, 0.550525), vec2(0.12542, 0.126643), vec2(-0.296654, 0.286879),
-    vec2(0.261744, -0.00604975), vec2(-0.213417, 0.715776), vec2(0.425684, -0.153211), vec2(-0.480054, 0.321357),
-    vec2(-0.0717878, -0.0250567), vec2(-0.328775, -0.169666), vec2(-0.394923, 0.130802), vec2(-0.553681, -0.176777),
-    vec2(-0.722615, 0.120616), vec2(-0.693065, 0.309017), vec2(0.603193, 0.791471), vec2(-0.0754941, -0.297988),
-    vec2(0.109303, -0.156472), vec2(0.260605, -0.280111), vec2(0.129731, -0.487954), vec2(-0.537315, 0.520494),
-    vec2(-0.42758, 0.800607), vec2(0.77309, -0.0728102), vec2(0.908777, 0.328356), vec2(0.985341, 0.0759158),
-    vec2(0.947536, -0.11837), vec2(-0.103315, -0.610747), vec2(0.337171, -0.584), vec2(0.210919, -0.720055),
-    vec2(0.41894, -0.36769), vec2(-0.254228, -0.49368), vec2(-0.428562, -0.404037), vec2(-0.831732, -0.189615),
-    vec2(-0.922642, 0.0888026), vec2(-0.865914, 0.427795), vec2(0.706117, -0.311662), vec2(0.545465, -0.520942),
-    vec2(-0.695738, 0.664492), vec2(0.389421, -0.899007), vec2(0.48842, -0.708054), vec2(0.760298, -0.62735),
-    vec2(-0.390788, -0.707388), vec2(-0.591046, -0.686721), vec2(-0.769903, -0.413775), vec2(-0.604457, -0.502571),
-    vec2(-0.557234, 0.00451362), vec2(0.147572, -0.924353), vec2(-0.0662488, -0.892081), vec2(0.863832, -0.407206)
-);
-
-// tap count up can go up to 64
-const uint DPCF_SHADOW_TAP_COUNT                = 12u;
-// more samples lead to better "shape" of the hardened shadow
-const uint PCSS_SHADOW_BLOCKER_SEARCH_TAP_COUNT = 16u;
-// less samples lead to noisier shadows (can be mitigated with TAA)
-const uint PCSS_SHADOW_FILTER_TAP_COUNT         = 16u;
-
-float hardenedKernel(float x) {
-    // this is basically a stronger smoothstep()
-    x = 2.0 * x - 1.0;
-    float s = sign(x);
-    x = 1.0 - s * x;
-    x = x * x * x;
-    x = s - x * s;
-    return 0.5 * x + 0.5;
-}
-
 highp vec2 computeReceiverPlaneDepthBias(const highp vec3 position) {
     // see: GDC '06: Shadow Mapping: GPU-based Tips and Techniques
     // Chain rule to compute dz/du and dz/dv
@@ -136,203 +98,250 @@ highp vec2 computeReceiverPlaneDepthBias(const highp vec3 position) {
     return dz_duv;
 }
 
-mat2 getRandomRotationMatrix(highp vec2 fragCoord) {
-    // rotate the poisson disk randomly
-    fragCoord += vec2(frameUniforms.temporalNoise); // 0 when TAA is not used
-    float randomAngle = interleavedGradientNoise(fragCoord) * (2.0 * PI);
-    vec2 randomBase = vec2(cos(randomAngle), sin(randomAngle));
-    mat2 R = mat2(randomBase.x, randomBase.y, -randomBase.y, randomBase.x);
-    return R;
-}
+//------------------------------------------------------------------------------
+// EVSM
+//------------------------------------------------------------------------------
 
-float getPenumbraLs(const bool DIRECTIONAL, const int index, const highp float zLight) {
-    float penumbra;
-    // This conditional is resolved at compile time
-    if (DIRECTIONAL) {
-        penumbra = shadowUniforms.shadows[index].bulbRadiusLs;
-    } else {
-        // the penumbra radius depends on the light-space z for spotlights
-        penumbra = shadowUniforms.shadows[index].bulbRadiusLs / zLight;
-    }
-    return penumbra;
-}
-
-float getPenumbraRatio(const bool DIRECTIONAL, const int index,
-        float z_receiver, float z_blocker) {
-    // z_receiver/z_blocker are not linear depths (i.e. they're not distances)
-    // Penumbra ratio for PCSS is given by:  pr = (d_receiver - d_blocker) / d_blocker
-    float penumbraRatio;
-    if (DIRECTIONAL) {
-        // TODO: take lispsm into account
-        // For directional lights, the depths are linear but depend on the position (because of LiSPSM).
-        // With:        z_linear = f + z * (n - f)
-        // We get:      (r-b)/b ==> (f/(n-f) + r_linear) / (f/(n-f) + b_linear) - 1
-        // Assuming f>>n and ignoring LISPSM, we get:
-        penumbraRatio = (z_blocker - z_receiver) / (1.0 - z_blocker);
-    } else {
-        // For spotlights, the depths are congruent to 1/z, specifically:
-        //      z_linear = (n * f) / (n + z * (f - n))
-        // replacing in (r - b) / b gives:
-        float nearOverFarMinusNear = shadowUniforms.shadows[index].nearOverFarMinusNear;
-        penumbraRatio = (nearOverFarMinusNear + z_blocker) / (nearOverFarMinusNear + z_receiver) - 1.0;
-    }
-    return penumbraRatio * frameUniforms.shadowPenumbraRatioScale;
-}
-
-void blockerSearchAndFilter(out float occludedCount, out float z_occSum,
-        const mediump sampler2DArray map, const highp vec4 scissorNormalized, const highp vec2 uv,
-        const float z_rec, const uint layer,
-        const highp vec2 filterRadii, const mat2 R, const highp vec2 dz_duv,
-        const uint tapCount) {
-    occludedCount = 0.0;
-    z_occSum = 0.0;
-    for (uint i = 0u; i < tapCount; i++) {
-        highp vec2 duv = R * (poissonDisk[i] * filterRadii);
-        highp vec2 tc = clamp(uv + duv, scissorNormalized.xy, scissorNormalized.zw);
-
-        float z_occ = textureLod(map, vec3(tc, layer), 0.0).r;
-
-        // note: z_occ and z_rec are not necessarily linear here, comparing them is always okay for
-        // the regular PCF, but the "distance" is meaningless unless they are actually linear
-        // (e.g.: for the directional light).
-        // Either way, if we assume that all the samples are close to each other we can take their
-        // average regardless, and the average depth value of the occluders
-        // becomes: z_occSum / occludedCount.
-
-        // receiver plane depth bias
-        float z_bias = dot(dz_duv, duv);
-        float dz = z_occ - z_rec; // dz>0 when blocker is between receiver and light
-        float occluded = step(z_bias, dz);
-        occludedCount += occluded;
-        z_occSum += z_occ * occluded;
-    }
-}
-
-float filterPCSS(const mediump sampler2DArray map,
-        const highp vec4 scissorNormalized,
-        const highp vec2 size,
-        const highp vec2 uv, const float z_rec, const uint layer,
-        const highp vec2 filterRadii, const mat2 R, const highp vec2 dz_duv,
-        const uint tapCount) {
-
-    float occludedCount = 0.0; // must be highp to workaround a spirv-tools issue
-    for (uint i = 0u; i < tapCount; i++) {
-        highp vec2 duv = R * (poissonDisk[i] * filterRadii);
-
-        // sample the shadow map with a 2x2 PCF, this helps a lot in low resolution areas
-        vec4 d;
-        highp vec2 tc = clamp(uv + duv, scissorNormalized.xy, scissorNormalized.zw);
-        highp vec2 st = tc.xy * size - 0.5;
-        highp vec2 grad = fract(st);
-
-#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-        d = textureGather(map, vec3(tc, layer), 0); // 01, 11, 10, 00
-#else
-        // we must use texelFetchOffset before texelLodOffset filters
-        d[0] = texelFetchOffset(map, ivec3(st, layer), 0, ivec2(0, 1)).r;
-        d[1] = texelFetchOffset(map, ivec3(st, layer), 0, ivec2(1, 1)).r;
-        d[2] = texelFetchOffset(map, ivec3(st, layer), 0, ivec2(1, 0)).r;
-        d[3] = texelFetchOffset(map, ivec3(st, layer), 0, ivec2(0, 0)).r;
-#endif
-
-        // receiver plane depth bias
-        float z_bias = dot(dz_duv, duv);
-        vec4 dz = d - vec4(z_rec); // dz>0 when blocker is between receiver and light
-        vec4 pcf = step(z_bias, dz);
-        occludedCount += mix(mix(pcf.w, pcf.z, grad.x), mix(pcf.x, pcf.y, grad.x), grad.y);
-    }
-    return occludedCount * (1.0 / float(tapCount));
-}
-
-/*
- * DPCF, PCF with contact hardenning simulation.
- * see "Shadow of Cold War", A scalable approach to shadowing -- by Kevin Myers
- */
-float ShadowSample_DPCF(const bool DIRECTIONAL,
-        const mediump sampler2DArray map,
-        const highp vec4 scissorNormalized,
-        const uint layer, const int index,
-        const highp vec4 shadowPosition, const highp float zLight) {
-    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
-    highp vec2 texelSize = vec2(1.0) / vec2(textureSize(map, 0));
-
-    // We need to use the shadow receiver plane depth bias to combat shadow acne due to the
-    // large kernel.
-    highp vec2 dz_duv = computeReceiverPlaneDepthBias(position);
-
-    float penumbra = getPenumbraLs(DIRECTIONAL, index, zLight);
-
-    // rotate the poisson disk randomly
-    mat2 R = getRandomRotationMatrix(gl_FragCoord.xy);
-
-    float occludedCount = 0.0;
-    float z_occSum = 0.0;
-
-    blockerSearchAndFilter(occludedCount, z_occSum,
-            map, scissorNormalized, position.xy, position.z, layer, texelSize * penumbra, R, dz_duv,
-            DPCF_SHADOW_TAP_COUNT);
-
-    // early exit if there is no occluders at all, also avoids a divide-by-zero below.
-    if (z_occSum == 0.0) {
+float chebyshevUpperBound(const highp vec2 moments, const highp float depth,
+        const highp float minVariance, const highp float lbrAmount) {
+    // Fast path: if the receiver is fully in front of the caster
+    if (depth <= moments.x) {
         return 1.0;
     }
 
-    float penumbraRatio = getPenumbraRatio(DIRECTIONAL, index, position.z, z_occSum / occludedCount);
+    // Calculate variance with our dynamically injected floor
+    highp float variance = max(moments.y - (moments.x * moments.x), minVariance);
 
-    // The main way we're diverging from PCSS is that we're not going to sample again, instead
-    // we're going to reuse the blocker search samples and we're going to use the penumbra ratio
-    // as a parameter to lerp between a hardened PCF kernel and the search PCF kernel.
-    // We need a parameter to blend between the the "hardened" kernel and the "soft" kernel,
-    // to this end clamp the penumbra ratio between 0 (blocker is close to the receiver) and
-    // 1 (blocker is close to the light).
-    penumbraRatio = saturate(penumbraRatio);
+    // Standard Chebyshev inequality
+    highp float d = depth - moments.x;
+    highp float p_max = variance / (variance + d * d);
 
-    // regular PCF weight (i.e. average of samples in shadow)
-    float percentageOccluded = occludedCount * (1.0 / float(DPCF_SHADOW_TAP_COUNT));
-
-    // now we just need to lerp between hardened PCF and regular PCF based on alpha
-    percentageOccluded = mix(hardenedKernel(percentageOccluded), percentageOccluded, penumbraRatio);
-    return 1.0 - percentageOccluded;
+    // Apply Light Bleeding Reduction (LBR)
+    return saturate((p_max - lbrAmount) / (1.0 - lbrAmount));
 }
 
-float ShadowSample_PCSS(const bool DIRECTIONAL,
-        const mediump sampler2DArray map,
+float evaluateEVSM(const bool ELVSM, float c,
+        const highp vec4 moments, const highp float zReceiver,
+        const highp vec2 dzduv, const highp vec2 texelSize) {
+    const highp float EPSILON_MULTIPLIER = 0.002; // could be 0.00001 in fp32
+    float lbrAmount = frameUniforms.vsmLightBleedReduction;
+
+    // Scale the UV-space gradient down to a single shadow map texel footprint.
+    highp vec2 texel_dzduv = dzduv * texelSize;
+
+    // squared magnitude of the linear depth gradient across a single shadow map texel footprint
+    highp float dz2 = dot(texel_dzduv, texel_dzduv);
+
+    // remap depth to [-1, 1]
+    highp float depth = zReceiver * 2.0 - 1.0;
+
+    // positive wrap
+    highp float pw = exp(c * depth);
+    highp float epsilon = EPSILON_MULTIPLIER * (pw * pw);
+    // Dynamic variance for the positive side (derivative of wraped depth w.r.t. light-space depth via Chain Rule)
+    highp float dpwdz = 2.0 * c * pw;
+    highp float pMinVariance = epsilon + 0.25 * (dpwdz * dpwdz) * dz2;
+    float p = chebyshevUpperBound(moments.xy, pw, pMinVariance, lbrAmount);
+
+    // negative wrap
+    if (ELVSM) {
+        highp float nw = -1.0 / pw;
+        highp float epsilon = EPSILON_MULTIPLIER * (nw * nw);
+        // Dynamic variance for the negative side (derivative of wraped depth w.r.t. light-space depth via Chain Rule)
+        highp float dnwdz = 2.0 * c * nw;
+        highp float nMinVariance = epsilon + 0.25 * (dnwdz * dnwdz) * dz2;
+        float n = chebyshevUpperBound(moments.zw, nw, nMinVariance, lbrAmount);
+       p = min(p, n);
+    }
+
+    return p;
+}
+
+float ShadowSample_VSM(const bool DIRECTIONAL, const highp sampler2DArray shadowMap,
         const highp vec4 scissorNormalized,
         const uint layer, const int index,
         const highp vec4 shadowPosition, const highp float zLight) {
-    highp vec2 size = vec2(textureSize(map, 0));
-    highp vec2 texelSize = vec2(1.0) / size;
-    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
 
-    // We need to use the shadow receiver plane depth bias to combat shadow acne due to the
-    // large kernel.
-    highp vec2 dz_duv = computeReceiverPlaneDepthBias(position);
+    bool ELVSM = shadowUniforms.shadows[index].elvsm;
+    float c = shadowUniforms.shadows[index].vsmExponent;
+    highp vec2 texelSize = vec2(1.0) / vec2(textureSize(shadowMap, 0)); // TODO: put this in a uniform
 
-    float penumbra = getPenumbraLs(DIRECTIONAL, index, zLight);
+    // note: shadowPosition.z is in linear light-space normalized to [0, 1]
+    //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
+    //  see: computeLightSpacePosition() in common_shadowing.fs
+    highp vec3 position = vec3(shadowPosition.xy * (1.0 / shadowPosition.w), shadowPosition.z);
 
-    // rotate the poisson disk randomly
-    mat2 R = getRandomRotationMatrix(gl_FragCoord.xy);
+    // plane receiver bias to reduce shadow acnee on the received plane (before clamp)
+    highp vec2 dzduv = computeReceiverPlaneDepthBias(position);
 
-    float occludedCount = 0.0;
-    float z_occSum = 0.0;
+    // clamp uv to border
+    position.xy = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
 
-    blockerSearchAndFilter(occludedCount, z_occSum,
-            map, scissorNormalized, position.xy, position.z, layer, texelSize * penumbra, R, dz_duv,
-            PCSS_SHADOW_BLOCKER_SEARCH_TAP_COUNT);
+    // Read the shadow map with all available filtering
+    highp vec4 moments = texture(shadowMap, vec3(position.xy, layer));
 
-    // early exit if there is no occluders at all, also avoids a divide-by-zero below.
-    if (z_occSum == 0.0) {
+    return evaluateEVSM(ELVSM, c, moments, position.z, dzduv, texelSize);
+}
+
+// Extracts the average blocker depth from EVSM moments in O(1)
+highp float computeBlockerDistance(float c, highp vec4 searchMoments, highp float zReceiver, float pLit) {
+    // 1. Unwarp the expected depth (E[x]) from the positive moment.
+    // moments.x ≈ exp(c * (2z - 1))  =>  ln(moments.x) / c ≈ (2z - 1)
+    // We clamp the moment to prevent log(0) in areas of extreme negative depth.
+    highp float warpedZ = max(searchMoments.x, 1e-8);
+    highp float zAvg = (log(warpedZ) / c + 1.0) * 0.5;
+
+    // 2. The VSSM Blocker Equation:
+    highp float pUnlit = 1.0 - pLit;
+    highp float zBlocker = (zAvg - (pLit * zReceiver)) / pUnlit;
+
+    // 3. Clamp to valid physical bounds [0, zReceiver]
+    return clamp(zBlocker, 0.0, zReceiver);
+}
+
+float ShadowSample_PCSS_VSM(const bool DIRECTIONAL, const highp sampler2DArray shadowMap,
+        const highp vec4 scissorNormalized,
+        const uint layer, const int index,
+        const highp vec4 shadowPosition, const highp float zLight) {
+
+    bool ELVSM = shadowUniforms.shadows[index].elvsm;
+    float c = shadowUniforms.shadows[index].vsmExponent;
+    float bulbRadiusLs = shadowUniforms.shadows[index].bulbRadiusLs;
+
+    // PCSS parameters
+    const float MAX_MIP_LEVEL = 3.0; // Your 4-level chain (0, 1, 2, 3)
+
+    highp vec2 texelSize = vec2(1.0) / vec2(textureSize(shadowMap, 0));
+    highp vec3 position = vec3(shadowPosition.xy * (1.0 / shadowPosition.w), shadowPosition.z);
+
+    // 1. Compute derivatives BEFORE clamping UVs to prevent dzduv from zeroing out on edges
+    highp vec2 dzduv = computeReceiverPlaneDepthBias(position);
+    position.xy = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
+
+    // ==========================================
+    // STEP 1: DYNAMIC O(1) BLOCKER SEARCH
+    // ==========================================
+    // Calculate the search radius in texels.
+    // We scale the baseline light size by the receiver's depth.
+    // The further away the receiver is from the light/shadow map plane,
+    // the wider the search cone becomes at the texture surface.
+    highp float searchRadiusInTexels = bulbRadiusLs * position.z;
+
+    // Convert the search radius into a Mipmap LOD level, exactly like the penumbra filter.
+    // A radius of 1 texel = LOD 0. Radius of 2 = LOD 1. Radius of 4 = LOD 2.
+    // We clamp it to MAX_MIP_LEVEL so we don't fetch non-existent textures.
+    float searchLod = clamp(log2(max(searchRadiusInTexels, 1.0)), 0.0, MAX_MIP_LEVEL);
+
+    // Fetch moments using hardware trilinear interpolation to get a perfectly smooth,
+    // continuously varying search area as the receiver moves.
+    highp vec4 searchMoments = textureLod(shadowMap, vec3(position.xy, layer), searchLod);
+
+    // Scale the texel footprint for the dynamic variance floor based on the calculated search LOD
+    highp vec2 searchTexelSize = texelSize * exp2(searchLod);
+
+    // Evaluate the probability that this dynamically sized macro-region is lit
+    float pLitSearch = evaluateEVSM(ELVSM, c, searchMoments, position.z, dzduv, searchTexelSize);
+
+    // If the region is almost entirely lit, skip the penumbra filter.
+    if (pLitSearch >= 0.999) {
         return 1.0;
     }
 
-    float penumbraRatio = getPenumbraRatio(DIRECTIONAL, index, position.z, z_occSum / occludedCount);
+    // If the region is almost entirely occluded, skip the penumbra filter.
+    if (pLitSearch <= 0.001) {
+        return 0.0;
+    }
 
-    float percentageOccluded = filterPCSS(map, scissorNormalized, size,
-            position.xy, position.z, layer,
-            texelSize * (penumbra * penumbraRatio),
-            R, dz_duv, PCSS_SHADOW_FILTER_TAP_COUNT);
+    // Extract the average depth of the occluding pixels
+    highp float zBlocker = computeBlockerDistance(c, searchMoments, position.z, pLitSearch);
 
-    return 1.0 - percentageOccluded;
+    // ==========================================
+    // STEP 2: PENUMBRA ESTIMATION
+    // ==========================================
+    float penumbraWidthInTexels;
+    if (DIRECTIONAL) {
+        // Orthographic projection (Cascades)
+        penumbraWidthInTexels = (position.z - zBlocker) * bulbRadiusLs;
+    } else {
+        // Perspective projection (Spot/Point lights)
+        penumbraWidthInTexels = ((position.z - zBlocker) / zBlocker) * bulbRadiusLs;
+    }
+
+    // ==========================================
+    // STEP 3: PENUMBRA FILTERING (Compile-Time Variants)
+    // ==========================================
+    float targetLod = clamp(log2(max(penumbraWidthInTexels, 1.0)), 0.0, MAX_MIP_LEVEL);
+
+    // The base footprint of one texel at the chosen LOD
+    highp vec2 mipTexelSize = texelSize * exp2(targetLod);
+    highp vec2 r = mipTexelSize * 0.5;
+
+    highp vec4 finalMoments;
+    highp vec2 effectiveTexelSize;
+
+    // Pre-calculate trigonometric noise once if ANY noise variant is enabled
+    #if defined(SHADOW_SAMPLING_PCSS_NOISE) && SHADOW_SAMPLING_PCSS_NOISE == 1
+        highp float noise = interleavedGradientNoise(gl_FragCoord.xy);
+        // Multiply by 2 * PI (6.2831853) to get a full 360-degree random rotation
+        highp float theta = noise * 6.28318530718;
+        highp float cosT = cos(theta);
+        highp float sinT = sin(theta);
+    #endif
+
+        // ---------------------------------------------------------
+        // VARIANT A: 1-TAP (Standard or Jittered)
+        // ---------------------------------------------------------
+    #if SHADOW_SAMPLING_PCSS_TAPS == 1
+        #if defined(SHADOW_SAMPLING_PCSS_NOISE) && SHADOW_SAMPLING_PCSS_NOISE == 1
+            // Randomly offset the fetch coordinate along a circular radius
+            highp vec2 jitterOffset = vec2(cosT, sinT) * r;
+            highp vec2 uv = clamp(position.xy + jitterOffset, scissorNormalized.xy, scissorNormalized.zw);
+            finalMoments = textureLod(shadowMap, vec3(uv, layer), targetLod);
+
+            // Jittering effectively widens the sampled area over time,
+            // so we must double the variance footprint to prevent acne.
+            effectiveTexelSize = mipTexelSize * 2.0;
+        #else
+            // Pure standard trilinear fetch
+            highp vec2 uv = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
+            finalMoments = textureLod(shadowMap, vec3(uv, layer), targetLod);
+            effectiveTexelSize = mipTexelSize;
+        #endif
+
+        // ---------------------------------------------------------
+        // VARIANT B: 5-TAP QUINCUNX (Standard or Rotated)
+        // ---------------------------------------------------------
+    #elif SHADOW_SAMPLING_PCSS_TAPS == 5
+        highp vec2 uvCenter = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
+        highp vec4 mC = textureLod(shadowMap, vec3(uvCenter, layer), targetLod);
+        #if defined(SHADOW_SAMPLING_PCSS_NOISE) && SHADOW_SAMPLING_PCSS_NOISE == 1
+            // Calculate the randomly rotated base corner offsets
+            highp vec2 rot0 = vec2(cosT - sinT, sinT + cosT) * r;
+            highp vec2 rot1 = vec2(cosT + sinT, sinT - cosT) * r;
+            highp vec2 uv0 = clamp(position.xy + rot0, scissorNormalized.xy, scissorNormalized.zw);
+            highp vec2 uv1 = clamp(position.xy + rot1, scissorNormalized.xy, scissorNormalized.zw);
+            highp vec2 uv2 = clamp(position.xy - rot0, scissorNormalized.xy, scissorNormalized.zw);
+            highp vec2 uv3 = clamp(position.xy - rot1, scissorNormalized.xy, scissorNormalized.zw);
+        #else
+            // Standard axis-aligned Quincunx corners
+            highp vec2 uv0 = clamp(position.xy + vec2(-r.x, -r.y), scissorNormalized.xy, scissorNormalized.zw);
+            highp vec2 uv1 = clamp(position.xy + vec2( r.x, -r.y), scissorNormalized.xy, scissorNormalized.zw);
+            highp vec2 uv2 = clamp(position.xy + vec2(-r.x,  r.y), scissorNormalized.xy, scissorNormalized.zw);
+            highp vec2 uv3 = clamp(position.xy + vec2( r.x,  r.y), scissorNormalized.xy, scissorNormalized.zw);
+        #endif
+
+        highp vec4 m0 = textureLod(shadowMap, vec3(uv0, layer), targetLod);
+        highp vec4 m1 = textureLod(shadowMap, vec3(uv1, layer), targetLod);
+        highp vec4 m2 = textureLod(shadowMap, vec3(uv2, layer), targetLod);
+        highp vec4 m3 = textureLod(shadowMap, vec3(uv3, layer), targetLod);
+
+        // Safe FP16 FMA accumulation
+        finalMoments = (mC * 0.5) + (m0 * 0.125) + (m1 * 0.125) + (m2 * 0.125) + (m3 * 0.125);
+        effectiveTexelSize = mipTexelSize * 2.0;
+    #endif
+
+    // Evaluate EVSM exactly once using the selected footprint and moments
+    return evaluateEVSM(ELVSM, c, finalMoments, position.z, dzduv, effectiveTexelSize);
 }
 
 //------------------------------------------------------------------------------
@@ -410,70 +419,6 @@ float screenSpaceContactShadow(vec3 lightDirection) {
 }
 
 //------------------------------------------------------------------------------
-// VSM
-//------------------------------------------------------------------------------
-
-float linstep(const float min, const float max, const float v) {
-    // we could use smoothstep() too
-    return clamp((v - min) / (max - min), 0.0, 1.0);
-}
-
-float reduceLightBleed(const float pMax, const float amount) {
-    // Remove the [0, amount] tail and linearly rescale (amount, 1].
-    return linstep(amount, 1.0, pMax);
-}
-
-float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
-        const highp float minVariance, const float lightBleedReduction) {
-    // Donnelly and Lauritzen 2006, "Variance Shadow Maps"
-
-    highp float variance = moments.y - (moments.x * moments.x);
-    variance = max(variance, minVariance);
-
-    highp float d = mean - moments.x;
-    float pMax = variance / (variance + d * d);
-
-    pMax = reduceLightBleed(pMax, lightBleedReduction);
-
-    return mean <= moments.x ? 1.0 : pMax;
-}
-
-float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
-    highp float depthScale = frameUniforms.vsmDepthScale * depth;
-    highp float minVariance = depthScale * depthScale;
-    return chebyshevUpperBound(moments, depth, minVariance, frameUniforms.vsmLightBleedReduction);
-}
-
-float ShadowSample_VSM(const bool ELVSM, const highp sampler2DArray shadowMap,
-        const highp vec4 scissorNormalized,
-        const uint layer, const highp vec4 shadowPosition) {
-
-    // note: shadowPosition.z is in linear light-space normalized to [0, 1]
-    //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
-    //  see: computeLightSpacePosition() in common_shadowing.fs
-    highp vec3 position = vec3(shadowPosition.xy * (1.0 / shadowPosition.w), shadowPosition.z);
-
-    // Note: we don't need to clamp to `scissorNormalized` in the VSM case because this is only
-    // needed when the shadow casters and receivers are different, which is never the case with VSM
-    // (see ShadowMap.cpp).
-
-    // Read the shadow map with all available filtering
-    highp vec4 moments = texture(shadowMap, vec3(position.xy, layer));
-    highp float depth = position.z;
-
-    // EVSM depth warping
-    depth = depth * 2.0 - 1.0;
-    depth = frameUniforms.vsmExponent * depth;
-
-    depth = exp(depth);
-    float p = evaluateShadowVSM(moments.xy, depth);
-    if (ELVSM) {
-        p = min(p, evaluateShadowVSM(moments.zw, -1.0 / depth));
-    }
-    return p;
-}
-
-//------------------------------------------------------------------------------
 // Shadow sampling dispatch
 //------------------------------------------------------------------------------
 
@@ -529,9 +474,12 @@ float shadow(const bool DIRECTIONAL,
     } else if (CONFIG_SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW) {
         return ShadowSample_PCF_Low(shadowMap, scissorNormalized, layer, shadowPosition);
     }
+
+    // should not happen
+    return 0.0;
 }
 
-// Shadow requiring a sampler2D sampler (VSM, DPCF and PCSS)
+// Shadow requiring a sampler2D sampler (VSM and PCSS)
 float shadow(const bool DIRECTIONAL,
         const highp sampler2DArray shadowMap,
         const int index, highp vec4 shadowPosition, highp float zLight) {
@@ -539,18 +487,12 @@ float shadow(const bool DIRECTIONAL,
     uint layer = shadowUniforms.shadows[index].layer;
     // This conditional is resolved at compile time
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
-        bool elvsm = shadowUniforms.shadows[index].elvsm;
-        return ShadowSample_VSM(elvsm, shadowMap, scissorNormalized, layer,
-                shadowPosition);
-    }
-
-    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_DPCF) {
-        return ShadowSample_DPCF(DIRECTIONAL, shadowMap, scissorNormalized, layer, index,
+        return ShadowSample_VSM(DIRECTIONAL, shadowMap, scissorNormalized, layer, index,
                 shadowPosition, zLight);
     }
 
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_PCSS) {
-        return ShadowSample_PCSS(DIRECTIONAL, shadowMap, scissorNormalized, layer, index,
+        return ShadowSample_PCSS_VSM(DIRECTIONAL, shadowMap, scissorNormalized, layer, index,
                 shadowPosition, zLight);
     }
 
@@ -558,8 +500,8 @@ float shadow(const bool DIRECTIONAL,
         // This is here mostly for debugging at this point.
         // Note: In this codepath, the normal bias is not applied because we're in the VSM variant.
         // (see: get{Cascade|Spot}LightSpacePosition)
-        return ShadowSample_PCF(shadowMap, scissorNormalized,
-                layer, shadowPosition);
+        return ShadowSample_PCF(shadowMap, scissorNormalized, layer,
+                shadowPosition);
     }
 
     // should not happen

@@ -635,7 +635,7 @@ public:
      *
      * Additional light-specific soft shadow parameters can be set with LightManager::setShadowOptions.
      *
-     * Only applicable when shadow type is set to ShadowType::DPCF or ShadowType::PCSS.
+     * Only applicable when shadow type is set to ShadowType::PCSS.
      *
      * @param options Options for shadowing.
      *
