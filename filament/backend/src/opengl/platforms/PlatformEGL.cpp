@@ -706,10 +706,11 @@ bool PlatformEGL::setExternalImage(ExternalImageHandleRef externalImage,
 // -----------------------------------------------------------------------------------------------
 
 void PlatformEGL::initializeGlExtensions() noexcept {
-    // We're guaranteed to be on an ES platform, since we're using EGL
     const char* const extensions = (const char*)glGetString(GL_EXTENSIONS);
-    GLUtils::unordered_string_set const glExtensions = GLUtils::split(extensions);
-    ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
+    if (extensions) {
+        GLUtils::unordered_string_set const glExtensions = GLUtils::split(extensions);
+        ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
+    }
 }
 
 EGLContext PlatformEGL::getContextForType(ContextType const type) const noexcept {
