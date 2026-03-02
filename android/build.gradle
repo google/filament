@@ -40,14 +40,20 @@
 //   - Build and upload artifacts with ./gradlew publish
 //   - Close and release staging repo on Nexus with ./gradlew closeAndReleaseStagingRepository
 //
-// The following is needed in ~/gradle/gradle.properties:
+// The following properties need to be set (either in ~/gradle/gradle.properties, on the command
+// line, or as environment variables, e.g.: ORG_GRADLE_PROJECT_property=value):
 //
 //     sonatypeUsername=nexus_user
 //     sonatypePassword=nexus_password
 //
+//     To sign with a key ring file:
 //     signing.keyId=pgp_key_id
 //     signing.password=pgp_key_password
 //     signing.secretKeyRingFile=/Users/user/.gnupg/maven_signing.key
+//
+//     To sign with in-memory keys (useful for CI):,
+//     signingKey=ASCII armored key (begins with -----BEGIN PGP PRIVATE KEY BLOCK-----)
+//     signingPassword=key password
 //
 
 buildscript {
