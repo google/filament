@@ -85,6 +85,12 @@ public:
     // - Update the bindings that use external samplers.
     void updateSetAndLayout(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
 
+    struct SizeInfo {
+        size_t setBindings;
+        size_t images;
+    };
+    SizeInfo getSize() const noexcept { return { mSetBindings.size(), mImages.size() }; }
+
 private:
 
     VulkanSamplerCache* mSamplerCache;

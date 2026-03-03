@@ -59,6 +59,8 @@ public:
     VkPipelineLayout getLayout(DescriptorSetLayoutArray const& descriptorSetLayouts,
             fvkmemory::resource_ptr<VulkanProgram> program);
 
+    size_t getSize() const noexcept { return mPipelineLayouts.size(); }
+
 private:
     using Timestamp = uint64_t;
     struct PipelineLayoutCacheEntry {

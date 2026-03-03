@@ -120,6 +120,10 @@ public:
     // Frees all Vulkan objects. Call this during shutdown before the device is destroyed.
     void terminate() noexcept;
 
+    size_t getFboCacheSize() const noexcept { return mFramebufferCache.size(); }
+    size_t getRenderPassCacheSize() const noexcept { return mRenderPassCache.size(); }
+    size_t getRenderPassRefCountSize() const noexcept { return mRenderPassRefCount.size(); }
+
 private:
     VkDevice mDevice;
     using FboMap = tsl::robin_map<FboKey, FboVal, FboKeyHashFn, FboKeyEqualFn>;

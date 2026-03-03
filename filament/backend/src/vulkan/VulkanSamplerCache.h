@@ -40,6 +40,8 @@ public:
     explicit VulkanSamplerCache(VkDevice device);
     VkSampler getSampler(Params params);
     void terminate() noexcept;
+
+    size_t getSize() const noexcept { return mCache.size(); }
 private:
     VkDevice mDevice;
 

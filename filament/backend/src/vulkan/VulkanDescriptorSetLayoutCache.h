@@ -49,6 +49,8 @@ public:
             fvkutils::SamplerBitmask externalSamplers,
             utils::FixedCapacityVector<std::pair<uint64_t, VkSampler>> immutableSamplers = {});
 
+    size_t getSize() const noexcept { return mVkLayouts.size(); }
+
 private:
     VkDevice mDevice;
     fvkmemory::ResourceManager* mResourceManager;

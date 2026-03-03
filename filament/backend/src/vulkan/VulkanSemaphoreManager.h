@@ -37,6 +37,8 @@ public:
     void terminate();
     Semaphore acquire();
 
+    size_t getSize() const noexcept { return mPool.size(); }
+
 private:
     friend struct VulkanSemaphore;
     void recycle(VkSemaphore semaphore);

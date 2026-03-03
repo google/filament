@@ -42,6 +42,8 @@ public:
     VkSamplerYcbcrConversion getConversion(Params params);
     void terminate() noexcept;
 
+    size_t getSize() const noexcept { return mCache.size(); }
+
 private:
     VkDevice mDevice;
 

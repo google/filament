@@ -118,6 +118,14 @@ void VulkanBufferCache::terminate() noexcept {
     }
 }
 
+size_t VulkanBufferCache::getSize() const noexcept {
+    size_t size = 0;
+    for (int i = 0; i < MAX_POOL_COUNT; i++) {
+        size += mGpuBufferPools[i].size();
+    }
+    return size;
+}
+
 void VulkanBufferCache::release(VulkanGpuBuffer const* gpuBuffer) noexcept {
     assert_invariant(gpuBuffer != nullptr);
 

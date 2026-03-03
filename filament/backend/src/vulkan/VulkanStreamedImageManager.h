@@ -46,6 +46,8 @@ public:
     void onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
             fvkmemory::resource_ptr<VulkanStream> stream);
 
+    size_t getSize() const noexcept { return mStreamedTexturesBindings.size(); }
+
 private:
     struct StreamedTextureBinding {
         uint8_t binding = 0;

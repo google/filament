@@ -89,6 +89,13 @@ public:
 
     void resetCachedState() noexcept { mLastBoundInfo = {}; }
 
+    struct SizeInfo {
+        size_t poolCount;
+        size_t totalSize;
+        size_t totalUnusedCount;
+    };
+    SizeInfo getSize() const noexcept;
+
 private:
     void copySet(VkDescriptorSet srcSet, VkDescriptorSet destSet,
             fvkutils::SamplerBitmask copyBindings) const;

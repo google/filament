@@ -136,6 +136,8 @@ public:
     void terminate() noexcept;
     void gc() noexcept;
 
+    size_t getSize() const noexcept { return mPipelines.size(); }
+
 private:
     // PIPELINE CACHE KEY
     // ------------------

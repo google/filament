@@ -158,6 +158,8 @@ struct CommandBufferPool {
 
     inline bool isRecording() const { return mRecording != INVALID; }
 
+    size_t getSize() const noexcept { return mBuffers.size(); }
+
 private:
     static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
     // int8 only goes up to 127, therefore capacity must be less than that.
@@ -254,6 +256,17 @@ public:
 
     // Updates the atomic "status" variable in every extant fence.
     void updateFences();
+
+    struct SizeInfo {
+        size_t regular;
+        size_t protectedPool;
+    };
+    SizeInfo getSize() const noexcept {
+        return {
+            mPool ? mPool->getSize() : 0,
+            mProtectedPool ? mProtectedPool->getSize() : 0
+        };
+    }
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});

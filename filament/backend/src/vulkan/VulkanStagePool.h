@@ -223,6 +223,12 @@ public:
     // resource_ptrs, as this would lead to undefined behavior.
     void terminate() noexcept;
 
+    struct SizeInfo {
+        size_t stages;
+        size_t freeImages;
+    };
+    SizeInfo getSize() const noexcept { return { mStages.size(), mFreeImages.size() }; }
+
 private:
     VmaAllocator mAllocator;
     fvkmemory::ResourceManager* mResManager;

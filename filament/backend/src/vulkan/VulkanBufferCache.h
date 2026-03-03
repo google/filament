@@ -48,6 +48,8 @@ public:
     // This should be called while the context's VkDevice is still alive.
     void terminate() noexcept;
 
+    size_t getSize() const noexcept;
+
 private:
     struct UnusedGpuBuffer {
         uint64_t lastAccessed;

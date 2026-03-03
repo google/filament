@@ -119,6 +119,9 @@ public:
         return mCapacity;
     }
 
+    uint16_t size() const { return mSize; }
+    uint16_t unusedCount() const { return mUnusedCount; }
+
     // A convenience method for checking if this pool can allocate sets for a given layout.
     inline bool canAllocate(DescriptorCount const& count) {
         return count == mCount;
@@ -253,6 +256,16 @@ public:
             pool->recycle(vklayout, vkSet);
             break;
         }
+    }
+
+    VulkanDescriptorSetCache::SizeInfo getSize() const {
+        VulkanDescriptorSetCache::SizeInfo info = {};
+        info.poolCount = mPools.size();
+        for (auto& pool : mPools) {
+            info.totalSize += pool->size();
+            info.totalUnusedCount += pool->unusedCount();
+        }
+        return info;
     }
 
 private:
@@ -447,6 +460,10 @@ void VulkanDescriptorSetCache::manualRecycle(VulkanDescriptorSetLayout::Count co
 }
 
 void VulkanDescriptorSetCache::gc() { mStashedSets = {}; }
+
+VulkanDescriptorSetCache::SizeInfo VulkanDescriptorSetCache::getSize() const noexcept {
+    return mDescriptorPool->getSize();
+}
 
 void VulkanDescriptorSetCache::copySet(VkDescriptorSet srcSet, VkDescriptorSet dstSet,
         fvkutils::SamplerBitmask bindings) const {

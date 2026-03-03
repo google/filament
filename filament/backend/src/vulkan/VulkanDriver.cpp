@@ -49,6 +49,7 @@
 
 #include <chrono>
 #include <mutex>
+#include <stdio.h>
 
 using namespace bluevk;
 
@@ -444,6 +445,29 @@ void VulkanDriver::collectGarbage() {
     mPipelineCache.gc();
 
     mResourceManager.gc();
+
+    auto dsSize = mDescriptorSetCache.getSize();
+    auto stageSize = mStagePool.getSize();
+    auto externalSize = mExternalImageManager.getSize();
+    auto commandsSize = mCommands.getSize();
+
+    fprintf(stderr, "Vulkan Cache Sizes:\n");
+    fprintf(stderr, "  Pipelines: %zu\n", mPipelineCache.getSize());
+    fprintf(stderr, "  Pipeline Layouts: %zu\n", mPipelineLayoutCache.getSize());
+    fprintf(stderr, "  Descriptor Set Layouts: %zu\n", mDescriptorSetLayoutCache.getSize());
+    fprintf(stderr, "  Descriptor Sets: %zu (pools: %zu, unused: %zu)\n", dsSize.totalSize, dsSize.poolCount, dsSize.totalUnusedCount);
+    fprintf(stderr, "  FBOs: %zu\n", mFramebufferCache.getFboCacheSize());
+    fprintf(stderr, "  Render Passes: %zu (refcount: %zu)\n",
+            mFramebufferCache.getRenderPassCacheSize(), mFramebufferCache.getRenderPassRefCountSize());
+    fprintf(stderr, "  Samplers: %zu\n", mSamplerCache.getSize());
+    fprintf(stderr, "  Buffers: %zu\n", mBufferCache.getSize());
+    fprintf(stderr, "  Stages: %zu, Free Images: %zu\n", stageSize.stages, stageSize.freeImages);
+    fprintf(stderr, "  YCbCr Conversions: %zu\n", mYcbcrConversionCache.getSize());
+    fprintf(stderr, "  External Images: %zu, Set Bindings: %zu\n", externalSize.images, externalSize.setBindings);
+    fprintf(stderr, "  Streamed Bindings: %zu\n", mStreamedImageManager.getSize());
+    fprintf(stderr, "  Command Buffers: %zu (regular: %zu, protected: %zu)\n",
+            commandsSize.regular + commandsSize.protectedPool, commandsSize.regular, commandsSize.protectedPool);
+    fprintf(stderr, "  Semaphores: %zu\n", mSemaphoreManager.getSize());
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
