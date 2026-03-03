@@ -20,6 +20,11 @@
 #include "TextureCache.h"
 #include "RenderPrimitive.h"
 
+#include "components/CameraManager.h"
+#include "components/LightManager.h"
+#include "components/RenderableManager.h"
+#include "components/TransformManager.h"
+
 #include "details/BufferObject.h"
 #include "details/Camera.h"
 #include "details/Fence.h"
@@ -58,6 +63,7 @@
 #include <utils/CallStack.h>
 #include <utils/CString.h>
 #include <utils/Invocable.h>
+#include <utils/JobSystem.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
@@ -600,7 +606,7 @@ void FEngine::shutdown() {
     mResourceAllocatorDisposer->terminate();
     mResourceAllocatorDisposer.reset();
     mDFG.terminate(*this);                  // free-up the DFG
-    mRenderableManager.terminate();         // free-up all renderables
+    mRenderableManager.terminate(driver);   // free-up all renderables
     mLightManager.terminate();              // free-up all lights
     mCameraManager.terminate(*this);        // free-up all cameras
 
@@ -764,13 +770,30 @@ void FEngine::prepare(DriverApi& driver) {
     });
 }
 
-void FEngine::gcManagers() {
-    // Note: this runs in a Job
-    auto& em = mEntityManager;
-    mRenderableManager.gc(em);
-    mLightManager.gc(em);
-    mTransformManager.gc(em);
-    mCameraManager.gc(*this, em);
+void FEngine::gc() {
+    JobSystem& js = getJobSystem();
+    auto *rootJob = js.createJob();
+
+    js.run(
+            jobs::createJob(js, rootJob, [this] {
+                // These are safe to GC *sequentially* from a worker thread.
+                // The JobSystem acts as a release/acquire operation.
+                mLightManager.gc(mEntityManager);
+                mTransformManager.gc(mEntityManager);
+                mCameraManager.gc(*this, mEntityManager);
+            }));
+
+    if (isAsynchronousModeEnabled()) {
+        // gcDeferredAsyncObjectDestruction() is thread-safe in this context because
+        // 1. JobSystem provides the release/acquire operation
+        // 2. it's only used from the main thread, which we are blocking during the gc
+        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, this));
+    }
+
+    // RenderableManager cannot be gc'ed from a different thread, because it needs the DriverAPI
+    mRenderableManager.gc(mEntityManager, getDriverApi());
+
+    js.runAndWait(rootJob);
 }
 
 void FEngine::gcDeferredAsyncObjectDestruction() {
@@ -1399,7 +1422,7 @@ bool FEngine::destroy(const FMaterialInstance* p) {
 
 UTILS_NOINLINE
 void FEngine::destroy(Entity const e) {
-    mRenderableManager.destroy(e);
+    mRenderableManager.destroy(e, getDriverApi());
     mLightManager.destroy(e);
     mTransformManager.destroy(e);
     mCameraManager.destroy(*this, e);
