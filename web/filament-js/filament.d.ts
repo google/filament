@@ -1747,7 +1747,7 @@ export interface View$VsmShadowOptions {
      */
     highPrecision?: boolean;
     /**
-     * VSM minimum variance scale, must be positive.
+     * @deprecated has no effect.
      */
     minVarianceScale?: number;
     /**

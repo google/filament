@@ -10,7 +10,7 @@ struct ShadowData {
     highp vec2 normalBias;
     bool elvsm;
     mediump uint layer;
-    mediump uint reserved1;
+    mediump float vsmExponent;
     mediump uint reserved2;
 };
 #endif
