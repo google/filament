@@ -367,9 +367,13 @@ void GLDescriptorSet::bind(
                     uint32_t requiredMipLevels = (std::floor(std::log2(std::max(t->width, std::max(t->height, t->depth)))) + 1);
                     bool textureHasRequiredMipLevels = t->levels == requiredMipLevels;
 
+<<<<<<< HEAD
                     bool samplerCanBeInvalid = params.filterMin > SamplerMinFilter::LINEAR ||
                         params.wrapS != SamplerWrapMode::CLAMP_TO_EDGE || params.wrapT != SamplerWrapMode::CLAMP_TO_EDGE;
 
+=======
+                    bool samplerCanBeInvalid = params.filterMin > SamplerMinFilter::LINEAR || params.wrapS != SamplerWrapMode::CLAMP_TO_EDGE || params.wrapT != SamplerWrapMode::CLAMP_TO_EDGE;
+>>>>>>> ecb4ad8d0 (Add workaround for GLES2 mipmap requirements)
                     if (samplerCanBeInvalid && (textureIsNonPowerOfTwo || !textureHasRequiredMipLevels)) {
                         if (params.filterMin > SamplerMinFilter::LINEAR) {
                             params.filterMin = SamplerMinFilter::NEAREST;
