@@ -175,7 +175,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // VSM shadows [variant: VSM]
             // ------------------------------------------------------------------------------------
             { "vsmExponent",             0, Type::FLOAT                  },
-            { "vsmDepthScale",           0, Type::FLOAT                  },
+            { "vsmMaxMoment",            0, Type::FLOAT, Precision::HIGH },
             { "vsmLightBleedReduction",  0, Type::FLOAT                  },
             { "shadowSamplingType",      0, Type::UINT                   },
 

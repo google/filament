@@ -271,8 +271,8 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
 
 void MaterialDefinition::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
-    perViewDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
-    perViewDescriptorSetLayoutVsm.terminate(engine.getDescriptorSetLayoutFactory(), driver);
+    perViewDescriptorSetLayoutPcf.terminate(engine.getDescriptorSetLayoutFactory(), driver);
+    perViewDescriptorSetLayoutS2d.terminate(engine.getDescriptorSetLayoutFactory(), driver);
     descriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
 }
 
@@ -607,23 +607,23 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
             refractionMode == RefractionMode::SCREEN_SPACE;
     bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
 
-    this->perViewDescriptorSetLayoutDescription = descriptor_sets::getPerViewDescriptorSetLayout(
+    this->perViewDescriptorSetLayoutPcfDescription = descriptor_sets::getPerViewDescriptorSetLayout(
             materialDomain, isLit, isSSR, hasFog, false);
 
-    this->perViewDescriptorSetLayoutVsmDescription = descriptor_sets::getPerViewDescriptorSetLayout(
+    this->perViewDescriptorSetLayoutS2dDescription = descriptor_sets::getPerViewDescriptorSetLayout(
             materialDomain, isLit, isSSR, hasFog, true);
 
     // set the labels
     this->descriptorSetLayoutDescription.label = CString{ name }.append("_perMat");
-    this->perViewDescriptorSetLayoutDescription.label = CString{ name }.append("_perView");
-    this->perViewDescriptorSetLayoutVsmDescription.label = CString{ name }.append("_perViewVsm");
+    this->perViewDescriptorSetLayoutPcfDescription.label = CString{ name }.append("_perView");
+    this->perViewDescriptorSetLayoutS2dDescription.label = CString{ name }.append("_perViewVsm");
 
     // get the PER_RENDERABLE and PER_VIEW descriptor binding info
     for (auto&& [bindingPoint, dsl] : {
             std::pair{ DescriptorSetBindingPoints::PER_RENDERABLE,
                     descriptor_sets::getPerRenderableLayout() },
             std::pair{ DescriptorSetBindingPoints::PER_VIEW,
-                    this->perViewDescriptorSetLayoutDescription }}) {
+                    this->perViewDescriptorSetLayoutPcfDescription }}) {
         Program::DescriptorBindingsInfo& descriptors = programDescriptorBindings[+bindingPoint];
         descriptors.reserve(dsl.descriptors.size());
         for (auto const& entry: dsl.descriptors) {
@@ -636,17 +636,17 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
             descriptorSetLayoutFactory, driver,
             this->descriptorSetLayoutDescription };
 
-    this->perViewDescriptorSetLayout = {
+    this->perViewDescriptorSetLayoutPcf = {
             descriptorSetLayoutFactory, driver,
-            this->perViewDescriptorSetLayoutDescription };
+            this->perViewDescriptorSetLayoutPcfDescription };
 
-    this->perViewDescriptorSetLayoutVsm = {
+    this->perViewDescriptorSetLayoutS2d = {
             descriptorSetLayoutFactory, driver,
-            this->perViewDescriptorSetLayoutVsmDescription };
+            this->perViewDescriptorSetLayoutS2dDescription };
 }
 
 backend::DescriptorSetLayout const& MaterialDefinition::getPerViewDescriptorSetLayoutDescription(
-        Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
+        Variant const variant, bool const useS2dDescriptorSetLayout) const noexcept {
     if (materialDomain == MaterialDomain::SURFACE) {
         if (Variant::isValidDepthVariant(variant)) {
             // Use the layout description used to create the per view depth variant layout.
@@ -657,10 +657,10 @@ backend::DescriptorSetLayout const& MaterialDefinition::getPerViewDescriptorSetL
             return descriptor_sets::getSsrVariantLayout();
         }
     }
-    if (useVsmDescriptorSetLayout) {
-        return perViewDescriptorSetLayoutVsmDescription;
+    if (useS2dDescriptorSetLayout) {
+        return perViewDescriptorSetLayoutS2dDescription;
     }
-    return perViewDescriptorSetLayoutDescription;
+    return perViewDescriptorSetLayoutPcfDescription;
 }
 
 Handle<HwProgram> MaterialDefinition::compileProgram(
@@ -689,7 +689,7 @@ Handle<HwProgram> MaterialDefinition::compileProgram(
     pb.descriptorLayout(+DescriptorSetBindingPoints::PER_VIEW,
             getPerViewDescriptorSetLayoutDescription(
                     specialization.variant,
-                    Variant::isVSMVariant(specialization.variant)));
+                    Variant::isShadowSampler2DVariant(specialization.variant)));
     pb.descriptorLayout(+DescriptorSetBindingPoints::PER_RENDERABLE,
             descriptor_sets::getPerRenderableLayout());
     pb.descriptorLayout(

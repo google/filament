@@ -36,6 +36,7 @@ VK_DEFINE_HANDLE(VmaPool)
 namespace filament::backend {
 
 struct VulkanCommandBuffer;
+struct VulkanRenderPass;
 struct VulkanRenderTarget;
 struct VulkanSwapChain;
 struct VulkanTexture;
@@ -58,11 +59,11 @@ struct VulkanAttachment {
     VkImageSubresourceRange getSubresourceRange() const;
 };
 
-struct VulkanRenderPass {
+struct VulkanRenderPassContext {
     // Between the begin and end command render pass we cache the command buffer
     VulkanCommandBuffer* commandBuffer;
     fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget;
-    VkRenderPass renderPass;
+    fvkmemory::resource_ptr<VulkanRenderPass> renderPass;
     RenderPassParams params;
     int currentSubpass;
 };

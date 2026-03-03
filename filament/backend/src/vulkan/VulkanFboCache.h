@@ -18,6 +18,9 @@
 #define TNT_FILAMENT_BACKEND_VULKANFBOCACHE_H
 
 #include "VulkanContext.h"
+#include "vulkan/memory/Resource.h"
+#include "vulkan/memory/ResourceManager.h"
+#include "vulkan/memory/ResourcePointer.h"
 
 #include <utils/Hash.h>
 
@@ -26,6 +29,9 @@
 #include <tsl/robin_map.h>
 
 namespace filament::backend {
+
+struct VulkanFramebuffer;
+struct VulkanRenderPass;
 
 // Simple manager for VkFramebuffer and VkRenderPass objects.
 //
@@ -57,7 +63,7 @@ public:
         uint8_t padding[2];
     };
     struct RenderPassVal {
-        VkRenderPass handle;
+        fvkmemory::resource_ptr<VulkanRenderPass> handle;
         uint32_t timestamp;
     };
     static_assert(0 == MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT % 8);
@@ -83,7 +89,7 @@ public:
         VkImageView depth; // 8 bytes
     };
     struct FboVal {
-        VkFramebuffer handle;
+        fvkmemory::resource_ptr<VulkanFramebuffer> handle;
         uint32_t timestamp;
     };
     static_assert(sizeof(VkRenderPass) == 8, "VkRenderPass has unexpected size.");
@@ -98,10 +104,12 @@ public:
     ~VulkanFboCache();
 
     // Retrieves or creates a VkFramebuffer handle.
-    VkFramebuffer getFramebuffer(FboKey const& config) noexcept;
+    fvkmemory::resource_ptr<VulkanFramebuffer> getFramebuffer(
+        FboKey const& config, fvkmemory::ResourceManager* resManager) noexcept;
 
     // Retrieves or creates a VkRenderPass handle.
-    VkRenderPass getRenderPass(RenderPassKey const& config) noexcept;
+    fvkmemory::resource_ptr<VulkanRenderPass> getRenderPass(
+        RenderPassKey const& config, fvkmemory::ResourceManager* resManager) noexcept;
 
     // Evicts old unused Vulkan objects. Call this once per frame.
     void gc() noexcept;

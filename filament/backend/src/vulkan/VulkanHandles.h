@@ -419,7 +419,7 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
         return mInfo->fbkey.samples;
     }
 
-    uint8_t getColorTargetCount(VulkanRenderPass const& pass) const;
+    uint8_t getColorTargetCount(VulkanRenderPassContext const& pass) const;
 
     inline bool hasDepth() const { return mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX; }
 
@@ -583,6 +583,32 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive, fvkmemory::Resource {
 
     fvkmemory::resource_ptr<VulkanVertexBuffer> vertexBuffer;
     fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer;
+};
+
+struct VulkanFramebuffer : public fvkmemory::Resource {
+    VulkanFramebuffer(VkDevice device, VkFramebuffer framebuffer);
+    ~VulkanFramebuffer();
+
+    inline VkFramebuffer getVkFramebuffer() const noexcept {
+        return mFramebuffer;
+    }
+
+private:
+    VkDevice mDevice;
+    VkFramebuffer mFramebuffer;
+};
+
+struct VulkanRenderPass : public fvkmemory::Resource {
+    VulkanRenderPass(VkDevice device, VkRenderPass renderPass);
+    ~VulkanRenderPass();
+
+    inline VkRenderPass getVkRenderPass() const noexcept {
+        return mRenderPass;
+    }
+
+private:
+    VkDevice mDevice;
+    VkRenderPass mRenderPass;
 };
 
 } // namespace filament::backend

@@ -336,6 +336,91 @@ float ShadowSample_PCSS(const bool DIRECTIONAL,
 }
 
 //------------------------------------------------------------------------------
+// VSM
+//------------------------------------------------------------------------------
+
+float chebyshevUpperBound(const highp vec2 moments, const highp float depth,
+        const highp float minVariance, const highp float lbrAmount) {
+    // Fast path: if the receiver is fully in front of the caster
+    if (depth <= moments.x) {
+        return 1.0;
+    }
+
+    // Calculate variance with our dynamically injected floor
+    highp float variance = max(moments.y - (moments.x * moments.x), minVariance);
+
+    // Standard Chebyshev inequality
+    highp float d = depth - moments.x;
+    highp float p_max = variance / (variance + d * d);
+
+    // Apply Light Bleeding Reduction (LBR)
+    return saturate((p_max - lbrAmount) / (1.0 - lbrAmount));
+}
+
+float evaluateEVSM(const bool ELVSM, float c,
+        const highp vec4 moments, const highp float zReceiver,
+        const highp vec2 dzduv, const highp vec2 texelSize) {
+    const highp float EPSILON_MULTIPLIER = 0.002; // could be 0.00001 in fp32
+    float lbrAmount = frameUniforms.vsmLightBleedReduction;
+
+    // Scale the UV-space gradient down to a single shadow map texel footprint.
+    highp vec2 texel_dzduv = dzduv * texelSize;
+
+    // squared magnitude of the linear depth gradient across a single shadow map texel footprint
+    highp float dz2 = dot(texel_dzduv, texel_dzduv);
+
+    // remap depth to [-1, 1]
+    highp float depth = zReceiver * 2.0 - 1.0;
+
+    // positive wrap
+    highp float pw = exp(c * depth);
+    highp float epsilon = EPSILON_MULTIPLIER * (pw * pw);
+    // Dynamic variance for the positive side (derivative of wraped depth w.r.t. light-space depth via Chain Rule)
+    highp float dpwdz = 2.0 * c * pw;
+    highp float pMinVariance = epsilon + 0.25 * (dpwdz * dpwdz) * dz2;
+    float p = chebyshevUpperBound(moments.xy, pw, pMinVariance, lbrAmount);
+
+    // negative wrap
+    if (ELVSM) {
+        highp float nw = -1.0 / pw;
+        highp float epsilon = EPSILON_MULTIPLIER * (nw * nw);
+        // Dynamic variance for the negative side (derivative of wraped depth w.r.t. light-space depth via Chain Rule)
+        highp float dnwdz = 2.0 * c * nw;
+        highp float nMinVariance = epsilon + 0.25 * (dnwdz * dnwdz) * dz2;
+        float n = chebyshevUpperBound(moments.zw, nw, nMinVariance, lbrAmount);
+       p = min(p, n);
+    }
+
+    return p;
+}
+
+float ShadowSample_VSM(const bool DIRECTIONAL, const highp sampler2DArray shadowMap,
+        const highp vec4 scissorNormalized,
+        const uint layer, const int index,
+        const highp vec4 shadowPosition, const highp float zLight) {
+
+    bool ELVSM = shadowUniforms.shadows[index].elvsm;
+    float c = shadowUniforms.shadows[index].vsmExponent;
+    highp vec2 texelSize = vec2(1.0) / vec2(textureSize(shadowMap, 0)); // TODO: put this in a uniform
+
+    // note: shadowPosition.z is in linear light-space normalized to [0, 1]
+    //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
+    //  see: computeLightSpacePosition() in common_shadowing.fs
+    highp vec3 position = vec3(shadowPosition.xy * (1.0 / shadowPosition.w), shadowPosition.z);
+
+    // plane receiver bias to reduce shadow acnee on the received plane (before clamp)
+    highp vec2 dzduv = computeReceiverPlaneDepthBias(position);
+
+    // clamp uv to border
+    position.xy = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
+
+    // Read the shadow map with all available filtering
+    highp vec4 moments = texture(shadowMap, vec3(position.xy, layer));
+
+    return evaluateEVSM(ELVSM, c, moments, position.z, dzduv, texelSize);
+}
+
+//------------------------------------------------------------------------------
 // Screen-space Contact Shadows
 //------------------------------------------------------------------------------
 
@@ -410,70 +495,6 @@ float screenSpaceContactShadow(vec3 lightDirection) {
 }
 
 //------------------------------------------------------------------------------
-// VSM
-//------------------------------------------------------------------------------
-
-float linstep(const float min, const float max, const float v) {
-    // we could use smoothstep() too
-    return clamp((v - min) / (max - min), 0.0, 1.0);
-}
-
-float reduceLightBleed(const float pMax, const float amount) {
-    // Remove the [0, amount] tail and linearly rescale (amount, 1].
-    return linstep(amount, 1.0, pMax);
-}
-
-float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
-        const highp float minVariance, const float lightBleedReduction) {
-    // Donnelly and Lauritzen 2006, "Variance Shadow Maps"
-
-    highp float variance = moments.y - (moments.x * moments.x);
-    variance = max(variance, minVariance);
-
-    highp float d = mean - moments.x;
-    float pMax = variance / (variance + d * d);
-
-    pMax = reduceLightBleed(pMax, lightBleedReduction);
-
-    return mean <= moments.x ? 1.0 : pMax;
-}
-
-float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
-    highp float depthScale = frameUniforms.vsmDepthScale * depth;
-    highp float minVariance = depthScale * depthScale;
-    return chebyshevUpperBound(moments, depth, minVariance, frameUniforms.vsmLightBleedReduction);
-}
-
-float ShadowSample_VSM(const bool ELVSM, const highp sampler2DArray shadowMap,
-        const highp vec4 scissorNormalized,
-        const uint layer, const highp vec4 shadowPosition) {
-
-    // note: shadowPosition.z is in linear light-space normalized to [0, 1]
-    //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
-    //  see: computeLightSpacePosition() in common_shadowing.fs
-    highp vec3 position = vec3(shadowPosition.xy * (1.0 / shadowPosition.w), shadowPosition.z);
-
-    // Note: we don't need to clamp to `scissorNormalized` in the VSM case because this is only
-    // needed when the shadow casters and receivers are different, which is never the case with VSM
-    // (see ShadowMap.cpp).
-
-    // Read the shadow map with all available filtering
-    highp vec4 moments = texture(shadowMap, vec3(position.xy, layer));
-    highp float depth = position.z;
-
-    // EVSM depth warping
-    depth = depth * 2.0 - 1.0;
-    depth = frameUniforms.vsmExponent * depth;
-
-    depth = exp(depth);
-    float p = evaluateShadowVSM(moments.xy, depth);
-    if (ELVSM) {
-        p = min(p, evaluateShadowVSM(moments.zw, -1.0 / depth));
-    }
-    return p;
-}
-
-//------------------------------------------------------------------------------
 // Shadow sampling dispatch
 //------------------------------------------------------------------------------
 
@@ -529,6 +550,9 @@ float shadow(const bool DIRECTIONAL,
     } else if (CONFIG_SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW) {
         return ShadowSample_PCF_Low(shadowMap, scissorNormalized, layer, shadowPosition);
     }
+
+    // should not happen
+    return 0.0;
 }
 
 // Shadow requiring a sampler2D sampler (VSM, DPCF and PCSS)
@@ -539,9 +563,8 @@ float shadow(const bool DIRECTIONAL,
     uint layer = shadowUniforms.shadows[index].layer;
     // This conditional is resolved at compile time
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
-        bool elvsm = shadowUniforms.shadows[index].elvsm;
-        return ShadowSample_VSM(elvsm, shadowMap, scissorNormalized, layer,
-                shadowPosition);
+        return ShadowSample_VSM(DIRECTIONAL, shadowMap, scissorNormalized, layer, index,
+                shadowPosition, zLight);
     }
 
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_DPCF) {
@@ -558,8 +581,8 @@ float shadow(const bool DIRECTIONAL,
         // This is here mostly for debugging at this point.
         // Note: In this codepath, the normal bias is not applied because we're in the VSM variant.
         // (see: get{Cascade|Spot}LightSpacePosition)
-        return ShadowSample_PCF(shadowMap, scissorNormalized,
-                layer, shadowPosition);
+        return ShadowSample_PCF(shadowMap, scissorNormalized, layer,
+                shadowPosition);
     }
 
     // should not happen

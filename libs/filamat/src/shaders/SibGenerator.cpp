@@ -49,7 +49,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
     // reason we name them "unused*" to ensure we're not using them by mistake (type/format don't
     // matter).
 
-    static SamplerInterfaceBlock const sibPcf{ SamplerInterfaceBlock::Builder()
+    static SamplerInterfaceBlock const sibShadowSamplerPcf{ SamplerInterfaceBlock::Builder()
             .name("sampler0")
             .stageFlags(backend::ShaderStageFlags::FRAGMENT)
             .add(  {{ "shadowMap",   +PerViewBindingPoints::SHADOW_MAP,     Type::SAMPLER_2D_ARRAY, Format::SHADOW, Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
@@ -62,7 +62,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
             )
             .build() };
 
-    static SamplerInterfaceBlock const sibVsm{ SamplerInterfaceBlock::Builder()
+    static SamplerInterfaceBlock const sibShadowSampler2D{ SamplerInterfaceBlock::Builder()
             .name("sampler0")
             .stageFlags(backend::ShaderStageFlags::FRAGMENT)
             .add(  {{ "shadowMap",   +PerViewBindingPoints::SHADOW_MAP,     Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::HIGH,   FILTERABLE, !MULTISAMPLE, ALL_STAGES },
@@ -85,10 +85,10 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
 
     if (Variant::isSSRVariant(variant)) {
         return sibSsr;
-    } else if (Variant::isVSMVariant(variant)) {
-        return sibVsm;
+    } else if (Variant::isShadowSampler2DVariant(variant)) {
+        return sibShadowSampler2D;
     } else {
-        return sibPcf;
+        return sibShadowSamplerPcf;
     }
 }
 
