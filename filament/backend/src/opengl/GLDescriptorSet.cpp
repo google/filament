@@ -343,6 +343,7 @@ void GLDescriptorSet::bind(
                     gl.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
                     SamplerParams params = arg.params;
 
+#if defined(__EMSCRIPTEN__)
                     // From https://registry.khronos.org/OpenGL-Refpages/es2.0/
                     // GLES 2.0 will draw mipmapped samplers as black if the following conditions are not met:
                     //
@@ -362,25 +363,21 @@ void GLDescriptorSet::bind(
                     //
                     // So we force the sampler to a valid state in those cases.
                     auto isPowerOfTwo = [](uint32_t x) -> bool { return (x & (x - 1)) == 0 && x > 0; };
-                    bool textureIsNonPowerOfTwo = isPowerOfTwo(t->width) && isPowerOfTwo(t->height);
+                    bool textureIsPowerOfTwo = isPowerOfTwo(t->width) && isPowerOfTwo(t->height);
 
                     uint32_t requiredMipLevels = (std::floor(std::log2(std::max(t->width, std::max(t->height, t->depth)))) + 1);
                     bool textureHasRequiredMipLevels = t->levels == requiredMipLevels;
 
-<<<<<<< HEAD
-                    bool samplerCanBeInvalid = params.filterMin > SamplerMinFilter::LINEAR ||
-                        params.wrapS != SamplerWrapMode::CLAMP_TO_EDGE || params.wrapT != SamplerWrapMode::CLAMP_TO_EDGE;
-
-=======
-                    bool samplerCanBeInvalid = params.filterMin > SamplerMinFilter::LINEAR || params.wrapS != SamplerWrapMode::CLAMP_TO_EDGE || params.wrapT != SamplerWrapMode::CLAMP_TO_EDGE;
->>>>>>> ecb4ad8d0 (Add workaround for GLES2 mipmap requirements)
-                    if (samplerCanBeInvalid && (textureIsNonPowerOfTwo || !textureHasRequiredMipLevels)) {
-                        if (params.filterMin > SamplerMinFilter::LINEAR) {
+                    bool samplerCanBeInvalid = params.filterMin > SamplerMinFilter::LINEAR;
+                    if (samplerCanBeInvalid && (!textureIsPowerOfTwo || !textureHasRequiredMipLevels)) {
+                        if (params.filterMin == SamplerMinFilter::NEAREST_MIPMAP_NEAREST
+                            || params.filterMin == SamplerMinFilter::LINEAR_MIPMAP_NEAREST) {
                             params.filterMin = SamplerMinFilter::NEAREST;
+                        } else {
+                            params.filterMin = SamplerMinFilter::LINEAR;
                         }
-                        params.wrapS = SamplerWrapMode::CLAMP_TO_EDGE;
-                        params.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
                     }
+#endif
                     
                     glTexParameteri(t->gl.target, GL_TEXTURE_MIN_FILTER,
                             (GLint)GLUtils::getTextureFilter(params.filterMin));
