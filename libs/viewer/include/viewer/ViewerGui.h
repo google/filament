@@ -260,7 +260,7 @@ private:
     int mCurrentAnimation = 0; // -1 means not playing animation and count means plays all of them (0-based index)
     int mCurrentVariant = 0;
     bool mEnableWireframe = false;
-    int mVsmMsaaSamplesLog2 = 1;
+    int mVsmMsaaSamplesLog2 = 2;
     Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;

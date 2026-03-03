@@ -12,7 +12,11 @@ LAYOUT_LOCATION(5) VARYING highp vec2 vertex_uv01;
 LAYOUT_LOCATION(5) VARYING highp vec4 vertex_uv01;
 #endif
 
+#if defined(VARIANT_HAS_MNT)
+LAYOUT_LOCATION(6) centroid VARYING highp vec4 vertex_worldPosition;
+#else
 LAYOUT_LOCATION(6) VARYING highp vec4 vertex_worldPosition;
+#endif
 
 #if defined(HAS_ATTRIBUTE_TANGENTS)
 LAYOUT_LOCATION(7) SHADING_INTERPOLATION VARYING mediump vec3 vertex_worldNormal;

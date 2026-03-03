@@ -206,6 +206,8 @@ Filament.loadGeneratedExtensions = function() {
         const options = {
             penumbraScale: 1.0,
             penumbraRatioScale: 1.0,
+            maxPenumbraRatio: 10.0,
+            maxSearchRadius: 1.0,
         };
         return Object.assign(options, overrides);
     };

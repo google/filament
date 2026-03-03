@@ -365,7 +365,12 @@ value_object<LightManager::ShadowOptions>("LightManager$ShadowOptions")
     .field("stepCount", &LightManager::ShadowOptions::stepCount)
     .field("maxShadowDistance", &LightManager::ShadowOptions::maxShadowDistance)
     .field("shadowBulbRadius", &LightManager::ShadowOptions::shadowBulbRadius)
-    .field("transform", &LightManager::ShadowOptions::transform);
+    .field("transform", &LightManager::ShadowOptions::transform)
+    .field("penumbraScale", &LightManager::ShadowOptions::penumbraScale)
+    .field("penumbraRatioScale", &LightManager::ShadowOptions::penumbraRatioScale)
+    .field("maxPenumbraRatio", &LightManager::ShadowOptions::maxPenumbraRatio)
+    .field("maxSearchRadius", &LightManager::ShadowOptions::maxSearchRadius)
+    ;
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.

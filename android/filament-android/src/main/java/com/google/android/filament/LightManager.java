@@ -365,10 +365,15 @@ public class LightManager {
         public float blurWidth = 0.0f;
 
         /**
-         * Light bulb radius used for soft shadows. Currently this is only used when DPCF is
-         * enabled. (2cm by default).
+         * Light bulb radius used for soft shadows. This is only used PCSS.
+         * A negative value is used to use a default value for each light type.
+         * For Spot and point-lights, this is the radius of the light bulb in meters.
+         * For Directional lights, this is tan(angularRadius), or just angularRadius [Rad] for small angles.
+         * SUN: getSunAngularRadius() * getSunHaloSize()
+         * DIRECTIONAL: 1.0 (1m area light)
+         * POINT / SPOT: 0.06 (A19 bulb)
          */
-        public float shadowBulbRadius = 0.02f;
+        public float shadowBulbRadius = -1.0f;
 
         /**
          * Transforms the shadow direction. Must be a unit quaternion.
@@ -380,6 +385,82 @@ public class LightManager {
         @NonNull
         @Size(min = 4, max = 4)
         public float[] transform = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+        /**
+         * Sets a light-specific scale factor applied to the final penumbra size of PCSS shadows.
+         *
+         * This parameter acts as an artistic modifier, allowing you to artificially soften or
+         * sharpen the shadows cast by this specific light without changing its physical
+         * light bulb size or altering the global scene lighting.
+         *
+         * The final scale applied to the shadow is calculated by modulating this local
+         * value with the global SoftShadowOptions::penumbraScale (global * local).
+         *
+         * The local penumbra scale multiplier. Default is 1.0.
+         *
+         * @see View.SoftShadowOptions#penumbraScale
+         */
+        float penumbraScale = 1.0f;
+
+        /**
+         * Sets a light-specific scale factor applied to the PCSS geometric ratio before clamping.
+         *
+         * This parameter controls the "contact shadow contrast" for this specific light. It
+         * allows artists to dictate how rapidly this light's shadow transitions from razor-sharp
+         * at the contact point to its maximum blur radius. It is heavily utilized to stylize
+         * lighting and aggressively mask 2.5D shadow map limitations near occluders.
+         *
+         * - Values > 1.0 (e.g., 10.0 or 20.0) create a rapid, cinematic blur acceleration.
+         * - Values < 1.0 keep the shadow crisp over longer distances.
+         *
+         * The final ratio scale applied is calculated by modulating this local value with
+         * the global SoftShadowOptions::penumbraRatioScale (global * local).
+         *
+         * The local penumbra ratio scale multiplier. Default is 1.0.
+         *
+         * @see View.SoftShadowOptions#penumbraRatioScale
+         */
+        float penumbraRatioScale = 1.0f;
+
+        /**
+         * Sets a light-specific maximum geometric ratio applied to Percentage-Closer Soft Shadows (PCSS),
+         * overriding the global default.
+         *
+         * In PCSS, overlapping occluders (like complex light fixtures) can cause the shadow map's 2.5D
+         * depth limitations to calculate an artificially close blocker depth. This drives the geometric
+         * ratio toward infinity, resulting in unnatural, massive "ghost" shadows.
+         *
+         * This parameter allows you to clamp the geometric ratio for this specific light, fixing geometric
+         * artifacts caused by layered occluders without compromising the soft shadows of other lights in
+         * the scene.
+         *
+         * The maximum penumbra ratio. Setting this to a value <= 0.0f disables the
+         * override and reverts the light to using the global default.
+         *
+         * @see View.SoftShadowOptions#maxPenumbraRatio
+         */
+        public float maxPenumbraRatio = 10.0f;
+
+        /**
+         * Sets a light-specific maximum world-space radius used during the PCSS blocker search,
+         * overriding the global default.
+         *
+         * In PCSS, the shadow algorithm searches a region of the shadow map to find the
+         * average depth of occluders. If this search region expands too much, it may inadvertently
+         * overlap distinct foreground geometry (like the light's own complex fixture) or climb
+         * vertical surfaces (like a pole), causing the shadow to detach from the contact point
+         * and appear to float.
+         *
+         * This parameter allows you to clamp the physical footprint of the blocker search
+         * for this specific light, fixing floating contact artifacts without compromising the
+         * soft shadows of other lights in the scene.
+         *
+         * The maximum search radius in world-space meters. Setting this to a
+         * value <= 0.0f disables the override and reverts the light to using the global default.
+         *
+         * @see View.SoftShadowOptions#maxSearchRadius
+         */
+        public float maxSearchRadius = 1.0f;
     }
 
     public static class ShadowCascades {
@@ -518,7 +599,9 @@ public class LightManager {
                     options.polygonOffsetConstant, options.polygonOffsetSlope,
                     options.screenSpaceContactShadows,
                     options.stepCount, options.maxShadowDistance,
-                    options.elvsm, options.blurWidth, options.shadowBulbRadius, options.transform);
+                    options.elvsm, options.blurWidth, options.shadowBulbRadius, options.transform,
+                    options.penumbraScale, options.penumbraRatioScale,
+                    options.maxPenumbraRatio, options.maxSearchRadius);
             return this;
         }
 
@@ -1182,7 +1265,9 @@ public class LightManager {
              boolean stable, boolean lispsm,
              float polygonOffsetConstant, float polygonOffsetSlope,
              boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance,
-             boolean elvsm, float blurWidth, float shadowBulbRadius, float[] transform);
+             boolean elvsm, float blurWidth, float shadowBulbRadius, float[] transform,
+             float penumbraScale, float penumbraRatioScale,
+             float maxPenumbraRatio, float maxSearchRadius);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

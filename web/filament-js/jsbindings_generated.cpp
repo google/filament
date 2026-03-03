@@ -171,6 +171,8 @@ value_object<View::VsmShadowOptions>("View$VsmShadowOptions")
 value_object<View::SoftShadowOptions>("View$SoftShadowOptions")
     .field("penumbraScale", &View::SoftShadowOptions::penumbraScale)
     .field("penumbraRatioScale", &View::SoftShadowOptions::penumbraRatioScale)
+    .field("maxPenumbraRatio", &View::SoftShadowOptions::maxPenumbraRatio)
+    .field("maxSearchRadius", &View::SoftShadowOptions::maxSearchRadius)
     ;
 
 value_object<View::StereoscopicOptions>("View$StereoscopicOptions")

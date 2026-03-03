@@ -1059,6 +1059,10 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, SoftShadowOptio
             i = parse(tokens, i + 1, jsonChunk, &out->penumbraScale);
         } else if (compare(tok, jsonChunk, "penumbraRatioScale") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->penumbraRatioScale);
+        } else if (compare(tok, jsonChunk, "maxPenumbraRatio") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxPenumbraRatio);
+        } else if (compare(tok, jsonChunk, "maxSearchRadius") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxSearchRadius);
         } else {
             slog.w << "Invalid SoftShadowOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1074,7 +1078,9 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, SoftShadowOptio
 std::ostream& operator<<(std::ostream& out, const SoftShadowOptions& in) {
     return out << "{\n"
         << "\"penumbraScale\": " << (in.penumbraScale) << ",\n"
-        << "\"penumbraRatioScale\": " << (in.penumbraRatioScale) << "\n"
+        << "\"penumbraRatioScale\": " << (in.penumbraRatioScale) << ",\n"
+        << "\"maxPenumbraRatio\": " << (in.maxPenumbraRatio) << ",\n"
+        << "\"maxSearchRadius\": " << (in.maxSearchRadius) << "\n"
         << "}";
 }
 

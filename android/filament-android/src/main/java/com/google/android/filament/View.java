@@ -2125,11 +2125,11 @@ public class View {
     public enum ShadowType {
         /** percentage-closer filtered shadows (default) */
         PCF,
-        /** variance shadows */
+        /** exponential variance shadows (EVSM) */
         VSM,
-        /** PCF with contact hardening simulation */
+        /** @deprecated falls back to PCSS */
         DPCF,
-        /** PCF with soft shadows and contact hardening */
+        /** EVSM with soft shadows and contact hardening */
         PCSS,
         PCFd,
     }
@@ -2178,23 +2178,100 @@ public class View {
     }
 
     /**
-     * View-level options for DPCF and PCSS Shadowing.
+     * View-level options for PCSS Shadowing.
      * @see #setSoftShadowOptions
      * <b>Warning:</b> This API is still experimental and subject to change.
      */
     public static class SoftShadowOptions {
         /**
-         * Globally scales the penumbra of all DPCF and PCSS shadows
-         * Acceptable values are greater than 0
+         * Sets a global scale factor applied to the final penumbra size of all PCSS shadows.
+         *
+         * This parameter acts as an artistic modifier, uniformly scaling the overall softness
+         * of shadows across the entire scene without altering the physical angular size of
+         * the light sources.
+         *
+         * The final scale applied to a shadow is calculated by modulating this global
+         * value with the light's individual penumbraScale (global * local). This allows
+         * art directors to shift the global mood (e.g., making all shadows 20% softer)
+         * while preserving the relative contrast between different lights.
+         *
+         * The global penumbra scale multiplier. Default is 1.0 (physically based).
+         *
+         * @see LightManager::ShadowOptions::penumbraScale
          */
         public float penumbraScale = 1.0f;
         /**
-         * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
-         * This effectively controls the strength of contact hardening effect and is useful for
-         * artistic purposes. Higher values make the shadows become softer faster.
-         * Acceptable values are equal to or greater than 1.
+         * Sets a global scale factor applied to the PCSS geometric ratio before failsafe clamping.
+         *
+         * This parameter controls the "contact shadow contrast" or the rate at which shadows
+         * transition from sharp to soft. By scaling the geometric ratio, you can create
+         * highly dramatic, cinematic shadows that blur rapidly as they move away from the
+         * contact point, completely independently of the light's overall physical size.
+         *
+         * - Values > 1.0 cause the shadow to accelerate toward its maximum softness faster.
+         * - Values < 1.0 cause the shadow to stay sharper for a longer distance.
+         *
+         * The final ratio scale applied is calculated by modulating this global value with
+         * the light's individual penumbraRatioScale (global * local).
+         *
+         * The global penumbra ratio scale multiplier. Default is 1.0.
+         *
+         * @see LightManager::ShadowOptions::penumbraRatioScale
          */
         public float penumbraRatioScale = 1.0f;
+        /**
+         * Sets the global default maximum geometric ratio applied to Percentage-Closer Soft Shadows (PCSS).
+         *
+         * In PCSS, the physical width of a shadow's penumbra is determined by the ratio:
+         * (distance_to_receiver - distance_to_blocker) / distance_to_blocker
+         *
+         * Standard shadow maps store a single depth layer (2.5D). When evaluating complex,
+         * overlapping occluders (e.g., foliage, layered floating geometry), the shadow map
+         * cannot resolve volumetric depth. This limitation can trick the blocker search into
+         * returning an artificially close depth value, driving the denominator toward zero.
+         * The resulting explosion in penumbra size causes unnatural, massive "ghost" shadows.
+         *
+         * maxPenumbraRatio applies a smooth, asymptotic squash to the geometric ratio, acting
+         * as both a mathematical failsafe and an artistic control. It guarantees the penumbra
+         * will gracefully stop expanding before it destroys the visual coherence of the scene.
+         *
+         * This global value acts as the baseline for all lights. Individual lights can explicitly
+         * override this default via the LightManager API to handle specific geometric artifacts
+         * without affecting the rest of the scene.
+         *
+         * - A lower value (e.g., 2.0) creates generally sharper, highly stable
+         * shadows that aggressively suppress 2.5D layered occlusion artifacts.
+         * - A higher value (e.g., 5.0+) allows for physically accurate, widely
+         * expanding soft shadows, but increases susceptibility to ghosting.
+         *
+         * @see LightManager::ShadowOptions::maxPenumbraRatio
+         */
+        public float maxPenumbraRatio = 10.0f;
+        /**
+         * Sets the global default maximum world-space radius used during the PCSS blocker search.
+         *
+         * In PCSS, the shadow algorithm searches a region of the shadow map to find the
+         * average depth of occluders. For lights with a large angular size (or objects
+         * very far from the light), this search region can become massive.
+         * * If the search region expands too much, it may inadvertently overlap distinct
+         * foreground geometry (like a streetlight fixture) or climb vertical surfaces
+         * (like a pole), causing the shadow to detach from the contact point and appear
+         * to float.
+         *
+         * maxSearchRadius limits the physical footprint of this search. This global value acts
+         * as the baseline for all lights. Individual lights can explicitly override this default
+         * via the LightManager API to clamp the search footprint for specific geometric setups
+         * without affecting the rest of the scene.
+         *
+         * The maximum search radius in world-space meters:
+         * - A smaller value (e.g., 0.05 to 0.1) tightly anchors shadows to their
+         * contact points and prevents artifacts near complex light fixtures.
+         * - A larger value provides more physically accurate blocker averaging for
+         * massive area lights but increases the risk of floating geometry.
+         *
+         * @see LightManager::ShadowOptions::maxSearchRadius
+         */
+        public float maxSearchRadius = 1.0f;
     }
 
     /**
