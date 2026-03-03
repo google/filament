@@ -38,6 +38,9 @@ public:
 
     Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) override;
     int getOSVersion() const noexcept override { return 0; }
+    utils::CString getDeviceInfo(DeviceInfoType, Driver* UTILS_NONNULL) const noexcept override {
+        return {};
+    }
 
     /**
      * Optionally initializes the Metal platform by acquiring resources necessary for rendering.

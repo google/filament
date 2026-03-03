@@ -73,6 +73,7 @@ protected:
 
     filament::backend::DriverApi& getDriverApi() { return *commandStream; }
     filament::backend::Driver& getDriver() { return *driver; }
+    filament::backend::Platform& getPlatform() { return *platform;}
 
     ImageExpectations& getExpectations() { return *mImageExpectations; }
 
@@ -92,6 +93,7 @@ private:
 
     static std::vector<std::string> sFailedImages;
 
+    filament::backend::Platform* platform = nullptr;
     filament::backend::Driver* driver = nullptr;
     filament::backend::CommandBufferQueue commandBufferQueue;
     std::unique_ptr<filament::backend::DriverApi> commandStream;

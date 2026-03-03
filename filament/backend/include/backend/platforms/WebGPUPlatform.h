@@ -46,6 +46,10 @@ public:
     ~WebGPUPlatform() override = default;
 
     [[nodiscard]] int getOSVersion() const noexcept final { return 0; }
+    [[nodiscard]] utils::CString getDeviceInfo(DeviceInfoType,
+            Driver* UTILS_NONNULL) const noexcept override {
+        return {};
+    }
 
     [[nodiscard]] wgpu::Instance& getInstance() noexcept { return mInstance; }
 
