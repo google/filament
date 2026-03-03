@@ -1,0 +1,26 @@
+name: 'Renderdiff Generate'
+description: 'Sets up prerequisites and runs the generate script for renderdiff'
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/mac-prereq
+    - uses: ./.github/actions/get-gltf-assets
+    - uses: ./.github/actions/get-mesa
+    - uses: ./.github/actions/get-vulkan-sdk
+    - name: Prerequisites
+      run: |
+        # Must have at least clang-16 for a webgpu/dawn build.
+        sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+      shell: bash
+    - name: Generate images
+      run: |
+        TEST_DIR=test/renderdiff
+        source ${TEST_DIR}/src/preamble.sh
+        set -eux
+        bash ${TEST_DIR}/generate.sh
+        set +eux
+      shell: bash
+    - name: Build diffimg tool
+      run: |
+        ./build.sh release diffimg
+      shell: bash

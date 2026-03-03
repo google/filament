@@ -16,12 +16,13 @@ class SimulatedSkybox {
     this.ozone = 0.0;
     this.msFactors = [0.1, 0.5, 0.0];
     this.contrast = 1.0;
-    this.nightColor = [0.0, 0.0003, 0.00075];
+    this.nightColor = [0.0, 3.0e-9, 7.5e-9];
     this.shimmerControl = [0.0, 20.0, 0.1];
     this.cloudControl = [0.0, 0.1, 8000.0, 0.0];
     this.cloudControl2 = [0.0, 0.0, 0.0, 0.0];
     this.waterControl = [50.0, 1.0, 1.0, 4.0]; // x=Strength, y=Speed, z=DerivativeTrick, w=Octaves
     this.starControl = [0.001, 1.0, 350.0, 0.01]; // x=Density, y=Enabled, z=Frequency, w=PixelScale
+    this.starIntensity = 1.0;
     this.focalLength = 24.0;
     this.height = 1000.0;
     this.planetRadius = 6360.0;
@@ -43,7 +44,7 @@ class SimulatedSkybox {
 
     // Milky Way Parameters
     // x=Intensity, y=Saturation, z=Unused
-    this.milkyWayControl = [1.0, 1.0, 0.07];
+    this.milkyWayControl = [1.0, 1.2, 0.05];
     this.milkyWayEnabled = true;
     this.milkyWayRotation = [1, 0, 0, 0, 1, 0, 0, 0, 1]; // Identity by default
     this.initEntity();
@@ -453,6 +454,11 @@ class SimulatedSkybox {
     this.updateCoefficients();
   }
 
+  setStarIntensity(intensity) {
+    this.starIntensity = Math.max(0.0, intensity);
+    this.updateCoefficients();
+  }
+
   setMoonPosition(direction) {
     // normalize
     const len = Math.hypot(direction[0], direction[1], direction[2]);
@@ -498,6 +504,13 @@ class SimulatedSkybox {
       this.milkyWayRotation = rotationMatrix;
       this.updateCoefficients();
     }
+  }
+
+
+
+  setExposure(exposure) {
+    this.exposure = exposure;
+    this.updateCoefficients();
   }
 
   updateCoefficients() {
@@ -585,6 +598,7 @@ class SimulatedSkybox {
     this.materialInstance.setFloat4Parameter('cloudControl2', new Float32Array(this.cloudControl2));
     this.materialInstance.setFloat4Parameter('waterControl', new Float32Array(this.waterControl));
     this.materialInstance.setFloat4Parameter('starControl', new Float32Array(this.starControl));
+    this.materialInstance.setFloatParameter('starIntensity', this.starIntensity);
 
     this.materialInstance.setFloatParameter('sunIntensity', physicalSunIntensity);
 
@@ -615,12 +629,13 @@ class SimulatedSkybox {
 
     this.materialInstance.setFloatParameter('sunIntensity2', finalMoonIntensity);
 
-    // Scale Milky Way by Sun Intensity (Pre-exposed) to match dynamic range
-    // Calibration: 1.0 User Intensity ~ 0.025 Lux Relative (approx 2.5% of Sun Pixel Value at Day)
-    // At Sunny 16 (Sun ~ 2.6), this gives ~0.065 pixel brightness, which is visible but dim.
+    // Scale Milky Way by Sun Intensity
+    // Calibration: 1.0 User Intensity = 1.5e-3 cd/m^2 (Nits) approx.
+    // Target: 1.5e-3 Nits. SunIntensity = 100,000.
+    // Scale = 1.5e-3 / 1.0e5 = 1.5e-8.
     const mwIntensity = this.milkyWayEnabled ? this.milkyWayControl[0] : 0.0;
     const mwUniform = [
-      mwIntensity * this.sunIntensity * 0.025,
+      mwIntensity * this.sunIntensity * 1.5e-8,
       this.milkyWayControl[1],
       this.milkyWayControl[2]
     ];
@@ -634,6 +649,7 @@ class SimulatedSkybox {
     const moonHaloUpload = [...this.moonHalo];
     moonHaloUpload[2] *= moonRadConv;
     this.materialInstance.setFloat4Parameter('sunHalo2', new Float32Array(moonHaloUpload));
+    this.materialInstance.setFloatParameter('exposure', this.exposure !== undefined ? this.exposure : 1.0);
 
     // Solar Eclipse (CPU Calculation)
     const sunRadius = Math.acos(this.sunHalo[0]);

@@ -126,6 +126,12 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
         case ResourceType::STREAM:
             destruct<VulkanStream>(Handle<VulkanStream>(id));
             break;
+        case ResourceType::FRAMEBUFFER:
+            destruct<VulkanFramebuffer>(Handle<VulkanFramebuffer>(id));
+            break;
+        case ResourceType::RENDER_PASS:
+            destruct<VulkanRenderPass>(Handle<VulkanRenderPass>(id));
+            break;
         case ResourceType::UNDEFINED_TYPE:
             break;
     }

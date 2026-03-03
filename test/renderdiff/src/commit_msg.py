@@ -18,6 +18,7 @@ import re
 from utils import execute, ArgParseImpl
 
 RDIFF_UPDATE_GOLDEN_STR = 'RDIFF_BRANCH'
+RDIFF_ACCEPT_NEW_GOLDENS_STR = 'RDIFF_ACCEPT_NEW_GOLDENS'
 
 def _parse_commit(commit_str):
   lines = commit_str.split('\n')
@@ -42,9 +43,11 @@ def _parse_commit(commit_str):
 
 if __name__ == "__main__":
   RE_STR = rf"{RDIFF_UPDATE_GOLDEN_STR}(?:\s)?\=(?:\s)?([a-zA-Z0-9\s\-\/]+)"
+  RE_ACCEPT = rf"^{RDIFF_ACCEPT_NEW_GOLDENS_STR}$"
 
   parser = ArgParseImpl()
   parser.add_argument('--file', help='A file containing the commit message')
+  parser.add_argument('--mode', choices=['branch', 'accept_new_goldens'], default='branch', help='Mode of operation')
   args, _ = parser.parse_known_args(sys.argv[1:])
 
   if not args.file:
@@ -53,14 +56,21 @@ if __name__ == "__main__":
     with open(args.file, 'r') as f:
       msg = f.read()
 
-  to_update = []
   commit, title, description = _parse_commit(msg)
+
+  if args.mode == 'accept_new_goldens':
+    for line in description:
+      if re.match(RE_ACCEPT, line):
+        sys.exit(0)
+    sys.exit(1)
+
+  # args.mode == 'branch'
   for line in description:
     m = re.match(RE_STR, line)
     if not m:
       continue
     print(m.group(1))
-    exit(0)
+    sys.exit(0)
 
   # Always default to the main branch
   print('main')

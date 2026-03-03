@@ -97,8 +97,18 @@ material {
             precision : high
         },
         {
+            type : float,
+            name : starIntensity,
+            precision : high
+        },
+        {
             type : sampler2d,
             name : moonTexture
+        },
+        {
+            type : float,
+            name : exposure,
+            precision : high
         },
         {
             type : sampler2d,
@@ -162,9 +172,9 @@ fragment {
     // --- CONFIGURATION ---
 
     // Stars
-    #define STAR_GLOBAL_INTENSITY 150.0      // Master brightness multiplier [0.0 - 500.0]
-    #define STAR_BRIGHTNESS_BASE 0.5         // Minimum random brightness [0.0 - 1.0]
-    #define STAR_BRIGHTNESS_VAR 4.0          // Random brightness variance range [0.0 - 10.0]
+    #define STAR_GLOBAL_INTENSITY 100.0      // Master brightness multiplier [0.0 - 500.0]
+    #define STAR_BRIGHTNESS_BASE 0.01        // Minimum random brightness [0.0 - 1.0]
+    #define STAR_BRIGHTNESS_VAR 15.0         // Random brightness variance range [0.0 - 10.0]
     #define STAR_FADE_SUN_ELV_HIGH 0.10      // Sun elevation (sin) where stars are fully hidden [0.0 - 0.5]
     #define STAR_FADE_SUN_ELV_LOW -0.20      // Sun elevation (sin) where stars are fully visible [-0.5 - 0.0]
     #define STAR_CLOUD_OCCLUSION 0.1         // Visibility when covered by clouds [0.0 - 1.0]
@@ -961,7 +971,11 @@ fragment {
                              highp vec4 sunHalo, highp vec4 cloudControl, highp vec4 cloudControl2, 
                              highp vec4 shimmerControl, highp vec4 waterControl,
                              highp vec3 L2, highp float sunIntensity2, highp vec4 sunHalo2,
-                             sampler2D moonTex, sampler2D moonNormal) {
+                             sampler2D moonTex, sampler2D moonNormal,
+                             highp vec3 nightColor,
+                             highp mat3 milkyWayRotation,
+                             highp vec3 milkyWayControl,
+                             sampler2D milkyWayTexture) {
 
         // Project to plane y=0
         highp float t = WATER_PLANE_HEIGHT / min(V.y, -0.0002); // Reduced clamp to minimize "wall" artifact
@@ -1057,7 +1071,7 @@ fragment {
          highp float rHorizonMask = 1.0 - smoothstep(0.0, REFLECTION_HORIZON_FADE, R.y);
         
         if (rHorizonMask > 0.0) {
-             reflection += getStarLayer(R, L, reflCloudDensity, outTransmittance, materialParams.starControl) * rHorizonMask;
+             reflection += getStarLayer(R, L, reflCloudDensity, outTransmittance, materialParams.starControl) * rHorizonMask * materialParams.exposure;
         }
 
         // Sun Disk Reflection
@@ -1087,6 +1101,29 @@ fragment {
         
         // Apply clouds to reflection
         reflection = mix(reflection, reflCloudLayer, reflCloudDensity);
+                
+        // Add Milky Way to Reflection
+        // Calculate Fade based on Sun Elevation
+        highp float sunElvSin = L.y;
+        highp float mwFade = smoothstep(STAR_FADE_SUN_ELV_HIGH, STAR_FADE_SUN_ELV_LOW, sunElvSin);
+        
+        if (mwFade > 0.0) {
+                 highp vec3 mwColor = getMilkyWay(R, milkyWayRotation, milkyWayTexture, milkyWayControl);
+                 
+                 // Apply Atmosphere Transmittance (approximate)
+                 mwColor *= outTransmittance;
+                 
+                 // Apply Fades
+                 mwColor *= mwFade;
+                 mwColor *= (1.0 - reflMoonOcclusion); // Occlude by Moon
+                 mwColor *= (1.0 - reflCloudDensity);  // Occlude by Clouds
+                 
+                 reflection += mwColor;
+        }
+                
+
+        // Add Night Color to Reflection
+        reflection += nightColor;
                 
         // Fresnel
         highp float F0 = WATER_FRESNEL_F0; // Water
@@ -1187,7 +1224,7 @@ fragment {
 
         // 7. Stars
         // Add stars before clouds (clouds cover stars)
-        highp vec3 starColor = getStarLayer(V, L, cloudDensityVal, transmittance, materialParams.starControl);
+        highp vec3 starColor = getStarLayer(V, L, cloudDensityVal, transmittance, materialParams.starControl) * materialParams.exposure * materialParams.starIntensity;
         
         // 7b. Milky Way
         // Add Milky Way behind stars (conceptually) but handled similarly
@@ -1232,7 +1269,11 @@ fragment {
                                        materialParams.shimmerControl,
                                        materialParams.waterControl,
                                        L2, materialParams.sunIntensity2, materialParams.sunHalo2,
-                                       materialParams_moonTexture, materialParams_moonNormal);
+                                       materialParams_moonTexture, materialParams_moonNormal,
+                                       materialParams.nightColor,
+                                       materialParams.milkyWayRotation,
+                                       materialParams.milkyWayControl,
+                                       materialParams_milkyWayTexture);
             color = applyDynamicToneMapping(color, L, materialParams.contrast);
         }
 
