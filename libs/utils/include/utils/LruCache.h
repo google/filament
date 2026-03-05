@@ -37,6 +37,9 @@ namespace utils {
  * ObjectPoolAllocator to store the nodes of a doubly-linked list representing the LRU order,
  * and a robin_map for fast key lookups.
  *
+ * This class is not thread-safe. Additionally, the pop() and put() methods have special concerns
+ * with regards to object lifetimes.
+ *
  * @tparam Key The type of the keys.
  * @tparam T The type of the values.
  * @tparam Hash The hasher for the keys.
@@ -108,6 +111,9 @@ public:
     /**
      * Moves the value out of the cache, if it exists.
      *
+     * Because this moves the actual value, any previous references to this object returned by a
+     * call to get() or put() is invalidated by this call.
+     *
      * @param key The key to look up.
      * @param hash The precomputed hash of the key.
      */
@@ -139,7 +145,7 @@ public:
         }
 
         T r = std::move(node->value);
-        mMap.erase(node->key);
+        mMap.erase(it);
         mArena.destroy(node);
         return r;
     }
@@ -153,6 +159,13 @@ public:
      *
      * Prepends it to the front of the most recently used (MRU) list. Potentially evicts the
      * least-recently used (LRU) key/value pair by calling the releaser function.
+     *
+     * Due to the evicting nature of this function, any pointers to any objects within the LRU cache
+     * that had been previously returned by a call to get() or another call to put() can be
+     * considered INVALID and any access to them will result in undefined behavior.
+     *
+     * An evicted node is removed from the map before the releaser callback is called. Calls to
+     * get() or pop() in the body of the releaser for the item in question will fail.
      *
      * @tparam F Callable type accepting T&&.
      * @param key The key to insert or update.
@@ -292,8 +305,8 @@ private:
         }
 
         // Finally free the node.
-        releaser(std::move(node->value));
         mMap.erase(node->key);
+        releaser(std::move(node->value));
         mArena.destroy(node);
     }
 

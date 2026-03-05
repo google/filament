@@ -278,7 +278,8 @@ private:
 
     TValue& insert(KeyRef key, T value) {
         // TODO: how to use computed hash here?
-        return deref(mMap.insert({ key, Entry{ 1, std::move(value) } }).first.value().value);
+        auto it = mMap.insert({ key, Entry{ 1, std::move(value) } });
+        return deref(it.first.value().value);
     }
 };
 
