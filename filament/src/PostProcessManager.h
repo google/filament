@@ -304,9 +304,10 @@ public:
             utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor outDesc) noexcept;
 
-    // Resolves base level of input and outputs a texture from outDesc.
+    // Resolves base level of input and outputs a texture from outDesc using a shader instead of
+    // driver-implemented API.
     // outDesc with, height, format and samples will be overridden.
-    FrameGraphId<FrameGraphTexture> resolveDepth(FrameGraph& fg,
+    FrameGraphId<FrameGraphTexture> resolveDepthWithShader(FrameGraph& fg,
             utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor outDesc) noexcept;
 
@@ -485,13 +486,6 @@ private:
     MaterialRegistryMap mMaterialRegistry;
 
     MaterialInstanceManager mMaterialInstanceManager;
-
-    struct {
-        int32_t colorGradingTranslucent = MaterialInstanceManager::INVALID_FIXED_INDEX;
-        int32_t colorGradingOpaque = MaterialInstanceManager::INVALID_FIXED_INDEX;
-        int32_t customResolve = MaterialInstanceManager::INVALID_FIXED_INDEX;
-        int32_t clearDepth = MaterialInstanceManager::INVALID_FIXED_INDEX;
-    } mFixedMaterialInstanceIndex;
 
     backend::Handle<backend::HwTexture> mStarburstTexture;
 

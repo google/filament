@@ -715,8 +715,11 @@ VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
       vertexBuffer(vb),
       indexBuffer(ib) {}
 
-VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkFramebuffer framebuffer)
-    : mDevice(device), mFramebuffer(framebuffer) {}
+VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkFramebuffer framebuffer,
+        fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget)
+        : mDevice(device),
+          mFramebuffer(framebuffer),
+          mRenderTarget(renderTarget) {}
 
 VulkanFramebuffer::~VulkanFramebuffer() {
     vkDestroyFramebuffer(mDevice, mFramebuffer, VKALLOC);

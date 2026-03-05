@@ -195,7 +195,7 @@ public:
     }
 
     // The current layout used by the descriptor set. This one will match the bindings, including
-    // external samplers data. 
+    // external samplers data.
     // This will not necessarilly be the same as `mLayout`.
     VkDescriptorSetLayout boundLayout = VK_NULL_HANDLE;
 
@@ -203,7 +203,7 @@ public:
 
     fvkutils::UniformBufferBitmask const& dynamicUboMask;
     uint8_t const uniqueDynamicUboCount;
-    
+
     // Flag to indicate if the current layout needs to be recreated or not.
     // This should only set to `true` when a external sampler image is bound to the descriptor set.
     bool isLayoutDirty = false;
@@ -586,7 +586,9 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive, fvkmemory::Resource {
 };
 
 struct VulkanFramebuffer : public fvkmemory::Resource {
-    VulkanFramebuffer(VkDevice device, VkFramebuffer framebuffer);
+    VulkanFramebuffer(VkDevice device,
+            VkFramebuffer framebuffer,
+            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget);
     ~VulkanFramebuffer();
 
     inline VkFramebuffer getVkFramebuffer() const noexcept {
@@ -596,6 +598,11 @@ struct VulkanFramebuffer : public fvkmemory::Resource {
 private:
     VkDevice mDevice;
     VkFramebuffer mFramebuffer;
+
+    // We need to keep a reference to the renderTarget because the key of the framebuffer in the
+    // cache has references to the image views that are derived from the textures of the render
+    // target.
+    fvkmemory::resource_ptr<VulkanRenderTarget> mRenderTarget;
 };
 
 struct VulkanRenderPass : public fvkmemory::Resource {

@@ -47,9 +47,12 @@
 #include <utils/Slice.h>
 
 #include <math/mat4.h>
+#include <math/half.h>
 #include <math/vec4.h>
 
+#include <algorithm>
 #include <array>
+#include <limits>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -145,6 +148,28 @@ public:
     // for debugging only
     utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
+    static float getMaxMomentEVSM(VsmShadowOptions const& vsmShadowOptions) noexcept {
+        return vsmShadowOptions.highPrecision ?
+                std::numeric_limits<float>::max() :
+                float(std::numeric_limits<math::half>::max());
+    }
+
+    static float getMaxWrapExponentEVSM(VsmShadowOptions const& vsmShadowOptions) noexcept {
+        constexpr float low  = 5.2f;  // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
+        constexpr float high = 40.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
+        return vsmShadowOptions.highPrecision ? high : low;
+    }
+
+    static float getWrapExponentEVSM(
+            VsmShadowOptions const& vsmShadowOptions,
+            LightManager::ShadowOptions const& options) noexcept {
+        constexpr float ABSOLUTE_FILTER_LIMIT = 42.0f;
+        float const targetExponent = getMaxWrapExponentEVSM(vsmShadowOptions);
+        float const effectiveFilterRadius = std::max(1.0f, options.vsm.blurWidth);
+        float const filterCeiling = ABSOLUTE_FILTER_LIMIT / effectiveFilterRadius;
+        return std::min(targetExponent, filterCeiling);
+    }
+
 private:
     explicit ShadowMapManager(FEngine& engine);
 
@@ -216,6 +241,7 @@ private:
         uint8_t levels = 0;
         uint8_t msaaSamples = 1;
         backend::TextureFormat format = backend::TextureFormat::DEPTH16;
+        math::float4 clearColor{};
     } mTextureAtlasRequirements;
 
     SoftShadowOptions mSoftShadowOptions;

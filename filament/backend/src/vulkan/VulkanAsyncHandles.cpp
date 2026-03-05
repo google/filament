@@ -29,6 +29,12 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+std::shared_ptr<VulkanCmdFence> VulkanCmdFence::completed() noexcept {
+    auto cmdFence = std::make_shared<VulkanCmdFence>(VK_NULL_HANDLE);
+    cmdFence->mStatus = VK_SUCCESS;
+    return cmdFence;
+}
+
 FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     std::chrono::steady_clock::time_point const until) {
 
