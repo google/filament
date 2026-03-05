@@ -3672,8 +3672,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
     }
 
     // The Metal / Vulkan backends currently don't support depth/stencil resolve.
-    if (isDepthFormat(inDesc.format) && (!mDepthStencilResolveSupported)) {
-        return resolveDepth(fg, outputBufferName, input, outDesc);
+    // TODO: Stencil resolve is actually *not* supported. Trying to resolve a stencil texture will
+    //     trigger an assert on debug builds. We need to investigate how this can be accomplished
+    //     through shaders or some other manipulation.
+    if ((isDepthFormat(inDesc.format) || isStencilFormat(inDesc.format)) &&
+            (!mDepthStencilResolveSupported)) {
+        return resolveDepthWithShader(fg, outputBufferName, input, outDesc);
     }
 
     outDesc.width = inDesc.width;
@@ -3688,9 +3692,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
     auto const& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
-                // we currently don't support stencil resolve.
-                assert_invariant(!isStencilFormat(inDesc.format));
-
                 data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
                 data.output = builder.createTexture(outputBufferName, outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::BLIT_DST);
@@ -3715,7 +3716,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
     return ppResolve->output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepthWithShader(FrameGraph& fg,
         utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor outDesc) noexcept {
 
@@ -3740,11 +3741,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto const& ppResolve = fg.addPass<ResolveData>("resolveDepth",
+    auto const& ppResolve = fg.addPass<ResolveData>("resolveDepthWithShader",
             [&](FrameGraph::Builder& builder, auto& data) {
-                // we currently don't support stencil resolve
-                assert_invariant(!isStencilFormat(inDesc.format));
-
                 data.input = builder.sample(input);
                 data.output = builder.createTexture(outputBufferName, outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
@@ -3753,6 +3751,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
             [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                // we currently don't support stencil resolve
+                assert_invariant(!isStencilFormat(inDesc.format));
+
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto const& input = resources.getTexture(data.input);
