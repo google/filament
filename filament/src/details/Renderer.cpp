@@ -1362,7 +1362,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     // Debug: CSM visualisation
     if (UTILS_UNLIKELY(engine.debug.shadowmap.visualize_cascades &&
                        view.hasShadowing() && view.hasDirectionalLighting())) {
-        input = ppm.debugShadowCascades(fg, input, depth);
+        input = ppm.debugShadowCascades(fg, view.getShadowMapManager(), input, depth);
     }
 
     // TODO: DoF should be applied here, before TAA -- but if we do this it'll result in a lot of
