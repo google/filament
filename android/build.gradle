@@ -200,7 +200,7 @@ subprojects {
         google()
     }
 
-    if (!name.startsWith("sample") && name != "filament-tools") {
+    if (!name.startsWith("sample") && name != "filament-tools" && name != "gradle-plugin") {
         apply plugin: 'com.android.library'
 
         android {

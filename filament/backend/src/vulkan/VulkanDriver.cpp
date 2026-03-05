@@ -1989,7 +1989,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
     fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
-            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager);
+            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
 
 // Assign a label to the framebuffer for debugging purposes.
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS | FVK_DEBUG_DEBUG_UTILS)
