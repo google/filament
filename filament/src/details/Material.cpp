@@ -235,11 +235,17 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
     return mDefinition.perViewDescriptorSetLayoutPcf;
 }
 
-void FMaterial::compile(CompilerPriorityQueue const priority,
-        UserVariantFilterMask variantSpec,
-        CallbackHandler* handler,
-        Invocable<void(Material*)>&& callback) noexcept {
-    getDefaultInstance()->compile(mEngine, priority, variantSpec, handler, std::move(callback));
+void FMaterial::compile(CompilerPriorityQueue const priority, UserVariantFilterMask variantSpec,
+        CallbackHandler* handler, Invocable<void(Material*)>&& callback) noexcept {
+    FMaterialInstance* mi = getDefaultInstance();
+    if (callback) {
+        mi->compile(mEngine, priority, variantSpec, handler,
+                [this, callback = std::move(callback)](MaterialInstance*) {
+                    callback(this);
+                });
+    } else {
+        mi->compile(mEngine, priority, variantSpec, handler, {});
+    }
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {

@@ -86,7 +86,7 @@ public:
 
     void compile(FEngine& engine, backend::CompilerPriorityQueue priority,
             UserVariantFilterMask variantSpec, backend::CallbackHandler* handler,
-            utils::Invocable<void(Material*)>&& callback) noexcept;
+            utils::Invocable<void(MaterialInstance*)>&& callback) noexcept;
 
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.

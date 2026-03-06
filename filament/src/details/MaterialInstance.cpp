@@ -448,8 +448,7 @@ const char* FMaterialInstance::getName() const noexcept {
 
 void FMaterialInstance::compile(FEngine& engine, CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec, CallbackHandler* handler,
-        Invocable<void(Material*)>&& callback) noexcept {
-
+        Invocable<void(MaterialInstance*)>&& callback) noexcept {
     DriverApi& driver = engine.getDriverApi();
     MaterialDefinition const& definition = mMaterial->getDefinition();
 
@@ -476,17 +475,15 @@ void FMaterialInstance::compile(FEngine& engine, CompilerPriorityQueue const pri
 
     if (callback) {
         struct Callback {
-            Invocable<void(Material*)> f;
-            Material* m;
+            Invocable<void(MaterialInstance*)> f;
+            MaterialInstance* m;
             static void func(void* user) {
                 auto* const c = static_cast<Callback*>(user);
                 c->f(c->m);
                 delete c;
             }
         };
-        // TODO(exv): fix this const cast
-        auto* const user = new (std::nothrow) Callback{ std::move(callback),
-            const_cast<Material*>(static_cast<Material const*>(mMaterial)) };
+        auto* const user = new (std::nothrow) Callback{ std::move(callback), this };
         driver.compilePrograms(priority, handler, &Callback::func, user);
     } else {
         driver.compilePrograms(priority, nullptr, nullptr, nullptr);
