@@ -423,4 +423,10 @@ void MaterialInstance::commit(Engine& engine) const {
     downcast(this)->commit(downcast(engine));
 }
 
+void MaterialInstance::compile(CompilerPriorityQueue const priority,
+        UserVariantFilterMask const variants, CallbackHandler* handler,
+        utils::Invocable<void(MaterialInstance*)>&& callback) noexcept {
+    downcast(this)->compile(priority, variants, handler, std::move(callback));
+}
+
 } // namespace filament

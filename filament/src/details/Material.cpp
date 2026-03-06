@@ -239,12 +239,12 @@ void FMaterial::compile(CompilerPriorityQueue const priority, UserVariantFilterM
         CallbackHandler* handler, Invocable<void(Material*)>&& callback) noexcept {
     FMaterialInstance* mi = getDefaultInstance();
     if (callback) {
-        mi->compile(mEngine, priority, variantSpec, handler,
+        mi->compile(priority, variantSpec, handler,
                 [this, callback = std::move(callback)](MaterialInstance*) {
                     callback(this);
                 });
     } else {
-        mi->compile(mEngine, priority, variantSpec, handler, {});
+        mi->compile(priority, variantSpec, handler, {});
     }
 }
 
