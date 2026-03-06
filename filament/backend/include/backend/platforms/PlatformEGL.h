@@ -159,6 +159,8 @@ protected:
     EGLConfig getEglConfig() const noexcept { return mEGLConfig; }
     EGLConfig getSuitableConfigForSwapChain(uint64_t flags, bool window, bool pbuffer) const;
 
+    void setEglDisplay(EGLDisplay display) noexcept { mEGLDisplay = display; }
+ 
     // supported extensions detected at runtime
     struct {
         struct {
