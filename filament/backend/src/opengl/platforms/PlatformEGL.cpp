@@ -119,6 +119,13 @@ bool PlatformEGL::isOpenGL() const noexcept {
 
 PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
 
+void PlatformEGL::setEglDisplay(EGLDisplay display) noexcept {
+    FILAMENT_CHECK_PRECONDITION(mEGLDisplay == EGL_NO_DISPLAY)
+        << "EGL Display has already been set.";
+    mEGLDisplay = display;
+}
+
+
 Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) {
     if (mEGLDisplay == EGL_NO_DISPLAY) {
         mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);

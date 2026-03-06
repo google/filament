@@ -163,7 +163,7 @@ protected:
     // classes before invoking createDriver. Calling it after that point will result in 
     // undefined behaviour. This class will take owernship of the display and call eglTerminate
     // on it during shutdown.
-    void setEglDisplay(EGLDisplay display) noexcept { mEGLDisplay = display; }
+    void setEglDisplay(EGLDisplay display) noexcept;
  
     // supported extensions detected at runtime
     struct {
