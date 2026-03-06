@@ -330,6 +330,43 @@ public:
         return getConstant<T>(name, strlen(name));
     }
 
+    using CompilerPriorityQueue = backend::CompilerPriorityQueue;
+
+    /**
+     * Asynchronously ensures that a subset of this MaterialInstance's variants are compiled.
+     *
+     * This function behaves identically to Material::compile(), but takes into account the
+     * specific constants overridden by setConstant().
+     *
+     * @param priority      Which priority queue to use, LOW or HIGH.
+     * @param variants      Variants to include to the compile command.
+     * @param handler       Handler to dispatch the callback or nullptr for the default handler
+     * @param callback      callback called on the main thread when the compilation is done on
+     *                      by backend.
+     *
+     * @see Material::compile
+     * @see setConstant
+     */
+    void compile(CompilerPriorityQueue priority,
+            UserVariantFilterMask variants,
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(MaterialInstance* UTILS_NONNULL)>&& callback = {}) noexcept;
+
+    inline void compile(CompilerPriorityQueue priority,
+            UserVariantFilterBit variants,
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(MaterialInstance* UTILS_NONNULL)>&& callback = {}) noexcept {
+        compile(priority, UserVariantFilterMask(variants), handler,
+                std::forward<utils::Invocable<void(MaterialInstance* UTILS_NONNULL)>>(callback));
+    }
+
+    inline void compile(CompilerPriorityQueue priority,
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(MaterialInstance* UTILS_NONNULL)>&& callback = {}) noexcept {
+        compile(priority, UserVariantFilterBit::ALL, handler,
+                std::forward<utils::Invocable<void(MaterialInstance* UTILS_NONNULL)>>(callback));
+    }
+
     /**
      * Set-up a custom scissor rectangle; by default it is disabled.
      *
