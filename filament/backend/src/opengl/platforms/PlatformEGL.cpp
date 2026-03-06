@@ -34,6 +34,7 @@
 
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
+#include <utils/Panic.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 
@@ -124,7 +125,6 @@ void PlatformEGL::setEglDisplay(EGLDisplay display) noexcept {
         << "EGL Display has already been set.";
     mEGLDisplay = display;
 }
-
 
 Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) {
     if (mEGLDisplay == EGL_NO_DISPLAY) {
