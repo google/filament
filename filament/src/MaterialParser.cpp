@@ -44,6 +44,7 @@
 
 #include <array>
 #include <atomic>
+#include <mutex>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -120,12 +121,10 @@ bool MaterialParser::operator==(MaterialParser const& rhs) const noexcept {
     if (mImpl.mManagedBuffer.size() != rhs.mImpl.mManagedBuffer.size()) {
         return false;
     }
-    std::optional<uint32_t> lhsCrc32 = getPrecomputedCrc32();
-    if (lhsCrc32) {
-        std::optional<uint32_t> rhsCrc32 = rhs.getPrecomputedCrc32();
-        if (rhsCrc32 && *lhsCrc32 != *rhsCrc32) {
-            return false;
-        }
+    uint32_t const lhsCrc32 = getCrc32();
+    uint32_t const rhsCrc32 = rhs.getCrc32();
+    if (lhsCrc32 != rhsCrc32) {
+        return false;
     }
     return !memcmp(mImpl.mManagedBuffer.data(), rhs.mImpl.mManagedBuffer.data(),
             mImpl.mManagedBuffer.size());
@@ -187,12 +186,34 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
     return ParseResult::SUCCESS;
 }
 
-uint32_t MaterialParser::computeCrc32() const noexcept {
-    uint32_t crc32 = mCrc32.load(std::memory_order_relaxed);
-    if (crc32) {
-        return crc32;
+uint32_t MaterialParser::getCrc32() const noexcept {
+    if (mCrc32Cached.load(std::memory_order_relaxed)) {
+        return mCrc32;
     }
 
+    std::lock_guard<utils::Mutex> lock(mCrc32CachedLock);
+
+    // If we enter this section after another thread has passed through it, we need to check whether
+    // crc32 has been cached or not. This is the slow path that will happen hopefully just once.
+    if (mCrc32Cached.load(std::memory_order_relaxed)) {
+        return mCrc32;
+    }
+
+    // First check whether the compiled material contains the crc32 already.
+    if (uint32_t parsedCrc32 = 0; getMaterialCrc32(&parsedCrc32)) {
+        mCrc32 = parsedCrc32;
+        mCrc32Cached.store(true);
+        return parsedCrc32;
+    }
+
+    // No crc32 found, so we compute it.
+    mCrc32 = computeCrc32();
+    mCrc32Cached.store(true);
+    return mCrc32;
+}
+
+
+uint32_t MaterialParser::computeCrc32() const noexcept {
     const size_t size = mImpl.mManagedBuffer.size();
     const void* const UTILS_NONNULL payload = mImpl.mManagedBuffer.data();
 
@@ -202,29 +223,7 @@ uint32_t MaterialParser::computeCrc32() const noexcept {
 
     std::vector<uint32_t> crc32Table;
     utils::hash::crc32GenerateTable(crc32Table);
-    crc32 = utils::hash::crc32Update(0, payload, originalSize, crc32Table);
-    mCrc32.store(crc32, std::memory_order_relaxed);
-    return crc32;
-}
-
-std::optional<uint32_t> MaterialParser::getPrecomputedCrc32() const noexcept {
-    uint32_t cachedCrc32 = mCrc32.load(std::memory_order_relaxed);
-    if (cachedCrc32) {
-        return cachedCrc32;
-    }
-    uint32_t parsedCrc32;
-    if (getMaterialCrc32(&parsedCrc32)) {
-        return parsedCrc32;
-    }
-    return std::nullopt;
-}
-
-uint32_t MaterialParser::getCrc32() const noexcept {
-    std::optional<uint32_t> crc32 = getPrecomputedCrc32();
-    if (crc32) {
-        return *crc32;
-    }
-    return computeCrc32();
+    return utils::hash::crc32Update(0, payload, originalSize, crc32Table);
 }
 
 ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {

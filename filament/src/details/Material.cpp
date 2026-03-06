@@ -414,8 +414,10 @@ void FMaterial::onEditCallback(void* userdata, const CString&, const void* packa
 
     // This is called on a web server thread, so we defer clearing the program cache
     // and swapping out the MaterialParser until the next getProgram call.
-    std::unique_ptr<MaterialParser> pending = MaterialDefinition::createParser(
-            engine.getBackend(), engine.getShaderLanguage(), packageData, packageSize);
+    // Also note that we don't check for crc32 because it's not meant for a dynamically generated
+    // material package.
+    std::unique_ptr<MaterialParser> pending = MaterialDefinition::createParser(engine, packageData,
+            packageSize, false /* checkCrc32 */);
     material->setPendingEdits(std::move(pending));
 }
 

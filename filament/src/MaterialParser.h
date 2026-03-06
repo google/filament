@@ -30,6 +30,7 @@
 
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Mutex.h>
 
 #include <array>
 #include <optional>
@@ -70,12 +71,12 @@ public:
 
     ParseResult parse() noexcept;
 
-    // Compute the CRC32 of the material or return the cached value.
-    uint32_t computeCrc32() const noexcept;
-    // Return the cached computed CRC32 or the CRC32 built into the material file if one exists.
-    std::optional<uint32_t> getPrecomputedCrc32() const noexcept;
-    // Return the CRC32 of the material.
+    // Return the CRC32 of the material. This will use a cached value if it is available.
     uint32_t getCrc32() const noexcept;
+
+    // Return the CRC32 of the material. This will *always* compute the crc32 from the full compiled
+    // binary content (i.e. this is the slow path).
+    uint32_t computeCrc32() const noexcept;
 
     backend::ShaderLanguage getShaderLanguage() const noexcept;
 
@@ -196,9 +197,10 @@ private:
     filaflat::ChunkContainer& getChunkContainer() noexcept;
     filaflat::ChunkContainer const& getChunkContainer() const noexcept;
     MaterialParserDetails mImpl;
-    // 0 == not cached. This technically means that a file with a CRC32 of 0 will never be cached,
-    // but this is unlikely, and keeping it a 32-bit value guarantees that it will be lockless.
-    mutable std::atomic<uint32_t> mCrc32 = 0;
+
+    mutable uint32_t mCrc32 = 0;
+    mutable std::atomic<bool> mCrc32Cached;
+    mutable utils::Mutex mCrc32CachedLock;
 };
 
 struct ChunkUniformInterfaceBlock {

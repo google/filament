@@ -28,11 +28,7 @@ namespace filament {
 
 size_t MaterialCache::MaterialKey::Hash::operator()(
         filament::MaterialCache::MaterialKey const& key) const noexcept {
-    uint32_t crc;
-    if (key.parser->getMaterialCrc32(&crc)) {
-        return size_t(crc);
-    }
-    return size_t(key.parser->computeCrc32());
+    return size_t(key.parser->getCrc32());
 }
 
 bool MaterialCache::MaterialKey::operator==(MaterialKey const& rhs) const noexcept {
@@ -60,8 +56,9 @@ void MaterialCache::terminate(FEngine& engine) {
 
 MaterialDefinition* UTILS_NULLABLE MaterialCache::acquireMaterial(FEngine& engine,
         const void* UTILS_NONNULL data, size_t size) noexcept {
-    std::unique_ptr<MaterialParser> parser = MaterialDefinition::createParser(engine.getBackend(),
-            engine.getShaderLanguage(), data, size);
+    bool const checkCrc32 = engine.features.material.check_crc32_after_loading;
+    std::unique_ptr<MaterialParser> parser =
+            MaterialDefinition::createParser(engine, data, size, checkCrc32);
     assert_invariant(parser);
 
     // The `key` must be constructed using parser.get() before parser is moved into the lambda

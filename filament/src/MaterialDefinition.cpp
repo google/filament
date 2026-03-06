@@ -162,10 +162,29 @@ void releaseProgramsImpl(FEngine& engine, utils::Slice<Handle<HwProgram>> progra
 
 } // namespace
 
-std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const backend,
-        FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
+std::unique_ptr<MaterialParser> MaterialDefinition::createParser(FEngine const& engine,
+        const void* data, size_t size, bool checkCrc32) {
+    auto const& languages = engine.getShaderLanguage();
+    auto const backend = engine.getBackend();
+
     // unique_ptr so we don't leak MaterialParser on failures below
     auto materialParser = std::make_unique<MaterialParser>(languages, data, size);
+
+    // Try checking CRC32 value for the package and skip if it's unavailable.
+    if (checkCrc32) {
+        uint32_t parsedCrc32 = 0;
+        bool const foundParsedCrc = materialParser->getMaterialCrc32(&parsedCrc32);
+        uint32_t const expectedCrc32 = materialParser->computeCrc32();
+
+        if (foundParsedCrc && parsedCrc32 != expectedCrc32) {
+            CString name;
+            materialParser->getName(&name);
+            LOG(ERROR) << "The material '" << name.c_str_safe()
+                       << "' is corrupted: crc32_expected=" << expectedCrc32
+                       << ", crc32_parsed=" << parsedCrc32;
+            return nullptr;
+        }
+    }
 
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
@@ -174,7 +193,7 @@ std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const b
     if (UTILS_UNLIKELY(materialResult == MaterialParser::ParseResult::ERROR_MISSING_BACKEND)) {
         CString languageNames;
         for (auto it = languages.begin(); it != languages.end(); ++it) {
-            languageNames.append(CString{shaderLanguageToString(*it)});
+            languageNames.append(CString{ shaderLanguageToString(*it) });
             if (std::next(it) != languages.end()) {
                 languageNames.append(", ");
             }
@@ -182,8 +201,9 @@ std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const b
 
         FILAMENT_CHECK_POSTCONDITION(
                 materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND)
-                << "the material " << name.c_str_safe() << " was not built for any of the " << to_string(backend)
-                << " backend's supported shader languages (" << languageNames.c_str() << ")\n";
+                << "the material " << name.c_str_safe() << " was not built for any of the "
+                << to_string(backend) << " backend's supported shader languages ("
+                << languageNames.c_str() << ")\n";
     }
 
     if (backend == Backend::NOOP) {
@@ -206,23 +226,6 @@ std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const b
 
 std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         std::unique_ptr<MaterialParser> parser) {
-    // Try checking CRC32 value for the package and skip if it's unavailable.
-    if (downcast(engine).features.material.check_crc32_after_loading) {
-        uint32_t parsedCrc32 = 0;
-        parser->getMaterialCrc32(&parsedCrc32);
-
-        uint32_t const expectedCrc32 = parser->computeCrc32();
-
-        if (parsedCrc32 != expectedCrc32) {
-            CString name;
-            parser->getName(&name);
-            LOG(ERROR) << "The material '" << name.c_str_safe()
-                       << "' is corrupted: crc32_expected=" << expectedCrc32
-                       << ", crc32_parsed=" << parsedCrc32;
-            return nullptr;
-        }
-    }
-
     uint32_t v = 0;
     parser->getShaderModels(&v);
     bitset32 shaderModels;
