@@ -161,7 +161,7 @@ protected:
 
     // Sets the EGLDisplay to be used by this platform. This should only be called by derived 
     // classes before invoking createDriver. Calling it after that point will result in 
-    // undefined behaviour. This class will take owernship of the display and call eglTerminate
+    // undefined behaviour. This class will take ownership of the display and call eglTerminate
     // on it during shutdown.
     void setEglDisplay(EGLDisplay display) noexcept;
  
