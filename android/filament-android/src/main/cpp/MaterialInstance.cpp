@@ -20,6 +20,8 @@
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 
+#include "common/CallbackUtils.h"
+
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec2.h>
@@ -642,4 +644,18 @@ Java_com_google_android_filament_MaterialInstance_nGetTransparencyMode(JNIEnv*, 
         jlong nativeMaterialInstance) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     return (jint) instance->getTransparencyMode();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nCompile(JNIEnv *env, jclass clazz,
+        jlong nativeMaterialInstance, jint priority, jint variants, jobject handler, jobject runnable) {
+    MaterialInstance* materialInstance = (MaterialInstance*) nativeMaterialInstance;
+    JniCallback* jniCallback = JniCallback::make(env, handler, runnable);
+    materialInstance->compile(
+            (MaterialInstance::CompilerPriorityQueue) priority,
+            (UserVariantFilterBit) variants,
+            jniCallback->getHandler(), [jniCallback](MaterialInstance*){
+                JniCallback::postToJavaAndDestroy(jniCallback);
+            });
 }

@@ -18,6 +18,7 @@ package com.google.android.filament;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
 import com.google.android.filament.proguard.UsedByNative;
@@ -140,6 +141,28 @@ public class MaterialInstance {
             mMaterial = new Material(mNativeMaterial);
         }
         return mMaterial;
+    }
+
+    /**
+     * Asynchronously ensures that a subset of this MaterialInstance's variants are compiled.
+     *
+     * <p>This function behaves identically to {@link Material#compile}, but takes into account
+     * the specific constants overridden by {@link #setConstant}.</p>
+     *
+     * @param priority      Priority of the compile command.
+     * @param variants      Variants to include to the compile command.
+     * @param handler       An {@link java.util.concurrent.Executor Executor}. On Android this can also be a {@link android.os.Handler Handler}.
+     * @param callback      callback called on the main thread when the compilation is done on
+     *                      by backend.
+     *
+     * @see Material#compile
+     * @see #setConstant
+     */
+    public void compile(@NonNull Material.CompilerPriorityQueue priority,
+                        int variants,
+                        @Nullable Object handler,
+                        @Nullable Runnable callback) {
+        nCompile(getNativeObject(), priority.ordinal(), variants, handler, callback);
     }
 
     /** @return the name associated with this instance */
@@ -1074,4 +1097,5 @@ public class MaterialInstance {
     private static native int nGetDepthFunc(long nativeMaterialInstance);
     private static native void nSetTransparencyMode(long nativeMaterialInstance, int mode);
     private static native int nGetTransparencyMode(long nativeMaterialInstance);
+    private static native void nCompile(long nativeMaterialInstance, int priority, int variants, Object handler, Runnable callback);
 }
