@@ -84,8 +84,8 @@ public:
 
     UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
 
-    void compile(FEngine& engine, backend::CompilerPriorityQueue priority,
-            UserVariantFilterMask variantSpec, backend::CallbackHandler* handler,
+    void compile(backend::CompilerPriorityQueue priority, UserVariantFilterMask variantSpec,
+            backend::CallbackHandler* handler,
             utils::Invocable<void(MaterialInstance*)>&& callback) noexcept;
 
     // prepareProgram creates the program for the material's given variant at the backend level.

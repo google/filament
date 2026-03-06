@@ -446,9 +446,10 @@ const char* FMaterialInstance::getName() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void FMaterialInstance::compile(FEngine& engine, CompilerPriorityQueue const priority,
+void FMaterialInstance::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec, CallbackHandler* handler,
         Invocable<void(MaterialInstance*)>&& callback) noexcept {
+    FEngine& engine = mMaterial->getEngine();
     DriverApi& driver = engine.getDriverApi();
     MaterialDefinition const& definition = mMaterial->getDefinition();
 
