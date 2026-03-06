@@ -123,6 +123,8 @@ PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
 void PlatformEGL::setEglDisplay(EGLDisplay display) noexcept {
     FILAMENT_CHECK_PRECONDITION(mEGLDisplay == EGL_NO_DISPLAY)
         << "EGL Display has already been set.";
+    FILAMENT_CHECK_PRECONDITION(display != EGL_NO_DISPLAY)
+        << "Must specify a valid EGL Display.";
     mEGLDisplay = display;
 }
 
