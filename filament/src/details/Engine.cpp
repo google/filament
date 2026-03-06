@@ -820,7 +820,7 @@ void FEngine::submitFrame() {
 void FEngine::flush() {
     // flush the command buffer
     flushCommandBuffer(mCommandBufferQueue);
-    
+
     // In single-threaded mode, we have to call execute() to drain the command
     // buffer to really free up space
     if constexpr (!UTILS_HAS_THREADING) {
@@ -889,8 +889,14 @@ int FEngine::loop() {
     #endif
     if (portString != nullptr) {
         const int port = atoi(portString);
+
+        ShaderLanguage preferredLanguage = ShaderLanguage::UNSPECIFIED;
+        if (mBackend == Backend::METAL) {
+            preferredLanguage = ShaderLanguage::MSL;
+        }
+
         debug.server = new matdbg::DebugServer(mBackend,
-                mDriver->getShaderLanguages(ShaderLanguage::UNSPECIFIED).front(),
+                mDriver->getShaderLanguages(preferredLanguage).front(),
                 matdbg::DbgShaderModel((uint8_t) mDriver->getShaderModel()), port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).

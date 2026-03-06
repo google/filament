@@ -60,9 +60,10 @@ class ToolsLocator {
         def classifier =
                 project.extensions.getByType(com.google.gradle.osdetector.OsDetector).classifier
 
-        // If com.google.android.filament.tools-dir is set, we'll use it as the tool's base path.
+        // If com.google.android.filament.tools-dir is set to a non-empty string, we'll use it as
+        // the tool's base path.
         def toolsDirProp = project.providers.gradleProperty("com.google.android.filament.tools-dir")
-        if (toolsDirProp.isPresent()) {
+        if (toolsDirProp.isPresent() && !toolsDirProp.get().trim().isEmpty()) {
             def toolsDir = toolsDirProp.get()
             def path = OperatingSystem.current().isWindows() ?
                 "${toolsDir}/bin/${name}.exe" :
