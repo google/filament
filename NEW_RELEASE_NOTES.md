@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- engine: add `MaterialInstance::setConstant()` and `MaterialInstance::getConstant()` methods. These allow for per-material instance specialization constant overrides.
