@@ -52,6 +52,9 @@ protected:
 
     ~OpenGLPlatform() noexcept override;
 
+    utils::CString getDeviceInfo(DeviceInfoType infoType,
+            Driver* UTILS_NULLABLE driver) const noexcept override;
+
 public:
     struct ExternalTexture {
         unsigned int target; // GLenum target
