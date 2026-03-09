@@ -143,6 +143,8 @@ public:
         return 0;
     }
 
+    utils::CString getDeviceInfo(DeviceInfoType infoType, Driver* driver) const noexcept override;
+
     // ----------------------------------------------------
     // ---------- Platform Customization options ----------
     struct Customization {
