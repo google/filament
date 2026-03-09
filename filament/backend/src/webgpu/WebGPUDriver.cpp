@@ -1988,7 +1988,11 @@ void WebGPUDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
 
 void WebGPUDriver::scissor(
         Viewport scissor) {
-    //todo
+    assert_invariant(mRenderPassEncoder);
+    assert_invariant(mCurrentRenderTarget);
+
+    uint32_t top = mCurrentRenderTarget->height - scissor.bottom - scissor.height;
+    mRenderPassEncoder.SetScissorRect(scissor.left, top, scissor.width, scissor.height);
 }
 
 void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
