@@ -41,5 +41,10 @@ void AsyncTaskCounter::waitForAllToFinish() {
     mFinishedCondition.wait(lock, [this] { return mTasksInProgress == 0; });
 }
 
+bool AsyncTaskCounter::isIdle() {
+    std::lock_guard<std::mutex> lock{ mMutex };
+    return mTasksInProgress == 0;
+}
+
 } // namespace filament::backend::webgpuutils
 
