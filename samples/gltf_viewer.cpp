@@ -782,6 +782,9 @@ int main(int argc, char** argv) {
                                            : AutomationEngine::Options::ExportFormat::TIFF;
             app.automationEngine->setOptions(options);
             app.viewer->getSettings().animation.enabled = false;
+        } else {
+            // Enable animation by default for interactive mode (non-batch mode).
+            app.viewer->getSettings().animation.enabled = true;
         }
 
         if (!app.settingsFile.empty()) {

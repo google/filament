@@ -46,9 +46,6 @@ public:
 
     FCamera(FEngine& engine, utils::Entity e);
 
-    void terminate(FEngine&) noexcept { }
-
-
     // Sets the projection matrices (viewing and culling). The viewing matrice has infinite far.
     void setProjection(Projection projection,
                        double left, double right, double bottom, double top,

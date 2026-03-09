@@ -35,9 +35,10 @@ test::NativeView getNativeView() {
 
 namespace {
 
-std::array<test::Backend, 2> const VALID_BACKENDS{
-        test::Backend::OPENGL,
-        test::Backend::VULKAN,
+std::array<test::Backend, 3> const VALID_BACKENDS{
+    test::Backend::OPENGL,
+    test::Backend::VULKAN,
+    test::Backend::WEBGPU
 };
 
 }// namespace

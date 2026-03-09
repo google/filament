@@ -45,6 +45,19 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
+utils::CString OpenGLPlatform::getDeviceInfo(DeviceInfoType infoType,
+        Driver* driver) const noexcept {
+    switch (infoType) {
+        case DeviceInfoType::OPENGL_RENDERER:
+            return getRendererString(driver);
+        case DeviceInfoType::OPENGL_VENDOR:
+            return getVendorString(driver);
+        default:
+            FILAMENT_CHECK_POSTCONDITION(false) << "Unsupported DeviceInfoType for OpenGLPlatform";
+            return {};
+    }
+}
+
 utils::CString OpenGLPlatform::getVendorString(Driver const* driver) {
     auto const p = static_cast<OpenGLDriverBase const*>(driver);
 #if UTILS_HAS_RTTI

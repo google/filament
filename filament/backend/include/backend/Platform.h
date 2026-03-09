@@ -217,6 +217,17 @@ public:
     };
 
     /**
+     * Types of device/driver information that can be queried from the platform.
+     */
+    enum class DeviceInfoType {
+        OPENGL_RENDERER,    //!< glGetString(GL_RENDERER)
+        OPENGL_VENDOR,      //!< glGetString(GL_VENDOR)
+        VULKAN_DEVICE_NAME, //!< VkPhysicalDeviceProperties::deviceName
+        VULKAN_DRIVER_NAME, //!< VkPhysicalDeviceDriverProperties::driverName
+        VULKAN_DRIVER_INFO, //!< VkPhysicalDeviceDriverProperties::driverInfo
+    };
+
+    /**
      * This controls the priority level for GPU work scheduling, which helps prioritize the
      * submitted GPU work and enables preemption.
      */
@@ -316,7 +327,7 @@ public:
          */
         StereoscopicType stereoscopicType = StereoscopicType::NONE;
 
-        /*
+        /**
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
          * between 1 and Engine::getMaxStereoscopicEyes() (inclusive).
          */
@@ -376,6 +387,16 @@ public:
      * @return The OS version.
      */
     virtual int getOSVersion() const noexcept = 0;
+
+    /**
+     * Queries device/driver information of the graphics API.
+     * @param infoType the type of information to query.
+     * @param driver a pointer to the current driver.
+     * @return a CString containing the requested information.
+     */
+    virtual utils::CString getDeviceInfo(DeviceInfoType infoType,
+            Driver* UTILS_NULLABLE driver) const noexcept = 0;
+
 
     /**
      * Creates and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
