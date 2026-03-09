@@ -1,4 +1,4 @@
-name: 'Web Preqrequisites'
+name: 'Web Prerequisites'
 runs:
   using: "composite"
   steps:
