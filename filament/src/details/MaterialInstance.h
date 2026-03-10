@@ -94,9 +94,7 @@ public:
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
             Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        if (UTILS_UNLIKELY(!mPendingSpecializationConstants.empty())) {
-            flushSpecializationConstants();
-        }
+        flushSpecializationConstants();
         return getPrograms().prepareProgram(driver, variant, priorityQueue);
     }
 

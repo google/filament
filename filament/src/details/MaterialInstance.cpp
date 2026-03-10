@@ -600,7 +600,9 @@ LocalProgramCache const& FMaterialInstance::getPrograms() const noexcept {
 }
 
 void FMaterialInstance::flushSpecializationConstants() const noexcept {
-    assert_invariant(!mPendingSpecializationConstants.empty());
+    if (mPendingSpecializationConstants.empty()) {
+        return;
+    }
 
     if (!mPrograms.isInitialized()) {
         mPrograms.initializeForMaterialInstance(mMaterial->getEngine(), *mMaterial);

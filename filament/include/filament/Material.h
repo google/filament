@@ -139,10 +139,8 @@ public:
         Builder& package(const void* UTILS_NONNULL payload, size_t size);
 
         template<typename T>
-        using is_supported_constant_parameter_t = std::enable_if_t<
-                std::is_same_v<int32_t, T> ||
-                std::is_same_v<float, T> ||
-                std::is_same_v<bool, T>>;
+        using is_supported_constant_parameter_t =
+                MaterialInstance::is_supported_constant_parameter_t<T>;
 
         /**
          * Specialize a constant parameter specified in the material definition with a concrete
