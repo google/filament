@@ -117,6 +117,13 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
         cond.wait(l, [this] { return signaled; });
     }
 
+    // Used in THREAD_POOL mode. Returns true if the token is signaled, meaning it's ready to be
+    // used.
+    bool isReady() const noexcept {
+        std::unique_lock const l(lock);
+        return signaled;
+    }
+
     // This is invoked upon token completion, which occurs after a successful `gl.program`
     // population or upon cancellation. In either scenario, the callback handle must be submitted
     // to notify the caller that resource loading has concluded.
@@ -524,8 +531,14 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
 }
 
 void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
-    if (token->gl.program) {
-        return;// It's ready.
+    if (mMode == Mode::THREAD_POOL) {
+        if (token->isReady()) {
+            return;
+        }
+    } else {
+        if (token->gl.program) {
+            return;
+        }
     }
 
     switch (mMode) {
@@ -935,6 +948,7 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
         return false;
     }
     token->retrievedFromBlobCache = true;
+    token->signal();
     return true;
 }
 
