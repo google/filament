@@ -522,11 +522,19 @@ public class Material {
      * for stereoscopic rendering. If an application is not planning to render in stereo, this bit
      * should be turned off to avoid unnecessary material compilations.
      *</p>
+     *<p>
+     * Note that it is possible to override specialization constants on a per-MaterialInstance basis
+     * (see {@link MaterialInstance#setConstant}). In that case, the programs compiled by a call to
+     * Material::compile() may not be reusable by that MaterialInstance. It's better to call
+     * MaterialInstance::compile() in cases where you intend to override specialization constants.
+     *</p>
      * @param priority      Which priority queue to use, LOW or HIGH.
      * @param variants      Variants to include to the compile command.
      * @param handler       An {@link java.util.concurrent.Executor Executor}. On Android this can also be a {@link android.os.Handler Handler}.
      * @param callback      callback called on the main thread when the compilation is done on
      *                      by backend.
+     *
+     * @see MaterialInstance#compile
      */
     public void compile(@NonNull CompilerPriorityQueue priority,
                         int variants,
