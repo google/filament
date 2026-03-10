@@ -1990,7 +1990,7 @@ void WebGPUDriver::scissor(Viewport scissor) {
     assert_invariant(mRenderPassEncoder);
     assert_invariant(mCurrentRenderTarget);
 
-    uint32_t top = mCurrentRenderTarget->height - scissor.bottom - scissor.height;
+    const uint32_t top = mCurrentRenderTarget->height - scissor.bottom - scissor.height;
     assert_invariant(scissor.left >= 0 && top >= 0 &&
                      scissor.width <= mCurrentRenderTarget->width &&
                      scissor.height <= mCurrentRenderTarget->height);
