@@ -681,6 +681,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     ShadowTechnique shadowTechnique{};
     uint32_t directionalShadowsMask = 0;
     uint32_t cascadeHasVisibleShadows = 0;
+    float4 wsSplitPositionUniform = { -std::numeric_limits<float>::infinity() };
 
     if (hasVisibleShadows) {
         uint32_t const cascadeCount = cascadedShadowMaps.size();
@@ -704,10 +705,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // (which is the near plane, and doesn't need to be communicated to the shaders).
         static_assert(CONFIG_MAX_SHADOW_CASCADES <= 5,
                 "At most, a float4 can fit 4 split positions for 5 shadow cascades");
-        float4 wsSplitPositionUniform{ -std::numeric_limits<float>::infinity() };
         std::copy(splits.begin() + 1, splits.end(), &wsSplitPositionUniform[0]);
-
-        mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
         // When computing the required bias we need a half-texel size, so we multiply by 0.5 here.
         // note: normalBias is set to zero for VSM
@@ -732,6 +730,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             auto shaderParameters = shadowMap.updateDirectional(engine,
                     lightData, 0, cameraInfo, shadowMapInfo, sceneInfo,
                     canUseDepthClamp);
+
+            mCascadesShaderParameters[i] = shaderParameters;
 
             if (shadowMap.hasVisibleShadows()) {
                 const size_t shadowIndex = shadowMap.getShadowIndex();
@@ -775,10 +775,14 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     cascades |= uint32_t(cascadedShadowMaps.size());
     cascades |= cascadeHasVisibleShadows << 8u;
 
-    mShadowMappingUniforms.directionalShadows = directionalShadowsMask;
-    mShadowMappingUniforms.ssContactShadowDistance = screenSpaceShadowDistance;
-    mShadowMappingUniforms.cascades = cascades;
-
+    mShadowMappingUniforms = {
+        .cascadeSplits = wsSplitPositionUniform,
+        .ssContactShadowDistance = screenSpaceShadowDistance,
+        .directionalShadows = directionalShadowsMask,
+        .cascades = cascades,
+        .atlasResolution = { mTextureAtlasRequirements.size, 1.0f / float(mTextureAtlasRequirements.size) }
+    };
+    
     return shadowTechnique;
 }
 
