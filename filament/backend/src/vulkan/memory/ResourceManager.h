@@ -49,8 +49,11 @@ private:
     using AllocatorImpl = HandleAllocatorVK;
 
     template<typename D>
-    using requires_thread_safety = typename std::disjunction<std::is_same<D, VulkanFence>,
-            std::is_same<D, VulkanTimerQuery>>;
+    using requires_thread_safety = typename std::disjunction<
+            std::is_same<D, VulkanProgram>,
+            std::is_same<D, VulkanFence>,
+            std::is_same<D, VulkanTimerQuery>,
+            std::is_same<D, VulkanSync>>;
 
     template<typename D, typename B, typename... ARGS>
     inline D* construct(Handle<B> const& handle, ARGS&&... args) noexcept {
