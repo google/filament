@@ -11,7 +11,7 @@ on:
 jobs:
   build-desktop-mac:
     name: build-mac
-    runs-on: macos-14-xlarge
+    runs-on: 'macos-14-xlarge'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -26,7 +26,7 @@ jobs:
 
   build-desktop-linux:
     name: build-linux
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -41,7 +41,7 @@ jobs:
 
   build-windows:
     name: build-windows
-    runs-on: windows-2022-32core
+    runs-on: 'windows-2022'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -53,7 +53,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -80,7 +80,7 @@ jobs:
 
   build-ios:
     name: build-iOS
-    runs-on: macos-14-xlarge
+    runs-on: 'macos-14-xlarge'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -95,7 +95,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -108,7 +108,7 @@ jobs:
 
   validate-docs:
     name: validate-docs
-    runs-on: 'ubuntu-24.04-4core'
+    runs-on: 'ubuntu-24.04'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -121,7 +121,7 @@ jobs:
 
   test-renderdiff:
     name: test-renderdiff
-    runs-on: macos-14-xlarge
+    runs-on: 'macos-14-xlarge'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -190,7 +190,7 @@ jobs:
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -224,7 +224,7 @@ jobs:
 
   test-backend:
     name: test-backend
-    runs-on: macos-14-xlarge
+    runs-on: 'macos-14-xlarge'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
