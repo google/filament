@@ -49,7 +49,8 @@ struct GLTimerQuery : public HwTimerQuery {
         int64_t then{};
         std::atomic<int64_t> elapsed{};
     };
-    std::shared_ptr<State> state;
+    std::shared_ptr<State> sharedState;             // for weak_ptr
+    std::atomic<State*> atomicState{ nullptr };     // for synchronization
 };
 
 /*
