@@ -257,9 +257,9 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
     }
     // mDefinition.perViewDescriptorSetLayout{Vsm} is already resolved for MaterialDomain
     if (useVsmDescriptorSetLayout) {
-        return mDefinition.perViewDescriptorSetLayoutVsm;
+        return mDefinition.perViewDescriptorSetLayoutS2d;
     }
-    return mDefinition.perViewDescriptorSetLayout;
+    return mDefinition.perViewDescriptorSetLayoutPcf;
 }
 
 void FMaterial::compile(CompilerPriorityQueue const priority,

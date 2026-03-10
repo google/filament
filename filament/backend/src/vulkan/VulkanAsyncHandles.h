@@ -40,6 +40,13 @@ struct VulkanCmdFence {
     explicit VulkanCmdFence(VkFence fence) : mFence(fence) { }
     ~VulkanCmdFence() = default;
 
+    // Creates a VulkanCmdFence with its status set to VK_SUCCESS. It holds
+    // a null handle; it is assumed that any user of this object will avoid
+    // using the fence handle directly if getStatus() returns VK_SUCCESS, as
+    // in that case, it's likely the fence is being reused for other passes,
+    // and is not in the expected state anyway.
+    static std::shared_ptr<VulkanCmdFence> completed() noexcept;
+
     void setStatus(VkResult const value) {
         std::lock_guard const l(mLock);
         mStatus = value;

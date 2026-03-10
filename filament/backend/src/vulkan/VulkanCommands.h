@@ -277,7 +277,11 @@ private:
     fvkmemory::resource_ptr<VulkanSemaphore> mLastSubmit;
 
     VkFence mLastFence = VK_NULL_HANDLE;
-    std::shared_ptr<VulkanCmdFence> mLastFenceStatus;
+    // Start out with a completed fence, because if no commands have
+    // been queued or submited, then by definition, all pending work
+    // is complete.
+    std::shared_ptr<VulkanCmdFence> mLastFenceStatus =
+            VulkanCmdFence::completed();
 
     VkPipelineStageFlags mInjectedDependencyWaitStage = 0;
 };

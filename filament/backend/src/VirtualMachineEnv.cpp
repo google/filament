@@ -25,6 +25,11 @@
 
 #include <mutex>
 
+#ifdef __ANDROID__
+#include <pthread.h>
+#endif
+
+
 namespace filament {
 
 using namespace utils;
@@ -105,8 +110,21 @@ JNIEnv* VirtualMachineEnv::getEnvironmentSlow() {
     FILAMENT_CHECK_PRECONDITION(mVirtualMachine)
             << "JNI_OnLoad() has not been called";
 
-#if defined(__ANDROID__)
-    jint const result = mVirtualMachine->AttachCurrentThread(&mJniEnv, nullptr);
+#ifdef __ANDROID__
+    JavaVMAttachArgs args;
+    args.version = JNI_VERSION_1_6;
+    args.group = nullptr;
+    char threadName[16]; // pthread_getname_np returns at most 16 bytes
+    if (__builtin_available(android 26, *)) {
+        if (pthread_getname_np(pthread_self(), threadName, sizeof(threadName)) == 0) {
+            args.name = threadName;
+        } else {
+            args.name = nullptr;
+        }
+    } else {
+        args.name = nullptr;
+    }
+    jint const result = mVirtualMachine->AttachCurrentThread(&mJniEnv, &args);
 #else
     jint const result = mVirtualMachine->AttachCurrentThread(reinterpret_cast<void**>(&mJniEnv), nullptr);
 #endif

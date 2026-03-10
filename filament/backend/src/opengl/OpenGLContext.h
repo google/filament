@@ -91,7 +91,7 @@ public:
         GLenum getIndicesType() const noexcept {
             return indicesType;
         }
-    } gl;
+    };
 
     static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
 
