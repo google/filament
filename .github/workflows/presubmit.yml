@@ -8,10 +8,20 @@ on:
     branches:
       - main
 
+# This will cancel in-flight runs when there is an update to a PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The conditional "verification.verified == false" is meant to skip doing presubmit jobs when the
+#   commit is to main, and the commit is "verified".  Typically, a verified commit will have passed
+#   through presubmit already.
+
 jobs:
   build-desktop-mac:
     name: build-mac
     runs-on: 'macos-14-xlarge'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -27,6 +37,7 @@ jobs:
   build-desktop-linux:
     name: build-linux
     runs-on: 'ubuntu-24.04-4core'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -42,6 +53,7 @@ jobs:
   build-windows:
     name: build-windows
     runs-on: 'windows-2022'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -54,6 +66,7 @@ jobs:
   build-android:
     name: build-android
     runs-on: 'ubuntu-24.04-4core'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -81,6 +94,7 @@ jobs:
   build-ios:
     name: build-iOS
     runs-on: 'macos-14-xlarge'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -96,6 +110,7 @@ jobs:
   build-web:
     name: build-web
     runs-on: 'ubuntu-24.04-4core'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -109,6 +124,7 @@ jobs:
   validate-docs:
     name: validate-docs
     runs-on: 'ubuntu-24.04'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -122,6 +138,7 @@ jobs:
   test-renderdiff:
     name: test-renderdiff
     runs-on: 'macos-14-xlarge'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -191,6 +208,7 @@ jobs:
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
     runs-on: 'ubuntu-24.04-4core'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -204,6 +222,7 @@ jobs:
   test-code-correctness:
     name: test-code-correctness
     runs-on: 'macos-14-xlarge'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -225,6 +244,7 @@ jobs:
   test-backend:
     name: test-backend
     runs-on: 'macos-14-xlarge'
+    if: github.event_name == 'pull_request' || github.event.head_commit.verification.verified == false
     steps:
       - uses: actions/checkout@v4.1.6
         with:
