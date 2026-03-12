@@ -532,6 +532,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
 
 void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
     if (mMode == Mode::THREAD_POOL) {
+        // Check if `token->gl.program` is populated
         if (token->isReady()) {
             return;
         }
@@ -948,7 +949,7 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
         return false;
     }
     token->retrievedFromBlobCache = true;
-    token->signal();
+    token->signal(); // notify that `token->gl.program` is ready to use
     return true;
 }
 
