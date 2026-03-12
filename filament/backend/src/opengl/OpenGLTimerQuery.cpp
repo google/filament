@@ -88,15 +88,14 @@ TimerQueryFactoryInterface::~TimerQueryFactoryInterface() = default;
 // This is a backend synchronous call
 TimerQueryResult TimerQueryFactoryInterface::getTimerQueryValue(
         GLTimerQuery* tq, uint64_t* elapsedTime) noexcept {
-    if (UTILS_LIKELY(tq->state)) {
-        int64_t const elapsed = tq->state->elapsed.load(std::memory_order_relaxed);
-        if (elapsed > 0) {
-            *elapsedTime = elapsed;
-            return TimerQueryResult::AVAILABLE;
-        }
-        return TimerQueryResult(elapsed);
+    assert_invariant(tq->state);
+
+    int64_t const elapsed = tq->state->elapsed.load(std::memory_order_relaxed);
+    if (elapsed > 0) {
+        *elapsedTime = elapsed;
+        return TimerQueryResult::AVAILABLE;
     }
-    return TimerQueryResult::ERROR;
+    return TimerQueryResult(elapsed);
 }
 
 // ------------------------------------------------------------------------------------------------
