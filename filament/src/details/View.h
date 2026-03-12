@@ -506,6 +506,8 @@ public:
 
     MaterialGlobals getMaterialGlobals() const { return mMaterialGlobals; }
 
+    ShadowMapManager const& getShadowMapManager() const noexcept { return *mShadowMapManager; }
+
 private:
     struct FPickingQuery : public PickingQuery {
     private:

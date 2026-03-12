@@ -159,6 +159,12 @@ protected:
     EGLConfig getEglConfig() const noexcept { return mEGLConfig; }
     EGLConfig getSuitableConfigForSwapChain(uint64_t flags, bool window, bool pbuffer) const;
 
+    // Sets the EGLDisplay to be used by this platform. This should only be called by derived 
+    // classes before invoking createDriver. Calling it after that point will result in 
+    // undefined behaviour. This class will take ownership of the display and call eglTerminate
+    // on it during shutdown.
+    void setEglDisplay(EGLDisplay display) noexcept;
+ 
     // supported extensions detected at runtime
     struct {
         struct {
