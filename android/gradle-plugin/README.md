@@ -25,7 +25,7 @@ configured, the corresponding task will be disabled.
 
 ```groovy
 plugins {
-    id 'filament-plugin'
+    id 'com.google.android.filament-tools'
 }
 
 filament {

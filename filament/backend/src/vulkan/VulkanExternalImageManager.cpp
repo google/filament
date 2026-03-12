@@ -94,6 +94,9 @@ void VulkanExternalImageManager::updateSetAndLayout(
     fvkmemory::resource_ptr<VulkanDescriptorSetLayout> const& layout = set->getLayout();
     set->boundLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
             actualExternalSamplers, outSamplers);
+
+    mDescriptorSetCache->cloneSet(set, actualExternalSamplers);
+
     // Update the external samplers in the set
     for (auto& [binding, sampler, image]: samplerAndBindings) {
         // We cannot call updateSamplerForExternalSamplerSet because some samplers are non NULL

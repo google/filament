@@ -104,8 +104,9 @@ public:
     ~VulkanFboCache();
 
     // Retrieves or creates a VkFramebuffer handle.
-    fvkmemory::resource_ptr<VulkanFramebuffer> getFramebuffer(
-        FboKey const& config, fvkmemory::ResourceManager* resManager) noexcept;
+    fvkmemory::resource_ptr<VulkanFramebuffer> getFramebuffer(FboKey const& config,
+            fvkmemory::ResourceManager* resManager,
+            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept;
 
     // Retrieves or creates a VkRenderPass handle.
     fvkmemory::resource_ptr<VulkanRenderPass> getRenderPass(

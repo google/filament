@@ -31,6 +31,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/LruCache.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
         ${PUBLIC_HDR_DIR}/${TARGET}/MonotonicRingMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
@@ -181,6 +182,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_FixedCircularBuffer.cpp
             test/test_Hash.cpp
             test/test_InternPool.cpp
+            test/test_LruCache.cpp
             test/test_JobSystem.cpp
             test/test_MonotonicRingMap.cpp
             test/test_QuadTreeArray.cpp

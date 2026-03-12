@@ -1,0 +1,899 @@
+{
+  "name": "Default Test",
+  "backends": [
+    "opengl"
+  ],
+  "models": {
+    "DamagedHelmet": "helmet.glb"
+  },
+  "presets": [
+    {
+      "name": "base",
+      "models": [
+        "DamagedHelmet"
+      ],
+      "rendering": {
+        "camera": {
+          "enabled": true,
+          "horizontalFov": 45.0,
+          "center": [
+            0,
+            0,
+            0
+          ],
+          "lookAt": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "view": {
+          "postProcessingEnabled": true,
+          "dithering": "NONE"
+        },
+        "tolerance": {
+          "maxAbsDiff": 0.1,
+          "maxFailingPixelsFraction": 0.0
+        }
+      }
+    },
+    {
+      "name": "tilted",
+      "rendering": {
+        "camera": {
+          "enabled": true,
+          "horizontalFov": 45.0,
+          "center": [
+            -4,
+            -2,
+            -3
+          ],
+          "lookAt": [
+            0,
+            0,
+            -4
+          ]
+        }
+      }
+    }
+  ],
+  "tests": [
+    {
+      "name": "basic",
+      "apply_presets": [
+        "base"
+      ]
+    },
+    {
+      "name": "rotated",
+      "apply_presets": [
+        "base",
+        "tilted"
+      ]
+    },
+    {
+      "name": "ssao",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true
+      }
+    },
+    {
+      "name": "msaa",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.msaa.enabled": true
+      }
+    },
+    {
+      "name": "bloom",
+      "apply_presets": [
+        "base",
+        "tilted"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true
+      }
+    },
+    {
+      "name": "aa_none",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.antiAliasing": "NONE"
+      }
+    },
+    {
+      "name": "aa_fxaa",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.antiAliasing": "FXAA"
+      }
+    },
+    {
+      "name": "dithering_none",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dithering": "NONE"
+      }
+    },
+    {
+      "name": "msaa_8",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.msaa.enabled": true,
+        "view.msaa.sampleCount": 8
+      }
+    },
+    {
+      "name": "taa_custom",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.taa.enabled": true,
+        "view.taa.feedback": 0.2,
+        "view.taa.jitterPattern": "HALTON_23_X16"
+      }
+    },
+    {
+      "name": "ssao_gtao",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.aoType": "GTAO"
+      }
+    },
+    {
+      "name": "ssao_sao",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.aoType": "SAO"
+      }
+    },
+    {
+      "name": "ssao_radius_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.radius": 1.0
+      }
+    },
+    {
+      "name": "ssao_radius_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.radius": 0.1
+      }
+    },
+    {
+      "name": "ssao_power_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.power": 2.0
+      }
+    },
+    {
+      "name": "ssao_power_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.power": 0.5
+      }
+    },
+    {
+      "name": "ssao_bias_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.bias": 0.05
+      }
+    },
+    {
+      "name": "ssao_resolution_half",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.resolution": 0.5
+      }
+    },
+    {
+      "name": "ssao_resolution_full",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.resolution": 1.0
+      }
+    },
+    {
+      "name": "ssao_intensity_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.intensity": 2.0
+      }
+    },
+    {
+      "name": "ssao_bent_normals",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.bentNormals": true
+      }
+    },
+    {
+      "name": "ssao_quality_ultra",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.quality": "ULTRA"
+      }
+    },
+    {
+      "name": "ssao_quality_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.quality": "LOW"
+      }
+    },
+    {
+      "name": "ssao_lowPassFilter_ultra",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.lowPassFilter": "ULTRA"
+      }
+    },
+    {
+      "name": "ssao_upsampling_ultra",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.ssao.enabled": true,
+        "view.ssao.upsampling": "ULTRA"
+      }
+    },
+    {
+      "name": "ssr_basic",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true
+      }
+    },
+    {
+      "name": "ssr_thickness_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.thickness": 0.5
+      }
+    },
+    {
+      "name": "ssr_bias_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.bias": 0.1
+      }
+    },
+    {
+      "name": "ssr_maxDistance_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.maxDistance": 5.0
+      }
+    },
+    {
+      "name": "ssr_stride_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.stride": 4.0
+      }
+    },
+    {
+      "name": "ssr_stride_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.stride": 1.0
+      }
+    },
+    {
+      "name": "ssr_thickness_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.thickness": 0.01
+      }
+    },
+    {
+      "name": "ssr_maxDistance_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.maxDistance": 1.0
+      }
+    },
+    {
+      "name": "ssr_bias_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.bias": 0.001
+      }
+    },
+    {
+      "name": "ssr_quality_combo",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.screenSpaceReflections.enabled": true,
+        "view.screenSpaceReflections.thickness": 0.2,
+        "view.screenSpaceReflections.stride": 2.0
+      }
+    },
+    {
+      "name": "bloom_levels_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.levels": 8
+      }
+    },
+    {
+      "name": "bloom_levels_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.levels": 4
+      }
+    },
+    {
+      "name": "bloom_resolution_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.resolution": 1024
+      }
+    },
+    {
+      "name": "bloom_strength_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.strength": 0.5
+      }
+    },
+    {
+      "name": "bloom_strength_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.strength": 0.01
+      }
+    },
+    {
+      "name": "bloom_blendMode_interpolate",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.blendMode": "INTERPOLATE"
+      }
+    },
+    {
+      "name": "bloom_no_threshold",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.threshold": false
+      }
+    },
+    {
+      "name": "bloom_quality_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.quality": "HIGH"
+      }
+    },
+    {
+      "name": "bloom_lensflare",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.lensFlare": true
+      }
+    },
+    {
+      "name": "bloom_lensflare_no_starburst",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.lensFlare": true,
+        "view.bloom.starburst": false
+      }
+    },
+    {
+      "name": "bloom_lensflare_chromatic",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.lensFlare": true,
+        "view.bloom.chromaticAberration": 0.05
+      }
+    },
+    {
+      "name": "bloom_lensflare_ghosts",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.lensFlare": true,
+        "view.bloom.ghostCount": 8
+      }
+    },
+    {
+      "name": "bloom_lensflare_ghostSpacing",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.lensFlare": true,
+        "view.bloom.ghostSpacing": 0.8
+      }
+    },
+    {
+      "name": "bloom_halo_thick",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.lensFlare": true,
+        "view.bloom.haloThickness": 0.2
+      }
+    },
+    {
+      "name": "bloom_halo_radius",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.bloom.enabled": true,
+        "view.bloom.lensFlare": true,
+        "view.bloom.haloRadius": 0.5
+      }
+    },
+    {
+      "name": "dof_basic",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true
+      }
+    },
+    {
+      "name": "dof_cocScale_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.cocScale": 2.0
+      }
+    },
+    {
+      "name": "dof_cocScale_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.cocScale": 0.5
+      }
+    },
+    {
+      "name": "dof_cocAspectRatio",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.cocAspectRatio": 2.0
+      }
+    },
+    {
+      "name": "dof_maxApertureDiameter",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.maxApertureDiameter": 0.05
+      }
+    },
+    {
+      "name": "dof_filter_none",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.filter": "NONE"
+      }
+    },
+    {
+      "name": "dof_nativeResolution",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.nativeResolution": true
+      }
+    },
+    {
+      "name": "dof_rings_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.foregroundRingCount": 5,
+        "view.dof.backgroundRingCount": 5
+      }
+    },
+    {
+      "name": "dof_rings_low",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.foregroundRingCount": 3,
+        "view.dof.backgroundRingCount": 3
+      }
+    },
+    {
+      "name": "dof_max_coc",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.dof.enabled": true,
+        "view.dof.maxForegroundCOC": 16,
+        "view.dof.maxBackgroundCOC": 16
+      }
+    },
+    {
+      "name": "fog_basic",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true
+      }
+    },
+    {
+      "name": "fog_distance",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.distance": 10.0
+      }
+    },
+    {
+      "name": "fog_cutOffDistance",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.cutOffDistance": 100.0
+      }
+    },
+    {
+      "name": "fog_maximumOpacity",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.maximumOpacity": 0.5
+      }
+    },
+    {
+      "name": "fog_height",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.height": 5.0
+      }
+    },
+    {
+      "name": "fog_heightFalloff",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.heightFalloff": 0.5
+      }
+    },
+    {
+      "name": "fog_density_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.density": 0.5
+      }
+    },
+    {
+      "name": "fog_inScatteringStart",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.inScatteringStart": 5.0
+      }
+    },
+    {
+      "name": "fog_inScatteringSize",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.inScatteringSize": 10.0
+      }
+    },
+    {
+      "name": "fog_fogColorFromIbl",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.fog.enabled": true,
+        "view.fog.fogColorFromIbl": true
+      }
+    },
+    {
+      "name": "vignette_basic",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.vignette.enabled": true
+      }
+    },
+    {
+      "name": "vignette_midPoint",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.vignette.enabled": true,
+        "view.vignette.midPoint": 0.8
+      }
+    },
+    {
+      "name": "vignette_roundness_circle",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.vignette.enabled": true,
+        "view.vignette.roundness": 1.0
+      }
+    },
+    {
+      "name": "vignette_roundness_rect",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.vignette.enabled": true,
+        "view.vignette.roundness": 0.0
+      }
+    },
+    {
+      "name": "vignette_feather_sharp",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.vignette.enabled": true,
+        "view.vignette.feather": 0.1
+      }
+    },
+    {
+      "name": "cg_filmic",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.colorGrading.toneMapping": "FILMIC"
+      }
+    },
+    {
+      "name": "cg_aces",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.colorGrading.toneMapping": "ACES"
+      }
+    },
+    {
+      "name": "cg_agx",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.colorGrading.toneMapping": "AGX"
+      }
+    },
+    {
+      "name": "cg_pbr_neutral",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.colorGrading.toneMapping": "PBR_NEUTRAL"
+      }
+    },
+    {
+      "name": "cg_contrast_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.colorGrading.contrast": 1.5
+      }
+    },
+    {
+      "name": "cg_saturation_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.colorGrading.saturation": 1.5
+      }
+    },
+    {
+      "name": "cg_exposure_high",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.colorGrading.exposure": 1.0
+      }
+    },
+    {
+      "name": "shadow_vsm",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.shadowType": "VSM"
+      }
+    },
+    {
+      "name": "shadow_vsm_anisotropy",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.shadowType": "VSM",
+        "view.vsmShadowOptions.anisotropy": 2
+      }
+    },
+    {
+      "name": "shadow_vsm_highPrecision",
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "view.shadowType": "VSM",
+        "view.vsmShadowOptions.highPrecision": true
+      }
+    }
+  ]
+}

@@ -20,7 +20,7 @@ layout(location = 0) out highp uvec2 outPicking;
 // note: VARIANT_HAS_VSM and VARIANT_HAS_PICKING are mutually exclusive
 //------------------------------------------------------------------------------
 
-highp vec2 computeDepthMomentsVSM(const highp float depth);
+highp vec4 computeDepthMomentsVSM(const highp float depth);
 
 void main() {
     filament_lodBias = frameUniforms.lodBias;
@@ -53,9 +53,7 @@ void main() {
     // we always compute the "negative" side of ELVSM because the cost is small, and this allows
     // EVSM/ELVSM choice to be done on the CPU side more easily.
     highp float depth = vertex_worldPosition.w;
-    depth = exp(frameUniforms.vsmExponent * depth);
-    fragColor.xy = computeDepthMomentsVSM(depth);
-    fragColor.zw = computeDepthMomentsVSM(-1.0 / depth); // requires at least RGBA16F
+    fragColor = computeDepthMomentsVSM(depth);
 #elif defined(VARIANT_HAS_PICKING)
 #if FILAMENT_EFFECTIVE_VERSION == 100
     outPicking.a = mod(float(object_uniforms_objectId / 65536), 256.0) / 255.0;
@@ -74,22 +72,30 @@ void main() {
 #endif
 }
 
-highp vec2 computeDepthMomentsVSM(const highp float depth) {
-    // computes the moments
+#if MATERIAL_FEATURE_LEVEL > 0
+
+highp vec4 computeDepthMomentsVSM(const highp float depth) {
     // See GPU Gems 3
     // https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-8-summed-area-variance-shadow-maps
-    highp vec2 moments;
+    // computes the first two moments
+    float c = frameUniforms.vsmExponent;
+    highp float MAX_MOMENT = frameUniforms.vsmMaxMoment;
 
-    // the first moment is just the depth (average)
-    moments.x = depth;
+    // wrap depth for EVSM
+    highp float z = exp(c * depth);
 
-    // compute the 2nd moment over the pixel extents.
-    moments.y = depth * depth;
+    // compute EVSM moments
+    highp vec2 m1 = vec2(z, -1.0 / z);
+    highp vec2 m2 = m1 * m1;
 
-    // the local linear approximation is not correct with a warped depth
-    //highp float dx = dFdx(depth);
-    //highp float dy = dFdy(depth);
-    //moments.y += 0.25 * (dx * dx + dy * dy);
+    // compute analytic variance (2nd moment), taking into account the change in depth accross the texel
+    highp float dzdx = dFdx(depth);
+    highp float dzdy = dFdy(depth);
+    highp float linearVariance = 0.25 * (dzdx * dzdx + dzdy * dzdy);
+    highp vec2 analyticVariance = c * c * m2 * linearVariance;
+    m2 = min(m2 + analyticVariance, MAX_MOMENT);
 
-    return moments;
+    return vec4(m1.x, m2.x, m1.y, m2.y);
 }
+
+#endif
