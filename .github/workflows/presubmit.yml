@@ -70,7 +70,7 @@ jobs:
 
   build-desktop-linux:
     name: build-linux
-    runs-on: 'ubuntu-24.04-4core'
+    runs-on: 'arm-ubuntu-24.04-16core'
     needs: [check-verification]
     if: >
       always() && !cancelled() &&
@@ -183,7 +183,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: 'ubuntu-24.04-4core'
+    runs-on: 'arm-ubuntu-24.04-16core'
     needs: [check-verification]
     if: >
       always() && !cancelled() &&
@@ -311,7 +311,7 @@ jobs:
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
-    runs-on: 'ubuntu-24.04-4core'
+    runs-on: 'arm-ubuntu-24.04-16core'
     needs: [check-verification]
     if: >
       always() && !cancelled() &&
