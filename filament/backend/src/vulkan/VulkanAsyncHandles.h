@@ -63,6 +63,11 @@ private:
     uint32_t mRangeCount;
 };
 
+// Encapsulates a VkShaderModule. Note: this is a ThreadSafeResource
+// because we may use parallel compilation, in which case ref counts may
+// be modified on multiple backend threads. This is simply to avoid
+// destroying a VkShaderModule mid-compilation of a pipeline. It is
+// still assumed that all calls will originate from the backend.
 struct VulkanProgram : public HwProgram, fvkmemory::ThreadSafeResource {
     using BindingList = fvkutils::StaticVector<uint16_t, MAX_SAMPLER_COUNT>;
 

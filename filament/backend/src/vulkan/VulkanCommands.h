@@ -36,6 +36,7 @@
 #include <atomic>
 #include <chrono>
 #include <list>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -72,11 +73,11 @@ struct VulkanCommandBuffer {
 
     ~VulkanCommandBuffer();
 
-    inline void acquire(fvkmemory::resource_ptr<fvkmemory::Resource> resource) {
-        mResources.push_back(resource);
-    }
-
-    inline void acquire(fvkmemory::resource_ptr<fvkmemory::ThreadSafeResource> resource) {
+    template <typename T,
+              typename = std::enable_if_t<
+                std::is_base_of_v<fvkmemory::Resource, T> ||
+                std::is_base_of_v<fvkmemory::ThreadSafeResource, T>>>
+    inline void acquire(fvkmemory::resource_ptr<T> resource) {
         mResources.push_back(resource);
     }
 
