@@ -24,7 +24,7 @@
 
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -42,36 +42,36 @@ using namespace filament;
 namespace matc {
 
 static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1RW:";
-static const option OPTIONS[] = {
-        { "help",                    no_argument, nullptr, 'h' },
-        { "license",                 no_argument, nullptr, 'L' },
-        { "output",            required_argument, nullptr, 'o' },
-        { "output-format",     required_argument, nullptr, 'f' },
-        { "debug",                   no_argument, nullptr, 'd' },
-        { "variant-filter",    required_argument, nullptr, 'V' },
-        { "platform",          required_argument, nullptr, 'p' },
-        { "optimize",                no_argument, nullptr, 'x' }, // for backward compatibility
-        { "optimize",                no_argument, nullptr, 'O' }, // for backward compatibility
-        { "optimize-size",           no_argument, nullptr, 'S' },
-        { "optimize-none",           no_argument, nullptr, 'g' },
-        { "preprocessor-only",       no_argument, nullptr, 'E' },
-        { "api",               required_argument, nullptr, 'a' },
-        { "feature-level",     required_argument, nullptr, 'l' },
-        { "no-essl1",                no_argument, nullptr, '1' },
-        { "define",            required_argument, nullptr, 'D' },
-        { "template",          required_argument, nullptr, 'T' },
-        { "material-parameter",required_argument, nullptr, 'P' },
-        { "reflect",           required_argument, nullptr, 'r' },
-        { "print",                   no_argument, nullptr, 't' },
-        { "version",                 no_argument, nullptr, 'v' },
-        { "raw",                     no_argument, nullptr, 'w' },
-        { "no-sampler-validation",   no_argument, nullptr, 'F' },
-        { "save-raw-variants",       no_argument, nullptr, 'R' },
-        { "workarounds",       required_argument, nullptr, 'W' },
-        { "no-insert-line-directives",       no_argument, nullptr, 'n' },
-        { "no-insert-line-directive-check",       no_argument, nullptr, 'N' },
-        { "include-source-mat",       no_argument, nullptr, 'm' },
-        { nullptr, 0, nullptr, 0 }  // termination of the option list
+static const utils::getopt::option OPTIONS[] = {
+        { "help",                    utils::getopt::no_argument, nullptr, 'h' },
+        { "license",                 utils::getopt::no_argument, nullptr, 'L' },
+        { "output",            utils::getopt::required_argument, nullptr, 'o' },
+        { "output-format",     utils::getopt::required_argument, nullptr, 'f' },
+        { "debug",                   utils::getopt::no_argument, nullptr, 'd' },
+        { "variant-filter",    utils::getopt::required_argument, nullptr, 'V' },
+        { "platform",          utils::getopt::required_argument, nullptr, 'p' },
+        { "optimize",                utils::getopt::no_argument, nullptr, 'x' }, // for backward compatibility
+        { "optimize",                utils::getopt::no_argument, nullptr, 'O' }, // for backward compatibility
+        { "optimize-size",           utils::getopt::no_argument, nullptr, 'S' },
+        { "optimize-none",           utils::getopt::no_argument, nullptr, 'g' },
+        { "preprocessor-only",       utils::getopt::no_argument, nullptr, 'E' },
+        { "api",               utils::getopt::required_argument, nullptr, 'a' },
+        { "feature-level",     utils::getopt::required_argument, nullptr, 'l' },
+        { "no-essl1",                utils::getopt::no_argument, nullptr, '1' },
+        { "define",            utils::getopt::required_argument, nullptr, 'D' },
+        { "template",          utils::getopt::required_argument, nullptr, 'T' },
+        { "material-parameter",utils::getopt::required_argument, nullptr, 'P' },
+        { "reflect",           utils::getopt::required_argument, nullptr, 'r' },
+        { "print",                   utils::getopt::no_argument, nullptr, 't' },
+        { "version",                 utils::getopt::no_argument, nullptr, 'v' },
+        { "raw",                     utils::getopt::no_argument, nullptr, 'w' },
+        { "no-sampler-validation",   utils::getopt::no_argument, nullptr, 'F' },
+        { "save-raw-variants",       utils::getopt::no_argument, nullptr, 'R' },
+        { "workarounds",       utils::getopt::required_argument, nullptr, 'W' },
+        { "no-insert-line-directives",       utils::getopt::no_argument, nullptr, 'n' },
+        { "no-insert-line-directive-check",       utils::getopt::no_argument, nullptr, 'N' },
+        { "include-source-mat",       utils::getopt::no_argument, nullptr, 'm' },
+        { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
 };
 
 // A list of options that may contain PII(Personally Identifiable Information) data.
@@ -230,7 +230,7 @@ static UserVariantFilterMask parseVariantFilter(const std::string& arg) {
 CommandlineConfig::CommandlineConfig(int const argc, char** argv)
         : Config(), mArgc(argc), mArgv(argv) {
     // Add aliases for some optimization flags. We do this by pre-processing the arguments,
-    // since getopt has trouble with short options that are longer than one character (e.g. -Os).
+    // since utils::getopt::getopt has trouble with short options that are longer than one character (e.g. -Os).
     for (int i = 1; i < mArgc; i++) {
         if (mArgv[i]) {
             if (strcmp(mArgv[i], "-Os") == 0) {
@@ -273,8 +273,8 @@ bool CommandlineConfig::parse() {
     int opt;
     int option_index = 0;
 
-    while ((opt = getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string const arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string const arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -415,12 +415,12 @@ bool CommandlineConfig::parse() {
         }
     }
 
-    if (mArgc - optind > 1) {
+    if (mArgc - utils::getopt::optind > 1) {
         std::cerr << "Only one input file should be specified on the command line." << std::endl;
         return false;
     }
-    if (mArgc - optind > 0) {
-        mInput = new FilesystemInput(mArgv[optind]);
+    if (mArgc - utils::getopt::optind > 0) {
+        mInput = new FilesystemInput(mArgv[utils::getopt::optind]);
     }
 
     return true;
@@ -430,23 +430,23 @@ bool CommandlineConfig::parse() {
 // name, and any options found in PII_OPTIONS due to potential PII data.
 std::string CommandlineConfig::toPIISafeString() const noexcept {
     std::string result;
-    optind = 1; // Reset getopt's internal index before parsing
+    utils::getopt::optind = 1; // Reset utils::getopt::getopt's internal index before parsing
 
     while (true) {
-        // getopt_long will only set `long_index` if a long option is parsed.
+        // utils::getopt::getopt_long will only set `long_index` if a long utils::getopt::option is parsed.
         int long_index = -1;
-        int const opt = getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &long_index);
+        int const opt = utils::getopt::getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &long_index);
         if (opt == -1) {
             break; // End of options
         }
 
-        // Find the matched option.
-        const struct option* matched_option = nullptr;
+        // Find the matched utils::getopt::option.
+        const utils::getopt::option* matched_option = nullptr;
         if (long_index != -1) {
-            // A long option was parsed (e.g., --help)
+            // A long utils::getopt::option was parsed (e.g., --help)
              matched_option = &OPTIONS[long_index];
         } else if (opt > 0) {
-            // A short option was parsed (e.g., -h)
+            // A short utils::getopt::option was parsed (e.g., -h)
             for (int i = 0; OPTIONS[i].name != nullptr; ++i) {
                 if (OPTIONS[i].val == opt) {
                     matched_option = &OPTIONS[i];
@@ -456,17 +456,17 @@ std::string CommandlineConfig::toPIISafeString() const noexcept {
         }
 
         if (!matched_option) {
-            std::cerr << "Failed to find the matched option: long_index=" << long_index
+            std::cerr << "Failed to find the matched utils::getopt::option: long_index=" << long_index
                       << ", opt=" << opt << std::endl;
             continue;
         }
 
-        // Skip if it's a PII option.
+        // Skip if it's a PII utils::getopt::option.
         if (isPIIOption(matched_option->name)) {
             continue;
         }
 
-        // Reconstruct the option.
+        // Reconstruct the utils::getopt::option.
         if (long_index != -1) {
             result += "--";
             result += matched_option->name;
@@ -478,8 +478,8 @@ std::string CommandlineConfig::toPIISafeString() const noexcept {
         }
 
         // Add an argument if available.
-        if (optarg && matched_option->has_arg != no_argument) {
-            result += optarg;
+        if (utils::getopt::optarg && matched_option->has_arg != utils::getopt::no_argument) {
+            result += utils::getopt::optarg;
             result += " ";
         }
     }

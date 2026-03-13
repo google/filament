@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <utils/Path.h>
 
@@ -133,33 +133,33 @@ static void license() {
 static int handleArguments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "hla:g:G:s:v:b:m:b:w:u:UXxyz";
     constexpr int DUMP_METAL_LIBRARY_OPTION = 1000;
-    static const struct option OPTIONS[] = {
-            { "help",               no_argument,       nullptr, 'h' },
-            { "license",            no_argument,       nullptr, 'l' },
-            { "analyze-spirv",      required_argument, nullptr, 'a' },
-            { "print-glsl",         required_argument, nullptr, 'g' },
-            { "print-essl1",        required_argument, nullptr, 'G' },
-            { "print-spirv",        required_argument, nullptr, 's' },
-            { "print-vkglsl",       required_argument, nullptr, 'v' },
-            { "print-metal",        required_argument, nullptr, 'm' },
-            { "print-wgsl",         required_argument, nullptr, 'u' },
-            { "print-dic-glsl",     no_argument,       nullptr, 'x' },
-            { "print-dic-essl1",    no_argument,       nullptr, 'X' },
-            { "print-dic-metal",    no_argument,       nullptr, 'y' },
-            { "print-dic-wgsl",     no_argument,       nullptr, 'U' },
-            { "print-dic-vk",       no_argument,       nullptr, 'z' },
-            { "dump-binary",        required_argument, nullptr, 'b' },  // backwards compatibility
-            { "dump-spirv-binary",  required_argument, nullptr, 'b' },
-            { "dump-metal-library", required_argument, nullptr, DUMP_METAL_LIBRARY_OPTION },
-            { "web-server",         required_argument, nullptr, 'w' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",               utils::getopt::no_argument,       nullptr, 'h' },
+            { "license",            utils::getopt::no_argument,       nullptr, 'l' },
+            { "analyze-spirv",      utils::getopt::required_argument, nullptr, 'a' },
+            { "print-glsl",         utils::getopt::required_argument, nullptr, 'g' },
+            { "print-essl1",        utils::getopt::required_argument, nullptr, 'G' },
+            { "print-spirv",        utils::getopt::required_argument, nullptr, 's' },
+            { "print-vkglsl",       utils::getopt::required_argument, nullptr, 'v' },
+            { "print-metal",        utils::getopt::required_argument, nullptr, 'm' },
+            { "print-wgsl",         utils::getopt::required_argument, nullptr, 'u' },
+            { "print-dic-glsl",     utils::getopt::no_argument,       nullptr, 'x' },
+            { "print-dic-essl1",    utils::getopt::no_argument,       nullptr, 'X' },
+            { "print-dic-metal",    utils::getopt::no_argument,       nullptr, 'y' },
+            { "print-dic-wgsl",     utils::getopt::no_argument,       nullptr, 'U' },
+            { "print-dic-vk",       utils::getopt::no_argument,       nullptr, 'z' },
+            { "dump-binary",        utils::getopt::required_argument, nullptr, 'b' },  // backwards compatibility
+            { "dump-spirv-binary",  utils::getopt::required_argument, nullptr, 'b' },
+            { "dump-metal-library", utils::getopt::required_argument, nullptr, DUMP_METAL_LIBRARY_OPTION },
+            { "web-server",         utils::getopt::required_argument, nullptr, 'w' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -230,7 +230,7 @@ static int handleArguments(int argc, char* argv[], Config* config) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 template<typename T>

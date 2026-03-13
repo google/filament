@@ -42,7 +42,7 @@ const static regex emptyLinesRegex(R"regex((\n|\r\n)+)regex");
 
 // Indentation:
 // (^|\n)           match the beginning of the file, or a newline character (C++14 does not support
-//                  the multiline option, unfortunately)
+//                  the multiline utils::getopt::option, unfortunately)
 // [ \t]+           match at least one leading space or tab character
 const static regex indentationRegex(R"regex((^|\n)[ \t]+)regex");
 
