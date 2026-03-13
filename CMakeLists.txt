@@ -326,11 +326,13 @@ endif()
 if (FILAMENT_ENABLE_LTO)
     include(CheckIPOSupported)
 
-    check_ipo_supported(RESULT IPO_SUPPORT)
+    check_ipo_supported(RESULT IPO_SUPPORT OUTPUT IPO_ERROR)
 
     if (IPO_SUPPORT)
-        message(STATUS "LTO support is enabled")
+        message(STATUS "IPO / LTO is enabled")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO / LTO is not supported by this architecture: ${IPO_ERROR}")
     endif()
 endif()
 
