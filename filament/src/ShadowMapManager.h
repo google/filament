@@ -48,6 +48,7 @@
 
 #include <math/mat4.h>
 #include <math/half.h>
+#include <math/vec2.h>
 #include <math/vec4.h>
 
 #include <algorithm>
@@ -75,6 +76,7 @@ struct ShadowMappingUniforms {
     float ssContactShadowDistance;
     uint32_t directionalShadows;
     uint32_t cascades;
+    math::float2 atlasResolution;
 };
 
 class ShadowMapManager {
@@ -170,6 +172,10 @@ public:
         return std::min(targetExponent, filterCeiling);
     }
 
+    ShadowMap::ShaderParameters const& getCascadeShaderParameters(size_t index) const noexcept {
+        return mCascadesShaderParameters[index];
+    }
+
 private:
     explicit ShadowMapManager(FEngine& engine);
 
@@ -252,6 +258,8 @@ private:
     ShadowMappingUniforms mShadowMappingUniforms = {};
 
     ShadowMap::SceneInfo mSceneInfo;
+
+    ShadowMap::ShaderParameters mCascadesShaderParameters[4]{};
 
     // Inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
     // Because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.
