@@ -49,6 +49,7 @@
 #include "fsr.h"
 #include "FrameHistory.h"
 #include "RenderPass.h"
+#include "ShadowMapManager.h"
 
 #include "details/Camera.h"
 #include "details/ColorGrading.h"
@@ -2247,6 +2248,18 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
     float bloomHeight = float(inoutBloomOptions.resolution);
     float bloomWidth  = bloomHeight * aspect;
 
+    // With extreme aspect ratios the major axis can exceed the GPU's maximum
+    // texture dimension. Scale both axes down proportionally so that the larger
+    // one stays within the hardware limit.
+    const float maxDimension = float(
+            FTexture::getMaxTextureSize(mEngine, SamplerType::SAMPLER_2D));
+    const float bloomMajor = std::max(bloomWidth, bloomHeight);
+    if (bloomMajor > maxDimension) {
+        const float clampScale = maxDimension / bloomMajor;
+        bloomWidth  *= clampScale;
+        bloomHeight *= clampScale;
+    }
+
     // we might need to adjust the max # of levels
     const uint32_t major = uint32_t(std::max(bloomWidth,  bloomHeight));
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
@@ -3830,6 +3843,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGraph& fg,
+        ShadowMapManager const& smm,
         FrameGraphId<FrameGraphTexture> const input,
         FrameGraphId<FrameGraphTexture> const depth) noexcept {
 
@@ -3847,17 +3861,31 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGra
                 data.output = builder.createTexture("Shadow Cascade Debug", desc);
                 builder.declareRenderPass(data.output);
             },
-            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, &smm, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto color = resources.getTexture(data.color);
                 auto depth = resources.getTexture(data.depth);
                 auto const out = resources.getRenderPassInfo();
+
+                auto const& smu = smm.getShadowMappingUniforms();
+                mat4f lightFromWorldMatrix[4] = {};
+                float4 scissorNormalized[4] = {};
+                for (size_t i = 0, c = std::max(4u, (smu.cascades & 0xF)) ; i < c; i++) {
+                    auto const& csp = smm.getCascadeShaderParameters(i);
+                    lightFromWorldMatrix[i] = csp.lightSpace;
+                    scissorNormalized[i] = csp.scissorNormalized;
+                }
+
                 auto const& material = getPostProcessMaterial("debugShadowCascades");
-                FMaterialInstance* const mi =
-                        getMaterialInstance(mEngine, driver, material);
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
                 mi->setParameter("color",  color, SamplerParams{});  // nearest
                 mi->setParameter("depth",  depth, SamplerParams{});  // nearest
+                mi->setParameter("cascadeSplits",  smu.cascadeSplits);
+                mi->setParameter("cascadeCount",  smu.cascades & 0xF);
+                mi->setParameter("shadowAtlasResolution",  smu.atlasResolution);
+                mi->setParameter("lightFromWorldMatrix",  lightFromWorldMatrix, 4);
+                mi->setParameter("scissorNormalized",  scissorNormalized, 4);
                 commitAndRenderFullScreenQuad(driver, out, mi);
                 unbindAllDescriptorSets(driver);
             });

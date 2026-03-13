@@ -66,6 +66,7 @@ class FMaterialInstance;
 class FrameGraph;
 class RenderPass;
 class RenderPassBuilder;
+class ShadowMapManager;
 class UboManager;
 struct CameraInfo;
 
@@ -322,6 +323,7 @@ public:
             bool reinhard, size_t kernelWidth, float sigma) noexcept;
 
     FrameGraphId<FrameGraphTexture> debugShadowCascades(FrameGraph& fg,
+            ShadowMapManager const& smm,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth) noexcept;
 

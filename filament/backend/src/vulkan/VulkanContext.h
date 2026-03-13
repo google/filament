@@ -137,6 +137,14 @@ public:
         return mFenceExportFlags;
     }
 
+    inline const char* getPhysicalDeviceName() const noexcept {
+        return mPhysicalDeviceProperties.properties.deviceName;
+    }
+
+    inline const char* getDriverName() const noexcept { return mDriverProperties.driverName; }
+
+    inline const char* getDriverInfo() const noexcept { return mDriverProperties.driverInfo; }
+
     inline bool isImageCubeArraySupported() const noexcept {
         return mPhysicalDeviceFeatures.features.imageCubeArray == VK_TRUE;
     }
@@ -212,10 +220,15 @@ public:
         return mGlobalPrioritySupported;
     }
 
+    inline bool isDriverPropertiesSupported() const noexcept { return mDriverPropertiesSupported; }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+    };
+    VkPhysicalDeviceDriverProperties mDriverProperties = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
     };
     VkPhysicalDeviceVulkan11Features mPhysicalDeviceVk11Features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
@@ -246,6 +259,7 @@ private:
     bool mProtectedMemorySupported = false;
     bool mVertexInputDynamicStateSupported = false;
     bool mGlobalPrioritySupported = false;
+    bool mDriverPropertiesSupported = false;
 
     // These are options that can be enabled or disabled at an application level.
     bool mAsyncPipelineCachePrewarmingEnabled = false;
