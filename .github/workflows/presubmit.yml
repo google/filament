@@ -64,9 +64,15 @@ jobs:
       - name: Run build script
         run: |
           cd build/mac && printf "y" | ./build.sh presubmit-with-test
-      - name: Test material parser
+      - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
+      - name: Test - public headers
+        run: |
+          # out/cmake-release should have the artifacts ready for installation. Here we install it
+          #   to test the public headers
+          ninja -C out/cmake-release install
+          test/check-headers/test.sh out/release/filament/include
 
   build-desktop-linux:
     name: build-linux
