@@ -16,7 +16,7 @@
 
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <fstream>
 #include <iostream>
@@ -113,22 +113,22 @@ static void insertMapEntry(std::string assignment, StringMap& map, std::string d
 
 static int handleArguments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "ahLqvo:T:";
-    static const struct option OPTIONS[] = {
-            { "append",   no_argument,       0, 'a' },
-            { "help",     no_argument,       0, 'h' },
-            { "license",  no_argument,       0, 'L' },
-            { "quiet",    no_argument,       0, 'q' },
-            { "verbose",  no_argument,       0, 'v' },
-            { "output",   required_argument, 0, 'o' },
-            { "template", required_argument, 0, 'T' },
-            { 0, 0, 0, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "append",   utils::getopt::no_argument,       0, 'a' },
+            { "help",     utils::getopt::no_argument,       0, 'h' },
+            { "license",  utils::getopt::no_argument,       0, 'L' },
+            { "quiet",    utils::getopt::no_argument,       0, 'q' },
+            { "verbose",  utils::getopt::no_argument,       0, 'v' },
+            { "output",   utils::getopt::required_argument, 0, 'o' },
+            { "template", utils::getopt::required_argument, 0, 'T' },
+            { 0, 0, 0, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'a':
@@ -141,10 +141,10 @@ static int handleArguments(int argc, char* argv[]) {
                 license();
                 exit(0);
             case 'o':
-                g_outputFile = optarg;
+                g_outputFile = utils::getopt::optarg;
                 break;
             case 'T':
-                insertMapEntry(optarg, g_templateMap, "missing");
+                insertMapEntry(utils::getopt::optarg, g_templateMap, "missing");
                 break;
             case 'q':
                 g_quietMode = true;
@@ -155,7 +155,7 @@ static int handleArguments(int argc, char* argv[]) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 static size_t getFileSize(const char* filename) {
