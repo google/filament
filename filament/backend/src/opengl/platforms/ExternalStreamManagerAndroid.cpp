@@ -56,8 +56,7 @@ void ExternalStreamManagerAndroid::destroy(ExternalStreamManagerAndroid* pExtern
     delete pExternalStreamManagerAndroid;
 }
 
-ExternalStreamManagerAndroid::ExternalStreamManagerAndroid() noexcept
-        : mVm(VirtualMachineEnv::get()) {
+ExternalStreamManagerAndroid::ExternalStreamManagerAndroid() noexcept {
     if (__builtin_available(android 28, *)) {
         DLOG(INFO) << "Using ASurfaceTexture";
     }
@@ -67,7 +66,7 @@ ExternalStreamManagerAndroid::~ExternalStreamManagerAndroid() noexcept = default
 
 UTILS_NOINLINE
 JNIEnv* ExternalStreamManagerAndroid::getEnvironmentSlow() noexcept {
-    JNIEnv* const env = mVm.getEnvironment();
+    JNIEnv* const env = VirtualMachineEnv::get().getEnvironment();
     mJniEnv = env;
     jclass SurfaceTextureClass = env->FindClass("android/graphics/SurfaceTexture");
     mSurfaceTextureClass_updateTexImage = env->GetMethodID(SurfaceTextureClass, "updateTexImage", "()V");
@@ -98,7 +97,7 @@ void ExternalStreamManagerAndroid::release(Stream* handle) noexcept {
         ASurfaceTexture_release(stream->nSurfaceTexture);
     }
     // use VirtualMachineEnv::getEnvironment() directly because we don't need to cache JNI methods here
-    JNIEnv* const env = mVm.getEnvironment();
+    JNIEnv* const env = VirtualMachineEnv::get().getEnvironment();
     assert_invariant(env); // we should have called attach() by now
     env->DeleteGlobalRef(stream->jSurfaceTexture);
     delete stream;

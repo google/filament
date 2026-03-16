@@ -70,8 +70,6 @@ public:
 private:
     ExternalStreamManagerAndroid() noexcept;
     ~ExternalStreamManagerAndroid() noexcept;
-
-    VirtualMachineEnv& mVm;
     JNIEnv* mJniEnv = nullptr;
 
     struct EGLStream : public Stream {
