@@ -91,9 +91,9 @@ public:
     ~FRenderableManager();
 
     // free-up all resources
-    void terminate() noexcept;
+    void terminate(backend::DriverApi& driver) noexcept;
 
-    void gc(utils::EntityManager& em) noexcept;
+    void gc(utils::EntityManager& em, backend::DriverApi& driver) noexcept;
 
     /*
      * Component Manager APIs
@@ -125,7 +125,11 @@ public:
 
     void create(const Builder& builder, utils::Entity entity);
 
-    void destroy(utils::Entity e) noexcept;
+    void destroy(utils::Entity e, backend::DriverApi& driver) noexcept;
+
+    // The client API should have taken an Engine&, but it doesn't, so that's a workaround
+    // so we can keep the API as it is.
+    void clientDestroy(utils::Entity e) noexcept;
 
     inline void setAxisAlignedBoundingBox(Instance instance, const Box& aabb);
 
@@ -239,7 +243,7 @@ public:
     };
 
 private:
-    void destroyComponent(Instance ci) noexcept;
+    void destroyComponent(Instance ci, backend::DriverApi& driver) noexcept;
     static void destroyComponentPrimitives(
             HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             utils::Slice<FRenderPrimitive> primitives) noexcept;

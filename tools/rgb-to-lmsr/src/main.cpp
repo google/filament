@@ -18,7 +18,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <utils/Path.h>
 
@@ -66,18 +66,18 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hln";
-    static const struct option OPTIONS[] = {
-        { "help",         no_argument, nullptr, 'h' },
-        { "license",      no_argument, nullptr, 'l' },
-        { "normalize",    no_argument, nullptr, 'n' },
-        { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+        { "help",         utils::getopt::no_argument, nullptr, 'h' },
+        { "license",      utils::getopt::no_argument, nullptr, 'l' },
+        { "normalize",    utils::getopt::no_argument, nullptr, 'n' },
+        { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -92,7 +92,7 @@ static int handleArguments(int argc, char* argv[]) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 // CIE 1931 reflectance spectrum for Rec.709 from 390nm to 790nm

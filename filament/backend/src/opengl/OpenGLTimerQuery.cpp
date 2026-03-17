@@ -88,15 +88,14 @@ TimerQueryFactoryInterface::~TimerQueryFactoryInterface() = default;
 // This is a backend synchronous call
 TimerQueryResult TimerQueryFactoryInterface::getTimerQueryValue(
         GLTimerQuery* tq, uint64_t* elapsedTime) noexcept {
-    if (UTILS_LIKELY(tq->state)) {
-        int64_t const elapsed = tq->state->elapsed.load(std::memory_order_relaxed);
-        if (elapsed > 0) {
-            *elapsedTime = elapsed;
-            return TimerQueryResult::AVAILABLE;
-        }
-        return TimerQueryResult(elapsed);
+    assert_invariant(tq->state);
+
+    int64_t const elapsed = tq->state->elapsed.load(std::memory_order_relaxed);
+    if (elapsed > 0) {
+        *elapsedTime = elapsed;
+        return TimerQueryResult::AVAILABLE;
     }
-    return TimerQueryResult::ERROR;
+    return TimerQueryResult(elapsed);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -110,9 +109,8 @@ TimerQueryNativeFactory::TimerQueryNativeFactory(OpenGLContext& context)
 TimerQueryNativeFactory::~TimerQueryNativeFactory() = default;
 
 void TimerQueryNativeFactory::createTimerQuery(GLTimerQuery* tq) {
-    assert_invariant(!tq->state);
+    assert_invariant(tq->state);
 
-    tq->state = std::make_shared<GLTimerQuery::State>();
     mContext.procs.genQueries(1u, &tq->state->gl.query);
     CHECK_GL_ERROR()
 }
@@ -181,8 +179,7 @@ TimerQueryFenceFactory::~TimerQueryFenceFactory() {
 }
 
 void TimerQueryFenceFactory::createTimerQuery(GLTimerQuery* tq) {
-    assert_invariant(!tq->state);
-    tq->state = std::make_shared<GLTimerQuery::State>();
+    assert_invariant(tq->state);
 }
 
 void TimerQueryFenceFactory::destroyTimerQuery(GLTimerQuery* tq) {
@@ -238,8 +235,7 @@ TimerQueryFallbackFactory::TimerQueryFallbackFactory() = default;
 TimerQueryFallbackFactory::~TimerQueryFallbackFactory() = default;
 
 void TimerQueryFallbackFactory::createTimerQuery(GLTimerQuery* tq) {
-    assert_invariant(!tq->state);
-    tq->state = std::make_shared<GLTimerQuery::State>();
+    assert_invariant(tq->state);
 }
 
 void TimerQueryFallbackFactory::destroyTimerQuery(GLTimerQuery* tq) {

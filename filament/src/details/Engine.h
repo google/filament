@@ -456,8 +456,7 @@ public:
     }
 
     void prepare(backend::DriverApi& driver);
-    void gcManagers();
-    void gcDeferredAsyncObjectDestruction();
+    void gc();
     void submitFrame();
 
     using ShaderContent = utils::FixedCapacityVector<uint8_t>;
@@ -582,6 +581,8 @@ private:
 
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue) const;
+
+    void gcDeferredAsyncObjectDestruction();
 
     template<typename T>
     bool isValid(const T* ptr, ResourceList<T> const& list) const;

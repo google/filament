@@ -39,10 +39,23 @@ bool MaterialCache::MaterialKey::operator==(MaterialKey const& rhs) const noexce
     return parser == rhs.parser;
 }
 
+MaterialCache::MaterialCache()
+        : mDefinitions("MaterialCache::mDefinitions", 0),
+          mPrograms("MaterialCache::mPrograms", 0) {}
+
 MaterialCache::~MaterialCache() {
     assert_invariant(mDefinitions.empty());
     assert_invariant(mPrograms.empty());
     assert_invariant(mSpecializationConstantsInternPool.empty());
+}
+
+void MaterialCache::terminate(FEngine& engine) {
+    mPrograms.clearLruCache([&engine](backend::Handle<backend::HwProgram>& program) {
+        engine.getDriverApi().destroyProgram(program);
+    });
+    mDefinitions.clearLruCache([&engine](MaterialDefinition& definition) {
+        definition.terminate(engine);
+    });
 }
 
 MaterialDefinition* UTILS_NULLABLE MaterialCache::acquireMaterial(FEngine& engine,

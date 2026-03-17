@@ -165,6 +165,9 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ------------------------------------------------------------------------------------
             { "directionalShadows",       0, Type::INT                      },
             { "ssContactShadowDistance",  0, Type::FLOAT                    },
+            { "shadowAtlasResolution",    0, Type::FLOAT2, Precision::HIGH  },
+            { "shadowReserved0",          0, Type::FLOAT                    },
+            { "shadowReserved1",          0, Type::FLOAT                    },
 
             { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH },
             { "cascades",                  0, Type::INT                     },

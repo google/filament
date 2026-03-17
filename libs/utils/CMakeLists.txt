@@ -12,6 +12,7 @@ set(PUBLIC_HDR_DIR include)
 file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 
 set(DIST_HDRS
+        ${PUBLIC_HDR_DIR}/${TARGET}/getopt.h
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CallStack.h
@@ -31,6 +32,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/LruCache.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
         ${PUBLIC_HDR_DIR}/${TARGET}/MonotonicRingMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
@@ -121,6 +123,11 @@ endif()
 include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
+if (HAS_SYSTEM_GETOPT)
+    target_compile_definitions(${TARGET} PUBLIC HAS_SYSTEM_GETOPT)
+else()
+    target_link_libraries(${TARGET} PUBLIC getopt)
+endif()
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} PUBLIC tsl)
@@ -181,6 +188,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_FixedCircularBuffer.cpp
             test/test_Hash.cpp
             test/test_InternPool.cpp
+            test/test_LruCache.cpp
             test/test_JobSystem.cpp
             test/test_MonotonicRingMap.cpp
             test/test_QuadTreeArray.cpp

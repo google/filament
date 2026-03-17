@@ -7,21 +7,21 @@ set(TARGET uberz)
 # Source files
 # ==================================================================================================
 set(SRCS
-    src/main.cpp)
+ src/main.cpp)
 
 # ==================================================================================================
 # Target definitions
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
-target_link_libraries(${TARGET} PRIVATE getopt uberzlib)
+target_link_libraries(${TARGET} PRIVATE uberzlib)
 set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================
 # Licenses
 # ==================================================================================================
-set(MODULE_LICENSES getopt)
+set(MODULE_LICENSES )
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR}/generated)
-list_licenses(${GENERATION_ROOT}/licenses/licenses.inc ${MODULE_LICENSES})
+list_licenses(${GENERATION_ROOT}/licenses/licenses.inc "${MODULE_LICENSES}")
 target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})
 
 # ==================================================================================================

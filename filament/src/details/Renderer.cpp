@@ -310,13 +310,7 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     engine.flush();     // flush command stream
 
     // Run GC
-    JobSystem& js = engine.getJobSystem();
-    auto *rootJob = js.createJob();
-    js.run(jobs::createJob(js, rootJob, &FEngine::gcManagers, &engine)); // gc all component managers
-    if (engine.isAsynchronousModeEnabled()) {
-        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
-    }
-    js.runAndWait(rootJob);
+    engine.gc();
 
     mFrameSkipper.frameSkipped();
 }
@@ -518,13 +512,7 @@ void FRenderer::endFrame() {
     engine.flush();     // flush command stream
 
     // Run GC
-    JobSystem& js = engine.getJobSystem();
-    auto *rootJob = js.createJob();
-    js.run(jobs::createJob(js, rootJob, &FEngine::gcManagers, &engine)); // gc all component managers
-    if (engine.isAsynchronousModeEnabled()) {
-        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
-    }
-    js.runAndWait(rootJob);
+    engine.gc();
 }
 
 void FRenderer::readPixels(
@@ -1374,7 +1362,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     // Debug: CSM visualisation
     if (UTILS_UNLIKELY(engine.debug.shadowmap.visualize_cascades &&
                        view.hasShadowing() && view.hasDirectionalLighting())) {
-        input = ppm.debugShadowCascades(fg, input, depth);
+        input = ppm.debugShadowCascades(fg, view.getShadowMapManager(), input, depth);
     }
 
     // TODO: DoF should be applied here, before TAA -- but if we do this it'll result in a lot of

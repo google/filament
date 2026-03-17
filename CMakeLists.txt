@@ -326,11 +326,13 @@ endif()
 if (FILAMENT_ENABLE_LTO)
     include(CheckIPOSupported)
 
-    check_ipo_supported(RESULT IPO_SUPPORT)
+    check_ipo_supported(RESULT IPO_SUPPORT OUTPUT IPO_ERROR)
 
     if (IPO_SUPPORT)
-        message(STATUS "LTO support is enabled")
+        message(STATUS "IPO / LTO is enabled")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO / LTO is not supported by this architecture: ${IPO_ERROR}")
     endif()
 endif()
 
@@ -867,6 +869,12 @@ endfunction()
 # Sub-projects
 # ==================================================================================================
 
+include(CheckSymbolExists)
+check_symbol_exists(getopt_long "getopt.h" HAS_SYSTEM_GETOPT)
+if (NOT HAS_SYSTEM_GETOPT)
+    add_subdirectory(${EXTERNAL}/getopt)
+endif()
+
 # Common to all platforms
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
 add_subdirectory(${LIBRARIES}/camutils)
@@ -902,7 +910,6 @@ add_subdirectory(${EXTERNAL}/cgltf/tnt)
 add_subdirectory(${EXTERNAL}/draco/tnt)
 add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
-add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 

@@ -716,7 +716,11 @@ Handle<HwSwapChain> OpenGLDriver::createSwapChainHeadlessS() noexcept {
 }
 
 Handle<HwTimerQuery> OpenGLDriver::createTimerQueryS() noexcept {
-    return initHandle<GLTimerQuery>();
+    Handle<HwTimerQuery> tqh = initHandle<GLTimerQuery>();
+    // The state must be constructed here, as a synchronous call to getTimerQueryValue might happen
+    // before createTimerQueryR is executed on the backend thread.
+    handle_cast<GLTimerQuery*>(tqh)->state = std::make_shared<GLTimerQuery::State>();
+    return tqh;
 }
 
 Handle<HwDescriptorSetLayout> OpenGLDriver::createDescriptorSetLayoutS() noexcept {

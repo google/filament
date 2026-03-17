@@ -52,6 +52,9 @@ protected:
 
     ~OpenGLPlatform() noexcept override;
 
+    utils::CString getDeviceInfo(DeviceInfoType infoType,
+            Driver* UTILS_NULLABLE driver) const noexcept override;
+
 public:
     struct ExternalTexture {
         unsigned int target; // GLenum target
@@ -69,6 +72,12 @@ public:
      * @return The GL_RENDERER string
      */
     static utils::CString getRendererString(Driver const* UTILS_NONNULL driver);
+
+    /**
+     * Return the OpenGL version string of the specified Driver instance.
+     * @return The GL_VERSION string
+     */
+    static utils::CString getVersionString(Driver const* UTILS_NONNULL driver);
 
     /**
      * Called by the driver to destroy the OpenGL context. This should clean up any windows

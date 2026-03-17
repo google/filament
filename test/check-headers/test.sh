@@ -53,6 +53,12 @@ for f in $(find . -name '*.h'); do
 done
 popd >/dev/null
 
+# Check if the system has getopt
+HAS_SYSTEM_GETOPT=0
+if echo "#include <getopt.h>" | clang -x c++ -std=c++17 -E - > /dev/null 2>&1; then
+    HAS_SYSTEM_GETOPT=1
+fi
+
 rm -rf out/check-headers
 mkdir -p out/check-headers
 
@@ -61,10 +67,17 @@ echo "Checking that public headers compile independently..."
 for include in "${includes[@]}"; do
     rm -f ${TMP_FILE}
     echo "Checking ${include}"
-    if [[ "${include}" == "utils/Systrace.h" ]]; then
-        # A necessary define before we can include utils/Systrace.h
-        echo "#define SYSTRACE_TAG SYSTRACE_TAG_DISABLED" >> ${TMP_FILE}
-    fi
+    case "${include}" in
+        "utils/Systrace.h")
+            # A necessary define before we can include utils/Systrace.h
+            echo "#define SYSTRACE_TAG SYSTRACE_TAG_DISABLED" >> ${TMP_FILE}
+            ;;
+        "utils/getopt.h")
+            if [[ $HAS_SYSTEM_GETOPT -eq 1 ]]; then
+                echo "#define HAS_SYSTEM_GETOPT 1" >> ${TMP_FILE}
+            fi
+            ;;
+    esac
     echo "#include <${include}>" >> ${TMP_FILE}
     # Filament is built internally with C++20, but we maintain C++17 compatibility (for the time
     # being) in our public headers to support projects on older toolchains.
