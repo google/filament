@@ -18,7 +18,7 @@
 
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <fstream>
 #include <iostream>
@@ -56,7 +56,7 @@ Options:
            #if defined(GL_GOOGLE_cpp_style_line_directive)
            #line 0 "foobar.h"
            #endif
-       This option is meant to be used with -Onone optimization.
+       This utils::getopt::option is meant to be used with -Onone optimization.
 
 Example:
     GLSLMINIFIER -o output.fs.min input.fs
@@ -86,20 +86,20 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hLo:O:l:";
-    static const struct option OPTIONS[] = {
-            { "help",                 no_argument, nullptr, 'h' },
-            { "license",              no_argument, nullptr, 'L' },
-            { "output",         required_argument, nullptr, 'o' },
-            { "optimization",   required_argument, nullptr, 'O' },
-            { "line",           required_argument, nullptr, 'l' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",                 utils::getopt::no_argument, nullptr, 'h' },
+            { "license",              utils::getopt::no_argument, nullptr, 'L' },
+            { "output",         utils::getopt::required_argument, nullptr, 'o' },
+            { "optimization",   utils::getopt::required_argument, nullptr, 'O' },
+            { "line",           utils::getopt::required_argument, nullptr, 'l' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -109,7 +109,7 @@ static int handleArguments(int argc, char* argv[]) {
                 license();
                 exit(0);
             case 'o':
-                g_outputFile = optarg;
+                g_outputFile = utils::getopt::optarg;
                 g_writeToStdOut = false;
                 break;
             case 'O':
@@ -126,7 +126,7 @@ static int handleArguments(int argc, char* argv[]) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 int main(int argc, char* argv[]) {

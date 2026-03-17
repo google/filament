@@ -46,7 +46,7 @@
 
 #include <private/filament/EngineEnums.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <utils/NameComponentManager.h>
 #include <utils/Log.h>
@@ -219,29 +219,29 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
     static constexpr const char* OPTSTR = "ha:f:i:usc:rt:y:b:evg:dw:";
-    static const struct option OPTIONS[] = {
-        { "help",              no_argument,          nullptr, 'h' },
-        { "api",               required_argument,    nullptr, 'a' },
-        { "feature-level",     required_argument,    nullptr, 'f' },
-        { "batch",             required_argument,    nullptr, 'b' },
-        { "headless",          no_argument,          nullptr, 'e' },
-        { "ibl",               required_argument,    nullptr, 'i' },
-        { "ubershader",        no_argument,          nullptr, 'u' },
-        { "actual-size",       no_argument,          nullptr, 's' },
-        { "camera",            required_argument,    nullptr, 'c' },
-        { "eyes",              required_argument,    nullptr, 'y' },
-        { "recompute-aabb",    no_argument,          nullptr, 'r' },
-        { "settings",          required_argument,    nullptr, 't' },
-        { "split-view",        no_argument,          nullptr, 'v' },
-        { "vulkan-gpu-hint",   required_argument,    nullptr, 'g' },
-        { "screenshot-as-ppm", no_argument,          nullptr, 'd' },
-        { "webgpu-backend",    required_argument,    nullptr, 'w' },
+    static const utils::getopt::option OPTIONS[] = {
+        { "help",              utils::getopt::no_argument,          nullptr, 'h' },
+        { "api",               utils::getopt::required_argument,    nullptr, 'a' },
+        { "feature-level",     utils::getopt::required_argument,    nullptr, 'f' },
+        { "batch",             utils::getopt::required_argument,    nullptr, 'b' },
+        { "headless",          utils::getopt::no_argument,          nullptr, 'e' },
+        { "ibl",               utils::getopt::required_argument,    nullptr, 'i' },
+        { "ubershader",        utils::getopt::no_argument,          nullptr, 'u' },
+        { "actual-size",       utils::getopt::no_argument,          nullptr, 's' },
+        { "camera",            utils::getopt::required_argument,    nullptr, 'c' },
+        { "eyes",              utils::getopt::required_argument,    nullptr, 'y' },
+        { "recompute-aabb",    utils::getopt::no_argument,          nullptr, 'r' },
+        { "settings",          utils::getopt::required_argument,    nullptr, 't' },
+        { "split-view",        utils::getopt::no_argument,          nullptr, 'v' },
+        { "vulkan-gpu-hint",   utils::getopt::required_argument,    nullptr, 'g' },
+        { "screenshot-as-ppm", utils::getopt::no_argument,          nullptr, 'd' },
+        { "webgpu-backend",    utils::getopt::required_argument,    nullptr, 'w' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string const arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string const arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -327,7 +327,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         std::cerr << "--headless is allowed only when --batch is present." << std::endl;
         app->config.headless = false;
     }
-    return optind;
+    return utils::getopt::optind;
 }
 
 static bool loadSettings(const char* filename, Settings* out) {
@@ -782,6 +782,9 @@ int main(int argc, char** argv) {
                                            : AutomationEngine::Options::ExportFormat::TIFF;
             app.automationEngine->setOptions(options);
             app.viewer->getSettings().animation.enabled = false;
+        } else {
+            // Enable animation by default for interactive mode (non-batch mode).
+            app.viewer->getSettings().animation.enabled = true;
         }
 
         if (!app.settingsFile.empty()) {

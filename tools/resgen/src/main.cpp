@@ -16,7 +16,7 @@
 
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <algorithm>
 #include <cctype>
@@ -149,27 +149,27 @@ static std::string& replaceAll(std::string& context, const std::string& from, co
     return context;
 }
 
-// Parses command-line arguments using getopt and populates the AppConfig struct.
+// Parses command-line arguments using utils::getopt::getopt and populates the AppConfig struct.
 static AppConfig handleArguments(int const argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hLp:x:ktcqjzZ";
-    static const option OPTIONS[] = {
-            { "help",         no_argument,       nullptr, 'h' },
-            { "license",      no_argument,       nullptr, 'L' },
-            { "package",      required_argument, nullptr, 'p' },
-            { "deploy",       required_argument, nullptr, 'x' },
-            { "keep",         no_argument,       nullptr, 'k' },
-            { "text",         no_argument,       nullptr, 't' },
-            { "cfile",        no_argument,       nullptr, 'c' },
-            { "quiet",        no_argument,       nullptr, 'q' },
-            { "json",         no_argument,       nullptr, 'j' },
-            { "compress",     no_argument,       nullptr, 'z' },
-            { "compress-package", no_argument,   nullptr, 'Z' },
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",         utils::getopt::no_argument,       nullptr, 'h' },
+            { "license",      utils::getopt::no_argument,       nullptr, 'L' },
+            { "package",      utils::getopt::required_argument, nullptr, 'p' },
+            { "deploy",       utils::getopt::required_argument, nullptr, 'x' },
+            { "keep",         utils::getopt::no_argument,       nullptr, 'k' },
+            { "text",         utils::getopt::no_argument,       nullptr, 't' },
+            { "cfile",        utils::getopt::no_argument,       nullptr, 'c' },
+            { "quiet",        utils::getopt::no_argument,       nullptr, 'q' },
+            { "json",         utils::getopt::no_argument,       nullptr, 'j' },
+            { "compress",     utils::getopt::no_argument,       nullptr, 'z' },
+            { "compress-package", utils::getopt::no_argument,   nullptr, 'Z' },
             { nullptr, 0, nullptr, 0 }
     };
 
     AppConfig config;
     int opt;
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, nullptr)) >= 0) {
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, nullptr)) >= 0) {
         switch (opt) {
             case 'h':
                 printUsage(argv[0]);
@@ -178,10 +178,10 @@ static AppConfig handleArguments(int const argc, char* argv[]) {
                 license();
                 std::exit(0);
             case 'p':
-                config.packageName = optarg;
+                config.packageName = utils::getopt::optarg;
                 break;
             case 'x':
-                config.deployDir = optarg;
+                config.deployDir = utils::getopt::optarg;
                 break;
             case 'k':
                 config.keepExtension = true;
@@ -216,7 +216,7 @@ static AppConfig handleArguments(int const argc, char* argv[]) {
     }
 
     // Treat remaining arguments as input file paths.
-    for (int i = optind; i < argc; ++i) {
+    for (int i = utils::getopt::optind; i < argc; ++i) {
         config.inputPaths.emplace_back(argv[i]);
     }
 

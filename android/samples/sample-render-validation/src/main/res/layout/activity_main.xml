@@ -81,6 +81,33 @@
                     android:contentDescription="More Options"
                     android:layout_marginStart="8dp"/>
             </LinearLayout>
+
+            <!-- Global Enhancement Controls (Hidden by default) -->
+            <LinearLayout
+                android:id="@+id/enhancement_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:id="@+id/enhancement_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Enhancement: 1.0x"
+                    android:textSize="12sp"
+                    android:minWidth="120dp" />
+
+                <SeekBar
+                    android:id="@+id/enhancement_slider"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="100"
+                    android:progress="0" />
+            </LinearLayout>
         </LinearLayout>
 
         <TextView

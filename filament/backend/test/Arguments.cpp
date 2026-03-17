@@ -16,7 +16,7 @@
 
 #include "PlatformRunner.h"
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <iostream>
 #include <string>
@@ -30,18 +30,18 @@ TestArguments parseArguments(int argc, char* argv[]) {
     // The first colon in OPTSTR turns on silent error reporting. This is important, as the
     // arguments may also contain gtest parameters we don't know about.
     static constexpr const char* OPTSTR = ":a:kc";
-    static const struct option OPTIONS[] = {
-            { "api", required_argument, nullptr, 'a' },
-            { "headless_only", no_argument, nullptr, 'k' },
-            { "ci", no_argument, nullptr, 'c' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "api", utils::getopt::required_argument, nullptr, 'a' },
+            { "headless_only", utils::getopt::no_argument, nullptr, 'k' },
+            { "ci", utils::getopt::no_argument, nullptr, 'c' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             case 'a':
                 if (arg == "opengl") {

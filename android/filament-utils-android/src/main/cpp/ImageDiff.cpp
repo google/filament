@@ -20,8 +20,6 @@
 #include <imagediff/ImageDiff.h>
 #include <utils/Log.h>
 
-#include <vector>
-
 using namespace imagediff;
 using namespace utils;
 
@@ -102,30 +100,48 @@ jobject createResult(JNIEnv* env, ImageDiffResult const& result, bool generateDi
 
     if (generateDiff && result.diffImage.getWidth() > 0) {
         jclass bitmapClass = env->FindClass("android/graphics/Bitmap");
-        jmethodID createBitmap = env->GetStaticMethodID(bitmapClass, "createBitmap", 
+        jmethodID createBitmap = env->GetStaticMethodID(bitmapClass, "createBitmap",
             "(IILandroid/graphics/Bitmap$Config;)Landroid/graphics/Bitmap;");
-        
+
         jclass configClass = env->FindClass("android/graphics/Bitmap$Config");
         jfieldID argb8888 = env->GetStaticFieldID(configClass, "ARGB_8888", "Landroid/graphics/Bitmap$Config;");
         jobject configObj = env->GetStaticObjectField(configClass, argb8888);
 
         uint32_t width = result.diffImage.getWidth();
         uint32_t height = result.diffImage.getHeight();
-        jobject diffBitmap = env->CallStaticObjectMethod(bitmapClass, createBitmap, (jint)width, (jint)height, configObj);
-        
+        jobject diffBitmap = env->CallStaticObjectMethod(bitmapClass, createBitmap, (jint) width,
+                (jint) height, configObj);
+
         if (diffBitmap) {
+            // We need to transport the bit differences accurately to the java side, so set
+            // premultiplied to false.  From the java-side, if the bitmap is used to draw to a
+            // canvas, then client needs to set premultiplied to true again.
+            jmethodID setPremultiplied = env->GetMethodID(bitmapClass, "setPremultiplied", "(Z)V");
+            if (setPremultiplied) {
+                env->CallVoidMethod(diffBitmap, setPremultiplied, JNI_FALSE);
+            }
+
             void* diffPixels;
             if (AndroidBitmap_lockPixels(env, diffBitmap, &diffPixels) == 0) {
+                AndroidBitmapInfo info;
+                AndroidBitmap_getInfo(env, diffBitmap, &info);
+
                 float const* src = result.diffImage.getPixelRef();
                 uint8_t* dst = (uint8_t*) diffPixels;
-                uint32_t channels = result.diffImage.getChannels(); // usually 4
-                
-                for (size_t i = 0; i < width * height; ++i) {
-                    for (int c = 0; c < 4; ++c) {
-                        float v = 0.0f;
-                        if (c < channels) v = src[i * channels + c];
-                        if (c == 3 && channels < 4) v = 1.0f; // Alpha 1.0 if missing
-                        dst[i * 4 + c] = (uint8_t) std::min(255.0f, std::max(0.0f, v * 255.0f));
+                uint32_t const channels = result.diffImage.getChannels(); // usually 4
+
+                for (size_t y = 0; y < height; ++y) {
+                    uint8_t* row = dst + y * info.stride;
+                    for (size_t x = 0; x < width; ++x) {
+                        size_t srcIdx = (y * width + x) * channels;
+                        for (int c = 0; c < 4; ++c) {
+                            float v = 0.0f;
+                            if (c < channels) v = src[srcIdx + c];
+                            if (c == 3 && channels < 4) v = 1.0f; // Alpha 1.0 if missing
+
+                            row[x * 4 + c] = uint8_t(
+                                    std::min(255.0f, std::max(0.0f, std::round(v * 255.0f))));
+                        }
                     }
                 }
                 AndroidBitmap_unlockPixels(env, diffBitmap);
@@ -133,7 +149,7 @@ jobject createResult(JNIEnv* env, ImageDiffResult const& result, bool generateDi
             }
         }
     }
-    
+
     return resultObj;
 }
 
@@ -147,7 +163,7 @@ Java_com_google_android_filament_utils_ImageDiff_nCompareBasic(JNIEnv* env, jcla
     BitmapLock maskArg(env, maskBitmap);
 
     if (!refArg.isValid() || !candArg.isValid()) {
-         ImageDiffResult emptyResult; 
+         ImageDiffResult emptyResult;
          emptyResult.status = ImageDiffResult::Status::SIZE_MISMATCH; // or ERROR
          return createResult(env, emptyResult, false);
     }
@@ -175,13 +191,13 @@ Java_com_google_android_filament_utils_ImageDiff_nCompareBasic(JNIEnv* env, jcla
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_google_android_filament_utils_ImageDiff_nCompareJson(JNIEnv* env, jclass,
         jobject refBitmap, jobject candBitmap, jstring jsonConfig, jobject maskBitmap) {
-        
+
     BitmapLock refArg(env, refBitmap);
     BitmapLock candArg(env, candBitmap);
     BitmapLock maskArg(env, maskBitmap);
 
     if (!refArg.isValid() || !candArg.isValid()) {
-         ImageDiffResult emptyResult; 
+         ImageDiffResult emptyResult;
          emptyResult.status = ImageDiffResult::Status::SIZE_MISMATCH; // or ERROR
          return createResult(env, emptyResult, false);
     }
@@ -189,7 +205,7 @@ Java_com_google_android_filament_utils_ImageDiff_nCompareJson(JNIEnv* env, jclas
     ImageDiffConfig config;
     const char* nativeJson = env->GetStringUTFChars(jsonConfig, 0);
     size_t length = env->GetStringUTFLength(jsonConfig);
-    
+
     bool parsed = parseConfig(nativeJson, length, &config);
     env->ReleaseStringUTFChars(jsonConfig, nativeJson);
 
@@ -214,4 +230,3 @@ Java_com_google_android_filament_utils_ImageDiff_nCompareJson(JNIEnv* env, jclas
 
     return createResult(env, result, generateDiff);
 }
-

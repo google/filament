@@ -262,6 +262,7 @@ public:
     }
 
     void setSampleCount(uint8_t count) noexcept {
+        // MSAA is a post-process effect, and post-processing is disabled at FL0
         if (mFeatureLevel >= backend::FeatureLevel::FEATURE_LEVEL_1) {
             count = uint8_t(count < 1u ? 1u : count);
             mMultiSampleAntiAliasingOptions.sampleCount = count;
@@ -507,6 +508,8 @@ public:
     }
 
     MaterialGlobals getMaterialGlobals() const { return mMaterialGlobals; }
+
+    ShadowMapManager const& getShadowMapManager() const noexcept { return *mShadowMapManager; }
 
 private:
     struct FPickingQuery : public PickingQuery {

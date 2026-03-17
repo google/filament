@@ -577,7 +577,7 @@ void FRenderableManager::create(
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
-        destroy(entity);
+        destroy(entity, driver);
     }
     Instance const ci = manager.addComponent(entity);
     assert_invariant(ci);
@@ -733,41 +733,42 @@ void FRenderableManager::create(
 }
 
 // this destroys a single component from an entity
-void FRenderableManager::destroy(Entity const e) noexcept {
+void FRenderableManager::destroy(Entity const e, DriverApi& driver) noexcept {
     Instance const ci = getInstance(e);
     if (ci) {
-        destroyComponent(ci);
+        destroyComponent(ci, driver);
         mManager.removeComponent(e);
     }
 }
 
+void FRenderableManager::clientDestroy(utils::Entity e) noexcept {
+    destroy(e, mEngine.getDriverApi());
+}
+
 // this destroys all components in this manager
-void FRenderableManager::terminate() noexcept {
+void FRenderableManager::terminate(DriverApi& driver) noexcept {
     auto& manager = mManager;
     if (!manager.empty()) {
         DLOG(INFO) << "cleaning up " << manager.getComponentCount()
                    << " leaked Renderable components";
         while (!manager.empty()) {
             Instance const ci = manager.end() - 1;
-            destroyComponent(ci);
+            destroyComponent(ci, driver);
             manager.removeComponent(manager.getEntity(ci));
         }
     }
-    mHwRenderPrimitiveFactory.terminate(mEngine.getDriverApi());
+    mHwRenderPrimitiveFactory.terminate(driver);
 }
 
-void FRenderableManager::gc(EntityManager& em) noexcept {
-    mManager.gc(em, [this](Entity const e) {
-        destroy(e);
+void FRenderableManager::gc(EntityManager& em, DriverApi& driver) noexcept {
+    mManager.gc(em, [this, &driver](Entity const e) {
+        destroy(e, driver);
     });
 }
 
 // This is basically a Renderable's destructor.
-void FRenderableManager::destroyComponent(Instance const ci) noexcept {
+void FRenderableManager::destroyComponent(Instance const ci, DriverApi& driver) noexcept {
     auto& manager = mManager;
-    FEngine& engine = mEngine;
-
-    FEngine::DriverApi& driver = engine.getDriverApi();
 
     // See create(RenderableManager::Builder&, Entity)
     destroyComponentPrimitives(mHwRenderPrimitiveFactory, driver, manager[ci].primitives);
