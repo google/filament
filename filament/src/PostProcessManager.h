@@ -360,13 +360,7 @@ public:
 
         void terminate(FEngine& engine) noexcept;
 
-        FMaterial* getMaterial(FEngine& engine, backend::DriverApi& driver,
-                Variant::type_t variant) const noexcept;
-
-        FMaterial* getMaterial(FEngine& engine, backend::DriverApi& driver,
-                PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept {
-                return getMaterial(engine, driver, Variant::type_t(variant));
-        }
+        FMaterial* getMaterial(FEngine& engine) const noexcept;
 
     private:
         void loadMaterial(FEngine& engine) const noexcept;
@@ -391,11 +385,12 @@ public:
 
     void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
 
-    backend::PipelineState getPipelineState(FMaterial const* ma, Variant::type_t variant) const noexcept;
+    backend::PipelineState getPipelineState(FMaterialInstance const* mi,
+            Variant::type_t variant) const noexcept;
 
-    backend::PipelineState getPipelineState(FMaterial const* ma,
-                    PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept {
-            return getPipelineState(ma, Variant::type_t(variant));
+    backend::PipelineState getPipelineState(FMaterialInstance const* mi,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept {
+        return getPipelineState(mi, Variant::type_t(variant));
     }
 
     void renderFullScreenQuad(FrameGraphResources::RenderPassInfo const& out,
@@ -430,17 +425,37 @@ private:
 
     void bindPerRenderableDescriptorSet(backend::DriverApi& driver) const noexcept;
 
-    // Helper to get a MaterialInstance from a FMaterial
-    // This currently just call FMaterial::getDefaultInstance().
-    FMaterialInstance* getMaterialInstance(FMaterial const* ma) {
-        return mMaterialInstanceManager.getMaterialInstance(ma);
+    // Helpers to get MaterialInstances.
+    //
+    // These funcions additionally ensure that the necessary shader programs are compiled via
+    // prepareProgram().
+    FMaterialInstance* getMaterialInstance(backend::DriverApi& driver, FMaterial const* ma,
+            Variant::type_t variant) const;
+
+    FMaterialInstance* getMaterialInstance(backend::DriverApi& driver, FMaterial const* ma,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) const {
+        return getMaterialInstance(driver, ma, Variant::type_t(variant));
     }
 
-    // Helper to get a MaterialInstance from a PostProcessMaterial.
-    FMaterialInstance* getMaterialInstance(FEngine& engine, backend::DriverApi& driver, PostProcessMaterial const& material,
-            PostProcessVariant variant = PostProcessVariant::OPAQUE) {
-        FMaterial const* ma = material.getMaterial(engine, driver, variant);
-        return getMaterialInstance(ma);
+    FMaterialInstance* getMaterialInstance(FEngine& engine, backend::DriverApi& driver,
+            PostProcessMaterial const& material,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) const {
+        return getMaterialInstance(driver, material.getMaterial(engine), Variant::type_t(variant));
+    }
+
+    FMaterialInstance* getMaterialInstanceWithTag(backend::DriverApi& driver, FMaterial const* ma,
+            uint32_t tag, Variant::type_t variant) const;
+
+    FMaterialInstance* getMaterialInstanceWithTag(backend::DriverApi& driver, FMaterial const* ma,
+            uint32_t tag, PostProcessVariant variant = PostProcessVariant::OPAQUE) const {
+        return getMaterialInstanceWithTag(driver, ma, tag, Variant::type_t(variant));
+    }
+
+    FMaterialInstance* getMaterialInstanceWithTag(FEngine& engine, backend::DriverApi& driver,
+            PostProcessMaterial const& material, uint32_t tag,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) const {
+        return getMaterialInstanceWithTag(driver, material.getMaterial(engine), tag,
+                Variant::type_t(variant));
     }
 
     UboManager* getUboManager() const noexcept;

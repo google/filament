@@ -139,10 +139,8 @@ public:
         Builder& package(const void* UTILS_NONNULL payload, size_t size);
 
         template<typename T>
-        using is_supported_constant_parameter_t = std::enable_if_t<
-                std::is_same_v<int32_t, T> ||
-                std::is_same_v<float, T> ||
-                std::is_same_v<bool, T>>;
+        using is_supported_constant_parameter_t =
+                MaterialInstance::is_supported_constant_parameter_t<T>;
 
         /**
          * Specialize a constant parameter specified in the material definition with a concrete
@@ -243,11 +241,18 @@ public:
      * for stereoscopic rendering. If an application is not planning to render in stereo, this bit
      * should be turned off to avoid unnecessary material compilations.
      *
+     * Note that it is possible to override specialization constants on a per-MaterialInstance basis
+     * (@see MaterialInstance::setConstant). In that case, the programs compiled by a call to
+     * Material::compile() may not be reusable by that MaterialInstance. It's better to call
+     * MaterialInstance::compile() in cases where you intend to override specialization constants.
+     *
      * @param priority      Which priority queue to use, LOW or HIGH.
      * @param variants      Variants to include to the compile command.
      * @param handler       Handler to dispatch the callback or nullptr for the default handler
      * @param callback      callback called on the main thread when the compilation is done on
      *                      by backend.
+     *
+     * @see Material::compile
      */
     void compile(CompilerPriorityQueue priority,
             UserVariantFilterMask variants,
