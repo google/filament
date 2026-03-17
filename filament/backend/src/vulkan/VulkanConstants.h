@@ -95,9 +95,9 @@
 #endif
 
 #ifndef NDEBUG
-#define FVK_DEBUG_FLAGS (FVK_DEBUG_PERFORMANCE | FVK_DEBUG_FORWARDED_FLAG)
+#define FVK_DEBUG_FLAGS (FVK_DEBUG_PERFORMANCE | FVK_DEBUG_FORWARDED_FLAG | FVK_DEBUG_RESOURCE_LEAK)
 #else
-#define FVK_DEBUG_FLAGS 0
+#define FVK_DEBUG_FLAGS (FVK_DEBUG_RESOURCE_LEAK)
 #endif
 
 // Override the debug flags if we are forcing profiling mode

@@ -26,6 +26,7 @@
 #include "VulkanFboCache.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
+#include "utils/compiler.h"
 #include "vulkan/VulkanCommands.h"
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourcePointer.h"
@@ -35,6 +36,7 @@
 #include <backend/Program.h>
 
 #include <utils/FixedCapacityVector.h>
+#include <utils/LruCache.h>
 #include <utils/Mutex.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/bitset.h>
@@ -372,12 +374,10 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
     ~VulkanRenderTarget();
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
-    explicit VulkanRenderTarget();
+    explicit VulkanRenderTarget(VkDevice device);
 
     VulkanRenderTarget(VulkanRenderTarget&& target)
-        : HwRenderTarget(0, 0),
-          mOffscreen(false),
-          mProtected(false) {
+        : HwRenderTarget(0, 0) {
         swap(std::move(target));
     }
 
@@ -394,34 +394,30 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
         return {width, height};
     }
 
-    inline VulkanAttachment& getColor0() const {
-        assert_invariant(mInfo->colors[0]);
-        return mInfo->attachments[0];
+    inline VulkanAttachment const& getColor0() const {
+        assert_invariant(mColors[0]);
+        return mAttachments[0];
     }
 
-    inline VulkanAttachment& getDepth() const {
+    inline VulkanAttachment const& getDepth() const {
         assert_invariant(hasDepth());
-        if (mInfo->fbkey.samples == 1) {
-            return mInfo->attachments[mInfo->depthIndex];
+        if (mRpKey.samples == 1) {
+            return mAttachments[mDepthIndex];
         }
-        return mInfo->attachments[mInfo->msaaDepthIndex];
+        return mAttachments[mMsaaDepthIndex];
     }
 
     inline VulkanFboCache::RenderPassKey const& getRenderPassKey() const {
-        return mInfo->rpkey;
-    }
-
-    inline VulkanFboCache::FboKey const& getFboKey() const {
-        return mInfo->fbkey;
+        return mRpKey;
     }
 
     inline uint8_t getSamples() const {
-        return mInfo->fbkey.samples;
+        return mRpKey.samples;
     }
 
     uint8_t getColorTargetCount(VulkanRenderPassContext const& pass) const;
 
-    inline bool hasDepth() const { return mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX; }
+    inline bool hasDepth() const { return mDepthIndex != UNDEFINED_INDEX; }
 
     inline bool isSwapChain() const { return !mOffscreen; }
     inline bool isProtected() const { return mProtected; }
@@ -431,40 +427,64 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
     void releaseSwapchain();
 
     bool isSwapchainBound() const {
-        return isSwapChain() && mInfo->colors[0];
+        return isSwapChain() && mColors[0];
     }
 
     void emitBarriersBeginRenderPass(VulkanCommandBuffer& commands);
 
     void emitBarriersEndRenderPass(VulkanCommandBuffer& commands);
 
+    VkFramebuffer getFramebuffer(VkRenderPass renderPass, VulkanCommandBuffer* commands);
+
 private:
     void swap(VulkanRenderTarget&& target) {
         std::swap(width, target.width);
         std::swap(height, target.height);
+
+        assert_invariant(target.mDevice != VK_NULL_HANDLE);
+        //assert_invariant(mDevice != VK_NULL_HANDLE);
+
+        std::swap(mDevice, target.mDevice);
+        std::swap(mColors, target.mColors);
+        std::swap(mDepthIndex, target.mDepthIndex);
+        std::swap(mMsaaDepthIndex, target.mMsaaDepthIndex);
+        std::swap(mMsaaIndex, target.mMsaaIndex);
+
         std::swap(mOffscreen, target.mOffscreen);
         std::swap(mProtected, target.mProtected);
-        std::swap(mInfo, target.mInfo);
+
+        std::swap(mAttachments, target.mAttachments);
+        std::swap(mRpKey, target.mRpKey);
+        std::swap(mFboInfo, target.mFboInfo);
+        std::swap(mFboAttachments, target.mFboAttachments);
     }
 
-    struct Auxiliary {
-        static constexpr int8_t UNDEFINED_INDEX = -1;
+    static constexpr int8_t UNDEFINED_INDEX = -1;
 
-        explicit Auxiliary() noexcept = default;
+    VkDevice mDevice = VK_NULL_HANDLE;  // 8 bytes
+    utils::bitset32 mColors;             // 4
+    int8_t mDepthIndex = UNDEFINED_INDEX;      // 1
+    int8_t mMsaaDepthIndex = UNDEFINED_INDEX;  // 1
+    int8_t mMsaaIndex = UNDEFINED_INDEX;       // 1
+    bool mOffscreen = false;                   // 1
 
-        VulkanFboCache::RenderPassKey rpkey = {};
-        VulkanFboCache::FboKey fbkey = {};
-        std::vector<VulkanAttachment> attachments;
-        utils::bitset32 colors;
-        int8_t depthIndex = UNDEFINED_INDEX;
-        int8_t msaaDepthIndex = UNDEFINED_INDEX;
-        int8_t msaaIndex = UNDEFINED_INDEX;
+    struct FboData {
+        VkRenderPass renderpass;
+        VkFramebuffer framebuffer;
+        std::shared_ptr<VulkanCmdFence> fence;
     };
-    bool mOffscreen;
-    bool mProtected;
 
-    std::unique_ptr<Auxiliary> mInfo;
+    std::vector<FboData> mVkFrameBuffers;
+    std::vector<VulkanAttachment> mAttachments; // 24 bytes
+    VulkanFboCache::RenderPassKey mRpKey = {};  // 56 bytes
+    VkFramebufferCreateInfo mFboInfo = {};      // 64 bytes
+    VkImageView mFboAttachments[
+            MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};    // 136
+    bool mProtected = false;                    // 1
+    UTILS_UNUSED bool padding[3] = {};          // 3
 };
+
+static_assert(sizeof(VulkanRenderTarget) == 352);
 
 struct VulkanBufferObject;
 
@@ -583,26 +603,6 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive, fvkmemory::Resource {
 
     fvkmemory::resource_ptr<VulkanVertexBuffer> vertexBuffer;
     fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer;
-};
-
-struct VulkanFramebuffer : public fvkmemory::Resource {
-    VulkanFramebuffer(VkDevice device,
-            VkFramebuffer framebuffer,
-            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget);
-    ~VulkanFramebuffer();
-
-    inline VkFramebuffer getVkFramebuffer() const noexcept {
-        return mFramebuffer;
-    }
-
-private:
-    VkDevice mDevice;
-    VkFramebuffer mFramebuffer;
-
-    // We need to keep a reference to the renderTarget because the key of the framebuffer in the
-    // cache has references to the image views that are derived from the textures of the render
-    // target.
-    fvkmemory::resource_ptr<VulkanRenderTarget> mRenderTarget;
 };
 
 struct VulkanRenderPass : public fvkmemory::Resource {

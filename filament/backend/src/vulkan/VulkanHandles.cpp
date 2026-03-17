@@ -27,7 +27,9 @@
 #include "vulkan/utils/Definitions.h"
 #include "vulkan/utils/Image.h"
 #include "vulkan/utils/Spirv.h"
+#include "vulkan/vulkan_core.h"
 
+#include <algorithm>
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/compiler.h> // UTILS_FALLTHROUGH
@@ -398,19 +400,25 @@ void VulkanProgram::flushPushConstants(VkPipelineLayout layout) {
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
-VulkanRenderTarget::VulkanRenderTarget()
+VulkanRenderTarget::VulkanRenderTarget(VkDevice device)
     : HwRenderTarget(0, 0),
-      mOffscreen(false),
-      mProtected(false),
-      mInfo(std::make_unique<Auxiliary>()) {
-    mInfo->rpkey.samples = mInfo->fbkey.samples = 1;
+      mDevice(device) {
+    assert_invariant(device != VK_NULL_HANDLE);    
+    mRpKey.samples = 1;
 }
 
-VulkanRenderTarget::~VulkanRenderTarget() = default;
+VulkanRenderTarget::~VulkanRenderTarget() {
+    if (mDevice == VK_NULL_HANDLE) {
+        return;
+    }
+    for (auto const& [renderpass, framebuffer, fence] : mVkFrameBuffers) {
+        vkDestroyFramebuffer(mDevice, framebuffer, VKALLOC);
+    }
+}
 
 void VulkanRenderTarget::bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
     assert_invariant(!mOffscreen);
-    assert_invariant(!mInfo->colors[0]);
+    assert_invariant(!mColors[0]);
 
     VkExtent2D const extent = swapchain->getExtent();
     width = extent.width;
@@ -418,36 +426,50 @@ void VulkanRenderTarget::bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> 
     mProtected = swapchain->isProtected();
 
     VulkanAttachment color = createSwapchainAttachment(swapchain->getCurrentColor());
-    assert_invariant(mInfo->attachments.size() == 0);
-    mInfo->attachments.push_back(color);
+    assert_invariant(mAttachments.size() == 0);
+    mAttachments.push_back(color);
 
-    auto& fbkey = mInfo->fbkey;
-    auto& rpkey = mInfo->rpkey;
+    auto& rpkey = mRpKey;
 
     rpkey.colorFormat[0] = color.getFormat();
     rpkey.viewCount = color.layerCount;
-    fbkey.width = width;
-    fbkey.height = height;
-    fbkey.color[0] = color.getImageView();
-    fbkey.resolve[0] = VK_NULL_HANDLE;
+
+    mFboInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    mFboInfo.width = width;
+    mFboInfo.height = height;
+    mFboInfo.layers = 1;
+    mFboInfo.pAttachments = mFboAttachments;
+
+    uint32_t attachmentCount = 0;
+    mFboAttachments[attachmentCount++] = color.getImageView();
 
     if (swapchain->getDepth()) {
         VulkanAttachment depth = createSwapchainAttachment(swapchain->getDepth());
-        mInfo->attachments.push_back(depth);
-        mInfo->depthIndex = 1;
+        mAttachments.push_back(depth);
+        mDepthIndex = 1;
 
         rpkey.depthFormat = depth.getFormat();
-        fbkey.depth = depth.getImageView();
+        mFboAttachments[attachmentCount++] = depth.getImageView();
     } else {
         rpkey.depthFormat = VK_FORMAT_UNDEFINED;
-        fbkey.depth = VK_NULL_HANDLE;
     }
-    mInfo->colors.set(0);
+    mFboInfo.attachmentCount = attachmentCount;
+    mColors.set(0);
+
+    std::vector<FboData> nbuffers;
+    for (auto const& [renderpass, framebuffer, fence] : mVkFrameBuffers) {
+        if (fence->getStatus() == VK_SUCCESS) {
+            vkDestroyFramebuffer(mDevice, framebuffer, VKALLOC);
+        } else {
+            nbuffers.push_back({renderpass,framebuffer,fence});
+        }
+    }
+    std::swap(mVkFrameBuffers, nbuffers);
 }
 
 void VulkanRenderTarget::releaseSwapchain() {
-    mInfo->colors = {};
-    mInfo->attachments.clear();
+    mColors = {};
+    mAttachments.clear();
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
@@ -456,9 +478,10 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
+      mDevice(device),
       mOffscreen(true),
-      mProtected(false),
-      mInfo(std::make_unique<Auxiliary>()) {
+      mProtected(false) {
+    assert_invariant(device != VK_NULL_HANDLE);        
     auto& depth = depthStencil[0];
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
@@ -467,18 +490,24 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     samples = fvkutils::reduceSampleCount(samples,
             limits.framebufferDepthSampleCounts & limits.framebufferColorSampleCounts);
 
-    auto& rpkey = mInfo->rpkey;
+    auto& rpkey = mRpKey;
     rpkey.samples = samples;
     rpkey.depthFormat = depth.getFormat();
     rpkey.viewCount = layerCount;
 
-    auto& fbkey = mInfo->fbkey;
-    fbkey.width = width;
-    fbkey.height = height;
-    fbkey.samples = samples;
+    auto& fboInfo = mFboInfo;
+    fboInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    fboInfo.width = width;
+    fboInfo.height = height;
+    fboInfo.layers = 1;
+    fboInfo.pAttachments = mFboAttachments;
 
-    std::vector<VulkanAttachment>& attachments = mInfo->attachments;
+    std::vector<VulkanAttachment>& attachments = mAttachments;
     std::vector<VulkanAttachment> msaaAttachments;
+
+    VkImageView colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    VkImageView resolveAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    VkImageView depthAttachment = VK_NULL_HANDLE;
 
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         VulkanAttachment& attachment = color[index];
@@ -491,11 +520,11 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         mProtected |= texture->getIsProtected();
 
         attachments.push_back(attachment);
-        mInfo->colors.set(index);
+        mColors.set(index);
 
         rpkey.colorFormat[index] = attachment.getFormat();
-        fbkey.color[index] = attachment.getImageView();
-        fbkey.resolve[index] = VK_NULL_HANDLE;
+        colorAttachments[index] = attachment.getImageView();
+        resolveAttachments[index] = VK_NULL_HANDLE;
 
         if (samples > 1) {
             VulkanAttachment msaaAttachment = {};
@@ -513,30 +542,30 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                     .layerCount = layerCount,
                 };
 
-                fbkey.resolve[index] = attachment.getImageView();
+                resolveAttachments[index] = attachment.getImageView();
             } else {
                 msaaAttachment = {
                     .texture = texture,
                     .layerCount = layerCount,
                 };
             }
-            fbkey.color[index] = msaaAttachment.getImageView();
+            colorAttachments[index] = msaaAttachment.getImageView();
             msaaAttachments.push_back(msaaAttachment);
         }
     }
 
     if (attachments.size() > 0 && samples > 1 && msaaAttachments.size() > 0) {
-        mInfo->msaaIndex = (uint8_t) attachments.size();
+        mMsaaIndex = (uint8_t) attachments.size();
         attachments.insert(attachments.end(), msaaAttachments.begin(), msaaAttachments.end());
     }
 
     if (depth.texture) {
         auto depthTexture = depth.texture;
-        mInfo->depthIndex = (uint8_t) attachments.size();
+        mDepthIndex = (uint8_t) attachments.size();
         attachments.push_back(depth);
-        fbkey.depth = depth.getImageView();
+        depthAttachment = depth.getImageView();
         if (samples > 1) {
-            mInfo->msaaDepthIndex = mInfo->depthIndex;
+            mMsaaDepthIndex = mDepthIndex;
             if (depthTexture->samples == 1) {
                 // MSAA depth texture must have the mipmap count of 1
                 uint8_t const msLevel = 1;
@@ -544,16 +573,54 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                 // exist.
                 auto msaaTexture = initMsaaTexture(depthTexture, device, physicalDevice, context,
                         allocator, commands, resourceManager, msLevel, samples, stagePool);
-                mInfo->msaaDepthIndex = (uint8_t) attachments.size();
+                mMsaaDepthIndex = (uint8_t) attachments.size();
                 VulkanAttachment msaaAttachment = {
                     .texture = msaaTexture,
                     .layerCount = layerCount,
                 };
                 attachments.push_back(msaaAttachment);
-                fbkey.depth = msaaAttachment.getImageView();
+                depthAttachment = msaaAttachment.getImageView();
             }
         }
     }
+
+    uint32_t attachmentCount = 0;
+    for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
+        if (colorAttachments[index]) {
+            mFboAttachments[attachmentCount++] = colorAttachments[index];
+        }
+    }
+    for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
+        if (resolveAttachments[index]) {
+            mFboAttachments[attachmentCount++] = resolveAttachments[index];
+        }
+    }
+    if (depthAttachment) {
+        mFboAttachments[attachmentCount++] = depthAttachment;
+    }
+    fboInfo.attachmentCount = attachmentCount;
+}
+
+VkFramebuffer VulkanRenderTarget::getFramebuffer(VkRenderPass renderPass, VulkanCommandBuffer* commands) {
+    if (mOffscreen) {
+        for (auto& [rp, fb, fence] : mVkFrameBuffers) {
+            if (rp == renderPass) {
+                fence = commands->getFenceStatus();
+                return fb;
+            }
+        }
+    }
+
+    VkDevice device = mDevice;
+
+    mFboInfo.renderPass = renderPass;
+    VkFramebuffer framebuffer;
+    VkResult error = vkCreateFramebuffer(device, &mFboInfo, VKALLOC, &framebuffer);
+    FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
+                                                      << " error=" << static_cast<int32_t>(error);
+    mVkFrameBuffers.push_back({renderPass, framebuffer, commands->getFenceStatus()});
+
+    return framebuffer;
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
@@ -570,10 +637,10 @@ uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPassContext& p
         return 1;
     }
     if (pass.currentSubpass == 1) {
-        return mInfo->colors.count();
+        return mColors.count();
     }
     uint8_t count = 0;
-    mInfo->colors.forEachSetBit([&count, &pass](size_t index) {
+    mColors.forEachSetBit([&count, &pass](size_t index) {
         if (!(pass.params.subpassMask & (1 << index))) {
             count++;
         }
@@ -582,8 +649,7 @@ uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPassContext& p
 }
 
 void VulkanRenderTarget::emitBarriersBeginRenderPass(VulkanCommandBuffer& commands) {
-    auto& attachments = mInfo->attachments;
-    auto samples = mInfo->fbkey.samples;
+    auto samples = mRpKey.samples;
     auto barrier = [&commands](VulkanAttachment& attachment, VulkanLayout const layout) {
         auto tex = attachment.texture;
         auto const& range = attachment.getSubresourceRange();
@@ -594,24 +660,24 @@ void VulkanRenderTarget::emitBarriersBeginRenderPass(VulkanCommandBuffer& comman
         }
     };
 
-    for (size_t i = 0, count = mInfo->colors.count(); i < count; ++i) {
-        auto& attachment = attachments[i];
+    for (size_t i = 0, count = mColors.count(); i < count; ++i) {
+        auto& attachment = mAttachments[i];
         auto tex = attachment.texture;
         if (samples == 1 || tex->samples == 1) {
             barrier(attachment, VulkanLayout::COLOR_ATTACHMENT);
         }
     }
-    if (mInfo->msaaIndex != Auxiliary::UNDEFINED_INDEX) {
-        for (size_t i = mInfo->msaaIndex, count = mInfo->msaaIndex + mInfo->colors.count();
+    if (mMsaaIndex != UNDEFINED_INDEX) {
+        for (size_t i = mMsaaIndex, count = mMsaaIndex + mColors.count();
                 i < count; ++i) {
-            barrier(attachments[i], VulkanLayout::COLOR_ATTACHMENT);
+            barrier(mAttachments[i], VulkanLayout::COLOR_ATTACHMENT);
         }
     }
-    if (mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX) {
-        barrier(attachments[mInfo->depthIndex], VulkanLayout::DEPTH_ATTACHMENT);
+    if (mDepthIndex != UNDEFINED_INDEX) {
+        barrier(mAttachments[mDepthIndex], VulkanLayout::DEPTH_ATTACHMENT);
     }
-    if (mInfo->msaaDepthIndex != Auxiliary::UNDEFINED_INDEX) {
-        barrier(attachments[mInfo->msaaDepthIndex], VulkanLayout::DEPTH_ATTACHMENT);
+    if (mMsaaDepthIndex != UNDEFINED_INDEX) {
+        barrier(mAttachments[mMsaaDepthIndex], VulkanLayout::DEPTH_ATTACHMENT);
     }
 }
 
@@ -620,7 +686,7 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
         return;
     }
 
-    for (auto& attachment: mInfo->attachments) {
+    for (auto& attachment: mAttachments) {
         auto const& range = attachment.getSubresourceRange();
         bool const isDepth = attachment.isDepth();
         auto texture = attachment.texture;
@@ -714,16 +780,6 @@ VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
     : HwRenderPrimitive{ .type = pt },
       vertexBuffer(vb),
       indexBuffer(ib) {}
-
-VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkFramebuffer framebuffer,
-        fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget)
-        : mDevice(device),
-          mFramebuffer(framebuffer),
-          mRenderTarget(renderTarget) {}
-
-VulkanFramebuffer::~VulkanFramebuffer() {
-    vkDestroyFramebuffer(mDevice, mFramebuffer, VKALLOC);
-}
 
 VulkanRenderPass::VulkanRenderPass(VkDevice device, VkRenderPass renderPass)
     : mDevice(device), mRenderPass(renderPass) {}

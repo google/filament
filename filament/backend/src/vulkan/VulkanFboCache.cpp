@@ -48,83 +48,12 @@ bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
     return true;
 }
 
-bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k2) const {
-    if (k1.renderPass != k2.renderPass) return false;
-    if (k1.width != k2.width) return false;
-    if (k1.height != k2.height) return false;
-    if (k1.layers != k2.layers) return false;
-    if (k1.samples != k2.samples) return false;
-    if (k1.depth != k2.depth) return false;
-    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (k1.color[i] != k2.color[i]) return false;
-        if (k1.resolve[i] != k2.resolve[i]) return false;
-    }
-    return true;
-}
-
 VulkanFboCache::VulkanFboCache(VkDevice device)
     : mDevice(device) {}
 
 VulkanFboCache::~VulkanFboCache() {
-    FILAMENT_CHECK_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty())
+    FILAMENT_CHECK_POSTCONDITION(mRenderPassCache.empty())
             << "Please explicitly call terminate() while the VkDevice is still alive.";
-}
-
-fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey const& config,
-        fvkmemory::ResourceManager* resManager,
-        fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept {
-    FboMap::iterator iter = mFramebufferCache.find(config);
-    if (UTILS_LIKELY(iter != mFramebufferCache.end())) {
-        iter.value().timestamp = mCurrentTime;
-        return iter->second.handle;
-    }
-
-    // The attachment list contains: Color Attachments, Resolve Attachments, and Depth Attachment.
-    // For simplicity, create an array that can hold the maximum possible number of attachments.
-    // Note that this needs to have the same ordering as the corollary array in getRenderPass.
-    VkImageView attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1];
-    uint32_t attachmentCount = 0;
-    for (VkImageView attachment : config.color) {
-        if (attachment) {
-            attachments[attachmentCount++] = attachment;
-        }
-    }
-    for (VkImageView attachment : config.resolve) {
-        if (attachment) {
-            attachments[attachmentCount++] = attachment;
-        }
-    }
-    if (config.depth) {
-        attachments[attachmentCount++] = config.depth;
-    }
-
-    #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
-    FVK_LOGD << "Creating framebuffer " << config.width << "x" << config.height << " "
-        << "for render pass " << config.renderPass << ", "
-        << "samples = " << int(config.samples) << ", "
-        << "depth = " << (config.depth ? 1 : 0) << ", "
-        << "attachmentCount = " << attachmentCount;
-    #endif
-
-    VkFramebufferCreateInfo info {
-        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-        .renderPass = config.renderPass,
-        .attachmentCount = attachmentCount,
-        .pAttachments = attachments,
-        .width = config.width,
-        .height = config.height,
-        .layers = config.layers,
-    };
-    mRenderPassRefCount[info.renderPass]++;
-    VkFramebuffer framebuffer;
-    VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
-    FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
-                                                     << " error=" << static_cast<int32_t>(error);
-    fvkmemory::resource_ptr<VulkanFramebuffer> fbh =
-            fvkmemory::resource_ptr<VulkanFramebuffer>::construct(resManager, mDevice, framebuffer,
-                    renderTarget);
-    mFramebufferCache[config] = { fbh, mCurrentTime };
-    return fbh;
 }
 
 fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
@@ -355,16 +284,7 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
     return rph;
 }
 
-void VulkanFboCache::resetFramebuffers() noexcept {
-    for (const auto& pair: mFramebufferCache) {
-        mRenderPassRefCount[pair.first.renderPass]--;
-    }
-    mFramebufferCache.clear();
-}
-
 void VulkanFboCache::terminate() noexcept {
-    resetFramebuffers();
-
     mRenderPassRefCount.clear();
     mRenderPassCache.clear();
 }
@@ -380,18 +300,6 @@ void VulkanFboCache::gc() noexcept {
         return;
     }
     const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
-
-    for (FboMap::iterator iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ) {
-        const FboVal fbo = iter->second;
-        if (fbo.timestamp < evictTime && fbo.handle) {
-            mRenderPassRefCount[iter->first.renderPass]--;
-
-            // erase(iterator) returns the iterator to the next element.
-            iter = mFramebufferCache.erase(iter);
-        } else {
-            ++iter;
-        }
-    }
 
     for (RenderPassMap::iterator iter = mRenderPassCache.begin(); iter != mRenderPassCache.end(); ) {
         const VkRenderPass handle = iter->second.handle->getVkRenderPass();

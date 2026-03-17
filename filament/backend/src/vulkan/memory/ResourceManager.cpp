@@ -20,6 +20,8 @@
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 
+#include <algorithm>
+
 namespace filament::backend::fvkmemory {
 
 namespace {
@@ -34,9 +36,24 @@ ResourceManager::ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck
 void ResourceManager::gc() noexcept {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("ResourceManager::gc");
-    auto destroyAll = [this](GcList& list) {
-        for (auto const& [type, id]: list) {
-            destroyWithType(type, id);
+    uint32_t counts[(size_t) ResourceType::UNDEFINED_TYPE] = {};
+    auto destroyAll = [this, &counts](GcList& list) {
+        FVK_SYSTRACE_CONTEXT();
+        if (list.empty()) {
+            return;
+        }
+        std::sort(list.begin(), list.end(), [](auto const& a, auto const& b) {
+            return a.first < b.first;
+        });
+        for (size_t i = 0; i < list.size(); ) {
+            ResourceType type = list[i].first;
+            FVK_SYSTRACE_START(getTypeStr(type).data());
+            while (i < list.size() && list[i].first == type) {
+                destroyWithType(type, list[i].second);
+                counts[(size_t) type]++;
+                i++;
+            }
+            FVK_SYSTRACE_END();
         }
         list.clear();
     };
@@ -45,13 +62,29 @@ void ResourceManager::gc() noexcept {
         // Note that we're not copying mThreadSafeGcList because the objects here do not have
         // resource_ptrs to other handle objects, so their desctruction would not add more elements
         // to mThreadSafeGcList.
+        FVK_SYSTRACE_START("gc::threadSafeList");
         std::unique_lock<utils::Mutex> lock(mThreadSafeGcListMutex);
         destroyAll(mThreadSafeGcList);
+        FVK_SYSTRACE_END();
     }
 
+    FVK_SYSTRACE_START("gc::mainList");
     GcList gcs;
     std::swap(gcs, mGcList);
     destroyAll(gcs);
+    FVK_SYSTRACE_END();
+
+    bool hasGarbage = false;
+    for (size_t i = 0; i < (size_t) ResourceType::UNDEFINED_TYPE; ++i) {
+        if (counts[i] > 0) {
+            if (!hasGarbage) {
+                LOG(INFO) << "ResourceManager GC freed:";
+                hasGarbage = true;
+            }
+            LOG(INFO) << "    " << getTypeStr((ResourceType) i) << "=" << counts[i];
+        }
+    }
+
     FVK_SYSTRACE_END();
 }
 
@@ -126,9 +159,6 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
         case ResourceType::STREAM:
             destruct<VulkanStream>(Handle<VulkanStream>(id));
             break;
-        case ResourceType::FRAMEBUFFER:
-            destruct<VulkanFramebuffer>(Handle<VulkanFramebuffer>(id));
-            break;
         case ResourceType::RENDER_PASS:
             destruct<VulkanRenderPass>(Handle<VulkanRenderPass>(id));
             break;
@@ -149,11 +179,11 @@ void ResourceManager::traceConstruction(ResourceType type, HandleId id) {
 
 void ResourceManager::print() const noexcept {
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
-    LOG(ERROR) << "-------------------";
-    for (size_t i = 0; i < (size_t) ResourceType::UNDEFINED_TYPE; ++i) {
-        LOG(ERROR) << "    " << getTypeStr((ResourceType) i) << "=" << COUNTER[i];
-    }
-    LOG(ERROR) << "+++++++++++++++++++";
+   LOG(ERROR) << "-------------------";
+   for (size_t i = 0; i < (size_t) ResourceType::UNDEFINED_TYPE; ++i) {
+       LOG(ERROR) << "    " << getTypeStr((ResourceType) i) << "=" << COUNTER[i];
+   }
+   LOG(ERROR) << "+++++++++++++++++++";
 #endif
 }
 

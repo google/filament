@@ -56,9 +56,8 @@ enum class ResourceType : uint8_t {
     MEMORY_MAPPED_BUFFER = 18,
     SEMAPHORE = 19,
     STREAM = 20,
-    FRAMEBUFFER = 21,
-    RENDER_PASS = 22,
-    UNDEFINED_TYPE = 23,    // Must be the last enum because we use it for iterating over the enums.
+    RENDER_PASS = 21,
+    UNDEFINED_TYPE = 22,    // Must be the last enum because we use it for iterating over the enums.
 };
 
 template<typename D>

@@ -248,7 +248,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       // swap the content later when createDefaultRenderTarget() is called.  This frees
       // createDefaultRenderTarget() from being ordered with makeCurrent().
       mDefaultRenderTarget(
-              fvkmemory::resource_ptr<VulkanRenderTarget>::construct(&mResourceManager)),
+              fvkmemory::resource_ptr<VulkanRenderTarget>::construct(&mResourceManager, mPlatform->getDevice())),
       mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
               mPlatform->getDevice())),
       mContext(context),
@@ -484,6 +484,9 @@ void VulkanDriver::endFrame(uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
     endCommandRecording();
     collectGarbage();
+//#if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
+//    mResourceManager.print();
+//#endif
 }
 
 void VulkanDriver::updateDescriptorSetBuffer(
@@ -1981,15 +1984,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             mFramebufferCache.getRenderPass(rpkey, &mResourceManager);
     mPipelineCache.bindRenderPass(renderPass, 0);
 
-    // Create the VkFramebuffer or fetch it from cache.
-    VulkanFboCache::FboKey fbkey = rt->getFboKey();
-    fbkey.renderPass = renderPass->getVkRenderPass();
-    fbkey.layers = 1;
-
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
-    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
-            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
+    VkFramebuffer vkfb = rt->getFramebuffer(renderPass->getVkRenderPass(), commandBuffer);
 
 // Assign a label to the framebuffer for debugging purposes.
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS | FVK_DEBUG_DEBUG_UTILS)
@@ -2003,13 +2000,12 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // The current command buffer now has references to the render target and its attachments.
     commandBuffer->acquire(rt);
     commandBuffer->acquire(renderPass);
-    commandBuffer->acquire(vkfb);
 
     // Populate the structures required for vkCmdBeginRenderPass.
     VkRenderPassBeginInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderPass->getVkRenderPass(),
-        .framebuffer = vkfb->getVkFramebuffer(),
+        .framebuffer = vkfb,
 
         // The renderArea field constrains the LoadOp, but scissoring does not.
         // Therefore, we do not set the scissor rect here, we only need it in draw().
@@ -2023,10 +2019,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             1] = {};
     if (clearVal != TargetBufferFlags::NONE) {
         // NOTE: clearValues must be populated in the same order as the attachments array in
-        // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
+        // VulkanRenderTarget::getFramebuffer. Values must be provided regardless of whether Vulkan is
         // actually clearing that particular target.
         for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-            if (fbkey.color[i]) {
+            if (rpkey.colorFormat[i] != VK_FORMAT_UNDEFINED) {
                 VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
                 clearValue.color.float32[0] = params.clearColor.r;
                 clearValue.color.float32[1] = params.clearColor.g;
@@ -2040,7 +2036,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 renderPassInfo.clearValueCount++;
             }
         }
-        if (fbkey.depth) {
+        if (rpkey.depthFormat != VK_FORMAT_UNDEFINED) {
             VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
             clearValue.depthStencil = {(float) params.clearDepth, 0};
         }
@@ -2103,7 +2099,7 @@ void VulkanDriver::nextSubpass(int) {
             ++mCurrentRenderPass.currentSubpass);
 
     if (mCurrentRenderPass.params.subpassMask & 0x1) {
-        VulkanAttachment& subpassInput = renderTarget->getColor0();
+        VulkanAttachment const& subpassInput = renderTarget->getColor0();
         mDescriptorSetCache.updateInputAttachment({}, subpassInput);
     }
 }
@@ -2710,9 +2706,6 @@ void VulkanDriver::acquireNextSwapchainImage() {
 
     bool resized = false;
     mCurrentSwapChain->acquire(resized);
-    if (resized) {
-        mFramebufferCache.resetFramebuffers();
-    }
     // Note that ordering this after the above lines is necessary since we set the swapchain image
     // to the render target in bindSwapChain().
     mDefaultRenderTarget->bindSwapChain(mCurrentSwapChain);

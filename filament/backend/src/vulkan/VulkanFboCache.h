@@ -30,7 +30,6 @@
 
 namespace filament::backend {
 
-struct VulkanFramebuffer;
 struct VulkanRenderPass;
 
 // Simple manager for VkFramebuffer and VkRenderPass objects.
@@ -75,38 +74,11 @@ public:
         bool operator()(const RenderPassKey& k1, const RenderPassKey& k2) const;
     };
 
-    // FboKey is a small POD representing the immutable state that we wish to configure
-    // in VkFramebuffer. It is hashed and used as a lookup key. There are several attachments, but
-    // rather than storing a count, we simply zero out the unused slots.
-    struct alignas(8) FboKey {
-        VkRenderPass renderPass; // 8 bytes
-        uint16_t width; // 2 bytes
-        uint16_t height; // 2 bytes
-        uint16_t layers; // 2 bytes
-        uint16_t samples; // 2 bytes
-        VkImageView color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
-        VkImageView resolve[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
-        VkImageView depth; // 8 bytes
-    };
-    struct FboVal {
-        fvkmemory::resource_ptr<VulkanFramebuffer> handle;
-        uint32_t timestamp;
-    };
     static_assert(sizeof(VkRenderPass) == 8, "VkRenderPass has unexpected size.");
     static_assert(sizeof(VkImageView) == 8, "VkImageView has unexpected size.");
-    static_assert(sizeof(FboKey) == 152, "FboKey has unexpected size.");
-    using FboKeyHashFn = utils::hash::MurmurHashFn<FboKey>;
-    struct FboKeyEqualFn {
-        bool operator()(const FboKey& k1, const FboKey& k2) const;
-    };
 
     explicit VulkanFboCache(VkDevice device);
     ~VulkanFboCache();
-
-    // Retrieves or creates a VkFramebuffer handle.
-    fvkmemory::resource_ptr<VulkanFramebuffer> getFramebuffer(FboKey const& config,
-            fvkmemory::ResourceManager* resManager,
-            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept;
 
     // Retrieves or creates a VkRenderPass handle.
     fvkmemory::resource_ptr<VulkanRenderPass> getRenderPass(
@@ -115,17 +87,11 @@ public:
     // Evicts old unused Vulkan objects. Call this once per frame.
     void gc() noexcept;
 
-    // Frees all Framebuffer objects. Call this every time a the swapchain is resized
-    void resetFramebuffers() noexcept;
-
     // Frees all Vulkan objects. Call this during shutdown before the device is destroyed.
     void terminate() noexcept;
 
 private:
     VkDevice mDevice;
-    using FboMap = tsl::robin_map<FboKey, FboVal, FboKeyHashFn, FboKeyEqualFn>;
-    FboMap mFramebufferCache;
-
     using RenderPassMap = tsl::robin_map<RenderPassKey, RenderPassVal, RenderPassHash, RenderPassEq>;
     RenderPassMap mRenderPassCache;
     tsl::robin_map<VkRenderPass, uint32_t> mRenderPassRefCount;
