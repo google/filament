@@ -30,7 +30,7 @@
 
 #include <filameshio/filamesh.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 using namespace filamesh;
 using namespace filament::math;
@@ -296,20 +296,20 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hilcg";
-    static const struct option OPTIONS[] = {
-            { "help",        no_argument, 0, 'h' },
-            { "license",     no_argument, 0, 'l' },
-            { "interleaved", no_argument, 0, 'i' },
-            { "compress",    no_argument, 0, 'c' },
-            { "ignore-uv1",  no_argument, 0, 'g' },
-            { 0, 0, 0, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",        utils::getopt::no_argument, 0, 'h' },
+            { "license",     utils::getopt::no_argument, 0, 'l' },
+            { "interleaved", utils::getopt::no_argument, 0, 'i' },
+            { "compress",    utils::getopt::no_argument, 0, 'c' },
+            { "ignore-uv1",  utils::getopt::no_argument, 0, 'g' },
+            { 0, 0, 0, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        // std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        // std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -332,7 +332,7 @@ static int handleArguments(int argc, char* argv[]) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 int main(int argc, char* argv[]) {

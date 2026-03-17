@@ -70,8 +70,9 @@ VulkanFboCache::~VulkanFboCache() {
             << "Please explicitly call terminate() while the VkDevice is still alive.";
 }
 
-fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(
-        FboKey const& config, fvkmemory::ResourceManager* resManager) noexcept {
+fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey const& config,
+        fvkmemory::ResourceManager* resManager,
+        fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept {
     FboMap::iterator iter = mFramebufferCache.find(config);
     if (UTILS_LIKELY(iter != mFramebufferCache.end())) {
         iter.value().timestamp = mCurrentTime;
@@ -120,8 +121,9 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
                                                      << " error=" << static_cast<int32_t>(error);
     fvkmemory::resource_ptr<VulkanFramebuffer> fbh =
-        fvkmemory::resource_ptr<VulkanFramebuffer>::construct(resManager, mDevice, framebuffer);
-    mFramebufferCache[config] = {fbh, mCurrentTime};
+            fvkmemory::resource_ptr<VulkanFramebuffer>::construct(resManager, mDevice, framebuffer,
+                    renderTarget);
+    mFramebufferCache[config] = { fbh, mCurrentTime };
     return fbh;
 }
 

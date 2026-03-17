@@ -39,7 +39,7 @@
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <iostream>
 #include <vector>
@@ -108,17 +108,17 @@ static void printUsage(char* name) {
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
     static constexpr const char* OPTSTR = "ha:y:m:";
-    static const struct option OPTIONS[] = {
-        { "help",    no_argument,       nullptr, 'h' },
-        { "api",     required_argument, nullptr, 'a' },
-        { "eyes",    required_argument, nullptr, 'y' },
-        { "samples", required_argument, nullptr, 'm'},
+    static const utils::getopt::option OPTIONS[] = {
+        { "help",    utils::getopt::no_argument,       nullptr, 'h' },
+        { "api",     utils::getopt::required_argument, nullptr, 'a' },
+        { "eyes",    utils::getopt::required_argument, nullptr, 'y' },
+        { "samples", utils::getopt::required_argument, nullptr, 'm'},
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -156,7 +156,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             }
         }
     }
-    return optind;
+    return utils::getopt::optind;
 }
 
 int main(int argc, char** argv) {

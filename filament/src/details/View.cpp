@@ -1138,6 +1138,7 @@ void FView::prepareShadowMapping() const noexcept {
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
     auto& s = mUniforms.edit();
     s.cascadeSplits = uniforms.cascadeSplits;
+    s.shadowAtlasResolution = uniforms.atlasResolution;
     s.ssContactShadowDistance = uniforms.ssContactShadowDistance;
     s.directionalShadows = int32_t(uniforms.directionalShadows);
     s.cascades = int32_t(uniforms.cascades);

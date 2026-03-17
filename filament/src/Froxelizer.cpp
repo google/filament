@@ -227,7 +227,6 @@ bool Froxelizer::prepare(
         const mat4f& projection, float const projectionNear, float const projectionFar,
         float4 const& clipTransform) noexcept {
     assert_invariant(projectionFar > projectionNear);
-    assert_invariant(projectionNear > 0);
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
 

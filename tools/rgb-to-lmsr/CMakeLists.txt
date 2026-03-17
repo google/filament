@@ -13,14 +13,14 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
 
-target_link_libraries(${TARGET} getopt utils math)
+target_link_libraries(${TARGET} utils math)
 
 set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================
 # Licenses
 # ==================================================================================================
-set(MODULE_LICENSES getopt)
+set(MODULE_LICENSES )
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR}/generated)
-list_licenses(${GENERATION_ROOT}/licenses/licenses.inc ${MODULE_LICENSES})
+list_licenses(${GENERATION_ROOT}/licenses/licenses.inc "${MODULE_LICENSES}")
 target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})
