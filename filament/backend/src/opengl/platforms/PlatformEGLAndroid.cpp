@@ -227,7 +227,7 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
     mPerformanceHintSession = PerformanceHintManager::Session{
             mPerformanceHintManager, &tid, 1, 16'666'667 };
 
-    mExternalStreamManager = ExternalStreamManagerAndroid::create();
+    mExternalStreamManager = &ExternalStreamManagerAndroid::create();
     FILAMENT_CHECK_POSTCONDITION(mExternalStreamManager)
             << "Failed to create ExternalStreamManagerAndroid";
 
