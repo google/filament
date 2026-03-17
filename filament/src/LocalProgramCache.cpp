@@ -182,7 +182,7 @@ Program::SpecializationConstant LocalProgramCache::getConstantImpl(
         return getConstantImpl(it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
     }
 
-    std::string name_cstring(name);
+    CString name_cstring(name);
     PANIC_PRECONDITION("No such constant exists: %s", name_cstring.c_str());
     return {};
 }
