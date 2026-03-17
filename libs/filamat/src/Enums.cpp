@@ -18,9 +18,11 @@
 
 #include "filamat/MaterialBuilder.h"
 
+#include <string_view>
+
 namespace filamat {
 
-std::unordered_map<std::string, Property> Enums::mStringToProperty = {
+std::unordered_map<std::string_view, Property> Enums::mStringToProperty = {
         { "baseColor",           Property::BASE_COLOR },
         { "roughness",           Property::ROUGHNESS },
         { "metallic",            Property::METALLIC },
@@ -55,11 +57,11 @@ std::unordered_map<std::string, Property> Enums::mStringToProperty = {
 };
 
 template <>
-std::unordered_map<std::string, Property>& Enums::getMap<Property>() noexcept {
+std::unordered_map<std::string_view, Property>& Enums::getMap<Property>() noexcept {
     return mStringToProperty;
 };
 
-std::unordered_map<std::string, UniformType> Enums::mStringToUniformType = {
+std::unordered_map<std::string_view, UniformType> Enums::mStringToUniformType = {
         { "bool",     UniformType::BOOL },
         { "bool2",    UniformType::BOOL2 },
         { "bool3",    UniformType::BOOL3 },
@@ -83,11 +85,11 @@ std::unordered_map<std::string, UniformType> Enums::mStringToUniformType = {
 };
 
 template <>
-std::unordered_map<std::string, UniformType>& Enums::getMap<UniformType>() noexcept {
+std::unordered_map<std::string_view, UniformType>& Enums::getMap<UniformType>() noexcept {
     return mStringToUniformType;
 };
 
-std::unordered_map<std::string, SamplerType> Enums::mStringToSamplerType = {
+std::unordered_map<std::string_view, SamplerType> Enums::mStringToSamplerType = {
         { "sampler2d",           SamplerType::SAMPLER_2D },
         { "sampler2dArray",      SamplerType::SAMPLER_2D_ARRAY },
         { "sampler3d",           SamplerType::SAMPLER_3D },
@@ -97,20 +99,20 @@ std::unordered_map<std::string, SamplerType> Enums::mStringToSamplerType = {
 };
 
 template <>
-std::unordered_map<std::string, SamplerType>& Enums::getMap<SamplerType>() noexcept {
+std::unordered_map<std::string_view, SamplerType>& Enums::getMap<SamplerType>() noexcept {
     return mStringToSamplerType;
 };
 
-std::unordered_map<std::string, SubpassType> Enums::mStringToSubpassType = {
+std::unordered_map<std::string_view, SubpassType> Enums::mStringToSubpassType = {
         { "subpassInput",       SubpassType::SUBPASS_INPUT },
 };
 
 template <>
-std::unordered_map<std::string, SubpassType>& Enums::getMap<SubpassType>() noexcept {
+std::unordered_map<std::string_view, SubpassType>& Enums::getMap<SubpassType>() noexcept {
     return mStringToSubpassType;
 };
 
-std::unordered_map<std::string, ParameterPrecision> Enums::mStringToSamplerPrecision = {
+std::unordered_map<std::string_view, ParameterPrecision> Enums::mStringToSamplerPrecision = {
         { "default", ParameterPrecision::DEFAULT },
         { "low",     ParameterPrecision::LOW },
         { "medium",  ParameterPrecision::MEDIUM },
@@ -118,30 +120,30 @@ std::unordered_map<std::string, ParameterPrecision> Enums::mStringToSamplerPreci
 };
 
 template <>
-std::unordered_map<std::string, ParameterPrecision>& Enums::getMap<ParameterPrecision>() noexcept {
+std::unordered_map<std::string_view, ParameterPrecision>& Enums::getMap<ParameterPrecision>() noexcept {
     return mStringToSamplerPrecision;
 };
 
-std::unordered_map<std::string, OutputTarget> Enums::mStringToOutputTarget = {
+std::unordered_map<std::string_view, OutputTarget> Enums::mStringToOutputTarget = {
         { "color",   OutputTarget::COLOR },
         { "depth",   OutputTarget::DEPTH }
 };
 
 template <>
-std::unordered_map<std::string, OutputTarget>& Enums::getMap<OutputTarget>() noexcept {
+std::unordered_map<std::string_view, OutputTarget>& Enums::getMap<OutputTarget>() noexcept {
     return mStringToOutputTarget;
 };
 
-std::unordered_map<std::string, OutputQualifier> Enums::mStringToOutputQualifier = {
+std::unordered_map<std::string_view, OutputQualifier> Enums::mStringToOutputQualifier = {
         { "out",     OutputQualifier::OUT }
 };
 
 template <>
-std::unordered_map<std::string, OutputQualifier>& Enums::getMap<OutputQualifier>() noexcept {
+std::unordered_map<std::string_view, OutputQualifier>& Enums::getMap<OutputQualifier>() noexcept {
     return mStringToOutputQualifier;
 };
 
-std::unordered_map<std::string, OutputType> Enums::mStringToOutputType = {
+std::unordered_map<std::string_view, OutputType> Enums::mStringToOutputType = {
         { "float",   OutputType::FLOAT },
         { "float2",  OutputType::FLOAT2 },
         { "float3",  OutputType::FLOAT3 },
@@ -149,11 +151,11 @@ std::unordered_map<std::string, OutputType> Enums::mStringToOutputType = {
 };
 
 template <>
-std::unordered_map<std::string, OutputType>& Enums::getMap<OutputType>() noexcept {
+std::unordered_map<std::string_view, OutputType>& Enums::getMap<OutputType>() noexcept {
     return mStringToOutputType;
 };
 
-std::unordered_map<std::string, SamplerFormat> Enums::mStringToSamplerFormat = {
+std::unordered_map<std::string_view, SamplerFormat> Enums::mStringToSamplerFormat = {
         { "int",    SamplerFormat::INT },
         { "uint",   SamplerFormat::UINT },
         { "float",  SamplerFormat::FLOAT },
@@ -161,29 +163,29 @@ std::unordered_map<std::string, SamplerFormat> Enums::mStringToSamplerFormat = {
 };
 
 template <>
-std::unordered_map<std::string, SamplerFormat>& Enums::getMap<SamplerFormat>() noexcept {
+std::unordered_map<std::string_view, SamplerFormat>& Enums::getMap<SamplerFormat>() noexcept {
     return mStringToSamplerFormat;
 };
 
-std::unordered_map<std::string, ConstantType > Enums::mStringToConstantType = {
+std::unordered_map<std::string_view, ConstantType > Enums::mStringToConstantType = {
         { "int",   ConstantType::INT },
         { "float", ConstantType::FLOAT },
         { "bool",  ConstantType::BOOL },
 };
 
 template <>
-std::unordered_map<std::string, ConstantType>& Enums::getMap<ConstantType>() noexcept {
+std::unordered_map<std::string_view, ConstantType>& Enums::getMap<ConstantType>() noexcept {
     return mStringToConstantType;
 };
 
-std::unordered_map<std::string, ShaderStageType> Enums::mStringToShaderStageType = {
+std::unordered_map<std::string_view, ShaderStageType> Enums::mStringToShaderStageType = {
         { "fragment", ShaderStageType::FRAGMENT },
         { "vertex",   ShaderStageType::VERTEX },
         { "compute",  ShaderStageType::COMPUTE },
 };
 
 template <>
-std::unordered_map<std::string, ShaderStageType>& Enums::getMap<ShaderStageType>() noexcept {
+std::unordered_map<std::string_view, ShaderStageType>& Enums::getMap<ShaderStageType>() noexcept {
     return mStringToShaderStageType;
 };
 

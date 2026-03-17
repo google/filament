@@ -1412,7 +1412,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         auto const* stage = to_string(sib.getStageFlags());
         for (auto const& sampler: samplers) {
             LOG(ERROR) << "\"" << sampler.name.c_str() << "\" "
-                   << Enums::toString(sampler.type).c_str() << " " << stage << '\n';
+                   << Enums::toString(sampler.type) << " " << stage << '\n';
         }
     };
 
