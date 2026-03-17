@@ -1970,9 +1970,19 @@ void WebGPUDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
     //todo
 }
 
-void WebGPUDriver::scissor(
-        Viewport scissor) {
-    //todo
+void WebGPUDriver::scissor(Viewport scissor) {
+    assert_invariant(mRenderPassEncoder);
+    assert_invariant(mCurrentRenderTarget);
+
+    // The WebGPU scissor starts from the top-left corner
+    assert_invariant(scissor.left >= 0 &&
+                     mCurrentRenderTarget->height >= scissor.bottom + scissor.height /*top >= 0*/ &&
+                     scissor.width <= mCurrentRenderTarget->width &&
+                     scissor.height <= mCurrentRenderTarget->height);
+
+    mRenderPassEncoder.SetScissorRect(scissor.left,
+            mCurrentRenderTarget->height - scissor.bottom - scissor.height /*top*/, scissor.width,
+            scissor.height);
 }
 
 void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

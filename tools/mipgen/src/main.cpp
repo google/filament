@@ -26,7 +26,7 @@
 
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <fstream>
 #include <iostream>
@@ -152,27 +152,27 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hLlgpf:c:k:saqm:";
-    static const struct option OPTIONS[] = {
-            { "help",                 no_argument, 0, 'h' },
-            { "license",              no_argument, 0, 'L' },
-            { "linear",               no_argument, 0, 'l' },
-            { "grayscale",            no_argument, 0, 'g' },
-            { "page",                 no_argument, 0, 'p' },
-            { "format",         required_argument, 0, 'f' },
-            { "compression",    required_argument, 0, 'c' },
-            { "kernel",         required_argument, 0, 'k' },
-            { "strip-alpha",          no_argument, 0, 's' },
-            { "add-alpha",            no_argument, 0, 'a' },
-            { "quiet",                no_argument, 0, 'q' },
-            { "mip-levels",     required_argument, 0, 'm' },
-            { 0, 0, 0, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",                 utils::getopt::no_argument, 0, 'h' },
+            { "license",              utils::getopt::no_argument, 0, 'L' },
+            { "linear",               utils::getopt::no_argument, 0, 'l' },
+            { "grayscale",            utils::getopt::no_argument, 0, 'g' },
+            { "page",                 utils::getopt::no_argument, 0, 'p' },
+            { "format",         utils::getopt::required_argument, 0, 'f' },
+            { "compression",    utils::getopt::required_argument, 0, 'c' },
+            { "kernel",         utils::getopt::required_argument, 0, 'k' },
+            { "strip-alpha",          utils::getopt::no_argument, 0, 's' },
+            { "add-alpha",            utils::getopt::no_argument, 0, 'a' },
+            { "quiet",                utils::getopt::no_argument, 0, 'q' },
+            { "mip-levels",     utils::getopt::required_argument, 0, 'm' },
+            { 0, 0, 0, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -262,7 +262,7 @@ static int handleArguments(int argc, char* argv[]) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 int main(int argc, char* argv[]) {

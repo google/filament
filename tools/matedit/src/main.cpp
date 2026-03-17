@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include "ExternalCompile.h"
 
@@ -85,7 +85,7 @@ static void printUsage(const char* name) {
         "               <output binary> is guaranteed to have a .metallib extension.\n"
         "\n"
         "       This command will remove the text-based shaders when writing the output material file, unless\n"
-        "       the --preserve-text-shaders option is specified.\n"
+        "       the --preserve-text-shaders utils::getopt::option is specified.\n"
         "\n"
         "       If script exits with a non-zero exit code, MATEDIT will terminate with error. Multiple\n"
         "       invocations of script may be launched in parallel.\n"
@@ -114,21 +114,21 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "hli:o:t:p";
-    static const struct option OPTIONS[] = {
-            { "help",                  no_argument,       nullptr, 'h' },
-            { "license",               no_argument,       nullptr, 'l' },
-            { "input",                 required_argument, nullptr, 'i' },
-            { "output",                required_argument, nullptr, 'o' },
-            { "type",                  required_argument, nullptr, 't' },
-            { "preserve-text-shaders", no_argument,       nullptr, 'p' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",                  utils::getopt::no_argument,       nullptr, 'h' },
+            { "license",               utils::getopt::no_argument,       nullptr, 'l' },
+            { "input",                 utils::getopt::required_argument, nullptr, 'i' },
+            { "output",                utils::getopt::required_argument, nullptr, 'o' },
+            { "type",                  utils::getopt::required_argument, nullptr, 't' },
+            { "preserve-text-shaders", utils::getopt::no_argument,       nullptr, 'p' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -158,7 +158,7 @@ static int handleArguments(int argc, char* argv[], Config* config) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 int main(int argc, char* argv[]) {
