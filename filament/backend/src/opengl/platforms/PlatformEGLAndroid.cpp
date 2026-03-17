@@ -120,8 +120,7 @@ struct PlatformEGLAndroid::AndroidDetails {
 // ---------------------------------------------------------------------------------------------
 
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
-        : mExternalStreamManager(ExternalStreamManagerAndroid::create()),
-          mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
+        : mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
     mOSVersion = android_get_device_api_level();
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
@@ -135,7 +134,10 @@ PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
 void PlatformEGLAndroid::terminate() noexcept {
     mPerformanceHintManager.terminate();
     mAndroidDetails.androidFrameCallback.terminate();
-    ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
+    if (mExternalStreamManager) {
+        ExternalStreamManagerAndroid::destroy(mExternalStreamManager);
+        mExternalStreamManager = nullptr;
+    }
     PlatformEGL::terminate();
 }
 
@@ -224,6 +226,10 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
     int32_t const tid = gettid();
     mPerformanceHintSession = PerformanceHintManager::Session{
             mPerformanceHintManager, &tid, 1, 16'666'667 };
+
+    mExternalStreamManager = ExternalStreamManagerAndroid::create();
+    FILAMENT_CHECK_POSTCONDITION(mExternalStreamManager)
+            << "Failed to create ExternalStreamManagerAndroid";
 
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
     auto const extensions = GLUtils::split(eglQueryString(getEglDisplay(), EGL_EXTENSIONS));
@@ -611,11 +617,13 @@ void PlatformEGLAndroid::setPresentationTime(int64_t const presentationTimeInNan
 }
 
 Platform::Stream* PlatformEGLAndroid::createStream(void* nativeStream) noexcept {
-    return mExternalStreamManager.acquire(static_cast<jobject>(nativeStream));
+    assert_invariant(mExternalStreamManager);
+    return mExternalStreamManager->acquire(static_cast<jobject>(nativeStream));
 }
 
 void PlatformEGLAndroid::destroyStream(Stream* stream) noexcept {
-    mExternalStreamManager.release(stream);
+    assert_invariant(mExternalStreamManager);
+    mExternalStreamManager->release(stream);
 }
 
 Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
@@ -667,19 +675,23 @@ void PlatformEGLAndroid::destroySync(Sync* sync) noexcept {
 }
 
 void PlatformEGLAndroid::attach(Stream* stream, intptr_t const tname) noexcept {
-    mExternalStreamManager.attach(stream, tname);
+    assert_invariant(mExternalStreamManager);
+    mExternalStreamManager->attach(stream, tname);
 }
 
 void PlatformEGLAndroid::detach(Stream* stream) noexcept {
-    mExternalStreamManager.detach(stream);
+    assert_invariant(mExternalStreamManager);
+    mExternalStreamManager->detach(stream);
 }
 
 void PlatformEGLAndroid::updateTexImage(Stream* stream, int64_t* timestamp) noexcept {
-    mExternalStreamManager.updateTexImage(stream, timestamp);
+    assert_invariant(mExternalStreamManager);
+    mExternalStreamManager->updateTexImage(stream, timestamp);
 }
 
 math::mat3f PlatformEGLAndroid::getTransformMatrix(Stream* stream) noexcept {
-    return mExternalStreamManager.getTransformMatrix(stream);
+    assert_invariant(mExternalStreamManager);
+    return mExternalStreamManager->getTransformMatrix(stream);
 }
 
 int PlatformEGLAndroid::getOSVersion() const noexcept {

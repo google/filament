@@ -48,8 +48,8 @@ using namespace backend;
 using Stream = Platform::Stream;
 
 
-ExternalStreamManagerAndroid& ExternalStreamManagerAndroid::create() noexcept {
-    return *(new(std::nothrow) ExternalStreamManagerAndroid{});
+ExternalStreamManagerAndroid* ExternalStreamManagerAndroid::create() noexcept {
+    return new(std::nothrow) ExternalStreamManagerAndroid{};
 }
 
 void ExternalStreamManagerAndroid::destroy(ExternalStreamManagerAndroid* pExternalStreamManagerAndroid) noexcept {
@@ -79,6 +79,9 @@ JNIEnv* ExternalStreamManagerAndroid::getEnvironmentSlow() noexcept {
 
 Stream* ExternalStreamManagerAndroid::acquire(jobject surfaceTexture) noexcept {
     // note: This is called on the application thread (not the GL thread)
+    // The application thread *MUST* be attached to the JVM to pass the java 'surfaceTexture' down
+    // to filament natively, so we are guaranteed to get a valid JNIEnv from getThreadEnvironment()
+    // without needing AttachCurrentThread.
     JNIEnv* env = VirtualMachineEnv::getThreadEnvironment();
     if (!env) {
         return nullptr; // this should not happen

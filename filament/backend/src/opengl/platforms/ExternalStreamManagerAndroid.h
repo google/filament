@@ -47,7 +47,7 @@ public:
     using Stream = Platform::Stream;
 
     // must be called on GLES thread
-    static ExternalStreamManagerAndroid& create() noexcept;
+    static ExternalStreamManagerAndroid* create() noexcept;
 
     // must be called on GLES thread
     static void destroy(ExternalStreamManagerAndroid* pExternalStreamManagerAndroid) noexcept;
