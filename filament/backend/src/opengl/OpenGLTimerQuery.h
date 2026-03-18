@@ -61,14 +61,15 @@ struct GLTimerQuery : public HwTimerQuery {
  */
 
 class TimerQueryFactory {
-    static bool mGpuTimeSupported;
 public:
+    enum class Type {
+        Fallback = 0,
+        Native,
+        Fence,
+    };
+
     static TimerQueryFactoryInterface* init(
             OpenGLPlatform& platform, OpenGLContext& context);
-
-    static bool isGpuTimeSupported() noexcept {
-        return mGpuTimeSupported;
-    }
 };
 
 class TimerQueryFactoryInterface {
@@ -86,8 +87,6 @@ public:
     static TimerQueryResult getTimerQueryValue(GLTimerQuery* tq, uint64_t* elapsedTime) noexcept;
 };
 
-#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
-
 class TimerQueryNativeFactory final : public TimerQueryFactoryInterface {
 public:
     explicit TimerQueryNativeFactory(OpenGLContext& context);
@@ -99,8 +98,6 @@ private:
     void endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* query) override;
     OpenGLContext& mContext;
 };
-
-#endif
 
 class TimerQueryFenceFactory final : public TimerQueryFactoryInterface {
 public:

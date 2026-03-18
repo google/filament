@@ -48,34 +48,25 @@ class OpenGLDriver;
 
 // ------------------------------------------------------------------------------------------------
 
-bool TimerQueryFactory::mGpuTimeSupported = false;
-
 TimerQueryFactoryInterface* TimerQueryFactory::init(
         OpenGLPlatform& platform, OpenGLContext& context) {
     (void)context;
 
     TimerQueryFactoryInterface* impl = nullptr;
 
-#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
-    if (context.ext.EXT_disjoint_timer_query) {
-        // timer queries are available
-        if (context.bugs.dont_use_timer_query && platform.canCreateFence()) {
-            // however, they don't work well, revert to using fences if we can.
-            impl = new(std::nothrow) TimerQueryFenceFactory(platform);
-        } else {
-            impl = new(std::nothrow) TimerQueryNativeFactory(context);
+    switch (context.getGpuTimerType()) {
+        case Type::Fallback: {
+            impl = new(std::nothrow) TimerQueryFallbackFactory();
+            break;
         }
-        mGpuTimeSupported = true;
-    } else
-#endif
-    if (platform.canCreateFence()) {
-        // no timer queries, but we can use fences
-        impl = new(std::nothrow) TimerQueryFenceFactory(platform);
-        mGpuTimeSupported = true;
-    } else {
-        // no queries, no fences -- that's a problem
-        impl = new(std::nothrow) TimerQueryFallbackFactory();
-        mGpuTimeSupported = false;
+        case Type::Native: {
+            impl = new(std::nothrow) TimerQueryNativeFactory(context);
+            break;
+        }
+        case Type::Fence: {
+            impl = new(std::nothrow) TimerQueryFenceFactory(platform);
+            break;
+        }
     }
     assert_invariant(impl);
     return impl;
@@ -99,8 +90,6 @@ TimerQueryResult TimerQueryFactoryInterface::getTimerQueryValue(
 }
 
 // ------------------------------------------------------------------------------------------------
-
-#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
 
 TimerQueryNativeFactory::TimerQueryNativeFactory(OpenGLContext& context)
         : mContext(context) {
@@ -164,8 +153,6 @@ void TimerQueryNativeFactory::endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQ
         return true;
     });
 }
-
-#endif
 
 // ------------------------------------------------------------------------------------------------
 

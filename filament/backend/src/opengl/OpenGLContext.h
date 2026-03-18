@@ -159,6 +159,12 @@ public:
 
     ShaderModel getShaderModel() const noexcept { return mShaderModel; }
 
+    TimerQueryFactory::Type getGpuTimerType() const noexcept { return mGpuTimerType; }
+
+    bool isGpuTimeSupported() const noexcept {
+        return getGpuTimerType() != TimerQueryFactory::Type::Fallback;
+    }
+
     void resetState() noexcept;
 
     inline void useProgram(GLuint program) noexcept;
@@ -541,6 +547,8 @@ private:
             SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
     Platform::DriverConfig const mDriverConfig;
+
+    TimerQueryFactory::Type mGpuTimerType{ TimerQueryFactory::Type::Fallback };
 
     void bindFramebufferResolved(GLenum target, GLuint buffer) noexcept;
 
