@@ -250,6 +250,10 @@ private:
         return utils::CString{ mContext.state.renderer };
     }
 
+    utils::CString getVersionString() const noexcept override {
+        return utils::CString{ mContext.state.version };
+    }
+
     JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
     JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
 

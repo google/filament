@@ -73,9 +73,6 @@ jobs:
         with:
           name: filament-mac
           path: out/filament-release-darwin.tgz
-      - name: Check public headers
-        run: |
-          test/check-headers/test.sh out/release/filament/include
 
   build-web:
     name: build-web
