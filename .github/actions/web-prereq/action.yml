@@ -8,7 +8,7 @@ runs:
       uses: actions/cache@v4 # Use a specific version
       with:
         path: emsdk
-        key: ${{ runner.os }}-emsdk-${{ env.GITHUB_EMSDK_VERSION }}
+        key: ${{ runner.os }}-${{ runner.arch }}-emsdk-${{ env.GITHUB_EMSDK_VERSION }}
     - name: Install Web Prerequisites
       shell: bash
       run: |

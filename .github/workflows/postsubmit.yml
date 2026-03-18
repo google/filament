@@ -13,7 +13,6 @@ jobs:
     # We intentially use a larger runner here to enable larger disk space
     # (standard linux runner will fail on disk space and faster build time).
     runs-on: 'ubuntu-24.04-4core'
-
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -27,7 +26,6 @@ jobs:
   build-ios:
     name: build-ios
     runs-on: 'macos-14'
-
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -46,8 +44,7 @@ jobs:
 
   build-linux:
     name: build-linux
-    runs-on: 'ubuntu-24.04-4core'
-
+    runs-on: 'arm-ubuntu-24.04-16core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -58,13 +55,12 @@ jobs:
           cd build/linux && printf "y" | ./build.sh continuous
       - uses: actions/upload-artifact@v4
         with:
-          name: filament-linux
-          path: out/filament-release-linux.tgz
+          name: filament-arm-linux
+          path: out/filament-release-arm-linux.tgz
 
   build-mac:
     name: build-mac
     runs-on: 'macos-14'
-
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -80,8 +76,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: 'ubuntu-24.04'
-
+    runs-on: 'arm-ubuntu-24.04-16core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
