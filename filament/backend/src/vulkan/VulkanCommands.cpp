@@ -194,6 +194,7 @@ void VulkanCommandBuffer::begin() noexcept {
 }
 
 fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
+    FVK_LOGD << "Submitting VulkanCommandBuffer: " << mBuffer << " (age=" << age() << ")";
     while (mMarkerCount > 0) {
         popMarker();
     }

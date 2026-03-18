@@ -294,9 +294,19 @@ VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommand
       mYcbcr{ ycbcrConversion },
       mDefaultLayout(getDefaultLayoutImpl(usage)),
       mUsage(usage),
-      mIsProtected(isProtected) {}
+      mIsProtected(isProtected) {
+    FVK_LOGD << "Creating VulkanTextureState: image=" << image
+             << ", memory=" << deviceMemory
+             << ", format=" << format
+             << ", viewType=" << viewType
+             << ", levels=" << (int)levels
+             << ", layers=" << (int)layerCount
+             << ", usage=" << usage;
+}
 
 VulkanTextureState::~VulkanTextureState() {
+    FVK_LOGD << "Destroying VulkanTextureState: image=" << mTextureImage
+             << ", memory=" << mTextureImageMemory;
     clearCachedImageViews();
     if (mTextureImageMemory != VK_NULL_HANDLE) {
         vkDestroyImage(mDevice, mTextureImage, VKALLOC);
@@ -512,6 +522,12 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
 void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
         uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t miplevel) {
+    FVK_LOGD << "updateImage: texture=" << mState->mTextureImage
+             << ", format=" << (int)data.format
+             << ", type=" << (int)data.type
+             << ", size=" << width << "x" << height << "x" << depth
+             << ", offset=" << xoffset << "," << yoffset << "," << zoffset
+             << ", mip=" << miplevel;
     assert_invariant(width <= this->width && height <= this->height);
     assert_invariant(depth <= this->depth * ((target == SamplerType::SAMPLER_CUBEMAP ||
                         target == SamplerType::SAMPLER_CUBEMAP_ARRAY) ? 6 : 1));
@@ -616,6 +632,11 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
 
 void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint32_t width,
         uint32_t height, uint32_t depth, uint32_t miplevel) {
+    FVK_LOGD << "updateImageWithBlit: texture=" << mState->mTextureImage
+             << ", format=" << (int)data.format
+             << ", type=" << (int)data.type
+             << ", size=" << width << "x" << height << "x" << depth
+             << ", mip=" << miplevel;
     // Otherwise, use vkCmdCopyBufferToImage.
     size_t const bpp = PixelBufferDescriptor::computeDataSize(data.format, data.type, 1, 1, 1);
     // Note: if bpp = 0, we're dealing with a compressed format; we should fall
@@ -755,10 +776,14 @@ bool VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, VkImageSubresourceR
     setLayout(range, newLayout);
 
     if (hasTransitions) {
+        FVK_LOGD << "transition texture=" << mState->mTextureImage << " (" << range.baseArrayLayer
+                 << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
+                 << range.levelCount << ")" << " from=" << (int)oldLayout << " to=" << (int)newLayout
+                 << " format=" << mState->mVkFormat;
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
         FVK_LOGD << "transition texture=" << mState->mTextureImage << " (" << range.baseArrayLayer
                  << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
-                 << range.levelCount << ")" << " from=" << oldLayout << " to=" << newLayout
+                 << range.levelCount << ")" << " from=" << (int)oldLayout << " to=" << (int)newLayout
                  << " format=" << mState->mVkFormat << " depth="
                  << fvkutils::isVkDepthFormat(mState->mVkFormat)
                  << " slice-by-slice=" << transitionSliceBySlice;
@@ -767,7 +792,7 @@ bool VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, VkImageSubresourceR
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
         FVK_LOGD << "transition texture=" << mState->mTextureImage << " (" << range.baseArrayLayer
                  << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
-                 << range.levelCount << ")" << " to=" << newLayout
+                 << range.levelCount << ")" << " to=" << (int)newLayout
                  << " is skipped because of no change in layout";
 #endif
     }
@@ -878,7 +903,7 @@ void VulkanTexture::print() const {
                 level >= mPrimaryViewRange.baseMipLevel &&
                 level < (mPrimaryViewRange.baseMipLevel + mPrimaryViewRange.levelCount);
             FVK_LOGD << "[" << mState->mTextureImage << "]: (" << layer << "," << level
-                          << ")=" << getLayout(layer, level)
+                          << ")=" << (int)getLayout(layer, level)
                           << " primary=" << primary;
         }
     }

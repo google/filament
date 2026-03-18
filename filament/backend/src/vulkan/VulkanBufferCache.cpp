@@ -106,6 +106,12 @@ void VulkanBufferCache::gc() noexcept {
         }
     }
 
+    size_t totalBuffers = 0;
+    for (auto& bufferPool : mGpuBufferPools) {
+        totalBuffers += bufferPool.size();
+    }
+    FVK_LOGD << "VulkanBufferCache sizes: buffers=" << totalBuffers;
+
     FVK_SYSTRACE_END();
 }
 
@@ -157,6 +163,10 @@ VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferBinding binding,
     UTILS_UNUSED_IN_RELEASE VkResult result = vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo,
             &gpuBuffer->vkbuffer, &gpuBuffer->vmaAllocation, &gpuBuffer->allocationInfo);
 
+    FVK_LOGD << "VulkanBufferCache - allocated a vkBuffer " << gpuBuffer->vkbuffer
+             << " of size " << numBytes << " and binding = " << static_cast<int>(binding)
+             << " result=" << (int)result;
+
 #if FVK_ENABLED(FVK_DEBUG_VULKAN_BUFFER_CACHE)
     if (result != VK_SUCCESS) {
         FVK_LOGE << "VulkanBufferCache - failed to allocate a new vkBuffer of size " << numBytes
@@ -173,6 +183,7 @@ VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferBinding binding,
 }
 
 void VulkanBufferCache::destroy(VulkanGpuBuffer const* gpuBuffer) noexcept {
+    FVK_LOGD << "VulkanBufferCache - Destroying vkBuffer " << gpuBuffer->vkbuffer;
     vmaDestroyBuffer(mAllocator, gpuBuffer->vkbuffer, gpuBuffer->vmaAllocation);
     delete gpuBuffer;
     gpuBuffer = nullptr;

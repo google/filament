@@ -271,6 +271,8 @@ void VulkanStagePool::gc() noexcept {
         }
     }
 
+    FVK_LOGD << "VulkanStagePool sizes: stages=" << mStages.size() << " freeImages=" << mFreeImages.size();
+
     FVK_SYSTRACE_END();
 }
 

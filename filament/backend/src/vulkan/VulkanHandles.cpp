@@ -403,10 +403,13 @@ VulkanRenderTarget::VulkanRenderTarget()
       mOffscreen(false),
       mProtected(false),
       mInfo(std::make_unique<Auxiliary>()) {
+    FVK_LOGD << "Creating default VulkanRenderTarget: " << this;
     mInfo->rpkey.samples = mInfo->fbkey.samples = 1;
 }
 
-VulkanRenderTarget::~VulkanRenderTarget() = default;
+VulkanRenderTarget::~VulkanRenderTarget() {
+    FVK_LOGD << "Destroying VulkanRenderTarget: " << this << " (offscreen=" << mOffscreen << ")";
+}
 
 void VulkanRenderTarget::bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
     assert_invariant(!mOffscreen);
@@ -443,9 +446,12 @@ void VulkanRenderTarget::bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> 
         fbkey.depth = VK_NULL_HANDLE;
     }
     mInfo->colors.set(0);
+    FVK_LOGD << "bindSwapChain: target=" << this << ", swapchain=" << swapchain.get()
+             << ", size=" << width << "x" << height;
 }
 
 void VulkanRenderTarget::releaseSwapchain() {
+    FVK_LOGD << "releaseSwapchain: target=" << this;
     mInfo->colors = {};
     mInfo->attachments.clear();
 }
@@ -459,6 +465,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
       mOffscreen(true),
       mProtected(false),
       mInfo(std::make_unique<Auxiliary>()) {
+    FVK_LOGD << "Creating offscreen VulkanRenderTarget: " << this << ", size=" << width << "x" << height << ", samples=" << (int)samples;
     auto& depth = depthStencil[0];
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
@@ -719,9 +726,13 @@ VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkFramebuffer framebuffer,
         fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget)
         : mDevice(device),
           mFramebuffer(framebuffer),
-          mRenderTarget(renderTarget) {}
+          mRenderTarget(renderTarget) {
+    FVK_LOGD << "Creating VulkanFramebuffer: " << framebuffer
+             << ", target=" << renderTarget.get();
+}
 
 VulkanFramebuffer::~VulkanFramebuffer() {
+    FVK_LOGD << "Destroying VulkanFramebuffer: " << mFramebuffer;
     vkDestroyFramebuffer(mDevice, mFramebuffer, VKALLOC);
 }
 

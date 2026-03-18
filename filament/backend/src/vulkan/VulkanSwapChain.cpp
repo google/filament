@@ -46,6 +46,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
       mCurrentSwapIndex(0),
       mAcquired(false),
       mIsFirstRenderPass(true) {
+    FVK_LOGD << "Creating VulkanSwapChain: " << this << ", window=" << nativeWindow << ", size=" << extent.width << "x" << extent.height;
     swapChain = mPlatform->createSwapChain(nativeWindow, flags, extent);
     FILAMENT_CHECK_POSTCONDITION(swapChain) << "Unable to create swapchain";
 
@@ -53,6 +54,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
 }
 
 VulkanSwapChain::~VulkanSwapChain() {
+    FVK_LOGD << "Destroying VulkanSwapChain: " << this;
     // Must wait for the inflight command buffers to finish since they might contain the images
     // we're about to destroy.
     mCommands->flush();
@@ -68,6 +70,7 @@ VulkanSwapChain::~VulkanSwapChain() {
 }
 
 void VulkanSwapChain::update() {
+    FVK_LOGD << "VulkanSwapChain::update: " << this;
     mColors.clear();
 
     auto const bundle = mPlatform->getSwapChainBundle(swapChain);
@@ -89,6 +92,7 @@ void VulkanSwapChain::update() {
         colorUsage |= TextureUsage::PROTECTED;
     }
     for (auto const color: bundle.colors) {
+        FVK_LOGD << "VulkanSwapChain::update: Adding color image=" << color << " to swapchain " << this;
         auto colorTexture = fvkmemory::resource_ptr<VulkanTexture>::construct(mResourceManager,
                 mContext, device, mAllocator, mResourceManager, mCommands, color, VK_NULL_HANDLE,
                 bundle.colorFormat, VK_NULL_HANDLE /*ycrcb */, 1, bundle.extent.width,
@@ -157,6 +161,7 @@ void VulkanSwapChain::acquire(bool& resized) {
 
     // Check if the swapchain should be resized.
     if ((resized = mPlatform->hasResized(swapChain))) {
+        FVK_LOGD << "VulkanSwapChain::acquire: Resizing " << this;
         if (mFlushAndWaitOnResize) {
             mCommands->flush();
             mCommands->wait();
@@ -176,6 +181,7 @@ void VulkanSwapChain::acquire(bool& resized) {
 
     mCurrentSwapIndex = imageSyncData.imageIndex;
     assert_invariant(mCurrentSwapIndex < mFinishedDrawing.size());
+    FVK_LOGD << "VulkanSwapChain::acquire: " << this << ", index=" << mCurrentSwapIndex << ", image=" << mColors[mCurrentSwapIndex]->getVkImage();
     mFinishedDrawing[mCurrentSwapIndex] = {};
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
             << "Cannot acquire in swapchain. error=" << static_cast<int32_t>(result);

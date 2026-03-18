@@ -534,6 +534,8 @@ void VulkanPipelineCache::gc() noexcept {
            ++iter;
        }
    }
+
+   FVK_LOGD << "VulkanPipelineCache sizes: pipelines=" << mPipelines.size();
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const PipelineKey& k1,

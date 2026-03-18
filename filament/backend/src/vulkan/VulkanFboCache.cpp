@@ -24,7 +24,7 @@
 
 // If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
 // is evicted from the cache.
-static constexpr uint32_t TIME_BEFORE_EVICTION = FVK_MAX_COMMAND_BUFFERS;
+static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
 
 using namespace bluevk;
 
@@ -120,6 +120,8 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
     VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
                                                      << " error=" << static_cast<int32_t>(error);
+    FVK_LOGD << "VulkanFboCache - Created VkFramebuffer " << framebuffer << " for renderTarget " << renderTarget.get()
+             << " size=" << config.width << "x" << config.height;
     fvkmemory::resource_ptr<VulkanFramebuffer> fbh =
             fvkmemory::resource_ptr<VulkanFramebuffer>::construct(resManager, mDevice, framebuffer,
                     renderTarget);
@@ -403,6 +405,8 @@ void VulkanFboCache::gc() noexcept {
             ++iter;
         }
     }
+
+    FVK_LOGD << "VulkanFboCache sizes: framebuffers=" << mFramebufferCache.size() << " renderpasses=" << mRenderPassCache.size();
 
     FVK_SYSTRACE_END();
 }
