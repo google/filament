@@ -56,6 +56,10 @@ public:
 
     bool hasShader(ShaderModel model, Variant variant, ShaderStage stage) const noexcept;
 
+    // Populates a pre-sized vector (matching dictionary size) with the frequency of each index
+    // Returns the total exact byte length of the variable-length indices stream.
+    size_t getDictionaryOccurrences(std::vector<uint32_t>& outOccurrences) const;
+
     // These methods are for debugging purposes only (matdbg)
     // @{
     static void decodeKey(uint32_t key,
@@ -69,6 +73,11 @@ private:
     Unflattener mUnflattener;
     const uint8_t* mBase = nullptr;
     tsl::robin_map<uint32_t, uint32_t> mOffsets;
+
+    uint16_t mSharedStrings = 0;
+    uint16_t mVertexStrings = 0;
+    uint16_t mFragmentStrings = 0;
+    uint16_t mComputeStrings = 0;
 
     bool getTextShader(Unflattener unflattener,
             BlobDictionary const& dictionary, ShaderContent& shaderContent,
