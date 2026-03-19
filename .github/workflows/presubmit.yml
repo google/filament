@@ -96,7 +96,7 @@ jobs:
       - name: Run build script
         run: |
           cd build/linux && printf "y" | ./build.sh presubmit
-      - name: Test material parser
+      - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
 
@@ -266,10 +266,10 @@ jobs:
             echo "accept=false" >> "$GITHUB_OUTPUT"
           fi
         shell: bash
-      - name: Renderdiff Generate
+      - name: Renderdiff generate
         if: steps.check_accept.outputs.accept != 'true'
         uses: ./.github/actions/renderdiff-generate
-      - name: Render and compare
+      - name: Compare rendered images
         if: steps.check_accept.outputs.accept != 'true'
         id: render_compare
         env:
@@ -301,12 +301,13 @@ jobs:
              echo "$DELIMITER" >> "$GITHUB_OUTPUT"
           fi
         shell: bash
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         if: steps.check_accept.outputs.accept != 'true'
         with:
           name: presubmit-renderdiff-result
           path: ./out/renderdiff
-      - name: Compare result
+      - name: Check results
         if: steps.check_accept.outputs.accept != 'true'
         run: |
           ERROR_STR="${{ steps.render_compare.outputs.err }}"
@@ -315,7 +316,7 @@ jobs:
               exit 1
           fi
 
-  validate-wgsl-webgpu:
+  build-wgsl-webgpu:
     name: validate-wgsl-webgpu
     runs-on: 'arm-ubuntu-24.04-16core'
     needs: [check-verification]
