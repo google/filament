@@ -80,6 +80,7 @@ elif [[ "$OS_NAME" == "Darwin" ]]; then
     if command -v brew > /dev/null 2>&1; then
         HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr \
                                                         llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
+        brew link --overwrite llvm@${LLVM_VERSION}
         # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
         LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
     elif command -v port > /dev/null 2>&1; then
