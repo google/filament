@@ -158,8 +158,10 @@ public:
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
 
     ShaderModel getShaderModel() const noexcept { return mShaderModel; }
-
+    
     void resetState() noexcept;
+    
+    bool isGpuTimeSupported() const noexcept { return mGpuTimeSupported; }
 
     inline void useProgram(GLuint program) noexcept;
 
@@ -541,6 +543,8 @@ private:
             SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
     Platform::DriverConfig const mDriverConfig;
+
+    bool mGpuTimeSupported = false;
 
     void bindFramebufferResolved(GLenum target, GLuint buffer) noexcept;
 

@@ -267,6 +267,35 @@ class ModelViewer(
     }
 
     /**
+     * Resets the model's transform, animation, and camera state to defaults.
+     * Call this when reusing the same model across multiple tests.
+     */
+    fun resetToDefaultState() {
+        // 1. Reset Camera parameters
+        cameraFocalLength = 28f
+        cameraNear = kNearPlane
+        cameraFar = kFarPlane
+        updateCameraProjection()
+
+        // 2. Reset the manipulator's look-at vectors to initial state
+        cameraManipulator?.let { cm ->
+            cm.jumpToBookmark(cm.homeBookmark)
+        }
+
+        // 3. Reset Animations
+        animator?.let {
+            if (it.animationCount > 0) {
+                it.applyAnimation(0, 0.0f)
+            }
+            it.updateBoneMatrices()
+        }
+
+        // 4. Re-apply the unit cube transform to clear custom scaling/translation
+        clearRootTransform()
+        transformToUnitCube()
+    }
+
+    /**
      * Frees all entities associated with the most recently-loaded model.
      */
     fun destroyModel() {

@@ -262,9 +262,12 @@ public:
     }
 
     void setSampleCount(uint8_t count) noexcept {
-        count = uint8_t(count < 1u ? 1u : count);
-        mMultiSampleAntiAliasingOptions.sampleCount = count;
-        mMultiSampleAntiAliasingOptions.enabled = count > 1u;
+        // MSAA is a post-process effect, and post-processing is disabled at FL0
+        if (mFeatureLevel >= backend::FeatureLevel::FEATURE_LEVEL_1) {
+            count = uint8_t(count < 1u ? 1u : count);
+            mMultiSampleAntiAliasingOptions.sampleCount = count;
+            mMultiSampleAntiAliasingOptions.enabled = count > 1u;
+        }
     }
 
     uint8_t getSampleCount() const noexcept {
@@ -628,6 +631,8 @@ private:
     FPickingQuery* mActivePickingQueriesList = nullptr;
 
     utils::CString mName;
+
+    backend::FeatureLevel mFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
 
     // the following values are set by prepare()
     Range mVisibleRenderables;
