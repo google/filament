@@ -48,7 +48,7 @@ class OpenGLDriver;
 
 // ------------------------------------------------------------------------------------------------
 
-bool TimerQueryFactory::mGpuTimeSupported = false;
+
 
 TimerQueryFactoryInterface* TimerQueryFactory::init(
         OpenGLPlatform& platform, OpenGLContext& context) {
@@ -65,17 +65,14 @@ TimerQueryFactoryInterface* TimerQueryFactory::init(
         } else {
             impl = new(std::nothrow) TimerQueryNativeFactory(context);
         }
-        mGpuTimeSupported = true;
     } else
 #endif
     if (platform.canCreateFence()) {
         // no timer queries, but we can use fences
         impl = new(std::nothrow) TimerQueryFenceFactory(platform);
-        mGpuTimeSupported = true;
     } else {
         // no queries, no fences -- that's a problem
         impl = new(std::nothrow) TimerQueryFallbackFactory();
-        mGpuTimeSupported = false;
     }
     assert_invariant(impl);
     return impl;

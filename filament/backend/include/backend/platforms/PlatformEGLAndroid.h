@@ -185,7 +185,7 @@ private:
     };
 
     int mOSVersion;
-    ExternalStreamManagerAndroid& mExternalStreamManager;
+    ExternalStreamManagerAndroid* mExternalStreamManager = nullptr;
     AndroidDetails& mAndroidDetails;
     utils::PerformanceHintManager mPerformanceHintManager;
     utils::PerformanceHintManager::Session mPerformanceHintSession;

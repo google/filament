@@ -2859,7 +2859,7 @@ bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool OpenGLDriver::isFrameTimeSupported() {
-    return TimerQueryFactory::isGpuTimeSupported();
+    return mContext.isGpuTimeSupported();
 }
 
 bool OpenGLDriver::isAutoDepthResolveSupported() {
