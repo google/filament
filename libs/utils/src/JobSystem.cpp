@@ -56,7 +56,6 @@
 #if defined(WIN32)
 #    define NOMINMAX
 #    include <windows.h>
-#    include <string>
 # else
 #    include <pthread.h>
 #endif
@@ -210,14 +209,22 @@ JobSystem::JobSystem(const size_t userThreadCount, const size_t adoptableThreads
     static_assert(std::atomic<bool>::is_always_lock_free);
     static_assert(std::atomic<uint16_t>::is_always_lock_free);
 
-    std::random_device rd;
     const size_t hardwareThreadCount = mThreadCount;
     auto& states = mThreadStates;
 
     #pragma nounroll
     for (size_t i = 0, n = states.size(); i < n; i++) {
+        // don't use std::random_device because it forces the use of std::string
+        constexpr uint32_t base_seed = 1337;
+        uint32_t seed = base_seed + static_cast<uint32_t>(i);
+        seed = (seed ^ 61) ^ (seed >> 16);
+        seed = seed + (seed << 3);
+        seed = seed ^ (seed >> 4);
+        seed = seed * 0x27d4eb2d;
+        seed = seed ^ (seed >> 15);
+
         auto& state = states[i];
-        state.rndGen = default_random_engine(rd());
+        state.rndGen = default_random_engine(seed);
         state.js = this;
         if (i < hardwareThreadCount) {
             // don't start a thread of adoptable thread slots

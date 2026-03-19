@@ -32,7 +32,7 @@
 
 #include <cstddef>
 #include <functional>
-#include <string>
+#include <string_view>
 #include <utility>
 
 #ifdef __ANDROID__

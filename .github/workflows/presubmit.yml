@@ -8,10 +8,54 @@ on:
     branches:
       - main
 
+# This will cancel in-flight runs when there is an update to a PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The conditional 'if' on each job is meant to skip presubmit jobs when a commit is pushed to main
+# and that commit is cryptographically "verified". Typically, a verified commit (like a GitHub UI
+# squash-and-merge) has already passed through presubmit during the Pull Request phase.
+# The conditional explicitly checks:
+# 1. always() && !cancelled(): Ensures the job runs even if 'check-verification' is skipped, but
+#    aborts if the workflow was manually cancelled.
+# 2. github.event_name == 'pull_request': Presubmits should always run normally on PRs.
+# 3. github.event_name == 'push' && ...: If it's a push to main, it only runs if the
+#    'check-verification' job confirmed the commit is NOT verified.
+
 jobs:
+  check-verification:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      verified: ${{ steps.check.outputs.verified }}
+    steps:
+      - name: Check commit verification
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha
+            });
+            core.setOutput('verified', data.commit.verification.verified);
+
   build-desktop-mac:
     name: build-mac
-    runs-on: macos-14-xlarge
+    runs-on: 'macos-14-xlarge'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -20,13 +64,30 @@ jobs:
       - name: Run build script
         run: |
           cd build/mac && printf "y" | ./build.sh presubmit-with-test
-      - name: Test material parser
+      - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
+      - name: Test - public headers
+        run: |
+          # out/cmake-release should have the artifacts ready for installation. Here we install it
+          #   to test the public headers
+          ninja -C out/cmake-release install
+          test/check-headers/test.sh out/release/filament/include
 
   build-desktop-linux:
     name: build-linux
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'arm-ubuntu-24.04-16core'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -41,7 +102,18 @@ jobs:
 
   build-windows:
     name: build-windows
-    runs-on: windows-2022-32core
+    runs-on: 'windows-2022'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -53,7 +125,18 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'ubuntu-24.04-4core'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -80,7 +163,18 @@ jobs:
 
   build-ios:
     name: build-iOS
-    runs-on: macos-14-xlarge
+    runs-on: 'macos-14-xlarge'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -95,7 +189,18 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'arm-ubuntu-24.04-16core'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -108,7 +213,18 @@ jobs:
 
   validate-docs:
     name: validate-docs
-    runs-on: 'ubuntu-24.04-4core'
+    runs-on: 'ubuntu-24.04'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -121,7 +237,18 @@ jobs:
 
   test-renderdiff:
     name: test-renderdiff
-    runs-on: macos-14-xlarge
+    runs-on: 'macos-14-xlarge'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -190,7 +317,18 @@ jobs:
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'arm-ubuntu-24.04-16core'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -204,6 +342,17 @@ jobs:
   test-code-correctness:
     name: test-code-correctness
     runs-on: 'macos-14-xlarge'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -224,7 +373,18 @@ jobs:
 
   test-backend:
     name: test-backend
-    runs-on: macos-14-xlarge
+    runs-on: 'macos-14-xlarge'
+    needs: [check-verification]
+    if: >
+      always() && !cancelled() &&
+      (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'push' &&
+          needs.check-verification.result == 'success' &&
+          needs.check-verification.outputs.verified == 'false'
+        )
+      )
     steps:
       - uses: actions/checkout@v4.1.6
         with:

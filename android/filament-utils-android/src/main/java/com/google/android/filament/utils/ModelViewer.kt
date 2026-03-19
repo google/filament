@@ -106,8 +106,8 @@ class ModelViewer(
     var skyboxCubemap: Texture? = null
 
     private lateinit var displayHelper: DisplayHelper
-    private lateinit var cameraManipulator: Manipulator
-    private lateinit var gestureDetector: GestureDetector
+    private var cameraManipulator: Manipulator? = null
+    private var gestureDetector: GestureDetector? = null
     private var surfaceView: SurfaceView? = null
     private var textureView: TextureView? = null
 
@@ -157,15 +157,13 @@ class ModelViewer(
             surfaceView: SurfaceView,
             engine: Engine = Engine.create(),
             uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
-            manipulator: Manipulator? = null
+            manipulator: Manipulator? = defaultCameraManipulator(surfaceView.width, surfaceView.height)
     ) : this(engine, uiHelper) {
-        cameraManipulator = manipulator ?: Manipulator.Builder()
-                .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
-                .viewport(surfaceView.width, surfaceView.height)
-                .build(Manipulator.Mode.ORBIT)
-
         this.surfaceView = surfaceView
-        gestureDetector = GestureDetector(surfaceView, cameraManipulator)
+        cameraManipulator = manipulator
+        cameraManipulator?.let { c ->
+            gestureDetector = GestureDetector(surfaceView, c)
+        }
         displayHelper = DisplayHelper(surfaceView.context)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(surfaceView)
@@ -177,15 +175,14 @@ class ModelViewer(
             textureView: TextureView,
             engine: Engine = Engine.create(),
             uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
-            manipulator: Manipulator? = null
+            manipulator: Manipulator? = defaultCameraManipulator(textureView.width, textureView.height)
     ) : this(engine, uiHelper) {
-        cameraManipulator = manipulator ?: Manipulator.Builder()
-                .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
-                .viewport(textureView.width, textureView.height)
-                .build(Manipulator.Mode.ORBIT)
-
+        cameraManipulator = manipulator
         this.textureView = textureView
-        gestureDetector = GestureDetector(textureView, cameraManipulator)
+        cameraManipulator = manipulator
+        cameraManipulator?.let { c ->
+            gestureDetector = GestureDetector(textureView, c)
+        }
         displayHelper = DisplayHelper(textureView.context)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(textureView)
@@ -302,11 +299,13 @@ class ModelViewer(
         asset?.let { populateScene(it) }
 
         // Extract the camera basis from the helper and push it to the Filament camera.
-        cameraManipulator.getLookAt(eyePos, target, upward)
-        camera.lookAt(
+        cameraManipulator?.let { cm ->
+            cm.getLookAt(eyePos, target, upward)
+            camera.lookAt(
                 eyePos[0], eyePos[1], eyePos[2],
                 target[0], target[1], target[2],
                 upward[0], upward[1], upward[2])
+        }
 
         // Render the scene, unless the renderer wants to skip the frame.
         if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
@@ -398,7 +397,7 @@ class ModelViewer(
      * Handles a [MotionEvent] to enable one-finger orbit, two-finger pan, and pinch-to-zoom.
      */
     fun onTouchEvent(event: MotionEvent) {
-        gestureDetector.onTouchEvent(event)
+        gestureDetector?.onTouchEvent(event)
     }
 
     @SuppressWarnings("ClickableViewAccessibility")
@@ -451,7 +450,7 @@ class ModelViewer(
 
         override fun onResized(width: Int, height: Int) {
             view.viewport = Viewport(0, 0, width, height)
-            cameraManipulator.setViewport(width, height)
+            cameraManipulator?.setViewport(width, height)
             updateCameraProjection()
             synchronizePendingFrames(engine)
         }
@@ -468,5 +467,11 @@ class ModelViewer(
 
     companion object {
         private val kDefaultObjectPosition = Float3(0.0f, 0.0f, -4.0f)
+        private fun defaultCameraManipulator(width: Int, height: Int) : Manipulator {
+            return Manipulator.Builder()
+                .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
+                .viewport(width, height)
+                .build(Manipulator.Mode.ORBIT)
+        }
     }
 }

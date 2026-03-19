@@ -849,17 +849,16 @@ static void showErrorMessage(const char* materialName, filament::Variant const v
     const char* targetApiString = "unknown";
     switch (targetApi) {
         case TargetApi::OPENGL:
-            targetApiString = (featureLevel == MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0)
-                              ? "GLES 2.0.\n" : "OpenGL.\n";
+            targetApiString = (featureLevel == MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0) ? "GLES 2.0" : "OpenGL";
             break;
         case TargetApi::VULKAN:
-            targetApiString = "Vulkan.\n";
+            targetApiString = "Vulkan";
             break;
         case TargetApi::METAL:
-            targetApiString = "Metal.\n";
+            targetApiString = "Metal";
             break;
         case TargetApi::WEBGPU:
-            targetApiString = "WebGPU.\n";
+            targetApiString = "WebGPU";
             break;
         case TargetApi::ALL:
             assert_invariant(false); // Unreachable.
@@ -869,24 +868,20 @@ static void showErrorMessage(const char* materialName, filament::Variant const v
     const char* shaderStageString = "unknown";
     switch (shaderType) {
         case ShaderStage::VERTEX:
-            shaderStageString = "Vertex Shader\n";
+            shaderStageString = "Vertex Shader";
             break;
         case ShaderStage::FRAGMENT:
-            shaderStageString = "Fragment Shader\n";
+            shaderStageString = "Fragment Shader";
             break;
         case ShaderStage::COMPUTE:
-            shaderStageString = "Compute Shader\n";
+            shaderStageString = "Compute Shader";
             break;
     }
 
     LOG(ERROR)
             << "Error in \"" << materialName << "\""
-            << ", Variant 0x" << io::hex << +variant.key
-            << ", " << targetApiString
-            << "=========================\n"
-            << "Generated " << shaderStageString
-            << "=========================\n"
-            << shaderCode;
+            << ", " << shaderStageString
+            << ", Variant " << io::hex << +variant.key;
 }
 
 bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Variant>& variants,
@@ -1417,7 +1412,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         auto const* stage = to_string(sib.getStageFlags());
         for (auto const& sampler: samplers) {
             LOG(ERROR) << "\"" << sampler.name.c_str() << "\" "
-                   << Enums::toString(sampler.type).c_str() << " " << stage << '\n';
+                   << Enums::toString(sampler.type) << " " << stage << '\n';
         }
     };
 

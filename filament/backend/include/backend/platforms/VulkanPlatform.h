@@ -31,7 +31,6 @@
 #include <cstring>
 #include <cstddef>
 #include <functional>
-#include <string>
 #include <tuple>
 #include <unordered_set>
 
@@ -69,7 +68,7 @@ public:
 
     struct ExtensionHashFn {
         std::size_t operator()(utils::CString const& s) const noexcept {
-            return std::hash<std::string>{}(s.data());
+            return std::hash<utils::CString>{}(s.data());
         }
     };
     // Note: utils::CString::operator== has an edge case that breaks for the extension set.
@@ -142,6 +141,8 @@ public:
     int getOSVersion() const noexcept override {
         return 0;
     }
+
+    utils::CString getDeviceInfo(DeviceInfoType infoType, Driver* driver) const noexcept override;
 
     // ----------------------------------------------------
     // ---------- Platform Customization options ----------

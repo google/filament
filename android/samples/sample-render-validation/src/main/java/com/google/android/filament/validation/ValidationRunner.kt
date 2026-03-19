@@ -41,18 +41,13 @@ class ValidationRunner(
     private var currentTestConfig: TestConfig? = null
     private var currentModelName: String? = null
 
-    private var loadStartFence: com.google.android.filament.Fence? = null
-    private var loadStartTime = 0L
     private var frameCounter = 0
 
     enum class State {
         IDLE,
-        LOADING_MODEL,
-        WAITING_FOR_FENCE,
         WAITING_FOR_RESOURCES,
         WARMUP,
-        RUNNING_TEST,
-        COMPARING
+        RUNNING_TEST
     }
 
     interface Callback {
@@ -93,8 +88,6 @@ class ValidationRunner(
             nextModel()
             return
         }
-
-        currentState = State.LOADING_MODEL
         callback?.onStatusChanged("Loading $modelName for ${currentTestConfig?.name}")
 
         // Load model on main thread (required by ModelViewer)
@@ -110,51 +103,20 @@ class ValidationRunner(
             Log.i("ValidationRunner", "Loading GLB buffer... (${bytes.size} bytes)")
             val buffer = ByteBuffer.wrap(bytes)
             modelViewer.loadModelGlb(buffer)
-            Log.i("ValidationRunner", "Model loaded. initializing fence.")
+            Log.i("ValidationRunner", "Model loaded.")
             modelViewer.transformToUnitCube()
-            loadStartFence = modelViewer.engine.createFence()
-            loadStartTime = System.nanoTime()
-            currentState = State.WAITING_FOR_FENCE
-            frameCounter = 0 // Reset for fence timeout tracking
-            Log.i("ValidationRunner", "State set to WAITING_FOR_FENCE")
+            currentState = State.WAITING_FOR_RESOURCES
+            frameCounter = 0
+            Log.i("ValidationRunner", "State set to WAITING_FOR_RESOURCES")
         } catch (e: Exception) {
-             Log.e("ValidationRunner", "Failed to load $path", e)
-             nextModel()
+            Log.e("ValidationRunner", "Failed to load $path", e)
+            nextModel()
         }
     }
 
     fun onFrame(frameTimeNanos: Long) {
-        if (frameCounter % 60 == 0) {
-             Log.i("ValidationRunner", "onFrame: $currentState (frame: $frameCounter)")
-        }
-
         when (currentState) {
             State.IDLE -> {}
-            State.WAITING_FOR_FENCE -> {
-                frameCounter++
-                if (frameCounter > 600) {
-                     Log.w("ValidationRunner", "Fence timed out after 600 frames! Forcing proceed.")
-                     modelViewer.engine.destroyFence(loadStartFence!!)
-                     loadStartFence = null
-                     currentState = State.WAITING_FOR_RESOURCES
-                     return
-                }
-
-                loadStartFence?.let { fence ->
-                     if (fence.wait(com.google.android.filament.Fence.Mode.FLUSH, 0) ==
-                            com.google.android.filament.Fence.FenceStatus.CONDITION_SATISFIED) {
-                         modelViewer.engine.destroyFence(fence)
-                         loadStartFence = null
-
-                         // Compile materials (simplified)
-                         modelViewer.scene.forEach { entity ->
-                             // ... existing material compilation logic ...
-                         }
-
-                         currentState = State.WAITING_FOR_RESOURCES
-                     }
-                }
-            }
             State.WAITING_FOR_RESOURCES -> {
                  val progress = modelViewer.progress
                  if (progress >= 1.0f) {
@@ -166,12 +128,11 @@ class ValidationRunner(
             State.WARMUP -> {
                 frameCounter++
                 if (frameCounter > 5) { // 5 frames warmup
-                     startAutomation()
+                    startAutomation()
                 }
             }
             State.RUNNING_TEST -> {
-                 // Log.i("ValidationRunner", "Running test...")
-                 currentEngine?.let { engine ->
+                currentEngine?.let { engine ->
                     val content = AutomationEngine.ViewerContent()
                     content.view = modelViewer.view
                     content.renderer = modelViewer.renderer
@@ -186,13 +147,11 @@ class ValidationRunner(
                     if (engine.shouldClose()) {
                         Log.i("ValidationRunner", "Finishing test (frames: $frameCounter)")
                         // Test finished (for this spec)
-                        currentState = State.COMPARING
+                        currentState = State.IDLE
                         captureAndCompare()
                     }
                 }
             }
-            State.COMPARING -> {} // Busy
-            State.LOADING_MODEL -> {}
         }
     }
 
@@ -233,7 +192,36 @@ class ValidationRunner(
 
          // Golden path
          val modelFile = File(config.models.get(modelName)!!)
-         val goldenFile = modelFile.parentFile!!.parentFile!!.resolve("golden/${testFullName}.png")
+         val modelParent = modelFile.parentFile!!
+
+         // Search for golden in:
+         // 1. ../golden/ (standard structure)
+         // 2. ../goldens/ (exported structure, sibling of models)
+         // 3. ./goldens/ (backup)
+
+         val searchPaths = mutableListOf<File>()
+         modelParent.parentFile?.let {
+             searchPaths.add(it.resolve("golden"))
+             searchPaths.add(it.resolve("goldens"))
+         }
+         searchPaths.add(modelParent.resolve("goldens"))
+
+         var goldenFile: File? = null
+         for (path in searchPaths) {
+             val f = path.resolve("${testFullName}.png")
+             if (f.exists()) {
+                 goldenFile = f
+                 break
+             }
+         }
+
+         if (goldenFile != null) {
+             Log.i("ValidationRunner", "Found golden at ${goldenFile.absolutePath}")
+         } else {
+             Log.w("ValidationRunner", "Golden not found for $testFullName. Searched in: ${searchPaths.joinToString { it.absolutePath }}")
+             // Fallback to old behavior for reference if everything else fails
+             goldenFile = modelParent.parentFile?.resolve("golden/${testFullName}.png") ?: File("nonexistent")
+         }
 
          Thread {
              try {
@@ -245,14 +233,15 @@ class ValidationRunner(
                 var diffMetric = 0f
 
                 if (generateGoldens) {
-                    goldenFile.parentFile?.mkdirs()
-                    FileOutputStream(goldenFile).use { out ->
+                    val targetGolden = goldenFile ?: modelParent.parentFile?.resolve("golden/${testFullName}.png") ?: File(modelParent, "golden/${testFullName}.png")
+                    targetGolden.parentFile?.mkdirs()
+                    FileOutputStream(targetGolden).use { out ->
                         flipped.compress(Bitmap.CompressFormat.PNG, 100, out)
                     }
                     passed = true // Generating goldens always passes if successful
                     callback?.onStatusChanged("Golden generated")
                 } else {
-                    if (goldenFile.exists()) {
+                    if (goldenFile != null && goldenFile.exists()) {
                         val golden = android.graphics.BitmapFactory.decodeFile(goldenFile.absolutePath)
                         if (golden != null) {
                             callback?.onImageResult("Golden", golden)
@@ -263,17 +252,61 @@ class ValidationRunner(
                             passed = (result.status == ImageDiff.Result.Status.PASSED)
                             diffMetric = result.failingPixelCount.toFloat()
 
-                             if (!passed) {
+                            if (!passed) {
                                 if (result.diffImage != null) {
-                                    callback?.onImageResult("Diff", result.diffImage!!)
-                                    resultManager.saveImage("${testFullName}_diff", result.diffImage!!)
+                                    val diffImg = result.diffImage!!
+                                    val width = diffImg.width
+                                    val height = diffImg.height
+                                    val pixels = IntArray(width * height)
+                                    diffImg.getPixels(pixels, 0, width, 0, 0, width, height)
+
+                                    var hasAlphaDiff = false
+                                    val alphaPixels = IntArray(width * height)
+
+                                    for (i in pixels.indices) {
+                                        val color = pixels[i]
+
+                                        val a = android.graphics.Color.alpha(color)
+                                        val r = android.graphics.Color.red(color)
+                                        val g = android.graphics.Color.green(color)
+                                        val b = android.graphics.Color.blue(color)
+
+                                        if (a > 0) {
+                                            hasAlphaDiff = true
+                                        }
+
+                                        // Map alpha diff to grayscale RGB
+                                        alphaPixels[i] = android.graphics.Color.argb(255, a, a, a)
+
+                                        // Force main diff image alpha to 255
+                                        pixels[i] = android.graphics.Color.argb(255, r, g, b)
+                                    }
+
+                                    // Apply updated pixels to diff image
+                                    diffImg.setPixels(pixels, 0, width, 0, 0, width, height)
+
+                                    // The C++ ImageDiff code sets isPremultiplied to false so Android
+                                    // doesn't erase RGB diff values when Alpha diff is 0. However, Android's
+                                    // Canvas will crash if we try to draw a non-premultiplied bitmap.
+                                    // Since we just forced all alpha values to 255 (fully opaque) in the
+                                    // loop above, we can safely mark it as premultiplied again here.
+                                    diffImg.isPremultiplied = true
+                                    callback?.onImageResult("Diff", diffImg)
+                                    resultManager.saveImage("${testFullName}_diff", diffImg)
+
+                                    if (hasAlphaDiff) {
+                                        val alphaDiffImg = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                                        alphaDiffImg.setPixels(alphaPixels, 0, width, 0, 0, width, height)
+                                        callback?.onImageResult("Alpha Diff", alphaDiffImg)
+                                        resultManager.saveImage("${testFullName}_alpha_diff", alphaDiffImg)
+                                    }
                                 }
                              }
                         } else {
                             callback?.onStatusChanged("Failed to load golden")
                         }
                     } else {
-                        Log.w("ValidationRunner", "Golden not found: ${goldenFile.absolutePath}")
+                        Log.w("ValidationRunner", "Golden not found: ${goldenFile?.absolutePath}")
                         callback?.onStatusChanged("Golden not found")
                     }
                 }

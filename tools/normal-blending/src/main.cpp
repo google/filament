@@ -25,7 +25,7 @@
 
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 using namespace filament::math;
 using namespace image;
@@ -85,19 +85,19 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hf:c:";
-    static const struct option OPTIONS[] = {
-            { "help",                 no_argument, 0, 'h' },
-            { "license",              no_argument, 0, 'l' },
-            { "format",         required_argument, 0, 'f' },
-            { "compression",    required_argument, 0, 'c' },
-            { 0, 0, 0, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",                 utils::getopt::no_argument, 0, 'h' },
+            { "license",              utils::getopt::no_argument, 0, 'l' },
+            { "format",         utils::getopt::required_argument, 0, 'f' },
+            { "compression",    utils::getopt::required_argument, 0, 'c' },
+            { 0, 0, 0, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -136,7 +136,7 @@ static int handleArguments(int argc, char* argv[]) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 int main(int argc, char* argv[]) {

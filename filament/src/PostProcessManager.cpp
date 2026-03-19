@@ -49,6 +49,7 @@
 #include "fsr.h"
 #include "FrameHistory.h"
 #include "RenderPass.h"
+#include "ShadowMapManager.h"
 
 #include "details/Camera.h"
 #include "details/ColorGrading.h"
@@ -998,13 +999,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 auto& material = getPostProcessMaterial(materialName);
 
                 FMaterial* ma = material.getMaterial(mEngine, driver);
-                {
-                    FMaterial::SpecializationConstantsBuilder maConstants =
-                            ma->getSpecializationConstantsBuilder();
-                    maConstants.set("useVisibilityBitmasks", options.gtao.useVisibilityBitmasks);
-                    maConstants.set("linearThickness", options.gtao.linearThickness);
-                    ma->setSpecializationConstants(std::move(maConstants));
-                }
+                ma->getPrograms().setConstants({
+                    { "useVisibilityBitmasks", options.gtao.useVisibilityBitmasks },
+                    { "linearThickness", options.gtao.linearThickness },
+                });
 
                 ma = material.getMaterial(mEngine, driver);
                 FMaterialInstance* const mi = getMaterialInstance(ma);
@@ -2250,6 +2248,18 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
     float bloomHeight = float(inoutBloomOptions.resolution);
     float bloomWidth  = bloomHeight * aspect;
 
+    // With extreme aspect ratios the major axis can exceed the GPU's maximum
+    // texture dimension. Scale both axes down proportionally so that the larger
+    // one stays within the hardware limit.
+    const float maxDimension = float(
+            FTexture::getMaxTextureSize(mEngine, SamplerType::SAMPLER_2D));
+    const float bloomMajor = std::max(bloomWidth, bloomHeight);
+    if (bloomMajor > maxDimension) {
+        const float clampScale = maxDimension / bloomMajor;
+        bloomWidth  *= clampScale;
+        bloomHeight *= clampScale;
+    }
+
     // we might need to adjust the max # of levels
     const uint32_t major = uint32_t(std::max(bloomWidth,  bloomHeight));
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
@@ -2917,20 +2927,18 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         TemporalAntiAliasingOptions const& taaOptions) noexcept {
 
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine, driver);
-    FMaterial::SpecializationConstantsBuilder maConstants = ma->getSpecializationConstantsBuilder();
-
-    maConstants.set("upscaling", taaOptions.upscaling > 1.0f);
-    maConstants.set("historyReprojection", taaOptions.historyReprojection);
-    maConstants.set("filterHistory", taaOptions.filterHistory);
-    maConstants.set("filterInput", taaOptions.filterInput);
-    maConstants.set("useYCoCg", taaOptions.useYCoCg);
-    maConstants.set("hdr", taaOptions.hdr);
-    maConstants.set("preventFlickering", taaOptions.preventFlickering);
-    maConstants.set("boxType", int32_t(taaOptions.boxType));
-    maConstants.set("boxClipping", int32_t(taaOptions.boxClipping));
-    maConstants.set("varianceGamma", taaOptions.varianceGamma);
-
-    ma->setSpecializationConstants(std::move(maConstants));
+    ma->getPrograms().setConstants({
+        { "upscaling", taaOptions.upscaling > 1.0f },
+        { "historyReprojection", taaOptions.historyReprojection },
+        { "filterHistory", taaOptions.filterHistory },
+        { "filterInput", taaOptions.filterInput },
+        { "useYCoCg", taaOptions.useYCoCg },
+        { "hdr", taaOptions.hdr },
+        { "preventFlickering", taaOptions.preventFlickering },
+        { "boxType", int32_t(taaOptions.boxType) },
+        { "boxClipping", int32_t(taaOptions.boxClipping) },
+        { "varianceGamma", taaOptions.varianceGamma },
+    });
 }
 
 FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::DriverApi& driver,
@@ -2938,13 +2946,10 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
         ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
         uint32_t const width, uint32_t const height) noexcept {
     FMaterial* ma = material.getMaterial(mEngine, driver);
-    {
-        FMaterial::SpecializationConstantsBuilder maConstants =
-                ma->getSpecializationConstantsBuilder();
-        maConstants.set("isOneDimensional", colorGrading->isOneDimensional());
-        maConstants.set("isLDR", colorGrading->isLDR());
-        ma->setSpecializationConstants(std::move(maConstants));
-    }
+    ma->getPrograms().setConstants({
+        { "isOneDimensional", colorGrading->isOneDimensional() },
+        { "isLDR", colorGrading->isLDR() },
+    });
 
     PostProcessVariant const variant = colorGradingConfig.translucent
                                                ? PostProcessVariant::TRANSLUCENT
@@ -3680,8 +3685,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
     }
 
     // The Metal / Vulkan backends currently don't support depth/stencil resolve.
-    if (isDepthFormat(inDesc.format) && (!mDepthStencilResolveSupported)) {
-        return resolveDepth(fg, outputBufferName, input, outDesc);
+    // TODO: Stencil resolve is actually *not* supported. Trying to resolve a stencil texture will
+    //     trigger an assert on debug builds. We need to investigate how this can be accomplished
+    //     through shaders or some other manipulation.
+    if ((isDepthFormat(inDesc.format) || isStencilFormat(inDesc.format)) &&
+            (!mDepthStencilResolveSupported)) {
+        return resolveDepthWithShader(fg, outputBufferName, input, outDesc);
     }
 
     outDesc.width = inDesc.width;
@@ -3696,9 +3705,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
     auto const& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
-                // we currently don't support stencil resolve.
-                assert_invariant(!isStencilFormat(inDesc.format));
-
                 data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
                 data.output = builder.createTexture(outputBufferName, outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::BLIT_DST);
@@ -3723,7 +3729,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
     return ppResolve->output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepthWithShader(FrameGraph& fg,
         utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor outDesc) noexcept {
 
@@ -3748,11 +3754,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto const& ppResolve = fg.addPass<ResolveData>("resolveDepth",
+    auto const& ppResolve = fg.addPass<ResolveData>("resolveDepthWithShader",
             [&](FrameGraph::Builder& builder, auto& data) {
-                // we currently don't support stencil resolve
-                assert_invariant(!isStencilFormat(inDesc.format));
-
                 data.input = builder.sample(input);
                 data.output = builder.createTexture(outputBufferName, outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
@@ -3761,6 +3764,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
             [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                // we currently don't support stencil resolve
+                assert_invariant(!isStencilFormat(inDesc.format));
+
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto const& input = resources.getTexture(data.input);
@@ -3809,15 +3815,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 auto const& inDesc = resources.getDescriptor(data.in);
                 auto width = inDesc.width;
                 assert_invariant(width == inDesc.height);
-                int const dim = width >> (level + 1);
+                uint32_t const dim = std::max(1u, width >> (level + 1));
 
                 auto& material = getPostProcessMaterial("vsmMipmap");
                 FMaterial const* const ma = material.getMaterial(mEngine, driver);
 
-                // When generating shadow map mip levels, we want to preserve the 1 texel border.
-                // (note clearing never respects the scissor in Filament)
                 auto const pipeline = getPipelineState(ma);
-                backend::Viewport const scissor = { 1u, 1u, dim - 2u, dim - 2u };
+                backend::Viewport const scissor = { 0, 0, dim, dim };
 
                 FMaterialInstance* const mi = getMaterialInstance(ma);
                 mi->setParameter("color", in, SamplerParams{
@@ -3839,6 +3843,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGraph& fg,
+        ShadowMapManager const& smm,
         FrameGraphId<FrameGraphTexture> const input,
         FrameGraphId<FrameGraphTexture> const depth) noexcept {
 
@@ -3856,17 +3861,31 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGra
                 data.output = builder.createTexture("Shadow Cascade Debug", desc);
                 builder.declareRenderPass(data.output);
             },
-            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, &smm, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto color = resources.getTexture(data.color);
                 auto depth = resources.getTexture(data.depth);
                 auto const out = resources.getRenderPassInfo();
+
+                auto const& smu = smm.getShadowMappingUniforms();
+                mat4f lightFromWorldMatrix[4] = {};
+                float4 scissorNormalized[4] = {};
+                for (size_t i = 0, c = std::max(4u, (smu.cascades & 0xF)) ; i < c; i++) {
+                    auto const& csp = smm.getCascadeShaderParameters(i);
+                    lightFromWorldMatrix[i] = csp.lightSpace;
+                    scissorNormalized[i] = csp.scissorNormalized;
+                }
+
                 auto const& material = getPostProcessMaterial("debugShadowCascades");
-                FMaterialInstance* const mi =
-                        getMaterialInstance(mEngine, driver, material);
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
                 mi->setParameter("color",  color, SamplerParams{});  // nearest
                 mi->setParameter("depth",  depth, SamplerParams{});  // nearest
+                mi->setParameter("cascadeSplits",  smu.cascadeSplits);
+                mi->setParameter("cascadeCount",  smu.cascades & 0xF);
+                mi->setParameter("shadowAtlasResolution",  smu.atlasResolution);
+                mi->setParameter("lightFromWorldMatrix",  lightFromWorldMatrix, 4);
+                mi->setParameter("scissorNormalized",  scissorNormalized, 4);
                 commitAndRenderFullScreenQuad(driver, out, mi);
                 unbindAllDescriptorSets(driver);
             });
