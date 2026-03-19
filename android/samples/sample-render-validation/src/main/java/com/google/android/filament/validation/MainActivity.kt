@@ -175,7 +175,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         choreographer = Choreographer.getInstance()
-        modelViewer = ModelViewer(surfaceView)
+        modelViewer = ModelViewer(surfaceView=surfaceView, manipulator=null)
         inputManager = ValidationInputManager(this)
 
         // Initialize IBL

@@ -81,6 +81,17 @@ class ValidationRunner(
     }
 
     private fun startModel(modelName: String) {
+        if (currentModelName == modelName) {
+            Log.i("ValidationRunner", "Reusing model $modelName")
+            callback?.onStatusChanged("Reusing $modelName for ${currentTestConfig?.name}")
+
+            modelViewer.resetToDefaultState()
+
+            frameCounter = 0
+            currentState = State.WARMUP
+            return
+        }
+
         currentModelName = modelName
         val modelPath = config.models[modelName]
         if (modelPath == null) {
