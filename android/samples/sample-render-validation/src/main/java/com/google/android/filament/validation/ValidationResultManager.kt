@@ -31,7 +31,14 @@ data class ValidationResult(
     val diffMetric: Float = 0f
 )
 
-class ValidationResultManager(private val outputDir: File) {
+class ValidationResultManager(
+    private val outputDir: File,
+    private val gpuDriverInfo: String,
+    private val deviceName: String,
+    private val deviceCodeName: String,
+    private val androidVersion: String,
+    private val androidBuildNumber: String
+) {
 
     companion object {
         private const val TAG = "ValidationResultManager"
@@ -64,9 +71,9 @@ class ValidationResultManager(private val outputDir: File) {
         return outputDir
     }
 
-    fun finalizeResults(): File? {
+    fun finalizeResults(totalTimeMs: Long): File? {
         // Write results JSON
-        writeResultsJson()
+        writeResultsJson(totalTimeMs)
         return null
     }
 
@@ -103,10 +110,10 @@ class ValidationResultManager(private val outputDir: File) {
                     zos.closeEntry()
                 }
 
-                // 3. Add diff images (any file ending in _diff.png in outputDir)
-                outputDir.listFiles { _, name -> name.endsWith("_diff.png") }?.forEach { diffFile ->
-                    zos.putNextEntry(ZipEntry(diffFile.name))
-                    diffFile.inputStream().use { it.copyTo(zos) }
+                // 3. Add images (only rendered images, exclude diffs)
+                outputDir.listFiles { _, name -> name.endsWith(".png") && !name.endsWith("_diff.png") }?.forEach { imgFile ->
+                    zos.putNextEntry(ZipEntry(imgFile.name))
+                    imgFile.inputStream().use { it.copyTo(zos) }
                     zos.closeEntry()
                 }
             }
@@ -266,7 +273,18 @@ class ValidationResultManager(private val outputDir: File) {
         }
     }
 
-    private fun writeResultsJson() {
+    private fun writeResultsJson(totalTimeMs: Long) {
+        val rootObject = JSONObject()
+
+        val metadataObject = JSONObject()
+        metadataObject.put("gpu_driver_info", gpuDriverInfo ?: "")
+        metadataObject.put("total_time_ms", totalTimeMs)
+        metadataObject.put("device_name", deviceName ?: "")
+        metadataObject.put("device_code_name", deviceCodeName ?: "")
+        metadataObject.put("android_version", androidVersion ?: "")
+        metadataObject.put("android_build_number", androidBuildNumber ?: "")
+        rootObject.put("metadata", metadataObject)
+
         val jsonArray = JSONArray()
         for (result in results) {
             val jsonObject = JSONObject()
@@ -275,11 +293,12 @@ class ValidationResultManager(private val outputDir: File) {
             jsonObject.put("diff_metric", result.diffMetric)
             jsonArray.put(jsonObject)
         }
+        rootObject.put("results", jsonArray)
 
         val jsonFile = File(outputDir, "results.json")
         try {
             FileOutputStream(jsonFile).use { out ->
-                out.write(jsonArray.toString(4).toByteArray())
+                out.write(rootObject.toString(4).toByteArray())
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to write results.json", e)
