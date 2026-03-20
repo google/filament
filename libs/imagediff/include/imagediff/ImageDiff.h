@@ -35,6 +35,10 @@ struct ImageDiffConfig {
     uint8_t channelMask = (uint8_t) Channel::RGBA;
     float maxAbsDiff = 0.0f; // Max absolute difference allowed (e.g. 5/255)
 
+    // Robustness Parameters
+    uint8_t shiftRadius = 0; // Search a (2r+1) x (2r+1) window in the reference image
+    uint8_t blurRadius = 0;  // Compare local (2r+1) x (2r+1) area averages
+
     // For AND/OR mode:
     std::vector<ImageDiffConfig> children;
 
@@ -56,6 +60,11 @@ struct ImageDiffResult {
     size_t maskedIgnoredPixelCount = 0; // Pixels that passed only due to masking
 
     float maxDiffFound[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // [R, G, B, A]
+
+    float errorSum[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // Sum of failing pixel errors
+    uint32_t errorHistogram[10] = {
+        0
+    }; // Decile buckets of max errors: (0-0.1], (0.1-0.2], ..., (0.9-1.0]
 
     image::LinearImage diffImage; // Populated if generateDiffImage is true
 

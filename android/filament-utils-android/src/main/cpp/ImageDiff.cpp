@@ -72,6 +72,8 @@ jobject createResult(JNIEnv* env, ImageDiffResult const& result, bool generateDi
     jfieldID statusField = env->GetFieldID(resultClass, "status", "Lcom/google/android/filament/utils/ImageDiff$Result$Status;");
     jfieldID failingCountField = env->GetFieldID(resultClass, "failingPixelCount", "J");
     jfieldID maxDiffField = env->GetFieldID(resultClass, "maxDiffFound", "[F");
+    jfieldID avgErrorField = env->GetFieldID(resultClass, "averageError", "[F");
+    jfieldID errHistField = env->GetFieldID(resultClass, "errorHistogram", "[I");
     jfieldID diffImageField = env->GetFieldID(resultClass, "diffImage", "Landroid/graphics/Bitmap;");
 
     // Map Status enum
@@ -97,6 +99,24 @@ jobject createResult(JNIEnv* env, ImageDiffResult const& result, bool generateDi
     jfloatArray maxDiffArray = env->NewFloatArray(4);
     env->SetFloatArrayRegion(maxDiffArray, 0, 4, result.maxDiffFound);
     env->SetObjectField(resultObj, maxDiffField, maxDiffArray);
+
+    float avgErr[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    if (result.failingPixelCount > 0) {
+        for (int i = 0; i < 4; ++i) {
+            avgErr[i] = result.errorSum[i] / (float) result.failingPixelCount;
+        }
+    }
+    jfloatArray avgErrorArray = env->NewFloatArray(4);
+    env->SetFloatArrayRegion(avgErrorArray, 0, 4, avgErr);
+    env->SetObjectField(resultObj, avgErrorField, avgErrorArray);
+
+    jintArray errHistArray = env->NewIntArray(10);
+    jint hist[10];
+    for (int i = 0; i < 10; ++i) {
+        hist[i] = (jint) result.errorHistogram[i];
+    }
+    env->SetIntArrayRegion(errHistArray, 0, 10, hist);
+    env->SetObjectField(resultObj, errHistField, errHistArray);
 
     if (generateDiff && result.diffImage.getWidth() > 0) {
         jclass bitmapClass = env->FindClass("android/graphics/Bitmap");
