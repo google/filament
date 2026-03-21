@@ -177,6 +177,12 @@ public:
          * presentation. Default is true.
          */
         bool transitionSwapChainImageLayoutForPresent = true;
+
+        /**
+         * The number of frames before an unused framebuffer is evicted from the cache.
+         * Default is 3.
+         */
+        uint32_t timeBeforeEvictionFbo = 3;
     };
 
     /**

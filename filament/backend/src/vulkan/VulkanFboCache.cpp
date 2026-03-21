@@ -20,6 +20,7 @@
 #include "VulkanHandles.h"
 #include "vulkan/utils/Image.h"
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 
 // If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
@@ -62,8 +63,9 @@ bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k
     return true;
 }
 
-VulkanFboCache::VulkanFboCache(VkDevice device)
-    : mDevice(device) {}
+VulkanFboCache::VulkanFboCache(VkDevice device, uint32_t timeBeforeEvictionFbo)
+        : mDevice(device),
+          mTimeBeforeEvictionFbo(timeBeforeEvictionFbo) {}
 
 VulkanFboCache::~VulkanFboCache() {
     FILAMENT_CHECK_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty())
@@ -376,31 +378,36 @@ void VulkanFboCache::gc() noexcept {
     FVK_SYSTRACE_START("fbocache::gc");
 
     // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
-    if (++mCurrentTime <= TIME_BEFORE_EVICTION) {
-        return;
-    }
-    const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
+    ++mCurrentTime;
 
-    for (FboMap::iterator iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ) {
-        const FboVal fbo = iter->second;
-        if (fbo.timestamp < evictTime && fbo.handle) {
-            mRenderPassRefCount[iter->first.renderPass]--;
+    if (UTILS_UNLIKELY(mCurrentTime > mTimeBeforeEvictionFbo)) {
+        const uint32_t evictTimeFbo = mCurrentTime - mTimeBeforeEvictionFbo;
+        for (FboMap::iterator iter = mFramebufferCache.begin(); iter != mFramebufferCache.end();) {
+            const FboVal fbo = iter->second;
+            if (fbo.timestamp < evictTimeFbo && fbo.handle) {
+                mRenderPassRefCount[iter->first.renderPass]--;
 
-            // erase(iterator) returns the iterator to the next element.
-            iter = mFramebufferCache.erase(iter);
-        } else {
-            ++iter;
+                // erase(iterator) returns the iterator to the next element.
+                iter = mFramebufferCache.erase(iter);
+            } else {
+                ++iter;
+            }
         }
     }
 
-    for (RenderPassMap::iterator iter = mRenderPassCache.begin(); iter != mRenderPassCache.end(); ) {
-        const VkRenderPass handle = iter->second.handle->getVkRenderPass();
-        if (iter->second.timestamp < evictTime && handle && mRenderPassRefCount[handle] == 0) {
-            // erase(iterator) returns the iterator to the next element.
-            iter = mRenderPassCache.erase(iter);
-            mRenderPassRefCount.erase(handle);
-        } else {
-            ++iter;
+    if (UTILS_UNLIKELY(mCurrentTime > TIME_BEFORE_EVICTION)) {
+        const uint32_t evictTimeRp = mCurrentTime - TIME_BEFORE_EVICTION;
+        for (RenderPassMap::iterator iter = mRenderPassCache.begin();
+                iter != mRenderPassCache.end();) {
+            const VkRenderPass handle = iter->second.handle->getVkRenderPass();
+            if (iter->second.timestamp < evictTimeRp && handle &&
+                    mRenderPassRefCount[handle] == 0) {
+                // erase(iterator) returns the iterator to the next element.
+                iter = mRenderPassCache.erase(iter);
+                mRenderPassRefCount.erase(handle);
+            } else {
+                ++iter;
+            }
         }
     }
 
