@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "eiff/LineDictionary.h"
+#include <private/filament/LineDictionaryUtils.h>
 
 #include <string>
 
@@ -27,10 +28,11 @@ TEST(LineDictionary, splitString) {
     LineDictionary dictionary;
     const std::string text = "first line hp_copy_123456 second line";
     dictionary.addText(ShaderStage::FRAGMENT, text);
-    EXPECT_EQ(dictionary.size(), 3);
+    EXPECT_EQ(dictionary.size(), 4);
     EXPECT_EQ(dictionary[0], "first line ");
-    EXPECT_EQ(dictionary[1], "hp_copy_123456");
-    EXPECT_EQ(dictionary[2], " second line");
+    EXPECT_EQ(dictionary[1], "hp_copy");
+    EXPECT_EQ(dictionary[2], "123456"); // Bypassing fails because 123456 > 16383
+    EXPECT_EQ(dictionary[3], " second line");
 }
 
 TEST(LineDictionary, Empty) {
@@ -62,8 +64,6 @@ TEST(LineDictionary, AddTextDuplicateLines) {
     EXPECT_EQ(dictionary[0], "Same line\n");
 }
 
-
-
 TEST(LineDictionary, SplitLogicNoPattern) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "A simple line with no patterns.");
@@ -76,8 +76,8 @@ TEST(LineDictionary, SplitLogicHpPattern) {
     dictionary.addText(ShaderStage::FRAGMENT, "some_var = hp_copy_123;");
     EXPECT_EQ(dictionary.size(), 3);
     EXPECT_EQ(dictionary[0], "some_var = ");
-    EXPECT_EQ(dictionary[1], "hp_copy_123");
-    EXPECT_EQ(dictionary[2], ";");
+    EXPECT_EQ(dictionary[1], "hp_copy");
+    EXPECT_EQ(dictionary[2], ";"); // 123 is bypassed!
 }
 
 TEST(LineDictionary, SplitLogicMpPattern) {
@@ -85,7 +85,7 @@ TEST(LineDictionary, SplitLogicMpPattern) {
     dictionary.addText(ShaderStage::FRAGMENT, "another_var = mp_copy_4567;");
     EXPECT_EQ(dictionary.size(), 3);
     EXPECT_EQ(dictionary[0], "another_var = ");
-    EXPECT_EQ(dictionary[1], "mp_copy_4567");
+    EXPECT_EQ(dictionary[1], "mp_copy");
     EXPECT_EQ(dictionary[2], ";");
 }
 
@@ -93,17 +93,16 @@ TEST(LineDictionary, SplitLogicUnderscorePattern) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "var_1 = 0;");
     EXPECT_EQ(dictionary.size(), 1);
-    EXPECT_EQ(dictionary[0], "var_1 = 0;");
+    EXPECT_EQ(dictionary[0], "var_1 = 0;"); // Underscore preceded by a word char is not considered a pattern boundary
 }
 
 TEST(LineDictionary, SplitLogicMultiplePatterns) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_1 mp_copy_2 _3");
-    EXPECT_EQ(dictionary.size(), 4);
-    EXPECT_EQ(dictionary[0], "hp_copy_1");
+    EXPECT_EQ(dictionary.size(), 3);
+    EXPECT_EQ(dictionary[0], "hp_copy");
     EXPECT_EQ(dictionary[1], " ");
-    EXPECT_EQ(dictionary[2], "mp_copy_2");
-    EXPECT_EQ(dictionary[3], "_3");
+    EXPECT_EQ(dictionary[2], "mp_copy");
 }
 
 TEST(LineDictionary, SplitLogicInvalidPattern) {
@@ -117,21 +116,21 @@ TEST(LineDictionary, SplitLogicPatternFollowedByWordChar) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_99rest");
     EXPECT_EQ(dictionary.size(), 1);
-    EXPECT_EQ(dictionary[0], "hp_copy_99rest");
+    EXPECT_EQ(dictionary[0], "hp_copy_99rest"); // Invalid word boundary on right side
 }
 
 TEST(LineDictionary, SplitLogicPatternPrecededByWordChar) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "rest_of_it_hp_copy_99");
     EXPECT_EQ(dictionary.size(), 1);
-    EXPECT_EQ(dictionary[0], "rest_of_it_hp_copy_99");
+    EXPECT_EQ(dictionary[0], "rest_of_it_hp_copy_99"); // Preceded by word char
 }
 
 TEST(LineDictionary, SplitLogicPatternNotFollowedByWordChar) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_99;");
     EXPECT_EQ(dictionary.size(), 2);
-    EXPECT_EQ(dictionary[0], "hp_copy_99");
+    EXPECT_EQ(dictionary[0], "hp_copy");
     EXPECT_EQ(dictionary[1], ";");
 }
 
@@ -145,41 +144,51 @@ TEST(LineDictionary, GetIndicesMultiple) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "A _1 B _2");
     dictionary.addText(ShaderStage::FRAGMENT, "A _1");
-        dictionary.resolve();
-    auto const [indices, numerics] = dictionary.tokenize("A _1");
+    dictionary.resolve();
+    auto const [indices, numerics] = dictionary.tokenize("A _1"); // String is in dictionary
     ASSERT_EQ(indices.size(), 2);
-    EXPECT_EQ(indices[0], 0);
-    EXPECT_EQ(indices[1], 1);
+    EXPECT_EQ(indices[0], 0); // "A "
+    EXPECT_EQ(indices[1], filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG); // 1
+    ASSERT_EQ(numerics.size(), 1);
+    EXPECT_EQ(numerics[0], 1);
 }
 
 TEST(LineDictionary, GetIndicesMultiplePatternsInARow) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_1 hp_copy_2");
-        dictionary.resolve();
+    dictionary.resolve();
     auto const [indices, numerics] = dictionary.tokenize("hp_copy_1 hp_copy_2");
-    ASSERT_EQ(indices.size(), 3);
-    EXPECT_EQ(indices[0], 0);
-    EXPECT_EQ(indices[1], 1);
-    EXPECT_EQ(indices[2], 2);
+    ASSERT_EQ(indices.size(), 5);
+    EXPECT_EQ(indices[0], 0); // hp_copy
+    EXPECT_EQ(indices[1], filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG);
+    EXPECT_EQ(indices[2], 1); // " "
+    EXPECT_EQ(indices[3], 0); // hp_copy
+    EXPECT_EQ(indices[4], filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG);
+    ASSERT_EQ(numerics.size(), 2);
+    EXPECT_EQ(numerics[0], 1);
+    EXPECT_EQ(numerics[1], 2);
 }
 
 TEST(LineDictionary, GetIndicesSamePatternMultipleTimes) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_1 hp_copy_1");
-        dictionary.resolve();
+    dictionary.resolve();
     auto const [indices, numerics] = dictionary.tokenize("hp_copy_1 hp_copy_1");
-    ASSERT_EQ(indices.size(), 3);
-    EXPECT_EQ(indices[0], 0);
-    EXPECT_EQ(indices[1], 1);
-    EXPECT_EQ(indices[2], 0);
+    ASSERT_EQ(indices.size(), 5);
+    EXPECT_EQ(indices[0], 0); // hp_copy
+    EXPECT_EQ(indices[1], filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG);
+    EXPECT_EQ(indices[2], 1); // " "
+    EXPECT_EQ(indices[3], 0); // hp_copy
+    EXPECT_EQ(indices[4], filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG);
+    ASSERT_EQ(numerics.size(), 2);
+    EXPECT_EQ(numerics[0], 1);
+    EXPECT_EQ(numerics[1], 1);
 }
-
-
 
 TEST(LineDictionary, GetIndicesWithAdjacentPatterns) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_1hp_copy_2");
-        dictionary.resolve();
+    dictionary.resolve();
     auto const [indices, numerics] = dictionary.tokenize("hp_copy_1hp_copy_2");
     ASSERT_EQ(indices.size(), 1);
     EXPECT_EQ(indices[0], 0);
@@ -189,7 +198,7 @@ TEST(LineDictionary, GetIndicesWithAdjacentPatternsNotInDictionary) {
     LineDictionary dictionary;
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_1");
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_2");
-        dictionary.resolve();
+    dictionary.resolve();
     auto const [indices, numerics] = dictionary.tokenize("hp_copy_1hp_copy_2");
     ASSERT_EQ(indices.size(), 0);
 }
@@ -199,13 +208,7 @@ TEST(LineDictionary, GetIndicesWithMixedContent) {
     dictionary.addText(ShaderStage::FRAGMENT, "hp_copy_1");
     dictionary.addText(ShaderStage::FRAGMENT, " ");
     dictionary.addText(ShaderStage::FRAGMENT, "mp_copy_2");
-
-    // The query string contains patterns that are in the dictionary,
-    // but also content that is not.
-        dictionary.resolve();
+    dictionary.resolve();
     auto const [indices, numerics] = dictionary.tokenize("prefix hp_copy_1 mp_copy_2 suffix");
-
-    // Since not all substrings of the query string are in the dictionary,
-    // tokenize should return an empty vector.
     ASSERT_EQ(indices.size(), 0);
 }
