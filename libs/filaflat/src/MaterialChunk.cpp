@@ -240,7 +240,8 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
         if (lineIndex == filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG) {
             uint32_t const numericLiteral = readNumericLiteral(numericUnflattener);
             char buf[16];
-            auto const [ptr, ec] = std::to_chars(buf, buf + 16, numericLiteral);
+            buf[0] = '_';
+            auto const [ptr, ec] = std::to_chars(buf + 1, buf + 16, numericLiteral);
             size_t const len = ptr - buf;
             memcpy(&shaderContent[cursor], buf, len);
             cursor += len;

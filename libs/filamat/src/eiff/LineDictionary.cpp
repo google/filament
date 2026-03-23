@@ -176,7 +176,14 @@ void LineDictionary::addText(ShaderStage stage, std::string_view const text) noe
 void LineDictionary::addLine(ShaderStage stage, std::string_view const line, std::vector<index_t>& ids, std::vector<index_t>& numerics) noexcept {
     auto const lines = splitString(line);
     for (std::string_view const& subline : lines) {
-        bool const isNumeric = !subline.empty() && std::all_of(subline.begin(), subline.end(), ::isdigit);
+        bool isNumeric = !subline.empty() && std::all_of(subline.begin(), subline.end(), ::isdigit);
+        if (isNumeric) {
+            if (subline.data() > line.data() && *(subline.data() - 1) == '_') {
+                // keep true
+            } else {
+                isNumeric = false;
+            }
+        }
         
         uint32_t numValue = 0;
         bool parsedNumeric = false;
@@ -279,7 +286,10 @@ std::vector<std::string_view> LineDictionary::splitString(std::string_view const
         // Add the match itself, but split prefix from numbers.
         for (const auto& prefix : kSplittingPatterns) {
             if (match_len >= prefix.size() && line.substr(match_pos, prefix.size()) == prefix) {
-                result.push_back(line.substr(match_pos, prefix.size()));
+                std::string_view const prefixWithoutUnderscore = line.substr(match_pos, prefix.size() - 1);
+                if (!prefixWithoutUnderscore.empty()) {
+                    result.push_back(prefixWithoutUnderscore);
+                }
                 result.push_back(line.substr(match_pos + prefix.size(), match_len - prefix.size()));
                 break;
             }
