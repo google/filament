@@ -726,6 +726,51 @@ function archive_ios {
     fi
 }
 
+function create_ios_xcframeworks {
+    local target=$1 # Debug | Release
+    local lc_target
+    lc_target=$(echo "${target}" | tr '[:upper:]' '[:lower:]')
+
+    local lib_dir="out/ios-${lc_target}/filament/lib"
+    local device_dir="${lib_dir}/arm64-iphoneos"
+
+    if [[ ! -d "${device_dir}" ]]; then
+        echo "Skipping XCFramework generation for iOS ${target}: ${device_dir} not found."
+        return 0
+    fi
+
+    local inputs=("${device_dir}")
+    local sim_arm="${lib_dir}/arm64-iphonesimulator"
+    local sim_x86="${lib_dir}/x86_64-iphonesimulator"
+    local sim_universal="${lib_dir}/universal-iphonesimulator"
+    local sim_input=""
+
+    if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
+        if [[ -d "${sim_arm}" && -d "${sim_x86}" ]]; then
+            build/ios/create-universal-libs.sh                 -o "${sim_universal}"                 "${sim_arm}"                 "${sim_x86}"
+            sim_input="${sim_universal}"
+            rm -rf "${sim_arm}" "${sim_x86}"
+        elif [[ -d "${sim_arm}" ]]; then
+            sim_input="${sim_arm}"
+        elif [[ -d "${sim_x86}" ]]; then
+            sim_input="${sim_x86}"
+        fi
+
+        if [[ "${sim_input}" ]]; then
+            inputs+=("${sim_input}")
+        fi
+    fi
+
+    build/ios/create-xc-frameworks.sh         -o "${lib_dir}"         "${inputs[@]}"
+
+    rm -rf "${device_dir}"
+    if [[ "${sim_input}" == "${sim_universal}" ]]; then
+        rm -rf "${sim_universal}"
+    elif [[ -n "${sim_input}" ]]; then
+        rm -rf "${sim_input}"
+    fi
+}
+
 function build_ios {
     # Suppress intermediate desktop tools install
     local old_install_command=${INSTALL_COMMAND}
@@ -744,24 +789,7 @@ function build_ios {
             build_ios_target "Debug" "arm64" "iphonesimulator"
             build_ios_target "Debug" "x86_64" "iphonesimulator"
         fi
-        
-        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
-            build/ios/create-universal-libs.sh \
-                -o ./out/ios-debug/filament/lib/universal \
-                ./out/ios-debug/filament/lib/arm64-iphonesimulator \
-                ./out/ios-debug/filament/lib/x86_64-iphonesimulator
-
-            rm -rf out/ios-debug/filament/lib/x86_64-iphonesimulator
-            rm -rf out/ios-debug/filament/lib/arm64-iphonesimulator
-            
-            build/ios/create-xc-frameworks.sh \
-                -o out/ios-debug/filament/lib \
-                out/ios-debug/filament/lib/arm64-iphoneos \
-                out/ios-debug/filament/lib/universal            
-            
-            rm -rf out/ios-debug/filament/lib/universal
-            rm -rf out/ios-debug/filament/lib/arm64-iphoneos
-        fi
+        create_ios_xcframeworks "Debug"
 
         archive_ios "Debug"
     fi
@@ -772,35 +800,9 @@ function build_ios {
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
             build_ios_target "Release" "arm64" "iphonesimulator"
             build_ios_target "Release" "x86_64" "iphonesimulator"
+        fi
+        create_ios_xcframeworks "Release"
 
-            # Create universal libraries - since simulator and iphone is both arm64
-            # we can create a universal library containing both platforms
-            build/ios/create-universal-libs.sh \
-                -o ./out/ios-release/filament/lib/universal \
-                ./out/ios-release/filament/lib/arm64-iphonesimulator \
-                ./out/ios-release/filament/lib/x86_64-iphonesimulator
-
-            rm -rf out/ios-release/filament/lib/x86_64-iphonesimulator
-            rm -rf out/ios-release/filament/lib/arm64-iphonesimulator
-
-            # Create XC Frameworks
-            build/ios/create-xc-frameworks.sh \
-                -o out/ios-release/filament/lib \
-                out/ios-release/filament/lib/arm64-iphoneos \
-                out/ios-release/filament/lib/universal            
-
-            rm -rf out/ios-release/filament/lib/universal
-            rm -rf out/ios-release/filament/lib/arm64-iphoneos
-        else
-            # Create XC Frameworks for arm64 only - no need to create
-            # universal libraries
-            build/ios/create-xc-frameworks.sh \
-                -o out/ios-release/filament/lib \
-                out/ios-release/filament/lib/arm64-iphoneos             
-
-            rm -rf out/ios-release/filament/lib/arm64-iphoneos
-        fi        
-                
         archive_ios "Release"
     fi
 }

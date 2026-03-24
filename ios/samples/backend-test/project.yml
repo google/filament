@@ -7,10 +7,12 @@ targets:
         templates:
             - FilamentApp
         dependencies:
-            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libbackend_test.xcframework
-            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libfilamat.xcframework
+            - framework: "$(FILAMENT_LIB_DIR)/libbackend_test.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libfilamat.xcframework"
         settings:
             base:
                 # Because each test case is a separate file, the -force_load flag is necessary to prevent the
                 # linker from removing "unused" symbols.
-                OTHER_LDFLAGS: ["-force_load ../../../out/ios-release/filament/lib/arm64/libbackend_test.xcframework"]
+                OTHER_LDFLAGS[sdk=iphoneos*]: ["-Wl,-force_load,$(FILAMENT_LIB_DIR)/libbackend_test.xcframework/ios-arm64/libbackend_test.a"]
+                # When built with -s we generate a universal sim slice and xcodebuild names it like this.
+                OTHER_LDFLAGS[sdk=iphonesimulator*]: ["-Wl,-force_load,$(FILAMENT_LIB_DIR)/libbackend_test.xcframework/ios-arm64_x86_64-simulator/libbackend_test.a"]

@@ -83,11 +83,11 @@ for FILE in "${LEADER_PATH}"/*.a; do
     # The static library file name, like "libfilament.a"
     LIBRARY_NAME="${FILE##*/}"
 
-    INPUT_FILES=("-library ${LEADER_PATH}/${LIBRARY_NAME}")
+    INPUT_FILES=("-library" "${LEADER_PATH}/${LIBRARY_NAME}")
     for ARCH_PATH in "${PATHS[@]:1}"; do
         THIS_FILE="${ARCH_PATH}/${LIBRARY_NAME}"
         if [[ -f "${THIS_FILE}" ]]; then
-            INPUT_FILES+=("-library ${THIS_FILE}")
+            INPUT_FILES+=("-library" "${THIS_FILE}")
         else
             echo "Error: ${THIS_FILE} does not exist."
             exit 1
@@ -96,12 +96,9 @@ for FILE in "${LEADER_PATH}"/*.a; do
 
     # Remove the .a extension
     LIBRARY_NAME="${LIBRARY_NAME%.a}"
-    
-    OUTPUT="${OUTPUT_DIR}/${LIBRARY_NAME}.xcframework"
-    # Delete previous xcframework
-    rm -rf $OUTPUT
 
-    # Create the xcframework command and execute it
-    CMD="xcodebuild -create-xcframework ${INPUT_FILES[@]} -output ${OUTPUT}"    
-    eval $CMD
+    OUTPUT="${OUTPUT_DIR}/${LIBRARY_NAME}.xcframework"
+    rm -rf "${OUTPUT}"
+
+    xcodebuild -create-xcframework "${INPUT_FILES[@]}" -output "${OUTPUT}"
 done
