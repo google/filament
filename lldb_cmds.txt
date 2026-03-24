@@ -1,0 +1,3 @@
+run
+bt
+quit

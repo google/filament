@@ -33,7 +33,7 @@ option(FILAMENT_SUPPORTS_XCB "Include XCB support in Linux builds" ON)
 
 option(FILAMENT_SUPPORTS_XLIB "Include XLIB support in Linux builds" ON)
 
-option(FILAMENT_SUPPORTS_EGL_ON_LINUX "Use EGL for OpenGL in Linux builds" OFF)
+option(FILAMENT_SUPPORTS_EGL_ON_DESKTOP "Use EGL for OpenGL in Linux builds" OFF)
 
 option(FILAMENT_SUPPORTS_WAYLAND "Include Wayland support in Linux builds" OFF)
 
@@ -50,8 +50,6 @@ option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
 option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
-
-option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filament" OFF)
 
 option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
 
@@ -157,23 +155,13 @@ else()
     set(LINUX FALSE)
 endif()
 
-if (NOT FILAMENT_OSMESA_PATH STREQUAL "")
-    if (NOT EXISTS ${FILAMENT_OSMESA_PATH}/)
-        message(FATAL_ERROR "Cannot find specified OSMesa build directory: ${FILAMENT_OSMESA_PATH}")
-    endif()
-    set(FILAMENT_SUPPORTS_OSMESA TRUE)
-endif()
-
 if (LINUX)
     if (FILAMENT_SUPPORTS_WAYLAND)
         add_definitions(-DFILAMENT_SUPPORTS_WAYLAND)
         set(FILAMENT_SUPPORTS_X11 FALSE)
-    elseif (FILAMENT_SUPPORTS_EGL_ON_LINUX)
-        add_definitions(-DFILAMENT_SUPPORTS_EGL_ON_LINUX)
+    elseif (FILAMENT_SUPPORTS_EGL_ON_DESKTOP)
+        add_definitions(-DFILAMENT_SUPPORTS_EGL_ON_DESKTOP)
         set(FILAMENT_SUPPORTS_X11 FALSE)
-    elseif (FILAMENT_SUPPORTS_OSMESA)
-        set(FILAMENT_SUPPORTS_X11 FALSE)
-        add_definitions(-DFILAMENT_SUPPORTS_OSMESA)
     else ()
         if (FILAMENT_SUPPORTS_XCB)
             add_definitions(-DFILAMENT_SUPPORTS_XCB)
@@ -203,8 +191,8 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
 endif()
 
 if (APPLE)
-    if (FILAMENT_SUPPORTS_OSMESA)
-        add_definitions(-DFILAMENT_SUPPORTS_OSMESA)
+    if (FILAMENT_SUPPORTS_EGL_ON_DESKTOP)
+        add_definitions(-DFILAMENT_SUPPORTS_EGL_ON_DESKTOP)
     endif()
 endif()
 
@@ -362,7 +350,7 @@ if (FILAMENT_USE_EXTERNAL_GLES3)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFILAMENT_USE_EXTERNAL_GLES3")
 endif()
 
-if (FILAMENT_SUPPORTS_EGL_ON_LINUX)
+if (FILAMENT_SUPPORTS_EGL_ON_DESKTOP)
   set(EGL TRUE)
 endif()
 
@@ -1005,3 +993,4 @@ endif()
 if ((NOT CMAKE_CROSSCOMPILING AND NOT FILAMENT_IMPORT_PREBUILT_EXECUTABLES) OR FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
     export(TARGETS matc cmgen filamesh mipgen resgen uberz glslminifier FILE ${IMPORT_EXECUTABLES})
 endif()
+

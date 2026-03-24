@@ -37,6 +37,7 @@ namespace filament::backend {
 
 VulkanPlatform::ExtensionSet VulkanPlatformApple::getSwapchainInstanceExtensions() const {
     ExtensionSet const ret = {
+        VK_KHR_SURFACE_EXTENSION_NAME,
         VK_EXT_METAL_SURFACE_EXTENSION_NAME,
     };
     return ret;

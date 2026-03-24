@@ -580,7 +580,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         }
 #endif
 
-        instExts.merge(getRequiredInstanceExtensions());
+        ExtensionSet const requiredExts = getRequiredInstanceExtensions();
+        ExtensionSet const filteredRequiredExts = getInstanceExtensions(requiredExts);
+        for (auto const& extension : filteredRequiredExts) {
+            instExts.insert(extension);
+        }
     }
     if (mImpl->mInstance == VK_NULL_HANDLE) {
         createInstance(instExts);

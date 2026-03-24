@@ -44,8 +44,8 @@
     #endif
 #elif defined(__APPLE__)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #if defined(FILAMENT_SUPPORTS_OSMESA)
-            #include <backend/platforms/PlatformOSMesa.h>
+        #if defined(FILAMENT_SUPPORTS_EGL_ON_DESKTOP)
+            #include <backend/platforms/PlatformEGLHeadless.h>
         #else
             #include <backend/platforms/PlatformCocoaGL.h>
         #endif
@@ -55,13 +55,9 @@
         #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
             #include "backend/platforms/PlatformGLX.h"
         #endif
-    #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
+    #elif defined(FILAMENT_SUPPORTS_EGL_ON_DESKTOP)
         #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
             #include "backend/platforms/PlatformEGLHeadless.h"
-        #endif
-    #elif defined(FILAMENT_SUPPORTS_OSMESA)
-        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-            #include "backend/platforms/PlatformOSMesa.h"
         #endif
     #endif
 #elif defined(WIN32)
@@ -175,18 +171,16 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
         #elif defined(FILAMENT_IOS)
             return new PlatformCocoaTouchGL();
         #elif defined(__APPLE__)
-            #if defined(FILAMENT_SUPPORTS_OSMESA)
-                return new PlatformOSMesa();
+            #if defined(FILAMENT_SUPPORTS_EGL_ON_DESKTOP)
+                return new PlatformEGLHeadless();
             #else
                 return new PlatformCocoaGL();
             #endif
         #elif defined(__linux__)
             #if defined(FILAMENT_SUPPORTS_X11)
                 return new PlatformGLX();
-            #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
+            #elif defined(FILAMENT_SUPPORTS_EGL_ON_DESKTOP)
                 return new PlatformEGLHeadless();
-            #elif defined(FILAMENT_SUPPORTS_OSMESA)
-                return new PlatformOSMesa();
             #else
                 return nullptr;
             #endif

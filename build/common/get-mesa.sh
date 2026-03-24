@@ -137,9 +137,12 @@ mkdir -p out
 source ${ORIG_DIR}/venv/bin/activate
 
 if  [[ "$OS_NAME" == "Darwin" ]]; then
-    LOCAL_LDFLAGS="-L/opt/homebrew/opt/llvm@${LLVM_VERSION}/lib"
-    LOCAL_CPPFLAGS="-I/opt/homebrew/opt/llvm@${LLVM_VERSION}/include -I/opt/homebrew/include"
-    LOCAL_PATH=${PATH}:/opt/homebrew/opt/llvm@${LLVM_VERSION}/bin
+    # Ensure Homebrew and LLVM paths are correctly set for the linker and compiler
+    HOMEBREW_PREFIX=$(brew --prefix)
+    LOCAL_LDFLAGS="-L${HOMEBREW_PREFIX}/lib -L${HOMEBREW_PREFIX}/opt/llvm@${LLVM_VERSION}/lib"
+    LOCAL_CPPFLAGS="-I${HOMEBREW_PREFIX}/include -I${HOMEBREW_PREFIX}/opt/llvm@${LLVM_VERSION}/include"
+    LOCAL_PATH=${PATH}:${HOMEBREW_PREFIX}/opt/llvm@${LLVM_VERSION}/bin
+    LOCAL_PKG_CONFIG_PATH="${HOMEBREW_PREFIX}/lib/pkgconfig:${HOMEBREW_PREFIX}/opt/llvm@${LLVM_VERSION}/lib/pkgconfig"
 
     # This is necessary to be able to build vk (lavapipe) on macOS.  Doesn't seem like a real dependency.
     sed -I '' "s/error('Vulkan drivers require dri3 for X11 support')//g" meson.build
@@ -148,13 +151,39 @@ if  [[ "$OS_NAME" == "Darwin" ]]; then
     sed -I '' "s/dep_xcb_present = null_dep/dep_xcb_present = dependency('xcb-present')/g" meson.build
 fi
 
+# Modify mesa to allow building EGL surfaceless without X11 or DRI
+python3 - <<EOF
+import os
+path = 'meson.build'
+with open(path, 'r') as f:
+    content = f.read()
+content = content.replace(
+    """with_egl = get_option('egl') \\
+  .require(with_platform_windows or with_platform_haiku or with_dri or with_platform_android, error_message : 'EGL requires DRI, Haiku, Windows or Android') \\
+  .require(with_shared_glapi, error_message : 'EGL requires shared-glapi') \\
+  .require(with_glx != 'xlib', error_message :'EGL requires DRI, but GLX is being built with xlib support') \\
+  .disable_auto_if(with_platform_haiku) \\
+  .allowed()""",
+    """with_egl = get_option('egl') \\
+  .require(with_shared_glapi, error_message : 'EGL requires shared-glapi') \\
+  .disable_auto_if(with_platform_haiku) \\
+  .allowed()"""
+)
+content = content.replace(
+    "with_dri = false",
+    "with_dri = true"
+)
+with open(path, 'w') as f:
+    f.write(content)
+EOF
+
 # -Dosmesa=true    => builds OSMesa, which is an offscreen GL context
 # -Dgallium-drivers=swrast  => builds GL software rasterizer
 # -Dvulkan-drivers=swrast   => builds VK software rasterizer
 # -Dgallium-drivers=llvmpipe is needed for GL >= 4.1 pipe-screen (see src/gallium/auxiliary/target-helpers/inline_sw_helper.h)
 PKG_CONFIG_PATH=${LOCAL_PKG_CONFIG_PATH} PATH=${LOCAL_PATH} \
 CXX=${LOCAL_CXX} CC=${LOCAL_CC} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
-   meson setup --wipe builddir/ -Dprefix="${MESA_DIR}/out" -Dglx=xlib -Dosmesa=true -Dgallium-drivers=llvmpipe,swrast -Dvulkan-drivers=swrast
+   meson setup --wipe builddir/ -Dprefix="${MESA_DIR}/out" -Dglx=disabled -Degl=enabled -Dosmesa=false -Dplatforms= -Dgallium-drivers=llvmpipe,swrast -Dvulkan-drivers=swrast -Dshared-glapi=enabled
 PKG_CONFIG_PATH=${LOCAL_PKG_CONFIG_PATH} PATH=${LOCAL_PATH} \
 CXX=${LOCAL_CXX} CC=${LOCAL_CC} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
    meson install -C builddir/

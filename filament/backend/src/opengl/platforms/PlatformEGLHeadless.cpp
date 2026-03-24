@@ -17,9 +17,7 @@
 #include <backend/platforms/PlatformEGLHeadless.h>
 
 #include <bluegl/BlueGL.h>
-
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
+#include <bluegl/BlueEGL.h>
 
 #include <utils/Logger.h>
 #include <utils/Panic.h>
@@ -44,6 +42,12 @@ bool PlatformEGLHeadless::isOpenGL() const noexcept {
 
 backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext,
         const Platform::DriverConfig& driverConfig) {
+    int bindBlueGL = bluegl::bind();
+    if (UTILS_UNLIKELY(bindBlueGL != 0)) {
+        LOG(ERROR) << "bluegl bind failed";
+        return nullptr;
+    }
+
     auto bindApiHelper = [](EGLenum api, const char* errorString) -> bool {
         EGLBoolean bindAPI = eglBindAPI(api);
         if (UTILS_UNLIKELY(bindAPI == EGL_FALSE || bindAPI == EGL_BAD_PARAMETER)) {
@@ -57,12 +61,6 @@ backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext,
     EGLenum api = isOpenGL() ? EGL_OPENGL_API : EGL_OPENGL_ES_API;
     const char* apiString = isOpenGL() ? "eglBindAPI EGL_OPENGL_API" : "eglBindAPI EGL_OPENGL_ES_API";
     if (!bindApiHelper(api, apiString)) {
-        return nullptr;
-    }
-
-    int bindBlueGL = bluegl::bind();
-    if (UTILS_UNLIKELY(bindBlueGL != 0)) {
-        LOG(ERROR) << "bluegl bind failed";
         return nullptr;
     }
 

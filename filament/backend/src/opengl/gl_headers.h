@@ -37,7 +37,7 @@
  */
 
 
-#if defined(__ANDROID__) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__) || defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
+#if defined(__ANDROID__) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__) || (defined(FILAMENT_SUPPORTS_EGL_ON_DESKTOP) && defined(__linux__))
 
     #if defined(__EMSCRIPTEN__)
     #   include <GLES3/gl3.h>
@@ -62,7 +62,6 @@
 
     #include <OpenGLES/ES3/gl.h>
     #include <OpenGLES/ES3/glext.h>
-
 #else
 
     // bluegl exposes symbols prefixed with bluegl_ to avoid clashing with clients that also link
@@ -73,6 +72,11 @@
     // This header must come before <bluegl/BlueGL.h>.
     #include <bluegl/BlueGLDefines.h>
     #include <bluegl/BlueGL.h>
+
+    extern "C" {
+        void glFramebufferTextureMultiviewOVR(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint baseViewIndex, GLsizei numViews);
+        void glFramebufferTextureMultisampleMultiviewOVR(GLenum target, GLenum attachment, GLuint texture, GLint level, GLsizei samples, GLint baseViewIndex, GLsizei numViews);
+    }
 
 #endif
 

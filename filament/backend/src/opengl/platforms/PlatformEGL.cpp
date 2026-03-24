@@ -23,9 +23,7 @@
 #include <backend/Platform.h>
 #include <backend/DriverEnums.h>
 
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <EGL/eglplatform.h>
+#include <bluegl/BlueEGL.h>
 
 #if defined(__ANDROID__)
 #include <sys/system_properties.h>
@@ -130,7 +128,20 @@ void PlatformEGL::setEglDisplay(EGLDisplay display) noexcept {
 
 Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) {
     if (mEGLDisplay == EGL_NO_DISPLAY) {
-        mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+        eglBindAPI(EGL_OPENGL_API);
+
+        PFNEGLGETPLATFORMDISPLAYEXTPROC getPlatformDisplayEXT =
+                (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
+
+        if (getPlatformDisplayEXT) {
+            // 0x31DD is EGL_PLATFORM_SURFACELESS_MESA
+            mEGLDisplay = getPlatformDisplayEXT(0x31DD, (void*)EGL_DEFAULT_DISPLAY, nullptr);
+        }
+
+        if (mEGLDisplay == EGL_NO_DISPLAY) {
+            mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+        }
+
         assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
         EGLint major, minor;
@@ -196,9 +207,11 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
     Config contextAttribs;
 
     if (isOpenGL()) {
-        // Request a OpenGL 4.1 context
+        // Request a OpenGL 4.1 Core Profile context
         contextAttribs[EGL_CONTEXT_MAJOR_VERSION] = 4;
         contextAttribs[EGL_CONTEXT_MINOR_VERSION] = 1;
+        contextAttribs[EGL_CONTEXT_OPENGL_PROFILE_MASK] = EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT;
+        contextAttribs[EGL_CONTEXT_FLAGS_KHR] = EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR;
     } else {
         // Request a ES2 context, devices that support ES3 will return an ES3 context
         contextAttribs[EGL_CONTEXT_CLIENT_VERSION] = 2;
@@ -717,11 +730,20 @@ bool PlatformEGL::setExternalImage(ExternalImageHandleRef externalImage,
 // -----------------------------------------------------------------------------------------------
 
 void PlatformEGL::initializeGlExtensions() noexcept {
-    const char* const extensions = (const char*)glGetString(GL_EXTENSIONS);
-    if (extensions) {
-        GLUtils::unordered_string_set const glExtensions = GLUtils::split(extensions);
-        ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
+    GLUtils::unordered_string_set glExtensions;
+    if (isOpenGL()) {
+        GLint n = 0;
+        glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+        for (GLint i = 0; i < n; i++) {
+            glExtensions.emplace((const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i));
+        }
+    } else {
+        const char* const extensions = (const char*)glGetString(GL_EXTENSIONS);
+        if (extensions) {
+            glExtensions = GLUtils::split(extensions);
+        }
     }
+    ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
 }
 
 EGLContext PlatformEGL::getContextForType(ContextType const type) const noexcept {

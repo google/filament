@@ -222,6 +222,17 @@ void ShaderCompilerService::init() noexcept {
     }
 
     if (mMode == Mode::THREAD_POOL) {
+        char const* const renderer = mDriver.getContext().state.renderer;
+
+#ifdef __APPLE__
+        if (UTILS_UNLIKELY(strstr(renderer, "Mesa") || strstr(renderer, "llvmpipe"))) {
+            // Mesa on macOS has issues with shared contexts and shader specialization/linking
+            // across threads, leading to "linking with uncompiled/unspecialized shader" errors.
+            mMode = Mode::SYNCHRONOUS;
+            return;
+        }
+#endif
+
         // - on Adreno there is a single compiler object. We can't use a pool > 1
         //   also glProgramBinary blocks if other threads are compiling.
         // - on Mali shader compilation can be multithreaded, but program linking happens on
@@ -237,7 +248,6 @@ void ShaderCompilerService::init() noexcept {
         uint32_t poolSize = 1;
         JobSystem::Priority priority = JobSystem::Priority::DISPLAY;
 
-        auto const& renderer = mDriver.getContext().state.renderer;
         // Some drivers support parallel shader compilation well, so we use N
         // threads, we can use lower priority threads here because urgent compilations
         // will most likely happen on the main gl thread. Using too many thread can

@@ -35,7 +35,7 @@ fi
 
 # Build backend_test_mac
 echo "Building backend_test_mac..."
-"${PROJECT_ROOT_DIR}/build.sh" -W -p desktop -X "${PROJECT_ROOT_DIR}/mesa" debug ${BACKEND_TEST_TARGET}
+"${PROJECT_ROOT_DIR}/build.sh" -W -p desktop -E "${PROJECT_ROOT_DIR}/mesa" debug ${BACKEND_TEST_TARGET}
 
 set +e
 

@@ -198,7 +198,7 @@ VULKAN_ANDROID_GRADLE_OPTION=""
 WEBGPU_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=OFF"
 WEBGPU_ANDROID_GRADLE_OPTION=""
 
-EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
+EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_DESKTOP=OFF"
 
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
 MATDBG_GRADLE_OPTION=""
@@ -215,8 +215,6 @@ ENABLE_PERFETTO=""
 BACKEND_DEBUG_FLAG_OPTION=""
 
 STEREOSCOPIC_OPTION=""
-
-OSMESA_OPTION=""
 
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
@@ -308,7 +306,7 @@ function build_desktop_target {
             ${IMPORT_EXECUTABLES_DIR_OPTION} \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
-            ${EGL_ON_LINUX_OPTION} \
+            ${EGL_ON_DESKTOP_OPTION} \
             ${FGVIEWER_OPTION} \
             ${WEBGPU_OPTION} \
             ${MATDBG_OPTION} \
@@ -317,7 +315,6 @@ function build_desktop_target {
             ${COVERAGE_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
-            ${OSMESA_OPTION} \
             ${architectures} \
             ../..
         ln -sf "out/cmake-${lc_target}/compile_commands.json" \
@@ -858,7 +855,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
+while getopts ":hacCfgimp:q:uvWslwE:dtk:bVx:S:X:Py:" opt; do
     case ${opt} in
         h)
             print_help
@@ -987,10 +984,6 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
             IOS_BUILD_SIMULATOR=true
             echo "iOS simulator support enabled."
             ;;
-        e)
-            EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=ON -DFILAMENT_SKIP_SDL2=ON -DFILAMENT_SKIP_SAMPLES=ON"
-            echo "EGL on Linux support enabled; skipping SDL2."
-            ;;
         l)
             IOS_BUILD_SIMULATOR=true
             BUILD_UNIVERSAL_LIBRARIES=true
@@ -1025,7 +1018,7 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
                     exit 1
             esac
             ;;
-        X)  OSMESA_OPTION="-DFILAMENT_OSMESA_PATH=${OPTARG}"
+        E)  EGL_ON_DESKTOP_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_DESKTOP=ON -DFILAMENT_EGL_PATH=${OPTARG}"
             ;;
         y)
             ISSUE_SPLIT_BUILD=true
