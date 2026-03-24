@@ -14,37 +14,51 @@
  * limitations under the License.
  */
 
+#include "BackendTest.h"
+
 #include <backend/Platform.h>
 #include <gtest/gtest.h>
+
+#include <private/backend/Driver.h>
 #include <private/backend/PlatformFactory.h>
 
-namespace filament::backend {
+namespace test {
 
-TEST(PlatformTest, GetDeviceInfo) {
-    Backend backend = Backend::DEFAULT;
-    Platform* platform = PlatformFactory::create(&backend);
+using namespace filament;
+using namespace filament::backend;
+
+class PlatformTest : public BackendTest {
+public:
+    PlatformTest() = default;
+};
+
+
+TEST_F(PlatformTest, GetDeviceInfo) {
+    Platform* platform = getPlatform();
+    Driver* driver = &getDriver();
+    auto backend = BackendTest::sBackend;
+
     ASSERT_NE(platform, nullptr);
 
     // Test valid queries for the current platform (will be either GL, Vulkan, or Metal depending on
     // host)
     if (backend == Backend::OPENGL) {
-        platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_RENDERER, nullptr);
-        platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_VENDOR, nullptr);
+        platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_RENDERER, driver);
+        platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_VENDOR, driver);
+        platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_VERSION, driver);
 
         // Death tests for Vulkan info on OpenGL platform
         EXPECT_DEATH(platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DEVICE_NAME, nullptr),
                 "Unsupported DeviceInfoType");
     } else if (backend == Backend::VULKAN) {
-        platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DEVICE_NAME, nullptr);
-        platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DRIVER_NAME, nullptr);
-        platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DRIVER_INFO, nullptr);
+        platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DEVICE_NAME, driver);
+        platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DRIVER_NAME, driver);
+        platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DRIVER_INFO, driver);
 
         // Death tests for OpenGL info on Vulkan platform
         EXPECT_DEATH(platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_RENDERER, nullptr),
                 "Unsupported DeviceInfoType");
     }
-
-    PlatformFactory::destroy(&platform);
 }
 
-} // namespace filament::backend
+} // namespace test
