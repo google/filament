@@ -238,6 +238,8 @@ public:
             case PixelDataFormat::RG: dstChannelCount = 2; break;
             case PixelDataFormat::RGB: dstChannelCount = 3; break;
             case PixelDataFormat::RGBA: dstChannelCount = 4; break;
+            case PixelDataFormat::DEPTH_COMPONENT: dstChannelCount = 1; break;
+            case PixelDataFormat::DEPTH_STENCIL:  dstChannelCount = 2; break;
             default:
                 LOG(ERROR) << "DataReshaper: unsupported dst->format: " << (int) dst->format;
                 return false;

@@ -51,7 +51,6 @@ public:
 protected:
     BackendTest();
     ~BackendTest() override;
-
     template<typename HandleType>
     filament::backend::Handle<HandleType> addCleanup(filament::backend::Handle<HandleType> handle) {
         return mCleanup->add(handle);
@@ -73,6 +72,7 @@ protected:
 
     filament::backend::DriverApi& getDriverApi() { return *commandStream; }
     filament::backend::Driver& getDriver() { return *driver; }
+    filament::backend::Platform* getPlatform() { return mPlatform; }
 
     ImageExpectations& getExpectations() { return *mImageExpectations; }
 
@@ -95,6 +95,7 @@ private:
     filament::backend::Driver* driver = nullptr;
     filament::backend::CommandBufferQueue commandBufferQueue;
     std::unique_ptr<filament::backend::DriverApi> commandStream;
+    filament::backend::Platform* mPlatform = nullptr;
 
     filament::backend::Handle<filament::backend::HwBufferObject> uniform;
 

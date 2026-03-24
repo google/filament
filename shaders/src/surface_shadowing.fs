@@ -15,38 +15,30 @@
 // PCF Shadow Sampling
 //------------------------------------------------------------------------------
 
-float sampleDepth(const mediump sampler2DArrayShadow map,
-        const highp vec4 scissorNormalized,
-        const uint layer,  highp vec2 uv, highp float depth) {
-
-    // clamp needed for directional lights and/or large kernels
-    uv = clamp(uv, scissorNormalized.xy, scissorNormalized.zw);
-
-    // depth must be clamped to support floating-point depth formats which are always in
-    // the range [0, 1].
-    return texture(map, vec4(uv, layer, saturate(depth)));
-}
-
 // use hardware assisted PCF
 float ShadowSample_PCF_Hard(const mediump sampler2DArrayShadow map,
         const highp vec4 scissorNormalized,
         const uint layer, const highp vec4 shadowPosition) {
-    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
-    return sampleDepth(map, scissorNormalized, layer, position.xy, position.z);
+    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+    position.xy = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
+    position.z = saturate(position.z);
+    return texture(map, vec4(position.xy, layer, position.z));
 }
 
 // use hardware assisted PCF + 3x3 gaussian filter
 float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map,
         const highp vec4 scissorNormalized,
         const uint layer, const highp vec4 shadowPosition) {
-    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+
+    highp vec2 size = vec2(frameUniforms.shadowAtlasResolution.x);
+    highp vec2 texelSize = vec2(frameUniforms.shadowAtlasResolution.y);
+
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
-    highp vec2 size = vec2(textureSize(map, 0));
-    highp vec2 texelSize = vec2(1.0) / size;
+    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+    position.z = saturate(position.z);
 
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
-    highp float depth = position.z;
 
     // clamp position to avoid overflows below, which cause some GPUs to abort
     position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
@@ -65,12 +57,27 @@ float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map,
     u *= texelSize.x;
     v *= texelSize.y;
 
+    float w0 = uw.x * vw.x;
+    float w1 = uw.y * vw.x;
+    float w2 = uw.x * vw.y;
+    float w3 = uw.y * vw.y;
+
+    highp vec2 uv0 = base + vec2(u.x, v.x);
+    highp vec2 uv1 = base + vec2(u.y, v.x);
+    highp vec2 uv2 = base + vec2(u.x, v.y);
+    highp vec2 uv3 = base + vec2(u.y, v.y);
+
+    uv0 = clamp(uv0, scissorNormalized.xy, scissorNormalized.zw);
+    uv1 = clamp(uv1, scissorNormalized.xy, scissorNormalized.zw);
+    uv2 = clamp(uv2, scissorNormalized.xy, scissorNormalized.zw);
+    uv3 = clamp(uv3, scissorNormalized.xy, scissorNormalized.zw);
+
     float sum = 0.0;
-    sum += uw.x * vw.x * sampleDepth(map, scissorNormalized, layer, base + vec2(u.x, v.x), depth);
-    sum += uw.y * vw.x * sampleDepth(map, scissorNormalized, layer, base + vec2(u.y, v.x), depth);
-    sum += uw.x * vw.y * sampleDepth(map, scissorNormalized, layer, base + vec2(u.x, v.y), depth);
-    sum += uw.y * vw.y * sampleDepth(map, scissorNormalized, layer, base + vec2(u.y, v.y), depth);
-    return sum * (1.0 / 16.0);
+    sum += w0 * texture(map, vec4(uv0, layer, position.z));
+    sum += w1 * texture(map, vec4(uv1, layer, position.z));
+    sum += w2 * texture(map, vec4(uv2, layer, position.z));
+    sum += w3 * texture(map, vec4(uv3, layer, position.z));
+    return sum * 0.0625;
 }
 
 // use manual PCF
@@ -79,8 +86,10 @@ float ShadowSample_PCF(const mediump sampler2DArray map,
         const uint layer, const highp vec4 shadowPosition) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
-    highp vec2 tc = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
-    return step(0.0, position.z - textureLod(map, vec3(tc, layer), 0.0).r);
+    position.xy = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
+    position.z = saturate(position.z);
+    highp float depth = textureLod(map, vec3(position.xy, layer), 0.0).r;
+    return step(0.0, position.z - depth);
 }
 
 //------------------------------------------------------------------------------
