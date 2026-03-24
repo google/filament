@@ -100,12 +100,13 @@ public:
         bool operator()(const FboKey& k1, const FboKey& k2) const;
     };
 
-    explicit VulkanFboCache(VkDevice device);
+    explicit VulkanFboCache(VkDevice device, uint32_t timeBeforeEvictionFbo);
     ~VulkanFboCache();
 
     // Retrieves or creates a VkFramebuffer handle.
-    fvkmemory::resource_ptr<VulkanFramebuffer> getFramebuffer(
-        FboKey const& config, fvkmemory::ResourceManager* resManager) noexcept;
+    fvkmemory::resource_ptr<VulkanFramebuffer> getFramebuffer(FboKey const& config,
+            fvkmemory::ResourceManager* resManager,
+            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept;
 
     // Retrieves or creates a VkRenderPass handle.
     fvkmemory::resource_ptr<VulkanRenderPass> getRenderPass(
@@ -129,6 +130,7 @@ private:
     RenderPassMap mRenderPassCache;
     tsl::robin_map<VkRenderPass, uint32_t> mRenderPassRefCount;
     uint32_t mCurrentTime = 0;
+    uint32_t mTimeBeforeEvictionFbo;
 };
 
 } // namespace filament::backend
