@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Filament Suzanne</title>
+<title>Filament Parquet</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
-<link href="favicon.png" rel="icon" type="image/x-icon" />
+<link href="../favicon.png" rel="icon" type="image/x-icon" />
 <style>
 body { margin: 0; overflow: hidden; }
 canvas { touch-action: none; width: 100%; height: 100%; }
@@ -12,39 +12,27 @@ canvas { touch-action: none; width: 100%; height: 100%; }
 </head>
 <body>
 <canvas></canvas>
-<script src="filament.js"></script>
-<script src="gl-matrix-min.js"></script>
+<script src="../filament.js"></script>
+<script src="../gl-matrix-min.js"></script>
 <script>
 
-const env = 'default_env'
-const ibl_url = `${env}/${env}_ibl.ktx`;
-const sky_url = `${env}/${env}_skybox.ktx`;
-const albedo_url = `albedo.ktx2`;
-const ao_url = `ao.ktx2`;
-const metallic_url = `metallic.ktx2`;
-const normal_url = `normal.ktx2`;
-const roughness_url = `roughness.ktx2`;
-const filamat_url = 'textured.filamat';
-const filamesh_url = 'suzanne.filamesh';
+const iblfile = 'default_env/default_env_ibl.ktx';
+const skyfile = 'default_env/default_env_skybox.ktx';
 
 Filament.init([
-    filamat_url,
-    filamesh_url,
-    albedo_url,
-    ao_url,
-    metallic_url,
-    normal_url,
-    roughness_url,
-    ibl_url,
-    sky_url
+    'parquet.filamat',
+    'shader_ball.filamesh',
+    'floor_ao_roughness_metallic.png',
+    'floor_basecolor.jpg',
+    'floor_normal.png',
+    iblfile, skyfile
 ], () => {
-    window.AttributeType = Filament.VertexBuffer$AttributeType;
-    window.Format = Filament.Texture$InternalFormat;
-    window.Fov = Filament.Camera$Fov;
-    window.IndexType = Filament.IndexBuffer$IndexType;
-    window.LightType = Filament.LightManager$Type;
-    window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
     window.VertexAttribute = Filament.VertexAttribute;
+    window.AttributeType = Filament.VertexBuffer$AttributeType;
+    window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
+    window.IndexType = Filament.IndexBuffer$IndexType;
+    window.Fov = Filament.Camera$Fov;
+    window.LightType = Filament.LightManager$Type;
     window.app = new App(document.getElementsByTagName('canvas')[0]);
 });
 
@@ -57,7 +45,7 @@ class App {
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
             .color([0.98, 0.92, 0.89])
-            .intensity(80000.0)
+            .intensity(100000.0)
             .direction([0.6, -1.0, -0.8])
             .castShadows(true)
             .sunAngularRadius(1.9)
@@ -66,44 +54,34 @@ class App {
             .build(engine, sunlight);
         this.scene.addEntity(sunlight);
 
-        const indirectLight = this.ibl = engine.createIblFromKtx1(ibl_url);
+        const indirectLight = this.ibl = engine.createIblFromKtx1(iblfile);
         this.scene.setIndirectLight(indirectLight);
-        indirectLight.setIntensity(80000);
 
-        const skybox = engine.createSkyFromKtx1(sky_url);
+        const radians = 1.0;
+        indirectLight.setRotation(mat3.fromRotation(mat3.create(), radians, [0, 1, 0]))
+        indirectLight.setIntensity(10000);
+
+        const skybox = engine.createSkyFromKtx1(skyfile);
         this.scene.setSkybox(skybox);
 
-        const material = engine.createMaterial(filamat_url);
+        const material = engine.createMaterial('parquet.filamat');
         const matinstance = material.createInstance();
 
         const sampler = new Filament.TextureSampler(
             Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
             Filament.MagFilter.LINEAR,
-            Filament.WrapMode.CLAMP_TO_EDGE);
+            Filament.WrapMode.REPEAT);
 
-        // Filament requests support for the following extensions, but none are guaranteed.
-        //   WEBGL_compressed_texture_s3tc, WEBGL_compressed_texture_s3tc_srgb
-        //   WEBGL_compressed_texture_astc, WEBGL_compressed_texture_etc
-        const albedo = engine.createTextureFromKtx2(albedo_url, {
-                srgb: true,
-                formats: [ Format.DXT5_RGBA, Format.DXT5_SRGBA, Format.ETC2_EAC_SRGBA8 ]
-        });
-
-        console.assert(albedo, "Unable to create albedo texture.")
-
-        const roughness = engine.createTextureFromKtx2(roughness_url);
-        const metallic = engine.createTextureFromKtx2(metallic_url);
-        const ao = engine.createTextureFromKtx2(ao_url);
-        const normal = engine.createTextureFromKtx2(normal_url);
-
-        matinstance.setTextureParameter('albedo', albedo, sampler)
-        matinstance.setTextureParameter('roughness', roughness, sampler)
-        matinstance.setTextureParameter('metallic', metallic, sampler)
+        const texargs = { usage: Filament.Texture$Usage.DEFAULT.value | Filament.Texture$Usage.GEN_MIPMAPPABLE.value };
+        const ao = engine.createTextureFromPng('floor_ao_roughness_metallic.png', texargs);
+        const basecolor = engine.createTextureFromJpeg('floor_basecolor.jpg', Object.assign({srgb: true}, texargs));
+        const normal = engine.createTextureFromPng('floor_normal.png', texargs);
+        matinstance.setTextureParameter('aoRoughnessMetallic', ao, sampler)
+        matinstance.setTextureParameter('baseColor', basecolor, sampler)
         matinstance.setTextureParameter('normal', normal, sampler)
-        matinstance.setTextureParameter('ao', ao, sampler)
 
-        const mesh = engine.loadFilamesh(filamesh_url, matinstance);
-        this.suzanne = mesh.renderable;
+        const mesh = engine.loadFilamesh('shader_ball.filamesh', matinstance);
+        this.shaderball = mesh.renderable;
         this.scene.addEntity(mesh.renderable);
 
         this.swapChain = engine.createSwapChain();
@@ -123,7 +101,7 @@ class App {
         const radians = Date.now() / 1000;
         const transform = mat4.fromRotation(mat4.create(), radians, [0, 1, 0]);
         const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(this.suzanne);
+        const inst = tcm.getInstance(this.shaderball);
         tcm.setTransform(inst, transform);
         inst.delete();
         this.renderer.render(this.swapChain, this.view);
@@ -135,7 +113,7 @@ class App {
         const width = this.canvas.width = window.innerWidth * dpr;
         const height = this.canvas.height = window.innerHeight * dpr;
         this.view.setViewport([0, 0, width, height]);
-        const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
+        const eye = [0, 1.8, 5], center = [0, 1, -1], up = [0, 1, 0];
         this.camera.lookAt(eye, center, up);
         const aspect = width / height;
         const fov = aspect < 1 ? Fov.HORIZONTAL : Fov.VERTICAL;

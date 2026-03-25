@@ -1,3 +1,104 @@
+
+<div class="demo_frame" style="width:100%; height:400px; border: 1px solid black; position: relative;">
+    <canvas id="demo-canvas" style="width:100%; height:100%; touch-action: none;"></canvas>
+</div>
+<script src="../filament.js"></script>
+<script src="../gl-matrix-min.js"></script>
+<script>
+// We wrap the demo code so it applies to demo-canvas instead of generic canvas
+(function() {
+    const originalGetElementsByTagName = document.getElementsByTagName;
+    document.getElementsByTagName = function(tag) {
+        if (tag === 'canvas') return [document.getElementById('demo-canvas')];
+        return originalGetElementsByTagName.call(document, tag);
+    };
+//
+class App {
+  constructor() {
+this.canvas = document.getElementsByTagName('canvas')[0];
+const engine = this.engine = Filament.Engine.create(this.canvas);
+this.scene = engine.createScene();
+this.triangle = Filament.EntityManager.get().create();
+this.scene.addEntity(this.triangle);
+const TRIANGLE_POSITIONS = new Float32Array([
+    1, 0,
+    Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
+    Math.cos(Math.PI * 4 / 3), Math.sin(Math.PI * 4 / 3),
+]);
+//
+const TRIANGLE_COLORS = new Uint32Array([0xffff0000, 0xff00ff00, 0xff0000ff]);
+const VertexAttribute = Filament.VertexAttribute;
+const AttributeType = Filament.VertexBuffer$AttributeType;
+this.vb = Filament.VertexBuffer.Builder()
+    .vertexCount(3)
+    .bufferCount(2)
+    .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT2, 0, 8)
+    .attribute(VertexAttribute.COLOR, 1, AttributeType.UBYTE4, 0, 4)
+    .normalized(VertexAttribute.COLOR)
+    .build(engine);
+//
+this.vb.setBufferAt(engine, 0, TRIANGLE_POSITIONS);
+this.vb.setBufferAt(engine, 1, TRIANGLE_COLORS);
+this.ib = Filament.IndexBuffer.Builder()
+    .indexCount(3)
+    .bufferType(Filament.IndexBuffer$IndexType.USHORT)
+    .build(engine);
+//
+this.ib.setBuffer(engine, new Uint16Array([0, 1, 2]));
+const mat = engine.createMaterial('triangle.filamat');
+const matinst = mat.getDefaultInstance();
+Filament.RenderableManager.Builder(1)
+    .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
+    .material(0, matinst)
+    .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+    .build(engine, this.triangle);
+this.swapChain = engine.createSwapChain();
+this.renderer = engine.createRenderer();
+this.camera = engine.createCamera(Filament.EntityManager.get().create());
+this.view = engine.createView();
+this.view.setCamera(this.camera);
+this.view.setScene(this.scene);
+//
+// Set up a blue-green background:
+this.renderer.setClearOptions({clearColor: [0.0, 0.1, 0.2, 1.0], clear: true});
+//
+// Adjust the initial viewport:
+this.resize();
+    this.render = this.render.bind(this);
+    this.resize = this.resize.bind(this);
+    window.addEventListener('resize', this.resize);
+    window.requestAnimationFrame(this.render);
+  }
+  render() {
+// Rotate the triangle.
+const radians = Date.now() / 1000;
+const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
+const tcm = this.engine.getTransformManager();
+const inst = tcm.getInstance(this.triangle);
+tcm.setTransform(inst, transform);
+inst.delete();
+//
+// Render the frame.
+this.renderer.render(this.swapChain, this.view);
+    window.requestAnimationFrame(this.render);
+  }
+  resize() {
+const dpr = window.devicePixelRatio;
+const width = this.canvas.width = window.innerWidth * dpr;
+const height = this.canvas.height = window.innerHeight * dpr;
+this.view.setViewport([0, 0, width, height]);
+//
+const aspect = width / height;
+const Projection = Filament.Camera$Projection;
+this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
+  }
+}
+//
+Filament.init(['triangle.filamat'], () => { window.app = new App() } );
+//
+})();
+</script>
+
 ## Start your project
 
 First, create a text file called `triangle.html` and fill it with the following HTML. This creates
@@ -33,21 +134,85 @@ The above HTML loads three JavaScript files:
 
 Go ahead and create `triangle.js` with the following content.
 
-```js {fragment="root"}
+```js
 class App {
   constructor() {
-    // TODO: create entities
+    this.canvas = document.getElementsByTagName('canvas')[0];
+    const engine = this.engine = Filament.Engine.create(this.canvas);
+    this.scene = engine.createScene();
+    this.triangle = Filament.EntityManager.get().create();
+    this.scene.addEntity(this.triangle);
+    const TRIANGLE_POSITIONS = new Float32Array([
+        1, 0,
+        Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
+        Math.cos(Math.PI * 4 / 3), Math.sin(Math.PI * 4 / 3),
+    ]);
+    
+    const TRIANGLE_COLORS = new Uint32Array([0xffff0000, 0xff00ff00, 0xff0000ff]);
+    const VertexAttribute = Filament.VertexAttribute;
+    const AttributeType = Filament.VertexBuffer$AttributeType;
+    this.vb = Filament.VertexBuffer.Builder()
+        .vertexCount(3)
+        .bufferCount(2)
+        .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT2, 0, 8)
+        .attribute(VertexAttribute.COLOR, 1, AttributeType.UBYTE4, 0, 4)
+        .normalized(VertexAttribute.COLOR)
+        .build(engine);
+    
+    this.vb.setBufferAt(engine, 0, TRIANGLE_POSITIONS);
+    this.vb.setBufferAt(engine, 1, TRIANGLE_COLORS);
+    this.ib = Filament.IndexBuffer.Builder()
+        .indexCount(3)
+        .bufferType(Filament.IndexBuffer$IndexType.USHORT)
+        .build(engine);
+    
+    this.ib.setBuffer(engine, new Uint16Array([0, 1, 2]));
+    const mat = engine.createMaterial('triangle.filamat');
+    const matinst = mat.getDefaultInstance();
+    Filament.RenderableManager.Builder(1)
+        .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
+        .material(0, matinst)
+        .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+        .build(engine, this.triangle);
+    this.swapChain = engine.createSwapChain();
+    this.renderer = engine.createRenderer();
+    this.camera = engine.createCamera(Filament.EntityManager.get().create());
+    this.view = engine.createView();
+    this.view.setCamera(this.camera);
+    this.view.setScene(this.scene);
+    
+    // Set up a blue-green background:
+    this.renderer.setClearOptions({clearColor: [0.0, 0.1, 0.2, 1.0], clear: true});
+    
+    // Adjust the initial viewport:
+    this.resize();
     this.render = this.render.bind(this);
     this.resize = this.resize.bind(this);
     window.addEventListener('resize', this.resize);
     window.requestAnimationFrame(this.render);
   }
   render() {
-    // TODO: render scene
+    // Rotate the triangle.
+    const radians = Date.now() / 1000;
+    const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
+    const tcm = this.engine.getTransformManager();
+    const inst = tcm.getInstance(this.triangle);
+    tcm.setTransform(inst, transform);
+    inst.delete();
+    
+    // Render the frame.
+    this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
   }
   resize() {
-    // TODO: adjust viewport and canvas
+    const dpr = window.devicePixelRatio;
+    const width = this.canvas.width = window.innerWidth * dpr;
+    const height = this.canvas.height = window.innerHeight * dpr;
+    this.view.setViewport([0, 0, width, height]);
+    
+    const aspect = width / height;
+    const Projection = Filament.Camera$Projection;
+    this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
   }
 }
 
@@ -90,7 +255,7 @@ with the correct MIME type.
 We now have a basic skeleton that can respond to paint and resize events. Let's start adding
 Filament objects to the app. Insert the following code into the top of the app constructor.
 
-```js {fragment="create entities"}
+```js
 this.canvas = document.getElementsByTagName('canvas')[0];
 const engine = this.engine = Filament.Engine.create(this.canvas);
 ```
@@ -102,7 +267,7 @@ The engine is a factory for many Filament entities, including `Scene`, which is 
 entities. Let's go ahead and create a scene, then add a blank entity called `triangle` into the
 scene.
 
-```js {fragment="create entities"}
+```js
 this.scene = engine.createScene();
 this.triangle = Filament.EntityManager.get().create();
 this.scene.addEntity(this.triangle);
@@ -118,7 +283,7 @@ calls.
 Next we'll create two typed arrays: a positions array with XY coordinates for each vertex, and a
 colors array with a 32-bit word for each vertex.
 
-```js {fragment="create entities"}
+```js
 const TRIANGLE_POSITIONS = new Float32Array([
     1, 0,
     Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
@@ -130,7 +295,7 @@ const TRIANGLE_COLORS = new Uint32Array([0xffff0000, 0xff00ff00, 0xff0000ff]);
 
 Next we'll use the positions and colors buffers to create a single `VertexBuffer` object.
 
-```js {fragment="create entities"}
+```js
 const VertexAttribute = Filament.VertexAttribute;
 const AttributeType = Filament.VertexBuffer$AttributeType;
 this.vb = Filament.VertexBuffer.Builder()
@@ -160,7 +325,7 @@ buffer slot.
 Next we'll construct an index buffer. The index buffer for our triangle is trivial: it simply holds
 the integers 0,1,2.
 
-```js {fragment="create entities"}
+```js
 this.ib = Filament.IndexBuffer.Builder()
     .indexCount(3)
     .bufferType(Filament.IndexBuffer$IndexType.USHORT)
@@ -183,7 +348,7 @@ next tutorial.
 After extracting the material instance, we can finally create a renderable component for the
 triangle by setting up a bounding box and passing in the vertex and index buffers.
 
-```js {fragment="create entities"}
+```js
 const mat = engine.createMaterial('triangle.filamat');
 const matinst = mat.getDefaultInstance();
 Filament.RenderableManager.Builder(1)
@@ -196,7 +361,7 @@ Filament.RenderableManager.Builder(1)
 Next let's wrap up the initialization routine by creating the swap chain, renderer, camera, and
 view.
 
-```js {fragment="create entities"}
+```js
 this.swapChain = engine.createSwapChain();
 this.renderer = engine.createRenderer();
 this.camera = engine.createCamera(Filament.EntityManager.get().create());
@@ -221,7 +386,16 @@ to repaint. Often this is 60 times a second.
 
 ```js
 render() {
-    // TODO: render scene
+    // Rotate the triangle.
+    const radians = Date.now() / 1000;
+    const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
+    const tcm = this.engine.getTransformManager();
+    const inst = tcm.getInstance(this.triangle);
+    tcm.setTransform(inst, transform);
+    inst.delete();
+    
+    // Render the frame.
+    this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
 }
 ```
@@ -229,7 +403,7 @@ render() {
 Let's flesh this out by rotating the triangle and invoking the Filament renderer. Add the following
 code to the top of the render method.
 
-```js {fragment="render scene"}
+```js
 // Rotate the triangle.
 const radians = Date.now() / 1000;
 const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
@@ -253,7 +427,7 @@ One last step. Add the following code to the resize method. This adjusts the res
 rendering surface when the window size changes, taking `devicePixelRatio` into account for high-DPI
 displays. It also adjusts the camera frustum accordingly.
 
-```js {fragment="adjust viewport and canvas"}
+```js
 const dpr = window.devicePixelRatio;
 const width = this.canvas.width = window.innerWidth * dpr;
 const height = this.canvas.height = window.innerHeight * dpr;
