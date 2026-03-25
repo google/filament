@@ -96,7 +96,7 @@ void OpenGLState::synchronizeStateAndCache(size_t index) {
 void OpenGLState::setDefaultState() noexcept {
     // We need to make sure our internal state matches the GL state when we start.
     // (some of these calls may be unneeded as they might be the gl defaults)
-    GLenum const caps[] = {
+    constexpr GLenum caps[] = {
         GL_BLEND,
         GL_CULL_FACE,
         GL_SCISSOR_TEST,
