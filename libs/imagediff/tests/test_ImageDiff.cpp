@@ -136,6 +136,52 @@ TEST_F(ImageDiffTest, GlobalFailureFraction) {
     EXPECT_EQ(result.status, ImageDiffResult::Status::PASSED);
 }
 
+TEST_F(ImageDiffTest, ShiftRadius) {
+    LinearImage img1 = createImage(10, 10, 0.5f);
+    LinearImage img2 = createImage(10, 10, 0.5f);
+
+    // Shift the color by 1 pixel to the right in img2
+    setPixel(img1, 5, 5, 1.0f, 0.0f, 0.0f);
+    setPixel(img2, 6, 5, 1.0f, 0.0f, 0.0f);
+
+    ImageDiffConfig config;
+    config.maxAbsDiff = 0.05f;
+
+    // Strict comparison should fail
+    auto result = compare(img1, img2, config);
+    EXPECT_EQ(result.status, ImageDiffResult::Status::PIXEL_DIFFERENCE);
+
+    // With shiftRadius = 1, it should find the pixel nearby and pass
+    config.shiftRadius = 1;
+    result = compare(img1, img2, config);
+    EXPECT_EQ(result.status, ImageDiffResult::Status::PASSED);
+}
+
+TEST_F(ImageDiffTest, BlurRadius) {
+    LinearImage img1 = createImage(10, 10, 0.5f);
+    LinearImage img2 = createImage(10, 10, 0.5f);
+
+    // Dithering/Noise: add noise that averages out to 0
+    // img1 has 0.5 everywhere
+    // img2 has 0.6 and 0.4 alternating (average is 0.5)
+    setPixel(img2, 5, 5, 0.6f, 0.5f, 0.5f);
+    setPixel(img2, 6, 5, 0.4f, 0.5f, 0.5f);
+    setPixel(img2, 5, 6, 0.4f, 0.5f, 0.5f);
+    setPixel(img2, 6, 6, 0.6f, 0.5f, 0.5f);
+
+    ImageDiffConfig config;
+    config.maxAbsDiff = 0.05f;
+
+    // Strict comparison should fail because pixel diff is 0.1
+    auto result = compare(img1, img2, config);
+    EXPECT_EQ(result.status, ImageDiffResult::Status::PIXEL_DIFFERENCE);
+
+    // With blurRadius = 1, it compares the 3x3 average, which is much closer to 0.5
+    config.blurRadius = 1;
+    result = compare(img1, img2, config);
+    EXPECT_EQ(result.status, ImageDiffResult::Status::PASSED);
+}
+
 TEST_F(ImageDiffTest, JSONSerialization) {
     ImageDiffConfig config;
     config.mode = ImageDiffConfig::Mode::AND;
