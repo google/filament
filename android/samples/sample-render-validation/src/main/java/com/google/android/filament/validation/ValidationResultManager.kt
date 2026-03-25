@@ -88,18 +88,19 @@ class ValidationResultManager(
      * - input test bundle (as nested zip), if provided
      * - diff images (if any failure)
      */
-    fun exportTestResults(sourceZip: File?, timestamp: String): File? {
+    fun exportTestResults(sourceZip: File?, config: RenderTestConfig, timestamp: String): File? {
         // Safe parent dir resolution
         val parentDir = outputDir.canonicalFile.parentFile ?: outputDir.parentFile
         if (parentDir == null) return null
 
         val resultZipName = "results_$timestamp"
-        val zipFile = File(parentDir, "$resultZipName.zip")
+        val tempZipFile = File(parentDir, "$resultZipName.zip.tmp")
+        val finalZipFile = File(parentDir, "$resultZipName.zip")
 
-        Log.i(TAG, "Exporting results to ${zipFile.absolutePath}")
+        Log.i(TAG, "Exporting results to ${tempZipFile.absolutePath}")
 
         try {
-            ZipOutputStream(FileOutputStream(zipFile)).use { zos ->
+            ZipOutputStream(FileOutputStream(tempZipFile)).use { zos ->
                 // 1. Add results.json
                 val resultsJson = File(outputDir, "results.json")
                 if (resultsJson.exists()) {
@@ -108,24 +109,28 @@ class ValidationResultManager(
                     zos.closeEntry()
                 }
 
-                // 2. Add source zip if exists
+                // 2. Add test bundle zip (fallback to sourceZip)
                 if (sourceZip != null && sourceZip.exists()) {
-                    zos.putNextEntry(ZipEntry(sourceZip.name))
+                    zos.putNextEntry(ZipEntry("bundle.zip"))
                     sourceZip.inputStream().use { it.copyTo(zos) }
                     zos.closeEntry()
                 }
 
-                // 3. Add images (only rendered images, exclude diffs)
+                // 3. Add images (exclude diffs, frontend computes them)
                 outputDir.listFiles { _, name -> name.endsWith(".png") && !name.endsWith("_diff.png") }?.forEach { imgFile ->
                     zos.putNextEntry(ZipEntry(imgFile.name))
                     imgFile.inputStream().use { it.copyTo(zos) }
                     zos.closeEntry()
                 }
             }
-            Log.i(TAG, "Exported results to ${zipFile.absolutePath}")
-            return zipFile
+
+            tempZipFile.renameTo(finalZipFile)
+
+            Log.i(TAG, "Exported results to ${finalZipFile.absolutePath}")
+            return finalZipFile
         } catch (e: Exception) {
             Log.e(TAG, "Failed to export results", e)
+            tempZipFile.delete()
             return null
         }
     }
@@ -144,7 +149,7 @@ class ValidationResultManager(
      *     goldens/
      *       test_result.png
      */
-    fun exportTestBundle(config: RenderTestConfig, timestamp: String): File? {
+    fun exportTestBundle(config: RenderTestConfig, timestamp: String, bundleNameOverride: String? = null): File? {
         Log.i(TAG, "Starting exportTestBundle for ${config.name} at $timestamp")
         Log.i(TAG, "OutputDir: ${outputDir.absolutePath}")
 
@@ -155,8 +160,7 @@ class ValidationResultManager(
         }
         Log.i(TAG, "Using parentDir for export: ${parentDir.absolutePath}")
 
-        val testNameWithTimestamp = "${config.name}_$timestamp"
-        val exportNameNoSpaces = testNameWithTimestamp.replace(" ", "_")
+        val exportNameNoSpaces = bundleNameOverride ?: config.name.lowercase(java.util.Locale.US).replace(" ", "_")
 
         val exportDir = File(parentDir, "export_temp_$timestamp")
 
@@ -204,7 +208,7 @@ class ValidationResultManager(
             // 3. Create modified config JSON
             Log.i(TAG, "Creating config.json...")
             val newConfigJson = JSONObject()
-            newConfigJson.put("name", testNameWithTimestamp) // Keep spaces in JSON name
+            newConfigJson.put("name", config.name) // Keep spaces in JSON name
 
             // Reconstruct backends
             val backendsArray = JSONArray()
@@ -251,10 +255,11 @@ class ValidationResultManager(
             File(rootDir, "config.json").writeText(newConfigJson.toString(4))
 
             // 4. Zip it
-            val zipFile = File(parentDir, "$exportNameNoSpaces.zip")
-            Log.i(TAG, "Zipping to ${zipFile.absolutePath}...")
+            val tempZipFile = File(parentDir, "$exportNameNoSpaces.zip.tmp")
+            val finalZipFile = File(parentDir, "$exportNameNoSpaces.zip")
+            Log.i(TAG, "Zipping to ${tempZipFile.absolutePath}...")
 
-            ZipOutputStream(FileOutputStream(zipFile)).use { zos ->
+            ZipOutputStream(FileOutputStream(tempZipFile)).use { zos ->
                 rootDir.walkTopDown().forEach { file ->
                     if (file.isFile) {
                         val entryName = file.relativeTo(exportDir).path
@@ -265,15 +270,18 @@ class ValidationResultManager(
                 }
             }
 
+            tempZipFile.renameTo(finalZipFile)
+
             // Cleanup temp dir
             exportDir.deleteRecursively()
 
-            Log.i(TAG, "Exported test bundle to ${zipFile.absolutePath}")
-            return zipFile
+            Log.i(TAG, "Exported test bundle to ${finalZipFile.absolutePath}")
+            return finalZipFile
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to export test bundle", e)
             exportDir.deleteRecursively()
+            File(parentDir, "$exportNameNoSpaces.zip.tmp").delete()
             return null
         }
     }

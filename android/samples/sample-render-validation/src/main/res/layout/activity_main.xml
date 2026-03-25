@@ -162,18 +162,25 @@
             android:id="@+id/test_results_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
             android:text="Test Results"
             android:textSize="14sp"
             android:paddingTop="0dp"
             android:paddingBottom="12dp" />
 
-        <ProgressBar
+        <com.google.android.filament.validation.TestProgressBar
             android:id="@+id/test_progress"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:gravity="center"
             android:layout_width="200dp"
             android:layout_height="4dp"
             android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/test_summary_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="10sp"
             android:layout_marginBottom="12dp"
             android:visibility="gone" />
 
