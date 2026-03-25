@@ -467,7 +467,8 @@ void OpenGLDriver::bindTexture(GLuint const unit, GLTexture const* t) noexcept {
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
     bool success = true;
     if (mBoundProgram != p) {
-        // compile/link the program if needed and call glUseProgram
+        // compile/link the program if needed and call glUseProgram.
+        // This call may block until the program linking process is complete.
         success = p->use(this, mContext);
         assert_invariant(success == p->isValid());
         if (success) {
