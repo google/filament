@@ -13,9 +13,8 @@
         return originalGetElementsByTagName.call(document, tag);
     };
 //
-const environ = 'pillars_2k';
-const ibl_url = `${environ}/${environ}_ibl.ktx`;
-const sky_url = `${environ}/${environ}_skybox.ktx`;
+const ibl_url = 'pillars_2k/pillars_2k_ibl.ktx';
+const sky_url = 'pillars_2k/pillars_2k_skybox.ktx';
 const filamat_url = 'plastic.filamat'
 //
 Filament.init([ filamat_url, ibl_url, sky_url ], () => {
@@ -120,8 +119,8 @@ scene.setSkybox(skybox);
 //
   resize() {
     const dpr = window.devicePixelRatio;
-    const width = this.canvas.width = window.innerWidth * dpr;
-    const height = this.canvas.height = window.innerHeight * dpr;
+    const width = this.canvas.width = this.canvas.clientWidth * dpr;
+    const height = this.canvas.height = this.canvas.clientHeight * dpr;
     this.view.setViewport([0, 0, width, height]);
     this.camera.setProjectionFov(45, width / height, 1.0, 10.0, Fov.VERTICAL);
   }
@@ -135,7 +134,7 @@ This tutorial will describe how to create the **redball** demo, introducing you 
 textures.
 
 For starters, create a text file called `redball.html` and copy over the HTML that we used in the
-[previous tutorial]. Change the last script tag from `triangle.js` to `redball.js`.
+previous tutorial. Change the last script tag from `triangle.js` to `redball.js`.
 
 Next you'll need to get a couple command-line tools: `matc` and `cmgen`. You can find these in the
 appropriate [Filament release](//github.com/google/filament/releases). You should choose the
@@ -204,9 +203,8 @@ IBL KTX contains these coefficients in its metadata.
 Next, create `redball.js` with the following content.
 
 ```js
-const environ = 'pillars_2k';
-const ibl_url = `${environ}/${environ}_ibl.ktx`;
-const sky_url = `${environ}/${environ}_skybox.ktx`;
+const ibl_url = 'pillars_2k/pillars_2k_ibl.ktx';
+const sky_url = 'pillars_2k/pillars_2k_skybox.ktx';
 const filamat_url = 'plastic.filamat'
 
 Filament.init([ filamat_url, ibl_url, sky_url ], () => {
@@ -311,8 +309,8 @@ class App {
 
   resize() {
     const dpr = window.devicePixelRatio;
-    const width = this.canvas.width = window.innerWidth * dpr;
-    const height = this.canvas.height = window.innerHeight * dpr;
+    const width = this.canvas.width = this.canvas.clientWidth * dpr;
+    const height = this.canvas.height = this.canvas.clientHeight * dpr;
     this.view.setViewport([0, 0, width, height]);
     this.camera.setProjectionFov(45, width / height, 1.0, 10.0, Fov.VERTICAL);
   }
@@ -489,15 +487,10 @@ const skybox = engine.createSkyFromKtx1(sky_url);
 scene.setSkybox(skybox);
 ```
 
-That's it, we now have a shiny red ball floating in an environment! The complete JavaScript file is
-available [here](tutorial_redball.js).
-
-In the [next tutorial], we'll take a closer look at textures and interaction.
+That's it, we now have a shiny red ball floating in an environment!
 
 [pillars_2k.hdr]:
 //github.com/google/filament/blob/main/third_party/environments/pillars_2k.hdr
 
-[next tutorial]: tutorial_suzanne.html
-[previous tutorial]: tutorial_triangle.html
 [Filament release]: //github.com/google/filament/releases
 [Filament Material System]: https://google.github.io/filament/Materials.md.html

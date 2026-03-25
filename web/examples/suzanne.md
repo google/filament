@@ -17,10 +17,9 @@
 const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc_srgb');
 const texture_suffix = Filament.getSupportedFormatSuffix('etc');
 //
-const environ = 'venetian_crossroads_2k'
-const ibl_url = `${environ}/${environ}_ibl.ktx`;
-const sky_small_url = `${environ}/${environ}_skybox_tiny.ktx`;
-const sky_large_url = `${environ}/${environ}_skybox.ktx`;
+const ibl_url = 'venetian_crossroads_2k/venetian_crossroads_2k_ibl.ktx';
+const sky_small_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox_tiny.ktx';
+const sky_large_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox.ktx';
 const albedo_url = `albedo.ktx2`;
 const ao_url = `ao.ktx2`;
 const metallic_url = `metallic.ktx2`;
@@ -105,8 +104,8 @@ inst.delete();
 //
     resize() {
         const dpr = window.devicePixelRatio;
-        const width = this.canvas.width = window.innerWidth * dpr;
-        const height = this.canvas.height = window.innerHeight * dpr;
+        const width = this.canvas.width = this.canvas.clientWidth * dpr;
+        const height = this.canvas.height = this.canvas.clientHeight * dpr;
         this.view.setViewport([0, 0, width, height]);
 //
         const aspect = width / height;
@@ -240,10 +239,9 @@ with the following content.
 const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc_srgb');
 const texture_suffix = Filament.getSupportedFormatSuffix('etc');
 
-const environ = 'venetian_crossroads_2k'
-const ibl_url = `${environ}/${environ}_ibl.ktx`;
-const sky_small_url = `${environ}/${environ}_skybox_tiny.ktx`;
-const sky_large_url = `${environ}/${environ}_skybox.ktx`;
+const ibl_url = 'venetian_crossroads_2k/venetian_crossroads_2k_ibl.ktx';
+const sky_small_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox_tiny.ktx';
+const sky_large_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox.ktx';
 const albedo_url = `albedo.ktx2`;
 const ao_url = `ao.ktx2`;
 const metallic_url = `metallic.ktx2`;
@@ -328,8 +326,8 @@ class App {
 
     resize() {
         const dpr = window.devicePixelRatio;
-        const width = this.canvas.width = window.innerWidth * dpr;
-        const height = this.canvas.height = window.innerHeight * dpr;
+        const width = this.canvas.width = this.canvas.clientWidth * dpr;
+        const height = this.canvas.height = this.canvas.clientHeight * dpr;
         this.view.setViewport([0, 0, width, height]);
 
         const aspect = width / height;
@@ -360,10 +358,9 @@ last resort. Go ahead and replace the **declare asset URLs** comment with the fo
 const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc_srgb');
 const texture_suffix = Filament.getSupportedFormatSuffix('etc');
 
-const environ = 'venetian_crossroads_2k'
-const ibl_url = `${environ}/${environ}_ibl.ktx`;
-const sky_small_url = `${environ}/${environ}_skybox_tiny.ktx`;
-const sky_large_url = `${environ}/${environ}_skybox.ktx`;
+const ibl_url = 'venetian_crossroads_2k/venetian_crossroads_2k_ibl.ktx';
+const sky_small_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox_tiny.ktx';
+const sky_large_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox.ktx';
 const albedo_url = `albedo.ktx2`;
 const ao_url = `ao.ktx2`;
 const metallic_url = `metallic.ktx2`;
@@ -449,11 +446,9 @@ tcm.setTransform(inst, this.trackball.getMatrix());
 inst.delete();
 ```
 
-That's it, we now have a fast-loading interactive demo. The complete JavaScript file is available
-[here](tutorial_suzanne.js).
+That's it, we now have a fast-loading interactive demo.
 
 [Filament release]: //github.com/google/filament/releases
-[previous tutorial]: tutorial_redball.html
 [Filament Material System]: https://google.github.io/filament/Materials.md.html
 [this OBJ file]: https://github.com/google/filament/blob/main/assets/models/monkey/monkey.obj
 [monkey folder]: https://github.com/google/filament/blob/main/assets/models/monkey

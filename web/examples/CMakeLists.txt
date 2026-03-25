@@ -120,7 +120,6 @@ add_custom_command(OUTPUT ${SERVER_DIR}/favicon.png COMMAND ${CMAKE_COMMAND} -E 
 list(APPEND ALL_DEMO_ASSETS ${SERVER_DIR}/filament.js ${SERVER_DIR}/filament.wasm ${SERVER_DIR}/gl-matrix-min.js ${SERVER_DIR}/gltumble.min.js ${SERVER_DIR}/main.css ${SERVER_DIR}/favicon.png)
 
 set(TARGET_DIR "triangle")
-add_localfile("triangle.html" "triangle.html" ${TARGET_DIR} ALL_DEMO_ASSETS)
 add_localfile("triangle.md" "triangle.md" ${TARGET_DIR} ALL_DEMO_ASSETS)
 build_material("materials/triangle.mat" ${TARGET_DIR} "triangle" ALL_DEMO_ASSETS)
 
@@ -130,7 +129,6 @@ build_material("materials/plastic.mat" ${TARGET_DIR} "plastic" ALL_DEMO_ASSETS)
 add_envmap("third_party/environments/pillars_2k.hdr" "pillars_2k" ${TARGET_DIR} ALL_DEMO_ASSETS)
 
 set(TARGET_DIR "suzanne")
-add_localfile("suzanne.html" "suzanne.html" ${TARGET_DIR} ALL_DEMO_ASSETS)
 add_localfile("suzanne.md" "suzanne.md" ${TARGET_DIR} ALL_DEMO_ASSETS)
 build_material("materials/textured.mat" ${TARGET_DIR} "textured" ALL_DEMO_ASSETS)
 add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh" ${TARGET_DIR} ALL_DEMO_ASSETS)

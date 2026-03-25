@@ -84,8 +84,8 @@ this.renderer.render(this.swapChain, this.view);
   }
   resize() {
 const dpr = window.devicePixelRatio;
-const width = this.canvas.width = window.innerWidth * dpr;
-const height = this.canvas.height = window.innerHeight * dpr;
+const width = this.canvas.width = this.canvas.clientWidth * dpr;
+const height = this.canvas.height = this.canvas.clientHeight * dpr;
 this.view.setViewport([0, 0, width, height]);
 //
 const aspect = width / height;
@@ -206,8 +206,8 @@ class App {
   }
   resize() {
     const dpr = window.devicePixelRatio;
-    const width = this.canvas.width = window.innerWidth * dpr;
-    const height = this.canvas.height = window.innerHeight * dpr;
+    const width = this.canvas.width = this.canvas.clientWidth * dpr;
+    const height = this.canvas.height = this.canvas.clientHeight * dpr;
     this.view.setViewport([0, 0, width, height]);
     
     const aspect = width / height;
@@ -429,18 +429,11 @@ displays. It also adjusts the camera frustum accordingly.
 
 ```js
 const dpr = window.devicePixelRatio;
-const width = this.canvas.width = window.innerWidth * dpr;
-const height = this.canvas.height = window.innerHeight * dpr;
+const width = this.canvas.width = this.canvas.clientWidth * dpr;
+const height = this.canvas.height = this.canvas.clientHeight * dpr;
 this.view.setViewport([0, 0, width, height]);
 
 const aspect = width / height;
 const Projection = Filament.Camera$Projection;
 this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
 ```
-
-You should now have a spinning triangle! The completed JavaScript is available
-[here](tutorial_triangle.js).
-
-In the [next tutorial], we'll take a closer look at Filament materials and 3D rendering.
-
-[next tutorial]: tutorial_redball.html
