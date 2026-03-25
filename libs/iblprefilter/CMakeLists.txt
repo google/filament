@@ -112,9 +112,9 @@ else()
         -fvisibility-inlines-hidden
     )
 
-        if (NOT FILAMENT_USING_GCC)
-                list(APPEND OPTIMIZATION_FLAGS -fstrict-vtable-pointers)
-        endif()
+    if (NOT FILAMENT_USING_GCC)
+        list(APPEND OPTIMIZATION_FLAGS -fstrict-vtable-pointers)
+    endif()
 endif()
 
 target_compile_options(${TARGET} PRIVATE
