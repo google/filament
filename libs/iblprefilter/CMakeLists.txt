@@ -110,10 +110,11 @@ else()
         # TODO: aggressive vectorization is currently broken on Android
         #        -fslp-vectorize-aggressive
         -fvisibility-inlines-hidden
-if (!FILAMENT_USING_GCC)
-        -fstrict-vtable-pointers
-endif()
     )
+
+        if (NOT FILAMENT_USING_GCC)
+                list(APPEND OPTIMIZATION_FLAGS -fstrict-vtable-pointers)
+        endif()
 endif()
 
 target_compile_options(${TARGET} PRIVATE
