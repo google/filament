@@ -66,7 +66,7 @@ class SimulatedSkybox {
 
     // Load Moon Texture
     try {
-      const texUrl = 'assets/moon_disk.png';
+      const texUrl = 'moon_disk.png';
       const Texture = Filament.Texture;
       const TextureSampler = Filament.TextureSampler;
       const PixelDataFormat = Filament.PixelDataFormat;
@@ -125,7 +125,7 @@ class SimulatedSkybox {
 
     // Load Moon Normal
     try {
-      const texUrl = 'assets/moon_normal.png';
+      const texUrl = 'moon_normal.png';
       const Texture = Filament.Texture;
       const TextureSampler = Filament.TextureSampler;
       const PixelDataFormat = Filament.PixelDataFormat;
@@ -182,7 +182,7 @@ class SimulatedSkybox {
 
     // Load Milky Way Texture
     try {
-      const texUrl = 'assets/milkyway.png';
+      const texUrl = 'milkyway.png';
       const Texture = Filament.Texture;
       const TextureSampler = Filament.TextureSampler;
       const PixelDataFormat = Filament.PixelDataFormat;

@@ -194,4 +194,15 @@ add_envmap("third_party/environments/lightroom_14b.hdr" "default_env" ${TARGET_D
 set(TARGET_DIR "remote")
 add_localfile("remote.html" "remote.html" ${TARGET_DIR} ALL_DEMO_ASSETS)
 
+set(TARGET_DIR "sky")
+add_localfile("sky.html" "sky.html" ${TARGET_DIR} ALL_DEMO_ASSETS)
+build_material("materials/simulated_skybox.mat" ${TARGET_DIR} "simulated_skybox" ALL_DEMO_ASSETS)
+add_localfile("sky/lil-gui.js" "lil-gui.js" ${TARGET_DIR} ALL_DEMO_ASSETS)
+add_localfile("sky/suncalc_global.js" "suncalc_global.js" ${TARGET_DIR} ALL_DEMO_ASSETS)
+add_localfile("sky/main.js" "main.js" ${TARGET_DIR} ALL_DEMO_ASSETS)
+add_localfile("sky/SimulatedSkybox.js" "SimulatedSkybox.js" ${TARGET_DIR} ALL_DEMO_ASSETS)
+add_localfile("textures/sky/moon_disk.png" "moon_disk.png" ${TARGET_DIR} ALL_DEMO_ASSETS)
+add_localfile("textures/sky/moon_normal.png" "moon_normal.png" ${TARGET_DIR} ALL_DEMO_ASSETS)
+add_localfile("textures/sky/milkyway.png" "milkyway.png" ${TARGET_DIR} ALL_DEMO_ASSETS)
+
 add_custom_target(${PROJECT_NAME} ALL DEPENDS ${ALL_DEMO_ASSETS})

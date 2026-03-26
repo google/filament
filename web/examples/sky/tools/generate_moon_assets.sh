@@ -3,8 +3,8 @@ set -e
 
 # Default size
 SIZE=${1:-256}
-OUTPUT_COLOR="../assets/moon_disk.png"
-OUTPUT_NORMAL="../assets/moon_normal.png"
+OUTPUT_COLOR="../../textures/sky/moon_disk.png"
+OUTPUT_NORMAL="../../textures/sky/moon_normal.png"
 
 # Navigate to script directory
 cd "$(dirname "$0")"
