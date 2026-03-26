@@ -142,7 +142,18 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
         if (!unflattener.read(&lineIndex)) {
             return false;
         }
+        if (lineIndex >= dictionary.size()) {
+            return false;
+        }
         const auto& content = dictionary[lineIndex];
+        if (content.empty()) {
+            return false;
+        }
+
+        // Validate that the copy will not exceed the buffer.
+        if (cursor + content.size() - 1 > shaderSize) {
+            return false;
+        }
 
         // remove the terminating null character.
         memcpy(&shaderContent[cursor], content.data(), content.size() - 1);
@@ -150,8 +161,10 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
     }
 
     // Write the terminating null character.
+    if (cursor >= shaderSize) {
+        return false;
+    }
     shaderContent[cursor++] = 0;
-    assert_invariant(cursor == shaderSize);
 
     return true;
 }
