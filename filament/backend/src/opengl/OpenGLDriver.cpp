@@ -425,7 +425,7 @@ utils::FixedCapacityVector<ShaderLanguage> OpenGLDriver::getShaderLanguages(
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
 void OpenGLDriver::resetState(int) {
-    getBackendState().resetState();
+    getBackendState().syncState();
 }
 
 void OpenGLDriver::bindSampler(GLuint const unit, GLuint const sampler) noexcept {

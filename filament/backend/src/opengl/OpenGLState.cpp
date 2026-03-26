@@ -90,7 +90,7 @@ void OpenGLState::synchronizeStateAndCache(size_t index) {
     // the default FBO could be invalid
     mDefaultFbo[index].reset();
     contextIndex = index;
-    resetState();
+    syncState();
 }
 
 void OpenGLState::setDefaultState() noexcept {
@@ -361,7 +361,7 @@ GLuint OpenGLState::getSamplerSlow(SamplerParams params) const noexcept {
 #endif
 
 
-void OpenGLState::resetState() noexcept {
+void OpenGLState::syncState() noexcept {
     // Force GL state to match the Filament state
 
     // increase the state version so other parts of the state know to reset

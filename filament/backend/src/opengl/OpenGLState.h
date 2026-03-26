@@ -97,7 +97,7 @@ public:
 
     void terminate() noexcept;
 
-    void resetState() noexcept;
+    void syncState() noexcept;
 
     inline void useProgram(GLuint program) noexcept;
 
