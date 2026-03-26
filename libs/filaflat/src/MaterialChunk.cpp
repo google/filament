@@ -25,6 +25,7 @@
 
 #include <filament/MaterialChunkType.h>
 
+#include <utils/compiler.h>
 #include <utils/Invocable.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
@@ -255,7 +256,17 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
             globalIndex += mVertexStrings + mFragmentStrings;
         }
 
+        if (UTILS_UNLIKELY(globalIndex >= dictionary.size())) {
+            return false;
+        }
+
         const auto& content = dictionary[globalIndex];
+
+        // Ensure string is correctly formed and doesn't exceed reserved shader space.
+        if (UTILS_UNLIKELY(content.size() == 0 || cursor + content.size() - 1 > shaderSize)) {
+            return false;
+        }
+
         // remove the terminating null character.
         size_t const length = content.size() - 1;
         memcpy(&shaderContent[cursor], content.data(), length);
