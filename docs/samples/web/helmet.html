@@ -1,0 +1,360 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>helmet - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <style>
+#container { position: relative; width: 100%; height: 400px; border: 1px solid black; }
+canvas     { position: absolute; width: 100%; height: 100%; touch-action: none; }
+#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:blue; pointer-events: none; overflow: hidden; }
+</style>
+<div id="container">
+    <canvas></canvas>
+    <pre id="messages"></pre>
+</div>
+<script src="../../web/lib/filament.js"></script>
+<script src="../../web/lib/gl-matrix-min.js"></script>
+<script src="../../web/lib/gltumble.min.js"></script>
+<script>
+const ibl_url = '../../web/assets/helmet/default_env/default_env_ibl.ktx';
+const sky_url = '../../web/assets/helmet/default_env/default_env_skybox.ktx';
+const mesh_url = '../../web/assets/helmet/FlightHelmet.gltf';
+Filament.init([mesh_url, ibl_url, sky_url], () => {
+    window.gltfio = Filament.gltfio;
+    window.Fov = Filament.Camera$Fov;
+    window.LightType = Filament.LightManager$Type;
+    window.IndirectLight = Filament.IndirectLight;
+    window.app = new App(document.getElementsByTagName('canvas')[0]);
+});
+class App {
+    constructor(canvas) {
+        this.canvas = canvas;
+        const engine = this.engine = Filament.Engine.create(this.canvas);
+        const scene = this.scene = engine.createScene();
+        this.trackball = new Trackball(canvas, {startSpin: 0.035});
+        const messages = document.getElementById('messages');
+        canvas.addEventListener('pointerdown', evt => {
+            const x = evt.clientX;
+            const y = this.canvas.getBoundingClientRect().height - 1 - evt.clientY;
+            const dpr = window.devicePixelRatio;
+            this.view.pick(x * dpr, y * dpr, (results) => {
+                const name = this.asset.getName(results.renderable);
+                messages.innerText = name ? ('Picked ' + name) : '';
+            });
+        });
+        const indirectLight = this.ibl = engine.createIblFromKtx1(ibl_url);
+        this.scene.setIndirectLight(indirectLight);
+        const iblDirection = IndirectLight.getDirectionEstimate(indirectLight.shfloats);
+        const iblColor = IndirectLight.getColorEstimate(indirectLight.shfloats, iblDirection);
+        const iblIntensity = 20000;
+        indirectLight.setIntensity(iblIntensity);
+        // Rotate the IBL so that a bright light is behind the helmet, to show off bloom.
+        const mat = [];
+        const radians = 3.14;
+        mat3.fromRotation(mat, radians, [0, 1, 0]);
+        indirectLight.setRotation(mat);
+        const skybox = engine.createSkyFromKtx1(sky_url);
+        this.scene.setSkybox(skybox);
+        const sunlight = Filament.EntityManager.get().create();
+        Filament.LightManager.Builder(LightType.SUN)
+            .color(iblColor.slice(0, 3))
+            .intensity(iblColor[3] * iblIntensity)
+            .direction(iblDirection)
+            .sunAngularRadius(1.9)
+            .castShadows(true)
+            .sunHaloSize(10.0)
+            .sunHaloFalloff(80.0)
+            .build(engine, sunlight);
+        this.scene.addEntity(sunlight);
+        const loader = this.loader = engine.createAssetLoader();
+        this.allowRefresh = false;
+        const asset = this.asset = loader.createAsset(mesh_url);
+        this.assetRoot = this.asset.getRoot();
+        // Crudely indicate progress by printing the URI of each resource as it is loaded.
+        const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;
+        const onDone = () => {
+            this.allowRefresh = true;
+            // Clear the progress indication messages.
+            messages.innerText = "";
+        };
+        asset.loadResources(onDone, onFetched, new URL('../../web/assets/helmet/', window.location.href).href);
+        const cameraEntity = Filament.EntityManager.get().create();
+        this.camera = engine.createCamera(cameraEntity);
+        const colorGrading = Filament.ColorGrading.Builder()
+            .toneMapping(Filament.ColorGrading$ToneMapping.ACES_LEGACY)
+            .build(engine);
+        this.swapChain = engine.createSwapChain();
+        this.renderer = engine.createRenderer();
+        this.view = engine.createView();
+        this.view.setVignetteOptions({ midPoint: 0.8, enabled: true });
+        this.view.setBloomOptions({ strength: 0.2, enabled: true });
+        this.view.setCamera(this.camera);
+        this.view.setScene(this.scene);
+        this.view.setColorGrading(colorGrading);
+        this.resize();
+        this.render = this.render.bind(this);
+        this.resize = this.resize.bind(this);
+        this.refresh = this.refresh.bind(this);
+        window.addEventListener('resize', this.resize);
+        window.addEventListener('dblclick', this.refresh);
+        window.requestAnimationFrame(this.render);
+    }
+    // Test for memory leaks by destroying and recreating the asset.
+    refresh() {
+        if (!this.allowRefresh) {
+            console.warn('Refresh not allowed while the model is still loading.');
+            return;
+        }
+        console.info('Refreshing...');
+        this.allowRefresh = false;
+        this.scene.removeEntities(this.asset.getEntities());
+        this.loader.destroyAsset(this.asset);
+        this.asset = this.loader.createAsset(mesh_url);
+        const onDone = () => { this.allowRefresh = true; }
+        this.asset.loadResources(onDone, null, new URL('../../web/assets/helmet/', window.location.href).href);
+    }
+    render() {
+        // Spin the model according to the trackball controller.
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(this.assetRoot);
+        tcm.setTransform(inst, this.trackball.getMatrix());
+        inst.delete();
+        // Gradually add renderables to the scene as their textures become ready.
+        let entity;
+        const popRenderable = () => {
+            entity = this.asset.popRenderable();
+            return entity.getId() != 0;
+        }
+        while (popRenderable()) {
+            this.scene.addEntity(entity);
+            entity.delete();
+        }
+        entity.delete();
+        // Render the scene and request the next animation frame.
+        if (this.renderer.beginFrame(this.swapChain)) {
+            this.renderer.renderView(this.view);
+            this.renderer.endFrame();
+        }
+        this.engine.execute();
+        window.requestAnimationFrame(this.render);
+    }
+    resize() {
+        const dpr = window.devicePixelRatio;
+        const width = this.canvas.width = this.canvas.clientWidth * dpr;
+        const height = this.canvas.height = this.canvas.clientHeight * dpr;
+        this.view.setViewport([0, 0, width, height]);
+        const y = -0.125, eye = [0, y, 2], center = [0, y, 0], up = [0, 1, 0];
+        this.camera.lookAt(eye, center, up);
+        const aspect = width / height;
+        const fov = aspect < 1 ? Fov.HORIZONTAL : Fov.VERTICAL;
+        this.camera.setProjectionFov(30, aspect, 1.0, 10.0, fov);
+    }
+}
+</script>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../samples/web/cube_fl0.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../samples/web/morphing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../samples/web/cube_fl0.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../samples/web/morphing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
