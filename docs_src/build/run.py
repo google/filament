@@ -35,6 +35,14 @@ FILAMENT_MD = 'Filament.md.html'
 MATERIALS_MD = 'Materials.md.html'
 
 def transform_dup_file_link(line, transforms):
+  """
+  Transforms markdown links in duplicated files to point to the correct relative locations
+  within the generated mdbook site.
+
+  Args:
+    line: The markdown line containing potential links.
+    transforms: A dictionary mapping original link prefixes to their new destinations.
+  """
   URL_CONTENT = '[-a-zA-Z0-9()@:%_\+.~#?&//=]+'
   res = re.findall(f'\[(.+)\]\(({URL_CONTENT})\)', line)
   for text, url in  res:
@@ -47,6 +55,12 @@ def transform_dup_file_link(line, transforms):
   return line
 
 def pull_duplicates():
+  """
+  Reads `duplicates.json` and copies files from the project root into the mdbook source directory.
+  This allows us to maintain a single source of truth for files like README.md or CONTRIBUTING.md,
+  while seamlessly embedding them into the generated documentation site.
+  It also converts raw HTML examples to Markdown by extracting just the body and styles.
+  """
   if not os.path.exists(DUP_DIR):
     os.mkdir(DUP_DIR)
 
@@ -59,11 +73,24 @@ def pull_duplicates():
     link_transforms = config[fin].get('link_transforms', {})
     fpath = os.path.join(ROOT_DIR, fin)
     new_fpath = os.path.join(SRC_DIR, new_name)
+    os.makedirs(os.path.dirname(new_fpath), exist_ok=True)
 
     with open(fpath, 'r') as in_file:
-      with open(new_fpath, 'w') as out_file:
-        for line in in_file.readlines():
-          out_file.write(transform_dup_file_link(line, link_transforms))
+      content = in_file.read()
+
+    if fpath.endswith('.html') and new_fpath.endswith('.md'):
+      # We replace double newlines so mdbook does not treat it as separated markdown paragraphs
+      content = content.replace("\n\n", "\n")
+      import re
+      style_match = re.search(r'<style>(.*?)</style>', content, re.DOTALL | re.IGNORECASE)
+      style_str = f"<style>{style_match.group(1)}</style>\n" if style_match else ""
+      body_match = re.search(r'<body[^>]*>(.*?)</body>', content, re.DOTALL | re.IGNORECASE)
+      if body_match:
+        content = style_str + body_match.group(1)
+
+    with open(new_fpath, 'w') as out_file:
+      for line in content.splitlines(True):
+        out_file.write(transform_dup_file_link(line, link_transforms))
 
 def pull_markdeep_docs():
   import http.server
@@ -166,8 +193,9 @@ if __name__ == "__main__":
   res, err = execute('mdbook build', cwd=MDBOOK_DIR)
   assert res == 0, f"failed to execute `mdbook`. return-code={res} err=\"{err}\""
 
-  RAW_IGNORES = shutil.ignore_patterns('update_remote_ui.sh')
-
-  shutil.copytree(RAW_COPIES_DIR, BOOK_OUPUT_DIR, ignore=RAW_IGNORES, dirs_exist_ok=True)
+  shutil.copytree(RAW_COPIES_DIR, BOOK_OUPUT_DIR, dirs_exist_ok=True)
   shutil.copy(os.path.join(MARKDEEP_DIR, FILAMENT_MD), BOOK_OUPUT_DIR)
   shutil.copy(os.path.join(MARKDEEP_DIR, MATERIALS_MD), BOOK_OUPUT_DIR)
+
+  import copy_web_docs
+  copy_web_docs.run()

@@ -76,6 +76,13 @@ located in `tools`. Some of tools also have README.md as description. We also co
 
 The process for copying and processing these READMEs is outlined in [Introductory docs](#introductory-doc).
 
+### Web Examples and Tutorials
+Filament provides a number of WebGL tutorials and examples in the `web/` directory. These are compiled during the WebGL CMake build and are integrated into the documentation via `duplicates.json`. The process is entirely automated:
+1. `run.py` maps the `.html` and `.md` WebGL outputs from the `out/cmake-webgl-release/...` directory into `docs_src/src_mdbook/src/samples/web/` using the instructions in `duplicates.json`.
+2. While transferring `.html` to `.md`, `run.py` strips away the `<!DOCTYPE html>`, `<head>`, and `<html>` tags. By retaining only the `<style>` and `<body>` elements, the HTML samples can be embedded cleanly into the `mdbook` site template without corrupting the DOM. It additionally collapses double-newlines (`\n\n`) because Markdown parsers will mistakenly fragment and wrap multi-line HTML tags into `<p>` blocks.
+3. After `mdbook build` concludes, `docs_src/build/copy_web_docs.py` is invoked. This script creates `web/lib` and `web/assets` directories inside the final `book/` output directory, copying in the compiled WebAssembly engine (`filament.wasm`/`filament.js`) and any necessary assets (`.filamat`, `.glb`, `.ktx`, etc.).
+4. Finally, `copy_web_docs.py` performs a regex pass over all HTML pages in `book/samples/web/` and `book/remote/` to rewrite their inline resource URLs to securely point to the shared `web/lib` and `web/assets` directories. It also dynamically overrides the `asset.loadResources()` Javascript call with an absolute URL (`new URL(..., window.location.href)`) so that `.glb`/`.gltf` assets fetch their internal `.bin` chunks correctly.
+
 ### Other technical notes
 These are technical documents that do not fit into a library, tool, or directory of the
 Filament source tree. We collect them into the `docs_src/src_mdbook/src/notes` directory. No additional
