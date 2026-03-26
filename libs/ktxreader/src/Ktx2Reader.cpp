@@ -134,7 +134,13 @@ static Result transcodeImageLevel(ktx2_transcoder& transcoder,
 
     if (formatInfo.isCompressed) {
         const uint32_t qwordsPerBlock = basisu::get_qwords_per_block(destFormat);
-        const size_t byteCount = sizeof(uint64_t) * qwordsPerBlock * levelInfo.m_total_blocks;
+        // Cast to size_t before multiplication to prevent uint32_t overflow.
+        const size_t byteCount = (size_t)sizeof(uint64_t) * (size_t)qwordsPerBlock * (size_t)levelInfo.m_total_blocks;
+        // Verify the multiplication did not overflow size_t.
+        if (qwordsPerBlock != 0 && levelInfo.m_total_blocks != 0 &&
+                byteCount / qwordsPerBlock / sizeof(uint64_t) != levelInfo.m_total_blocks) {
+            return Result::COMPRESSED_TRANSCODE_FAILURE;
+        }
         uint64_t* const blocks = (uint64_t*) malloc(byteCount);
         if (!transcoder.transcode_image_level(levelIndex, layerIndex, faceIndex, blocks,
                 levelInfo.m_total_blocks, formatInfo.basisFormat, decodeFlags,
@@ -149,7 +155,14 @@ static Result transcodeImageLevel(ktx2_transcoder& transcoder,
 
     const uint32_t rowCount = levelInfo.m_orig_height;
     const uint32_t bytesPerPix = basis_get_bytes_per_block_or_pixel(formatInfo.basisFormat);
-    const size_t byteCount = bytesPerPix * levelInfo.m_orig_width * rowCount;
+    // Cast to size_t before multiplication to prevent uint32_t overflow.
+    // Without the cast, bytesPerPix * m_orig_width is computed as uint32_t and can wrap.
+    const size_t byteCount = (size_t)bytesPerPix * (size_t)levelInfo.m_orig_width * (size_t)rowCount;
+    // Verify the multiplication did not overflow size_t.
+    if (bytesPerPix != 0 && levelInfo.m_orig_width != 0 &&
+            byteCount / bytesPerPix / levelInfo.m_orig_width != rowCount) {
+        return Result::UNCOMPRESSED_TRANSCODE_FAILURE;
+    }
     uint64_t* const rows = (uint64_t*) malloc(byteCount);
     if (!transcoder.transcode_image_level(levelIndex, layerIndex, faceIndex, rows,
             byteCount / bytesPerPix, formatInfo.basisFormat, decodeFlags,
