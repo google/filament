@@ -17,27 +17,38 @@
 #include <filaflat/MaterialChunk.h>
 #include <filaflat/ChunkContainer.h>
 
+#include <filament/MaterialChunkType.h>
+
+#include <private/filament/Variant.h>
+
 #include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/Invocable.h>
 #include <utils/Log.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 
 namespace filaflat {
 
-static inline uint32_t makeKey(
+static uint32_t makeKey(
         MaterialChunk::ShaderModel shaderModel,
-        MaterialChunk::Variant variant,
+        MaterialChunk::Variant const variant,
         MaterialChunk::ShaderStage stage) noexcept {
     static_assert(sizeof(variant.key) * 8 <= 8);
     return (uint32_t(shaderModel) << 16) | (uint32_t(stage) << 8) | variant.key;
 }
 
-void MaterialChunk::decodeKey(uint32_t key,
-        MaterialChunk::ShaderModel* model,
-        MaterialChunk::Variant* variant,
-        MaterialChunk::ShaderStage* stage) {
-    variant->key = key & 0xff;
-    *model = MaterialChunk::ShaderModel((key >> 16) & 0xff);
-    *stage = MaterialChunk::ShaderStage((key >> 8) & 0xff);
+void MaterialChunk::decodeKey(uint32_t const key,
+        ShaderModel* outModel,
+        Variant* outVariant,
+        ShaderStage* outStage) {
+    outVariant->key = key & 0xff;
+    *outModel = ShaderModel((key >> 16) & 0xff);
+    *outStage = ShaderStage((key >> 8) & 0xff);
 }
 
 MaterialChunk::MaterialChunk(ChunkContainer const& container)
@@ -46,7 +57,7 @@ MaterialChunk::MaterialChunk(ChunkContainer const& container)
 
 MaterialChunk::~MaterialChunk() noexcept = default;
 
-bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
+bool MaterialChunk::initialize(filamat::ChunkType const materialTag) {
 
     if (mBase != nullptr) {
         // initialize() should be called only once.
@@ -93,7 +104,7 @@ bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
             return false;
         }
 
-        uint32_t key = makeKey(ShaderModel(model), variant, ShaderStage(stage));
+        uint32_t const key = makeKey(ShaderModel(model), variant, ShaderStage(stage));
         mOffsets[key] = offsetValue;
     }
     return true;
@@ -101,19 +112,19 @@ bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
 
 bool MaterialChunk::getTextShader(Unflattener unflattener,
         BlobDictionary const& dictionary, ShaderContent& shaderContent,
-        ShaderModel shaderModel, Variant variant, ShaderStage shaderStage) const {
+        ShaderModel const shaderModel, Variant const variant, ShaderStage const shaderStage) const {
     if (mBase == nullptr) {
         return false;
     }
 
     // Jump and read
-    uint32_t key = makeKey(shaderModel, variant, shaderStage);
-    auto pos = mOffsets.find(key);
+    uint32_t const key = makeKey(shaderModel, variant, shaderStage);
+    auto const pos = mOffsets.find(key);
     if (pos == mOffsets.end()) {
         return false;
     }
 
-    size_t offset = pos->second;
+    size_t const offset = pos->second;
     if (offset == 0) {
         // This shader was not found.
         return false;
@@ -142,7 +153,17 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
         if (!unflattener.read(&lineIndex)) {
             return false;
         }
+
+        if (UTILS_UNLIKELY(lineIndex >= dictionary.size())) {
+            return false;
+        }
+
         const auto& content = dictionary[lineIndex];
+
+        // Ensure string is correctly formed and doesn't exceed reserved shader space.
+        if (UTILS_UNLIKELY(content.size() == 0 || cursor + content.size() - 1 > shaderSize)) {
+            return false;
+        }
 
         // remove the terminating null character.
         memcpy(&shaderContent[cursor], content.data(), content.size() - 1);
@@ -157,15 +178,19 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
 }
 
 bool MaterialChunk::getBinaryShader(BlobDictionary const& dictionary,
-        ShaderContent& shaderContent, ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage) const {
+        ShaderContent& shaderContent, ShaderModel const shaderModel, filament::Variant const variant, ShaderStage const shaderStage) const {
 
     if (mBase == nullptr) {
         return false;
     }
 
-    uint32_t key = makeKey(shaderModel, variant, shaderStage);
-    auto pos = mOffsets.find(key);
+    uint32_t const key = makeKey(shaderModel, variant, shaderStage);
+    auto const pos = mOffsets.find(key);
     if (pos == mOffsets.end()) {
+        return false;
+    }
+
+    if (UTILS_UNLIKELY(pos->second >= dictionary.size())) {
         return false;
     }
 
@@ -173,16 +198,16 @@ bool MaterialChunk::getBinaryShader(BlobDictionary const& dictionary,
     return true;
 }
 
-bool MaterialChunk::hasShader(ShaderModel model, Variant variant, ShaderStage stage) const noexcept {
+bool MaterialChunk::hasShader(ShaderModel const model, Variant const variant, ShaderStage const stage) const noexcept {
     if (mBase == nullptr) {
         return false;
     }
-    auto pos = mOffsets.find(makeKey(model, variant, stage));
+    auto const pos = mOffsets.find(makeKey(model, variant, stage));
     return pos != mOffsets.end();
 }
 
 bool MaterialChunk::getShader(ShaderContent& shaderContent, BlobDictionary const& dictionary,
-        ShaderModel shaderModel, filament::Variant variant, ShaderStage stage) const {
+        ShaderModel const shaderModel, filament::Variant const variant, ShaderStage const stage) const {
     switch (mMaterialTag) {
         case filamat::ChunkType::MaterialGlsl:
         case filamat::ChunkType::MaterialEssl1:
