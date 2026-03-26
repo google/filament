@@ -1,4 +1,123 @@
 
+<div class="demo_frame" style="width:100%; height:400px; border: 1px solid black; position: relative;">
+    <canvas id="demo-canvas" style="width:100%; height:100%; touch-action: none;"></canvas>
+</div>
+<script src="../filament.js"></script>
+<script src="../gl-matrix-min.js"></script>
+<script src="../gltumble.min.js"></script>
+<script>
+// We wrap the demo code so it applies to demo-canvas instead of generic canvas
+(function() {
+    const originalGetElementsByTagName = document.getElementsByTagName;
+    document.getElementsByTagName = function(tag) {
+        if (tag === 'canvas') return [document.getElementById('demo-canvas')];
+        return originalGetElementsByTagName.call(document, tag);
+    };
+//
+const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc_srgb');
+const texture_suffix = Filament.getSupportedFormatSuffix('etc');
+//
+const ibl_url = 'venetian_crossroads_2k/venetian_crossroads_2k_ibl.ktx';
+const sky_small_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox_tiny.ktx';
+const sky_large_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox.ktx';
+const albedo_url = `albedo.ktx2`;
+const ao_url = `ao.ktx2`;
+const metallic_url = `metallic.ktx2`;
+const normal_url = `normal.ktx2`;
+const roughness_url = `roughness.ktx2`;
+const filamat_url = 'textured.filamat';
+const filamesh_url = 'suzanne.filamesh';
+//
+Filament.init([ filamat_url, filamesh_url, sky_small_url, ibl_url ], () => {
+    window.app = new App(document.getElementsByTagName('canvas')[0]);
+});
+//
+class App {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.engine = Filament.Engine.create(canvas);
+        this.scene = this.engine.createScene();
+//
+        const material = this.engine.createMaterial(filamat_url);
+        this.matinstance = material.createInstance();
+//
+        const filamesh = this.engine.loadFilamesh(filamesh_url, this.matinstance);
+        this.suzanne = filamesh.renderable;
+//
+this.skybox = this.engine.createSkyFromKtx1(sky_small_url);
+this.scene.setSkybox(this.skybox);
+this.indirectLight = this.engine.createIblFromKtx1(ibl_url);
+this.indirectLight.setIntensity(100000);
+this.scene.setIndirectLight(this.indirectLight);
+this.trackball = new Trackball(canvas, {startSpin: 0.035});
+Filament.fetch([sky_large_url, albedo_url, roughness_url, metallic_url, normal_url, ao_url], () => {
+    const albedo = this.engine.createTextureFromKtx2(albedo_url, {srgb: true});
+    const roughness = this.engine.createTextureFromKtx2(roughness_url);
+    const metallic = this.engine.createTextureFromKtx2(metallic_url);
+    const normal = this.engine.createTextureFromKtx2(normal_url);
+    const ao = this.engine.createTextureFromKtx2(ao_url);
+//
+    const sampler = new Filament.TextureSampler(
+        Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
+        Filament.MagFilter.LINEAR,
+        Filament.WrapMode.CLAMP_TO_EDGE);
+//
+    this.matinstance.setTextureParameter('albedo', albedo, sampler);
+    this.matinstance.setTextureParameter('roughness', roughness, sampler);
+    this.matinstance.setTextureParameter('metallic', metallic, sampler);
+    this.matinstance.setTextureParameter('normal', normal, sampler);
+    this.matinstance.setTextureParameter('ao', ao, sampler);
+//
+    // Replace low-res skybox with high-res skybox.
+    this.engine.destroySkybox(this.skybox);
+    this.skybox = this.engine.createSkyFromKtx1(sky_large_url);
+    this.scene.setSkybox(this.skybox);
+//
+    this.scene.addEntity(this.suzanne);
+});
+//
+        this.swapChain = this.engine.createSwapChain();
+        this.renderer = this.engine.createRenderer();
+        this.camera = this.engine.createCamera(Filament.EntityManager.get().create());
+        this.view = this.engine.createView();
+        this.view.setCamera(this.camera);
+        this.view.setScene(this.scene);
+        this.render = this.render.bind(this);
+        this.resize = this.resize.bind(this);
+        window.addEventListener('resize', this.resize);
+//
+        const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
+        this.camera.lookAt(eye, center, up);
+//
+        this.resize();
+        window.requestAnimationFrame(this.render);
+    }
+//
+    render() {
+const tcm = this.engine.getTransformManager();
+const inst = tcm.getInstance(this.suzanne);
+tcm.setTransform(inst, this.trackball.getMatrix());
+inst.delete();
+        this.renderer.render(this.swapChain, this.view);
+        window.requestAnimationFrame(this.render);
+    }
+//
+    resize() {
+        const dpr = window.devicePixelRatio;
+        const width = this.canvas.width = this.canvas.clientWidth * dpr;
+        const height = this.canvas.height = this.canvas.clientHeight * dpr;
+        this.view.setViewport([0, 0, width, height]);
+//
+        const aspect = width / height;
+        const Fov = Filament.Camera$Fov, fov = aspect < 1 ? Fov.HORIZONTAL : Fov.VERTICAL;
+        this.camera.setProjectionFov(45, aspect, 1.0, 10.0, fov);
+    }
+}
+//
+})();
+</script>
+
+
 This tutorial will describe how to create the **suzanne** demo, introducing you to compressed
 textures, mipmap generation, asynchronous texture loading, and trackball rotation.
 
@@ -116,8 +235,20 @@ Create a text file called `suzanne.html` and copy over the HTML that we used in 
 tutorial]. Change the last script tag from `redball.js` to `suzanne.js`. Next, create `suzanne.js`
 with the following content.
 
-```js {fragment="root"}
-// TODO: declare asset URLs
+```js
+const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc_srgb');
+const texture_suffix = Filament.getSupportedFormatSuffix('etc');
+
+const ibl_url = 'venetian_crossroads_2k/venetian_crossroads_2k_ibl.ktx';
+const sky_small_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox_tiny.ktx';
+const sky_large_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox.ktx';
+const albedo_url = `albedo.ktx2`;
+const ao_url = `ao.ktx2`;
+const metallic_url = `metallic.ktx2`;
+const normal_url = `normal.ktx2`;
+const roughness_url = `roughness.ktx2`;
+const filamat_url = 'textured.filamat';
+const filamesh_url = 'suzanne.filamesh';
 
 Filament.init([ filamat_url, filamesh_url, sky_small_url, ibl_url ], () => {
     window.app = new App(document.getElementsByTagName('canvas')[0]);
@@ -135,9 +266,37 @@ class App {
         const filamesh = this.engine.loadFilamesh(filamesh_url, this.matinstance);
         this.suzanne = filamesh.renderable;
 
-        // TODO: create sky box and IBL
-        // TODO: initialize gltumble
-        // TODO: fetch larger assets
+        this.skybox = this.engine.createSkyFromKtx1(sky_small_url);
+        this.scene.setSkybox(this.skybox);
+        this.indirectLight = this.engine.createIblFromKtx1(ibl_url);
+        this.indirectLight.setIntensity(100000);
+        this.scene.setIndirectLight(this.indirectLight);
+        this.trackball = new Trackball(canvas, {startSpin: 0.035});
+        Filament.fetch([sky_large_url, albedo_url, roughness_url, metallic_url, normal_url, ao_url], () => {
+            const albedo = this.engine.createTextureFromKtx2(albedo_url, {srgb: true});
+            const roughness = this.engine.createTextureFromKtx2(roughness_url);
+            const metallic = this.engine.createTextureFromKtx2(metallic_url);
+            const normal = this.engine.createTextureFromKtx2(normal_url);
+            const ao = this.engine.createTextureFromKtx2(ao_url);
+        
+            const sampler = new Filament.TextureSampler(
+                Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
+                Filament.MagFilter.LINEAR,
+                Filament.WrapMode.CLAMP_TO_EDGE);
+        
+            this.matinstance.setTextureParameter('albedo', albedo, sampler);
+            this.matinstance.setTextureParameter('roughness', roughness, sampler);
+            this.matinstance.setTextureParameter('metallic', metallic, sampler);
+            this.matinstance.setTextureParameter('normal', normal, sampler);
+            this.matinstance.setTextureParameter('ao', ao, sampler);
+        
+            // Replace low-res skybox with high-res skybox.
+            this.engine.destroySkybox(this.skybox);
+            this.skybox = this.engine.createSkyFromKtx1(sky_large_url);
+            this.scene.setSkybox(this.skybox);
+        
+            this.scene.addEntity(this.suzanne);
+        });
 
         this.swapChain = this.engine.createSwapChain();
         this.renderer = this.engine.createRenderer();
@@ -157,15 +316,18 @@ class App {
     }
 
     render() {
-        // TODO: apply gltumble matrix
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(this.suzanne);
+        tcm.setTransform(inst, this.trackball.getMatrix());
+        inst.delete();
         this.renderer.render(this.swapChain, this.view);
         window.requestAnimationFrame(this.render);
     }
 
     resize() {
         const dpr = window.devicePixelRatio;
-        const width = this.canvas.width = window.innerWidth * dpr;
-        const height = this.canvas.height = window.innerHeight * dpr;
+        const width = this.canvas.width = this.canvas.clientWidth * dpr;
+        const height = this.canvas.height = this.canvas.clientHeight * dpr;
         this.view.setViewport([0, 0, width, height]);
 
         const aspect = width / height;
@@ -192,19 +354,18 @@ In our case, we know that our web server will have `astc` and `s3tc` variants fo
 variants for the other textures. The uncompressed variants (empty string) are always available as a
 last resort. Go ahead and replace the **declare asset URLs** comment with the following snippet.
 
-```js {fragment="declare asset URLs"}
+```js
 const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc_srgb');
 const texture_suffix = Filament.getSupportedFormatSuffix('etc');
 
-const environ = 'venetian_crossroads_2k'
-const ibl_url = `${environ}/${environ}_ibl.ktx`;
-const sky_small_url = `${environ}/${environ}_skybox_tiny.ktx`;
-const sky_large_url = `${environ}/${environ}_skybox.ktx`;
-const albedo_url = `albedo${albedo_suffix}.ktx`;
-const ao_url = `ao${texture_suffix}.ktx`;
-const metallic_url = `metallic${texture_suffix}.ktx`;
-const normal_url = `normal${texture_suffix}.ktx`;
-const roughness_url = `roughness${texture_suffix}.ktx`;
+const ibl_url = 'venetian_crossroads_2k/venetian_crossroads_2k_ibl.ktx';
+const sky_small_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox_tiny.ktx';
+const sky_large_url = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox.ktx';
+const albedo_url = `albedo.ktx2`;
+const ao_url = `ao.ktx2`;
+const metallic_url = `metallic.ktx2`;
+const normal_url = `normal.ktx2`;
+const roughness_url = `roughness.ktx2`;
 const filamat_url = 'textured.filamat';
 const filamesh_url = 'suzanne.filamesh';
 ```
@@ -213,7 +374,7 @@ const filamesh_url = 'suzanne.filamesh';
 
 Next, let's create the low-resolution skybox and IBL in the `App` constructor.
 
-```js {fragment="create sky box and IBL"}
+```js
 this.skybox = this.engine.createSkyFromKtx1(sky_small_url);
 this.scene.setSkybox(this.skybox);
 this.indirectLight = this.engine.createIblFromKtx1(ibl_url);
@@ -234,7 +395,7 @@ In our callback, we'll make several `setTextureParameter` calls on the material 
 recreate the skybox using a higher-resolution texture. As a last step we unhide the renderable that
 was created in the app constructor.
 
-```js {fragment="fetch larger assets"}
+```js
 Filament.fetch([sky_large_url, albedo_url, roughness_url, metallic_url, normal_url, ao_url], () => {
     const albedo = this.engine.createTextureFromKtx2(albedo_url, {srgb: true});
     const roughness = this.engine.createTextureFromKtx2(roughness_url);
@@ -274,22 +435,20 @@ listens for drag events and computes a rotation matrix.
 Next, replace the **initialize gltumble** and **apply gltumble matrix** comments with the following
 two code snippets.
 
-```js {fragment="initialize gltumble"}
+```js
 this.trackball = new Trackball(canvas, {startSpin: 0.035});
 ```
 
-```js {fragment="apply gltumble matrix"}
+```js
 const tcm = this.engine.getTransformManager();
 const inst = tcm.getInstance(this.suzanne);
 tcm.setTransform(inst, this.trackball.getMatrix());
 inst.delete();
 ```
 
-That's it, we now have a fast-loading interactive demo. The complete JavaScript file is available
-[here](tutorial_suzanne.js).
+That's it, we now have a fast-loading interactive demo.
 
 [Filament release]: //github.com/google/filament/releases
-[previous tutorial]: tutorial_redball.html
 [Filament Material System]: https://google.github.io/filament/Materials.md.html
 [this OBJ file]: https://github.com/google/filament/blob/main/assets/models/monkey/monkey.obj
 [monkey folder]: https://github.com/google/filament/blob/main/assets/models/monkey

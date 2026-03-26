@@ -1,9 +1,140 @@
 
+<div class="demo_frame" style="width:100%; height:400px; border: 1px solid black; position: relative;">
+    <canvas id="demo-canvas" style="width:100%; height:100%; touch-action: none;"></canvas>
+</div>
+<script src="../filament.js"></script>
+<script src="../gl-matrix-min.js"></script>
+<script>
+// We wrap the demo code so it applies to demo-canvas instead of generic canvas
+(function() {
+    const originalGetElementsByTagName = document.getElementsByTagName;
+    document.getElementsByTagName = function(tag) {
+        if (tag === 'canvas') return [document.getElementById('demo-canvas')];
+        return originalGetElementsByTagName.call(document, tag);
+    };
+//
+const ibl_url = 'pillars_2k/pillars_2k_ibl.ktx';
+const sky_url = 'pillars_2k/pillars_2k_skybox.ktx';
+const filamat_url = 'plastic.filamat'
+//
+Filament.init([ filamat_url, ibl_url, sky_url ], () => {
+  // Create some global aliases to enums for convenience.
+  window.VertexAttribute = Filament.VertexAttribute;
+  window.AttributeType = Filament.VertexBuffer$AttributeType;
+  window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
+  window.IndexType = Filament.IndexBuffer$IndexType;
+  window.Fov = Filament.Camera$Fov;
+  window.LightType = Filament.LightManager$Type;
+//
+  // Obtain the canvas DOM object and pass it to the App.
+  const canvas = document.getElementsByTagName('canvas')[0];
+  window.app = new App(canvas);
+} );
+//
+class App {
+  constructor(canvas) {
+    this.canvas = canvas;
+    const engine = this.engine = Filament.Engine.create(canvas);
+    const scene = engine.createScene();
+//
+const material = engine.createMaterial(filamat_url);
+const matinstance = material.createInstance();
+//
+const red = [0.8, 0.0, 0.0];
+matinstance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, red);
+matinstance.setFloatParameter('roughness', 0.5);
+matinstance.setFloatParameter('clearCoat', 1.0);
+matinstance.setFloatParameter('clearCoatRoughness', 0.3);
+const renderable = Filament.EntityManager.get().create();
+scene.addEntity(renderable);
+//
+const icosphere = new Filament.IcoSphere(5);
+//
+const vb = Filament.VertexBuffer.Builder()
+  .vertexCount(icosphere.vertices.length / 3)
+  .bufferCount(2)
+  .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 0)
+  .attribute(VertexAttribute.TANGENTS, 1, AttributeType.SHORT4, 0, 0)
+  .normalized(VertexAttribute.TANGENTS)
+  .build(engine);
+//
+const ib = Filament.IndexBuffer.Builder()
+  .indexCount(icosphere.triangles.length)
+  .bufferType(IndexType.USHORT)
+  .build(engine);
+//
+vb.setBufferAt(engine, 0, icosphere.vertices);
+vb.setBufferAt(engine, 1, icosphere.tangents);
+ib.setBuffer(engine, icosphere.triangles);
+//
+Filament.RenderableManager.Builder(1)
+  .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
+  .material(0, matinstance)
+  .geometry(0, PrimitiveType.TRIANGLES, vb, ib)
+  .build(engine, renderable);
+const sunlight = Filament.EntityManager.get().create();
+scene.addEntity(sunlight);
+Filament.LightManager.Builder(LightType.SUN)
+  .color([0.98, 0.92, 0.89])
+  .intensity(110000.0)
+  .direction([0.6, -1.0, -0.8])
+  .sunAngularRadius(1.9)
+  .sunHaloSize(10.0)
+  .sunHaloFalloff(80.0)
+  .build(engine, sunlight);
+//
+const backlight = Filament.EntityManager.get().create();
+scene.addEntity(backlight);
+Filament.LightManager.Builder(LightType.DIRECTIONAL)
+        .direction([-1, 0, 1])
+        .intensity(50000.0)
+        .build(engine, backlight);
+const indirectLight = engine.createIblFromKtx1(ibl_url);
+indirectLight.setIntensity(50000);
+scene.setIndirectLight(indirectLight);
+const skybox = engine.createSkyFromKtx1(sky_url);
+scene.setSkybox(skybox);
+//
+    this.swapChain = engine.createSwapChain();
+    this.renderer = engine.createRenderer();
+    this.camera = engine.createCamera(Filament.EntityManager.get().create());
+    this.view = engine.createView();
+    this.view.setCamera(this.camera);
+    this.view.setScene(scene);
+    this.resize();
+    this.render = this.render.bind(this);
+    this.resize = this.resize.bind(this);
+    window.addEventListener('resize', this.resize);
+    window.requestAnimationFrame(this.render);
+  }
+//
+  render() {
+    const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
+    const radians = Date.now() / 10000;
+    vec3.rotateY(eye, eye, center, radians);
+    this.camera.lookAt(eye, center, up);
+    this.renderer.render(this.swapChain, this.view);
+    window.requestAnimationFrame(this.render);
+  }
+//
+  resize() {
+    const dpr = window.devicePixelRatio;
+    const width = this.canvas.width = this.canvas.clientWidth * dpr;
+    const height = this.canvas.height = this.canvas.clientHeight * dpr;
+    this.view.setViewport([0, 0, width, height]);
+    this.camera.setProjectionFov(45, width / height, 1.0, 10.0, Fov.VERTICAL);
+  }
+}
+//
+})();
+</script>
+
+
 This tutorial will describe how to create the **redball** demo, introducing you to materials and
 textures.
 
 For starters, create a text file called `redball.html` and copy over the HTML that we used in the
-[previous tutorial]. Change the last script tag from `triangle.js` to `redball.js`.
+previous tutorial. Change the last script tag from `triangle.js` to `redball.js`.
 
 Next you'll need to get a couple command-line tools: `matc` and `cmgen`. You can find these in the
 appropriate [Filament release](//github.com/google/filament/releases). You should choose the
@@ -71,10 +202,9 @@ IBL KTX contains these coefficients in its metadata.
 
 Next, create `redball.js` with the following content.
 
-```js {fragment="root"}
-const environ = 'pillars_2k';
-const ibl_url = `${environ}/${environ}_ibl.ktx`;
-const sky_url = `${environ}/${environ}_skybox.ktx`;
+```js
+const ibl_url = 'pillars_2k/pillars_2k_ibl.ktx';
+const sky_url = 'pillars_2k/pillars_2k_skybox.ktx';
 const filamat_url = 'plastic.filamat'
 
 Filament.init([ filamat_url, ibl_url, sky_url ], () => {
@@ -97,11 +227,63 @@ class App {
     const engine = this.engine = Filament.Engine.create(canvas);
     const scene = engine.createScene();
 
-    // TODO: create material
-    // TODO: create sphere
-    // TODO: create lights
-    // TODO: create IBL
-    // TODO: create skybox
+    const material = engine.createMaterial(filamat_url);
+    const matinstance = material.createInstance();
+    
+    const red = [0.8, 0.0, 0.0];
+    matinstance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, red);
+    matinstance.setFloatParameter('roughness', 0.5);
+    matinstance.setFloatParameter('clearCoat', 1.0);
+    matinstance.setFloatParameter('clearCoatRoughness', 0.3);
+    const renderable = Filament.EntityManager.get().create();
+    scene.addEntity(renderable);
+    
+    const icosphere = new Filament.IcoSphere(5);
+    
+    const vb = Filament.VertexBuffer.Builder()
+      .vertexCount(icosphere.vertices.length / 3)
+      .bufferCount(2)
+      .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 0)
+      .attribute(VertexAttribute.TANGENTS, 1, AttributeType.SHORT4, 0, 0)
+      .normalized(VertexAttribute.TANGENTS)
+      .build(engine);
+    
+    const ib = Filament.IndexBuffer.Builder()
+      .indexCount(icosphere.triangles.length)
+      .bufferType(IndexType.USHORT)
+      .build(engine);
+    
+    vb.setBufferAt(engine, 0, icosphere.vertices);
+    vb.setBufferAt(engine, 1, icosphere.tangents);
+    ib.setBuffer(engine, icosphere.triangles);
+    
+    Filament.RenderableManager.Builder(1)
+      .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
+      .material(0, matinstance)
+      .geometry(0, PrimitiveType.TRIANGLES, vb, ib)
+      .build(engine, renderable);
+    const sunlight = Filament.EntityManager.get().create();
+    scene.addEntity(sunlight);
+    Filament.LightManager.Builder(LightType.SUN)
+      .color([0.98, 0.92, 0.89])
+      .intensity(110000.0)
+      .direction([0.6, -1.0, -0.8])
+      .sunAngularRadius(1.9)
+      .sunHaloSize(10.0)
+      .sunHaloFalloff(80.0)
+      .build(engine, sunlight);
+    
+    const backlight = Filament.EntityManager.get().create();
+    scene.addEntity(backlight);
+    Filament.LightManager.Builder(LightType.DIRECTIONAL)
+            .direction([-1, 0, 1])
+            .intensity(50000.0)
+            .build(engine, backlight);
+    const indirectLight = engine.createIblFromKtx1(ibl_url);
+    indirectLight.setIntensity(50000);
+    scene.setIndirectLight(indirectLight);
+    const skybox = engine.createSkyFromKtx1(sky_url);
+    scene.setSkybox(skybox);
 
     this.swapChain = engine.createSwapChain();
     this.renderer = engine.createRenderer();
@@ -127,8 +309,8 @@ class App {
 
   resize() {
     const dpr = window.devicePixelRatio;
-    const width = this.canvas.width = window.innerWidth * dpr;
-    const height = this.canvas.height = window.innerHeight * dpr;
+    const width = this.canvas.width = this.canvas.clientWidth * dpr;
+    const height = this.canvas.height = this.canvas.clientHeight * dpr;
     this.view.setViewport([0, 0, width, height]);
     this.camera.setProjectionFov(45, width / height, 1.0, 10.0, Fov.VERTICAL);
   }
@@ -141,7 +323,7 @@ new set of assets. We also added some animation to the camera.
 Next let's create a material instance from the package that we built at the beginning the tutorial.
 Replace the **create material** comment with the following snippet.
 
-```js {fragment="create material"}
+```js
 const material = engine.createMaterial(filamat_url);
 const matinstance = material.createInstance();
 
@@ -164,7 +346,7 @@ three arrays:
 Let's go ahead use these arrays to build the vertex buffer and index buffer. Replace **create
 sphere** with the following snippet.
 
-```js {fragment="create sphere"}
+```js
 const renderable = Filament.EntityManager.get().create();
 scene.addEntity(renderable);
 
@@ -204,7 +386,7 @@ In this section we will create some directional light sources, as well as an ima
 defined by one of the KTX files we built at the start of the demo. First, replace the **create
 lights** comment with the following snippet.
 
-```js {fragment="create lights"}
+```js
 const sunlight = Filament.EntityManager.get().create();
 scene.addEntity(sunlight);
 Filament.LightManager.Builder(LightType.SUN)
@@ -269,7 +451,7 @@ scene.setIndirectLight(indirectLight);
 Filament provides a JavaScript utility to make this simpler,
 simply replace the **create IBL** comment with the following snippet.
 
-```js {fragment="create IBL"}
+```js
 const indirectLight = engine.createIblFromKtx1(ibl_url);
 indirectLight.setIntensity(50000);
 scene.setIndirectLight(indirectLight);
@@ -300,20 +482,15 @@ skytex.setImageCube(engine, 0, pixelbuffer);
 Filament provides a Javascript utility to make this easier.
 Replace **create skybox** with the following.
 
-```js {fragment="create skybox"}
+```js
 const skybox = engine.createSkyFromKtx1(sky_url);
 scene.setSkybox(skybox);
 ```
 
-That's it, we now have a shiny red ball floating in an environment! The complete JavaScript file is
-available [here](tutorial_redball.js).
-
-In the [next tutorial], we'll take a closer look at textures and interaction.
+That's it, we now have a shiny red ball floating in an environment!
 
 [pillars_2k.hdr]:
 //github.com/google/filament/blob/main/third_party/environments/pillars_2k.hdr
 
-[next tutorial]: tutorial_suzanne.html
-[previous tutorial]: tutorial_triangle.html
 [Filament release]: //github.com/google/filament/releases
 [Filament Material System]: https://google.github.io/filament/Materials.md.html
