@@ -49,7 +49,7 @@ def copy_assets():
     It preserves the relative directory structure per sample so that each sample's
     assets are isolated.
     """
-    exts = ['.filamat', '.filamesh', '.ktx', '.ktx2', '.png', '.jpg', '.bin', '.glb', '.gltf', '.hdr', '.css']
+    exts = ['.filamat', '.filamesh', '.ktx', '.ktx2', '.png', '.jpg', '.bin', '.glb', '.gltf', '.hdr', '.css', '.js']
     for root, dirs, files in os.walk(OUT_DIR):
         for f in files:
             if any(f.endswith(ext) for ext in exts):
@@ -66,9 +66,9 @@ def fix_paths():
     files (which assume assets are alongside them) need to be patched to point to the correct
     relative paths based on their nesting depth.
     """
-    files_to_fix = glob.glob(f"{BOOK_DIR}/samples/web/*.html") + glob.glob(f"{BOOK_DIR}/remote/*.html")
+    files_to_fix = glob.glob(f"{BOOK_DIR}/samples/web/*.html") + glob.glob(f"{BOOK_DIR}/remote/*.html") + glob.glob(f"{BOOK_DIR}/web/*.html")
 
-    exts = "filamat|filamesh|ktx|ktx2|png|jpg|bin|glb|gltf|hdr|css"
+    exts = "filamat|filamesh|ktx|ktx2|png|jpg|bin|glb|gltf|hdr|css|js"
     asset_pattern = r'([\'"`])((?:\.\.\/)?(?:[\w\-\/]+\.)(?:' + exts + r'))\1'
 
     for f in files_to_fix:
@@ -95,6 +95,8 @@ def fix_paths():
         def asset_repl(m):
             quote = m.group(1)
             path = m.group(2)
+            if "lib/" in path:
+                return m.group(0)
             if path.startswith("../"):
                 return f"{quote}{depth_prefix}assets/{path[3:]}{quote}"
             else:
@@ -115,6 +117,8 @@ def fix_paths():
             return f"{prefix}.loadResources({', '.join(args)});"
 
         text = re.sub(r'(\w+(?:\.\w+)*)\.loadResources\(([^)]*)\);', fix_load_resources, text)
+
+        text = text.replace('window.FILAMENT_ASSET_DIR = "";', f'window.FILAMENT_ASSET_DIR = "{depth_prefix}assets/{sample_name}/";')
 
         with open(f, 'w') as file:
             file.write(text)

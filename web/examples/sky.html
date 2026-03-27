@@ -23,8 +23,10 @@
 </head>
 
 <body>
-  <canvas></canvas>
-
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <canvas></canvas>
+    <!-- mdbook: add fullscreen mode -->
+  </div>
   <!-- Filament -->
   <script src="../filament.js"></script>
   <script src="../gl-matrix-min.js"></script>
@@ -36,6 +38,7 @@
   <script src="suncalc_global.js"></script>
 
   <!-- App -->
+  <script>window.FILAMENT_ASSET_DIR = "";</script>
   <script src="SimulatedSkybox.js"></script>
   <script src="main.js"></script>
 </body>
