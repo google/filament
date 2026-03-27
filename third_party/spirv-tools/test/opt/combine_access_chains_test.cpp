@@ -573,6 +573,7 @@ OpReturn
 OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndMatch<CombineAccessChains>(text, true);
 }
 
@@ -610,6 +611,7 @@ OpReturn
 OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndMatch<CombineAccessChains>(text, true);
 }
 
@@ -648,6 +650,7 @@ OpReturn
 OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndMatch<CombineAccessChains>(text, true);
 }
 
@@ -763,6 +766,7 @@ OpReturn
 OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndMatch<CombineAccessChains>(text, true);
 }
 

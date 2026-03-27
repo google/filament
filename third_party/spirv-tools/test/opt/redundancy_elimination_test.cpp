@@ -84,6 +84,34 @@ TEST_F(RedundancyEliminationTest, RemoveRedundantAdd) {
   SinglePassRunAndMatch<RedundancyEliminationPass>(text, false);
 }
 
+// Remove a redundant add with flipped arguments.
+TEST_F(RedundancyEliminationTest, RemoveRedundantAddFlipped) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+               OpSource GLSL 430
+          %3 = OpTypeVoid
+          %4 = OpTypeFunction %3
+          %5 = OpTypeFloat 32
+          %6 = OpTypePointer Function %5
+          %2 = OpFunction %3 None %4
+          %7 = OpLabel
+          %8 = OpVariable %6 Function
+          %9 = OpLoad %5 %8
+         %10 = OpFMul %5 %9 %9
+         %11 = OpFAdd %5 %9 %10
+; CHECK: OpFAdd
+; CHECK-NEXT: OpReturn
+         %12 = OpFAdd %5 %10 %9
+               OpReturn
+               OpFunctionEnd
+  )";
+  SinglePassRunAndMatch<RedundancyEliminationPass>(text, false);
+}
+
 // Remove a redundant add going through a multiple basic blocks.
 TEST_F(RedundancyEliminationTest, RemoveRedundantAddDiamond) {
   const std::string text = R"(

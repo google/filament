@@ -1,0 +1,35 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_NV_cooperative_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_shader_64bit_indexing : enable
+
+#pragma shader_64bit_indexing
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, buffer_reference) coherent buffer Block {
+    float x[];
+} block;
+
+void main()
+{
+    uint64_t element = 0;
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseA> m;
+    coopMatLoad(m, block.x, element, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(m, block.x, element, 128, gl_CooperativeMatrixLayoutRowMajor);
+
+    coopvecNV<float16_t, 2> vec;
+    coopVecMatMulAddNV(vec, vec, 0, block.x, element, 0, block.x, element, 0, 2, 2, 0, false, 0);
+    coopVecMatMulNV(vec, vec, 0, block.x, element, 0, 2, 2, 0, false, 0);
+    coopVecLoadNV(vec, block.x, element);
+    coopVecStoreNV(vec, block.x, element);
+    coopVecOuterProductAccumulateNV(vec, vec, block.x, element, 0, 0, 0);
+    coopVecReduceSumAccumulateNV(vec, block.x, element);
+
+    float y = block.x[element];
+    int32_t len = block.x.length();
+    int64_t len64 = block.x.length64();
+}

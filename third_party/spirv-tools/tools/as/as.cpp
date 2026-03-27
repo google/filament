@@ -86,11 +86,13 @@ int main(int, const char** argv) {
     options |= SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS;
   }
 
-  if (flags::positional_arguments.size() != 1) {
-    fprintf(stderr, "error: exactly one input file must be specified.\n");
+  if (flags::positional_arguments.size() > 1) {
+    fprintf(stderr, "error: one input file at most must be specified.\n");
     return 1;
   }
-  std::string inFile = flags::positional_arguments[0];
+  std::string inFile = flags::positional_arguments.size() == 1
+                           ? flags::positional_arguments[0]
+                           : "-";
 
   std::vector<char> contents;
   if (!ReadTextFile(inFile.c_str(), &contents)) return 1;

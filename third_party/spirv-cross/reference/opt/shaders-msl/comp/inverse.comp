@@ -121,7 +121,7 @@ struct MatrixIn
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
-kernel void main0(device MatrixOut& _15 [[buffer(0)]], const device MatrixIn& _20 [[buffer(1)]])
+kernel void main0(device MatrixOut& _15 [[buffer(0)]], device MatrixIn& _20 [[buffer(1)]])
 {
     _15.m2out = spvInverse2x2(_20.m2in);
     _15.m3out = spvInverse3x3(_20.m3in);

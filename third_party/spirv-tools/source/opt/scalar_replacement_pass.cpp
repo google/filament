@@ -475,6 +475,7 @@ void ScalarReplacementPass::CreateVariable(
 
   if (id == 0) {
     replacements->push_back(nullptr);
+    return;
   }
 
   std::unique_ptr<Instruction> variable(
@@ -488,7 +489,10 @@ void ScalarReplacementPass::CreateVariable(
   Instruction* inst = &*block->begin();
 
   // If varInst was initialized, make sure to initialize its replacement.
-  GetOrCreateInitialValue(var_inst, index, inst);
+  if (!GetOrCreateInitialValue(var_inst, index, inst)) {
+    replacements->push_back(nullptr);
+    return;
+  }
   get_def_use_mgr()->AnalyzeInstDefUse(inst);
   context()->set_instr_block(inst, block);
 
@@ -509,11 +513,11 @@ uint32_t ScalarReplacementPass::GetOrCreatePointerType(uint32_t id) {
   return ptr_type_id;
 }
 
-void ScalarReplacementPass::GetOrCreateInitialValue(Instruction* source,
+bool ScalarReplacementPass::GetOrCreateInitialValue(Instruction* source,
                                                     uint32_t index,
                                                     Instruction* newVar) {
   assert(source->opcode() == spv::Op::OpVariable);
-  if (source->NumInOperands() < 2) return;
+  if (source->NumInOperands() < 2) return true;
 
   uint32_t initId = source->GetSingleWordInOperand(1u);
   uint32_t storageId = GetStorageType(newVar)->result_id();
@@ -525,6 +529,7 @@ void ScalarReplacementPass::GetOrCreateInitialValue(Instruction* source,
     auto iter = type_to_null_.find(storageId);
     if (iter == type_to_null_.end()) {
       newInitId = TakeNextId();
+      if (newInitId == 0) return false;
       type_to_null_[storageId] = newInitId;
       context()->AddGlobalValue(
           MakeUnique<Instruction>(context(), spv::Op::OpConstantNull, storageId,
@@ -537,6 +542,7 @@ void ScalarReplacementPass::GetOrCreateInitialValue(Instruction* source,
   } else if (IsSpecConstantInst(init->opcode())) {
     // Create a new constant extract.
     newInitId = TakeNextId();
+    if (newInitId == 0) return false;
     context()->AddGlobalValue(MakeUnique<Instruction>(
         context(), spv::Op::OpSpecConstantOp, storageId, newInitId,
         std::initializer_list<Operand>{
@@ -561,6 +567,7 @@ void ScalarReplacementPass::GetOrCreateInitialValue(Instruction* source,
   if (newInitId != 0) {
     newVar->AddOperand({SPV_OPERAND_TYPE_ID, {newInitId}});
   }
+  return true;
 }
 
 uint64_t ScalarReplacementPass::GetArrayLength(

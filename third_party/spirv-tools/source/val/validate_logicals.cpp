@@ -184,6 +184,10 @@ spv_result_t LogicalsPass(ValidationState_t& _, const Instruction* inst) {
             dimension = type_inst->word(3);
             break;
           }
+          case spv::Op::OpTypeVectorIdEXT: {
+            dimension = _.GetDimension(result_type);
+            break;
+          }
 
           case spv::Op::OpTypeBool:
           case spv::Op::OpTypeInt:

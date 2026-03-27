@@ -182,7 +182,8 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %token <lex> FCOOPMATNV ICOOPMATNV UCOOPMATNV
 %token <lex> COOPMAT
 %token <lex> COOPVECNV
-%token <lex> HITOBJECTNV HITOBJECTATTRNV
+%token <lex> VECTOR
+%token <lex> HITOBJECTNV HITOBJECTATTRNV HITOBJECTEXT HITOBJECTATTREXT
 %token <lex> TENSORLAYOUTNV TENSORVIEWNV
 %token <lex> TENSORARM
 
@@ -284,7 +285,7 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %token <lex> SUBROUTINE DEMOTE FUNCTION
 %token <lex> PAYLOADNV PAYLOADINNV HITATTRNV CALLDATANV CALLDATAINNV 
 %token <lex> PAYLOADEXT PAYLOADINEXT HITATTREXT CALLDATAEXT CALLDATAINEXT
-%token <lex> PATCH SAMPLE NONUNIFORM
+%token <lex> PATCH SAMPLE NONUNIFORM RESOURCEHEAP SAMPLERHEAP
 %token <lex> COHERENT VOLATILE RESTRICT READONLY WRITEONLY NONTEMPORAL DEVICECOHERENT QUEUEFAMILYCOHERENT WORKGROUPCOHERENT
 %token <lex> SUBGROUPCOHERENT NONPRIVATE SHADERCALLCOHERENT
 %token <lex> NOPERSPECTIVE EXPLICITINTERPAMD PERVERTEXEXT PERVERTEXNV PERPRIMITIVENV PERVIEWNV PERTASKNV PERPRIMITIVEEXT TASKPAYLOADWORKGROUPEXT
@@ -298,7 +299,8 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %type <interm.intermTypedNode> conditional_expression constant_expression
 %type <interm.intermTypedNode> logical_or_expression logical_xor_expression logical_and_expression
 %type <interm.intermTypedNode> shift_expression and_expression exclusive_or_expression inclusive_or_expression
-%type <interm.intermTypedNode> function_call initializer condition conditionopt
+%type <interm.intermTypedNode> function_call initializer
+%type <interm.intermNode> condition conditionopt
 
 %type <interm.intermNode> translation_unit function_definition
 %type <interm.intermNode> statement simple_statement
@@ -325,8 +327,10 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %type <interm.type> single_type_qualifier
 %type <interm.type> type_specifier_nonarray
 %type <interm.type> struct_specifier
+%type <interm.type> block_heap_inner_structure
 %type <interm.typeLine> struct_declarator
 %type <interm.typeList> struct_declarator_list struct_declaration struct_declaration_list
+%type <interm.typeList> struct_declaration_with_heap struct_declaration_without_heap
 %type <interm> block_structure
 %type <interm.function> function_header function_declarator
 %type <interm.function> function_header_with_parameters
@@ -451,7 +455,7 @@ postfix_expression
 
 integer_expression
     : expression {
-        parseContext.integerCheck($1, "[]");
+        parseContext.arrayIndexCheck($1, "[]");
         $$ = $1;
     }
     ;
@@ -555,7 +559,7 @@ function_identifier
 
         TIntermMethod* method = $1->getAsMethodNode();
         if (method) {
-            $$.function = new TFunction(&method->getMethodName(), TType(EbtInt), EOpArrayLength);
+            $$.function = new TFunction(&method->getMethodName(), method->getType(), EOpArrayLength);
             $$.intermNode = method->getObject();
         } else {
             TIntermSymbol* symbol = $1->getAsSymbolNode();
@@ -912,37 +916,28 @@ declaration
         $$ = 0;
     }
     | block_structure SEMICOLON {
-        parseContext.declareBlock($1.loc, *$1.typeList);
-        $$ = 0;
+        $$ = parseContext.declareBlock($1.loc, *$1.typeList);
     }
     | block_structure IDENTIFIER SEMICOLON {
-        parseContext.declareBlock($1.loc, *$1.typeList, $2.string);
-        $$ = 0;
+        $$ = parseContext.declareBlock($1.loc, *$1.typeList, $2.string);
     }
     | block_structure IDENTIFIER array_specifier SEMICOLON {
-        parseContext.declareBlock($1.loc, *$1.typeList, $2.string, $3.arraySizes);
-        $$ = 0;
+        $$ = parseContext.declareBlock($1.loc, *$1.typeList, $2.string, $3.arraySizes);
     }
     | type_qualifier SEMICOLON {
         parseContext.globalQualifierFixCheck($1.loc, $1.qualifier);
         parseContext.updateStandaloneQualifierDefaults($1.loc, $1);
         $$ = 0;
     }
-    | type_qualifier IDENTIFIER SEMICOLON {
+    | type_qualifier identifier_list SEMICOLON {
         parseContext.checkNoShaderLayouts($1.loc, $1.shaderQualifiers);
-        parseContext.addQualifierToExisting($1.loc, $1.qualifier, *$2.string);
-        $$ = 0;
-    }
-    | type_qualifier IDENTIFIER identifier_list SEMICOLON {
-        parseContext.checkNoShaderLayouts($1.loc, $1.shaderQualifiers);
-        $3->push_back($2.string);
-        parseContext.addQualifierToExisting($1.loc, $1.qualifier, *$3);
+        parseContext.addQualifierToExisting($1.loc, $1.qualifier, *$2);
         $$ = 0;
     }
     ;
 
 block_structure
-    : type_qualifier IDENTIFIER LEFT_BRACE { parseContext.nestedBlockCheck($1.loc); } struct_declaration_list RIGHT_BRACE {
+    : type_qualifier IDENTIFIER LEFT_BRACE { parseContext.nestedBlockCheck($1.loc); } struct_declaration_without_heap RIGHT_BRACE {
         --parseContext.blockNestingLevel;
         parseContext.blockName = $2.string;
         parseContext.globalQualifierFixCheck($1.loc, $1.qualifier);
@@ -951,11 +946,12 @@ block_structure
         $$.loc = $1.loc;
         $$.typeList = $5;
     }
+    ;
 
 identifier_list
-    : COMMA IDENTIFIER {
+    : IDENTIFIER {
         $$ = new TIdentifierList;
-        $$->push_back($2.string);
+        $$->push_back($1.string);
     }
     | identifier_list COMMA IDENTIFIER {
         $$ = $1;
@@ -1170,21 +1166,23 @@ init_declarator_list
     }
     | init_declarator_list COMMA IDENTIFIER {
         $$ = $1;
-        parseContext.declareVariable($3.loc, *$3.string, $1.type);
+        TIntermNode* declNode = parseContext.declareVariable($3.loc, *$3.string, $1.type);
+        $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, declNode, $3.loc);
     }
     | init_declarator_list COMMA IDENTIFIER array_specifier {
         $$ = $1;
-        parseContext.declareVariable($3.loc, *$3.string, $1.type, $4.arraySizes);
+        TIntermNode* declNode = parseContext.declareVariable($3.loc, *$3.string, $1.type, $4.arraySizes);
+        $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, declNode, $3.loc);
     }
     | init_declarator_list COMMA IDENTIFIER array_specifier EQUAL initializer {
         $$.type = $1.type;
-        TIntermNode* initNode = parseContext.declareVariable($3.loc, *$3.string, $1.type, $4.arraySizes, $6);
-        $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, initNode, $5.loc);
+        TIntermNode* declNode = parseContext.declareVariable($3.loc, *$3.string, $1.type, $4.arraySizes, $6);
+        $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, declNode, $5.loc);
     }
     | init_declarator_list COMMA IDENTIFIER EQUAL initializer {
         $$.type = $1.type;
-        TIntermNode* initNode = parseContext.declareVariable($3.loc, *$3.string, $1.type, 0, $5);
-        $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, initNode, $4.loc);
+        TIntermNode* declNode = parseContext.declareVariable($3.loc, *$3.string, $1.type, 0, $5);
+        $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, declNode, $4.loc);
     }
     ;
 
@@ -1196,23 +1194,24 @@ single_declaration
     }
     | fully_specified_type IDENTIFIER {
         $$.type = $1;
-        $$.intermNode = 0;
-        parseContext.declareVariable($2.loc, *$2.string, $1);
+        TIntermNode* declNode = parseContext.declareVariable($2.loc, *$2.string, $1);
+        $$.intermNode = parseContext.intermediate.growAggregate(nullptr, declNode, $2.loc);
+
     }
     | fully_specified_type IDENTIFIER array_specifier {
         $$.type = $1;
-        $$.intermNode = 0;
-        parseContext.declareVariable($2.loc, *$2.string, $1, $3.arraySizes);
+        TIntermNode* declNode = parseContext.declareVariable($2.loc, *$2.string, $1, $3.arraySizes);
+        $$.intermNode = parseContext.intermediate.growAggregate(nullptr, declNode, $2.loc);
     }
     | fully_specified_type IDENTIFIER array_specifier EQUAL initializer {
         $$.type = $1;
-        TIntermNode* initNode = parseContext.declareVariable($2.loc, *$2.string, $1, $3.arraySizes, $5);
-        $$.intermNode = parseContext.intermediate.growAggregate(0, initNode, $4.loc);
+        TIntermNode* declNode = parseContext.declareVariable($2.loc, *$2.string, $1, $3.arraySizes, $5);
+        $$.intermNode = parseContext.intermediate.growAggregate(nullptr, declNode, $2.loc);
     }
     | fully_specified_type IDENTIFIER EQUAL initializer {
         $$.type = $1;
-        TIntermNode* initNode = parseContext.declareVariable($2.loc, *$2.string, $1, 0, $4);
-        $$.intermNode = parseContext.intermediate.growAggregate(0, initNode, $3.loc);
+        TIntermNode* declNode = parseContext.declareVariable($2.loc, *$2.string, $1, 0, $4);
+        $$.intermNode = parseContext.intermediate.growAggregate(nullptr, declNode, $2.loc);
     }
 
 // Grammar Note:  No 'enum', or 'typedef'.
@@ -1535,6 +1534,16 @@ storage_qualifier
         $$.init($1.loc);
         $$.qualifier.sample = true;
     }
+    | RESOURCEHEAP {
+        parseContext.globalCheck($1.loc, "resourceHeap");
+        $$.init($1.loc);
+        $$.qualifier.storage = EvqResourceHeap;
+    }
+    | SAMPLERHEAP {
+        parseContext.globalCheck($1.loc, "samplerHeap");
+        $$.init($1.loc);
+        $$.qualifier.storage = EvqSamplerHeap;
+    }
     | HITATTRNV {
         parseContext.globalCheck($1.loc, "hitAttributeNV");
         parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangIntersectMask | EShLangClosestHitMask
@@ -1543,14 +1552,22 @@ storage_qualifier
         $$.init($1.loc);
         $$.qualifier.storage = EvqHitAttr;
     }
-	| HITOBJECTATTRNV {
+    | HITOBJECTATTRNV {
         parseContext.globalCheck($1.loc, "hitAttributeNV");
         parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangRayGenMask | EShLangClosestHitMask
             | EShLangMissMask), "hitObjectAttributeNV");
         parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_NV_shader_invocation_reorder, "hitObjectAttributeNV");
         $$.init($1.loc);
         $$.qualifier.storage = EvqHitObjectAttrNV;
-	}
+    }
+    | HITOBJECTATTREXT {
+        parseContext.globalCheck($1.loc, "hitAttributeEXT");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangRayGenMask | EShLangClosestHitMask
+            | EShLangMissMask), "hitObjectAttributeEXT");
+        parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_EXT_shader_invocation_reorder, "hitObjectAttributeEXT");
+        $$.init($1.loc);
+        $$.qualifier.storage = EvqHitObjectAttrEXT;
+    }
     | HITATTREXT {
         parseContext.globalCheck($1.loc, "hitAttributeEXT");
         parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangIntersectMask | EShLangClosestHitMask
@@ -3649,14 +3666,24 @@ type_specifier_nonarray
         $$.tensorRankARM = 1; // placeholder value
         $$.basicType = EbtTensorARM;
     }
+    | VECTOR {
+        parseContext.longVectorCheck($1.loc, "vector", parseContext.symbolTable.atBuiltInLevel());
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtLongVector;
+        $$.longVector = true;
+    }
     | spirv_type_specifier {
         parseContext.requireExtensions($1.loc, 1, &E_GL_EXT_spirv_intrinsics, "SPIR-V type specifier");
         $$ = $1;
     }
-	| HITOBJECTNV {
+    | HITOBJECTNV {
        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
        $$.basicType = EbtHitObjectNV;
-	}
+    }
+    | HITOBJECTEXT {
+       $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+       $$.basicType = EbtHitObjectEXT;
+    }
     | struct_specifier {
         $$ = $1;
         $$.qualifier.storage = parseContext.symbolTable.atGlobalLevel() ? EvqGlobal : EvqTemporary;
@@ -3697,7 +3724,6 @@ precision_qualifier
 
 struct_specifier
     : STRUCT IDENTIFIER LEFT_BRACE { parseContext.nestedStructCheck($1.loc); } struct_declaration_list RIGHT_BRACE {
-
         TType* structure = new TType($5, *$2.string);
         parseContext.structArrayCheck($2.loc, *structure);
 
@@ -3723,10 +3749,71 @@ struct_specifier
     ;
 
 struct_declaration_list
+    : struct_declaration_without_heap {
+        $$ = $1;
+    }
+    | struct_declaration_with_heap {
+        $$ = $1;
+    }
+    | struct_declaration_with_heap struct_declaration_without_heap {
+        $$ = $1;
+        for (unsigned int i = 0; i < $2->size(); ++i) {
+            for (unsigned int j = 0; j < $$->size(); ++j) {
+                if ((*$$)[j].type->getFieldName() == (*$2)[i].type->getFieldName())
+                    parseContext.error((*$2)[i].loc, "duplicate member name:", "", (*$2)[i].type->getFieldName().c_str());
+            }
+            $$->push_back((*$2)[i]);
+        }
+    }
+    | struct_declaration_without_heap struct_declaration_with_heap {
+        $$ = $1;
+        for (unsigned int i = 0; i < $2->size(); ++i) {
+            for (unsigned int j = 0; j < $$->size(); ++j) {
+                if ((*$$)[j].type->getFieldName() == (*$2)[i].type->getFieldName())
+                    parseContext.error((*$2)[i].loc, "duplicate member name:", "", (*$2)[i].type->getFieldName().c_str());
+            }
+            $$->push_back((*$2)[i]);
+        }
+    }
+    ;
+
+struct_declaration_with_heap
+    : block_heap_inner_structure struct_declarator_list SEMICOLON {
+        $$ = $2;
+        parseContext.voidErrorCheck($1.loc, (*$2)[0].type->getFieldName(), $1.basicType);
+        parseContext.precisionQualifierCheck($1.loc, $1.basicType, $1.qualifier, $1.hasTypeParameter());
+
+        for (unsigned int i = 0; i < $$->size(); ++i) {
+            TType type($1);
+            type.setFieldName((*$$)[i].type->getFieldName());
+            type.transferArraySizes((*$$)[i].type->getArraySizes());
+            type.copyArrayInnerSizes($1.arraySizes);
+            parseContext.arrayOfArrayVersionCheck((*$$)[i].loc, type.getArraySizes());
+            (*$$)[i].type->shallowCopy(type);
+        }
+    }
+    ;
+
+block_heap_inner_structure
+    : type_qualifier LEFT_BRACE { parseContext.nestedBlockCheck($1.loc, true); } struct_declaration_without_heap RIGHT_BRACE {
+        --parseContext.blockNestingLevel;
+        parseContext.globalQualifierFixCheck($1.loc, $1.qualifier);
+        parseContext.checkNoShaderLayouts($1.loc, $1.shaderQualifiers);
+        $$.init($1.loc);
+        TType* innerStructure = new TType($4, TString(""));
+        $$.basicType = EbtBlock;
+        $$.userDef = innerStructure;
+        $$.qualifier = $1.qualifier;
+        $$.qualifier.layoutDescriptorHeap = true;
+        $$.qualifier.layoutDescriptorInnerBlock = true;
+    }
+    ;
+
+struct_declaration_without_heap
     : struct_declaration {
         $$ = $1;
     }
-    | struct_declaration_list struct_declaration {
+    | struct_declaration_without_heap struct_declaration {
         $$ = $1;
         for (unsigned int i = 0; i < $2->size(); ++i) {
             for (unsigned int j = 0; j < $$->size(); ++j) {
@@ -3996,11 +4083,7 @@ condition
         parseContext.boolCheck($2.loc, $1);
 
         TType type($1);
-        TIntermNode* initNode = parseContext.declareVariable($2.loc, *$2.string, $1, 0, $4);
-        if (initNode)
-            $$ = initNode->getAsTyped();
-        else
-            $$ = 0;
+        $$ = parseContext.declareVariable($2.loc, *$2.string, $1, 0, $4);
     }
     ;
 
@@ -4090,6 +4173,10 @@ iteration_statement_nonattributed
       condition RIGHT_PAREN statement_no_new_scope {
         parseContext.symbolTable.pop(&parseContext.defaultPrecision[0]);
         $$ = parseContext.intermediate.addLoop($6, $4, 0, true, $1.loc);
+        if (parseContext.intermediate.getDebugInfo()) {
+            $$ = parseContext.intermediate.makeAggregate($$, $1.loc);
+            $$->getAsAggregate()->setOperator(EOpScope);
+        }
         --parseContext.loopNestingLevel;
         --parseContext.statementNestingLevel;
         --parseContext.controlFlowNestingLevel;
@@ -4107,6 +4194,10 @@ iteration_statement_nonattributed
         parseContext.boolCheck($8.loc, $6);
 
         $$ = parseContext.intermediate.addLoop($3, $6, 0, false, $4.loc);
+        if (parseContext.intermediate.getDebugInfo()) {
+            $$ = parseContext.intermediate.makeAggregate($$, $4.loc);
+            $$->getAsAggregate()->setOperator(EOpScope);
+        }
         parseContext.symbolTable.pop(&parseContext.defaultPrecision[0]);
         --parseContext.loopNestingLevel;
         --parseContext.statementNestingLevel;
@@ -4125,7 +4216,7 @@ iteration_statement_nonattributed
         if (! parseContext.limits.nonInductiveForLoops)
             parseContext.inductiveLoopCheck($1.loc, $4, forLoop);
         $$ = parseContext.intermediate.growAggregate($$, forLoop, $1.loc);
-        $$->getAsAggregate()->setOperator(EOpSequence);
+        $$->getAsAggregate()->setOperator(parseContext.intermediate.getDebugInfo() ? EOpScope : EOpSequence);
         --parseContext.loopNestingLevel;
         --parseContext.statementNestingLevel;
         --parseContext.controlFlowNestingLevel;

@@ -59,7 +59,10 @@ void EmitNumericLiteral(std::ostream* out, const spv_parsed_instruction_t& inst,
             *out << spvtools::utils::FloatProxy<spvtools::utils::Float8_E5M2>(
                 uint8_t(word & 0xFF));
             break;
-          // TODO Bfloat16
+          case SPV_FP_ENCODING_BFLOAT16:
+            *out << spvtools::utils::FloatProxy<spvtools::utils::BFloat16>(
+                uint16_t(word & 0xFFFF));
+            break;
           case SPV_FP_ENCODING_UNKNOWN:
             switch (operand.number_bit_width) {
               case 16:

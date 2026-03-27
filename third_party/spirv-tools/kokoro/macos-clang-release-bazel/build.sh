@@ -32,14 +32,14 @@ git config --global --add safe.directory $SRC
 cd $SRC
 /usr/bin/python3 utils/git-sync-deps --treeless
 
-# Get bazel 7.0.2
-gsutil cp gs://bazel/7.0.2/release/bazel-7.0.2-darwin-x86_64 .
-chmod +x bazel-7.0.2-darwin-x86_64
+# Get bazel 7.4.0
+gsutil cp gs://bazel/7.4.0/release/bazel-7.4.0-darwin-x86_64 .
+chmod +x bazel-7.4.0-darwin-x86_64
 
 echo $(date): Build everything...
-./bazel-7.0.2-darwin-x86_64 build --cxxopt=-std=c++17 :all
+./bazel-7.4.0-darwin-x86_64 build --cxxopt=-std=c++17 :all
 echo $(date): Build completed.
 
 echo $(date): Starting bazel test...
-./bazel-7.0.2-darwin-x86_64 test --cxxopt=-std=c++17 :all
+./bazel-7.4.0-darwin-x86_64 test --cxxopt=-std=c++17 :all
 echo $(date): Bazel test completed.

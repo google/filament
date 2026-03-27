@@ -485,35 +485,35 @@
       "enumerants" : [
         {
           "enumerant" : "Unspecified",
-          "value" : "0"
+          "value" : 0
         },
         {
           "enumerant" : "Address",
-          "value" : "1"
+          "value" : 1
         },
         {
           "enumerant" : "Boolean",
-          "value" : "2"
+          "value" : 2
         },
         {
           "enumerant" : "Float",
-          "value" : "3"
+          "value" : 3
         },
         {
           "enumerant" : "Signed",
-          "value" : "4"
+          "value" : 4
         },
         {
           "enumerant" : "SignedChar",
-          "value" : "5"
+          "value" : 5
         },
         {
           "enumerant" : "Unsigned",
-          "value" : "6"
+          "value" : 6
         },
         {
           "enumerant" : "UnsignedChar",
-          "value" : "7"
+          "value" : 7
         }
       ]
     },
@@ -523,15 +523,15 @@
       "enumerants" : [
         {
           "enumerant" : "Class",
-          "value" : "0"
+          "value" : 0
         },
         {
           "enumerant" : "Structure",
-          "value" : "1"
+          "value" : 1
         },
         {
           "enumerant" : "Union",
-          "value" : "2"
+          "value" : 2
         }
       ]
     },
@@ -541,19 +541,19 @@
       "enumerants" : [
         {
           "enumerant" : "ConstType",
-          "value" : "0"
+          "value" : 0
         },
         {
           "enumerant" : "VolatileType",
-          "value" : "1"
+          "value" : 1
         },
         {
           "enumerant" : "RestrictType",
-          "value" : "2"
+          "value" : 2
         },
         {
           "enumerant" : "AtomicType",
-          "value" : "3"
+          "value" : 3
         }
       ]
     },
@@ -563,26 +563,26 @@
       "enumerants" : [
         {
           "enumerant" : "Deref",
-          "value" : "0"
+          "value" : 0
         },
         {
           "enumerant" : "Plus",
-          "value" : "1"
+          "value" : 1
         },
         {
           "enumerant" : "Minus",
-          "value" : "2"
+          "value" : 2
         },
         {
           "enumerant" : "PlusUconst",
-          "value" : "3",
+          "value" : 3,
           "parameters" : [
              { "kind" : "LiteralInteger" }
           ]
         },
         {
           "enumerant" : "BitPiece",
-          "value" : "4",
+          "value" : 4,
           "parameters" : [
              { "kind" : "LiteralInteger" },
              { "kind" : "LiteralInteger" }
@@ -590,26 +590,26 @@
         },
         {
           "enumerant" : "Swap",
-          "value" : "5"
+          "value" : 5
         },
         {
           "enumerant" : "Xderef",
-          "value" : "6"
+          "value" : 6
         },
         {
           "enumerant" : "StackValue",
-          "value" : "7"
+          "value" : 7
         },
         {
           "enumerant" : "Constu",
-          "value" : "8",
+          "value" : 8,
           "parameters" : [
              { "kind" : "LiteralInteger" }
           ]
         },
         {
           "enumerant" : "Fragment",
-          "value" : "9",
+          "value" : 9,
           "parameters" : [
              { "kind" : "LiteralInteger" },
              { "kind" : "LiteralInteger" }
@@ -623,11 +623,11 @@
       "enumerants" : [
         {
           "enumerant" : "ImportedModule",
-          "value" : "0"
+          "value" : 0
         },
         {
           "enumerant" : "ImportedDeclaration",
-          "value" : "1"
+          "value" : 1
 	}
       ]
     }

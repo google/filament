@@ -858,41 +858,42 @@ INSTANTIATE_TEST_SUITE_P(
             {"OpExtension \"SPV_NV_shader_subgroup_partitioned\"\n",
              MakeInstruction(spv::Op::OpExtension,
                              MakeVector("SPV_NV_shader_subgroup_partitioned"))},
-            {"OpCapability GroupNonUniformPartitionedNV\n",
+            {"OpCapability GroupNonUniformPartitionedEXT\n",
              MakeInstruction(
                  spv::Op::OpCapability,
-                 {(uint32_t)spv::Capability::GroupNonUniformPartitionedNV})},
+                 {(uint32_t)spv::Capability::GroupNonUniformPartitionedEXT})},
             // Check the new capability's token number
-            {"OpCapability GroupNonUniformPartitionedNV\n",
+            {"OpCapability GroupNonUniformPartitionedEXT\n",
              MakeInstruction(spv::Op::OpCapability, {5297})},
-            {"%2 = OpGroupNonUniformPartitionNV %1 %3\n",
-             MakeInstruction(spv::Op::OpGroupNonUniformPartitionNV, {1, 2, 3})},
+            {"%2 = OpGroupNonUniformPartitionEXT %1 %3\n",
+             MakeInstruction(spv::Op::OpGroupNonUniformPartitionEXT,
+                             {1, 2, 3})},
             // Check the new instruction's token number
-            {"%2 = OpGroupNonUniformPartitionNV %1 %3\n",
+            {"%2 = OpGroupNonUniformPartitionEXT %1 %3\n",
              MakeInstruction(static_cast<spv::Op>(5296), {1, 2, 3})},
             // Check the new group operations
-            {"%2 = OpGroupIAdd %1 %3 PartitionedReduceNV %4\n",
+            {"%2 = OpGroupIAdd %1 %3 PartitionedReduceEXT %4\n",
              MakeInstruction(
                  spv::Op::OpGroupIAdd,
-                 {1, 2, 3, (uint32_t)spv::GroupOperation::PartitionedReduceNV,
+                 {1, 2, 3, (uint32_t)spv::GroupOperation::PartitionedReduceEXT,
                   4})},
-            {"%2 = OpGroupIAdd %1 %3 PartitionedReduceNV %4\n",
+            {"%2 = OpGroupIAdd %1 %3 PartitionedReduceEXT %4\n",
              MakeInstruction(spv::Op::OpGroupIAdd, {1, 2, 3, 6, 4})},
-            {"%2 = OpGroupIAdd %1 %3 PartitionedInclusiveScanNV %4\n",
+            {"%2 = OpGroupIAdd %1 %3 PartitionedInclusiveScanEXT %4\n",
              MakeInstruction(
                  spv::Op::OpGroupIAdd,
                  {1, 2, 3,
                   (uint32_t)spv::GroupOperation::PartitionedInclusiveScanNV,
                   4})},
-            {"%2 = OpGroupIAdd %1 %3 PartitionedInclusiveScanNV %4\n",
+            {"%2 = OpGroupIAdd %1 %3 PartitionedInclusiveScanEXT %4\n",
              MakeInstruction(spv::Op::OpGroupIAdd, {1, 2, 3, 7, 4})},
-            {"%2 = OpGroupIAdd %1 %3 PartitionedExclusiveScanNV %4\n",
+            {"%2 = OpGroupIAdd %1 %3 PartitionedExclusiveScanEXT %4\n",
              MakeInstruction(
                  spv::Op::OpGroupIAdd,
                  {1, 2, 3,
-                  (uint32_t)spv::GroupOperation::PartitionedExclusiveScanNV,
+                  (uint32_t)spv::GroupOperation::PartitionedExclusiveScanEXT,
                   4})},
-            {"%2 = OpGroupIAdd %1 %3 PartitionedExclusiveScanNV %4\n",
+            {"%2 = OpGroupIAdd %1 %3 PartitionedExclusiveScanEXT %4\n",
              MakeInstruction(spv::Op::OpGroupIAdd, {1, 2, 3, 8, 4})},
         })));
 
@@ -1567,6 +1568,37 @@ INSTANTIATE_TEST_SUITE_P(
                              {1, 2, 3, 4, 5, 6})},
 
         })));
+
+// SPV_ARM_graph
+INSTANTIATE_TEST_SUITE_P(
+    SPV_ARM_graph, ExtensionRoundTripTest,
+    Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_6,
+                   SPV_ENV_VULKAN_1_0, SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_2,
+                   SPV_ENV_VULKAN_1_3, SPV_ENV_OPENCL_2_1),
+            ValuesIn(std::vector<AssemblyCase>{
+                {"OpExtension \"SPV_ARM_graph\"\n",
+                 MakeInstruction(spv::Op::OpExtension,
+                                 MakeVector("SPV_ARM_graph"))},
+                {"OpCapability GraphARM\n",
+                 MakeInstruction(spv::Op::OpCapability,
+                                 {(uint32_t)spv::Capability::GraphARM})},
+                {"%1 = OpTypeGraphARM 1 %2 %3\n",
+                 MakeInstruction(spv::Op::OpTypeGraphARM, {1, 1, 2, 3})},
+                {"%2 = OpGraphConstantARM %1 42\n",
+                 MakeInstruction(spv::Op::OpGraphConstantARM, {1, 2, 42})},
+                {"%2 = OpGraphARM %1\n",
+                 MakeInstruction(spv::Op::OpGraphARM, {1, 2})},
+                {"OpGraphEndARM\n",
+                 MakeInstruction(spv::Op::OpGraphEndARM, {})},
+                {"%2 = OpGraphInputARM %1 %3\n",
+                 MakeInstruction(spv::Op::OpGraphInputARM, {1, 2, 3})},
+                {"%2 = OpGraphInputARM %1 %3 %4\n",
+                 MakeInstruction(spv::Op::OpGraphInputARM, {1, 2, 3, 4})},
+                {"OpGraphSetOutputARM %1 %2\n",
+                 MakeInstruction(spv::Op::OpGraphSetOutputARM, {1, 2})},
+                {"OpGraphSetOutputARM %1 %2 %3\n",
+                 MakeInstruction(spv::Op::OpGraphSetOutputARM, {1, 2, 3})},
+            })));
 
 }  // namespace
 }  // namespace spvtools

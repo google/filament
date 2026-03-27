@@ -4,7 +4,6 @@ set(SOURCES
         ../Logger.cpp
         ../SpvBuilder.cpp
         ../SpvPostProcess.cpp
-        ../SPVRemapper.cpp
         ../doc.cpp
         ../disassemble.cpp)
 
@@ -21,7 +20,6 @@ set(HEADERS
         ../SpvBuilder.h
         ../spvIR.h
         ../doc.h
-        ../SPVRemapper.h
         ../disassemble.h)
 
 if(ENABLE_AMD_EXTENSIONS)

@@ -1,0 +1,40 @@
+#version 450
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 2
+#endif
+const int A = SPIRV_CROSS_CONSTANT_ID_1;
+const uint _22 = (uint(A) + 0u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+const uint _23 = SPIRV_CROSS_CONSTANT_ID_0;
+const uvec3 _25 = uvec3(_23, 1u, 1u);
+const uint _26 = _25.x;
+const uint _27 = (_22 * _26);
+const uint _31 = (uint(A) + 0u);
+const uint _32 = _25.x;
+const uint _33 = (_31 * _32);
+
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_0, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer SSBO
+{
+    int I;
+    float V;
+} _49;
+
+float D[_33];
+
+void main()
+{
+    for (int i = 0; uint(i) < _27; i++)
+    {
+        D[i] = 1.0 + float(i);
+    }
+    _49.V = D[_49.I] + D[_49.I ^ 1];
+}
+

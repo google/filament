@@ -75,11 +75,6 @@ set(SPIRV_TOOLS_REDUCE_SOURCES
         structured_loop_to_selection_reduction_opportunity_finder.cpp
 )
 
-if(MSVC AND (NOT ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")))
-  # Enable parallel builds across four cores for this lib
-  add_definitions(/MP4)
-endif()
-
 spvtools_pch(SPIRV_TOOLS_REDUCE_SOURCES pch_source_reduce)
 
 add_library(SPIRV-Tools-reduce ${SPIRV_TOOLS_LIBRARY_TYPE} ${SPIRV_TOOLS_REDUCE_SOURCES})

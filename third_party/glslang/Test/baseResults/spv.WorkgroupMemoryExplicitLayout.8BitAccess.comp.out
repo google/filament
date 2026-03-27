@@ -5,8 +5,8 @@ spv.WorkgroupMemoryExplicitLayout.8BitAccess.comp
 
                               Capability Shader
                               Capability Int8
-                              Capability CapabilityWorkgroupMemoryExplicitLayoutKHR
-                              Capability CapabilityWorkgroupMemoryExplicitLayout8BitAccessKHR
+                              Capability WorkgroupMemoryExplicitLayoutKHR
+                              Capability WorkgroupMemoryExplicitLayout8BitAccessKHR
                               Extension  "SPV_KHR_workgroup_memory_explicit_layout"
                1:             ExtInstImport  "GLSL.std.450"
                               MemoryModel Logical GLSL450

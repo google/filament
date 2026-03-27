@@ -74,16 +74,19 @@ uint32_t FixFuncCallArgumentsPass::ReplaceAccessChainFuncCallArguments(
       op_type->result_id(), spv::StorageClass::Function);
   // Create new variable
   builder.SetInsertPoint(variable_insertion_point);
+  // TODO(1841): Handle id overflow.
   Instruction* var =
       builder.AddVariable(varType, uint32_t(spv::StorageClass::Function));
   // Load access chain to the new variable before function call
   builder.SetInsertPoint(func_call_inst);
 
   uint32_t operand_id = operand_inst->result_id();
+  // TODO(1841): Handle id overflow.
   Instruction* load = builder.AddLoad(op_type->result_id(), operand_id);
   builder.AddStore(var->result_id(), load->result_id());
   // Load return value to the acesschain after function call
   builder.SetInsertPoint(next_insert_point);
+  // TODO(1841): Handle id overflow.
   load = builder.AddLoad(op_type->result_id(), var->result_id());
   builder.AddStore(operand_id, load->result_id());
 

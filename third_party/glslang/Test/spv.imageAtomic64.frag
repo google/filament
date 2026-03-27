@@ -37,17 +37,17 @@ void main()
     i64 = imageAtomicExchange(i1D, i32v4.x, i64);
     i64 = imageAtomicCompSwap(i3D, i32v4.xyz, i64, i64 + 1);
 
-    i64 = imageAtomicAdd(i1D, i32v4.x, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    i64 = imageAtomicMin(i3D, i32v4.xyz, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    i64 = imageAtomicMax(iBuf, i32v4.x, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    i64 = imageAtomicAnd(i2DArray, i32v4.xyz, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    i64 = imageAtomicOr(i2DRect, i32v4.xy, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    i64 = imageAtomicXor(i2DMSArray, i32v4.xyz, i32v4.w, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    i64 = imageAtomicExchange(i1D, i32v4.x, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
+    i64 = imageAtomicAdd(i1D, i32v4.x, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    i64 = imageAtomicMin(i3D, i32v4.xyz, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    i64 = imageAtomicMax(iBuf, i32v4.x, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    i64 = imageAtomicAnd(i2DArray, i32v4.xyz, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    i64 = imageAtomicOr(i2DRect, i32v4.xy, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    i64 = imageAtomicXor(i2DMSArray, i32v4.xyz, i32v4.w, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    i64 = imageAtomicExchange(i1D, i32v4.x, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
     i64 = imageAtomicCompSwap(i3D, i32v4.xyz, i64, i64 + 1, gl_ScopeDevice,
-            gl_StorageSemanticsImage, gl_SemanticsRelaxed, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    i64 = imageAtomicLoad(iBuf, i32v4.x, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    imageAtomicStore(i2DArray, i32v4.xyz, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
+            gl_StorageSemanticsImage, gl_SemanticsAcquireRelease, gl_StorageSemanticsImage, gl_SemanticsAcquire);
+    i64 = imageAtomicLoad(iBuf, i32v4.x, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquire);
+    imageAtomicStore(i2DArray, i32v4.xyz, i64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelease);
 
     u64 = imageAtomicAdd(u2D, i32v4.xy, u64);
     u64 = imageAtomicMin(uCube, i32v4.xyz, u64);
@@ -58,17 +58,17 @@ void main()
     u64 = imageAtomicExchange(uCube, i32v4.xyz, u64);
     u64 = imageAtomicCompSwap(u1DArray, i32v4.xy, u64, u64 + 1);
 
-    u64 = imageAtomicAdd(u2D, i32v4.xy, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    u64 = imageAtomicMin(uCube, i32v4.xyz, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    u64 = imageAtomicMax(u1DArray, i32v4.xy, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    u64 = imageAtomicAnd(uCubeArray, i32v4.xyz, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    u64 = imageAtomicOr(u2DMS, i32v4.xy, i32v4.z, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    u64 = imageAtomicXor(u2D, i32v4.xy, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    u64 = imageAtomicExchange(uCube, i32v4.xyz, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
+    u64 = imageAtomicAdd(u2D, i32v4.xy, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    u64 = imageAtomicMin(uCube, i32v4.xyz, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    u64 = imageAtomicMax(u1DArray, i32v4.xy, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    u64 = imageAtomicAnd(uCubeArray, i32v4.xyz, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    u64 = imageAtomicOr(u2DMS, i32v4.xy, i32v4.z, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    u64 = imageAtomicXor(u2D, i32v4.xy, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
+    u64 = imageAtomicExchange(uCube, i32v4.xyz, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquireRelease);
     u64 = imageAtomicCompSwap(u1DArray, i32v4.xy, u64, u64 + 1, gl_ScopeDevice,
-            gl_StorageSemanticsImage, gl_SemanticsRelaxed, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    u64 = imageAtomicLoad(uCubeArray, i32v4.xyz, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
-    imageAtomicStore(u2DMS, i32v4.xy, i32v4.z, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
+            gl_StorageSemanticsImage, gl_SemanticsAcquireRelease, gl_StorageSemanticsImage, gl_SemanticsAcquire);
+    u64 = imageAtomicLoad(uCubeArray, i32v4.xyz, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsAcquire);
+    imageAtomicStore(u2DMS, i32v4.xy, i32v4.z, u64, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelease);
 
     i64v4 += imageLoad(i1D, i32v4.x);
     i64v4 += imageLoad(i3D, i32v4.xyz);

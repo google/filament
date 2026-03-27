@@ -29,11 +29,47 @@ namespace opt {
 
 Pass::Status RemoveDuplicatesPass::Process() {
   bool modified = RemoveDuplicateCapabilities();
+  modified |= RemoveDuplicateExtensions();
   modified |= RemoveDuplicatesExtInstImports();
   modified |= RemoveDuplicateTypes();
   modified |= RemoveDuplicateDecorations();
 
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
+}
+
+bool RemoveDuplicatesPass::RemoveDuplicateExtensions() const {
+  bool modified = false;
+
+  if (context()->extensions().empty()) {
+    return modified;
+  }
+
+  // set of {condition ID, extension name}
+  // ID 0 means unconditional extension, ie., OpExtension, otherwise the ID is
+  // the condition operand of OpConditionalExtensionINTEL.
+  std::set<std::pair<uint32_t, std::string>> extensions;
+  for (auto* inst = &*context()->extension_begin(); inst;) {
+    uint32_t cond_id = 0;
+    uint32_t i_name = 0;
+    if (inst->opcode() == spv::Op::OpConditionalExtensionINTEL) {
+      cond_id = inst->GetOperand(0).AsId();
+      i_name = 1;
+    }
+
+    auto res =
+        extensions.insert({cond_id, inst->GetOperand(i_name).AsString()});
+
+    if (res.second) {
+      // Never seen before, keep it.
+      inst = inst->NextNode();
+    } else {
+      // It's a duplicate, remove it.
+      inst = context()->KillInst(inst);
+      modified = true;
+    }
+  }
+
+  return modified;
 }
 
 bool RemoveDuplicatesPass::RemoveDuplicateCapabilities() const {
@@ -43,16 +79,27 @@ bool RemoveDuplicatesPass::RemoveDuplicateCapabilities() const {
     return modified;
   }
 
-  std::unordered_set<uint32_t> capabilities;
-  for (auto* i = &*context()->capability_begin(); i;) {
-    auto res = capabilities.insert(i->GetSingleWordOperand(0u));
+  // set of {condition ID, capability}
+  // ID 0 means unconditional capability, ie., OpCapability, otherwise the ID is
+  // the condition operand of OpConditionalCapabilityINTEL.
+  std::set<std::pair<uint32_t, uint32_t>> capabilities;
+  for (auto* inst = &*context()->capability_begin(); inst;) {
+    uint32_t cond_id = 0;
+    uint32_t i_cap = 0;
+    if (inst->opcode() == spv::Op::OpConditionalCapabilityINTEL) {
+      cond_id = inst->GetOperand(0).AsId();
+      i_cap = 1;
+    }
+
+    auto res =
+        capabilities.insert({cond_id, inst->GetSingleWordOperand(i_cap)});
 
     if (res.second) {
       // Never seen before, keep it.
-      i = i->NextNode();
+      inst = inst->NextNode();
     } else {
       // It's a duplicate, remove it.
-      i = context()->KillInst(i);
+      inst = context()->KillInst(inst);
       modified = true;
     }
   }

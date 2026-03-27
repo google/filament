@@ -14,6 +14,8 @@
 
 // Validates correctness of conversion instructions.
 
+#include <climits>
+
 #include "source/opcode.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
@@ -539,7 +541,10 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
                << "Expected input to be a pointer or int or float vector "
                << "or scalar: " << spvOpcodeString(opcode);
 
-      if (result_is_coopvec != input_is_coopvec)
+      // NV_cooperative_vector doesn't allow bitcasting between vec<->coopvec,
+      // but long_vector does.
+      if (result_is_coopvec != input_is_coopvec &&
+          !_.HasCapability(spv::Capability::LongVectorEXT))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Cooperative vector can only be cast to another cooperative "
                << "vector: " << spvOpcodeString(opcode);
@@ -549,7 +554,8 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
                << "Cooperative matrix can only be cast to another cooperative "
                << "matrix: " << spvOpcodeString(opcode);
 
-      if (result_is_coopvec) {
+      if (result_is_coopvec && input_is_coopvec &&
+          !_.HasCapability(spv::Capability::LongVectorEXT)) {
         spv_result_t ret =
             _.CooperativeVectorDimensionsMatch(inst, result_type, input_type);
         if (ret != SPV_SUCCESS) return ret;
@@ -572,26 +578,38 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
         if (result_is_pointer && !input_is_pointer && !input_is_int_scalar &&
             !(input_is_int_vector && input_has_int32))
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << "Expected input to be a pointer, int scalar or 32-bit int "
+                 << "In SPIR-V 1.5 or later (or with "
+                    "SPV_KHR_physical_storage_buffer), expected input to be a "
+                    "pointer, "
+                    "int scalar or 32-bit int "
                     "vector if Result Type is pointer: "
                  << spvOpcodeString(opcode);
 
         if (input_is_pointer && !result_is_pointer && !result_is_int_scalar &&
             !(result_is_int_vector && result_has_int32))
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << "Pointer can only be converted to another pointer, int "
+                 << "In SPIR-V 1.5 or later (or with "
+                    "SPV_KHR_physical_storage_buffer), pointer can only be "
+                    "converted to "
+                    "another pointer, int "
                     "scalar or 32-bit int vector: "
                  << spvOpcodeString(opcode);
       } else {
         if (result_is_pointer && !input_is_pointer && !input_is_int_scalar)
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << "Expected input to be a pointer or int scalar if Result "
+                 << "In SPIR-V 1.4 or earlier (and without "
+                    "SPV_KHR_physical_storage_buffer), expected input to be a "
+                    "pointer "
+                    "or int scalar if Result "
                     "Type is pointer: "
                  << spvOpcodeString(opcode);
 
         if (input_is_pointer && !result_is_pointer && !result_is_int_scalar)
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << "Pointer can only be converted to another pointer or int "
+                 << "In SPIR-V 1.4 or earlier (and without "
+                    "SPV_KHR_physical_storage_buffer), pointer can only be "
+                    "converted "
+                    "to another pointer or int "
                     "scalar: "
                  << spvOpcodeString(opcode);
       }
@@ -660,6 +678,69 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << "Result Type must have UseB: " << spvOpcodeString(opcode);
         }
+      }
+      break;
+    }
+
+    case spv::Op::OpBitCastArrayQCOM: {
+      const auto result_type_inst = _.FindDef(inst->type_id());
+      const auto source = _.FindDef(inst->GetOperandAs<uint32_t>(2u));
+      const auto source_type_inst = _.FindDef(source->type_id());
+
+      // Are the input and the result arrays?
+      if (result_type_inst->opcode() != spv::Op::OpTypeArray ||
+          source_type_inst->opcode() != spv::Op::OpTypeArray) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Opcode " << spvOpcodeString(inst->opcode())
+               << " requires OpTypeArray operands for the input and the "
+                  "result.";
+      }
+
+      const auto source_elt_type = _.GetComponentType(source_type_inst->id());
+      const auto result_elt_type = _.GetComponentType(result_type_inst->id());
+
+      if (!_.IsIntNOrFP32OrFP16<32>(source_elt_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Opcode " << spvOpcodeString(inst->opcode())
+               << " requires the source element type be one of 32-bit "
+                  "OpTypeInt "
+                  "(signed/unsigned), 32-bit OpTypeFloat and 16-bit "
+                  "OpTypeFloat";
+      }
+
+      if (!_.IsIntNOrFP32OrFP16<32>(result_elt_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Opcode " << spvOpcodeString(inst->opcode())
+               << " requires the result element type be one of 32-bit "
+                  "OpTypeInt "
+                  "(signed/unsigned), 32-bit OpTypeFloat and 16-bit "
+                  "OpTypeFloat";
+      }
+
+      unsigned src_arr_len_id = source_type_inst->GetOperandAs<unsigned>(2u);
+      unsigned res_arr_len_id = result_type_inst->GetOperandAs<unsigned>(2u);
+
+      // Are the input and result element types compatible?
+      unsigned src_arr_len = UINT_MAX, res_arr_len = UINT_MAX;
+      bool src_arr_len_status =
+          _.GetConstantValueAs<unsigned>(src_arr_len_id, src_arr_len);
+      bool res_arr_len_status =
+          _.GetConstantValueAs<unsigned>(res_arr_len_id, res_arr_len);
+
+      bool is_src_arr_len_spec_const =
+          spvOpcodeIsSpecConstant(_.FindDef(src_arr_len_id)->opcode());
+      bool is_res_arr_len_spec_const =
+          spvOpcodeIsSpecConstant(_.FindDef(res_arr_len_id)->opcode());
+
+      unsigned source_bitlen = _.GetBitWidth(source_elt_type) * src_arr_len;
+      unsigned result_bitlen = _.GetBitWidth(result_elt_type) * res_arr_len;
+      if (!is_src_arr_len_spec_const && !is_res_arr_len_spec_const &&
+          (!src_arr_len_status || !res_arr_len_status ||
+           source_bitlen != result_bitlen)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Opcode " << spvOpcodeString(inst->opcode())
+               << " requires source and result types be compatible for "
+                  "conversion.";
       }
       break;
     }

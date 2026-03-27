@@ -1,0 +1,51 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+struct spvBufferDescriptor;
+
+template<typename T>
+struct spvBufferDescriptor<device T*>
+{
+    device T* value;
+    int length;
+    int padding;
+};
+
+template<typename T>
+struct spvDescriptorArray;
+
+template<typename T>
+struct spvDescriptorArray<device T*>
+{
+    spvDescriptorArray(const device spvBufferDescriptor<device T*>* ptr_) : ptr(ptr_) {}
+    spvDescriptorArray(const device void *ptr_) : spvDescriptorArray(static_cast<const device spvBufferDescriptor<device T*>*>(ptr_)) {}
+    device T* operator [] (size_t i) const { return ptr[i].value; }
+    int length(int i) const { return ptr[i].length; }
+    const device spvBufferDescriptor<device T*>* ptr;
+};
+
+struct SSBOW
+{
+    char _m0_pad[4];
+    float a;
+};
+
+struct SSBO
+{
+    float b;
+    float unsized[1];
+};
+
+kernel void main0(device void* spvBufferAliasSet0Binding0 [[buffer(0)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    spvDescriptorArray<device SSBOW*> RW {spvBufferAliasSet0Binding0};
+    spvDescriptorArray<device SSBO*> RO {spvBufferAliasSet0Binding0};
+
+    RW[gl_WorkGroupID.x]->a = RO[gl_WorkGroupID.x]->b + float(int((RO.length(gl_WorkGroupID.x) - 4) / 4));
+}
+

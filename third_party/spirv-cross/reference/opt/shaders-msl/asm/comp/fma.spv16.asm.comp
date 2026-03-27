@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO2
+{
+    float4 out_data[1];
+};
+
+struct SSBO
+{
+    float4 in_data[1];
+};
+
+kernel void main0(device SSBO2& _4 [[buffer(0)]], device SSBO& _6 [[buffer(1)]])
+{
+    _4.out_data[0] = fma(_6.in_data[0], _6.in_data[1], _6.in_data[1]);
+}
+

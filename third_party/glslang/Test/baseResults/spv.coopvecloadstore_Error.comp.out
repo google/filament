@@ -1,0 +1,7 @@
+spv.coopvecloadstore_Error.comp
+ERROR: 0:20: 'coopVecStoreNV' : buffer argument must be in buffer or shared storage 
+ERROR: 0:25: 'coopVecLoadNV' : buffer argument must be in buffer or shared storage 
+ERROR: 2 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

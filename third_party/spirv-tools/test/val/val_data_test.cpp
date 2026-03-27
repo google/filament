@@ -898,6 +898,8 @@ TEST_F(ValidateData, vulkan_RTA_array_at_end_of_struct) {
               OpMemberDecorate %struct_t 0 Offset 0
               OpMemberDecorate %struct_t 1 Offset 4
               OpDecorate %struct_t Block
+              OpDecorate %2 DescriptorSet 0
+              OpDecorate %2 Binding 0
      %uint_t = OpTypeInt 32 0
    %array_t = OpTypeRuntimeArray %uint_t
   %struct_t = OpTypeStruct %uint_t %array_t

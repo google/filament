@@ -118,7 +118,6 @@ LOCAL_SRC_FILES:= \
 		SPIRV/GlslangToSpv.cpp \
 		SPIRV/InReadableOrder.cpp \
 		SPIRV/Logger.cpp \
-		SPIRV/SPVRemapper.cpp \
 		SPIRV/SpvBuilder.cpp \
 		SPIRV/SpvPostProcess.cpp \
 		SPIRV/SpvTools.cpp \

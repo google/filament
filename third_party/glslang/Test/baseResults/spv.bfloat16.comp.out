@@ -9,9 +9,9 @@ spv.bfloat16.comp
                               Capability Int64
                               Capability Int16
                               Capability Int8
-                              Capability CapabilityBFloat16TypeKHR
-                              Capability CapabilityBFloat16DotProductKHR
-                              Capability CapabilityBFloat16CooperativeMatrixKHR
+                              Capability BFloat16TypeKHR
+                              Capability BFloat16DotProductKHR
+                              Capability BFloat16CooperativeMatrixKHR
                               Capability VulkanMemoryModelKHR
                               Capability CooperativeMatrixKHR
                               Extension  "SPV_KHR_bfloat16"

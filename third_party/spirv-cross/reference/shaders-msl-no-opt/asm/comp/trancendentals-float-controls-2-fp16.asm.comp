@@ -1,0 +1,42 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+[[clang::optnone]] T spvFAdd(T l, T r)
+{
+    return fma(T(1), l, r);
+}
+
+struct SSBO
+{
+    float v[4];
+    half f16[4];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 1u, 1u);
+
+kernel void main0(device SSBO& _9 [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
+{
+    _9.v[gl_LocalInvocationIndex] = cos(_9.v[gl_LocalInvocationIndex]);
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::sin(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::tan(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::acos(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::asin(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::atan(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::exp(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::exp2(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::log(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::log2(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::sqrt(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::rsqrt(_9.v[gl_LocalInvocationIndex]));
+    _9.v[gl_LocalInvocationIndex] = spvFAdd(_9.v[gl_LocalInvocationIndex], precise::powr(_9.v[gl_LocalInvocationIndex], 4.0));
+    _9.f16[gl_LocalInvocationIndex] = cos(_9.f16[gl_LocalInvocationIndex]);
+    _9.f16[gl_LocalInvocationIndex] += sin(_9.f16[gl_LocalInvocationIndex]);
+    _9.f16[gl_LocalInvocationIndex] += half(fast::cosh(float(_9.f16[gl_LocalInvocationIndex])));
+    _9.f16[gl_LocalInvocationIndex] += half(fast::sinh(float(_9.f16[gl_LocalInvocationIndex])));
+}
+

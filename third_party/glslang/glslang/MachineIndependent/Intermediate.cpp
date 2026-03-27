@@ -118,7 +118,8 @@ TIntermSymbol* TIntermediate::addSymbol(const TType& type, const TSourceLoc& loc
 TIntermTyped* TIntermediate::addBinaryMath(TOperator op, TIntermTyped* left, TIntermTyped* right, const TSourceLoc& loc)
 {
     // No operations work on blocks
-    if (left->getType().getBasicType() == EbtBlock || right->getType().getBasicType() == EbtBlock)
+    if (left->getType().getBasicType() == EbtBlock || right->getType().getBasicType() == EbtBlock ||
+        left->getType().getBasicType() == EbtString || right->getType().getBasicType() == EbtString)
         return nullptr;
 
     // Convert "reference +/- int" and "reference - reference" to integer math
@@ -406,11 +407,15 @@ TIntermTyped* TIntermediate::addUnaryMath(TOperator op, TIntermTyped* child,
     }
 
     if (newType != EbtVoid) {
-        child = addConversion(op, TType(newType, EvqTemporary, child->getVectorSize(),
-                                                               child->getMatrixCols(),
-                                                               child->getMatrixRows(),
-                                                               child->isVector()),
-                              child);
+        TType newTType(newType, EvqTemporary, child->getVectorSize(), child->getMatrixCols(), child->getMatrixRows(), child->isVector());
+        if (child->getType().isLongVector()) {
+            newTType.shallowCopy(child->getType());
+            newTType.setBasicType(newType);
+            newTType.makeTemporary();
+            newTType.getQualifier().clear();
+        }
+
+        child = addConversion(op, newTType, child);
         if (child == nullptr)
             return nullptr;
     }
@@ -646,6 +651,12 @@ TIntermTyped* TIntermediate::createConversion(TBasicType convertTo, TIntermTyped
     }
 
     TType newType(convertTo, EvqTemporary, node->getVectorSize(), node->getMatrixCols(), node->getMatrixRows());
+    if (node->getType().isLongVector()) {
+        newType.shallowCopy(node->getType());
+        newType.setBasicType(convertTo);
+        newType.makeTemporary();
+        newType.getQualifier().clear();
+    }
     newNode = addUnaryNode(newOp, node, node->getLoc(), newType);
 
     if (node->getAsConstantUnion()) {
@@ -839,7 +850,8 @@ TIntermTyped* TIntermediate::addConversion(TOperator op, const TType& type, TInt
     // Reject implicit conversions to cooperative matrix types
     if (node->getType().isCoopMat() &&
         op != EOpConstructCooperativeMatrixNV &&
-        op != EOpConstructCooperativeMatrixKHR)
+        op != EOpConstructCooperativeMatrixKHR &&
+        op != glslang::EOpCompositeConstructCoopMatQCOM)
         return nullptr;
 
     if (node->getType().isTensorLayoutNV() ||
@@ -1857,7 +1869,7 @@ TOperator TIntermediate::mapTypeToConstructorOp(const TType& type) const
     if (type.isCoopMatKHR())
         return EOpConstructCooperativeMatrixKHR;
 
-    if (type.isCoopVecNV())
+    if (type.isCoopVecOrLongVector())
         return EOpConstructCooperativeVectorNV;
 
     switch (type.getBasicType()) {
@@ -2381,7 +2393,8 @@ TIntermTyped* TIntermediate::addSelection(TIntermTyped* cond, TIntermTyped* true
     trueBlock = std::get<0>(children);
     falseBlock = std::get<1>(children);
 
-    if (trueBlock == nullptr || falseBlock == nullptr)
+    if (trueBlock == nullptr || falseBlock == nullptr ||
+        trueBlock->getBasicType() == EbtString || falseBlock->getBasicType() == EbtString)
         return nullptr;
 
     // Handle a vector condition as a mix
@@ -2649,7 +2662,7 @@ const TIntermTyped* TIntermediate::traverseLValueBase(const TIntermTyped* node, 
 //
 // Create while and do-while loop nodes.
 //
-TIntermLoop* TIntermediate::addLoop(TIntermNode* body, TIntermTyped* test, TIntermTyped* terminal, bool testFirst,
+TIntermLoop* TIntermediate::addLoop(TIntermNode* body, TIntermNode* test, TIntermTyped* terminal, bool testFirst,
     const TSourceLoc& loc)
 {
     TIntermLoop* node = new TIntermLoop(body, test, terminal, testFirst);
@@ -2661,7 +2674,7 @@ TIntermLoop* TIntermediate::addLoop(TIntermNode* body, TIntermTyped* test, TInte
 //
 // Create a for-loop sequence.
 //
-TIntermAggregate* TIntermediate::addForLoop(TIntermNode* body, TIntermNode* initializer, TIntermTyped* test,
+TIntermAggregate* TIntermediate::addForLoop(TIntermNode* body, TIntermNode* initializer, TIntermNode* test,
     TIntermTyped* terminal, bool testFirst, const TSourceLoc& loc, TIntermLoop*& node)
 {
     node = new TIntermLoop(body, test, terminal, testFirst);
@@ -3453,12 +3466,18 @@ bool TIntermediate::promoteBinary(TIntermBinary& node)
         return false;
     }
 
+    bool vectorAndLongVectorMatch = TType::vectorAndLongVectorMatch(left->getType(), right->getType());
+
     // Finish handling the case, for all ops, where both operands are scalars.
     if (left->isScalar() && right->isScalar())
         return true;
 
     // Finish handling the case, for all ops, where there are two vectors of different sizes
     if (left->isVector() && right->isVector() && left->getVectorSize() != right->getVectorSize() && right->getVectorSize() > 1)
+        return false;
+
+    // Finish handling the case, for all ops, where there are two vectors of different sizes
+    if (left->getType().isLongVector() && right->getType().isLongVector() && !left->getType().sameLongVectorShape(right->getType()))
         return false;
 
     //
@@ -3546,7 +3565,8 @@ bool TIntermediate::promoteBinary(TIntermBinary& node)
         break;
 
     case EOpAssign:
-        if (left->getVectorSize() != right->getVectorSize() || left->getMatrixCols() != right->getMatrixCols() || left->getMatrixRows() != right->getMatrixRows())
+        if ((left->getVectorSize() != right->getVectorSize() || left->getMatrixCols() != right->getMatrixCols() || left->getMatrixRows() != right->getMatrixRows()) &&
+            !vectorAndLongVectorMatch)
             return false;
         [[fallthrough]];
 
@@ -3573,7 +3593,7 @@ bool TIntermediate::promoteBinary(TIntermBinary& node)
             return false;
         if (left->isVector() && right->isVector() && left->getVectorSize() != right->getVectorSize())
             return false;
-        if (right->isVector() || right->isMatrix()) {
+        if ((right->isVector() || right->isMatrix()) && !vectorAndLongVectorMatch) {
             node.getWritableType().shallowCopy(right->getType());
             node.getWritableType().getQualifier().makeTemporary();
         }
@@ -3903,12 +3923,15 @@ void TIntermediate::performTextureUpgradeAndSamplerRemovalTransformation(TInterm
 const char* TIntermediate::getResourceName(TResourceType res)
 {
     switch (res) {
-    case EResSampler: return "shift-sampler-binding";
-    case EResTexture: return "shift-texture-binding";
-    case EResImage:   return "shift-image-binding";
-    case EResUbo:     return "shift-UBO-binding";
-    case EResSsbo:    return "shift-ssbo-binding";
-    case EResUav:     return "shift-uav-binding";
+    case EResSampler:         return "shift-sampler-binding";
+    case EResTexture:         return "shift-texture-binding";
+    case EResImage:           return "shift-image-binding";
+    case EResUbo:             return "shift-ubo-binding";
+    case EResSsbo:            return "shift-ssbo-binding";
+    case EResUav:             return "shift-uav-binding";
+    case EResCombinedSampler: return "shift-combined-sampler-binding";
+    case EResAs:              return "shift-as-binding";
+    case EResTensor:          return nullptr;
     default:
         assert(0); // internal error: should only be called with valid resource types.
         return nullptr;

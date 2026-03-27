@@ -55,16 +55,8 @@ target_link_libraries(example PRIVATE
     glslang::glslang-default-resource-limits    
 )
 
-if (NOT TARGET glslang::SPVRemapper)
-    message(FATAL_ERROR "glslang::SPVRemapper does not exist!")
-endif()
-
 if (NOT TARGET glslang::glslang-standalone)
     message(FATAL_ERROR "glslang::glslang-standalone does not exist!")
-endif()
-
-if (NOT TARGET glslang::spirv-remap)
-    message(FATAL_ERROR "glslang::spirv-remap does not exist!")
 endif()
 
 if (target_type STREQUAL STATIC_LIBRARY)
@@ -81,6 +73,5 @@ if (target_type STREQUAL STATIC_LIBRARY)
     # Ensure these executables run without issue
     add_custom_target(test-executables ALL
         COMMAND glslang::glslang-standalone --version
-        COMMAND glslang::spirv-remap --help
     )
 endif()

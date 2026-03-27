@@ -36,8 +36,11 @@ opt::Function* FindFragmentShaderEntryPoint(opt::IRContext* ir_context,
   // Check that this is a fragment shader
   bool found_capability_shader = false;
   for (auto& capability : ir_context->capabilities()) {
-    assert(capability.opcode() == spv::Op::OpCapability);
-    if (spv::Capability(capability.GetSingleWordInOperand(0)) ==
+    assert(capability.opcode() == spv::Op::OpCapability ||
+           capability.opcode() == spv::Op::OpConditionalCapabilityINTEL);
+    const uint32_t i_cap =
+        capability.opcode() == spv::Op::OpConditionalCapabilityINTEL ? 1 : 0;
+    if (spv::Capability(capability.GetSingleWordInOperand(i_cap)) ==
         spv::Capability::Shader) {
       found_capability_shader = true;
       break;

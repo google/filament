@@ -20,11 +20,6 @@ set(SPIRV_TOOLS_LINT_SOURCES
   lint_divergent_derivatives.cpp
 )
 
-if(MSVC AND (NOT ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")))
-  # Enable parallel builds across four cores for this lib.
-  add_definitions(/MP4)
-endif()
-
 add_library(SPIRV-Tools-lint ${SPIRV_TOOLS_LIBRARY_TYPE} ${SPIRV_TOOLS_LINT_SOURCES})
 
 spvtools_default_compile_options(SPIRV-Tools-lint)

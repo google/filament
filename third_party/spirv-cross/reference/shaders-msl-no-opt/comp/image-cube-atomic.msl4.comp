@@ -1,0 +1,16 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+kernel void main0(texturecube<uint, access::read_write> uCube [[texture(0)]], texturecube_array<uint, access::read_write> uCubeArray [[texture(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    uint _22 = uCube.atomic_fetch_add(uint3(int3(gl_GlobalInvocationID)).xy, uint3(int3(gl_GlobalInvocationID)).z, 10u).x;
+    uint _29 = uCubeArray.atomic_fetch_or(uint3(int3(gl_GlobalInvocationID)).xy, uint3(int3(gl_GlobalInvocationID)).z % 6u, uint3(int3(gl_GlobalInvocationID)).z / 6u, 10u).x;
+}
+

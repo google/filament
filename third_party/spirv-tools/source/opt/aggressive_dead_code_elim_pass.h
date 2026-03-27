@@ -85,8 +85,10 @@ class AggressiveDCEPass : public MemPass {
   }
 
   // Adds entry points, execution modes and workgroup size decorations to the
-  // worklist for processing with the first function.
-  void InitializeModuleScopeLiveInstructions();
+  // worklist for processing with the first function. Returns
+  // Pass::Status::Failure if it could not create a required debug instruction.
+  // Returns Pass::Status::SuccessWithoutChange otherwise.
+  Pass::Status InitializeModuleScopeLiveInstructions();
 
   // Add |inst| to worklist_ and live_insts_.
   void AddToWorklist(Instruction* inst) {
@@ -136,7 +138,7 @@ class AggressiveDCEPass : public MemPass {
   // existing control structures will remain. This can leave not-insignificant
   // sequences of ultimately useless code.
   // TODO(): Remove useless control constructs.
-  bool AggressiveDCE(Function* func);
+  Pass::Status AggressiveDCE(Function* func);
 
   Pass::Status ProcessImpl();
 
@@ -150,9 +152,21 @@ class AggressiveDCEPass : public MemPass {
   // will be empty at the end.
   void ProcessWorkList(Function* func);
 
+  // Process each DebugDeclare and DebugValue in |func| that has not been
+  // marked as live in the work list. DebugDeclare's are marked live now, and
+  // DebugValue Value operands are set to OpUndef.  The work list will be empty
+  // at the end.
+  // Returns Pass::Status::Failure if it could not create an OpUndef.
+  // Otherwise, returns Pass::Status::SuccessWithChange if it made changes,
+  Pass::Status ProcessDebugInformation(
+      std::list<BasicBlock*>& structured_order);
+
   // Kills any instructions in |func| that have not been marked as live.
-  bool KillDeadInstructions(const Function* func,
-                            std::list<BasicBlock*>& structured_order);
+  // Returns Pass::Status::Failure if it could not create an OpUndef.
+  // Otherwise, returns Pass::Status::SuccessWithChange if it made changes,
+  // and Pass::Status::SuccessWithoutChange otherwise.
+  Pass::Status KillDeadInstructions(const Function* func,
+                                    std::list<BasicBlock*>& structured_order);
 
   // Adds the instructions that define the operands of |inst| to the work list.
   void AddOperandsToWorkList(const Instruction* inst);

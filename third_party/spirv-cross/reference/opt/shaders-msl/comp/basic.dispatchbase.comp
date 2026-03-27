@@ -25,7 +25,7 @@ constant uint _59_tmp [[function_constant(10)]];
 constant uint _59 = is_function_constant_defined(_59_tmp) ? _59_tmp : 1u;
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(_59, 1u, 1u);
 
-kernel void main0(const device SSBO& _27 [[buffer(0)]], device SSBO2& _49 [[buffer(1)]], device SSBO3& _52 [[buffer(2)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 spvDispatchBase [[grid_origin]])
+kernel void main0(device SSBO& _27 [[buffer(0)]], device SSBO2& _49 [[buffer(1)]], device SSBO3& _52 [[buffer(2)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 spvDispatchBase [[grid_origin]])
 {
     gl_GlobalInvocationID += spvDispatchBase * gl_WorkGroupSize;
     float4 _33 = _27.in_data[gl_GlobalInvocationID.x];

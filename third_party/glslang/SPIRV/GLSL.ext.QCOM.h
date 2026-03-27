@@ -39,6 +39,8 @@ static const int GLSLextQCOMRevision = 1;
 const char* const E_SPV_QCOM_image_processing = "SPV_QCOM_image_processing";
 //SPV_QCOM_image_processing2
 const char* const E_SPV_QCOM_image_processing2 = "SPV_QCOM_image_processing2";
+//SPV_QCOM_cooperative_matrix_conversion
+const char* const E_SPV_QCOM_cooperative_matrix_conversion = "SPV_QCOM_cooperative_matrix_conversion";
 
 //SPV_QCOM_tile_shading
 const char* const E_SPV_QCOM_tile_shading = "SPV_QCOM_tile_shading";

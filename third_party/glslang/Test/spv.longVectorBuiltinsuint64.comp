@@ -1,0 +1,61 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_EXT_long_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_expect_assume : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    vector<uint64_t, 5> vu;
+    uint64_t u;
+    vector<int64_t, 5> vi;
+    int64_t i;
+    vector<bool, 5> vb;
+    bool b;
+
+    // 8.1
+
+    // 8.2
+
+    // 8.3
+    //vu = abs(vu);
+    //vu = sign(vu);
+    vu = min(vu, u);
+    vu = min(vu, vu);
+    vu = max(vu, u);
+    vu = max(vu, vu);
+    vu = clamp(vu, u, u);
+    vu = clamp(vu, vu, vu);
+    vu = mix(vu, vu, vb);
+
+    // 8.5
+
+    // 8.7
+    vb = lessThan(vu, vu);
+    vb = lessThanEqual(vu, vu);
+    vb = greaterThan(vu, vu);
+    vb = greaterThanEqual(vu, vu);
+    vb = equal(vu, vu);
+    vb = notEqual(vu, vu);
+
+    // 8.8
+    vu = uaddCarry(vu, vu, vu);
+    vu = usubBorrow(vu, vu, vu);
+    umulExtended(vu, vu, vu, vu);
+    //vu = bitfieldExtract(vu, i, i);
+    //vu = bitfieldInsert(vu, vu, i, i);
+    //vu = bitfieldReverse(vu);
+    vi = bitCount(vu);
+    //vi = findLSB(vu);
+    //vi = findMSB(vu);
+
+    // GL_EXT_shader_integer_mix
+    vu = mix(vu, vu, vb);
+    vb = mix(vb, vb, vb);
+
+    // GL_EXT_expect_assume
+    vu = expectEXT(vu, vu);
+}
