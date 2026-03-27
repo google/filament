@@ -1,7 +1,7 @@
 
 // main.js
 
-Filament.init(['assets/simulated_skybox.filamat?v=' + Date.now()], () => {
+Filament.init([(window.FILAMENT_ASSET_DIR || '') + 'simulated_skybox.filamat?v=' + Date.now()], () => {
   window.app = new App(document.getElementsByTagName('canvas')[0]);
 });
 
@@ -130,7 +130,7 @@ class App {
 
     // Load the material explicitly. SimulatedSkybox.loadMaterial fetches it.
 
-    const matUrl = 'assets/simulated_skybox.filamat?v=' + Date.now();
+    const matUrl = (window.FILAMENT_ASSET_DIR || '') + 'simulated_skybox.filamat?v=' + Date.now();
     this.skybox.loadMaterial(matUrl).then(() => {
       this.initGUI();
     });
