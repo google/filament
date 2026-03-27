@@ -21,6 +21,12 @@ if (FILAMENT_BUILD_FILAMAT)
     set(TINT_BUILD_SPV_READER ON)
 endif ()
 
+# TODO: Dawn requires macOS 11.0, but Filament sets the min to 10.15.
+# Silence the availability warnings for now. We can re-enable once we bump Filament's macOS min.
+if (CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang")
+    add_compile_options(-Wno-unguarded-availability-new)
+endif()
+
 add_subdirectory(../  ${PROJECT_BINARY_DIR}/third_party/dawn)
 
 # Need to install libtint for filamat on Android.
