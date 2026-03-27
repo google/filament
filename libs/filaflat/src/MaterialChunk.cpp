@@ -15,26 +15,32 @@
  */
 
 #include <filaflat/MaterialChunk.h>
+
+#include <private/filament/LineDictionaryUtils.h>
+
+
+#include "private/filament/Variant.h"
+
 #include <filaflat/ChunkContainer.h>
 
 #include <filament/MaterialChunkType.h>
 
-#include <private/filament/Variant.h>
-
-#include <backend/DriverEnums.h>
-
 #include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/Invocable.h>
+#include <utils/debug.h>
 #include <utils/Log.h>
 
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
+#include <charconv>
+#include <string_view>
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 namespace filaflat {
 
-static uint32_t makeKey(
+static inline uint32_t makeKey(
         MaterialChunk::ShaderModel shaderModel,
         MaterialChunk::Variant const variant,
         MaterialChunk::ShaderStage stage) noexcept {
@@ -71,9 +77,23 @@ bool MaterialChunk::initialize(filamat::ChunkType const materialTag) {
 
     Unflattener unflattener(start, end);
 
-    mUnflattener = unflattener;
     mMaterialTag = materialTag;
     mBase = unflattener.getCursor();
+
+    bool const isTextChunk = (
+            mMaterialTag == filamat::ChunkType::MaterialGlsl ||
+            mMaterialTag == filamat::ChunkType::MaterialEssl1 ||
+            mMaterialTag == filamat::ChunkType::MaterialWgsl ||
+            mMaterialTag == filamat::ChunkType::MaterialMetal);
+
+    if (isTextChunk) {
+        if (!unflattener.read(&mSharedStrings)) return false;
+        if (!unflattener.read(&mVertexStrings)) return false;
+        if (!unflattener.read(&mFragmentStrings)) return false;
+        if (!unflattener.read(&mComputeStrings)) return false;
+    }
+
+    mUnflattener = unflattener;
 
     // Read how many shaders we have in the chunk.
     uint64_t numShaders;
@@ -110,6 +130,36 @@ bool MaterialChunk::initialize(filamat::ChunkType const materialTag) {
     return true;
 }
 
+static bool readDictionaryId(Unflattener& base, Unflattener& ext, uint32_t& outId, size_t& outBytesRead) noexcept {
+    uint8_t b8;
+    if (!base.read(&b8)) {
+        return false;
+    }
+    
+    if (b8 < filament::LineDictionaryUtils::DICTIONARY_1_BYTE_ID_CAPACITY) {
+        outId = b8;
+        outBytesRead = 1;
+        return true;
+    }
+    if (b8 == filament::LineDictionaryUtils::DICTIONARY_NUMERIC_ID) {
+        outId = filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG;
+        outBytesRead = 1;
+        return true;
+    }
+    if (b8 < filament::LineDictionaryUtils::DICTIONARY_3_BYTE_ID) {
+        uint8_t e;
+        if (!ext.read(&e)) return false;
+        outId = filament::LineDictionaryUtils::unpack2ByteDictionaryId(b8, e);
+        outBytesRead = 2;
+        return true;
+    }
+    uint8_t e0, e1;
+    if (!ext.read(&e0) || !ext.read(&e1)) return false;
+    outId = filament::LineDictionaryUtils::unpack3ByteDictionaryId(e0, e1);
+    outBytesRead = 3;
+    return true;
+}
+
 bool MaterialChunk::getTextShader(Unflattener unflattener,
         BlobDictionary const& dictionary, ShaderContent& shaderContent,
         ShaderModel const shaderModel, Variant const variant, ShaderStage const shaderStage) const {
@@ -143,22 +193,74 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
         return false;
     }
 
+    uint32_t extLength = 0;
+    if (!unflattener.read(&extLength)) {
+        return false;
+    }
+
+    uint32_t baseLength = 0;
+    if (!unflattener.read(&baseLength)) {
+        return false;
+    }
+
+    uint32_t numericLength = 0;
+    if (!unflattener.read(&numericLength)) { return false; }
+
     shaderContent.reserve(shaderSize);
     shaderContent.resize(shaderSize);
     size_t cursor = 0;
 
-    // Read all lines.
-    for(int32_t i = 0 ; i < lineCount; i++) {
-        uint16_t lineIndex;
-        if (!unflattener.read(&lineIndex)) {
+    Unflattener extUnflattener(unflattener);
+    extUnflattener.setCursor(unflattener.getCursor() + baseLength);
+    
+    Unflattener numericUnflattener(unflattener);
+    numericUnflattener.setCursor(unflattener.getCursor() + baseLength + extLength);
+
+    auto readNumericLiteral = [](Unflattener& stream) -> uint32_t {
+        uint8_t e0;
+        if (!stream.read(&e0)) {
+            return 0;
+        }
+        if (e0 < 128) {
+            return e0;
+        }
+        uint8_t e1;
+        if (!stream.read(&e1)) {
+            return 0;
+        }
+        return (e0 & 0x7F) | (e1 << 7);
+    };
+
+    for (size_t i = 0; i < lineCount; ++i) {
+        uint32_t lineIndex = 0;
+        size_t bytesRead = 0;
+        if (!readDictionaryId(unflattener, extUnflattener, lineIndex, bytesRead)) {
             return false;
         }
 
-        if (UTILS_UNLIKELY(lineIndex >= dictionary.size())) {
+        if (lineIndex == filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG) {
+            uint32_t const numericLiteral = readNumericLiteral(numericUnflattener);
+            char buf[16];
+            buf[0] = '_';
+            auto const [ptr, ec] = std::to_chars(buf + 1, buf + 16, numericLiteral);
+            size_t const len = ptr - buf;
+            memcpy(&shaderContent[cursor], buf, len);
+            cursor += len;
+            continue;
+        }
+
+        uint32_t globalIndex = lineIndex;
+        if (shaderStage == ShaderStage::FRAGMENT && lineIndex >= mSharedStrings) {
+            globalIndex += mVertexStrings;
+        } else if (shaderStage == ShaderStage::COMPUTE && lineIndex >= mSharedStrings) {
+            globalIndex += mVertexStrings + mFragmentStrings;
+        }
+
+        if (UTILS_UNLIKELY(globalIndex >= dictionary.size())) {
             return false;
         }
 
-        const auto& content = dictionary[lineIndex];
+        const auto& content = dictionary[globalIndex];
 
         // Ensure string is correctly formed and doesn't exceed reserved shader space.
         if (UTILS_UNLIKELY(content.size() == 0 || cursor + content.size() - 1 > shaderSize)) {
@@ -166,9 +268,14 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
         }
 
         // remove the terminating null character.
-        memcpy(&shaderContent[cursor], content.data(), content.size() - 1);
-        cursor += content.size() - 1;
+        size_t const length = content.size() - 1;
+        memcpy(&shaderContent[cursor], content.data(), length);
+        cursor += length;
     }
+
+    // Explicitly leapfrog the native stream reader past the isolated Extension stream
+    // to preserve unflatten sync consistency natively across chunks.
+    unflattener.setCursor(numericUnflattener.getCursor());
 
     // Write the terminating null character.
     shaderContent[cursor++] = 0;
@@ -178,7 +285,8 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
 }
 
 bool MaterialChunk::getBinaryShader(BlobDictionary const& dictionary,
-        ShaderContent& shaderContent, ShaderModel const shaderModel, filament::Variant const variant, ShaderStage const shaderStage) const {
+        ShaderContent& shaderContent, ShaderModel const shaderModel,
+        filament::Variant const variant, ShaderStage const shaderStage) const {
 
     if (mBase == nullptr) {
         return false;
@@ -255,6 +363,75 @@ void MaterialChunk::visitShaders(
 
         visitor(ShaderModel(shaderModelValue), variant, ShaderStage(pipelineStageValue));
     }
+}
+
+size_t MaterialChunk::getDictionaryOccurrences(std::vector<uint32_t>& outOccurrences) const {
+    size_t totalIndicesSize = 0;
+
+    if (mBase == nullptr || (
+        mMaterialTag != filamat::ChunkType::MaterialGlsl &&
+        mMaterialTag != filamat::ChunkType::MaterialEssl1 &&
+        mMaterialTag != filamat::ChunkType::MaterialWgsl &&
+        mMaterialTag != filamat::ChunkType::MaterialMetal)) {
+        return 0;
+    }
+
+    for (auto const& chunk : mOffsets) {
+        ShaderModel model;
+        Variant variant;
+        ShaderStage stage;
+        decodeKey(chunk.first, &model, &variant, &stage);
+
+        Unflattener unflattener(mBase + chunk.second, mContainer.getChunkRange(mMaterialTag).second);
+
+        uint32_t shaderSize = 0;
+        if (!unflattener.read(&shaderSize)) {
+            continue;
+        }
+
+        uint32_t lineCount = 0;
+        if (!unflattener.read(&lineCount)) {
+            continue;
+        }
+
+        uint32_t extLength = 0;
+        if (!unflattener.read(&extLength)) {
+            continue;
+        }
+
+        uint32_t baseLength = 0;
+        if (!unflattener.read(&baseLength)) {
+            continue;
+        }
+
+        Unflattener extUnflattener(unflattener);
+        extUnflattener.setCursor(unflattener.getCursor() + baseLength);
+
+        for (size_t i = 0; i < lineCount; ++i) {
+            uint32_t lineIndex = 0;
+            size_t bytesRead = 0;
+            if (!readDictionaryId(unflattener, extUnflattener, lineIndex, bytesRead)) {
+                break;
+            }
+            totalIndicesSize += bytesRead;
+
+            if (lineIndex == filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG) {
+                continue;
+            }
+
+            uint32_t globalIndex = lineIndex;
+            if (stage == ShaderStage::FRAGMENT && lineIndex >= mSharedStrings) {
+                globalIndex += mVertexStrings;
+            } else if (stage == ShaderStage::COMPUTE && lineIndex >= mSharedStrings) {
+                globalIndex += mVertexStrings + mFragmentStrings;
+            }
+
+            if (globalIndex < outOccurrences.size()) {
+                outOccurrences[globalIndex]++;
+            }
+        }
+    }
+    return totalIndicesSize;
 }
 
 } // namespace filaflat
