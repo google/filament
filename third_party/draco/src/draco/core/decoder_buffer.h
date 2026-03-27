@@ -54,12 +54,11 @@ class DecoderBuffer {
 
   // Decodes up to 32 bits into out_val. Can be called only in between
   // StartBitDecoding and EndBitDecoding. Otherwise returns false.
-  bool DecodeLeastSignificantBits32(int nbits, uint32_t *out_value) {
+  bool DecodeLeastSignificantBits32(uint32_t nbits, uint32_t *out_value) {
     if (!bit_decoder_active()) {
       return false;
     }
-    bit_decoder_.GetBits(nbits, out_value);
-    return true;
+    return bit_decoder_.GetBits(nbits, out_value);
   }
 
   // Decodes an arbitrary data type.
@@ -158,11 +157,12 @@ class DecoderBuffer {
     inline void ConsumeBits(int k) { bit_offset_ += k; }
 
     // Returns |nbits| bits in |x|.
-    inline bool GetBits(int32_t nbits, uint32_t *x) {
-      DRACO_DCHECK_GE(nbits, 0);
-      DRACO_DCHECK_LE(nbits, 32);
+    inline bool GetBits(uint32_t nbits, uint32_t *x) {
+      if (nbits > 32) {
+        return false;
+      }
       uint32_t value = 0;
-      for (int32_t bit = 0; bit < nbits; ++bit) {
+      for (uint32_t bit = 0; bit < nbits; ++bit) {
         value |= GetBit() << bit;
       }
       *x = value;

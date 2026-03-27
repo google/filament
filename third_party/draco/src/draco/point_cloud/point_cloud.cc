@@ -16,10 +16,42 @@
 
 #include <algorithm>
 #include <unordered_map>
+#include <utility>
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+#include "draco/attributes/point_attribute.h"
+#endif
 
 namespace draco {
 
 PointCloud::PointCloud() : num_points_(0) {}
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+void PointCloud::Copy(const PointCloud &src) {
+  num_points_ = src.num_points_;
+  for (int i = 0; i < GeometryAttribute::NAMED_ATTRIBUTES_COUNT; ++i) {
+    named_attribute_index_[i] = src.named_attribute_index_[i];
+  }
+  attributes_.resize(src.attributes_.size());
+  for (int i = 0; i < src.attributes_.size(); ++i) {
+    attributes_[i] = std::unique_ptr<PointAttribute>(new PointAttribute());
+    attributes_[i]->CopyFrom(*src.attributes_[i]);
+  }
+  compression_enabled_ = src.compression_enabled_;
+  compression_options_ = src.compression_options_;
+  CopyMetadata(src);
+}
+
+void PointCloud::CopyMetadata(const PointCloud &src) {
+  if (src.metadata_ == nullptr) {
+    metadata_ = nullptr;
+  } else {
+    // Copy base metadata.
+    const GeometryMetadata *const metadata = src.metadata_.get();
+    metadata_.reset(new GeometryMetadata(*metadata));
+  }
+}
+#endif
 
 int32_t PointCloud::NumNamedAttributes(GeometryAttribute::Type type) const {
   if (type == GeometryAttribute::INVALID ||
@@ -75,6 +107,20 @@ const PointAttribute *PointCloud::GetAttributeByUniqueId(
   }
   return attributes_[att_id].get();
 }
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+const PointAttribute *PointCloud::GetNamedAttributeByName(
+    GeometryAttribute::Type type, const std::string &name) const {
+  const auto &index = named_attribute_index_;
+  for (size_t i = 0; i < index[type].size(); ++i) {
+    const PointAttribute *const att = attributes_[index[type][i]].get();
+    if (att->name() == name) {
+      return att;
+    }
+  }
+  return nullptr;
+}
+#endif  // DRACO_TRANSCODER_SUPPORTED
 
 int32_t PointCloud::GetAttributeIdByUniqueId(uint32_t unique_id) const {
   for (size_t att_id = 0; att_id < attributes_.size(); ++att_id) {
@@ -253,11 +299,16 @@ bool PointCloud::DeduplicateAttributeValues() {
 }
 #endif
 
-// TODO(xiaoxumeng): Consider to cash the BBox.
+// TODO(b/199760503): Consider to cache the BBox.
 BoundingBox PointCloud::ComputeBoundingBox() const {
   BoundingBox bounding_box;
   auto pc_att = GetNamedAttribute(GeometryAttribute::POSITION);
-  // TODO(xiaoxumeng): Make the BoundingBox a template type, it may not be easy
+  if (pc_att == nullptr) {
+    // Return default invalid bounding box.
+    return bounding_box;
+  }
+
+  // TODO(b/199760503): Make the BoundingBox a template type, it may not be easy
   // because PointCloud is not a template.
   // Or simply add some preconditioning here to make sure the position attribute
   // is valid, because the current code works only if the position attribute is

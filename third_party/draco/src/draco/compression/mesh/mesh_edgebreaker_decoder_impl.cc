@@ -15,6 +15,7 @@
 #include "draco/compression/mesh/mesh_edgebreaker_decoder_impl.h"
 
 #include <algorithm>
+#include <cstdint>
 
 #include "draco/compression/attributes/sequential_attribute_decoders_controller.h"
 #include "draco/compression/mesh/mesh_edgebreaker_decoder.h"
@@ -299,6 +300,22 @@ bool MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity() {
   if (static_cast<uint32_t>(num_encoded_vertices_) > num_faces * 3) {
     return false;  // There cannot be more vertices than 3 * num_faces.
   }
+
+  // Minimum number of edges of the mesh assuming each edge is shared between
+  // two faces.
+  const uint32_t min_num_face_edges = 3 * num_faces / 2;
+
+  // Maximum number of edges that can exist between |num_encoded_vertices_|.
+  // This is based on graph theory assuming simple connected graph.
+  const uint64_t num_encoded_vertices_64 =
+      static_cast<uint64_t>(num_encoded_vertices_);
+  const uint64_t max_num_vertex_edges =
+      num_encoded_vertices_64 * (num_encoded_vertices_64 - 1) / 2;
+  if (max_num_vertex_edges < min_num_face_edges) {
+    // It is impossible to construct a manifold mesh with these properties.
+    return false;
+  }
+
   uint8_t num_attribute_data;
   if (!decoder_->buffer()->Decode(&num_attribute_data)) {
     return false;
@@ -454,7 +471,7 @@ bool MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity() {
 #endif
 
   // Decode connectivity of non-position attributes.
-  if (attribute_data_.size() > 0) {
+  if (!attribute_data_.empty()) {
 #ifdef DRACO_BACKWARDS_COMPATIBILITY_SUPPORTED
     if (decoder_->bitstream_version() < DRACO_BITSTREAM_VERSION(2, 1)) {
       for (CornerIndex ci(0); ci < corner_table_->num_corners(); ci += 3) {
@@ -484,7 +501,10 @@ bool MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity() {
       attribute_data_[i].connectivity_data.AddSeamEdge(CornerIndex(c));
     }
     // Recompute vertices from the newly added seam edges.
-    attribute_data_[i].connectivity_data.RecomputeVertices(nullptr, nullptr);
+    if (!attribute_data_[i].connectivity_data.RecomputeVertices(nullptr,
+                                                                nullptr)) {
+      return false;
+    }
   }
 
   pos_encoding_data_.Init(corner_table_->num_vertices());
@@ -574,6 +594,17 @@ int MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity(
       const CornerIndex corner_b =
           corner_table_->Next(corner_table_->LeftMostCorner(vertex_x));
 
+      if (corner_a == corner_b) {
+        // All matched corners must be different.
+        return -1;
+      }
+      if (corner_table_->Opposite(corner_a) != kInvalidCornerIndex ||
+          corner_table_->Opposite(corner_b) != kInvalidCornerIndex) {
+        // One of the corners is already opposite to an existing face, which
+        // should not happen unless the input was tampered with.
+        return -1;
+      }
+
       // New tip corner.
       const CornerIndex corner(3 * face.value());
       // Update opposite corner mappings.
@@ -616,6 +647,11 @@ int MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity(
         return -1;
       }
       const CornerIndex corner_a = active_corner_stack.back();
+      if (corner_table_->Opposite(corner_a) != kInvalidCornerIndex) {
+        // Active corner is already opposite to an existing face, which should
+        // not happen unless the input was tampered with.
+        return -1;
+      }
 
       // First corner on the new face is either corner "l" or "r".
       const CornerIndex corner(3 * face.value());
@@ -681,10 +717,14 @@ int MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity(
       }
       const CornerIndex corner_a = active_corner_stack.back();
 
+      if (corner_a == corner_b) {
+        // All matched corners must be different.
+        return -1;
+      }
       if (corner_table_->Opposite(corner_a) != kInvalidCornerIndex ||
           corner_table_->Opposite(corner_b) != kInvalidCornerIndex) {
         // One of the corners is already opposite to an existing face, which
-        // should not happen unless the input was tempered with.
+        // should not happen unless the input was tampered with.
         return -1;
       }
 
@@ -713,9 +753,15 @@ int MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity(
 
       // Also update the vertex id at corner "n" and all corners that are
       // connected to it in the CCW direction.
+      const CornerIndex first_corner = corner_n;
       while (corner_n != kInvalidCornerIndex) {
         corner_table_->MapCornerToVertex(corner_n, vertex_p);
         corner_n = corner_table_->SwingLeft(corner_n);
+        if (corner_n == first_corner) {
+          // We reached the start again which should not happen for split
+          // symbols.
+          return -1;
+        }
       }
       // Make sure the old vertex n is now mapped to an invalid corner (make it
       // isolated).
@@ -800,7 +846,7 @@ int MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity(
     return -1;  // Unexpected number of decoded vertices.
   }
   // Decode start faces and connect them to the faces from the active stack.
-  while (active_corner_stack.size() > 0) {
+  while (!active_corner_stack.empty()) {
     const CornerIndex corner = active_corner_stack.back();
     active_corner_stack.pop_back();
     const bool interior_face =
@@ -841,6 +887,18 @@ int MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity(
           corner_table_->Vertex(corner_table_->Next(corner_b));
       const CornerIndex corner_c =
           corner_table_->Next(corner_table_->LeftMostCorner(vert_x));
+
+      if (corner == corner_b || corner == corner_c || corner_b == corner_c) {
+        // All matched corners must be different.
+        return -1;
+      }
+      if (corner_table_->Opposite(corner) != kInvalidCornerIndex ||
+          corner_table_->Opposite(corner_b) != kInvalidCornerIndex ||
+          corner_table_->Opposite(corner_c) != kInvalidCornerIndex) {
+        // One of the corners is already opposite to an existing face, which
+        // should not happen unless the input was tampered with.
+        return -1;
+      }
 
       const VertexIndex vert_p =
           corner_table_->Vertex(corner_table_->Next(corner_c));
@@ -894,6 +952,11 @@ int MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity(
     VertexCornersIterator<CornerTable> vcit(corner_table_.get(), src_vert);
     for (; !vcit.End(); ++vcit) {
       const CornerIndex cid = vcit.Corner();
+      if (corner_table_->Vertex(cid) != src_vert) {
+        // Vertex mapped to |cid| was not |src_vert|. This indicates corrupted
+        // data and we should terminate the decoding.
+        return -1;
+      }
       corner_table_->MapCornerToVertex(cid, invalid_vert);
     }
     corner_table_->SetLeftMostCorner(invalid_vert,

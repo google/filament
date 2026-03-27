@@ -54,6 +54,20 @@ class ObjDecoderTest : public ::testing::Test {
     return geometry;
   }
 
+  template <class Geometry>
+  std::unique_ptr<Geometry> DecodeObjWithPolygons(
+      const std::string &file_name, bool regularize_quads,
+      bool store_added_edges_per_vertex) const {
+    const std::string path = GetTestFileFullPath(file_name);
+    ObjDecoder decoder;
+    decoder.set_preserve_polygons(true);
+    std::unique_ptr<Geometry> geometry(new Geometry());
+    if (!decoder.DecodeFromFile(path, geometry.get()).ok()) {
+      return nullptr;
+    }
+    return geometry;
+  }
+
   void test_decoding(const std::string &file_name) {
     const std::unique_ptr<Mesh> mesh(DecodeObj<Mesh>(file_name));
     ASSERT_NE(mesh, nullptr) << "Failed to load test model " << file_name;
@@ -113,7 +127,7 @@ TEST_F(ObjDecoderTest, SubObjectsWithMetadata) {
   ASSERT_EQ(sub_obj_id, 2);
 }
 
-TEST_F(ObjDecoderTest, QuadOBJ) {
+TEST_F(ObjDecoderTest, QuadTriangulateOBJ) {
   // Tests loading an Obj with quad faces.
   const std::string file_name = "cube_quads.obj";
   const std::unique_ptr<Mesh> mesh(DecodeObj<Mesh>(file_name));
@@ -124,11 +138,114 @@ TEST_F(ObjDecoderTest, QuadOBJ) {
   ASSERT_EQ(mesh->num_points(), 4 * 6);  // Four points per quad face.
 }
 
-TEST_F(ObjDecoderTest, ComplexPolyOBJ) {
-  // Tests that we fail to load an obj with complex polygon (expected failure).
-  const std::string file_name = "invalid/complex_poly.obj";
+TEST_F(ObjDecoderTest, QuadPreserveOBJ) {
+  // Tests loading an Obj with quad faces preserved as an attribute.
+  const std::string file_name = "cube_quads.obj";
+  constexpr bool kRegularizeQuads = false;
+  constexpr bool kStoreAddedEdgesPerVertex = false;
+  const std::unique_ptr<Mesh> mesh(DecodeObjWithPolygons<Mesh>(
+      file_name, kRegularizeQuads, kStoreAddedEdgesPerVertex));
+  ASSERT_NE(mesh, nullptr) << "Failed to load test model " << file_name;
+  ASSERT_EQ(mesh->num_faces(), 12);
+
+  ASSERT_EQ(mesh->num_attributes(), 4);
+  ASSERT_EQ(mesh->num_points(), 4 * 6);  // Four points per quad face.
+
+  // Expect a new generic attribute.
+  ASSERT_EQ(mesh->attribute(3)->attribute_type(), GeometryAttribute::GENERIC);
+
+  // Expect the new attribute to have two values to describe old and new edge.
+  ASSERT_EQ(mesh->attribute(3)->size(), 2);
+  const auto new_edge_value =
+      mesh->attribute(3)->GetValue<uint8_t, 1>(AttributeValueIndex(0))[0];
+  const auto old_edge_value =
+      mesh->attribute(3)->GetValue<uint8_t, 1>(AttributeValueIndex(1))[0];
+  ASSERT_EQ(new_edge_value, 0);
+  ASSERT_EQ(old_edge_value, 1);
+
+  // Expect one new edge on each of the six cube quads.
+  for (int i = 0; i < 6; i++) {
+    ASSERT_EQ(mesh->attribute(3)->mapped_index(PointIndex(4 * i + 0)), 0);
+    // New edge.
+    ASSERT_EQ(mesh->attribute(3)->mapped_index(PointIndex(4 * i + 1)), 1);
+    ASSERT_EQ(mesh->attribute(3)->mapped_index(PointIndex(4 * i + 2)), 0);
+    ASSERT_EQ(mesh->attribute(3)->mapped_index(PointIndex(4 * i + 3)), 0);
+  }
+
+  // Expect metadata entry on the new attribute.
+  const AttributeMetadata *const metadata =
+      mesh->GetAttributeMetadataByAttributeId(3);
+  ASSERT_NE(metadata, nullptr);
+  ASSERT_TRUE(metadata->sub_metadatas().empty());
+  ASSERT_EQ(metadata->entries().size(), 1);
+  std::string name;
+  metadata->GetEntryString("name", &name);
+  ASSERT_EQ(name, "added_edges");
+}
+
+TEST_F(ObjDecoderTest, OctagonTriangulatedOBJ) {
+  // Tests that we can load an obj with an octagon triangulated.
+  const std::string file_name = "octagon.obj";
   const std::unique_ptr<Mesh> mesh(DecodeObj<Mesh>(file_name));
-  ASSERT_EQ(mesh, nullptr);
+  ASSERT_NE(mesh, nullptr) << "Failed to load test model " << file_name;
+
+  ASSERT_EQ(mesh->num_attributes(), 1);
+  ASSERT_EQ(mesh->num_points(), 8);
+  ASSERT_EQ(mesh->attribute(0)->attribute_type(), GeometryAttribute::POSITION);
+  ASSERT_EQ(mesh->attribute(0)->size(), 8);
+}
+
+TEST_F(ObjDecoderTest, OctagonPreservedOBJ) {
+  // Tests that we can load an obj with an octagon preserved as an attribute.
+  const std::string file_name = "octagon.obj";
+  constexpr bool kRegularizeQuads = false;
+  constexpr bool kStoreAddedEdgesPerVertex = false;
+  const std::unique_ptr<Mesh> mesh(DecodeObjWithPolygons<Mesh>(
+      file_name, kRegularizeQuads, kStoreAddedEdgesPerVertex));
+  ASSERT_NE(mesh, nullptr) << "Failed to load test model " << file_name;
+
+  ASSERT_EQ(mesh->num_attributes(), 2);
+  ASSERT_EQ(mesh->attribute(0)->attribute_type(), GeometryAttribute::POSITION);
+  ASSERT_EQ(mesh->attribute(0)->size(), 8);
+
+  // Expect a new generic attribute.
+  ASSERT_EQ(mesh->attribute(1)->attribute_type(), GeometryAttribute::GENERIC);
+
+  // There are four vertices with both old and new edges in their ring.
+  ASSERT_EQ(mesh->num_points(), 8 + 4);
+
+  // Expect the new attribute to have two values to describe old and new edge.
+  ASSERT_EQ(mesh->attribute(1)->size(), 2);
+  const auto new_edge_value =
+      mesh->attribute(1)->GetValue<uint8_t, 1>(AttributeValueIndex(0))[0];
+  const auto old_edge_value =
+      mesh->attribute(1)->GetValue<uint8_t, 1>(AttributeValueIndex(1))[0];
+  ASSERT_EQ(new_edge_value, 0);
+  ASSERT_EQ(old_edge_value, 1);
+
+  // Five new edges are introduced while triangulating as octagon.
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(0)), 0);
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(1)), 1);  // New edge.
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(2)), 0);
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(3)), 1);  // New edge.
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(4)), 0);
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(5)), 1);  // New edge.
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(6)), 0);
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(7)), 1);  // New edge.
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(8)), 0);
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(9)), 1);  // New edge.
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(10)), 0);
+  ASSERT_EQ(mesh->attribute(1)->mapped_index(PointIndex(11)), 0);
+
+  // Expect metadata entry on the new attribute.
+  const AttributeMetadata *const metadata =
+      mesh->GetAttributeMetadataByAttributeId(1);
+  ASSERT_NE(metadata, nullptr);
+  ASSERT_TRUE(metadata->sub_metadatas().empty());
+  ASSERT_EQ(metadata->entries().size(), 1);
+  std::string name;
+  metadata->GetEntryString("name", &name);
+  ASSERT_EQ(name, "added_edges");
 }
 
 TEST_F(ObjDecoderTest, EmptyNameOBJ) {
@@ -167,7 +284,6 @@ TEST_F(ObjDecoderTest, WrongAttributeMapping) {
 TEST_F(ObjDecoderTest, TestObjDecodingAll) {
   // test if we can read all obj that are currently in test folder.
   test_decoding("bunny_norm.obj");
-  // test_decoding("complex_poly.obj"); // not supported see test above
   test_decoding("cube_att.obj");
   test_decoding("cube_att_partial.obj");
   test_decoding("cube_att_sub_o.obj");

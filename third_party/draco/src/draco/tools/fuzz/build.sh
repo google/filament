@@ -19,7 +19,7 @@
 cmake $SRC/draco
 # The draco_decoder and draco_encoder binaries don't build nicely with OSS-Fuzz
 # options, so just build the Draco shared libraries.
-make -j$(nproc) draco
+make -j$(nproc)
 
 # build fuzzers
 for fuzzer in $(find $SRC/draco/src/draco/tools/fuzz -name '*.cc'); do

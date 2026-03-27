@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// TODO(hemmer): Make this a wrapper using DynamicIntegerPointsKdTreeEncoder.
+// TODO(b/199760123): Make this a wrapper using
+// DynamicIntegerPointsKdTreeEncoder.
 #ifndef DRACO_COMPRESSION_POINT_CLOUD_ALGORITHMS_INTEGER_POINTS_KD_TREE_ENCODER_H_
 #define DRACO_COMPRESSION_POINT_CLOUD_ALGORITHMS_INTEGER_POINTS_KD_TREE_ENCODER_H_
 

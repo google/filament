@@ -25,6 +25,7 @@ namespace draco {
 class AttributeMetadata : public Metadata {
  public:
   AttributeMetadata() : att_unique_id_(0) {}
+  AttributeMetadata(const AttributeMetadata &metadata);
   explicit AttributeMetadata(const Metadata &metadata)
       : Metadata(metadata), att_unique_id_(0) {}
 
@@ -57,6 +58,7 @@ struct AttributeMetadataHasher {
 class GeometryMetadata : public Metadata {
  public:
   GeometryMetadata() {}
+  GeometryMetadata(const GeometryMetadata &metadata);
   explicit GeometryMetadata(const Metadata &metadata) : Metadata(metadata) {}
 
   const AttributeMetadata *GetAttributeMetadataByStringEntry(
