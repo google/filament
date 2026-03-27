@@ -114,8 +114,12 @@ uint32_t Pass::GenerateCopy(Instruction* object_to_copy, uint32_t new_type_id,
       assert(length_const->AsIntConstant());
       uint32_t array_length = length_const->AsIntConstant()->GetU32();
       for (uint32_t i = 0; i < array_length; i++) {
+        // TODO(1841): Handle id overflow.
         Instruction* extract = ir_builder.AddCompositeExtract(
             original_element_type_id, object_to_copy->result_id(), {i});
+        if (extract == nullptr) {
+          return 0;
+        }
         uint32_t new_id =
             GenerateCopy(extract, new_element_type_id, insertion_position);
         if (new_id == 0) {
@@ -124,16 +128,24 @@ uint32_t Pass::GenerateCopy(Instruction* object_to_copy, uint32_t new_type_id,
         element_ids.push_back(new_id);
       }
 
-      return ir_builder.AddCompositeConstruct(new_type_id, element_ids)
-          ->result_id();
+      Instruction* construct =
+          ir_builder.AddCompositeConstruct(new_type_id, element_ids);
+      if (construct == nullptr) {
+        return 0;
+      }
+      return construct->result_id();
     }
     case spv::Op::OpTypeStruct: {
       std::vector<uint32_t> element_ids;
       for (uint32_t i = 0; i < original_type->NumInOperands(); i++) {
         uint32_t orig_member_type_id = original_type->GetSingleWordInOperand(i);
         uint32_t new_member_type_id = new_type->GetSingleWordInOperand(i);
+        // TODO(1841): Handle id overflow.
         Instruction* extract = ir_builder.AddCompositeExtract(
             orig_member_type_id, object_to_copy->result_id(), {i});
+        if (extract == nullptr) {
+          return 0;
+        }
         uint32_t new_id =
             GenerateCopy(extract, new_member_type_id, insertion_position);
         if (new_id == 0) {
@@ -141,8 +153,12 @@ uint32_t Pass::GenerateCopy(Instruction* object_to_copy, uint32_t new_type_id,
         }
         element_ids.push_back(new_id);
       }
-      return ir_builder.AddCompositeConstruct(new_type_id, element_ids)
-          ->result_id();
+      Instruction* construct =
+          ir_builder.AddCompositeConstruct(new_type_id, element_ids);
+      if (construct == nullptr) {
+        return 0;
+      }
+      return construct->result_id();
     }
     default:
       // If we do not have an aggregate type, then we have a problem.  Either we

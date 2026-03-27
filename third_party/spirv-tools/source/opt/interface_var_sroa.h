@@ -15,6 +15,7 @@
 #ifndef SOURCE_OPT_INTERFACE_VAR_SROA_H_
 #define SOURCE_OPT_INTERFACE_VAR_SROA_H_
 
+#include <optional>
 #include <unordered_set>
 
 #include "source/opt/pass.h"
@@ -100,25 +101,26 @@ class InterfaceVariableScalarReplacement : public Pass {
   // If |extra_array_length| is 0, it means |interface_var| has a Patch
   // decoration. Otherwise, |extra_array_length| denotes the length of the extra
   // array of |interface_var|.
-  bool ReplaceInterfaceVariableWithScalars(Instruction* interface_var,
-                                           Instruction* interface_var_type,
-                                           uint32_t location,
-                                           uint32_t component,
-                                           uint32_t extra_array_length);
+  Status ReplaceInterfaceVariableWithScalars(Instruction* interface_var,
+                                             Instruction* interface_var_type,
+                                             uint32_t location,
+                                             uint32_t component,
+                                             uint32_t extra_array_length);
 
   // Creates scalar variables with the storage classe |storage_class| to replace
   // an interface variable whose type is |interface_var_type|. If
   // |extra_array_length| is not zero, adds the extra arrayness to the created
   // scalar variables.
-  NestedCompositeComponents CreateScalarInterfaceVarsForReplacement(
-      Instruction* interface_var_type, spv::StorageClass storage_class,
-      uint32_t extra_array_length);
+  std::optional<NestedCompositeComponents>
+  CreateScalarInterfaceVarsForReplacement(Instruction* interface_var_type,
+                                          spv::StorageClass storage_class,
+                                          uint32_t extra_array_length);
 
   // Creates scalar variables with the storage classe |storage_class| to replace
   // the interface variable whose type is OpTypeArray |interface_var_type| with.
   // If |extra_array_length| is not zero, adds the extra arrayness to all the
   // scalar variables.
-  NestedCompositeComponents CreateScalarInterfaceVarsForArray(
+  std::optional<NestedCompositeComponents> CreateScalarInterfaceVarsForArray(
       Instruction* interface_var_type, spv::StorageClass storage_class,
       uint32_t extra_array_length);
 
@@ -126,7 +128,7 @@ class InterfaceVariableScalarReplacement : public Pass {
   // the interface variable whose type is OpTypeMatrix |interface_var_type|
   // with. If |extra_array_length| is not zero, adds the extra arrayness to all
   // the scalar variables.
-  NestedCompositeComponents CreateScalarInterfaceVarsForMatrix(
+  std::optional<NestedCompositeComponents> CreateScalarInterfaceVarsForMatrix(
       Instruction* interface_var_type, spv::StorageClass storage_class,
       uint32_t extra_array_length);
 
@@ -142,7 +144,7 @@ class InterfaceVariableScalarReplacement : public Pass {
   // |extra_arrayness| is the extra arrayness of the interface variable.
   // |scalar_interface_vars| contains the nested variables to replace the
   // interface variable with.
-  bool ReplaceInterfaceVarWith(
+  Status ReplaceInterfaceVarWith(
       Instruction* interface_var, uint32_t extra_arrayness,
       const NestedCompositeComponents& scalar_interface_vars);
 
@@ -155,7 +157,7 @@ class InterfaceVariableScalarReplacement : public Pass {
   // construct instructions to be replaced with load instructions of access
   // chain instructions in |interface_var_users| via
   // |loads_for_access_chain_to_composites|.
-  bool ReplaceComponentsOfInterfaceVarWith(
+  Status ReplaceComponentsOfInterfaceVarWith(
       Instruction* interface_var,
       const std::vector<Instruction*>& interface_var_users,
       const NestedCompositeComponents& scalar_interface_vars,
@@ -174,7 +176,7 @@ class InterfaceVariableScalarReplacement : public Pass {
   // via |loads_to_composites|. Returns composite construct instructions to be
   // replaced with load instructions of access chain instructions in
   // |interface_var_users| via |loads_for_access_chain_to_composites|.
-  bool ReplaceMultipleComponentsOfInterfaceVarWith(
+  Status ReplaceMultipleComponentsOfInterfaceVarWith(
       Instruction* interface_var,
       const std::vector<Instruction*>& interface_var_users,
       const std::vector<NestedCompositeComponents>& components,
@@ -192,7 +194,7 @@ class InterfaceVariableScalarReplacement : public Pass {
   // |loads_to_component_values|. If |interface_var_user| is an access chain,
   // returns the component value for loads of |interface_var_user| via
   // |loads_for_access_chain_to_component_values|.
-  bool ReplaceComponentOfInterfaceVarWith(
+  Status ReplaceComponentOfInterfaceVarWith(
       Instruction* interface_var, Instruction* interface_var_user,
       Instruction* scalar_var,
       const std::vector<uint32_t>& interface_var_component_indices,
@@ -389,6 +391,9 @@ class InterfaceVariableScalarReplacement : public Pass {
   // A set of interface variables without the extra arrayness for any of the
   // entry points.
   std::unordered_set<Instruction*> vars_without_extra_arrayness;
+
+  // Returns the next available id, or 0 if the id overflows.
+  uint32_t TakeNextId() { return context()->TakeNextId(); }
 };
 
 }  // namespace opt

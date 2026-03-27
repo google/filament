@@ -22,6 +22,7 @@ namespace spvtools {
 namespace opt {
 namespace {
 // Indices of operands in SPIR-V instructions
+constexpr int kImageSampleCoordinateIdInIdx = 1;
 constexpr int kImageSampleDrefIdInIdx = 2;
 }  // namespace
 
@@ -75,6 +76,9 @@ analysis::Type* ConvertToHalfPass::FloatScalarType(uint32_t width) {
 analysis::Type* ConvertToHalfPass::FloatVectorType(uint32_t v_len,
                                                    uint32_t width) {
   analysis::Type* reg_float_ty = FloatScalarType(width);
+  if (reg_float_ty == nullptr) {
+    return nullptr;
+  }
   analysis::Vector vec_ty(reg_float_ty, v_len);
   return context()->get_type_mgr()->GetRegisteredType(&vec_ty);
 }
@@ -85,6 +89,9 @@ analysis::Type* ConvertToHalfPass::FloatMatrixType(uint32_t v_cnt,
   Instruction* vty_inst = get_def_use_mgr()->GetDef(vty_id);
   uint32_t v_len = vty_inst->GetSingleWordInOperand(1);
   analysis::Type* reg_vec_ty = FloatVectorType(v_len, width);
+  if (reg_vec_ty == nullptr) {
+    return nullptr;
+  }
   analysis::Matrix mat_ty(reg_vec_ty, v_cnt);
   return context()->get_type_mgr()->GetRegisteredType(&mat_ty);
 }
@@ -99,6 +106,9 @@ uint32_t ConvertToHalfPass::EquivFloatTypeId(uint32_t ty_id, uint32_t width) {
     reg_equiv_ty = FloatVectorType(ty_inst->GetSingleWordInOperand(1), width);
   else  // spv::Op::OpTypeFloat
     reg_equiv_ty = FloatScalarType(width);
+  if (reg_equiv_ty == nullptr) {
+    return 0;
+  }
   return context()->get_type_mgr()->GetTypeInstruction(reg_equiv_ty);
 }
 
@@ -107,6 +117,10 @@ void ConvertToHalfPass::GenConvert(uint32_t* val_idp, uint32_t width,
   Instruction* val_inst = get_def_use_mgr()->GetDef(*val_idp);
   uint32_t ty_id = val_inst->type_id();
   uint32_t nty_id = EquivFloatTypeId(ty_id, width);
+  if (nty_id == 0) {
+    status_ = Status::Failure;
+    return;
+  }
   if (nty_id == ty_id) return;
   Instruction* cvt_inst;
   InstructionBuilder builder(
@@ -116,6 +130,10 @@ void ConvertToHalfPass::GenConvert(uint32_t* val_idp, uint32_t width,
     cvt_inst = builder.AddNullaryOp(nty_id, spv::Op::OpUndef);
   else
     cvt_inst = builder.AddUnaryOp(nty_id, spv::Op::OpFConvert, *val_idp);
+  if (cvt_inst == nullptr) {
+    status_ = Status::Failure;
+    return;
+  }
   *val_idp = cvt_inst->result_id();
 }
 
@@ -137,22 +155,43 @@ bool ConvertToHalfPass::MatConvertCleanup(Instruction* inst) {
   uint32_t orig_width = (cty_inst->GetSingleWordInOperand(0) == 16) ? 32 : 16;
   uint32_t orig_mat_id = inst->GetSingleWordInOperand(0);
   uint32_t orig_vty_id = EquivFloatTypeId(vty_id, orig_width);
+  if (orig_vty_id == 0) {
+    status_ = Status::Failure;
+    return false;
+  }
   std::vector<Operand> opnds = {};
   for (uint32_t vidx = 0; vidx < v_cnt; ++vidx) {
     Instruction* ext_inst = builder.AddIdLiteralOp(
         orig_vty_id, spv::Op::OpCompositeExtract, orig_mat_id, vidx);
+    if (ext_inst == nullptr) {
+      status_ = Status::Failure;
+      return false;
+    }
     Instruction* cvt_inst =
         builder.AddUnaryOp(vty_id, spv::Op::OpFConvert, ext_inst->result_id());
+    if (cvt_inst == nullptr) {
+      status_ = Status::Failure;
+      return false;
+    }
     opnds.push_back({SPV_OPERAND_TYPE_ID, {cvt_inst->result_id()}});
   }
   uint32_t mat_id = TakeNextId();
+  if (mat_id == 0) {
+    status_ = Status::Failure;
+    return false;
+  }
   std::unique_ptr<Instruction> mat_inst(new Instruction(
       context(), spv::Op::OpCompositeConstruct, mty_id, mat_id, opnds));
   (void)builder.AddInstruction(std::move(mat_inst));
   context()->ReplaceAllUsesWith(inst->result_id(), mat_id);
   // Turn original instruction into copy so it is valid.
+  uint32_t new_type_id = EquivFloatTypeId(mty_id, orig_width);
+  if (new_type_id == 0) {
+    status_ = Status::Failure;
+    return false;
+  }
   inst->SetOpcode(spv::Op::OpCopyObject);
-  inst->SetResultType(EquivFloatTypeId(mty_id, orig_width));
+  inst->SetResultType(new_type_id);
   get_def_use_mgr()->AnalyzeInstUse(inst);
   return true;
 }
@@ -187,13 +226,24 @@ bool ConvertToHalfPass::GenHalfArith(Instruction* inst) {
   // Convert all float32 based operands to float16 equivalent and change
   // instruction type to float16 equivalent.
   inst->ForEachInId([&inst, &modified, this](uint32_t* idp) {
+    if (status_ == Status::Failure) {
+      return;
+    }
     Instruction* op_inst = get_def_use_mgr()->GetDef(*idp);
     if (!IsFloat(op_inst, 32)) return;
     GenConvert(idp, 16, inst);
     modified = true;
   });
+  if (status_ == Status::Failure) {
+    return false;
+  }
   if (IsFloat(inst, 32)) {
-    inst->SetResultType(EquivFloatTypeId(inst->type_id(), 16));
+    uint32_t new_type_id = EquivFloatTypeId(inst->type_id(), 16);
+    if (new_type_id == 0) {
+      status_ = Status::Failure;
+      return false;
+    }
+    inst->SetResultType(new_type_id);
     converted_ids_.insert(inst->result_id());
     modified = true;
   }
@@ -211,6 +261,9 @@ bool ConvertToHalfPass::ProcessPhi(Instruction* inst, uint32_t from_width,
   bool modified = false;
   inst->ForEachInId([&ocnt, &prev_idp, &from_width, &to_width, &modified,
                      this](uint32_t* idp) {
+    if (status_ == Status::Failure) {
+      return;
+    }
     if (ocnt % 2 == 0) {
       prev_idp = idp;
     } else {
@@ -230,8 +283,16 @@ bool ConvertToHalfPass::ProcessPhi(Instruction* inst, uint32_t from_width,
     }
     ++ocnt;
   });
+  if (status_ == Status::Failure) {
+    return false;
+  }
   if (to_width == 16u) {
-    inst->SetResultType(EquivFloatTypeId(inst->type_id(), 16u));
+    uint32_t new_type_id = EquivFloatTypeId(inst->type_id(), 16u);
+    if (new_type_id == 0) {
+      status_ = Status::Failure;
+      return false;
+    }
+    inst->SetResultType(new_type_id);
     converted_ids_.insert(inst->result_id());
     modified = true;
   }
@@ -242,7 +303,12 @@ bool ConvertToHalfPass::ProcessPhi(Instruction* inst, uint32_t from_width,
 bool ConvertToHalfPass::ProcessConvert(Instruction* inst) {
   // If float32 and relaxed, change to float16 convert
   if (IsFloat(inst, 32) && IsRelaxed(inst->result_id())) {
-    inst->SetResultType(EquivFloatTypeId(inst->type_id(), 16));
+    uint32_t new_type_id = EquivFloatTypeId(inst->type_id(), 16);
+    if (new_type_id == 0) {
+      status_ = Status::Failure;
+      return false;
+    }
+    inst->SetResultType(new_type_id);
     get_def_use_mgr()->AnalyzeInstUse(inst);
     converted_ids_.insert(inst->result_id());
   }
@@ -255,17 +321,33 @@ bool ConvertToHalfPass::ProcessConvert(Instruction* inst) {
   Instruction* val_inst = get_def_use_mgr()->GetDef(val_id);
   if (inst->type_id() == val_inst->type_id())
     inst->SetOpcode(spv::Op::OpCopyObject);
-  return true;  // modified
+  return true;
 }
 
 bool ConvertToHalfPass::ProcessImageRef(Instruction* inst) {
   bool modified = false;
-  // If image reference, only need to convert dref args back to float32
+  // If image reference, some operands aren't allowed to be non-32 bit floats
   if (dref_image_ops_.count(inst->opcode()) != 0) {
     uint32_t dref_id = inst->GetSingleWordInOperand(kImageSampleDrefIdInIdx);
     if (converted_ids_.count(dref_id) > 0) {
       GenConvert(&dref_id, 32, inst);
+      if (status_ == Status::Failure) {
+        return false;
+      }
       inst->SetInOperand(kImageSampleDrefIdInIdx, {dref_id});
+      get_def_use_mgr()->AnalyzeInstUse(inst);
+      modified = true;
+    }
+  }
+  if (coordinate_image_ops_.count(inst->opcode()) != 0) {
+    uint32_t coordinate_id =
+        inst->GetSingleWordInOperand(kImageSampleCoordinateIdInIdx);
+    if (converted_ids_.count(coordinate_id) > 0) {
+      GenConvert(&coordinate_id, 32, inst);
+      if (status_ == Status::Failure) {
+        return false;
+      }
+      inst->SetInOperand(kImageSampleCoordinateIdInIdx, {coordinate_id});
       get_def_use_mgr()->AnalyzeInstUse(inst);
       modified = true;
     }
@@ -279,11 +361,17 @@ bool ConvertToHalfPass::ProcessDefault(Instruction* inst) {
   if (inst->opcode() == spv::Op::OpPhi) return ProcessPhi(inst, 16u, 32u);
   bool modified = false;
   inst->ForEachInId([&inst, &modified, this](uint32_t* idp) {
+    if (status_ == Status::Failure) {
+      return;
+    }
     if (converted_ids_.count(*idp) == 0) return;
     uint32_t old_id = *idp;
     GenConvert(idp, 32, inst);
     if (*idp != old_id) modified = true;
   });
+  if (status_ == Status::Failure) {
+    return false;
+  }
   if (modified) get_def_use_mgr()->AnalyzeInstUse(inst);
   return modified;
 }
@@ -370,19 +458,38 @@ bool ConvertToHalfPass::ProcessFunction(Function* func) {
       });
   // Replace invalid converts of matrix into equivalent vector extracts,
   // converts and finally a composite construct
+  bool ok = true;
   cfg()->ForEachBlockInReversePostOrder(
-      func->entry().get(), [&modified, this](BasicBlock* bb) {
-        for (auto ii = bb->begin(); ii != bb->end(); ++ii)
-          modified |= MatConvertCleanup(&*ii);
+      func->entry().get(), [&modified, &ok, this](BasicBlock* bb) {
+        if (!ok) {
+          return;
+        }
+        for (auto ii = bb->begin(); ii != bb->end(); ++ii) {
+          bool Mmodified = MatConvertCleanup(&*ii);
+          if (status_ == Status::Failure) {
+            ok = false;
+            break;
+          }
+          modified |= Mmodified;
+        }
       });
+
+  if (!ok) {
+    return false;
+  }
   return modified;
 }
 
 Pass::Status ConvertToHalfPass::ProcessImpl() {
+  status_ = Status::SuccessWithoutChange;
   Pass::ProcessFunction pfn = [this](Function* fp) {
     return ProcessFunction(fp);
   };
   bool modified = context()->ProcessReachableCallTree(pfn);
+  if (status_ == Status::Failure) {
+    return status_;
+  }
+
   // If modified, make sure module has Float16 capability
   if (modified) context()->AddCapability(spv::Capability::Float16);
   // Remove all RelaxedPrecision decorations from instructions and globals
@@ -497,6 +604,30 @@ void ConvertToHalfPass::Initialize() {
       spv::Op::OpImageSparseSampleProjDrefImplicitLod,
       spv::Op::OpImageSparseSampleProjDrefExplicitLod,
       spv::Op::OpImageSparseDrefGather,
+  };
+  coordinate_image_ops_ = {
+      spv::Op::OpImageSampleImplicitLod,
+      spv::Op::OpImageSampleExplicitLod,
+      spv::Op::OpImageSampleDrefImplicitLod,
+      spv::Op::OpImageSampleDrefExplicitLod,
+      spv::Op::OpImageSampleProjImplicitLod,
+      spv::Op::OpImageSampleProjExplicitLod,
+      spv::Op::OpImageSampleProjDrefImplicitLod,
+      spv::Op::OpImageSampleProjDrefExplicitLod,
+      spv::Op::OpImageFetch,
+      spv::Op::OpImageGather,
+      spv::Op::OpImageDrefGather,
+      spv::Op::OpImageRead,
+      spv::Op::OpImageWrite,
+      spv::Op::OpImageQueryLod,
+      spv::Op::OpImageSparseSampleImplicitLod,
+      spv::Op::OpImageSparseSampleExplicitLod,
+      spv::Op::OpImageSparseSampleDrefImplicitLod,
+      spv::Op::OpImageSparseSampleDrefExplicitLod,
+      spv::Op::OpImageSparseFetch,
+      spv::Op::OpImageSparseGather,
+      spv::Op::OpImageSparseDrefGather,
+      spv::Op::OpImageSparseRead,
   };
   closure_ops_ = {
       spv::Op::OpVectorExtractDynamic,

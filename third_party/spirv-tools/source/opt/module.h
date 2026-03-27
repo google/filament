@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "source/opt/function.h"
+#include "source/opt/graph.h"
 #include "source/opt/instruction.h"
 #include "source/opt/iterator.h"
 
@@ -48,6 +49,8 @@ class Module {
   using const_iterator = UptrVectorIterator<Function, true>;
   using inst_iterator = InstructionList::iterator;
   using const_inst_iterator = InstructionList::const_iterator;
+  using graph_iterator = UptrVectorIterator<Graph>;
+  using const_graph_iterator = UptrVectorIterator<Graph, true>;
 
   // Creates an empty module with zero'd header.
   Module() : header_({}), contains_debug_info_(false) {}
@@ -90,6 +93,9 @@ class Module {
   // Appends an entry point instruction to this module.
   inline void AddEntryPoint(std::unique_ptr<Instruction> e);
 
+  // Appends a graph entry point instruction to this module.
+  inline void AddGraphEntryPoint(std::unique_ptr<Instruction> e);
+
   // Appends an execution mode instruction to this module.
   inline void AddExecutionMode(std::unique_ptr<Instruction> e);
 
@@ -125,6 +131,9 @@ class Module {
 
   // Appends a function to this module.
   inline void AddFunction(std::unique_ptr<Function> f);
+
+  // Appends a graph to this module.
+  inline void AddGraph(std::unique_ptr<Graph> g);
 
   // Sets |contains_debug_info_| as true.
   inline void SetContainsDebugInfo();
@@ -220,6 +229,10 @@ class Module {
   inline IteratorRange<inst_iterator> entry_points();
   inline IteratorRange<const_inst_iterator> entry_points() const;
 
+  // Iterators for graph entry point instructions contained in this module
+  inline IteratorRange<inst_iterator> graph_entry_points();
+  inline IteratorRange<const_inst_iterator> graph_entry_points() const;
+
   // Iterators for execution_modes instructions contained in this module.
   inline inst_iterator execution_mode_begin();
   inline inst_iterator execution_mode_end();
@@ -251,6 +264,9 @@ class Module {
   const_iterator end() const { return cend(); }
   inline const_iterator cbegin() const;
   inline const_iterator cend() const;
+
+  // Iterators for graphs contained in this module.
+  inline const std::vector<std::unique_ptr<Graph>>& graphs() const;
 
   // Invokes function |f| on all instructions in this module, and optionally on
   // the debug line instructions that precede them.
@@ -306,6 +322,7 @@ class Module {
   // A module can only have one optional sampled image addressing mode
   std::unique_ptr<Instruction> sampled_image_address_mode_;
   InstructionList entry_points_;
+  InstructionList graph_entry_points_;
   InstructionList execution_modes_;
   InstructionList debugs1_;
   InstructionList debugs2_;
@@ -315,6 +332,7 @@ class Module {
   // Type declarations, constants, and global variable declarations.
   InstructionList types_values_;
   std::vector<std::unique_ptr<Function>> functions_;
+  std::vector<std::unique_ptr<Graph>> graphs_;
 
   // If the module ends with Op*Line instruction, they will not be attached to
   // any instruction.  We record them here, so they will not be lost.
@@ -349,6 +367,10 @@ inline void Module::SetSampledImageAddressMode(std::unique_ptr<Instruction> m) {
 
 inline void Module::AddEntryPoint(std::unique_ptr<Instruction> e) {
   entry_points_.push_back(std::move(e));
+}
+
+inline void Module::AddGraphEntryPoint(std::unique_ptr<Instruction> e) {
+  graph_entry_points_.push_back(std::move(e));
 }
 
 inline void Module::AddExecutionMode(std::unique_ptr<Instruction> e) {
@@ -390,6 +412,10 @@ inline void Module::AddFunctionDeclaration(std::unique_ptr<Function> f) {
 
 inline void Module::AddFunction(std::unique_ptr<Function> f) {
   functions_.emplace_back(std::move(f));
+}
+
+inline void Module::AddGraph(std::unique_ptr<Graph> g) {
+  graphs_.emplace_back(std::move(g));
 }
 
 inline void Module::SetContainsDebugInfo() { contains_debug_info_ = true; }
@@ -482,6 +508,15 @@ inline IteratorRange<Module::const_inst_iterator> Module::entry_points() const {
   return make_range(entry_points_.begin(), entry_points_.end());
 }
 
+inline IteratorRange<Module::inst_iterator> Module::graph_entry_points() {
+  return make_range(graph_entry_points_.begin(), graph_entry_points_.end());
+}
+
+inline IteratorRange<Module::const_inst_iterator> Module::graph_entry_points()
+    const {
+  return make_range(graph_entry_points_.begin(), graph_entry_points_.end());
+}
+
 inline Module::inst_iterator Module::execution_mode_begin() {
   return execution_modes_.begin();
 }
@@ -542,6 +577,10 @@ inline IteratorRange<Module::inst_iterator> Module::types_values() {
 
 inline IteratorRange<Module::const_inst_iterator> Module::types_values() const {
   return make_range(types_values_.begin(), types_values_.end());
+}
+
+inline const std::vector<std::unique_ptr<Graph>>& Module::graphs() const {
+  return graphs_;
 }
 
 inline Module::const_iterator Module::cbegin() const {

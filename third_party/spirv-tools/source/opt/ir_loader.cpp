@@ -178,12 +178,48 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
     last_dbg_scope_ = DebugScope(kNoDebugScope, kNoInlinedAt);
     last_line_inst_.reset();
     dbg_line_info_.clear();
+  } else if (opcode == spv::Op::OpGraphARM) {
+    if (graph_ != nullptr) {
+      Error(consumer_, src, loc, "graph inside graph");
+      return false;
+    }
+    graph_ = MakeUnique<Graph>(std::move(spv_inst));
+  } else if (opcode == spv::Op::OpGraphEndARM) {
+    if (graph_ == nullptr) {
+      Error(consumer_, src, loc,
+            "OpGraphEndARM without corresponding OpGraphARM");
+      return false;
+    }
+    graph_->SetGraphEnd(std::move(spv_inst));
+    module_->AddGraph(std::move(graph_));
+    graph_ = nullptr;
+  } else if (opcode == spv::Op::OpGraphConstantARM) {
+    module_->AddGlobalValue(std::move(spv_inst));
+  } else if (graph_ != nullptr) {
+    if (opcode == spv::Op::OpGraphInputARM) {
+      graph_->AddInput(std::move(spv_inst));
+    } else if (opcode == spv::Op::OpGraphSetOutputARM) {
+      graph_->AddOutput(std::move(spv_inst));
+    } else {
+      switch (opcode) {
+        case spv::Op::OpExtInst:
+        case spv::Op::OpCompositeExtract:
+          graph_->AddInstruction(std::move(spv_inst));
+          break;
+        default:
+          Errorf(consumer_, src, loc,
+                 "unhandled instruction (opcode %d) inside graph", opcode);
+          return false;
+      }
+    }
   } else {
     if (function_ == nullptr) {  // Outside function definition
       SPIRV_ASSERT(consumer_, block_ == nullptr);
-      if (opcode == spv::Op::OpCapability) {
+      if (opcode == spv::Op::OpCapability ||
+          opcode == spv::Op::OpConditionalCapabilityINTEL) {
         module_->AddCapability(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpExtension) {
+      } else if (opcode == spv::Op::OpExtension ||
+                 opcode == spv::Op::OpConditionalExtensionINTEL) {
         module_->AddExtension(std::move(spv_inst));
       } else if (opcode == spv::Op::OpExtInstImport) {
         module_->AddExtInstImport(std::move(spv_inst));
@@ -193,6 +229,8 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
         module_->SetSampledImageAddressMode(std::move(spv_inst));
       } else if (opcode == spv::Op::OpEntryPoint) {
         module_->AddEntryPoint(std::move(spv_inst));
+      } else if (opcode == spv::Op::OpGraphEntryPointARM) {
+        module_->AddGraphEntryPoint(std::move(spv_inst));
       } else if (opcode == spv::Op::OpExecutionMode ||
                  opcode == spv::Op::OpExecutionModeId) {
         module_->AddExecutionMode(std::move(spv_inst));

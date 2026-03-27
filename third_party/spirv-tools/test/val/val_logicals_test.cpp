@@ -631,38 +631,54 @@ OpStore %y %f32vec4_1234
 }
 
 TEST_F(ValidateLogicals, OpSelectPointerWithCapability1) {
-  const std::string body = R"(
-%x = OpVariable %f32vec4ptr Function
-%y = OpVariable %f32vec4ptr Function
-OpStore %x %f32vec4_0123
-OpStore %y %f32vec4_1234
-%val1 = OpSelect %f32vec4ptr %true %x %y
-)";
-
-  const std::string extra_cap_ext = R"(
+  const std::string spirv = R"(
+OpCapability Shader
 OpCapability VariablePointers
 OpExtension "SPV_KHR_variable_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%ptr = OpTypePointer Workgroup %int
+%var = OpVariable %ptr Workgroup
+%null = OpConstantNull %ptr
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%sel = OpSelect %ptr %undef %var %null
+OpReturn
+OpFunctionEnd
 )";
 
-  CompileSuccessfully(GenerateShaderCode(body, extra_cap_ext).c_str());
+  CompileSuccessfully(spirv);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 TEST_F(ValidateLogicals, OpSelectPointerWithCapability2) {
-  const std::string body = R"(
-%x = OpVariable %f32vec4ptr Function
-%y = OpVariable %f32vec4ptr Function
-OpStore %x %f32vec4_0123
-OpStore %y %f32vec4_1234
-%val1 = OpSelect %f32vec4ptr %true %x %y
-)";
-
-  const std::string extra_cap_ext = R"(
+  const std::string spirv = R"(
+OpCapability Shader
 OpCapability VariablePointersStorageBuffer
 OpExtension "SPV_KHR_variable_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%ptr = OpTypePointer StorageBuffer %int
+%var = OpVariable %ptr StorageBuffer
+%null = OpConstantNull %ptr
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%sel = OpSelect %ptr %undef %var %null
+OpReturn
+OpFunctionEnd
 )";
 
-  CompileSuccessfully(GenerateShaderCode(body, extra_cap_ext).c_str());
+  CompileSuccessfully(spirv);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 

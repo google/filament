@@ -53,6 +53,7 @@ create_grammar_tables_target(
         ExtInst("opencl.debuginfo.100", prefix="CLDEBUG100_"),
         ExtInst("nonsemantic.shader.debuginfo.100", prefix="SHDEBUG100_"),
         ExtInst("tosa.001000.1", target="spirv_ext_inst_tosa_001000_1", prefix="TOSA_"),
+        ExtInst("arm.motion-engine.100", target="spirv_ext_inst_arm_motion_engine_100"),
     ] + [ExtInst(e) for e in [
             "spv-amd-shader-explicit-vertex-parameter",
             "spv-amd-shader-trinary-minmax",
@@ -202,7 +203,7 @@ cc_library(
 cc_library(
     name = "spirv_tools_link",
     srcs = glob(["source/link/*.cpp"]),
-    hdrs = ["include/spirv-tools/linker.hpp"],
+    hdrs = ["include/spirv-tools/linker.hpp", "source/link/fnvar.h"],
     copts = COMMON_COPTS,
     linkstatic = 1,
     visibility = ["//visibility:public"],

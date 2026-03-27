@@ -3864,6 +3864,81 @@ OpFunctionEnd
   SinglePassRunAndCheck<LoopUnroller>(text, text, false);
 }
 
+TEST_F(PassClassTest, ApplyDecorationsToClonedInstructions) {
+  const std::string text = R"(
+  ; CHECK: OpDecorate [[ld1:%\w+]] RelaxedPrecision
+  ; CHECK: OpDecorate [[mul1:%\w+]] RelaxedPrecision
+  ; CHECK: OpDecorate [[add1:%\w+]] RelaxedPrecision
+  ; CHECK: OpDecorate [[ld2:%\w+]] RelaxedPrecision
+  ; CHECK: OpDecorate [[mul2:%\w+]] RelaxedPrecision
+  ; CHECK: OpDecorate [[add2:%\w+]] RelaxedPrecision
+  ; CHECK: OpDecorate [[ld3:%\w+]] RelaxedPrecision
+  ; CHECK: OpDecorate [[mul3:%\w+]] RelaxedPrecision
+  ; CHECK: OpDecorate [[add3:%\w+]] RelaxedPrecision
+  
+; CHECK: [[ld1]] = OpLoad %float
+; CHECK: [[mul1]] = OpFMul %float
+; CHECK: [[add1]] = OpFAdd %float
+; CHECK: [[ld2]] = OpLoad %float
+; CHECK: [[mul2]] = OpFMul %float
+; CHECK: [[add2]] = OpFAdd %float
+; CHECK: [[ld3]] = OpLoad %float
+; CHECK: [[mul3]] = OpFMul %float
+; CHECK: [[add3]] = OpFAdd %float
+
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %2
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpDecorate %2 DescriptorSet 0
+               OpDecorate %2 Binding 0
+               OpDecorate %_runtimearr_float ArrayStride 4
+               OpMemberDecorate %_struct_4 0 Offset 0
+               OpDecorate %_struct_4 Block
+               OpDecorate %5 RelaxedPrecision
+               OpDecorate %6 RelaxedPrecision
+               OpDecorate %7 RelaxedPrecision
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_3 = OpConstant %int 3
+      %int_1 = OpConstant %int 1
+      %float = OpTypeFloat 32
+%_runtimearr_float = OpTypeRuntimeArray %float
+  %_struct_4 = OpTypeStruct %_runtimearr_float
+%_ptr_StorageBuffer__struct_4 = OpTypePointer StorageBuffer %_struct_4
+       %uint = OpTypeInt 32 0
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+       %bool = OpTypeBool
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+          %2 = OpVariable %_ptr_StorageBuffer__struct_4 StorageBuffer
+          %1 = OpFunction %void None %16
+         %19 = OpLabel
+               OpBranch %20
+         %20 = OpLabel
+         %21 = OpPhi %int %int_0 %19 %22 %23
+         %24 = OpSLessThan %bool %21 %int_3
+               OpLoopMerge %25 %23 Unroll
+               OpBranchConditional %24 %26 %25
+         %26 = OpLabel
+         %27 = OpBitcast %uint %21
+         %28 = OpAccessChain %_ptr_StorageBuffer_float %2 %int_0 %27
+          %5 = OpLoad %float %28
+          %6 = OpFMul %float %5 %5
+          %7 = OpFAdd %float %5 %6
+               OpStore %28 %7
+               OpBranch %23
+         %23 = OpLabel
+         %22 = OpIAdd %int %21 %int_1
+               OpBranch %20
+         %25 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_6);
+  SinglePassRunAndMatch<LoopUnroller>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

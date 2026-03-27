@@ -53,17 +53,15 @@ bool IsPowerOf2(uint32_t val) {
 
 Pass::Status StrengthReductionPass::Process() {
   // Initialize the member variables on a per module basis.
-  bool modified = false;
   int32_type_id_ = 0;
   uint32_type_id_ = 0;
   std::memset(constant_ids_, 0, sizeof(constant_ids_));
 
   FindIntTypesAndConstants();
-  modified = ScanFunctions();
-  return (modified ? Status::SuccessWithChange : Status::SuccessWithoutChange);
+  return ScanFunctions();
 }
 
-bool StrengthReductionPass::ReplaceMultiplyByPowerOf2(
+Pass::Status StrengthReductionPass::ReplaceMultiplyByPowerOf2(
     BasicBlock::iterator* inst) {
   assert((*inst)->opcode() == spv::Op::OpIMul &&
          "Only works for multiplication of integers.");
@@ -72,7 +70,7 @@ bool StrengthReductionPass::ReplaceMultiplyByPowerOf2(
   // Currently only works on 32-bit integers.
   if ((*inst)->type_id() != int32_type_id_ &&
       (*inst)->type_id() != uint32_type_id_) {
-    return modified;
+    return Status::SuccessWithoutChange;
   }
 
   // Check the operands for a constant that is a power of 2.
@@ -87,9 +85,11 @@ bool StrengthReductionPass::ReplaceMultiplyByPowerOf2(
         modified = true;
         uint32_t shiftAmount = CountTrailingZeros(constVal);
         uint32_t shiftConstResultId = GetConstantId(shiftAmount);
+        if (shiftConstResultId == 0) return Status::Failure;
 
         // Create the new instruction.
         uint32_t newResultId = TakeNextId();
+        if (newResultId == 0) return Status::Failure;
         std::vector<Operand> newOperands;
         newOperands.push_back((*inst)->GetInOperand(1 - i));
         Operand shiftOperand(spv_operand_type_t::SPV_OPERAND_TYPE_ID,
@@ -117,7 +117,7 @@ bool StrengthReductionPass::ReplaceMultiplyByPowerOf2(
     }
   }
 
-  return modified;
+  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
 void StrengthReductionPass::FindIntTypesAndConstants() {
@@ -152,6 +152,7 @@ uint32_t StrengthReductionPass::GetConstantId(uint32_t val) {
 
     // Construct the constant.
     uint32_t resultId = TakeNextId();
+    if (resultId == 0) return 0;
     Operand constant(spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER,
                      {val});
     std::unique_ptr<Instruction> newConstant(new Instruction(
@@ -169,7 +170,7 @@ uint32_t StrengthReductionPass::GetConstantId(uint32_t val) {
   return constant_ids_[val];
 }
 
-bool StrengthReductionPass::ScanFunctions() {
+Pass::Status StrengthReductionPass::ScanFunctions() {
   // I did not use |ForEachInst| in the module because the function that acts on
   // the instruction gets a pointer to the instruction.  We cannot use that to
   // insert a new instruction.  I want an iterator.
@@ -178,16 +179,19 @@ bool StrengthReductionPass::ScanFunctions() {
     for (auto& bb : func) {
       for (auto inst = bb.begin(); inst != bb.end(); ++inst) {
         switch (inst->opcode()) {
-          case spv::Op::OpIMul:
-            if (ReplaceMultiplyByPowerOf2(&inst)) modified = true;
+          case spv::Op::OpIMul: {
+            Status s = ReplaceMultiplyByPowerOf2(&inst);
+            if (s == Status::Failure) return Status::Failure;
+            if (s == Status::SuccessWithChange) modified = true;
             break;
+          }
           default:
             break;
         }
       }
     }
   }
-  return modified;
+  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
 }  // namespace opt

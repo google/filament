@@ -129,8 +129,7 @@ spv_result_t ValidateTensorTypeWithDimValuesNV(ValidationState_t& _,
   for (uint32_t i = 0; i < num_values; ++i) {
     const auto val_id = inst->GetOperandAs<uint32_t>(i + 3);
     const auto val = _.FindDef(val_id);
-    if (!val || !_.IsIntScalarType(val->type_id()) ||
-        _.GetBitWidth(val->type_id()) != 32) {
+    if (!val || !_.IsIntScalarType(val->type_id(), 32)) {
       return _.diag(SPV_ERROR_INVALID_ID, inst)
              << spvOpcodeString(inst->opcode()) << " operand <id> "
              << _.getIdName(val_id) << " is not a 32-bit integer.";

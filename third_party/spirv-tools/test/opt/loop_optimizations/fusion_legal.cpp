@@ -3415,7 +3415,8 @@ TEST_F(FusionLegalTest, DifferentArraysInLoopsNoPreheader) {
       EXPECT_FALSE(fusion.AreCompatible());
     }
 
-    ld.CreatePreHeaderBlocksIfMissing();
+    auto status = ld.CreatePreHeaderBlocksIfMissing();
+    EXPECT_NE(status, LoopDescriptor::Status::Failure);
 
     {
       LoopFusion fusion(context.get(), loops[0], loops[1]);
@@ -3588,7 +3589,8 @@ TEST_F(FusionLegalTest, AdjacentLoopsNoPreheaders) {
       EXPECT_FALSE(fusion.AreCompatible());
     }
 
-    ld.CreatePreHeaderBlocksIfMissing();
+    auto status = ld.CreatePreHeaderBlocksIfMissing();
+    EXPECT_NE(status, LoopDescriptor::Status::Failure);
 
     {
       LoopFusion fusion(context.get(), loops[0], loops[1]);

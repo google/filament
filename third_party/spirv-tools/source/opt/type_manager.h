@@ -203,7 +203,11 @@ class TypeManager {
     return GetRegisteredType(&bool_type);
   }
 
-  uint32_t GetBoolTypeId() { return GetTypeInstruction(GetBoolType()); }
+  uint32_t GetBoolTypeId() {
+    Type* bool_type = GetBoolType();
+    if (bool_type == nullptr) return 0;
+    return GetTypeInstruction(bool_type);
+  }
 
   Type* GetVoidType() {
     Void void_type;

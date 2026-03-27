@@ -110,6 +110,7 @@ std::string ShaderPreamble() {
   OpCapability Shader
   OpMemoryModel Logical Simple
   OpEntryPoint GLCompute %main "main"
+  OpExecutionMode %main LocalSize 16 1 1
 )";
 }
 
@@ -228,6 +229,7 @@ std::string ACCheckFail(const std::string& access_chain_inst,
 //   TODO(dneto): RuntimeArray
 
 TEST_F(GraphicsRobustAccessTest, ACVectorLeastInboundConstantUntouched) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt() << R"(
@@ -244,6 +246,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorLeastInboundConstantUntouched) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACVectorMostInboundConstantUntouched) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt() << R"(
@@ -260,6 +263,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorMostInboundConstantUntouched) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACVectorExcessConstantClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt() << R"(
@@ -276,6 +280,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorExcessConstantClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACVectorNegativeConstantClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt() << R"(
@@ -295,6 +300,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorNegativeConstantClamped) {
 // Like the previous test, but ensures the pass knows how to modify an index
 // which does not come first in the access chain.
 TEST_F(GraphicsRobustAccessTest, ACVectorInArrayNegativeConstantClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt() << R"(
@@ -315,6 +321,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorInArrayNegativeConstantClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACVectorGeneralClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"i"}) << TypesVoid() << TypesInt() << R"(
@@ -335,6 +342,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorGeneralClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACVectorGeneralShortClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Show that signed 16 bit integers are clamped as well.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -360,6 +368,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorGeneralShortClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACVectorGeneralUShortClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Show that unsigned 16 bit integers are clamped as well.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -385,6 +394,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorGeneralUShortClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACVectorGeneralLongClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Show that signed 64 bit integers are clamped as well.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -410,6 +420,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorGeneralLongClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACVectorGeneralULongClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Show that unsigned 64 bit integers are clamped as well.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -435,6 +446,7 @@ TEST_F(GraphicsRobustAccessTest, ACVectorGeneralULongClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACMatrixLeastInboundConstantUntouched) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt()
@@ -454,6 +466,7 @@ TEST_F(GraphicsRobustAccessTest, ACMatrixLeastInboundConstantUntouched) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACMatrixMostInboundConstantUntouched) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt()
@@ -473,6 +486,7 @@ TEST_F(GraphicsRobustAccessTest, ACMatrixMostInboundConstantUntouched) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACMatrixExcessConstantClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt()
@@ -492,6 +506,7 @@ TEST_F(GraphicsRobustAccessTest, ACMatrixExcessConstantClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACMatrixNegativeConstantClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt()
@@ -511,6 +526,7 @@ TEST_F(GraphicsRobustAccessTest, ACMatrixNegativeConstantClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACMatrixGeneralClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"i"}) << TypesVoid() << TypesInt()
@@ -534,6 +550,7 @@ TEST_F(GraphicsRobustAccessTest, ACMatrixGeneralClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayLeastInboundConstantUntouched) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt()
@@ -551,6 +568,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayLeastInboundConstantUntouched) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayMostInboundConstantUntouched) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt()
@@ -568,6 +586,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayMostInboundConstantUntouched) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayGeneralClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"i"}) << TypesVoid() << TypesInt()
@@ -590,6 +609,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayGeneralClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayGeneralShortIndexUIntBoundsClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Index is signed short, array bounds overflows the index type.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -615,6 +635,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayGeneralShortIndexUIntBoundsClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayGeneralUShortIndexIntBoundsClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Index is unsigned short, array bounds overflows the index type.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -640,6 +661,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayGeneralUShortIndexIntBoundsClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayGeneralUIntIndexShortBoundsClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Signed int index i is wider than the array bounds type.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -664,6 +686,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayGeneralUIntIndexShortBoundsClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayGeneralIntIndexUShortBoundsClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Unsigned int index i is wider than the array bounds type.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -688,6 +711,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayGeneralIntIndexUShortBoundsClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayGeneralLongIndexUIntBoundsClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Signed long index i is wider than the array bounds type.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -712,6 +736,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayGeneralLongIndexUIntBoundsClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayGeneralULongIndexIntBoundsClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Unsigned long index i is wider than the array bounds type.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -737,6 +762,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayGeneralULongIndexIntBoundsClamped) {
 
 TEST_F(GraphicsRobustAccessTest,
        ACArrayGeneralShortIndeArrayBiggerThanShortMaxClipsToShortIntMax) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << "OpCapability Int16\n"
@@ -761,6 +787,7 @@ TEST_F(GraphicsRobustAccessTest,
 
 TEST_F(GraphicsRobustAccessTest,
        ACArrayGeneralIntIndexArrayBiggerThanIntMaxClipsToSignedIntMax) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"i"}) << TypesVoid() << TypesInt()
@@ -784,6 +811,7 @@ TEST_F(GraphicsRobustAccessTest,
 
 TEST_F(GraphicsRobustAccessTest,
        ACArrayGeneralLongIndexArrayBiggerThanLongMaxClipsToSignedLongMax) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << "OpCapability Int64\n"
@@ -811,6 +839,7 @@ TEST_F(GraphicsRobustAccessTest,
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArraySpecIdSizedAlwaysClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"spec200"}) << R"(
@@ -837,6 +866,7 @@ TEST_F(GraphicsRobustAccessTest, ACArraySpecIdSizedAlwaysClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACStructLeastUntouched) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt()
@@ -853,6 +883,7 @@ TEST_F(GraphicsRobustAccessTest, ACStructLeastUntouched) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACStructMostUntouched) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << TypesVoid() << TypesInt()
@@ -869,6 +900,7 @@ TEST_F(GraphicsRobustAccessTest, ACStructMostUntouched) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACStructSpecConstantFail) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"struct", "spec200"})
@@ -891,6 +923,7 @@ TEST_F(GraphicsRobustAccessTest, ACStructSpecConstantFail) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACStructFloatConstantFail) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"struct"}) <<
@@ -911,6 +944,7 @@ TEST_F(GraphicsRobustAccessTest, ACStructFloatConstantFail) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACStructNonConstantFail) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"struct", "i"}) <<
@@ -932,6 +966,7 @@ TEST_F(GraphicsRobustAccessTest, ACStructNonConstantFail) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACStructExcessFail) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"struct", "i"}) << TypesVoid() << TypesInt()
@@ -951,6 +986,7 @@ TEST_F(GraphicsRobustAccessTest, ACStructExcessFail) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACStructNegativeFail) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"struct", "i"}) << TypesVoid() << TypesInt()
@@ -970,6 +1006,7 @@ TEST_F(GraphicsRobustAccessTest, ACStructNegativeFail) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACRTArrayLeastInboundClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC() << "OpDecorate %rtarr ArrayStride 4 "
@@ -997,6 +1034,7 @@ TEST_F(GraphicsRobustAccessTest, ACRTArrayLeastInboundClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralShortIndexClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << "OpCapability Int16\n"
@@ -1028,6 +1066,7 @@ TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralShortIndexClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralUShortIndexClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << "OpCapability Int16\n"
@@ -1059,6 +1098,7 @@ TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralUShortIndexClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralIntIndexClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"i"}) << "OpDecorate %rtarr ArrayStride 4 "
@@ -1087,6 +1127,7 @@ TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralIntIndexClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralUIntIndexClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"i"}) << "OpDecorate %rtarr ArrayStride 4 "
@@ -1115,6 +1156,7 @@ TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralUIntIndexClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralLongIndexClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << "OpCapability Int64" << ShaderPreambleAC({"i"})
@@ -1144,6 +1186,7 @@ TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralLongIndexClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralULongIndexClamped) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << "OpCapability Int64" << ShaderPreambleAC({"i"})
@@ -1173,6 +1216,7 @@ TEST_F(GraphicsRobustAccessTest, ACRTArrayGeneralULongIndexClamped) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACRTArrayStructVectorElem) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // The point of this test is that the access chain can have indices past the
   // index into the runtime array.  For good measure, the index into the final
   // struct is out of bounds.  We have to clamp that index too.
@@ -1213,6 +1257,7 @@ TEST_F(GraphicsRobustAccessTest, ACRTArrayStructVectorElem) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACArrayRTArrayStructVectorElem) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Now add an additional level of arrays around the Block-decorated struct.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
@@ -1257,6 +1302,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayRTArrayStructVectorElem) {
 }
 
 TEST_F(GraphicsRobustAccessTest, ACSplitACArrayRTArrayStructVectorElem) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Split the address calculation across two access chains.  Force
   // the transform to walk up the access chains to find the base variable.
   for (auto* ac : AccessChains()) {
@@ -1318,6 +1364,7 @@ TEST_F(GraphicsRobustAccessTest, ACSplitACArrayRTArrayStructVectorElem) {
 
 TEST_F(GraphicsRobustAccessTest,
        ACSplitACArrayRTArrayStructVectorElemAcrossBasicBlocks) {
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
   // Split the address calculation across two access chains.  Force
   // the transform to walk up the access chains to find the base variable.
   // This time, put the different access chains in different basic blocks.

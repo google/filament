@@ -30161,6 +30161,20 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
+				Enumerant:    "ArrayStrideIdEXT",
+				Value:        5124,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Array Stride'"},},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "OffsetIdEXT",
+				Value:        5125,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Byte Offset'"},},
+				Version:      "1.0",
+			},
+			Enumerant{
 				Enumerant:    "OverrideCoverageNV",
 				Value:        5248,
 				Capabilities: []string{"SampleMaskOverrideCoverageNV",},

@@ -199,7 +199,9 @@ class ScalarReplacementPass : public MemPass {
   // If there is an initial value for |source| for element |index|, it is
   // appended as an operand on |newVar|. If the initial value is OpUndef, no
   // initial value is added to |newVar|.
-  void GetOrCreateInitialValue(Instruction* source, uint32_t index,
+  //
+  // Returns true if the value was successfully created.
+  bool GetOrCreateInitialValue(Instruction* source, uint32_t index,
                                Instruction* newVar);
 
   // Replaces the load to the entire composite.

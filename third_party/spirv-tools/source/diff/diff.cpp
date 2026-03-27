@@ -1219,6 +1219,7 @@ bool Differ::DoDebugAndAnnotationInstructionsMatch(
     case spv::Op::OpMemberDecorate:
       return DoOperandsMatch(src_inst, dst_inst, 0, 3);
     case spv::Op::OpExtInst:
+      return DoOperandsMatch(src_inst, dst_inst, 0, 2);
     case spv::Op::OpDecorationGroup:
     case spv::Op::OpGroupDecorate:
     case spv::Op::OpGroupMemberDecorate:
@@ -2612,6 +2613,9 @@ void Differ::MatchExtInstDebugInfo() {
   // This section includes OpExtInst for DebugInfo extension
   MatchDebugAndAnnotationInstructions(src_->ext_inst_debuginfo(),
                                       dst_->ext_inst_debuginfo());
+  // OpExtInst can exist in other sections too, such as with non-semantic info.
+  MatchDebugAndAnnotationInstructions(src_->types_values(),
+                                      dst_->types_values());
 }
 
 void Differ::MatchAnnotations() {

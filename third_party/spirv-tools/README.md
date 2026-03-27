@@ -317,9 +317,7 @@ Effcee itself depends on [RE2][re2], and RE2 depends on [Abseil][abseil-cpp].
 #### Dependency on mimalloc
 
 SPIRV-Tools may be configured to use the [mimalloc][mimalloc] library to improve memory
-allocation performance. In order to avoid unexpectedly changing allocation behavior of
-applications that link SPIRV-Tools libraries statically, this option has no effect on
-the static libraries.
+allocation performance.
 
 In the CMake build, usage of mimalloc is controlled by the `SPIRV_TOOLS_USE_MIMALLOC`
 option. This variable defaults on `ON` when building for Windows and `OFF` when building
@@ -327,6 +325,11 @@ for other platforms. Enabling this option on non-Windows platforms is supported 
 expected to work normally, but this has not been tested as thoroughly and extensively as
 the Windows version. In the future, the `SPIRV_TOOLS_USE_MIMALLOC` option may default to
 `ON` for non-Windows platforms as well.
+
+In order to avoid unexpectedly changing allocation behavior of applications that link
+SPIRV-Tools libraries statically, mimalloc is disabled by default on static libraries.
+The option 'SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD' can be used to force the usage of
+mimalloc on static libraries.
 
 *Note*: mimalloc is currently only supported when building with CMake. When using Bazel,
 mimalloc is not used.
@@ -452,7 +455,7 @@ targets, you need to install CMake Version 2.8.12 or later.
 - [Python 3](http://www.python.org/): for utility scripts and running the test
 suite.
 - [Bazel](https://bazel.build/) (optional): if building the source with Bazel,
-you need to install Bazel Version 7.0.2 on your machine. Other versions may
+you need to install Bazel Version 7.4.0 on your machine. Other versions may
 also work, but are not verified.
 - [Emscripten SDK](https://emscripten.org) (optional): if building the
   WebAssembly module.
@@ -467,7 +470,6 @@ On MacOS
 - AppleClang 15.0
 
 On Windows
-- Visual Studio 2019
 - Visual Studio 2022
 
 Note: Other compilers or later versions may work, but they are not tested.

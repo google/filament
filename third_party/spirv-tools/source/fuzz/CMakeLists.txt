@@ -431,20 +431,15 @@ if(SPIRV_BUILD_FUZZER)
         ${CMAKE_CURRENT_BINARY_DIR}/protobufs/spvtoolsfuzz.pb.cc
         )
 
-  if(MSVC AND (NOT ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")))
-    # Enable parallel builds across four cores for this lib
-    add_definitions(/MP4)
-  endif()
-
   spvtools_pch(SPIRV_TOOLS_FUZZ_SOURCES pch_source_fuzz)
 
-  if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+  if (SPIRV_TOOLS_USE_MIMALLOC AND (NOT SPIRV_TOOLS_BUILD_STATIC OR SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD))
     list(APPEND SPIRV_TOOLS_DIFF_SOURCES ${spirv-tools_SOURCE_DIR}/source/mimalloc.cpp)
   endif()
 
   add_library(SPIRV-Tools-fuzz ${SPIRV_TOOLS_FUZZ_SOURCES})
 
-  if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+  if (SPIRV_TOOLS_USE_MIMALLOC AND (NOT SPIRV_TOOLS_BUILD_STATIC OR SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD))
     target_link_libraries(SPIRV-Tools-fuzz PRIVATE mimalloc-static)
   endif()
 
@@ -480,7 +475,7 @@ if(SPIRV_BUILD_FUZZER)
   if(ENABLE_SPIRV_TOOLS_INSTALL)
       set(SPIRV-Tools-fuzz-InstallTargets SPIRV-Tools-fuzz)
 
-      if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+      if (SPIRV_TOOLS_USE_MIMALLOC AND (NOT SPIRV_TOOLS_BUILD_STATIC OR SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD))
         list(APPEND SPIRV-Tools-fuzz-InstallTargets mimalloc-static)
       endif()
 

@@ -4034,6 +4034,18 @@ export default {
         "ExplicitInterpAMD": {
           "value": 4999
         },
+        "ArrayStrideIdEXT": {
+          "value": 5124,
+          "params": [
+            "IdRef"
+          ]
+        },
+        "OffsetIdEXT": {
+          "value": 5125,
+          "params": [
+            "IdRef"
+          ]
+        },
         "CounterBuffer": {
           "value": 5634,
           "params": [
@@ -4378,6 +4390,9 @@ export default {
         },
         "QuadControlKHR": {
           "value": 5087
+        },
+        "DescriptorHeapEXT": {
+          "value": 5128
         },
         "FragmentFullyCoveredEXT": {
           "value": 5265

@@ -256,5 +256,8 @@ bool GetExtensionFromString(const char* str, Extension* extension);
 // Returns text string corresponding to |extension|.
 const char* ExtensionToString(Extension extension);
 
+/// Used to provide better error message
+const char* StorageClassToString(spv::StorageClass value);
+
 }  // namespace spvtools
 #endif  // SOURCE_TABLE2_H_

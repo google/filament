@@ -582,6 +582,9 @@ int32_t unbiased_exponent(double f) {
 int16_t unbiased_half_exponent(uint16_t f) {
   return HexFloat<FloatProxy<Float16>>(f).getUnbiasedNormalizedExponent();
 }
+int16_t unbiased_bfloat16_exponent(uint16_t f) {
+  return HexFloat<FloatProxy<BFloat16>>(f).getUnbiasedNormalizedExponent();
+}
 int8_t unbiased_E4M3_exponent(uint8_t f) {
   return HexFloat<FloatProxy<Float8_E4M3>>(f).getUnbiasedNormalizedExponent();
 }
@@ -622,6 +625,17 @@ TEST(HexFloatOperationTest, UnbiasedExponent) {
 
   // Smallest representable number
   EXPECT_EQ(-24, unbiased_half_exponent(0x0001));
+
+  EXPECT_EQ(0, unbiased_bfloat16_exponent(0x3F80));
+  EXPECT_EQ(3, unbiased_bfloat16_exponent(0x4100));
+  EXPECT_EQ(-1, unbiased_bfloat16_exponent(0x3F00));
+  EXPECT_EQ(-126, unbiased_bfloat16_exponent(0x0080));
+  EXPECT_EQ(127, unbiased_bfloat16_exponent(0x7F00));
+  EXPECT_EQ(10, unbiased_bfloat16_exponent(0x4480));
+  EXPECT_EQ(128, unbiased_bfloat16_exponent(0x7F80));
+  // Test case for the smallest representable denormal number.
+  // Effective exponent is 1 - bias - (leading_one_pos) = 1 - 127 - 7 = -133
+  EXPECT_EQ(-133, unbiased_bfloat16_exponent(0x0001));
 
   // E4M3 cases
   // The exponent is represented in the bits 0x78
@@ -1479,6 +1493,7 @@ INSTANTIATE_TEST_SUITE_P(
 TEST(HexFloatOperationTests, NanTests) {
   using HF = HexFloat<FloatProxy<float>>;
   using HF16 = HexFloat<FloatProxy<Float16>>;
+  using BF16 = HexFloat<FloatProxy<BFloat16>>;
   using FE4M3 = HexFloat<FloatProxy<Float8_E4M3>>;
   using FE5M2 = HexFloat<FloatProxy<Float8_E5M2>>;
   round_direction rounding[] = {round_direction::kToZero,
@@ -1490,6 +1505,7 @@ TEST(HexFloatOperationTests, NanTests) {
   for (round_direction round : rounding) {
     HF16 f16(0);
     HF f(0.f);
+    BF16 bf16(0);
     FE4M3 fe4m3(0);
     FE5M2 fe5m2(0);
     HF(std::numeric_limits<float>::quiet_NaN()).castTo(f16, round);
@@ -1506,6 +1522,17 @@ TEST(HexFloatOperationTests, NanTests) {
     HF16(0x7C10).castTo(f, round);
     EXPECT_TRUE(f.value().isNan());
     HF16(0xFF00).castTo(f, round);
+    EXPECT_TRUE(f.value().isNan());
+
+    BF16(0x7F81).castTo(f, round);
+    EXPECT_TRUE(f.value().isNan());
+    BF16(0x7F91).castTo(f, round);
+    EXPECT_TRUE(f.value().isNan());
+    BF16(0xFF81).castTo(f, round);
+    EXPECT_TRUE(f.value().isNan());
+    BF16(0x7F90).castTo(f, round);
+    EXPECT_TRUE(f.value().isNan());
+    BF16(0xFFE0).castTo(f, round);
     EXPECT_TRUE(f.value().isNan());
 
     HF(std::numeric_limits<float>::quiet_NaN()).castTo(fe4m3, round);

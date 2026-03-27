@@ -155,11 +155,12 @@ spv_result_t NumConsumedLocations(ValidationState_t& _, const Instruction* type,
       *num_locations = 1;
       break;
     case spv::Op::OpTypeVector:
+    case spv::Op::OpTypeVectorIdEXT:
       // 3- and 4-component 64-bit vectors consume two locations.
       if ((_.ContainsSizedIntOrFloatType(type->id(), spv::Op::OpTypeInt, 64) ||
            _.ContainsSizedIntOrFloatType(type->id(), spv::Op::OpTypeFloat,
                                          64)) &&
-          (type->GetOperandAs<uint32_t>(2) > 2)) {
+          (_.GetDimension(type->id()) > 2)) {
         *num_locations = 2;
       } else {
         *num_locations = 1;
@@ -239,12 +240,13 @@ uint32_t NumConsumedComponents(ValidationState_t& _, const Instruction* type) {
       }
       break;
     case spv::Op::OpTypeVector:
+    case spv::Op::OpTypeVectorIdEXT:
       // Vectors consume components equal to the underlying type's consumption
       // times the number of elements in the vector. Note that 3- and 4-element
       // vectors cannot have a component decoration (i.e. assumed to be zero).
       num_components =
           NumConsumedComponents(_, _.FindDef(type->GetOperandAs<uint32_t>(1)));
-      num_components *= type->GetOperandAs<uint32_t>(2);
+      num_components *= _.GetDimension(type->id());
       break;
     case spv::Op::OpTypeArray:
       // Skip the array.
@@ -615,7 +617,8 @@ spv_result_t ValidateStorageClass(ValidationState_t& _,
     auto storage_class = interface_var->GetOperandAs<spv::StorageClass>(2);
     switch (storage_class) {
       case spv::StorageClass::PushConstant: {
-        if (has_push_constant) {
+        if (has_push_constant &&
+            !(_.HasCapability(spv::Capability::PushConstantBanksNV))) {
           return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
                  << _.VkErrorID(6673)
                  << "Entry-point has more than one variable with the "
@@ -690,7 +693,7 @@ spv_result_t ValidateStorageClass(ValidationState_t& _,
                   return false;
                 })) {
           return _.diag(SPV_ERROR_INVALID_ID, interface_var)
-                 << "FP8 E4M3/E5M2 OpVariable <id> "  // TODO VUID
+                 << _.VkErrorID(10823) << "FP8 E4M3/E5M2 OpVariable <id> "
                  << _.getIdName(interface_var->id()) << " must not be declared "
                  << "with a Storage Class of Input or Output.";
         }
