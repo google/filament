@@ -8,7 +8,7 @@ ERROR: 0:9: 'binding' : uniform/buffer blocks require layout(binding=X)
 ERROR: 0:13: 'gl_VertexIndex' : undeclared identifier 
 ERROR: 0:14: 'gl_InstanceIndex' : undeclared identifier 
 ERROR: 0:17: 'gl_DepthRangeParameters' : undeclared identifier 
-ERROR: 0:20: '' :  syntax error, unexpected IDENTIFIER, expecting LEFT_BRACE or COMMA or SEMICOLON
+ERROR: 0:20: '' :  syntax error, unexpected IDENTIFIER, expecting COMMA or SEMICOLON
 ERROR: 10 compilation errors.  No code generated.
 
 

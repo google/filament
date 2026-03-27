@@ -10,7 +10,7 @@ WARNING: spv.pp.line.frag:8: varying deprecated in version 130; may be removed i
                               Capability Sampled1D
                2:             ExtInstImport  "GLSL.std.450"
                               MemoryModel Logical GLSL450
-                              EntryPoint Fragment 5  "main" 60 72 75 78
+                              EntryPoint Fragment 5  "main" 23 26 29 76
                               ExecutionMode 5 OriginUpperLeft
                1:             String  "spv.pp.line.frag"
                7:             String  "header.h"
@@ -63,111 +63,111 @@ void main()
                               Name 5  "main"
                               Name 12  "myAbs(f1;"
                               Name 11  "x"
-                              Name 27  "blendscale"
-                              Name 29  "param"
-                              Name 31  "bias"
-                              Name 33  "coords1D"
-                              Name 36  "color"
-                              Name 41  "texSampler1D"
-                              Name 56  "texSampler2D"
-                              Name 60  "coords2D"
-                              Name 72  "gl_FragColor"
-                              Name 75  "u"
-                              Name 78  "blend"
-                              Decorate 41(texSampler1D) Binding 0
-                              Decorate 41(texSampler1D) DescriptorSet 0
-                              Decorate 56(texSampler2D) Binding 1
-                              Decorate 56(texSampler2D) DescriptorSet 0
-                              Decorate 60(coords2D) Location 2
-                              Decorate 72(gl_FragColor) Location 0
-                              Decorate 75(u) Location 1
-                              Decorate 78(blend) Location 0
+                              Name 17  "texSampler1D"
+                              Name 21  "texSampler2D"
+                              Name 23  "blend"
+                              Name 26  "u"
+                              Name 29  "coords2D"
+                              Name 43  "blendscale"
+                              Name 45  "param"
+                              Name 47  "bias"
+                              Name 49  "coords1D"
+                              Name 51  "color"
+                              Name 76  "gl_FragColor"
+                              Decorate 17(texSampler1D) Binding 0
+                              Decorate 17(texSampler1D) DescriptorSet 0
+                              Decorate 21(texSampler2D) Binding 1
+                              Decorate 21(texSampler2D) DescriptorSet 0
+                              Decorate 23(blend) Location 0
+                              Decorate 26(u) Location 1
+                              Decorate 29(coords2D) Location 2
+                              Decorate 76(gl_FragColor) Location 0
                3:             TypeVoid
                4:             TypeFunction 3
                8:             TypeFloat 32
                9:             TypePointer Function 8(float)
               10:             TypeFunction 8(float) 9(ptr)
-              15:    8(float) Constant 0
-              16:             TypeBool
-              28:    8(float) Constant 1071971828
-              32:    8(float) Constant 1073741824
-              34:             TypeVector 8(float) 4
-              35:             TypePointer Function 34(fvec4)
-              37:   34(fvec4) ConstantComposite 15 15 15 15
-              38:             TypeImage 8(float) 1D sampled format:Unknown
-              39:             TypeSampledImage 38
-              40:             TypePointer UniformConstant 39
-41(texSampler1D):     40(ptr) Variable UniformConstant
-              53:             TypeImage 8(float) 2D sampled format:Unknown
-              54:             TypeSampledImage 53
-              55:             TypePointer UniformConstant 54
-56(texSampler2D):     55(ptr) Variable UniformConstant
-              58:             TypeVector 8(float) 2
-              59:             TypePointer Input 58(fvec2)
-    60(coords2D):     59(ptr) Variable Input
-              71:             TypePointer Output 34(fvec4)
-72(gl_FragColor):     71(ptr) Variable Output
-              74:             TypePointer Input 34(fvec4)
-           75(u):     74(ptr) Variable Input
-              77:             TypePointer Input 8(float)
-       78(blend):     77(ptr) Variable Input
+              14:             TypeImage 8(float) 1D sampled format:Unknown
+              15:             TypeSampledImage 14
+              16:             TypePointer UniformConstant 15
+17(texSampler1D):     16(ptr) Variable UniformConstant
+              18:             TypeImage 8(float) 2D sampled format:Unknown
+              19:             TypeSampledImage 18
+              20:             TypePointer UniformConstant 19
+21(texSampler2D):     20(ptr) Variable UniformConstant
+              22:             TypePointer Input 8(float)
+       23(blend):     22(ptr) Variable Input
+              24:             TypeVector 8(float) 4
+              25:             TypePointer Input 24(fvec4)
+           26(u):     25(ptr) Variable Input
+              27:             TypeVector 8(float) 2
+              28:             TypePointer Input 27(fvec2)
+    29(coords2D):     28(ptr) Variable Input
+              31:    8(float) Constant 0
+              32:             TypeBool
+              44:    8(float) Constant 1071971828
+              48:    8(float) Constant 1073741824
+              50:             TypePointer Function 24(fvec4)
+              52:   24(fvec4) ConstantComposite 31 31 31 31
+              75:             TypePointer Output 24(fvec4)
+76(gl_FragColor):     75(ptr) Variable Output
                               Line 1 23 11
          5(main):           3 Function None 4
                6:             Label
-  27(blendscale):      9(ptr) Variable Function
-       29(param):      9(ptr) Variable Function
-        31(bias):      9(ptr) Variable Function
-    33(coords1D):      9(ptr) Variable Function
-       36(color):     35(ptr) Variable Function
+  43(blendscale):      9(ptr) Variable Function
+       45(param):      9(ptr) Variable Function
+        47(bias):      9(ptr) Variable Function
+    49(coords1D):      9(ptr) Variable Function
+       51(color):     50(ptr) Variable Function
                               Line 1 25 0
-                              Store 29(param) 28
-              30:    8(float) FunctionCall 12(myAbs(f1;) 29(param)
-                              Store 27(blendscale) 30
+                              Store 45(param) 44
+              46:    8(float) FunctionCall 12(myAbs(f1;) 45(param)
+                              Store 43(blendscale) 46
                               Line 1 26 0
-                              Store 31(bias) 32
+                              Store 47(bias) 48
                               Line 1 27 0
-                              Store 33(coords1D) 28
+                              Store 49(coords1D) 44
                               Line 1 28 0
-                              Store 36(color) 37
+                              Store 51(color) 52
                               Line 1 54 0
-              42:          39 Load 41(texSampler1D)
-              43:    8(float) Load 33(coords1D)
-              44:   34(fvec4) ImageSampleImplicitLod 42 43
-              45:   34(fvec4) Load 36(color)
-              46:   34(fvec4) FAdd 45 44
-                              Store 36(color) 46
+              53:          15 Load 17(texSampler1D)
+              54:    8(float) Load 49(coords1D)
+              55:   24(fvec4) ImageSampleImplicitLod 53 54
+              56:   24(fvec4) Load 51(color)
+              57:   24(fvec4) FAdd 56 55
+                              Store 51(color) 57
                               Line 1 55 0
-              47:          39 Load 41(texSampler1D)
-              48:    8(float) Load 33(coords1D)
-              49:    8(float) Load 31(bias)
-              50:   34(fvec4) ImageSampleImplicitLod 47 48 Bias 49
-              51:   34(fvec4) Load 36(color)
-              52:   34(fvec4) FAdd 51 50
-                              Store 36(color) 52
+              58:          15 Load 17(texSampler1D)
+              59:    8(float) Load 49(coords1D)
+              60:    8(float) Load 47(bias)
+              61:   24(fvec4) ImageSampleImplicitLod 58 59 Bias 60
+              62:   24(fvec4) Load 51(color)
+              63:   24(fvec4) FAdd 62 61
+                              Store 51(color) 63
                               Line 1 103 0
-              57:          54 Load 56(texSampler2D)
-              61:   58(fvec2) Load 60(coords2D)
-              62:   34(fvec4) ImageSampleImplicitLod 57 61
-              63:   34(fvec4) Load 36(color)
-              64:   34(fvec4) FAdd 63 62
-                              Store 36(color) 64
+              64:          19 Load 21(texSampler2D)
+              65:   27(fvec2) Load 29(coords2D)
+              66:   24(fvec4) ImageSampleImplicitLod 64 65
+              67:   24(fvec4) Load 51(color)
+              68:   24(fvec4) FAdd 67 66
+                              Store 51(color) 68
                               Line 1 104 0
-              65:          54 Load 56(texSampler2D)
-              66:   58(fvec2) Load 60(coords2D)
-              67:    8(float) Load 31(bias)
-              68:   34(fvec4) ImageSampleImplicitLod 65 66 Bias 67
-              69:   34(fvec4) Load 36(color)
-              70:   34(fvec4) FAdd 69 68
-                              Store 36(color) 70
+              69:          19 Load 21(texSampler2D)
+              70:   27(fvec2) Load 29(coords2D)
+              71:    8(float) Load 47(bias)
+              72:   24(fvec4) ImageSampleImplicitLod 69 70 Bias 71
+              73:   24(fvec4) Load 51(color)
+              74:   24(fvec4) FAdd 73 72
+                              Store 51(color) 74
                               Line 1 106 0
-              73:   34(fvec4) Load 36(color)
-              76:   34(fvec4) Load 75(u)
-              79:    8(float) Load 78(blend)
-              80:    8(float) Load 27(blendscale)
+              77:   24(fvec4) Load 51(color)
+              78:   24(fvec4) Load 26(u)
+              79:    8(float) Load 23(blend)
+              80:    8(float) Load 43(blendscale)
               81:    8(float) FMul 79 80
-              82:   34(fvec4) CompositeConstruct 81 81 81 81
-              83:   34(fvec4) ExtInst 2(GLSL.std.450) 46(FMix) 73 76 82
-                              Store 72(gl_FragColor) 83
+              82:   24(fvec4) CompositeConstruct 81 81 81 81
+              83:   24(fvec4) ExtInst 2(GLSL.std.450) 46(FMix) 77 78 82
+                              Store 76(gl_FragColor) 83
                               Line 1 107 0
                               Return
                               FunctionEnd
@@ -176,19 +176,19 @@ void main()
            11(x):      9(ptr) FunctionParameter
               13:             Label
                               Line 7 2 0
-              14:    8(float) Load 11(x)
-              17:    16(bool) FOrdGreaterThan 14 15
-                              SelectionMerge 19 None
-                              BranchConditional 17 18 22
-              18:               Label
+              30:    8(float) Load 11(x)
+              33:    32(bool) FOrdGreaterThan 30 31
+                              SelectionMerge 35 None
+                              BranchConditional 33 34 38
+              34:               Label
                                 Line 7 3 0
-              20:    8(float)   Load 11(x)
-                                ReturnValue 20
-              22:               Label
+              36:    8(float)   Load 11(x)
+                                ReturnValue 36
+              38:               Label
                                 Line 7 6 0
-              23:    8(float)   Load 11(x)
-              24:    8(float)   FNegate 23
-                                ReturnValue 24
-              19:             Label
+              39:    8(float)   Load 11(x)
+              40:    8(float)   FNegate 39
+                                ReturnValue 40
+              35:             Label
                               Unreachable
                               FunctionEnd

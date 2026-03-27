@@ -1,0 +1,12 @@
+spv.coopmatKHR_matmuladd_Error.comp
+ERROR: 0:26: 'a' : cannot multiply coop matrices with incompatible sizes 3 x 4 with 3 x 4
+ERROR: 0:37: 'i' : cannot multiply coop matrices with incompatible sizes spec_const x spec_const with spec_const x spec_const
+ERROR: 0:45: 'e' : cannot add coop matrices with incompatible sizes 3 x 3 with 4 x 4
+ERROR: 0:50: 'f' : coop matrix A in MulAdd operation has incompatible usage property, found 1, but needed 0
+ERROR: 0:55: 'g' : coop matrix B in MulAdd operation has incompatible usage property, found 2, but needed 1
+ERROR: 0:60: 'h' : coop matrix C in MulAdd operation has incompatible usage property, found 0, but needed 2
+ERROR: 0:60: 'assign' :  cannot convert from ' temp coopmat<3, 3, 3, 0> float16_t' to ' temp coopmat<3, 4, 4, 2> float16_t'
+ERROR: 7 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

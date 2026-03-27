@@ -32,32 +32,17 @@ void main()
 
     BARRIER();
 
-    gl_MeshVerticesEXT[iid+1].gl_Position = gl_MeshVerticesEXT[iid].gl_Position;
-    gl_MeshVerticesEXT[iid+1].gl_PointSize = gl_MeshVerticesEXT[iid].gl_PointSize;
-    gl_MeshVerticesEXT[iid+1].gl_ClipDistance[3] = gl_MeshVerticesEXT[iid].gl_ClipDistance[3];
-    gl_MeshVerticesEXT[iid+1].gl_CullDistance[2] = gl_MeshVerticesEXT[iid].gl_CullDistance[2];
-
-    BARRIER();
-
     gl_MeshPrimitivesEXT[iid].gl_PrimitiveID = 6;
     gl_MeshPrimitivesEXT[iid].gl_Layer = 7;
     gl_MeshPrimitivesEXT[iid].gl_ViewportIndex = 8;
     gl_MeshPrimitivesEXT[iid].gl_CullPrimitiveEXT = false;
 
-    BARRIER();
-
-    gl_MeshPrimitivesEXT[iid+1].gl_PrimitiveID = gl_MeshPrimitivesEXT[iid].gl_PrimitiveID;
-    gl_MeshPrimitivesEXT[iid+1].gl_Layer = gl_MeshPrimitivesEXT[iid].gl_Layer;
-    gl_MeshPrimitivesEXT[iid+1].gl_ViewportIndex = gl_MeshPrimitivesEXT[iid].gl_ViewportIndex;
-    gl_MeshPrimitivesEXT[iid+1].gl_CullPrimitiveEXT = false;
 
     BARRIER();
 
     // check bound limits
     gl_PrimitiveTriangleIndicesEXT[0] = uvec3(1, 1, 1); // range is between [0, vertexCount-1]
     gl_PrimitiveTriangleIndicesEXT[primitiveCount - 1] = uvec3(2, 2, 2); // array size is primitiveCount*3 for triangle
-    gl_PrimitiveTriangleIndicesEXT[gid] = gl_PrimitiveTriangleIndicesEXT[gid-1];
-
 
     BARRIER();
 }

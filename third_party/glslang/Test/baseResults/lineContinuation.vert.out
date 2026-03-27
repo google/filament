@@ -67,7 +67,7 @@ ERROR: node is still EOpNull!
 0:74      'funkyf' ( global highp float)
 0:75      Constant:
 0:75        1.2300000000000e+16
-0:85  Sequence
+0:84  Sequence
 0:84    move second child to first child ( temp highp int)
 0:84      'funkyh' ( global highp int)
 0:86      Constant:
@@ -201,7 +201,7 @@ ERROR: node is still EOpNull!
 0:74      'funkyf' ( global highp float)
 0:75      Constant:
 0:75        1.2300000000000e+16
-0:85  Sequence
+0:84  Sequence
 0:84    move second child to first child ( temp highp int)
 0:84      'funkyh' ( global highp int)
 0:86      Constant:

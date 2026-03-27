@@ -78,8 +78,8 @@ ERROR: 0:192: 'gl_ClipDistance' : undeclared identifier
 ERROR: 0:192: 'gl_ClipDistance' :  left of '[' is not of type array, matrix, or vector  
 ERROR: 0:192: 'assign' :  l-value required (can't modify a const)
 ERROR: 0:195: 'gl_ModelViewMatrix' : identifiers starting with "gl_" are reserved 
-ERROR: 0:200: 'token pasting (##)' : not supported for this version or the enabled extensions 
-ERROR: 0:203: 'token pasting (##)' : not supported for this version or the enabled extensions 
+ERROR: 0:199: 'token pasting (##)' : not supported for this version or the enabled extensions 
+ERROR: 0:202: 'token pasting (##)' : not supported for this version or the enabled extensions 
 ERROR: 0:205: '' :  syntax error, unexpected IDENTIFIER
 ERROR: 82 compilation errors.  No code generated.
 

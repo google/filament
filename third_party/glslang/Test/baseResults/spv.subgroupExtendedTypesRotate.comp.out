@@ -10,7 +10,7 @@ spv.subgroupExtendedTypesRotate.comp
                               Capability Int8
                               Capability StorageUniformBufferBlock16
                               Capability StorageBuffer8BitAccess
-                              Capability CapabilityGroupNonUniformRotateKHR
+                              Capability GroupNonUniformRotateKHR
                               Extension  "SPV_KHR_8bit_storage"
                               Extension  "SPV_KHR_subgroup_rotate"
                1:             ExtInstImport  "GLSL.std.450"

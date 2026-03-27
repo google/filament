@@ -89,7 +89,7 @@ ERROR: 0:227: 'non-constant global initializer (needs GL_EXT_shader_non_constant
 ERROR: 0:235: '#define' : names containing consecutive underscores are reserved, and an error if version < 300: A__B
 ERROR: 0:236: 'a__b' : identifiers containing consecutive underscores ("__") are reserved, and an error if version < 300 
 ERROR: 0:3000: '#error' : line of this error should be 3000  
-ERROR: 0:3002: '' :  syntax error, unexpected IDENTIFIER, expecting LEFT_BRACE or COMMA or SEMICOLON
+ERROR: 0:3002: '' :  syntax error, unexpected IDENTIFIER, expecting COMMA or SEMICOLON
 ERROR: 82 compilation errors.  No code generated.
 
 

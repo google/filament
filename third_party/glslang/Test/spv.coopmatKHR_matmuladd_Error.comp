@@ -1,0 +1,61 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+
+layout(constant_id = 0) const int M = 3;
+layout(constant_id = 1) const int N = 3;
+
+layout(local_size_x = 4, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) coherent buffer Block16 {
+    float16_t x[];
+} block;
+
+void main() {
+    coopmat<float16_t, gl_ScopeSubgroup, 3, 4, gl_MatrixUseA> a;
+    coopmat<float16_t, gl_ScopeSubgroup, 3, 4, gl_MatrixUseB> b;
+    coopMatLoad(a, block.x, 0, 3, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatLoad(b, block.x, 0, 3, gl_CooperativeMatrixLayoutRowMajor);
+
+    coopmat<float16_t, gl_ScopeSubgroup, 3, 3, gl_MatrixUseAccumulator> c =
+        coopmat<float16_t, gl_ScopeSubgroup, 3, 3, gl_MatrixUseAccumulator>(1.0);
+
+    // Incompatible dimensions (inside doesn't match): (3, 4) x (3, 4)
+    c = coopMatMulAdd(a, b, c);
+
+    coopmat<float16_t, gl_ScopeSubgroup, M, N, gl_MatrixUseA> i;
+    coopmat<float16_t, gl_ScopeSubgroup, M, N, gl_MatrixUseB> j;
+    coopMatLoad(a, block.x, 0, M, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatLoad(b, block.x, 0, M, gl_CooperativeMatrixLayoutRowMajor);
+
+    coopmat<float16_t, gl_ScopeSubgroup, M, N, gl_MatrixUseAccumulator> k =
+        coopmat<float16_t, gl_ScopeSubgroup, M, N, gl_MatrixUseAccumulator>(2.0);
+
+    // Incompatible dimensions (inside doesn't match): (M, N) x (M, N)
+    k = coopMatMulAdd(i, j, k);
+
+    coopmat<float16_t, gl_ScopeSubgroup, 4, 3, gl_MatrixUseB> d;
+    coopMatLoad(d, block.x, 0, 4, gl_CooperativeMatrixLayoutRowMajor);
+    coopmat<float16_t, gl_ScopeSubgroup, 4, 4, gl_MatrixUseAccumulator> e =
+        coopmat<float16_t, gl_ScopeSubgroup, 4, 4, gl_MatrixUseAccumulator>(3.0);
+
+    // Incompatible dimensions (product doesn't match sum): (3, 4) * (4, 3) = (3, 3) + (4, 4)
+    e = coopMatMulAdd(a, d, e);
+
+    // Improper usage type: A
+    coopmat<float16_t, gl_ScopeSubgroup, 3, 4, gl_MatrixUseB> f;
+    coopMatLoad(f, block.x, 0, 3, gl_CooperativeMatrixLayoutRowMajor);
+    c = coopMatMulAdd(f, d, c);
+
+    // Improper usage type: B
+    coopmat<float16_t, gl_ScopeSubgroup, 4, 3, gl_MatrixUseAccumulator> g;
+    coopMatLoad(g, block.x, 0, 4, gl_CooperativeMatrixLayoutRowMajor);
+    c = coopMatMulAdd(a, g, c);
+
+    // Improper usage type: Accum
+    coopmat<float16_t, gl_ScopeSubgroup, 3, 3, gl_MatrixUseA> h =
+        coopmat<float16_t, gl_ScopeSubgroup, 3, 3, gl_MatrixUseA>(1.0);
+    e = coopMatMulAdd(a, d, h);
+}

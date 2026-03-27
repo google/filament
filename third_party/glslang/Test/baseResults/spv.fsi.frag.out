@@ -4,7 +4,7 @@ spv.fsi.frag
 // Id's are bound by 24
 
                               Capability Shader
-                              Capability CapabilityFragmentShaderSampleInterlockEXT
+                              Capability FragmentShaderSampleInterlockEXT
                               Extension  "SPV_EXT_fragment_shader_interlock"
                1:             ExtInstImport  "GLSL.std.450"
                               MemoryModel Logical GLSL450

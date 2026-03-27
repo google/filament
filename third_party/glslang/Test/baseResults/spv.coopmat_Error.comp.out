@@ -29,7 +29,9 @@ ERROR: 0:71: '*' :  wrong operand types: no operation '*' exists that takes a le
 ERROR: 0:72: '*' :  wrong operand types: no operation '*' exists that takes a left-hand operand of type ' temp<32, 3, 16, 8> highp float' and a right operand of type ' const float16_t' (or there is no acceptable conversion)
 ERROR: 0:73: '*' :  wrong operand types: no operation '*' exists that takes a left-hand operand of type ' const float16_t' and a right operand of type ' temp<32, 3, 16, 8> highp float' (or there is no acceptable conversion)
 ERROR: 0:75: 'transpose' : no matching overloaded function found 
-ERROR: 30 compilation errors.  No code generated.
+ERROR: 0:80: 'coopMatLoadNV' : Only l-values corresponding to storage block or shared variables can be used with cooperative matrix load/store functions. 
+ERROR: 0:81: 'coopMatStoreNV' : Only l-values corresponding to storage block or shared variables can be used with cooperative matrix load/store functions. 
+ERROR: 32 compilation errors.  No code generated.
 
 
 SPIR-V is not generated for failed compile or link

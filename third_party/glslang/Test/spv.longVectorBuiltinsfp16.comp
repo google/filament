@@ -1,0 +1,100 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_EXT_long_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_expect_assume : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    vector<float16_t, 5> vf;
+    float16_t f;
+    vector<int16_t, 5> vi;
+    vector<bool, 5> vb;
+    bool b;
+
+    // 8.1
+    vf = radians(vf);
+    vf = degrees(vf);
+    vf = sin(vf);
+    vf = cos(vf);
+    vf = tan(vf);
+    vf = asin(vf);
+    vf = acos(vf);
+    vf = atan(vf);
+    vf = atan(vf, vf);
+    vf = sinh(vf);
+    vf = cosh(vf);
+    vf = tanh(vf);
+    vf = asinh(vf);
+    vf = acosh(vf);
+    vf = atanh(vf);
+
+    // 8.2
+    vf = pow(vf, vf);
+    vf = exp(vf);
+    vf = log(vf);
+    vf = exp2(vf);
+    vf = log2(vf);
+    vf = sqrt(vf);
+    vf = inversesqrt(vf);
+
+    // 8.3
+    vf = abs(vf);
+    vf = sign(vf);
+    vf = floor(vf);
+    vf = trunc(vf);
+    vf = round(vf);
+    vf = roundEven(vf);
+    vf = ceil(vf);
+    vf = fract(vf);
+    vf = mod(vf, f);
+    vf = mod(vf, vf);
+    vf = modf(vf, vf);
+    vf = min(vf, f);
+    vf = min(vf, vf);
+    vf = max(vf, f);
+    vf = max(vf, vf);
+    vf = clamp(vf, f, f);
+    vf = clamp(vf, vf, vf);
+    vf = mix(vf, vf, f);
+    vf = mix(vf, vf, vf);
+    vf = mix(vf, vf, vb);
+    vf = step(vf, vf);
+    vf = step(f, vf);
+    vf = smoothstep(vf, vf, vf);
+    vf = smoothstep(f, f, vf);
+    vb = isnan(vf);
+    vb = isinf(vf);
+    vf = fma(vf, vf, vf);
+    vf = frexp(vf, vi);
+    vf = ldexp(vf, vi);
+
+    // 8.5
+    f = length(vf);
+    f = distance(vf, vf);
+    f = dot(vf, vf);
+    vf = normalize(vf);
+    vf = faceforward(vf, vf, vf);
+    vf = reflect(vf, vf);
+    vf = refract(vf, vf, f);
+
+    // 8.7
+    vb = lessThan(vf, vf);
+    vb = lessThanEqual(vf, vf);
+    vb = greaterThan(vf, vf);
+    vb = greaterThanEqual(vf, vf);
+    vb = equal(vf, vf);
+    vb = notEqual(vf, vf);
+    b = any(vb);
+    b = all(vb);
+    vb = not(vb);
+
+    // 8.8
+
+    // GL_EXT_shader_integer_mix
+
+    // GL_EXT_expect_assume
+}
