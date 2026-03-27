@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 enum {
-    TOSAVersion = 1000000,
+    TOSAVersion = 1000001,
     TOSAVersion_BitWidthPadding = 0x7fffffff
 };
 enum {
