@@ -62,4 +62,8 @@ Here are some additional standalone examples demonstrating Filament's capabiliti
         <img src="../../images/web_sample_skinning.png" alt="skinning" />
         <span>skinning</span>
     </a>
+    <a href="sky.md" class="sample-card">
+        <img src="../../images/web_sample_sky.png" alt="sky" />
+        <span>sky</span>
+    </a>
 </div>

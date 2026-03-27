@@ -21,6 +21,7 @@
     - [morphing](./samples/web/morphing.md)
     - [parquet](./samples/web/parquet.md)
     - [skinning](./samples/web/skinning.md)
+    - [sky](./samples/web/sky.md)
 - [Technical Notes](./notes/README.md)
   - [Material Properties](./notes/material_properties.md)
   - [Release](./release/README.md)
