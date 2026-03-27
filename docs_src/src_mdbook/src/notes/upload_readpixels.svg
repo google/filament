@@ -1,0 +1,85 @@
+<svg viewBox="0 0 900 650" xmlns="http://www.w3.org/2000/svg" style="background-color: white;">
+  <defs>
+    <g id="smiley-upright">
+      <circle cx="0" cy="0" r="40" fill="none" stroke="black" stroke-width="3"/>
+      <circle cx="-15" cy="-15" r="5" fill="black"/>
+      <circle cx="15" cy="-15" r="5" fill="black"/>
+      <path d="M -20 10 Q 0 30 20 10" fill="none" stroke="black" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <g id="smiley-flipped">
+      <circle cx="0" cy="0" r="40" fill="none" stroke="black" stroke-width="3"/>
+      <circle cx="-15" cy="15" r="5" fill="black"/>
+      <circle cx="15" cy="15" r="5" fill="black"/>
+      <path d="M -20 -10 Q 0 -30 20 -10" fill="none" stroke="black" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="black" />
+    </marker>
+  </defs>
+
+  <text x="450" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold">Filament Image Upload / ReadPixels</text>
+
+  <text x="100" y="250" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold">Original Image</text>
+  <rect x="50" y="270" width="100" height="100" fill="none" stroke="black" />
+  <use href="#smiley-upright" x="100" y="320" />
+  <text x="100" y="265" text-anchor="middle" font-family="Arial" font-size="10">low addresses</text>
+  <text x="100" y="385" text-anchor="middle" font-family="Arial" font-size="10">high addresses</text>
+
+  <line x1="160" y1="310" x2="240" y2="220" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+  <text x="170" y="280" font-family="Arial" font-size="12" transform="rotate(-48, 170, 280)">texture upload</text>
+
+  <line x1="160" y1="310" x2="240" y2="310" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+  <line x1="160" y1="310" x2="240" y2="400" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+  <text x="320" y="80" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold">OpenGL</text>
+  <rect x="270" y="90" width="100" height="100" fill="none" stroke="black" />
+  <use href="#smiley-flipped" x="320" y="140" />
+  <circle cx="270" cy="190" r="3" fill="black" />
+  <text x="255" y="205" font-family="monospace" font-size="10">(0, 0)</text>
+  <text x="170" y="100" text-anchor="middle" font-family="Arial" font-size="12">
+    <tspan x="170" dy="1.2em">OpenGL's texture coordinates are</tspan>
+    <tspan x="170" dy="1.2em">bottom-left. However, images are</tspan>
+    <tspan x="170" dy="1.2em">flipped during upload.</tspan>
+  </text>
+
+  <text x="320" y="250" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold">Metal</text>
+  <rect x="270" y="260" width="100" height="100" fill="none" stroke="black" />
+  <use href="#smiley-upright" x="320" y="310" />
+  <circle cx="270" cy="260" r="3" fill="black" />
+  <text x="255" y="255" font-family="monospace" font-size="10">(0, 0)</text>
+
+  <text x="320" y="420" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold">Vulkan / WebGPU</text>
+  <rect x="270" y="430" width="100" height="100" fill="none" stroke="black" />
+  <use href="#smiley-upright" x="320" y="480" />
+  <circle cx="270" cy="430" r="3" fill="black" />
+  <text x="255" y="425" font-family="monospace" font-size="10">(0, 0)</text>
+
+  <line x1="390" y1="140" x2="450" y2="140" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+  <text x="425" y="130" text-anchor="middle" font-family="Arial" font-size="12">plain glReadPixels</text>
+  <rect x="480" y="90" width="100" height="100" fill="none" stroke="black" />
+  <use href="#smiley-upright" x="530" y="140" />
+
+  <line x1="600" y1="140" x2="660" y2="140" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+  <text x="630" y="115" text-anchor="middle" font-family="Arial" font-size="12">
+    <tspan x="630" dy="0">CPU flip inside</tspan>
+    <tspan x="630" dy="1.2em">OpenGL backend</tspan>
+  </text>
+  <rect x="690" y="90" width="100" height="100" fill="none" stroke="black" />
+  <use href="#smiley-flipped" x="740" y="140" />
+
+  <line x1="390" y1="310" x2="450" y2="310" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+  <text x="425" y="300" text-anchor="middle" font-family="Arial" font-size="12">Filament ReadPixels</text>
+  <rect x="480" y="260" width="100" height="100" fill="none" stroke="black" />
+  <use href="#smiley-upright" x="530" y="310" />
+
+  <line x1="390" y1="480" x2="450" y2="480" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+  <text x="425" y="470" text-anchor="middle" font-family="Arial" font-size="12">Filament ReadPixels</text>
+  <rect x="480" y="430" width="100" height="100" fill="none" stroke="black" />
+  <use href="#smiley-upright" x="530" y="480" />
+
+  <text x="530" y="85" text-anchor="middle" font-family="Arial" font-size="9">low addresses</text>
+  <text x="530" y="205" text-anchor="middle" font-family="Arial" font-size="9">high addresses</text>
+  <text x="740" y="85" text-anchor="middle" font-family="Arial" font-size="9">low addresses</text>
+  <text x="740" y="205" text-anchor="middle" font-family="Arial" font-size="9">high addresses</text>
+</svg>
