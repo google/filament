@@ -865,6 +865,7 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
         } else {
             scene->remove(sunlight);
         }
+        // FIXME: currently the LightType cannot be set/changed
         lm->setIntensity(light, settings.sunlight.intensity);
         lm->setSunHaloSize(light, settings.sunlight.sunHaloSize);
         lm->setSunHaloFalloff(light, settings.sunlight.sunHaloFalloff);
