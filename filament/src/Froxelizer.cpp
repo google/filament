@@ -736,7 +736,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         using container_type = LightRecord::bitset::container_type;
         constexpr size_t r = sizeof(container_type) / sizeof(LightGroupType);
         UTILS_UNROLL
-        for (size_t i = 0; i < LightRecord::bitset::WORLD_COUNT; i++) {
+        for (size_t i = 0; i < LightRecord::bitset::WORD_COUNT; i++) {
             container_type b = froxelThreadData[i * r][j];
             UTILS_UNROLL
             for (size_t k = 0; k < r; k++) {
