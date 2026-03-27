@@ -67,7 +67,7 @@ class DataBuffer {
   int64_t update_count() const { return descriptor_.buffer_update_count; }
   size_t data_size() const { return data_.size(); }
   const uint8_t *data() const { return data_.data(); }
-  uint8_t *data() { return &data_[0]; }
+  uint8_t *data() { return data_.data(); }
   int64_t buffer_id() const { return descriptor_.buffer_id; }
   void set_buffer_id(int64_t buffer_id) { descriptor_.buffer_id = buffer_id; }
 

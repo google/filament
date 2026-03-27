@@ -15,12 +15,11 @@
 #include "draco/core/options.h"
 
 #include <cstdlib>
+#include <set>
 #include <string>
 #include <utility>
 
 namespace draco {
-
-Options::Options() {}
 
 void Options::MergeAndReplace(const Options &other_options) {
   for (const auto &item : other_options.options_) {

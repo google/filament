@@ -44,7 +44,7 @@ class MeshEdgebreakerEncodingTest : public ::testing::Test {
     EncoderOptions encoder_options = EncoderOptions::CreateDefaultOptions();
     encoder_options.SetSpeed(10 - compression_level, 10 - compression_level);
     encoder.SetMesh(*mesh);
-    ASSERT_TRUE(encoder.Encode(encoder_options, &buffer).ok());
+    DRACO_ASSERT_OK(encoder.Encode(encoder_options, &buffer));
 
     DecoderBuffer dec_buffer;
     dec_buffer.Init(buffer.data(), buffer.size());
@@ -52,15 +52,14 @@ class MeshEdgebreakerEncodingTest : public ::testing::Test {
 
     std::unique_ptr<Mesh> decoded_mesh(new Mesh());
     DecoderOptions dec_options;
-    ASSERT_TRUE(
-        decoder.Decode(dec_options, &dec_buffer, decoded_mesh.get()).ok());
+    DRACO_ASSERT_OK(
+        decoder.Decode(dec_options, &dec_buffer, decoded_mesh.get()));
 
     // Cleanup the input mesh to make sure that input and output can be
     // compared (edgebreaker method discards degenerated triangles and isolated
     // vertices).
     const MeshCleanupOptions options;
-    MeshCleanup cleanup;
-    ASSERT_TRUE(cleanup(mesh, options)) << "Failed to clean the input mesh.";
+    DRACO_ASSERT_OK(MeshCleanup::Cleanup(mesh, options));
 
     MeshAreEquivalent eq;
     ASSERT_TRUE(eq(*mesh, *decoded_mesh.get()))
@@ -102,8 +101,8 @@ TEST_F(MeshEdgebreakerEncodingTest, TestEncoderReuse) {
   EncoderOptions encoder_options = EncoderOptions::CreateDefaultOptions();
   encoder.SetMesh(*mesh);
   EncoderBuffer buffer_0, buffer_1;
-  ASSERT_TRUE(encoder.Encode(encoder_options, &buffer_0).ok());
-  ASSERT_TRUE(encoder.Encode(encoder_options, &buffer_1).ok());
+  DRACO_ASSERT_OK(encoder.Encode(encoder_options, &buffer_0));
+  DRACO_ASSERT_OK(encoder.Encode(encoder_options, &buffer_1));
 
   // Make sure both buffer are identical.
   ASSERT_EQ(buffer_0.size(), buffer_1.size());
@@ -123,7 +122,7 @@ TEST_F(MeshEdgebreakerEncodingTest, TestDecoderReuse) {
   EncoderOptions encoder_options = EncoderOptions::CreateDefaultOptions();
   encoder.SetMesh(*mesh);
   EncoderBuffer buffer;
-  ASSERT_TRUE(encoder.Encode(encoder_options, &buffer).ok());
+  DRACO_ASSERT_OK(encoder.Encode(encoder_options, &buffer));
 
   DecoderBuffer dec_buffer;
   dec_buffer.Init(buffer.data(), buffer.size());
@@ -133,13 +132,13 @@ TEST_F(MeshEdgebreakerEncodingTest, TestDecoderReuse) {
   // Decode the mesh two times.
   std::unique_ptr<Mesh> decoded_mesh_0(new Mesh());
   DecoderOptions dec_options;
-  ASSERT_TRUE(
-      decoder.Decode(dec_options, &dec_buffer, decoded_mesh_0.get()).ok());
+  DRACO_ASSERT_OK(
+      decoder.Decode(dec_options, &dec_buffer, decoded_mesh_0.get()));
 
   dec_buffer.Init(buffer.data(), buffer.size());
   std::unique_ptr<Mesh> decoded_mesh_1(new Mesh());
-  ASSERT_TRUE(
-      decoder.Decode(dec_options, &dec_buffer, decoded_mesh_1.get()).ok());
+  DRACO_ASSERT_OK(
+      decoder.Decode(dec_options, &dec_buffer, decoded_mesh_1.get()));
 
   // Make sure both of the meshes are identical.
   MeshAreEquivalent eq;
@@ -169,7 +168,7 @@ TEST_F(MeshEdgebreakerEncodingTest, TestSingleConnectivityEncoding) {
     encoder.SetAttributeQuantization(GeometryAttribute::TEX_COORD, 8);
     encoder.SetAttributeQuantization(GeometryAttribute::NORMAL, 8);
     encoder.SetEncodingMethod(MESH_EDGEBREAKER_ENCODING);
-    ASSERT_TRUE(encoder.EncodeMeshToBuffer(*mesh, &buffer).ok());
+    DRACO_ASSERT_OK(encoder.EncodeMeshToBuffer(*mesh, &buffer));
 
     DecoderBuffer dec_buffer;
     dec_buffer.Init(buffer.data(), buffer.size());
@@ -216,7 +215,7 @@ TEST_F(MeshEdgebreakerEncodingTest, TestWrongAttributeOrder) {
   encoder.SetAttributeQuantization(GeometryAttribute::POSITION, 8);
   encoder.SetAttributeQuantization(GeometryAttribute::NORMAL, 8);
   encoder.SetEncodingMethod(MESH_EDGEBREAKER_ENCODING);
-  ASSERT_TRUE(encoder.EncodeMeshToBuffer(*mesh, &buffer).ok());
+  DRACO_ASSERT_OK(encoder.EncodeMeshToBuffer(*mesh, &buffer));
 
   DecoderBuffer dec_buffer;
   dec_buffer.Init(buffer.data(), buffer.size());

@@ -143,7 +143,8 @@ bool PlyEncoder::EncodeInternal() {
   buffer()->Encode(header_str.data(), header_str.length());
 
   // Store point attributes.
-  for (PointIndex v(0); v < in_point_cloud_->num_points(); ++v) {
+  const int num_points = in_point_cloud_->num_points();
+  for (PointIndex v(0); v < num_points; ++v) {
     const auto *const pos_att = in_point_cloud_->attribute(pos_att_id);
     buffer()->Encode(pos_att->GetAddress(pos_att->mapped_index(v)),
                      pos_att->byte_stride());
@@ -166,9 +167,13 @@ bool PlyEncoder::EncodeInternal() {
       buffer()->Encode(static_cast<uint8_t>(3));
 
       const auto &f = in_mesh_->face(i);
-      buffer()->Encode(f[0]);
-      buffer()->Encode(f[1]);
-      buffer()->Encode(f[2]);
+      for (int c = 0; c < 3; ++c) {
+        if (f[c] >= num_points) {
+          // Invalid point stored on the |in_mesh_| face.
+          return false;
+        }
+        buffer()->Encode(f[c]);
+      }
 
       if (tex_coord_att_id >= 0) {
         // Two coordinates for every corner -> 6.

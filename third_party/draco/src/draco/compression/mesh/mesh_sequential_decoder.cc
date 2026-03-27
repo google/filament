@@ -14,6 +14,9 @@
 //
 #include "draco/compression/mesh/mesh_sequential_decoder.h"
 
+#include <cstdint>
+#include <limits>
+
 #include "draco/compression/attributes/linear_sequencer.h"
 #include "draco/compression/attributes/sequential_attribute_decoders_controller.h"
 #include "draco/compression/entropy/symbol_decoding.h"
@@ -48,7 +51,6 @@ bool MeshSequentialDecoder::DecodeConnectivity() {
 
   // Check that num_faces and num_points are valid values.
   const uint64_t faces_64 = static_cast<uint64_t>(num_faces);
-  const uint64_t points_64 = static_cast<uint64_t>(num_points);
   // Compressed sequential encoding can only handle (2^32 - 1) / 3 indices.
   if (faces_64 > 0xffffffff / 3) {
     return false;
@@ -56,9 +58,6 @@ bool MeshSequentialDecoder::DecodeConnectivity() {
   if (faces_64 > buffer()->remaining_size() / 3) {
     // The number of faces is unreasonably high, because face indices do not
     // fit in the remaining size of the buffer.
-    return false;
-  }
-  if (points_64 > faces_64 * 3) {
     return false;
   }
   uint8_t connectivity_method;
@@ -96,7 +95,7 @@ bool MeshSequentialDecoder::DecodeConnectivity() {
         }
         mesh()->AddFace(face);
       }
-    } else if (mesh()->num_points() < (1 << 21) &&
+    } else if (num_points < (1 << 21) &&
                bitstream_version() >= DRACO_BITSTREAM_VERSION(2, 2)) {
       // Decode indices as uint32_t.
       for (uint32_t i = 0; i < num_faces; ++i) {
@@ -147,7 +146,7 @@ bool MeshSequentialDecoder::DecodeAndDecompressIndices(uint32_t num_faces) {
   }
   // Reconstruct the indices from the differences.
   // See MeshSequentialEncoder::CompressAndEncodeIndices() for more details.
-  int32_t last_index_value = 0;
+  int32_t last_index_value = 0;  // This will always be >= 0.
   int vertex_index = 0;
   for (uint32_t i = 0; i < num_faces; ++i) {
     Mesh::Face face;
@@ -155,7 +154,17 @@ bool MeshSequentialDecoder::DecodeAndDecompressIndices(uint32_t num_faces) {
       const uint32_t encoded_val = indices_buffer[vertex_index++];
       int32_t index_diff = (encoded_val >> 1);
       if (encoded_val & 1) {
+        if (index_diff > last_index_value) {
+          // Subtracting index_diff would result in a negative index.
+          return false;
+        }
         index_diff = -index_diff;
+      } else {
+        if (index_diff >
+            (std::numeric_limits<int32_t>::max() - last_index_value)) {
+          // Adding index_diff to last_index_value would overflow.
+          return false;
+        }
       }
       const int32_t index_value = index_diff + last_index_value;
       face[j] = index_value;

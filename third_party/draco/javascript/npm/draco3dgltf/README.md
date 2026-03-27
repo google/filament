@@ -6,18 +6,25 @@
 Description - glTF Draco Mesh Compression Extension
 ===================================================
 
+The `draco3dgltf` package is a subset of the `draco3d` package, containing only
+features of the Draco library that are relevant to compression in the glTF file
+format. glTF files (`.gltf`, `.glb`) can contain Draco-compressed mesh geometry,
+as defined by the glTF extension `KHR_draco_mesh_compression`.
 
-[Draco] is a library for compressing and decompressing 3D geometric [meshes] and [point clouds]. It is intended to improve the storage and transmission of 3D graphics.
-The [GL Transmission Format (glTF)](https://github.com/KhronosGroup/glTF) is an API-neutral runtime asset delivery format. glTF bridges the gap between 3D content creation tools and modern 3D applications by providing an efficient, extensible, interoperable format for the transmission and loading of 3D content.
+This library does not directly read/write glTF files, but is intended for use
+within tools and applications that deal with the glTF format. Examples of tools
+using the Draco library to apply compression to glTF files include:
 
-This package is a build for encoding/decoding [Draco mesh compression extension](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_draco_mesh_compression) in glTF specification. It could be used to compress the meshes in glTF assets or to decode the buffer data that belongs to a Draco mesh compression extension. For more detail, please read the extension spec.
+[Blender](https://www.blender.org/),
+[glTF Transform](https://gltf-transform.donmccurdy.com/), and
+[glTF Pipeline](https://github.com/CesiumGS/gltf-pipeline).
 
 Draco github glTF branch URL: https://github.com/google/draco/tree/gltf_2.0_draco_extension
 
 News
 =======
 
-Check out the [README](https://github.com/google/draco/blob/1.4.1/README.md)
+Check out the [README](https://github.com/google/draco/blob/1.5.7/README.md)
 file for news about this release.
 
 NPM Package

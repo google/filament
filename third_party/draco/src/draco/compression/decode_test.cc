@@ -17,9 +17,11 @@
 #include <cinttypes>
 #include <sstream>
 
+#include "draco/compression/encode.h"
 #include "draco/core/draco_test_base.h"
 #include "draco/core/draco_test_utils.h"
 #include "draco/io/file_utils.h"
+#include "draco/io/obj_encoder.h"
 
 namespace {
 
@@ -164,6 +166,80 @@ TEST_F(DecodeTest, TestSkipAttributeTransformWithNoQuantization) {
 
   // Make sure there is no attribute transform available for the attribute.
   ASSERT_EQ(pos_att->GetAttributeTransformData(), nullptr);
+}
+
+TEST_F(DecodeTest, TestSkipAttributeTransformUniqueId) {
+  // Tests that decoders preserve unique id of attributes even when their
+  // attribute transforms are skipped.
+  const std::string file_name = "cube_att.obj";
+  auto src_mesh = draco::ReadMeshFromTestFile(file_name);
+  ASSERT_NE(src_mesh, nullptr);
+
+  constexpr int kPosUniqueId = 7;
+  constexpr int kNormUniqueId = 42;
+  // Set unique ids for some of the attributes.
+  src_mesh
+      ->attribute(
+          src_mesh->GetNamedAttributeId(draco::GeometryAttribute::POSITION))
+      ->set_unique_id(kPosUniqueId);
+  src_mesh
+      ->attribute(
+          src_mesh->GetNamedAttributeId(draco::GeometryAttribute::NORMAL))
+      ->set_unique_id(kNormUniqueId);
+
+  draco::EncoderBuffer encoder_buffer;
+  draco::Encoder encoder;
+  encoder.SetAttributeQuantization(draco::GeometryAttribute::POSITION, 10);
+  encoder.SetAttributeQuantization(draco::GeometryAttribute::NORMAL, 11);
+  encoder.EncodeMeshToBuffer(*src_mesh, &encoder_buffer);
+
+  // Create a draco decoding buffer.
+  draco::DecoderBuffer buffer;
+  buffer.Init(encoder_buffer.data(), encoder_buffer.size());
+
+  // First we decode the mesh without skipping the attribute transforms.
+  draco::Decoder decoder_no_skip;
+  std::unique_ptr<draco::Mesh> mesh_no_skip =
+      decoder_no_skip.DecodeMeshFromBuffer(&buffer).value();
+  ASSERT_NE(mesh_no_skip, nullptr);
+
+  // Now we decode it again while skipping some attributes.
+  draco::Decoder decoder_skip;
+  // Make sure we skip dequantization for the position and normal attribute.
+  decoder_skip.SetSkipAttributeTransform(draco::GeometryAttribute::POSITION);
+  decoder_skip.SetSkipAttributeTransform(draco::GeometryAttribute::NORMAL);
+
+  // Decode the input data into a geometry.
+  buffer.Init(encoder_buffer.data(), encoder_buffer.size());
+  std::unique_ptr<draco::Mesh> mesh_skip =
+      decoder_skip.DecodeMeshFromBuffer(&buffer).value();
+  ASSERT_NE(mesh_skip, nullptr);
+
+  // Compare the unique ids.
+  const draco::PointAttribute *const pos_att_no_skip =
+      mesh_no_skip->GetNamedAttribute(draco::GeometryAttribute::POSITION);
+  ASSERT_NE(pos_att_no_skip, nullptr);
+  ASSERT_EQ(pos_att_no_skip->data_type(), draco::DataType::DT_FLOAT32);
+
+  const draco::PointAttribute *const pos_att_skip =
+      mesh_skip->GetNamedAttribute(draco::GeometryAttribute::POSITION);
+  ASSERT_NE(pos_att_skip, nullptr);
+  ASSERT_EQ(pos_att_skip->data_type(), draco::DataType::DT_INT32);
+
+  const draco::PointAttribute *const norm_att_no_skip =
+      mesh_no_skip->GetNamedAttribute(draco::GeometryAttribute::NORMAL);
+  ASSERT_NE(norm_att_no_skip, nullptr);
+  ASSERT_EQ(norm_att_no_skip->data_type(), draco::DataType::DT_FLOAT32);
+
+  const draco::PointAttribute *const norm_att_skip =
+      mesh_skip->GetNamedAttribute(draco::GeometryAttribute::NORMAL);
+  ASSERT_NE(norm_att_skip, nullptr);
+  ASSERT_EQ(norm_att_skip->data_type(), draco::DataType::DT_INT32);
+
+  ASSERT_EQ(pos_att_skip->unique_id(), pos_att_no_skip->unique_id());
+  ASSERT_EQ(norm_att_skip->unique_id(), norm_att_no_skip->unique_id());
+  std::cout << pos_att_skip->unique_id() << " " << norm_att_skip->unique_id()
+            << std::endl;
 }
 
 }  // namespace

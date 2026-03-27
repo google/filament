@@ -36,14 +36,11 @@ class PlyDecoderTest : public ::testing::Test {
 
   void test_decoding(const std::string &file_name, int num_faces,
                      uint32_t num_points, std::unique_ptr<Mesh> *out_mesh) {
-    // Don't test mesh decoding when the input is point cloud.
-    if (num_faces > 0) {
-      std::unique_ptr<Mesh> mesh(DecodePly<Mesh>(file_name));
-      ASSERT_NE(mesh, nullptr) << "Failed to load test model " << file_name;
-      ASSERT_EQ(mesh->num_faces(), num_faces);
-      if (out_mesh) {
-        *out_mesh = std::move(mesh);
-      }
+    std::unique_ptr<Mesh> mesh(DecodePly<Mesh>(file_name));
+    ASSERT_NE(mesh, nullptr) << "Failed to load test model " << file_name;
+    ASSERT_EQ(mesh->num_faces(), num_faces);
+    if (out_mesh) {
+      *out_mesh = std::move(mesh);
     }
 
     const std::unique_ptr<PointCloud> pc(DecodePly<PointCloud>(file_name));
@@ -88,6 +85,7 @@ TEST_F(PlyDecoderTest, TestPlyDecodingAll) {
   // test_decoding("test_pos_color.ply"); // tested
   test_decoding("cube_quads.ply");
   test_decoding("Box.ply");
+  test_decoding("delim_test.ply");
 }
 
 }  // namespace draco
