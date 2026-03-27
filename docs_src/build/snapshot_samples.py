@@ -71,7 +71,7 @@ def snapshot_samples():
     
     driver = webdriver.Chrome(options=chrome_options)
     
-    samples = ['animation', 'cube_fl0', 'helmet', 'morphing', 'parquet', 'skinning', 'triangle', 'redball', 'suzanne']
+    samples = ['animation', 'cube_fl0', 'helmet', 'morphing', 'parquet', 'skinning', 'sky', 'triangle', 'redball', 'suzanne']
     
     for sample in samples:
         print(f"Taking snapshot of {sample}...")

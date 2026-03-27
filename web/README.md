@@ -61,3 +61,36 @@ The custom `serve.py` script in the `web/examples/` directory performs the follo
 - Automatically detects the built files in the `out/` directory.
 - Generates a main entry `index.html` listing all the available samples and tutorials.
 - Handles server-side rendering of `.md` tutorial files into HTML using an embedded template.
+
+## Porting a Web Sample to Official Docs (`docs_src`)
+
+If you want your web sample or tutorial to appear on the official Filament documentation website via
+`mdbook`, follow these steps:
+
+1. **Map the Built HTML:**
+   Add your generated `.html` or `.md` file to the mapping in `docs_src/build/duplicates.json`. This
+   tells the documentation build script to copy your sample into the `mdbook` structure.
+   ```json
+   "out/cmake-webgl-release/web/examples/examples/your_sample/your_sample.html": {
+       "dest": "samples/web/your_sample.md"
+   }
+   ```
+
+2. **Add to the Navigation Menu:**
+   Link your sample in the table of contents by adding it to `docs_src/src_mdbook/src/SUMMARY.md`
+   under the "Web Tutorials" or "Web Samples" section.
+
+3. **Generate a Thumbnail Image:**
+   Add your sample's name to the `samples` array in `docs_src/build/snapshot_samples.py`. Then,
+   manually run this script (`python3 snapshot_samples.py`). It will launch a headless browser,
+   wait for your scene to render, and snap a 100x100 preview image.
+
+4. **Dynamic Asset Loading (Optional):**
+   When `mdbook` serves your sample, the assets (`.filamat`, textures) are segregated into a
+   `web/assets/` directory.
+   - For `<script src="...">` or `<img src="...">` tags embedded in the HTML, the paths will be
+     automatically rewritten by `docs_src/build/copy_web_docs.py`.
+   - However, if you load files dynamically within your JavaScript code (e.g., using `fetch()`), you
+     **must** prepend `(window.FILAMENT_ASSET_DIR || '')` to the file URL.
+   - If you need `window.FILAMENT_ASSET_DIR` to be properly populated, make sure to add logic to
+     `docs_src/build/copy_web_docs.py` to inject the proper path prefix for your sample.

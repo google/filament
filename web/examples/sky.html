@@ -5,7 +5,7 @@
   <title>Analytic Skybox</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
-  <link href="styles.css" rel="stylesheet">
+  <link href="../main.css" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -23,22 +23,24 @@
 </head>
 
 <body>
-  <canvas></canvas>
-
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <canvas></canvas>
+    <!-- mdbook: add fullscreen mode -->
+  </div>
   <!-- Filament -->
-  <script src="filament.js"></script>
-  <script src="gl-matrix-min.js"></script>
+  <script src="../filament.js"></script>
+  <script src="../gl-matrix-min.js"></script>
 
   <!-- UI -->
   <script src="lil-gui.js"></script>
 
   <!-- Utils -->
-  <script src="assets/suncalc_global.js"></script>
+  <script src="suncalc_global.js"></script>
 
   <!-- App -->
-
-  <script src="SimulatedSkybox.js?v=9999"></script>
-  <script src="main.js?v=9999"></script>
+  <script>window.FILAMENT_ASSET_DIR = "";</script>
+  <script src="SimulatedSkybox.js"></script>
+  <script src="main.js"></script>
 </body>
 
 </html>

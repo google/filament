@@ -88,6 +88,10 @@ def pull_duplicates():
       if body_match:
         content = style_str + body_match.group(1)
 
+    replacements = config[fin].get('replacements', {})
+    for old, new in replacements.items():
+      content = content.replace(old, new)
+
     with open(new_fpath, 'w') as out_file:
       for line in content.splitlines(True):
         out_file.write(transform_dup_file_link(line, link_transforms))
