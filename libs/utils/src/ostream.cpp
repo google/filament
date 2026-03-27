@@ -25,7 +25,6 @@
 
 #include <algorithm>
 #include <mutex>
-#include <string>
 #include <string_view>
 #include <utility>
 
@@ -204,10 +203,6 @@ ostream& ostream::operator<<(const unsigned char* string) noexcept {
 
 ostream& ostream::operator<<(const void* value) noexcept {
     return print("%p", value);
-}
-
-ostream& ostream::operator<<(std::string const& s) noexcept {
-    return print("%s", s.c_str());
 }
 
 ostream& ostream::operator<<(std::string_view const& s) noexcept {

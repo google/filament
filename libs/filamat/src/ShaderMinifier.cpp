@@ -147,16 +147,18 @@ std::string ShaderMinifier::removeWhitespace(const std::string& s, bool mergeBra
         size_t pos = cur;
         size_t len = 0;
 
-        while (s[cur] != '\n') {
+        while (cur < s.length() && s[cur] != '\n') {
             cur++;
             len++;
         }
 
         size_t newPos = s.find_first_not_of(" \t", pos);
-        if (newPos == std::string::npos) newPos = pos;
+        if (newPos == std::string::npos || newPos >= pos + len) {
+            newPos = pos + len;
+        }
 
         // If we have a single { or } on a line, move it to the previous line instead
-        size_t subLen = len - (newPos - pos);
+        size_t subLen = (pos + len) - newPos;
         if (mergeBraces && subLen == 1 && (s[newPos] == '{' || s[newPos] == '}')) {
             r.replace(r.size() - 1, 1, 1, s[newPos]);
         } else {
@@ -164,10 +166,35 @@ std::string ShaderMinifier::removeWhitespace(const std::string& s, bool mergeBra
         }
         r += '\n';
 
-        while (s[cur] == '\n') {
+        while (cur < s.length() && s[cur] == '\n') {
             cur++;
         }
     }
+
+    // Safely strip explicitly padded spacing surrounding standard punctuation that 
+    // spirv-cross systematically injects, to optimally pack our generated uncompressed outputs.
+    auto replaceAll = [](std::string& str, const char* from, const char* to) {
+        size_t start_pos = 0;
+        size_t from_len = std::strlen(from);
+        size_t to_len = std::strlen(to);
+        while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+            str.replace(start_pos, from_len, to);
+            start_pos += to_len;
+        }
+    };
+
+    replaceAll(r, " = ", "=");
+    replaceAll(r, ", ", ",");
+    replaceAll(r, " + ", "+");
+    replaceAll(r, " - ", "-");
+    replaceAll(r, " * ", "*");
+    replaceAll(r, " / ", "/");
+    replaceAll(r, " == ", "==");
+    replaceAll(r, " != ", "!=");
+    replaceAll(r, " >= ", ">=");
+    replaceAll(r, " <= ", "<=");
+    replaceAll(r, " > ", ">");
+    replaceAll(r, " < ", "<");
 
     return r;
 }

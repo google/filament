@@ -36,3 +36,18 @@ endif()
 # We do not need filaflat headers in the install directory
 # install(DIRECTORY ${PUBLIC_HDR_DIR}/filaflat DESTINATION include)
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+if (FILAMENT_BUILD_TESTING AND IS_HOST_PLATFORM)
+    project(test_filaflat)
+    set(TARGET test_filaflat)
+    set(SRCS
+            tests/test_filaflat.cpp)
+
+    add_executable(${TARGET} ${SRCS})
+    target_include_directories(${TARGET} PRIVATE src)
+    target_link_libraries(${TARGET} filaflat gtest)
+    set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
+endif()

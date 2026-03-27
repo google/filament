@@ -175,7 +175,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         choreographer = Choreographer.getInstance()
-        modelViewer = ModelViewer(surfaceView)
+        modelViewer = ModelViewer(surfaceView=surfaceView, manipulator=null)
         inputManager = ValidationInputManager(this)
 
         // Initialize IBL
@@ -368,6 +368,18 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         }
     }
 
+    private fun createResultManager(outputDir: File): ValidationResultManager {
+        val gpuDriverInfo = com.google.android.filament.utils.DeviceUtils.getGpuDriverInfo(modelViewer.engine)
+        return ValidationResultManager(
+            outputDir = outputDir,
+            gpuDriverInfo = gpuDriverInfo,
+            deviceName = android.os.Build.MODEL,
+            deviceCodeName = android.os.Build.DEVICE,
+            androidVersion = android.os.Build.VERSION.RELEASE,
+            androidBuildNumber = android.os.Build.DISPLAY
+        )
+    }
+
     private fun startValidation(input: ValidationInputManager.ValidationInput) {
         try {
             resultsContainer.removeAllViews()
@@ -378,7 +390,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
             testResultsHeader.text = "${input.config.name}"
 
-            resultManager = ValidationResultManager(input.outputDir)
+            resultManager = createResultManager(input.outputDir)
 
             validationRunner = ValidationRunner(this, modelViewer, input.config, resultManager!!)
             validationRunner?.callback = this
@@ -534,7 +546,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private fun exportTestBundleAction() {
         currentInput?.let { input ->
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val rm = resultManager ?: ValidationResultManager(input.outputDir)
+            val rm = resultManager ?: createResultManager(input.outputDir)
             val zip = rm.exportTestBundle(input.config, timestamp)
             if (zip != null) {
                 val msg = "Exported Bundle: ${zip.name}"
@@ -550,7 +562,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private fun exportTestResultsAction() {
         currentInput?.let { input ->
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val rm = resultManager ?: ValidationResultManager(input.outputDir)
+            val rm = resultManager ?: createResultManager(input.outputDir)
             val zip = rm.exportTestResults(input.sourceZip, timestamp)
             if (zip != null) {
                 val msg = "Exported Results: ${zip.name}"

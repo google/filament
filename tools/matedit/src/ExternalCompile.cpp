@@ -386,10 +386,10 @@ int externalCompile(utils::Path input, utils::Path output, bool preserveTextShad
         // Here we ONLY add GLSL and ESSL 1 types, as we're removing MSL completely.
         filamat::LineDictionary textDictionary;
         for (const auto& s : glslEntries) {
-            textDictionary.addText(s.shader);
+            textDictionary.addText(s.stage, s.shader);
         }
         for (const auto& s : essl1Entries) {
-            textDictionary.addText(s.shader);
+            textDictionary.addText(s.stage, s.shader);
         }
 
         // Add the re-generated text dictionary chunk and text-based shaders.

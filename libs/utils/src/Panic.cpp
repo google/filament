@@ -20,6 +20,7 @@
 
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/Log.h>
 #include <utils/Logger.h>
 #include <utils/ostream.h>
@@ -33,7 +34,6 @@
 #include <cstring>
 #include <mutex>
 #include <new>
-#include <string>
 #include <string_view>
 #include <utility>
 
@@ -79,8 +79,8 @@ public:
 // ------------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
-static std::string sprintfToString(const char* format, va_list args) noexcept {
-    std::string s;
+static CString sprintfToString(const char* format, va_list args) noexcept {
+    CString s;
     va_list tmp;
     va_copy(tmp, args);
     int n = vsnprintf(nullptr, 0, format, tmp);
@@ -91,22 +91,22 @@ static std::string sprintfToString(const char* format, va_list args) noexcept {
         char* const buf = new(std::nothrow) char[n];
         if (buf) {
             vsnprintf(buf, size_t(n), format, args);
-            s.assign(buf);
+            s = CString(buf);
             delete [] buf;
         }
     }
     return s;
 }
 
-static std::string sprintfToString(const char* format, ...) noexcept {
+static CString sprintfToString(const char* format, ...) noexcept {
     va_list args;
     va_start(args, format);
-    std::string const s{ sprintfToString(format, args) };
+    CString const s{ sprintfToString(format, args) };
     va_end(args);
     return s;
 }
 
-static std::string buildPanicString(
+static CString buildPanicString(
         std::string_view const& msg, const char* function, int line,
         const char* file, const char* reason) {
 #ifndef NDEBUG
@@ -130,7 +130,7 @@ void Panic::setPanicHandler(PanicHandlerCallback const handler, void* user) noex
 
 template<typename T>
 TPanic<T>::TPanic(const char* function, const char* file, int const line, char const* literal,
-        std::string reason)
+        CString reason)
         : mFile(file),
           mFunction(function),
           mLine(line),
@@ -200,7 +200,7 @@ void TPanic<T>::panic(char const* function, char const* file, int const line, ch
         const char* format, ...) {
     va_list args;
     va_start(args, format);
-    std::string reason{ sprintfToString(format, args) };
+    CString reason{ sprintfToString(format, args) };
     va_end(args);
 
     panic(function, file, line, literal, std::move(reason));
@@ -208,10 +208,10 @@ void TPanic<T>::panic(char const* function, char const* file, int const line, ch
 
 template<typename T>
 void TPanic<T>::panic(char const* function, char const* file, int line, char const* literal,
-        std::string reason) {
+        CString reason) {
 
     if (reason.empty()) {
-        reason = literal;
+        reason = CString(literal);
     }
 
     T e(function, formatFile(file), line, literal, std::move(reason));
@@ -238,10 +238,10 @@ namespace details {
 void panicLog(char const* function, char const* file, int const line, const char* format, ...) noexcept {
     va_list args;
     va_start(args, format);
-    std::string const reason{ sprintfToString(format, args) };
+    CString const reason{ sprintfToString(format, args) };
     va_end(args);
 
-    std::string const msg = buildPanicString("PanicLog",
+    CString const msg = buildPanicString("PanicLog",
             function, line, file, reason.c_str());
 
     slog.e << msg << io::endl;
@@ -343,7 +343,7 @@ PanicStream& PanicStream::operator<<(unsigned char const* value) noexcept {
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(std::string const& value) noexcept {
+PanicStream& PanicStream::operator<<(CString const& value) noexcept {
     mStream << value;
     return *this;
 }

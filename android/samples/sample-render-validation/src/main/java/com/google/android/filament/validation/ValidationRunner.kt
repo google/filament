@@ -42,6 +42,7 @@ class ValidationRunner(
     private var currentModelName: String? = null
 
     private var frameCounter = 0
+    private var suiteStartTime: Long = 0
 
     enum class State {
         IDLE,
@@ -65,6 +66,7 @@ class ValidationRunner(
             callback?.onAllTestsFinished()
             return
         }
+        suiteStartTime = System.currentTimeMillis()
         currentTestIndex = 0
         currentModelIndex = 0
         startTest(config.tests[0])
@@ -81,6 +83,17 @@ class ValidationRunner(
     }
 
     private fun startModel(modelName: String) {
+        if (currentModelName == modelName) {
+            Log.i("ValidationRunner", "Reusing model $modelName")
+            callback?.onStatusChanged("Reusing $modelName for ${currentTestConfig?.name}")
+
+            modelViewer.resetToDefaultState()
+
+            frameCounter = 0
+            currentState = State.WARMUP
+            return
+        }
+
         currentModelName = modelName
         val modelPath = config.models[modelName]
         if (modelPath == null) {
@@ -345,7 +358,10 @@ class ValidationRunner(
             startTest(config.tests[currentTestIndex])
         } else {
             currentState = State.IDLE
-            resultManager.finalizeResults()
+
+            val totalTimeMs = System.currentTimeMillis() - suiteStartTime
+
+            resultManager.finalizeResults(totalTimeMs)
             callback?.onAllTestsFinished()
         }
     }

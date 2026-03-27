@@ -467,7 +467,8 @@ void OpenGLDriver::bindTexture(GLuint const unit, GLTexture const* t) noexcept {
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
     bool success = true;
     if (mBoundProgram != p) {
-        // compile/link the program if needed and call glUseProgram
+        // compile/link the program if needed and call glUseProgram.
+        // This call may block until the program linking process is complete.
         success = p->use(this, mContext);
         assert_invariant(success == p->isValid());
         if (success) {
@@ -716,7 +717,11 @@ Handle<HwSwapChain> OpenGLDriver::createSwapChainHeadlessS() noexcept {
 }
 
 Handle<HwTimerQuery> OpenGLDriver::createTimerQueryS() noexcept {
-    return initHandle<GLTimerQuery>();
+    Handle<HwTimerQuery> tqh = initHandle<GLTimerQuery>();
+    // The state must be constructed here, as a synchronous call to getTimerQueryValue might happen
+    // before createTimerQueryR is executed on the backend thread.
+    handle_cast<GLTimerQuery*>(tqh)->state = std::make_shared<GLTimerQuery::State>();
+    return tqh;
 }
 
 Handle<HwDescriptorSetLayout> OpenGLDriver::createDescriptorSetLayoutS() noexcept {
@@ -2855,7 +2860,7 @@ bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool OpenGLDriver::isFrameTimeSupported() {
-    return TimerQueryFactory::isGpuTimeSupported();
+    return mContext.isGpuTimeSupported();
 }
 
 bool OpenGLDriver::isAutoDepthResolveSupported() {

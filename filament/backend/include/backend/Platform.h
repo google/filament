@@ -222,6 +222,7 @@ public:
     enum class DeviceInfoType {
         OPENGL_RENDERER,    //!< glGetString(GL_RENDERER)
         OPENGL_VENDOR,      //!< glGetString(GL_VENDOR)
+        OPENGL_VERSION,     //!< glGetString(GL_VERSION)
         VULKAN_DEVICE_NAME, //!< VkPhysicalDeviceProperties::deviceName
         VULKAN_DRIVER_NAME, //!< VkPhysicalDeviceDriverProperties::driverName
         VULKAN_DRIVER_INFO, //!< VkPhysicalDeviceDriverProperties::driverInfo

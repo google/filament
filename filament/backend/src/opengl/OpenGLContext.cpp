@@ -222,6 +222,15 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
 #endif
 #endif
 
+#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
+    if (ext.EXT_disjoint_timer_query) {
+        mGpuTimeSupported = true;
+    } else
+#endif
+    if (platform.canCreateFence()) {
+        mGpuTimeSupported = true;
+    }
+
     // in practice KHR_Debug has never been useful, and actually is confusing. We keep this
     // only for our own debugging, in case we need it some day.
 #if false && !defined(NDEBUG) && defined(GL_KHR_debug)

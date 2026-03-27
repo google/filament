@@ -106,19 +106,25 @@ Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Varia
     assert_invariant(mMaterial != nullptr);
 
     FEngine& engine = mMaterial->getEngine();
+
+    Handle<HwProgram> result;
     if (mMaterial->isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = engine.getDefaultMaterial();
         assert_invariant(defaultMaterial);
         LocalProgramCache const& defaultPrograms = defaultMaterial->getPrograms();
-        Handle<HwProgram> program = defaultPrograms.mCachedPrograms[variant.key];
-        if (program) {
-            return mCachedPrograms[variant.key] = program;
+        result = defaultPrograms.mCachedPrograms[variant.key];
+        if (!result) {
+            result = defaultPrograms.prepareProgram(driver, variant, priorityQueue);
         }
-        return mCachedPrograms[variant.key] =
-                defaultPrograms.prepareProgram(driver, variant, priorityQueue);
+    } else {
+        result = mMaterial->getDefinition().prepareProgram(engine, driver,
+                mMaterial->getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
     }
-    return mCachedPrograms[variant.key] = mMaterial->getDefinition().prepareProgram(engine, driver,
-                   mMaterial->getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
+
+    FILAMENT_CHECK_POSTCONDITION(result) << "Requested variant " << (uint32_t)variant.key
+                                         << " does not exist for material " << mMaterial->getName();
+
+    return mCachedPrograms[variant.key] = result;
 }
 
 ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant variant) const noexcept {
@@ -182,7 +188,7 @@ Program::SpecializationConstant LocalProgramCache::getConstantImpl(
         return getConstantImpl(it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
     }
 
-    std::string name_cstring(name);
+    CString name_cstring(name);
     PANIC_PRECONDITION("No such constant exists: %s", name_cstring.c_str());
     return {};
 }

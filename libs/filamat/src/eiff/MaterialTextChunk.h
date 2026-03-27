@@ -27,8 +27,8 @@ namespace filamat {
 
 class MaterialTextChunk final : public Chunk {
 public:
-    MaterialTextChunk(const std::vector<TextEntry>&& entries, const LineDictionary& dictionary,
-            ChunkType type) : Chunk(type), mEntries(entries), mDictionary(dictionary) {
+    MaterialTextChunk(std::vector<TextEntry>&& entries, const LineDictionary& dictionary,
+            ChunkType type) : Chunk(type), mEntries(std::move(entries)), mDictionary(dictionary) {
     }
     ~MaterialTextChunk() override = default;
 
