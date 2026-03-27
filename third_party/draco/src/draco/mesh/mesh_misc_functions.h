@@ -18,6 +18,10 @@
 #ifndef DRACO_MESH_MESH_MISC_FUNCTIONS_H_
 #define DRACO_MESH_MESH_MISC_FUNCTIONS_H_
 
+#include <array>
+#include <cmath>
+#include <memory>
+
 #include "draco/mesh/corner_table.h"
 #include "draco/mesh/mesh.h"
 
@@ -67,7 +71,6 @@ inline bool IsCornerOppositeToAttributeSeam(CornerIndex ci,
 // Interpolates an attribute value on a face using given barycentric
 // coordinates. InterpolatedVectorT should be a VectorD that corresponds to the
 // values stored in the attribute.
-// TODO(ostava): Find a better place for this.
 template <typename InterpolatedVectorT>
 InterpolatedVectorT ComputeInterpolatedAttributeValueOnMeshFace(
     const Mesh &mesh, const PointAttribute &attribute, FaceIndex fi,
@@ -77,6 +80,10 @@ InterpolatedVectorT ComputeInterpolatedAttributeValueOnMeshFace(
   InterpolatedVectorT val[3];
   for (int c = 0; c < 3; ++c) {
     attribute.GetMappedValue(face[c], &(val[c][0]));
+  }
+  if (val[1] == val[0] && val[2] == val[0]) {
+    // No need to interpolate anything if all values are the same.
+    return val[0];
   }
   // Return an interpolated value.
   InterpolatedVectorT res;

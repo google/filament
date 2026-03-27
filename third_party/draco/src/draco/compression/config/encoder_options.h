@@ -65,6 +65,10 @@ class EncoderOptionsBase : public DracoOptions<AttributeKeyT> {
     this->SetGlobalInt("encoding_speed", encoding_speed);
     this->SetGlobalInt("decoding_speed", decoding_speed);
   }
+  bool IsSpeedSet() const {
+    return this->IsGlobalOptionSet("encoding_speed") ||
+           this->IsGlobalOptionSet("decoding_speed");
+  }
 
   // Sets a given feature as supported or unsupported by the target decoder.
   // Encoder will always use only supported features when encoding the input

@@ -15,6 +15,8 @@
 #ifndef DRACO_POINT_CLOUD_POINT_CLOUD_BUILDER_H_
 #define DRACO_POINT_CLOUD_POINT_CLOUD_BUILDER_H_
 
+#include <utility>
+
 #include "draco/point_cloud/point_cloud.h"
 
 namespace draco {
@@ -37,6 +39,9 @@ namespace draco {
 
 class PointCloudBuilder {
  public:
+  // Index type of the inserted element.
+  typedef PointIndex ElementIndex;
+
   PointCloudBuilder();
 
   // Starts collecting point cloud data.
@@ -45,6 +50,8 @@ class PointCloudBuilder {
 
   int AddAttribute(GeometryAttribute::Type attribute_type,
                    int8_t num_components, DataType data_type);
+  int AddAttribute(GeometryAttribute::Type attribute_type,
+                   int8_t num_components, DataType data_type, bool normalized);
 
   // Sets attribute value for a specific point.
   // |attribute_value| must contain data in the format specified by the
@@ -60,6 +67,14 @@ class PointCloudBuilder {
   void SetAttributeValuesForAllPoints(int att_id, const void *attribute_values,
                                       int stride);
 
+  // Sets the unique ID for an attribute created with AddAttribute().
+  void SetAttributeUniqueId(int att_id, uint32_t unique_id);
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Sets attribute name.
+  void SetAttributeName(int att_id, const std::string &name);
+#endif  // DRACO_TRANSCODER_SUPPORTED
+
   // Finalizes the PointCloud or returns nullptr on error.
   // If |deduplicate_points| is set to true, the following happens:
   //   1. Attribute values with duplicate entries are deduplicated.
@@ -70,6 +85,12 @@ class PointCloudBuilder {
   // Once this function is called, the builder becomes invalid and cannot be
   // used until the method Start() is called again.
   std::unique_ptr<PointCloud> Finalize(bool deduplicate_points);
+
+  // Add metadata for an attribute.
+  void AddAttributeMetadata(int32_t att_id,
+                            std::unique_ptr<AttributeMetadata> metadata) {
+    point_cloud_->AddAttributeMetadata(att_id, std::move(metadata));
+  }
 
  private:
   std::unique_ptr<PointCloud> point_cloud_;

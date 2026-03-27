@@ -22,7 +22,7 @@
 
 namespace draco {
 
-// TODO(hemmer): Make this a stable bounding box.
+// TODO(b/199760123): Make this a stable bounding box.
 struct QuantizationInfo {
   uint32_t quantization_bits;
   float range;
@@ -41,7 +41,7 @@ OutputIterator QuantizePoints3(const PointIterator &begin,
     max_range = std::max(std::fabs((*it)[2]), max_range);
   }
 
-  const uint32_t max_quantized_value((1 << info->quantization_bits) - 1);
+  const uint32_t max_quantized_value((1u << info->quantization_bits) - 1);
   Quantizer quantize;
   quantize.Init(max_range, max_quantized_value);
   info->range = max_range;
@@ -66,7 +66,7 @@ void DequantizePoints3(const QPointIterator &begin, const QPointIterator &end,
 
   const uint32_t quantization_bits = info.quantization_bits;
   const float range = info.range;
-  const uint32_t max_quantized_value((1 << quantization_bits) - 1);
+  const uint32_t max_quantized_value((1u << quantization_bits) - 1);
   Dequantizer dequantize;
   dequantize.Init(range, max_quantized_value);
 

@@ -44,7 +44,7 @@ namespace draco {
 // there are more leading zeros, which is then compressed better by the
 // arithmetic encoding.
 
-// TODO(hemmer): Remove class because it duplicates quantization code.
+// TODO(b/199760123): Remove class because it duplicates quantization code.
 class FloatPointsTreeEncoder {
  public:
   explicit FloatPointsTreeEncoder(PointCloudCompressionMethod method);
@@ -91,7 +91,7 @@ bool FloatPointsTreeEncoder::EncodePointCloud(InputIteratorT points_begin,
   // Collect necessary data for encoding.
   num_points_ = std::distance(points_begin, points_end);
 
-  // TODO(hemmer): Extend quantization tools to make this more automatic.
+  // TODO(b/199760123): Extend quantization tools to make this more automatic.
   // Compute range of points for quantization
   std::vector<Point3ui> qpoints;
   qpoints.reserve(num_points_);

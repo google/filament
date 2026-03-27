@@ -221,14 +221,13 @@ bool Decoder::GetAttributeFloatForAllPoints(const PointCloud &pc,
   const int components = pa.num_components();
   const int num_points = pc.num_points();
   const int num_entries = num_points * components;
-  const int kMaxAttributeFloatValues = 4;
-  float values[kMaxAttributeFloatValues] = {-2.0, -2.0, -2.0, -2.0};
+  std::vector<float> values(components, -2.f);
   int entry_id = 0;
 
   out_values->Resize(num_entries);
   for (draco::PointIndex i(0); i < num_points; ++i) {
     const draco::AttributeValueIndex val_index = pa.mapped_index(i);
-    if (!pa.ConvertValue<float>(val_index, values)) {
+    if (!pa.ConvertValue<float>(val_index, &values[0])) {
       return false;
     }
     for (int j = 0; j < components; ++j) {
@@ -249,17 +248,16 @@ bool Decoder::GetAttributeFloatArrayForAllPoints(const PointCloud &pc,
     return false;
   }
   const bool requested_type_is_float = pa.data_type() == draco::DT_FLOAT32;
-  const int kMaxAttributeFloatValues = 4;
-  float values[kMaxAttributeFloatValues] = {-2.0, -2.0, -2.0, -2.0};
+  std::vector<float> values(components, -2.f);
   int entry_id = 0;
   float *const floats = reinterpret_cast<float *>(out_values);
 
   for (draco::PointIndex i(0); i < num_points; ++i) {
     const draco::AttributeValueIndex val_index = pa.mapped_index(i);
     if (requested_type_is_float) {
-      pa.GetValue(val_index, values);
+      pa.GetValue(val_index, &values[0]);
     } else {
-      if (!pa.ConvertValue<float>(val_index, values)) {
+      if (!pa.ConvertValue<float>(val_index, &values[0])) {
         return false;
       }
     }

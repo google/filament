@@ -40,7 +40,7 @@ class MeshAttributeCornerTable {
   // whenever the seam edges are updated).
   // |mesh| and |att| can be null, in which case mapping between vertices and
   // attribute value ids is set to identity.
-  void RecomputeVertices(const Mesh *mesh, const PointAttribute *att);
+  bool RecomputeVertices(const Mesh *mesh, const PointAttribute *att);
 
   inline bool IsCornerOppositeToSeamEdge(CornerIndex corner) const {
     return is_edge_on_seam_[corner.value()];
@@ -130,6 +130,12 @@ class MeshAttributeCornerTable {
     return false;
   }
 
+  bool IsDegenerated(FaceIndex face) const {
+    // Introducing seams can't change the degeneracy of the individual faces,
+    // therefore we can delegate the check to the original |corner_table_|.
+    return corner_table_->IsDegenerated(face);
+  }
+
   bool no_interior_seams() const { return no_interior_seams_; }
   const CornerTable *corner_table() const { return corner_table_; }
 
@@ -166,7 +172,7 @@ class MeshAttributeCornerTable {
 
  private:
   template <bool init_vertex_to_attribute_entry_map>
-  void RecomputeVerticesInternal(const Mesh *mesh, const PointAttribute *att);
+  bool RecomputeVerticesInternal(const Mesh *mesh, const PointAttribute *att);
 
   std::vector<bool> is_edge_on_seam_;
   std::vector<bool> is_vertex_on_seam_;

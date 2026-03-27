@@ -14,6 +14,8 @@
 //
 #include "draco/io/file_utils.h"
 
+#include <string>
+
 #include "draco/core/draco_test_base.h"
 #include "draco/core/draco_test_utils.h"
 

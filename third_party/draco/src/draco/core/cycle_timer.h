@@ -20,9 +20,10 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-typedef LARGE_INTEGER timeval;
+typedef LARGE_INTEGER DracoTimeVal;
 #else
 #include <sys/time.h>
+typedef timeval DracoTimeVal;
 #endif
 
 #include <cinttypes>
@@ -39,8 +40,8 @@ class DracoTimer {
   int64_t GetInMs();
 
  private:
-  timeval tv_start;
-  timeval tv_end;
+  DracoTimeVal tv_start_;
+  DracoTimeVal tv_end_;
 };
 
 typedef DracoTimer CycleTimer;

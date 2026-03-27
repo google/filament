@@ -5,7 +5,7 @@ set -euo pipefail
 function usage() {
   echo "Usage: $0 [-h] <version_tag>"
   echo "  -h: Display this help message"
-  echo "  <version_tag>: The draco version to download (e.g., 1.4.1)"
+  echo "  <version_tag>: The draco version to download (e.g., 1.5.7)"
   exit 1
 }
 
