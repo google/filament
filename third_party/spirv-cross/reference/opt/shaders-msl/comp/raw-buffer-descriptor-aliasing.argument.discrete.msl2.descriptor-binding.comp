@@ -91,12 +91,12 @@ struct spvDescriptorSetBuffer0
     constant UBO_C* ubo_c [[id(1)]];
     device SSBO_B* ssbo_b [[id(2)]];
     constant UBO_D* ubo_d [[id(3)]];
-    const device SSBO_BRO* ssbo_b_readonly [[id(4)]];
+    device SSBO_BRO* ssbo_b_readonly [[id(4)]];
     device SSBO_As* ssbo_as [[id(5)]][4];
     constant UBO_Cs* ubo_cs [[id(9)]][4];
     device SSBO_Bs* ssbo_bs [[id(13)]][4];
     constant UBO_Ds* ubo_ds [[id(17)]][4];
-    const device SSBO_BsRO* ssbo_bs_readonly [[id(21)]][4];
+    device SSBO_BsRO* ssbo_bs_readonly [[id(21)]][4];
 };
 
 kernel void main0(constant spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], constant Registers& _42 [[buffer(1)]], device void* spvBufferAliasSet2Binding0 [[buffer(2)]], constant void* spvBufferAliasSet2Binding1 [[buffer(3)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
@@ -105,7 +105,7 @@ kernel void main0(constant spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0
     constant auto& ubo_g = *(constant UBO_G*)spvBufferAliasSet2Binding1;
     device auto& ssbo_f = *(device SSBO_F*)spvBufferAliasSet2Binding0;
     constant auto& ubo_h = *(constant UBO_H*)spvBufferAliasSet2Binding1;
-    const device auto& ssbo_i = *(const device SSBO_I*)spvBufferAliasSet2Binding0;
+    device auto& ssbo_i = *(device SSBO_I*)spvBufferAliasSet2Binding0;
     (*spvDescriptorSet0.ssbo_a).data[gl_GlobalInvocationID.x] = (*spvDescriptorSet0.ubo_c).data[gl_WorkGroupID.x].x + _42.reg;
     (*spvDescriptorSet0.ssbo_b).data[gl_GlobalInvocationID.x] = (*spvDescriptorSet0.ubo_d).data[gl_WorkGroupID.y].xy + (*spvDescriptorSet0.ssbo_b_readonly).data[gl_GlobalInvocationID.x];
     spvDescriptorSet0.ssbo_as[gl_WorkGroupID.x]->data[gl_GlobalInvocationID.x] = spvDescriptorSet0.ubo_cs[gl_WorkGroupID.x]->data[0].x;

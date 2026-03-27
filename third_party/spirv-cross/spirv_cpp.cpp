@@ -23,7 +23,7 @@
 
 #include "spirv_cpp.hpp"
 
-using namespace spv;
+using namespace SPIRV_CROSS_SPV_HEADER_NAMESPACE;
 using namespace SPIRV_CROSS_NAMESPACE;
 using namespace std;
 

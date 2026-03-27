@@ -24,7 +24,7 @@ struct _13
     float2 _m0[648];
 };
 
-kernel void main0(const device _6& _7 [[buffer(0)]], device _9& _11 [[buffer(1)]], device _13& _14 [[buffer(2)]])
+kernel void main0(device _6& _7 [[buffer(0)]], device _9& _11 [[buffer(1)]], device _13& _14 [[buffer(2)]])
 {
     for (uint _46 = 0u; _46 < 648u; _46 += 2u)
     {

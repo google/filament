@@ -40,47 +40,32 @@ struct spvDescriptor
 };
 
 template<typename T>
-struct spvBufferDescriptor
+struct spvBufferDescriptor;
+
+template<typename T>
+struct spvBufferDescriptor<device T*>
 {
-    T value;
+    device T* value;
     int length;
-    const device T& operator -> () const device
-    {
-        return value;
-    }
-    const device T& operator * () const device
-    {
-        return value;
-    }
+    int padding;
 };
 
 template<typename T>
 struct spvDescriptorArray
 {
-    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(&ptr->value)
-    {
-    }
-    const device T& operator [] (size_t i) const
-    {
-        return ptr[i];
-    }
+    spvDescriptorArray(const device spvDescriptor<T>* ptr_) : ptr(&ptr_->value) {}
+    spvDescriptorArray(const device void *ptr_) : spvDescriptorArray(static_cast<const device spvDescriptor<T>*>(ptr_)) {}
+    const device T& operator [] (size_t i) const { return ptr[i]; }
     const device T* ptr;
 };
 
 template<typename T>
 struct spvDescriptorArray<device T*>
 {
-    spvDescriptorArray(const device spvBufferDescriptor<device T*>* ptr) : ptr(ptr)
-    {
-    }
-    const device T* operator [] (size_t i) const
-    {
-        return ptr[i].value;
-    }
-    const int length(int i) const
-    {
-        return ptr[i].length;
-    }
+    spvDescriptorArray(const device spvBufferDescriptor<device T*>* ptr_) : ptr(ptr_) {}
+    spvDescriptorArray(const device void *ptr_) : spvDescriptorArray(static_cast<const device spvBufferDescriptor<device T*>*>(ptr_)) {}
+    device T* operator [] (size_t i) const { return ptr[i].value; }
+    int length(int i) const { return ptr[i].length; }
     const device spvBufferDescriptor<device T*>* ptr;
 };
 
@@ -100,16 +85,16 @@ struct main0_in
     uint inputId [[user(locn0)]];
 };
 
-fragment void main0(main0_in in [[stage_in]], const device spvBufferDescriptor<const device Ssbo*>* ssbo_ [[buffer(4)]], const device spvDescriptor<constant Ubo*>* ubo_ [[buffer(5)]], const device spvDescriptor<texture2d<float>>* smp_textures_ [[buffer(0)]], const device spvDescriptor<texture2d<float>>* textures_ [[buffer(2)]], const device spvDescriptor<texture2d<float>>* images_ [[buffer(6)]], const device spvDescriptor<sampler>* smp_texturesSmplr_ [[buffer(1)]], const device spvDescriptor<sampler>* smp_ [[buffer(3)]], const device spvDescriptor<raytracing::acceleration_structure<raytracing::instancing>>* tlas_ [[buffer(7)]])
+fragment void main0(main0_in in [[stage_in]], device const void* spvDescriptorSet0Binding3 [[buffer(4)]], device const void* spvDescriptorSet0Binding4 [[buffer(5)]], device const void* spvDescriptorSet0Binding0 [[buffer(0)]], device const void* spvDescriptorSet0Binding2 [[buffer(2)]], device const void* spvDescriptorSet0Binding5 [[buffer(6)]], device const void* spvDescriptorSet0Binding0Smplr [[buffer(1)]], device const void* spvDescriptorSet0Binding1 [[buffer(3)]], device const void* spvDescriptorSet0Binding6 [[buffer(7)]])
 {
-    spvDescriptorArray<texture2d<float>> smp_textures {smp_textures_};
-    spvDescriptorArray<sampler> smp_texturesSmplr {smp_texturesSmplr_};
-    spvDescriptorArray<texture2d<float>> textures {textures_};
-    spvDescriptorArray<sampler> smp {smp_};
-    spvDescriptorArray<const device Ssbo*> ssbo {ssbo_};
-    spvDescriptorArray<constant Ubo*> ubo {ubo_};
-    spvDescriptorArray<texture2d<float>> images {images_};
-    spvDescriptorArray<raytracing::acceleration_structure<raytracing::instancing>> tlas {tlas_};
+    spvDescriptorArray<texture2d<float>> smp_textures {spvDescriptorSet0Binding0};
+    spvDescriptorArray<sampler> smp_texturesSmplr {spvDescriptorSet0Binding0Smplr};
+    spvDescriptorArray<texture2d<float>> textures {spvDescriptorSet0Binding2};
+    spvDescriptorArray<sampler> smp {spvDescriptorSet0Binding1};
+    spvDescriptorArray<const device Ssbo*> ssbo {spvDescriptorSet0Binding3};
+    spvDescriptorArray<constant Ubo*> ubo {spvDescriptorSet0Binding4};
+    spvDescriptorArray<texture2d<float>> images {spvDescriptorSet0Binding5};
+    spvDescriptorArray<raytracing::acceleration_structure<raytracing::instancing>> tlas {spvDescriptorSet0Binding6};
 
     uint _231 = in.inputId;
     raytracing::intersection_query<raytracing::instancing, raytracing::triangle_data> rayQuery;

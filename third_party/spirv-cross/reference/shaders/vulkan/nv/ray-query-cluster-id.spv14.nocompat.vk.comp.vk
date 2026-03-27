@@ -1,0 +1,64 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_NV_cluster_acceleration_structure : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 1, std140) uniform Params
+{
+    uint ray_flags;
+    uint cull_mask;
+    vec3 origin;
+    float tmin;
+    vec3 dir;
+    float tmax;
+} _18;
+
+layout(set = 0, binding = 2, std430) buffer SSBO
+{
+    int id;
+} _68;
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT AS;
+
+rayQueryEXT q;
+
+void main()
+{
+    rayQueryInitializeEXT(q, AS, _18.ray_flags, _18.cull_mask, _18.origin, _18.tmin, _18.dir, _18.tmax);
+    for (;;)
+    {
+        bool _47 = rayQueryProceedEXT(q);
+        if (_47)
+        {
+            uint _49 = rayQueryGetIntersectionTypeEXT(q, bool(0));
+            bool _51 = _49 == 0u;
+            bool _57;
+            if (_51)
+            {
+                int _54 = rayQueryGetIntersectionClusterIdNV(q, bool(0));
+                _57 = _54 != (-1);
+            }
+            else
+            {
+                _57 = _51;
+            }
+            if (_57)
+            {
+                rayQueryTerminateEXT(q);
+                rayQueryConfirmIntersectionEXT(q);
+            }
+            continue;
+        }
+        else
+        {
+            break;
+        }
+    }
+    uint _61 = rayQueryGetIntersectionTypeEXT(q, bool(1));
+    if (_61 == 1u)
+    {
+        int _69 = rayQueryGetIntersectionClusterIdNV(q, bool(1));
+        _68.id = _69;
+    }
+}
+

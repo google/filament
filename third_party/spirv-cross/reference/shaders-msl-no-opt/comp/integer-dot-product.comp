@@ -36,10 +36,10 @@ struct InOut
     int result;
 };
 
-kernel void main0(device void* spvBufferAliasSet0Binding1 [[buffer(0)]])
+kernel void main0(const device void* spvBufferAliasSet0Binding1 [[buffer(0)]])
 {
-    device auto& comp3 = *(device InOut3*)spvBufferAliasSet0Binding1;
-    device auto& comp2 = *(device InOut2*)spvBufferAliasSet0Binding1;
+    const device auto& comp3 = *(const device InOut3*)spvBufferAliasSet0Binding1;
+    const device auto& comp2 = *(const device InOut2*)spvBufferAliasSet0Binding1;
     int sdot_int = reduce_add(int4(short4(comp3.x)) * int4(short4(comp3.y)));
     uint sdot_uint = reduce_add(uint4(short4(comp3.x)) * uint4(short4(comp3.y)));
     uint udot_uint = reduce_add(uint4(comp3.x) * uint4(comp3.y));

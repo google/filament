@@ -1,0 +1,17 @@
+#version 460
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : require
+
+layout(scalar, binding=1) restrict buffer AttData0 {
+    uvec3 att0[];
+};
+
+void main() {
+    uint newVal = 432;
+    uint prevVal = 0;
+    uint curVal = 0;
+    
+    while ( (curVal = atomicCompSwap(att0[0].x, prevVal, newVal)) != prevVal)
+    {
+    }
+};

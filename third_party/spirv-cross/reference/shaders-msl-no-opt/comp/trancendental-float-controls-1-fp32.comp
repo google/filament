@@ -1,0 +1,34 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float v[4];
+    half f16[4];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 1u, 1u);
+
+kernel void main0(device SSBO& _14 [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
+{
+    _14.v[gl_LocalInvocationIndex] = precise::cos(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::sin(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::tan(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::acos(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::asin(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::atan(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::exp(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::exp2(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::log(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::log2(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::sqrt(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::rsqrt(_14.v[gl_LocalInvocationIndex]);
+    _14.v[gl_LocalInvocationIndex] += precise::powr(_14.v[gl_LocalInvocationIndex], 4.0);
+    _14.f16[gl_LocalInvocationIndex] = cos(_14.f16[gl_LocalInvocationIndex]);
+    _14.f16[gl_LocalInvocationIndex] += sin(_14.f16[gl_LocalInvocationIndex]);
+    _14.f16[gl_LocalInvocationIndex] += half(fast::cosh(float(_14.f16[gl_LocalInvocationIndex])));
+    _14.f16[gl_LocalInvocationIndex] += half(fast::sinh(float(_14.f16[gl_LocalInvocationIndex])));
+}
+

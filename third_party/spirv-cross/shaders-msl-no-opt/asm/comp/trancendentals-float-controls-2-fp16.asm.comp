@@ -1,0 +1,225 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 173
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability StorageBuffer16BitAccess
+               OpCapability FloatControls2
+               OpExtension "SPV_KHR_16bit_storage"
+               OpExtension "SPV_KHR_float_controls2"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %gl_LocalInvocationIndex
+               OpExecutionMode %main LocalSize 4 1 1
+               OpExecutionModeId %main FPFastMathDefault %half %fp32_modes
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "v"
+               OpMemberName %SSBO 1 "f16"
+               OpName %_ ""
+               OpName %gl_LocalInvocationIndex "gl_LocalInvocationIndex"
+               OpDecorate %_arr_float_uint_4 ArrayStride 4
+               OpDecorate %_arr_half_uint_4 ArrayStride 2
+               OpDecorate %SSBO BufferBlock
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 16
+               OpDecorate %_ Binding 0
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %gl_LocalInvocationIndex BuiltIn LocalInvocationIndex
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+			   OpDecorate %24 FPFastMathMode NotNaN|NotInf
+			   OpDecorate %30 FPFastMathMode NotNaN ; This isn't enough to avoid precise::
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+	   %fp32_modes = OpConstant %uint 0x7000f
+     %uint_4 = OpConstant %uint 4
+%_arr_float_uint_4 = OpTypeArray %float %uint_4
+       %half = OpTypeFloat 16
+%_arr_half_uint_4 = OpTypeArray %half %uint_4
+       %SSBO = OpTypeStruct %_arr_float_uint_4 %_arr_half_uint_4
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%gl_LocalInvocationIndex = OpVariable %_ptr_Input_uint Input
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+    %float_4 = OpConstant %float 4
+      %int_1 = OpConstant %int 1
+%_ptr_Uniform_half = OpTypePointer Uniform %half
+     %v3uint = OpTypeVector %uint 3
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_4 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %19 = OpLoad %uint %gl_LocalInvocationIndex
+         %20 = OpLoad %uint %gl_LocalInvocationIndex
+         %22 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %20
+         %23 = OpLoad %float %22
+         %24 = OpExtInst %float %1 Cos %23
+         %25 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %19
+               OpStore %25 %24
+         %26 = OpLoad %uint %gl_LocalInvocationIndex
+         %27 = OpLoad %uint %gl_LocalInvocationIndex
+         %28 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %27
+         %29 = OpLoad %float %28
+         %30 = OpExtInst %float %1 Sin %29
+         %31 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %26
+         %32 = OpLoad %float %31
+         %33 = OpFAdd %float %32 %30
+         %34 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %26
+               OpStore %34 %33
+         %35 = OpLoad %uint %gl_LocalInvocationIndex
+         %36 = OpLoad %uint %gl_LocalInvocationIndex
+         %37 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %36
+         %38 = OpLoad %float %37
+         %39 = OpExtInst %float %1 Tan %38
+         %40 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %35
+         %41 = OpLoad %float %40
+         %42 = OpFAdd %float %41 %39
+         %43 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %35
+               OpStore %43 %42
+         %44 = OpLoad %uint %gl_LocalInvocationIndex
+         %45 = OpLoad %uint %gl_LocalInvocationIndex
+         %46 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %45
+         %47 = OpLoad %float %46
+         %48 = OpExtInst %float %1 Acos %47
+         %49 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %44
+         %50 = OpLoad %float %49
+         %51 = OpFAdd %float %50 %48
+         %52 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %44
+               OpStore %52 %51
+         %53 = OpLoad %uint %gl_LocalInvocationIndex
+         %54 = OpLoad %uint %gl_LocalInvocationIndex
+         %55 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %54
+         %56 = OpLoad %float %55
+         %57 = OpExtInst %float %1 Asin %56
+         %58 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %53
+         %59 = OpLoad %float %58
+         %60 = OpFAdd %float %59 %57
+         %61 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %53
+               OpStore %61 %60
+         %62 = OpLoad %uint %gl_LocalInvocationIndex
+         %63 = OpLoad %uint %gl_LocalInvocationIndex
+         %64 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %63
+         %65 = OpLoad %float %64
+         %66 = OpExtInst %float %1 Atan %65
+         %67 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %62
+         %68 = OpLoad %float %67
+         %69 = OpFAdd %float %68 %66
+         %70 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %62
+               OpStore %70 %69
+         %71 = OpLoad %uint %gl_LocalInvocationIndex
+         %72 = OpLoad %uint %gl_LocalInvocationIndex
+         %73 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %72
+         %74 = OpLoad %float %73
+         %75 = OpExtInst %float %1 Exp %74
+         %76 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %71
+         %77 = OpLoad %float %76
+         %78 = OpFAdd %float %77 %75
+         %79 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %71
+               OpStore %79 %78
+         %80 = OpLoad %uint %gl_LocalInvocationIndex
+         %81 = OpLoad %uint %gl_LocalInvocationIndex
+         %82 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %81
+         %83 = OpLoad %float %82
+         %84 = OpExtInst %float %1 Exp2 %83
+         %85 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %80
+         %86 = OpLoad %float %85
+         %87 = OpFAdd %float %86 %84
+         %88 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %80
+               OpStore %88 %87
+         %89 = OpLoad %uint %gl_LocalInvocationIndex
+         %90 = OpLoad %uint %gl_LocalInvocationIndex
+         %91 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %90
+         %92 = OpLoad %float %91
+         %93 = OpExtInst %float %1 Log %92
+         %94 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %89
+         %95 = OpLoad %float %94
+         %96 = OpFAdd %float %95 %93
+         %97 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %89
+               OpStore %97 %96
+         %98 = OpLoad %uint %gl_LocalInvocationIndex
+         %99 = OpLoad %uint %gl_LocalInvocationIndex
+        %100 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %99
+        %101 = OpLoad %float %100
+        %102 = OpExtInst %float %1 Log2 %101
+        %103 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %98
+        %104 = OpLoad %float %103
+        %105 = OpFAdd %float %104 %102
+        %106 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %98
+               OpStore %106 %105
+        %107 = OpLoad %uint %gl_LocalInvocationIndex
+        %108 = OpLoad %uint %gl_LocalInvocationIndex
+        %109 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %108
+        %110 = OpLoad %float %109
+        %111 = OpExtInst %float %1 Sqrt %110
+        %112 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %107
+        %113 = OpLoad %float %112
+        %114 = OpFAdd %float %113 %111
+        %115 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %107
+               OpStore %115 %114
+        %116 = OpLoad %uint %gl_LocalInvocationIndex
+        %117 = OpLoad %uint %gl_LocalInvocationIndex
+        %118 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %117
+        %119 = OpLoad %float %118
+        %120 = OpExtInst %float %1 InverseSqrt %119
+        %121 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %116
+        %122 = OpLoad %float %121
+        %123 = OpFAdd %float %122 %120
+        %124 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %116
+               OpStore %124 %123
+        %125 = OpLoad %uint %gl_LocalInvocationIndex
+        %126 = OpLoad %uint %gl_LocalInvocationIndex
+        %127 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %126
+        %128 = OpLoad %float %127
+        %130 = OpExtInst %float %1 Pow %128 %float_4
+        %131 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %125
+        %132 = OpLoad %float %131
+        %133 = OpFAdd %float %132 %130
+        %134 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %125
+               OpStore %134 %133
+        %136 = OpLoad %uint %gl_LocalInvocationIndex
+        %137 = OpLoad %uint %gl_LocalInvocationIndex
+        %139 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %137
+        %140 = OpLoad %half %139
+        %141 = OpExtInst %half %1 Cos %140
+        %142 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %136
+               OpStore %142 %141
+        %143 = OpLoad %uint %gl_LocalInvocationIndex
+        %144 = OpLoad %uint %gl_LocalInvocationIndex
+        %145 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %144
+        %146 = OpLoad %half %145
+        %147 = OpExtInst %half %1 Sin %146
+        %148 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %143
+        %149 = OpLoad %half %148
+        %150 = OpFAdd %half %149 %147
+        %151 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %143
+               OpStore %151 %150
+        %152 = OpLoad %uint %gl_LocalInvocationIndex
+        %153 = OpLoad %uint %gl_LocalInvocationIndex
+        %154 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %153
+        %155 = OpLoad %half %154
+        %156 = OpExtInst %half %1 Cosh %155
+        %157 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %152
+        %158 = OpLoad %half %157
+        %159 = OpFAdd %half %158 %156
+        %160 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %152
+               OpStore %160 %159
+        %161 = OpLoad %uint %gl_LocalInvocationIndex
+        %162 = OpLoad %uint %gl_LocalInvocationIndex
+        %163 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %162
+        %164 = OpLoad %half %163
+        %165 = OpExtInst %half %1 Sinh %164
+        %166 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %161
+        %167 = OpLoad %half %166
+        %168 = OpFAdd %half %167 %165
+        %169 = OpAccessChain %_ptr_Uniform_half %_ %int_1 %161
+               OpStore %169 %168
+               OpReturn
+               OpFunctionEnd

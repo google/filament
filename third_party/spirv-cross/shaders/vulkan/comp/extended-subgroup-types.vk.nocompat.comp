@@ -1,0 +1,92 @@
+#version 450
+
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_shuffle : require
+
+#extension GL_EXT_shader_subgroup_extended_types_int8 : require
+#extension GL_EXT_shader_subgroup_extended_types_int16 : require
+#extension GL_EXT_shader_subgroup_extended_types_float16 : require
+#extension GL_EXT_shader_subgroup_extended_types_int64 : require
+
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+layout(local_size_x = 4) in;
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	uint8_t u8_1[4];
+	i8vec2 i8_2[4];
+	u8vec3 u8_3[4];
+	i8vec4 i8_4[4];
+
+	uint16_t u16_1[4];
+	i16vec2 i16_2[4];
+	u16vec3 u16_3[4];
+	i16vec4 i16_4[4];
+
+	float16_t f16_1[4];
+	f16vec2 f16_2[4];
+	f16vec3 f16_3[4];
+	f16vec4 f16_4[4];
+
+	double f64_1[4];
+	double f64_2[4];
+	double f64_3[4];
+	double f64_4[4];
+
+	uint64_t u64_1[4];
+	i64vec2 i64_2[4];
+	u64vec3 u64_3[4];
+	i64vec4 i64_4[4];
+};
+
+void int8()
+{
+	u8_1[gl_LocalInvocationIndex] = subgroupShuffle(u8_1[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	i8_2[gl_LocalInvocationIndex] = subgroupShuffle(i8_2[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	u8_3[gl_LocalInvocationIndex] = subgroupShuffle(u8_3[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	i8_4[gl_LocalInvocationIndex] = subgroupShuffle(i8_4[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+}
+
+void int16()
+{
+	u16_1[gl_LocalInvocationIndex] = subgroupShuffle(u16_1[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	i16_2[gl_LocalInvocationIndex] = subgroupShuffle(i16_2[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	u16_3[gl_LocalInvocationIndex] = subgroupShuffle(u16_3[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	i16_4[gl_LocalInvocationIndex] = subgroupShuffle(i16_4[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+}
+
+void fp16()
+{
+	f16_1[gl_LocalInvocationIndex] = subgroupShuffle(f16_1[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	f16_2[gl_LocalInvocationIndex] = subgroupShuffle(f16_2[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	f16_3[gl_LocalInvocationIndex] = subgroupShuffle(f16_3[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	f16_4[gl_LocalInvocationIndex] = subgroupShuffle(f16_4[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+}
+
+void fp64()
+{
+	f64_1[gl_LocalInvocationIndex] = subgroupShuffle(f64_1[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	f64_2[gl_LocalInvocationIndex] = subgroupShuffle(f64_2[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	f64_3[gl_LocalInvocationIndex] = subgroupShuffle(f64_3[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	f64_4[gl_LocalInvocationIndex] = subgroupShuffle(f64_4[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+}
+
+void int64()
+{
+	u64_1[gl_LocalInvocationIndex] = subgroupShuffle(u64_1[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	i64_2[gl_LocalInvocationIndex] = subgroupShuffle(i64_2[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	u64_3[gl_LocalInvocationIndex] = subgroupShuffle(u64_3[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+	i64_4[gl_LocalInvocationIndex] = subgroupShuffle(i64_4[gl_LocalInvocationIndex], gl_SubgroupInvocationID ^ 1);
+}
+
+void main()
+{
+	int8();
+	int16();
+	int64();
+	fp16();
+	fp64();
+}

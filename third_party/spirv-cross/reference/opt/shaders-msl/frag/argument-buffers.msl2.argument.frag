@@ -41,7 +41,7 @@ struct spvDescriptorSetBuffer1
 {
     array<texture2d<float>, 4> uTexture2 [[id(0)]];
     array<sampler, 2> uSampler [[id(4)]];
-    device SSBO* m_60 [[id(6)]];
+    const device SSBO* m_60 [[id(6)]];
     const device SSBOs* ssbos [[id(7)]][2];
 };
 

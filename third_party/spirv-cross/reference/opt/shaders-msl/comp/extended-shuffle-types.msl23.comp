@@ -1,0 +1,96 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+inline T spvSubgroupShuffle(T value, ushort lane)
+{
+    return simd_shuffle(value, lane);
+}
+
+template<>
+inline bool spvSubgroupShuffle(bool value, ushort lane)
+{
+    return !!simd_shuffle((ushort)value, lane);
+}
+
+template<uint N>
+inline vec<bool, N> spvSubgroupShuffle(vec<bool, N> value, ushort lane)
+{
+    return (vec<bool, N>)simd_shuffle((vec<ushort, N>)value, lane);
+}
+
+template<>
+inline ulong spvSubgroupShuffle(ulong value, ushort lane)
+{
+    return as_type<ulong>(spvSubgroupShuffle(as_type<uint2>(value), lane));
+}
+
+template<>
+inline ulong2 spvSubgroupShuffle(ulong2 value, ushort lane)
+{
+    return ulong2(spvSubgroupShuffle(value.x, lane), spvSubgroupShuffle(value.y, lane));
+}
+
+inline ulong3 spvSubgroupShuffle(ulong3 value, ushort lane)
+{
+    return ulong3(spvSubgroupShuffle(value.xy, lane), spvSubgroupShuffle(value.z, lane));
+}
+
+inline ulong4 spvSubgroupShuffle(ulong4 value, ushort lane)
+{
+    return ulong4(spvSubgroupShuffle(value.xy, lane), spvSubgroupShuffle(value.zw, lane));
+}
+
+template<uint N>
+inline vec<long, N> spvSubgroupShuffle(vec<long, N> value, ushort lane)
+{
+    return vec<long, N>(spvSubgroupShuffle(vec<ulong, N>(value), lane));
+}
+
+struct SSBO
+{
+    uchar u8_1[4];
+    char2 i8_2[4];
+    uchar3 u8_3[4];
+    char4 i8_4[4];
+    ushort u16_1[4];
+    short2 i16_2[4];
+    ushort3 u16_3[4];
+    short4 i16_4[4];
+    half f16_1[4];
+    half2 f16_2[4];
+    half3 f16_3[4];
+    half4 f16_4[4];
+    ulong u64_1[4];
+    long2 i64_2[4];
+    ulong3 u64_3[4];
+    long4 i64_4[4];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 1u, 1u);
+
+kernel void main0(device SSBO& _53 [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]], uint gl_SubgroupInvocationID [[thread_index_in_simdgroup]])
+{
+    uint _232 = gl_SubgroupInvocationID ^ 1u;
+    _53.u8_1[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.u8_1[gl_LocalInvocationIndex], _232);
+    _53.i8_2[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.i8_2[gl_LocalInvocationIndex], _232);
+    _53.u8_3[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.u8_3[gl_LocalInvocationIndex], _232);
+    _53.i8_4[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.i8_4[gl_LocalInvocationIndex], _232);
+    _53.u16_1[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.u16_1[gl_LocalInvocationIndex], _232);
+    _53.i16_2[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.i16_2[gl_LocalInvocationIndex], _232);
+    _53.u16_3[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.u16_3[gl_LocalInvocationIndex], _232);
+    _53.i16_4[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.i16_4[gl_LocalInvocationIndex], _232);
+    _53.u64_1[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.u64_1[gl_LocalInvocationIndex], _232);
+    _53.i64_2[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.i64_2[gl_LocalInvocationIndex], _232);
+    _53.u64_3[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.u64_3[gl_LocalInvocationIndex], _232);
+    _53.i64_4[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.i64_4[gl_LocalInvocationIndex], _232);
+    _53.f16_1[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.f16_1[gl_LocalInvocationIndex], _232);
+    _53.f16_2[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.f16_2[gl_LocalInvocationIndex], _232);
+    _53.f16_3[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.f16_3[gl_LocalInvocationIndex], _232);
+    _53.f16_4[gl_LocalInvocationIndex] = spvSubgroupShuffle(_53.f16_4[gl_LocalInvocationIndex], _232);
+}
+

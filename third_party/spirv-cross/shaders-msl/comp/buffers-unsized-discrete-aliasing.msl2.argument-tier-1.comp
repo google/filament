@@ -1,0 +1,28 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) readonly buffer SSBO
+{
+        float b;
+} RO[];
+
+layout(set = 0, binding = 0) writeonly buffer SSBOW
+{
+        layout(offset = 4) float a;
+} RW[];
+
+void in_func()
+{
+        RW[gl_WorkGroupID.x].a = RO[gl_WorkGroupID.x].b;
+}
+
+layout(set = 1, binding = 0) uniform texture2D tex2d[];
+layout(set = 1, binding = 0) uniform texture3D tex3d[];
+
+void main()
+{
+        in_func();
+		RW[0].a += texelFetch(tex2d[gl_WorkGroupID.x], ivec2(0), 0).x;
+		RW[0].a += texelFetch(tex3d[gl_WorkGroupID.x], ivec3(10), 1).x;
+}
