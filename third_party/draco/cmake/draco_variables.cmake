@@ -1,3 +1,17 @@
+# Copyright 2021 The Draco Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
 if(DRACO_CMAKE_DRACO_VARIABLES_CMAKE_)
   return()
 endif() # DRACO_CMAKE_DRACO_VARIABLES_CMAKE_
@@ -14,8 +28,7 @@ macro(draco_variable_must_be_directory variable_name)
 
   if("${${variable_name}}" STREQUAL "")
     message(
-      FATAL_ERROR
-        "Empty variable ${variable_name} is required to build draco.")
+      FATAL_ERROR "Empty variable ${variable_name} is required to build draco.")
   endif()
 
   if(NOT IS_DIRECTORY "${${variable_name}}")
@@ -44,11 +57,13 @@ macro(draco_dump_cmake_flag_variables)
   list(APPEND flag_variables "CMAKE_CXX_FLAGS_INIT" "CMAKE_CXX_FLAGS"
               "CMAKE_EXE_LINKER_FLAGS_INIT" "CMAKE_EXE_LINKER_FLAGS")
   if(CMAKE_BUILD_TYPE)
-    list(APPEND flag_variables "CMAKE_BUILD_TYPE"
-                "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}_INIT"
-                "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}"
-                "CMAKE_EXE_LINKER_FLAGS_${CMAKE_BUILD_TYPE}_INIT"
-                "CMAKE_EXE_LINKER_FLAGS_${CMAKE_BUILD_TYPE}")
+    list(
+      APPEND flag_variables
+             "CMAKE_BUILD_TYPE"
+             "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}_INIT"
+             "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}"
+             "CMAKE_EXE_LINKER_FLAGS_${CMAKE_BUILD_TYPE}_INIT"
+             "CMAKE_EXE_LINKER_FLAGS_${CMAKE_BUILD_TYPE}")
   endif()
   foreach(flag_variable ${flag_variables})
     message("${flag_variable}:${${flag_variable}}")

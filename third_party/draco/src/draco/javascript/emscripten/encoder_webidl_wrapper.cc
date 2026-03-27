@@ -179,6 +179,19 @@ bool PointCloudBuilder::SetMetadataForAttribute(PointCloud *pc,
   return true;
 }
 
+bool PointCloudBuilder::SetNormalizedFlagForAttribute(draco::PointCloud *pc,
+                                                      long attribute_id,
+                                                      bool normalized) {
+  if (!pc) {
+    return false;
+  }
+  if (attribute_id < 0 || attribute_id >= pc->num_attributes()) {
+    return false;
+  }
+  pc->attribute(attribute_id)->set_normalized(normalized);
+  return true;
+}
+
 MeshBuilder::MeshBuilder() {}
 
 bool MeshBuilder::AddFacesToMesh(Mesh *mesh, long num_faces, const int *faces) {

@@ -126,18 +126,18 @@ void MeshAttributeCornerTable::AddSeamEdge(CornerIndex c) {
   }
 }
 
-void MeshAttributeCornerTable::RecomputeVertices(const Mesh *mesh,
+bool MeshAttributeCornerTable::RecomputeVertices(const Mesh *mesh,
                                                  const PointAttribute *att) {
   DRACO_DCHECK(GetValenceCache().IsCacheEmpty());
   if (mesh != nullptr && att != nullptr) {
-    RecomputeVerticesInternal<true>(mesh, att);
+    return RecomputeVerticesInternal<true>(mesh, att);
   } else {
-    RecomputeVerticesInternal<false>(nullptr, nullptr);
+    return RecomputeVerticesInternal<false>(nullptr, nullptr);
   }
 }
 
 template <bool init_vertex_to_attribute_entry_map>
-void MeshAttributeCornerTable::RecomputeVerticesInternal(
+bool MeshAttributeCornerTable::RecomputeVerticesInternal(
     const Mesh *mesh, const PointAttribute *att) {
   DRACO_DCHECK(GetValenceCache().IsCacheEmpty());
   vertex_to_attribute_entry_id_map_.clear();
@@ -167,6 +167,11 @@ void MeshAttributeCornerTable::RecomputeVerticesInternal(
       while (act_c != kInvalidCornerIndex) {
         first_c = act_c;
         act_c = SwingLeft(act_c);
+        if (act_c == c) {
+          // We reached the initial corner which shouldn't happen when we swing
+          // left from |c|.
+          return false;
+        }
       }
     }
     corner_to_vertex_map_[first_c.value()] = VertexIndex(first_vert_id.value());
@@ -189,6 +194,7 @@ void MeshAttributeCornerTable::RecomputeVerticesInternal(
       act_c = corner_table_->SwingRight(act_c);
     }
   }
+  return true;
 }
 
 int MeshAttributeCornerTable::Valence(VertexIndex v) const {

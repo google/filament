@@ -25,25 +25,32 @@ namespace draco {
 
 // A wrapper around the standard std::vector that supports indexing of the
 // vector entries using the strongly typed indices as defined in
-// draco_index_type.h .
-// TODO(ostava): Make the interface more complete. It's currently missing
-// features such as iterators.
-// TODO(vytyaz): Add more unit tests for this class.
+// draco_index_type.h.
+// TODO(ostava): Make the interface more complete. It's currently missing some
+// features.
 template <class IndexTypeT, class ValueTypeT>
 class IndexTypeVector {
  public:
   typedef typename std::vector<ValueTypeT>::const_reference const_reference;
   typedef typename std::vector<ValueTypeT>::reference reference;
+  typedef typename std::vector<ValueTypeT>::iterator iterator;
+  typedef typename std::vector<ValueTypeT>::const_iterator const_iterator;
 
   IndexTypeVector() {}
   explicit IndexTypeVector(size_t size) : vector_(size) {}
   IndexTypeVector(size_t size, const ValueTypeT &val) : vector_(size, val) {}
+
+  iterator begin() { return vector_.begin(); }
+  const_iterator begin() const { return vector_.begin(); }
+  iterator end() { return vector_.end(); }
+  const_iterator end() const { return vector_.end(); }
 
   void clear() { vector_.clear(); }
   void reserve(size_t size) { vector_.reserve(size); }
   void resize(size_t size) { vector_.resize(size); }
   void resize(size_t size, const ValueTypeT &val) { vector_.resize(size, val); }
   void assign(size_t size, const ValueTypeT &val) { vector_.assign(size, val); }
+  iterator erase(iterator position) { return vector_.erase(position); }
 
   void swap(IndexTypeVector<IndexTypeT, ValueTypeT> &arg) {
     vector_.swap(arg.vector_);

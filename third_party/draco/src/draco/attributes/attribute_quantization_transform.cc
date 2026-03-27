@@ -14,6 +14,11 @@
 //
 #include "draco/attributes/attribute_quantization_transform.h"
 
+#include <cmath>
+#include <cstring>
+#include <memory>
+#include <vector>
+
 #include "draco/attributes/attribute_transform_type.h"
 #include "draco/core/quantization_utils.h"
 
@@ -144,6 +149,9 @@ bool AttributeQuantizationTransform::ComputeParameters(
        ++i) {
     attribute.GetValue(i, att_val.get());
     for (int c = 0; c < num_components; ++c) {
+      if (std::isnan(att_val[c])) {
+        return false;
+      }
       if (min_values_[c] > att_val[c]) {
         min_values_[c] = att_val[c];
       }

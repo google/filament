@@ -115,6 +115,8 @@ interface PointCloudBuilder {
   boolean AddMetadata(PointCloud pc, [Const] Metadata metadata);
   boolean SetMetadataForAttribute(PointCloud pc, long attribute_id,
                                   [Const] Metadata metadata);
+  boolean SetNormalizedFlagForAttribute(PointCloud pc, long attribute_id,
+                                        boolean normalized);
 };
 
 interface MeshBuilder : PointCloudBuilder {
@@ -159,6 +161,8 @@ interface MeshBuilder : PointCloudBuilder {
   boolean AddMetadata(PointCloud pc, [Const] Metadata metadata);
   boolean SetMetadataForAttribute(PointCloud pc, long attribute_id,
                                   [Const] Metadata metadata);
+  boolean SetNormalizedFlagForAttribute(PointCloud pc, long attribute_id,
+                                        boolean normalized);
 };
 
 interface Encoder {

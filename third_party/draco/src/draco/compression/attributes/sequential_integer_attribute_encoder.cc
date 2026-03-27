@@ -138,9 +138,11 @@ bool SequentialIntegerAttributeEncoder::EncodeValues(
   // All integer values are initialized. Process them using the prediction
   // scheme if we have one.
   if (prediction_scheme_) {
-    prediction_scheme_->ComputeCorrectionValues(
-        portable_attribute_data, &encoded_data[0], num_values, num_components,
-        point_ids.data());
+    if (!prediction_scheme_->ComputeCorrectionValues(
+            portable_attribute_data, &encoded_data[0], num_values,
+            num_components, point_ids.data())) {
+      return false;
+    }
   }
 
   if (prediction_scheme_ == nullptr ||

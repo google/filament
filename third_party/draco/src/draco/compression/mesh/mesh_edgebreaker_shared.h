@@ -50,8 +50,6 @@ namespace draco {
 //    \ /  S  \ /          /  E  \
 //     *-------*          *-------*
 //
-// TODO(ostava): Get rid of the topology bit pattern. It's important only for
-// encoding but the algorithms should use EdgebreakerSymbol instead.
 enum EdgebreakerTopologyBitPattern {
   TOPOLOGY_C = 0x0,  // 0
   TOPOLOGY_S = 0x1,  // 1 0 0

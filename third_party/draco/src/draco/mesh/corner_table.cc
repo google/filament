@@ -15,6 +15,7 @@
 #include "draco/mesh/corner_table.h"
 
 #include <limits>
+#include <memory>
 
 #include "draco/attributes/geometry_indices.h"
 #include "draco/mesh/corner_table_iterators.h"

@@ -391,7 +391,6 @@ class RAnsEncoder {
       ans_.buf[ans_.buf_offset++] = ans_.state % DRACO_ANS_IO_BASE;
       ans_.state /= DRACO_ANS_IO_BASE;
     }
-    // TODO(ostava): The division and multiplication should be optimized.
     ans_.state =
         (ans_.state / p) * rans_precision + ans_.state % p + sym->cum_prob;
   }

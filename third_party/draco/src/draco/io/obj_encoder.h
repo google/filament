@@ -18,6 +18,7 @@
 #include <unordered_map>
 
 #include "draco/core/encoder_buffer.h"
+#include "draco/mesh/corner_table.h"
 #include "draco/mesh/mesh.h"
 
 namespace draco {
@@ -44,19 +45,30 @@ class ObjEncoder {
   bool ExitAndCleanup(bool return_value);
 
  private:
+  typedef AttributeValueIndex PositionIndex;
+  typedef std::map<PositionIndex, PointIndex> PolygonEdges;
+  bool GetAddedEdges();
   bool GetSubObjects();
   bool EncodeMaterialFileName();
   bool EncodePositions();
   bool EncodeTextureCoordinates();
   bool EncodeNormals();
   bool EncodeFaces();
+  bool EncodePolygonalFaces();
+  bool EncodeFaceAttributes(FaceIndex face_id);
   bool EncodeSubObject(FaceIndex face_id);
   bool EncodeMaterial(FaceIndex face_id);
   bool EncodeFaceCorner(FaceIndex face_id, int local_corner_id);
+  bool EncodeFaceCorner(PointIndex vert_index);
 
   void EncodeFloat(float val);
   void EncodeFloatList(float *vals, int num_vals);
   void EncodeInt(int32_t val);
+  bool IsNewEdge(const CornerTable &ct, CornerIndex ci) const;
+  void FindOriginalFaceEdges(FaceIndex face_index,
+                             const CornerTable &corner_table,
+                             std::vector<bool> *triangle_visited,
+                             PolygonEdges *polygon_edges);
 
   // Various attributes used by the encoder. If an attribute is not used, it is
   // set to nullptr.
@@ -65,6 +77,9 @@ class ObjEncoder {
   const PointAttribute *normal_att_;
   const PointAttribute *material_att_;
   const PointAttribute *sub_obj_att_;
+
+  // Stores per-corner triangulation information for polygon reconstruction.
+  const PointAttribute *added_edges_att_;
 
   // Buffer used for encoding float/int numbers.
   char num_buffer_[20];

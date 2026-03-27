@@ -25,7 +25,7 @@ namespace draco {
 // Sequencer that generates point sequence in an order given by a deterministic
 // traversal on the mesh surface. Note that all attributes encoded with this
 // sequence must share the same connectivity.
-// TODO(hemmer): Consider refactoring such that this is an observer.
+// TODO(b/199760123): Consider refactoring such that this is an observer.
 template <class TraverserT>
 class MeshTraversalSequencer : public PointsSequencer {
  public:

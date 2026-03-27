@@ -1,0 +1,318 @@
+on:
+  pull_request:
+  # Run on all pull requests.
+
+  push:
+    # Run on merges/pushes to master.
+    branches:
+      - master
+
+  schedule:
+    # Run nightly, at midnight.
+    - cron: '8 0 * * *'
+
+name: draco-ci
+
+jobs:
+  # Main build and test job.
+  draco-tests:
+    strategy:
+      matrix:
+        include:
+          - test_name: macos-make-release-shared
+            os: macos-latest
+            cmake_configure_command: |-
+              cmake .. -G "Unix Makefiles" \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+          - test_name: macos-make-release-shared-with-transcoder
+            os: macos-latest
+            cmake_configure_command: |-
+              cmake .. -G "Unix Makefiles" \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+
+          - test_name: macos-make-release-static
+            os: macos-latest
+            cmake_configure_command: |-
+              cmake .. -G "Unix Makefiles" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+          - test_name: macos-make-release-static-with-transcoder
+            os: macos-latest
+            cmake_configure_command: |-
+              cmake .. -G "Unix Makefiles" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+
+          - test_name: macos-xcode-release-shared
+            os: macos-latest
+            cmake_configure_command: |-
+              cmake .. -G Xcode \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_CONFIGURATION_TYPES=Release \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . --config Release
+            draco_test_command: Release/draco_tests
+          - test_name: macos-xcode-release-shared-with-transcoder
+            os: macos-latest
+            cmake_configure_command: |-
+              cmake .. -G Xcode \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_CONFIGURATION_TYPES=Release \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . --config Release
+            draco_test_command: Release/draco_tests
+
+          - test_name: macos-xcode-release-static
+            os: macos-latest
+            cmake_configure_command: |-
+              cmake .. -G Xcode \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_CONFIGURATION_TYPES=Release \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . --config Release
+            draco_test_command: Release/draco_tests
+          - test_name: macos-xcode-release-static-with-transcoder
+            os: macos-latest
+            cmake_configure_command: |-
+              cmake .. -G Xcode \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_CONFIGURATION_TYPES=Release \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . --config Release
+            draco_test_command: Release/draco_tests
+
+          - test_name: ubuntu-make-release-shared
+            os: ubuntu-latest
+            cmake_configure_command: |-
+              cmake .. -G "Unix Makefiles" \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=gcc-10 \
+                -DCMAKE_CXX_COMPILER=g++-10 \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+          - test_name: ubuntu-make-release-shared-with-transcoder
+            os: ubuntu-latest
+            cmake_configure_command: |-
+              cmake .. -G "Unix Makefiles" \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=gcc-10 \
+                -DCMAKE_CXX_COMPILER=g++-10 \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+
+          - test_name: ubuntu-make-release-static
+            os: ubuntu-latest
+            cmake_configure_command: |-
+              cmake .. -G "Unix Makefiles" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=gcc-10 \
+                -DCMAKE_CXX_COMPILER=g++-10 \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+          - test_name: ubuntu-make-release-static-with-transcoder
+            os: ubuntu-latest
+            cmake_configure_command: |-
+              cmake .. -G "Unix Makefiles" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=gcc-10 \
+                -DCMAKE_CXX_COMPILER=g++-10 \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+
+          - test_name: windows-msvc-release-shared
+            os: windows-2019
+            cmake_configure_command: |-
+              cmake .. -G "Visual Studio 16 2019" \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_CONFIGURATION_TYPES=Release \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . --config Release -- -m:2
+            draco_test_command: Release/draco_tests
+          - test_name: windows-msvc-release-shared-with-transcoder
+            os: windows-2019
+            cmake_configure_command: |-
+              cmake .. -G "Visual Studio 16 2019" \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_CONFIGURATION_TYPES=Release \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . --config Release -- -m:2
+            draco_test_command: Release/draco_tests
+
+          - test_name: windows-msvc-release-static
+            os: windows-2019
+            cmake_configure_command: |-
+              cmake .. -G "Visual Studio 16 2019" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_CONFIGURATION_TYPES=Release \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . --config Release -- -m:2
+            draco_test_command: Release/draco_tests
+          - test_name: windows-msvc-release-static-with-transcoder
+            os: windows-2019
+            cmake_configure_command: |-
+              cmake .. -G "Visual Studio 16 2019" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_CONFIGURATION_TYPES=Release \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . --config Release -- -m:2
+            draco_test_command: Release/draco_tests
+
+          - test_name: windows-make-release-shared
+            os: windows-2019
+            cmake_configure_command: |-
+              cmake .. -G "MinGW Makefiles" \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+                -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+          - test_name: windows-make-release-shared-with-transcoder
+            os: windows-2019
+            cmake_configure_command: |-
+              cmake .. -G "MinGW Makefiles" \
+                -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+                -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+
+          - test_name: windows-make-release-static
+            os: windows-2019
+            cmake_configure_command: |-
+              cmake .. -G "MinGW Makefiles" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+                -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+                -DDRACO_TESTS=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+          - test_name: windows-make-release-static-with-transcoder
+            os: windows-2019
+            cmake_configure_command: |-
+              cmake .. -G "MinGW Makefiles" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+                -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+                -DDRACO_TESTS=ON \
+                -DDRACO_TRANSCODER_SUPPORTED=ON
+            cmake_build_command: cmake --build . -- -j2
+            draco_test_command: ./draco_tests
+
+    name: test-${{ matrix.test_name }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Clone Draco with Submodules.
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Create build directory
+        shell: bash
+        run: mkdir _gh_build
+
+      - name: Configure CMake build
+        shell: bash
+        run: ${{ matrix.cmake_configure_command }}
+        working-directory: ./_gh_build
+
+      - name: Build with CMake
+        shell: bash
+        run: ${{ matrix.cmake_build_command }}
+        working-directory: ./_gh_build
+
+      - name: Run tests
+        shell: bash
+        run: ${{ matrix.draco_test_command }}
+        working-directory: ./_gh_build
+
+  # Runs src/draco/tools/install_test.
+  draco-install-tests:
+    strategy:
+      matrix:
+        include:
+          - test_name: ubuntu-make
+            os: ubuntu-latest
+            test_command: python3 test.py -v -G "Unix Makefiles"
+          - test_name: ubuntu-make-with-transcoder
+            os: ubuntu-latest
+            test_command: python3 test.py -v -t -G "Unix Makefiles"
+
+          - test_name: macos-make
+            os: macos-latest
+            test_command: python3 test.py -v -G "Unix Makefiles"
+          - test_name: macos-make-with-transcoder
+            os: macos-latest
+            test_command: python3 test.py -v -t -G "Unix Makefiles"
+
+          - test_name: macos-xcode
+            os: macos-latest
+            test_command: python3 test.py -v -G Xcode
+          - test_name: macos-xcode-with-transcoder
+            os: macos-latest
+            test_command: python3 test.py -v -t -G Xcode
+
+          - test_name: windows-make
+            os: windows-2019
+            test_command: python3 test.py -v -G "MinGW Makefiles"
+          - test_name: windows-make-with-transcoder
+            os: windows-2019
+            test_command: python3 test.py -v -t -G "MinGW Makefiles"
+
+          - test_name: windows-msvc
+            os: windows-2019
+            test_command: python3 test.py -v -G "Visual Studio 16 2019"
+          - test_name: windows-msvc-with-transcoder
+            os: windows-2019
+            test_command: python3 test.py -v -t -G "Visual Studio 16 2019"
+
+    name: install-test-${{ matrix.test_name }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Clone Draco with Submodules
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Run src/draco/tools/install_test/test.py
+        shell: bash
+        run: ${{ matrix.test_command }}
+        working-directory: ./src/draco/tools/install_test
