@@ -21,8 +21,8 @@
 #include "GLTexture.h"
 #include "GLUtils.h"
 #include "OpenGLDriver.h"
-#include "OpenGLContext.h"
 #include "OpenGLProgram.h"
+#include "OpenGLState.h"
 
 #include "gl_headers.h"
 
@@ -49,7 +49,7 @@
 
 namespace filament::backend {
 
-GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle dslh,
+GLDescriptorSet::GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh,
         GLDescriptorSetLayout const* layout)
         : descriptors(layout->maxDescriptorBinding + 1),
           dslh(std::move(dslh)) {
@@ -142,7 +142,7 @@ GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle ds
     }
 }
 
-void GLDescriptorSet::update(OpenGLContext&,
+void GLDescriptorSet::update(OpenGLState&,
         descriptor_binding_t binding, GLBufferObject* bo, size_t offset, size_t size) noexcept {
     assert_invariant(binding < descriptors.size());
     std::visit([=](auto&& arg) {
@@ -164,7 +164,7 @@ void GLDescriptorSet::update(OpenGLContext&,
     }, descriptors[binding].desc);
 }
 
-void GLDescriptorSet::update(OpenGLContext& gl, HandleAllocatorGL& handleAllocator,
+void GLDescriptorSet::update(OpenGLState& gl, HandleAllocatorGL& handleAllocator,
         descriptor_binding_t binding, TextureHandle th, SamplerParams params) noexcept {
 
     GLTexture* t = th ? handleAllocator.handle_cast<GLTexture*>(th) : nullptr;
@@ -223,7 +223,7 @@ void GLDescriptorSet::update(OpenGLContext& gl, HandleAllocatorGL& handleAllocat
     }, descriptors[binding].desc);
 }
 
-void GLDescriptorSet::updateTextureView(OpenGLContext& gl,
+void GLDescriptorSet::updateTextureView(OpenGLState& gl,
         HandleAllocatorGL& handleAllocator, GLuint unit, GLTexture const* t) noexcept {
     // The common case is that we don't have a ref handle (we only have one if
     // the texture ever had a View on it).
@@ -260,7 +260,7 @@ void GLDescriptorSet::updateTextureView(OpenGLContext& gl,
 }
 
 void GLDescriptorSet::bind(
-        OpenGLContext& gl,
+        OpenGLState& gl,
         HandleAllocatorGL& handleAllocator,
         OpenGLProgram const& p,
         descriptor_set_t set, uint32_t const* offsets, bool offsetsOnly) const noexcept {
@@ -378,7 +378,7 @@ void GLDescriptorSet::bind(
                         }
                     }
 #endif
-                    
+
                     glTexParameteri(t->gl.target, GL_TEXTURE_MIN_FILTER,
                             (GLint)GLUtils::getTextureFilter(params.filterMin));
                     glTexParameteri(t->gl.target, GL_TEXTURE_MAG_FILTER,

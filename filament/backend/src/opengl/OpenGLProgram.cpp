@@ -112,7 +112,7 @@ void OpenGLProgram::initialize(OpenGLDriver& gld) {
     assert_invariant(mToken == nullptr);
     if (gl.program) {
         assert_invariant(lazyInitializationData);
-        initializeProgramState(gld.getContext(), gl.program, *lazyInitializationData);
+        initializeProgramState(gld.getBackendState(), gl.program, *lazyInitializationData);
         delete lazyInitializationData;
     }
 }
@@ -121,7 +121,7 @@ void OpenGLProgram::initialize(OpenGLDriver& gld) {
  * Initializes our internal state from a valid program. This must only be called after
  * checkProgramStatus() has been successfully called.
  */
-void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint program,
+void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
         LazyInitializationData& lazyInitializationData) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
@@ -139,7 +139,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     GLuint binding = 0;
 
     // needed for samplers
-    context.useProgram(program);
+    gls.useProgram(program);
 
     UTILS_NOUNROLL
     for (descriptor_set_t set = 0; set < MAX_DESCRIPTOR_SET_COUNT; set++) {
@@ -149,7 +149,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
                 case DescriptorType::SHADER_STORAGE_BUFFER: {
                     if (!entry.name.empty()) {
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-                        if (UTILS_LIKELY(!context.isES2())) {
+                        if (UTILS_LIKELY(!gls.isES2())) {
                             GLuint const index = glGetUniformBlockIndex(program,
                                     entry.name.c_str());
                             if (index != GL_INVALID_INDEX) {
@@ -219,7 +219,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         CHECK_GL_ERROR()
     }
 
-    if (context.isES2()) {
+    if (gls.isES2()) {
         // ES2 initialization of (fake) UBOs
         UniformsRecord* const uniformsRecords = new(std::nothrow) UniformsRecord[Program::UNIFORM_BINDING_COUNT];
         UTILS_NOUNROLL

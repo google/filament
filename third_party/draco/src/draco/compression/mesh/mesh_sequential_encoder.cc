@@ -32,8 +32,6 @@ Status MeshSequentialEncoder::EncodeConnectivity() {
   EncodeVarint(static_cast<uint32_t>(mesh()->num_points()), buffer());
 
   // We encode all attributes in the original (possibly duplicated) format.
-  // TODO(ostava): This may not be optimal if we have only one attribute or if
-  // all attributes share the same index mapping.
   if (options()->GetGlobalBool("compress_connectivity", false)) {
     // 0 = Encode compressed indices.
     buffer()->Encode(static_cast<uint8_t>(0));
@@ -44,8 +42,6 @@ Status MeshSequentialEncoder::EncodeConnectivity() {
     // 1 = Encode indices directly.
     buffer()->Encode(static_cast<uint8_t>(1));
     // Store vertex indices using a smallest data type that fits their range.
-    // TODO(ostava): This can be potentially improved by using a tighter
-    // fit that is not bound by a bit-length of any particular data type.
     if (mesh()->num_points() < 256) {
       // Serialize indices as uint8_t.
       for (FaceIndex i(0); i < num_faces; ++i) {

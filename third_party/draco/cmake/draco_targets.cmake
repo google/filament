@@ -1,3 +1,17 @@
+# Copyright 2021 The Draco Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
 if(DRACO_CMAKE_DRACO_TARGETS_CMAKE_)
   return()
 endif() # DRACO_CMAKE_DRACO_TARGETS_CMAKE_
@@ -51,26 +65,33 @@ macro(draco_add_executable)
   unset(exe_LIB_DEPS)
   set(optional_args TEST)
   set(single_value_args NAME OUTPUT_NAME)
-  set(multi_value_args SOURCES DEFINES INCLUDES COMPILE_FLAGS LINK_FLAGS
-                       OBJLIB_DEPS LIB_DEPS)
+  set(multi_value_args
+      SOURCES
+      DEFINES
+      INCLUDES
+      COMPILE_FLAGS
+      LINK_FLAGS
+      OBJLIB_DEPS
+      LIB_DEPS)
 
   cmake_parse_arguments(exe "${optional_args}" "${single_value_args}"
                         "${multi_value_args}" ${ARGN})
 
   if(DRACO_VERBOSE GREATER 1)
-    message("--------- draco_add_executable ---------\n"
-            "exe_TEST=${exe_TEST}\n"
-            "exe_TEST_DEFINES_MAIN=${exe_TEST_DEFINES_MAIN}\n"
-            "exe_NAME=${exe_NAME}\n"
-            "exe_OUTPUT_NAME=${exe_OUTPUT_NAME}\n"
-            "exe_SOURCES=${exe_SOURCES}\n"
-            "exe_DEFINES=${exe_DEFINES}\n"
-            "exe_INCLUDES=${exe_INCLUDES}\n"
-            "exe_COMPILE_FLAGS=${exe_COMPILE_FLAGS}\n"
-            "exe_LINK_FLAGS=${exe_LINK_FLAGS}\n"
-            "exe_OBJLIB_DEPS=${exe_OBJLIB_DEPS}\n"
-            "exe_LIB_DEPS=${exe_LIB_DEPS}\n"
-            "------------------------------------------\n")
+    message(
+      "--------- draco_add_executable ---------\n"
+      "exe_TEST=${exe_TEST}\n"
+      "exe_TEST_DEFINES_MAIN=${exe_TEST_DEFINES_MAIN}\n"
+      "exe_NAME=${exe_NAME}\n"
+      "exe_OUTPUT_NAME=${exe_OUTPUT_NAME}\n"
+      "exe_SOURCES=${exe_SOURCES}\n"
+      "exe_DEFINES=${exe_DEFINES}\n"
+      "exe_INCLUDES=${exe_INCLUDES}\n"
+      "exe_COMPILE_FLAGS=${exe_COMPILE_FLAGS}\n"
+      "exe_LINK_FLAGS=${exe_LINK_FLAGS}\n"
+      "exe_OBJLIB_DEPS=${exe_OBJLIB_DEPS}\n"
+      "exe_LIB_DEPS=${exe_LIB_DEPS}\n"
+      "------------------------------------------\n")
   endif()
 
   if(NOT (exe_NAME AND exe_SOURCES))
@@ -88,6 +109,12 @@ macro(draco_add_executable)
 
   add_executable(${exe_NAME} ${exe_SOURCES})
 
+    target_compile_features(${exe_NAME} PUBLIC cxx_std_11)
+
+  if(NOT EMSCRIPTEN)
+    set_target_properties(${exe_NAME} PROPERTIES VERSION ${DRACO_VERSION})
+  endif()
+
   if(exe_OUTPUT_NAME)
     set_target_properties(${exe_NAME} PROPERTIES OUTPUT_NAME ${exe_OUTPUT_NAME})
   endif()
@@ -103,16 +130,17 @@ macro(draco_add_executable)
   endif()
 
   if(exe_COMPILE_FLAGS OR DRACO_CXX_FLAGS)
-    target_compile_options(${exe_NAME}
-                           PRIVATE ${exe_COMPILE_FLAGS} ${DRACO_CXX_FLAGS})
+    target_compile_options(${exe_NAME} PRIVATE ${exe_COMPILE_FLAGS}
+                                               ${DRACO_CXX_FLAGS})
   endif()
 
   if(exe_LINK_FLAGS OR DRACO_EXE_LINKER_FLAGS)
     if(${CMAKE_VERSION} VERSION_LESS "3.13")
-      set(link_flags ${exe_LINK_FLAGS} ${DRACO_EXE_LINKER_FLAGS})
-      set_target_properties(${exe_NAME}
-                            PROPERTIES LINK_FLAGS ${exe_LINK_FLAGS}
-                                       ${DRACO_EXE_LINKER_FLAGS})
+      list(APPEND exe_LINK_FLAGS "${DRACO_EXE_LINKER_FLAGS}")
+      # LINK_FLAGS is managed as a string.
+      draco_set_and_stringify(SOURCE "${exe_LINK_FLAGS}" DEST exe_LINK_FLAGS)
+      set_target_properties(${exe_NAME} PROPERTIES LINK_FLAGS
+                                                   "${exe_LINK_FLAGS}")
     else()
       target_link_options(${exe_NAME} PRIVATE ${exe_LINK_FLAGS}
                           ${DRACO_EXE_LINKER_FLAGS})
@@ -130,16 +158,11 @@ macro(draco_add_executable)
   endif()
 
   if(BUILD_SHARED_LIBS AND (MSVC OR WIN32))
-    target_compile_definitions(${lib_NAME} PRIVATE "DRACO_BUILDING_DLL=0")
+    target_compile_definitions(${exe_NAME} PRIVATE "DRACO_BUILDING_DLL=0")
   endif()
 
   if(exe_LIB_DEPS)
-    unset(exe_static)
-    if("${CMAKE_EXE_LINKER_FLAGS} ${DRACO_EXE_LINKER_FLAGS}" MATCHES "static")
-      set(exe_static ON)
-    endif()
-
-    if(exe_static AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "^Clang|^GNU")
       # Third party dependencies can introduce dependencies on system and test
       # libraries. Since the target created here is an executable, and CMake
       # does not provide a method of controlling order of link dependencies,
@@ -147,6 +170,10 @@ macro(draco_add_executable)
       # ensure that dependencies of third party targets can be resolved when
       # those dependencies happen to be resolved by dependencies of the current
       # target.
+      # TODO(tomfinegan): For portability use LINK_GROUP with RESCAN instead of
+      # directly (ab)using compiler/linker specific flags once CMake v3.24 is in
+      # wider use. See:
+      # https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:LINK_GROUP
       list(INSERT exe_LIB_DEPS 0 -Wl,--start-group)
       list(APPEND exe_LIB_DEPS -Wl,--end-group)
     endif()
@@ -163,8 +190,8 @@ endmacro()
 # cmake-format: off
 #   - OUTPUT_NAME: Override output file basename. Target basename defaults to
 #     NAME. OUTPUT_NAME is ignored when BUILD_SHARED_LIBS is enabled and CMake
-#     is generating a build for which MSVC or WIN32 are true. This is to avoid
-#     output basename collisions with DLL import libraries.
+#     is generating a build for which MSVC is true. This is to avoid output
+#     basename collisions with DLL import libraries.
 #   - TEST: Flag. Presence means treat library as a test.
 #   - DEFINES: List of preprocessor macro definitions.
 #   - INCLUDES: list of include directories for the target.
@@ -207,27 +234,36 @@ macro(draco_add_library)
   unset(lib_TARGET_PROPERTIES)
   set(optional_args TEST)
   set(single_value_args NAME OUTPUT_NAME TYPE)
-  set(multi_value_args SOURCES DEFINES INCLUDES COMPILE_FLAGS LINK_FLAGS
-                       OBJLIB_DEPS LIB_DEPS PUBLIC_INCLUDES TARGET_PROPERTIES)
+  set(multi_value_args
+      SOURCES
+      DEFINES
+      INCLUDES
+      COMPILE_FLAGS
+      LINK_FLAGS
+      OBJLIB_DEPS
+      LIB_DEPS
+      PUBLIC_INCLUDES
+      TARGET_PROPERTIES)
 
   cmake_parse_arguments(lib "${optional_args}" "${single_value_args}"
                         "${multi_value_args}" ${ARGN})
 
   if(DRACO_VERBOSE GREATER 1)
-    message("--------- draco_add_library ---------\n"
-            "lib_TEST=${lib_TEST}\n"
-            "lib_NAME=${lib_NAME}\n"
-            "lib_OUTPUT_NAME=${lib_OUTPUT_NAME}\n"
-            "lib_TYPE=${lib_TYPE}\n"
-            "lib_SOURCES=${lib_SOURCES}\n"
-            "lib_DEFINES=${lib_DEFINES}\n"
-            "lib_INCLUDES=${lib_INCLUDES}\n"
-            "lib_COMPILE_FLAGS=${lib_COMPILE_FLAGS}\n"
-            "lib_LINK_FLAGS=${lib_LINK_FLAGS}\n"
-            "lib_OBJLIB_DEPS=${lib_OBJLIB_DEPS}\n"
-            "lib_LIB_DEPS=${lib_LIB_DEPS}\n"
-            "lib_PUBLIC_INCLUDES=${lib_PUBLIC_INCLUDES}\n"
-            "---------------------------------------\n")
+    message(
+      "--------- draco_add_library ---------\n"
+      "lib_TEST=${lib_TEST}\n"
+      "lib_NAME=${lib_NAME}\n"
+      "lib_OUTPUT_NAME=${lib_OUTPUT_NAME}\n"
+      "lib_TYPE=${lib_TYPE}\n"
+      "lib_SOURCES=${lib_SOURCES}\n"
+      "lib_DEFINES=${lib_DEFINES}\n"
+      "lib_INCLUDES=${lib_INCLUDES}\n"
+      "lib_COMPILE_FLAGS=${lib_COMPILE_FLAGS}\n"
+      "lib_LINK_FLAGS=${lib_LINK_FLAGS}\n"
+      "lib_OBJLIB_DEPS=${lib_OBJLIB_DEPS}\n"
+      "lib_LIB_DEPS=${lib_LIB_DEPS}\n"
+      "lib_PUBLIC_INCLUDES=${lib_PUBLIC_INCLUDES}\n"
+      "---------------------------------------\n")
   endif()
 
   if(NOT (lib_NAME AND lib_TYPE))
@@ -254,14 +290,24 @@ macro(draco_add_library)
   endif()
 
   add_library(${lib_NAME} ${lib_TYPE} ${lib_SOURCES})
+
+    target_compile_features(${lib_NAME} PUBLIC cxx_std_11)
+
+  target_include_directories(${lib_NAME} PUBLIC $<INSTALL_INTERFACE:include>)
+
+  if(BUILD_SHARED_LIBS)
+    # Enable PIC for all targets in shared configurations.
+    set_target_properties(${lib_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
+
   if(lib_SOURCES)
     draco_process_intrinsics_sources(TARGET ${lib_NAME} SOURCES ${lib_SOURCES})
   endif()
 
   if(lib_OUTPUT_NAME)
-    if(NOT (BUILD_SHARED_LIBS AND (MSVC OR WIN32)))
-      set_target_properties(${lib_NAME}
-                            PROPERTIES OUTPUT_NAME ${lib_OUTPUT_NAME})
+    if(NOT (BUILD_SHARED_LIBS AND MSVC))
+      set_target_properties(${lib_NAME} PROPERTIES OUTPUT_NAME
+                                                   ${lib_OUTPUT_NAME})
     endif()
   endif()
 
@@ -278,8 +324,8 @@ macro(draco_add_library)
   endif()
 
   if(lib_COMPILE_FLAGS OR DRACO_CXX_FLAGS)
-    target_compile_options(${lib_NAME}
-                           PRIVATE ${lib_COMPILE_FLAGS} ${DRACO_CXX_FLAGS})
+    target_compile_options(${lib_NAME} PRIVATE ${lib_COMPILE_FLAGS}
+                                               ${DRACO_CXX_FLAGS})
   endif()
 
   if(lib_LINK_FLAGS)
@@ -318,8 +364,13 @@ macro(draco_add_library)
     set_target_properties(${lib_NAME} PROPERTIES PREFIX "")
   endif()
 
-  if(lib_TYPE STREQUAL SHARED AND NOT MSVC)
-    set_target_properties(${lib_NAME} PROPERTIES SOVERSION ${DRACO_SOVERSION})
+  if(NOT EMSCRIPTEN)
+    # VERSION and SOVERSION as necessary
+    if((lib_TYPE STREQUAL BUNDLE OR lib_TYPE STREQUAL SHARED) AND NOT MSVC)
+      set_target_properties(
+        ${lib_NAME} PROPERTIES VERSION ${DRACO_SOVERSION}
+                               SOVERSION ${DRACO_SOVERSION_MAJOR})
+    endif()
   endif()
 
   if(BUILD_SHARED_LIBS AND (MSVC OR WIN32))

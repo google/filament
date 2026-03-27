@@ -38,6 +38,11 @@ class BoundingBox {
   // Returns the maximum point of the bounding box.
   inline const Vector3f &GetMaxPoint() const { return max_point_; }
 
+  // Checks if the bounding box object was created with the default constructor
+  // then never updated. Internally, checks if the bounding box minimum and
+  // maximum points hold the largest positive and smallest negative values.
+  const bool IsValid() const;
+
   // Conditionally updates the bounding box with a given |new_point|.
   void Update(const Vector3f &new_point) {
     for (int i = 0; i < 3; i++) {

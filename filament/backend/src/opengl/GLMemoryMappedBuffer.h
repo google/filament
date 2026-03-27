@@ -31,7 +31,7 @@
 
 namespace filament::backend {
 
-class OpenGLContext;
+class OpenGLState;
 class OpenGLDriver;
 class BufferDescriptor;
 
@@ -50,14 +50,14 @@ struct GLMemoryMappedBuffer : public HwMemoryMappedBuffer {
 
     GLMemoryMappedBuffer();
 
-    GLMemoryMappedBuffer(OpenGLContext& glc, HandleAllocatorGL& handleAllocator,
+    GLMemoryMappedBuffer(OpenGLState& gls, HandleAllocatorGL& handleAllocator,
             BufferObjectHandle boh, size_t offset, size_t size, MapBufferAccessFlags access);
 
     ~GLMemoryMappedBuffer();
 
-    void unmap(OpenGLContext& gl, HandleAllocatorGL& handleAllocator) const;
+    void unmap(OpenGLState& gls, HandleAllocatorGL& handleAllocator) const;
 
-    void copy(OpenGLContext& glc, OpenGLDriver& gld,
+    void copy(OpenGLState& gls, OpenGLDriver& gld,
             size_t offset, BufferDescriptor&& data) const;
 };
 

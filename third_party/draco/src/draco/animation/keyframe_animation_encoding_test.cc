@@ -26,8 +26,9 @@ class KeyframeAnimationEncodingTest : public ::testing::Test {
 
   bool CreateAndAddTimestamps(int32_t num_frames) {
     timestamps_.resize(num_frames);
-    for (int i = 0; i < timestamps_.size(); ++i)
+    for (int i = 0; i < timestamps_.size(); ++i) {
       timestamps_[i] = static_cast<draco::KeyframeAnimation::TimestampType>(i);
+    }
     return keyframe_animation_.SetTimestamps(timestamps_);
   }
 
@@ -35,8 +36,9 @@ class KeyframeAnimationEncodingTest : public ::testing::Test {
                                     uint32_t num_components) {
     // Create and add animation data with.
     animation_data_.resize(num_frames * num_components);
-    for (int i = 0; i < animation_data_.size(); ++i)
+    for (int i = 0; i < animation_data_.size(); ++i) {
       animation_data_[i] = static_cast<float>(i);
+    }
     return keyframe_animation_.AddKeyframes(draco::DT_FLOAT32, num_components,
                                             animation_data_);
   }
@@ -49,7 +51,7 @@ class KeyframeAnimationEncodingTest : public ::testing::Test {
     ASSERT_EQ(animation0.num_animations(), animation1.num_animations());
 
     if (quantized) {
-      // TODO(hemmer) : Add test for stable quantization.
+      // TODO(b/199760123) : Add test for stable quantization.
       // Quantization will result in slightly different values.
       // Skip comparing values.
       return;
@@ -109,9 +111,8 @@ class KeyframeAnimationEncodingTest : public ::testing::Test {
       }
     }
 
-    ASSERT_TRUE(
-        encoder.EncodeKeyframeAnimation(keyframe_animation_, options, &buffer)
-            .ok());
+    DRACO_ASSERT_OK(
+        encoder.EncodeKeyframeAnimation(keyframe_animation_, options, &buffer));
 
     draco::DecoderBuffer dec_decoder;
     draco::KeyframeAnimationDecoder decoder;
@@ -122,8 +123,8 @@ class KeyframeAnimationEncodingTest : public ::testing::Test {
     std::unique_ptr<KeyframeAnimation> decoded_animation(
         new KeyframeAnimation());
     DecoderOptions dec_options;
-    ASSERT_TRUE(
-        decoder.Decode(dec_options, &dec_buffer, decoded_animation.get()).ok());
+    DRACO_ASSERT_OK(
+        decoder.Decode(dec_options, &dec_buffer, decoded_animation.get()));
 
     // Verify if animation before and after compression is identical.
     CompareAnimationData<num_components_t>(keyframe_animation_,

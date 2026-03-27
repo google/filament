@@ -26,9 +26,15 @@ GLTF_DIR="$(pwd)/gltf/Models"
 BUILD_COMMON_DIR="$(pwd)/build/common"
 
 os_name=$(uname -s)
+arch_name=$(uname -m)
 if [[ "$os_name" == "Linux" ]]; then
-    MESA_LIB_DIR="${MESA_DIR}lib/x86_64-linux-gnu"
-    MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.x86_64.json"
+    if [[ "$arch_name" == "aarch64" ]]; then
+        MESA_LIB_DIR="${MESA_DIR}lib/aarch64-linux-gnu"
+        MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.aarch64.json"
+    else
+        MESA_LIB_DIR="${MESA_DIR}lib/x86_64-linux-gnu"
+        MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.x86_64.json"
+    fi
 elif [[ "$os_name" == "Darwin" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib"
     MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.aarch64.json"

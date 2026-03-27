@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.19)
 
 project(draco C CXX)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-this-capture")
+endif()
+
 if (ANDROID)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DANDROID")
 endif()
@@ -13,13 +17,10 @@ endif()
 set(draco_root "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set(draco_src_root "${draco_root}/src/draco")
 set(draco_build_dir "${CMAKE_CURRENT_BINARY_DIR}")
+set(draco_build "${CMAKE_CURRENT_BINARY_DIR}")
 
 include(CMakePackageConfigHelpers)
-include("${draco_root}/cmake/compiler_flags.cmake")
-include("${draco_root}/cmake/draco_features.cmake")
-include("${draco_root}/cmake/draco_tests.cmake")
-include("${draco_root}/cmake/sanitizers.cmake")
-include("${draco_root}/cmake/util.cmake")
+include("${draco_root}/cmake/draco_options.cmake")
 
 draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
 draco_enable_feature(FEATURE "DRACO_NORMAL_ENCODING_SUPPORTED")
@@ -45,6 +46,7 @@ set(
   draco_compression_attributes_dec_sources
   "${draco_src_root}/compression/attributes/attributes_decoder.cc"
   "${draco_src_root}/compression/attributes/attributes_decoder.h"
+  "${draco_src_root}/compression/attributes/attributes_decoder_interface.h"
   "${draco_src_root}/compression/attributes/kd_tree_attributes_decoder.cc"
   "${draco_src_root}/compression/attributes/kd_tree_attributes_decoder.h"
   "${draco_src_root}/compression/attributes/kd_tree_attributes_shared.h"
@@ -176,6 +178,10 @@ set(draco_dec_config_sources
     "${draco_src_root}/compression/config/decoder_options.h"
     "${draco_src_root}/compression/config/draco_options.h")
 
+set(draco_compression_options_sources
+    "${draco_src_root}/compression/draco_compression_options.cc"
+    "${draco_src_root}/compression/draco_compression_options.h")
+
 set(draco_compression_decode_sources "${draco_src_root}/compression/decode.cc"
                                      "${draco_src_root}/compression/decode.h")
 
@@ -261,6 +267,7 @@ set(draco_core_sources
     "${draco_src_root}/core/bit_utils.h"
     "${draco_src_root}/core/bounding_box.cc"
     "${draco_src_root}/core/bounding_box.h"
+    "${draco_src_root}/core/constants.h"
     "${draco_src_root}/core/cycle_timer.cc"
     "${draco_src_root}/core/cycle_timer.h"
     "${draco_src_root}/core/data_buffer.cc"
@@ -273,6 +280,7 @@ set(draco_core_sources
     "${draco_src_root}/core/draco_index_type_vector.h"
     "${draco_src_root}/core/draco_types.cc"
     "${draco_src_root}/core/draco_types.h"
+    "${draco_src_root}/core/draco_version.h"
     "${draco_src_root}/core/encoder_buffer.cc"
     "${draco_src_root}/core/encoder_buffer.h"
     "${draco_src_root}/core/hash_utils.cc"
@@ -298,6 +306,8 @@ set(draco_io_sources
     "${draco_src_root}/io/file_writer_factory.cc"
     "${draco_src_root}/io/file_writer_factory.h"
     "${draco_src_root}/io/file_writer_interface.h"
+    "${draco_src_root}/io/file_writer_utils.cc"
+    "${draco_src_root}/io/file_writer_utils.h"
     "${draco_src_root}/io/mesh_io.cc"
     "${draco_src_root}/io/mesh_io.h"
     "${draco_src_root}/io/obj_decoder.cc"
@@ -314,6 +324,10 @@ set(draco_io_sources
     "${draco_src_root}/io/ply_property_writer.h"
     "${draco_src_root}/io/ply_reader.cc"
     "${draco_src_root}/io/ply_reader.h"
+    "${draco_src_root}/io/stl_decoder.cc"
+    "${draco_src_root}/io/stl_decoder.h"
+    "${draco_src_root}/io/stl_encoder.cc"
+    "${draco_src_root}/io/stl_encoder.h"
     "${draco_src_root}/io/point_cloud_io.cc"
     "${draco_src_root}/io/point_cloud_io.h"
     "${draco_src_root}/io/stdio_file_reader.cc"
@@ -333,6 +347,9 @@ set(draco_mesh_sources
     "${draco_src_root}/mesh/mesh_attribute_corner_table.h"
     "${draco_src_root}/mesh/mesh_cleanup.cc"
     "${draco_src_root}/mesh/mesh_cleanup.h"
+    "${draco_src_root}/mesh/mesh_features.cc"
+    "${draco_src_root}/mesh/mesh_features.h"
+    "${draco_src_root}/mesh/mesh_indices.h"
     "${draco_src_root}/mesh/mesh_misc_functions.cc"
     "${draco_src_root}/mesh/mesh_misc_functions.h"
     "${draco_src_root}/mesh/mesh_stripifier.cc"
@@ -373,7 +390,15 @@ set(
 set(draco_metadata_sources "${draco_src_root}/metadata/geometry_metadata.cc"
                            "${draco_src_root}/metadata/geometry_metadata.h"
                            "${draco_src_root}/metadata/metadata.cc"
-                           "${draco_src_root}/metadata/metadata.h")
+                           "${draco_src_root}/metadata/metadata.h"
+                           "${draco_src_root}/metadata/property_attribute.cc"
+                           "${draco_src_root}/metadata/property_attribute.h"
+                           "${draco_src_root}/metadata/property_table.cc"
+                           "${draco_src_root}/metadata/property_table.h"
+                           "${draco_src_root}/metadata/structural_metadata.cc"
+                           "${draco_src_root}/metadata/structural_metadata.h"
+                           "${draco_src_root}/metadata/structural_metadata_schema.cc"
+                           "${draco_src_root}/metadata/structural_metadata_schema.h")
 
 set(draco_metadata_enc_sources "${draco_src_root}/metadata/metadata_encoder.cc"
                                "${draco_src_root}/metadata/metadata_encoder.h")
@@ -438,6 +463,7 @@ add_library(draco_compression_bit_coders
             OBJECT ${draco_compression_bit_coders_sources})
 add_library(draco_enc_config OBJECT ${draco_enc_config_sources})
 add_library(draco_dec_config OBJECT ${draco_dec_config_sources})
+add_library(draco_compression_options OBJECT ${draco_compression_options_sources})
 add_library(draco_compression_decode OBJECT
                                       ${draco_compression_decode_sources})
 add_library(draco_compression_encode OBJECT
@@ -481,6 +507,7 @@ set(draco_object_libraries
     draco_compression_bit_coders
     draco_enc_config
     draco_dec_config
+    draco_compression_options
     draco_compression_decode
     draco_compression_encode
     draco_compression_entropy
@@ -522,6 +549,7 @@ add_library(dracodec
             $<TARGET_OBJECTS:draco_compression_bit_coders>
             $<TARGET_OBJECTS:draco_core>
             $<TARGET_OBJECTS:draco_dec_config>
+            $<TARGET_OBJECTS:draco_compression_options>
             $<TARGET_OBJECTS:draco_io>
             $<TARGET_OBJECTS:draco_mesh>
             $<TARGET_OBJECTS:draco_metadata>
@@ -545,7 +573,8 @@ if(BUILD_SHARED_LIBS)
   set_target_properties(dracodec PROPERTIES SOVERSION 1)
 endif()
 
-extract_version_string("${draco_src_root}/core/draco_version.h" draco_version)
+file(STRINGS "${draco_src_root}/core/draco_version.h" draco_version REGEX "kDracoVersion\\[\\]")
+string(REGEX REPLACE ".*kDracoVersion\\[\\] = \"([0-9]+\\.[0-9]+\\.[0-9]+)\".*" "\\1" draco_version "${draco_version}")
 
 if(NOT MSVC)
   # Generate draco.pc.
@@ -570,7 +599,7 @@ set(draco_include_install_dir "include/draco")
 set(draco_lib_install_dir "lib")
 set(draco_script_install_dir
     "${CMAKE_INSTALL_PREFIX}/${draco_lib_install_dir}/draco/cmake")
-set(draco_config_in_file "${draco_root}/cmake/DracoConfig.cmake")
+set(draco_config_in_file "${draco_root}/cmake/draco-config.cmake.template")
 set(draco_config_out_file "${draco_build_dir}/DracoConfig.cmake")
 
 configure_package_config_file("${draco_config_in_file}"
@@ -598,8 +627,9 @@ set(draco_cmake_helper_scripts "${draco_root}/cmake/FindDraco.cmake"
 
 # Some generators complain about unknown link language for header only
 # targets. Silence the harmless warnings/errors with some dummy source files.
+file(WRITE "${draco_build_dir}/draco_dummy.cc" "")
 foreach(target ${draco_header_only_targets})
-  add_dummy_source_file_to_target("${target}" "cc")
+  target_sources(${target} PRIVATE "${draco_build_dir}/draco_dummy.cc")
   set_target_properties(${target} PROPERTIES FOLDER ThirdParty/draco)
 endforeach()
 
@@ -621,6 +651,7 @@ set_target_properties(draco_compression_attributes_pred_schemes_enc  PROPERTIES 
 set_target_properties(draco_compression_bit_coders                   PROPERTIES FOLDER ThirdParty/draco)
 set_target_properties(draco_enc_config                               PROPERTIES FOLDER ThirdParty/draco)
 set_target_properties(draco_dec_config                               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_options                      PROPERTIES FOLDER ThirdParty/draco)
 set_target_properties(draco_compression_decode                       PROPERTIES FOLDER ThirdParty/draco)
 set_target_properties(draco_compression_encode                       PROPERTIES FOLDER ThirdParty/draco)
 set_target_properties(draco_compression_entropy                      PROPERTIES FOLDER ThirdParty/draco)

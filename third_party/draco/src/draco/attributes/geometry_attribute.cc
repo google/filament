@@ -26,7 +26,7 @@ GeometryAttribute::GeometryAttribute()
       unique_id_(0) {}
 
 void GeometryAttribute::Init(GeometryAttribute::Type attribute_type,
-                             DataBuffer *buffer, int8_t num_components,
+                             DataBuffer *buffer, uint8_t num_components,
                              DataType data_type, bool normalized,
                              int64_t byte_stride, int64_t byte_offset) {
   buffer_ = buffer;
@@ -59,6 +59,9 @@ bool GeometryAttribute::CopyFrom(const GeometryAttribute &src_att) {
     }
     buffer_->Update(src_att.buffer_->data(), src_att.buffer_->data_size());
   }
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  name_ = src_att.name_;
+#endif
   return true;
 }
 
@@ -87,6 +90,11 @@ bool GeometryAttribute::operator==(const GeometryAttribute &va) const {
   if (byte_offset_ != va.byte_offset_) {
     return false;
   }
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  if (name_ != va.name_) {
+    return false;
+  }
+#endif
   return true;
 }
 

@@ -17,6 +17,9 @@
 
 #include <math.h>
 
+#include <algorithm>
+#include <limits>
+
 #include "draco/attributes/point_attribute.h"
 #include "draco/core/math_utils.h"
 #include "draco/core/vector_d.h"
@@ -105,10 +108,14 @@ bool MeshPredictionSchemeTexCoordsPortablePredictor<
   next_data_id = mesh_data_.vertex_to_data_map()->at(next_vert_id);
   prev_data_id = mesh_data_.vertex_to_data_map()->at(prev_vert_id);
 
+  typedef VectorD<int64_t, 2> Vec2;
+  typedef VectorD<int64_t, 3> Vec3;
+  typedef VectorD<uint64_t, 2> Vec2u;
+
   if (prev_data_id < data_id && next_data_id < data_id) {
     // Both other corners have available UV coordinates for prediction.
-    const VectorD<int64_t, 2> n_uv = GetTexCoordForEntryId(next_data_id, data);
-    const VectorD<int64_t, 2> p_uv = GetTexCoordForEntryId(prev_data_id, data);
+    const Vec2 n_uv = GetTexCoordForEntryId(next_data_id, data);
+    const Vec2 p_uv = GetTexCoordForEntryId(prev_data_id, data);
     if (p_uv == n_uv) {
       // We cannot do a reliable prediction on degenerated UV triangles.
       predicted_value_[0] = p_uv[0];
@@ -117,9 +124,9 @@ bool MeshPredictionSchemeTexCoordsPortablePredictor<
     }
 
     // Get positions at all corners.
-    const VectorD<int64_t, 3> tip_pos = GetPositionForEntryId(data_id);
-    const VectorD<int64_t, 3> next_pos = GetPositionForEntryId(next_data_id);
-    const VectorD<int64_t, 3> prev_pos = GetPositionForEntryId(prev_data_id);
+    const Vec3 tip_pos = GetPositionForEntryId(data_id);
+    const Vec3 next_pos = GetPositionForEntryId(next_data_id);
+    const Vec3 prev_pos = GetPositionForEntryId(prev_data_id);
     // We use the positions of the above triangle to predict the texture
     // coordinate on the tip corner C.
     // To convert the triangle into the UV coordinate system we first compute
@@ -135,17 +142,17 @@ bool MeshPredictionSchemeTexCoordsPortablePredictor<
     // Where next_pos is point (N), prev_pos is point (P) and tip_pos is the
     // position of predicted coordinate (C).
     //
-    const VectorD<int64_t, 3> pn = prev_pos - next_pos;
+    const Vec3 pn = prev_pos - next_pos;
     const uint64_t pn_norm2_squared = pn.SquaredNorm();
     if (pn_norm2_squared != 0) {
       // Compute the projection of C onto PN by computing dot product of CN with
       // PN and normalizing it by length of PN. This gives us a factor |s| where
       // |s = PN.Dot(CN) / PN.SquaredNorm2()|. This factor can be used to
       // compute X in UV space |X_UV| as |X_UV = N_UV + s * PN_UV|.
-      const VectorD<int64_t, 3> cn = tip_pos - next_pos;
+      const Vec3 cn = tip_pos - next_pos;
       const int64_t cn_dot_pn = pn.Dot(cn);
 
-      const VectorD<int64_t, 2> pn_uv = p_uv - n_uv;
+      const Vec2 pn_uv = p_uv - n_uv;
       // Because we perform all computations with integers, we don't explicitly
       // compute the normalized factor |s|, but rather we perform all operations
       // over UV vectors in a non-normalized coordinate system scaled with a
@@ -153,19 +160,31 @@ bool MeshPredictionSchemeTexCoordsPortablePredictor<
       //
       //      x_uv = X_UV * PN.Norm2Squared()
       //
-      const VectorD<int64_t, 2> x_uv =
-          n_uv * pn_norm2_squared + (cn_dot_pn * pn_uv);
-
+      const int64_t n_uv_absmax_element =
+          std::max(std::abs(n_uv[0]), std::abs(n_uv[1]));
+      if (n_uv_absmax_element >
+          std::numeric_limits<int64_t>::max() / pn_norm2_squared) {
+        // Return false if the below multiplication would overflow.
+        return false;
+      }
+      const int64_t pn_uv_absmax_element =
+          std::max(std::abs(pn_uv[0]), std::abs(pn_uv[1]));
+      if (std::abs(cn_dot_pn) >
+          std::numeric_limits<int64_t>::max() / pn_uv_absmax_element) {
+        // Return false if squared length calculation would overflow.
+        return false;
+      }
+      const Vec2 x_uv = n_uv * pn_norm2_squared + (cn_dot_pn * pn_uv);
       const int64_t pn_absmax_element =
           std::max(std::max(std::abs(pn[0]), std::abs(pn[1])), std::abs(pn[2]));
-      if (cn_dot_pn > std::numeric_limits<int64_t>::max() / pn_absmax_element) {
-        // return false if squared length calculation would overflow.
+      if (std::abs(cn_dot_pn) >
+          std::numeric_limits<int64_t>::max() / pn_absmax_element) {
+        // Return false if squared length calculation would overflow.
         return false;
       }
 
       // Compute squared length of vector CX in position coordinate system:
-      const VectorD<int64_t, 3> x_pos =
-          next_pos + (cn_dot_pn * pn) / pn_norm2_squared;
+      const Vec3 x_pos = next_pos + (cn_dot_pn * pn) / pn_norm2_squared;
       const uint64_t cx_norm2_squared = (tip_pos - x_pos).SquaredNorm();
 
       // Compute vector CX_UV in the uv space by rotating vector PN_UV by 90
@@ -182,7 +201,7 @@ bool MeshPredictionSchemeTexCoordsPortablePredictor<
       //
       //     cx_uv = CX.Norm2() * PN.Norm2() * Rot(PN_UV)
       //
-      VectorD<int64_t, 2> cx_uv(pn_uv[1], -pn_uv[0]);  // Rotated PN_UV.
+      Vec2 cx_uv(pn_uv[1], -pn_uv[0]);  // Rotated PN_UV.
       // Compute CX.Norm2() * PN.Norm2()
       const uint64_t norm_squared =
           IntSqrt(cx_norm2_squared * pn_norm2_squared);
@@ -191,17 +210,15 @@ bool MeshPredictionSchemeTexCoordsPortablePredictor<
 
       // Predicted uv coordinate is then computed by either adding or
       // subtracting CX_UV to/from X_UV.
-      VectorD<int64_t, 2> predicted_uv;
+      Vec2 predicted_uv;
       if (is_encoder_t) {
         // When encoding, compute both possible vectors and determine which one
         // results in a better prediction.
         // Both vectors need to be transformed back from the scaled space to
         // the real UV coordinate space.
-        const VectorD<int64_t, 2> predicted_uv_0((x_uv + cx_uv) /
-                                                 pn_norm2_squared);
-        const VectorD<int64_t, 2> predicted_uv_1((x_uv - cx_uv) /
-                                                 pn_norm2_squared);
-        const VectorD<int64_t, 2> c_uv = GetTexCoordForEntryId(data_id, data);
+        const Vec2 predicted_uv_0((x_uv + cx_uv) / pn_norm2_squared);
+        const Vec2 predicted_uv_1((x_uv - cx_uv) / pn_norm2_squared);
+        const Vec2 c_uv = GetTexCoordForEntryId(data_id, data);
         if ((c_uv - predicted_uv_0).SquaredNorm() <
             (c_uv - predicted_uv_1).SquaredNorm()) {
           predicted_uv = predicted_uv_0;
@@ -217,10 +234,12 @@ bool MeshPredictionSchemeTexCoordsPortablePredictor<
         }
         const bool orientation = orientations_.back();
         orientations_.pop_back();
+        // Perform operations in unsigned type to avoid signed integer overflow.
+        // Note that the result will be the same (for non-overflowing values).
         if (orientation) {
-          predicted_uv = (x_uv + cx_uv) / pn_norm2_squared;
+          predicted_uv = Vec2(Vec2u(x_uv) + Vec2u(cx_uv)) / pn_norm2_squared;
         } else {
-          predicted_uv = (x_uv - cx_uv) / pn_norm2_squared;
+          predicted_uv = Vec2(Vec2u(x_uv) - Vec2u(cx_uv)) / pn_norm2_squared;
         }
       }
       predicted_value_[0] = static_cast<int>(predicted_uv[0]);

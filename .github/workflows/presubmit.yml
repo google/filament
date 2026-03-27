@@ -63,16 +63,7 @@ jobs:
       - uses: ./.github/actions/mac-prereq
       - name: Run build script
         run: |
-          cd build/mac && printf "y" | ./build.sh presubmit-with-test
-      - name: Test - material parser
-        run: |
-          out/cmake-release/filament/test/test_material_parser
-      - name: Test - public headers
-        run: |
-          # out/cmake-release should have the artifacts ready for installation. Here we install it
-          #   to test the public headers
-          ninja -C out/cmake-release install
-          test/check-headers/test.sh out/release/filament/include
+          cd build/mac && printf "y" | ./build.sh presubmit
 
   build-desktop-linux:
     name: build-linux
@@ -95,10 +86,16 @@ jobs:
       - uses: ./.github/actions/linux-prereq
       - name: Run build script
         run: |
-          cd build/linux && printf "y" | ./build.sh presubmit
-      - name: Test material parser
+          cd build/linux && printf "y" | ./build.sh presubmit-with-test
+      - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
+      - name: Test - public headers
+        run: |
+          # out/cmake-release should have the artifacts ready for installation. Here we install it
+          #   to test the public headers
+          ninja -C out/cmake-release install
+          test/check-headers/test.sh out/release/filament/include
 
   build-windows:
     name: build-windows
@@ -125,7 +122,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: 'ubuntu-24.04-4core'
+    runs-on: 'ubuntu-24.04-8core'
     needs: [check-verification]
     if: >
       always() && !cancelled() &&
@@ -266,10 +263,10 @@ jobs:
             echo "accept=false" >> "$GITHUB_OUTPUT"
           fi
         shell: bash
-      - name: Renderdiff Generate
+      - name: Renderdiff generate
         if: steps.check_accept.outputs.accept != 'true'
         uses: ./.github/actions/renderdiff-generate
-      - name: Render and compare
+      - name: Compare rendered images
         if: steps.check_accept.outputs.accept != 'true'
         id: render_compare
         env:
@@ -301,12 +298,13 @@ jobs:
              echo "$DELIMITER" >> "$GITHUB_OUTPUT"
           fi
         shell: bash
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         if: steps.check_accept.outputs.accept != 'true'
         with:
           name: presubmit-renderdiff-result
           path: ./out/renderdiff
-      - name: Compare result
+      - name: Check results
         if: steps.check_accept.outputs.accept != 'true'
         run: |
           ERROR_STR="${{ steps.render_compare.outputs.err }}"
@@ -315,8 +313,8 @@ jobs:
               exit 1
           fi
 
-  validate-wgsl-webgpu:
-    name: validate-wgsl-webgpu
+  build-wgsl-webgpu:
+    name: build-wgsl-webgpu
     runs-on: 'arm-ubuntu-24.04-16core'
     needs: [check-verification]
     if: >
@@ -341,7 +339,7 @@ jobs:
 
   test-code-correctness:
     name: test-code-correctness
-    runs-on: 'macos-14-xlarge'
+    runs-on: 'arm-ubuntu-24.04-16core'
     needs: [check-verification]
     if: >
       always() && !cancelled() &&
@@ -357,12 +355,7 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/mac-prereq
-      - name: Install clang-tidy and deps
-        run: |
-          pip install pyyaml
-          brew install llvm@${GITHUB_LLVM_VERSION}
-          sudo ln -s "$(brew --prefix llvm)@${GITHUB_LLVM_VERSION}/bin/clang-tidy" "/usr/local/bin/clang-tidy"
+      - uses: ./.github/actions/linux-prereq
       - name: Run build script
         # We need to build before clang-tidy can run analysis
         run: |
@@ -373,7 +366,7 @@ jobs:
 
   test-backend:
     name: test-backend
-    runs-on: 'macos-14-xlarge'
+    runs-on: 'arm-ubuntu-24.04-16core'
     needs: [check-verification]
     if: >
       always() && !cancelled() &&
@@ -389,14 +382,9 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/get-mesa
       - uses: ./.github/actions/get-vulkan-sdk
-      - name: Prerequisites
-        run: |
-          # Must have at least clang-16 for a webgpu/dawn build.
-          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
-        shell: bash
       - name: Run backend tests
         shell: bash
         run: |

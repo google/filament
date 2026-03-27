@@ -49,14 +49,20 @@ public:
         return mCursor < mEnd;
     }
 
-    bool willOverflow(size_t size) const noexcept {
-        return (mCursor + size) > mEnd;
+    bool willOverflow(size_t const size) const noexcept {
+        // Evaluate the remaining valid buffer size instead of using pointer arithmetic,
+        // preventing arbitrary integer size overflows from pointer wrapping.
+        return size > size_t(mEnd - mCursor);
     }
 
     void skipAlignmentPadding() {
         const uint8_t padSize = (8 - (intptr_t(mCursor) % 8)) % 8;
-        mCursor += padSize;
-        assert_invariant(0 == (intptr_t(mCursor) % 8));
+        if (UTILS_UNLIKELY(willOverflow(padSize))) {
+            mCursor = mEnd;
+        } else {
+            mCursor += padSize;
+            assert_invariant(0 == (intptr_t(mCursor) % 8));
+        }
     }
 
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>

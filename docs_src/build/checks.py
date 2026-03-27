@@ -34,8 +34,11 @@ DOCS_SRC_DIR = os.path.abspath(os.path.join(CUR_DIR, '../'))
 MARKDEEP_SRC_DIR = os.path.join(DOCS_SRC_DIR, 'src_markdeep')
 MDBOOK_SRC_DIR = os.path.join(DOCS_SRC_DIR, 'src_mdbook')
 RAW_SRC_DIR = os.path.join(DOCS_SRC_DIR, 'src_raw')
+# Web samples and tutorials are processed and embedded into the docs output,
+# so edits to the web directory must trigger a docs update.
+WEB_SRC_DIR = os.path.abspath(os.path.join(CUR_DIR, '../../web/'))
 
-SRC_SRC_DIRS = [MARKDEEP_SRC_DIR, MDBOOK_SRC_DIR, RAW_SRC_DIR]
+SRC_SRC_DIRS = [MARKDEEP_SRC_DIR, MDBOOK_SRC_DIR, RAW_SRC_DIR, WEB_SRC_DIR]
 
 def get_edited_files(commit_hash):
   INSERT = '#####?????'

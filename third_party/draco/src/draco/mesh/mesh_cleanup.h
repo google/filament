@@ -16,42 +16,38 @@
 #define DRACO_MESH_MESH_CLEANUP_H_
 
 #include "draco/core/status.h"
+#include "draco/draco_features.h"
 #include "draco/mesh/mesh.h"
 
 namespace draco {
 
 // Options used by the MeshCleanup class.
 struct MeshCleanupOptions {
-  MeshCleanupOptions()
-      : remove_degenerated_faces(true),
-        remove_duplicate_faces(true),
-        remove_unused_attributes(true),
-        make_geometry_manifold(false) {}
   // If true, the cleanup tool removes any face where two or more vertices
   // share the same position index.
-  bool remove_degenerated_faces;
+  bool remove_degenerated_faces = true;
 
   // If true, the cleanup tool removes all duplicate faces. A pair of faces is
   // duplicate if both faces share the same position indices on all vertices
   // (that is, position values have to be duduplicated). Note that all
   // non-position properties are currently ignored.
-  bool remove_duplicate_faces;
+  bool remove_duplicate_faces = true;
 
   // If true, the cleanup tool removes any unused attribute value or unused
   // point id. For example, it can be used to remove isolated vertices.
-  bool remove_unused_attributes;
+  bool remove_unused_attributes = true;
 
   // If true, the cleanup tool splits vertices along non-manifold edges and
   // vertices. This ensures that the connectivity defined by position indices
   // is manifold.
-  bool make_geometry_manifold;
+  bool make_geometry_manifold = false;
 };
 
 // Tool that can be used for removing bad or unused data from draco::Meshes.
 class MeshCleanup {
  public:
   // Performs in-place cleanup of the input mesh according to the input options.
-  bool operator()(Mesh *mesh, const MeshCleanupOptions &options);
+  static Status Cleanup(Mesh *mesh, const MeshCleanupOptions &options);
 
  private:
   static void RemoveDegeneratedFaces(Mesh *mesh);

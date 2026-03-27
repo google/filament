@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- matc: better material compression using a Multi-Base Variable-Length Interleaved Token Stream [⚠️ **New Material Version**]

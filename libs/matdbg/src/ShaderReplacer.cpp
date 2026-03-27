@@ -371,7 +371,7 @@ ShaderIndex::ShaderIndex(ChunkType dictTag, ChunkType matTag, const filaflat::Ch
 void ShaderIndex::writeChunks(ostream& stream) {
     filamat::LineDictionary lines;
     for (const auto& record : mShaderRecords) {
-        lines.addText(record.shader);
+        lines.addText(record.stage, record.shader);
     }
     sortRecords(mShaderRecords);
 

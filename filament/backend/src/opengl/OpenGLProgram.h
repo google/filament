@@ -20,7 +20,7 @@
 #include "DriverBase.h"
 
 #include "BindingMap.h"
-#include "OpenGLContext.h"
+#include "OpenGLState.h"
 #include "ShaderCompilerService.h"
 
 #include <private/backend/Driver.h>
@@ -56,7 +56,7 @@ public:
 
     bool isValid() const noexcept { return mToken || gl.program != 0; }
 
-    bool use(OpenGLDriver* const gld, OpenGLContext& context) noexcept {
+    bool use(OpenGLDriver* const gld, OpenGLState& gls) noexcept {
         // both non-null is impossible by construction
         assert_invariant(!mToken || !gl.program);
 
@@ -71,7 +71,7 @@ public:
             return false;
         }
 
-        context.useProgram(gl.program);
+        gls.useProgram(gl.program);
         return true;
     }
 
@@ -105,7 +105,7 @@ private:
 
     void initialize(OpenGLDriver& gld);
 
-    void initializeProgramState(OpenGLContext& context, GLuint program,
+    void initializeProgramState(OpenGLState& gls, GLuint program,
             LazyInitializationData& lazyInitializationData);
 
     BindingMap mBindingMap;     // 8 bytes + out-of-line 256 bytes
