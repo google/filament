@@ -675,6 +675,8 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
     ext->OES_rgb8_rgba8 = exts.has("GL_OES_rgb8_rgba8"sv);
     ext->OES_standard_derivatives = exts.has("GL_OES_standard_derivatives"sv);
+    ext->OES_texture_float_linear = exts.has("GL_OES_texture_float_linear"sv);
+    ext->OES_texture_half_float_linear = exts.has("GL_OES_texture_half_float_linear"sv);
     ext->OES_texture_npot = exts.has("GL_OES_texture_npot"sv);
     ext->OES_vertex_array_object = exts.has("GL_OES_vertex_array_object"sv);
     ext->OVR_multiview2 = exts.has("GL_OVR_multiview2"sv);
@@ -682,14 +684,15 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
     ext->WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
 
-    // ES 3.2 implies EXT_color_buffer_float
+    // ES 3.2 implies EXT_color_buffer_float (but not necessarily filterable)
     if (major > 3 || (major == 3 && minor >= 2)) {
         ext->EXT_color_buffer_float = true;
     }
-    // ES 3.x implies EXT_discard_framebuffer and OES_vertex_array_object
+    // ES 3.x implies EXT_discard_framebuffer, OES_vertex_array_object and OES_texture_half_float_linear
     if (major >= 3) {
         ext->EXT_discard_framebuffer = true;
         ext->OES_vertex_array_object = true;
+        ext->OES_texture_half_float_linear = true;
     }
 }
 
@@ -740,6 +743,8 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     ext->OES_EGL_image_external_essl3 = false;
     ext->OES_rgb8_rgba8 = true;
     ext->OES_standard_derivatives = true;
+    ext->OES_texture_float_linear = true;
+    ext->OES_texture_half_float_linear = true;
     ext->OES_texture_npot = true;
     ext->OES_vertex_array_object = true;
     ext->OVR_multiview2 = exts.has("GL_OVR_multiview2"sv);

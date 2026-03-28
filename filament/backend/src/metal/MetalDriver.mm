@@ -1259,6 +1259,18 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
     }
 }
 
+bool MetalDriver::isTextureFormatFilterable(TextureFormat format) {
+    if (isFp32ColorFormat(format)) {
+        return mContext->highestSupportedGpuFamily.apple >= 7 ||
+               mContext->highestSupportedGpuFamily.mac >= 1;
+    }
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+        isDepthFormat(format) || isStencilFormat(format)) {
+        return false;
+    }
+    return true;
+}
+
 bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
     MTLPixelFormat mtlFormat = getMetalFormat(mContext, format);
     // RGB9E5 isn't supported on Mac as a color render target.
