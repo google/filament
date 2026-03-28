@@ -191,7 +191,7 @@ int main(int argc, char* argv[]) {
         uint64_t* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
         ZSTD_decompress(basePointer, decompSize, archiveData, archiveSize);
         existingArchive = (ReadableArchive*) basePointer;
-        convertOffsetsToPointers(existingArchive);
+        convertOffsetsToPointers(existingArchive, decompSize);
         existingMaterialsCount = existingArchive->specsCount;
     }
 

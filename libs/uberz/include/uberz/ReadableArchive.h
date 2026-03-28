@@ -17,6 +17,7 @@
 #ifndef UBERZ_READABLE_ARCHIVE_H
 #define UBERZ_READABLE_ARCHIVE_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <uberz/ArchiveEnums.h>
@@ -28,7 +29,7 @@ namespace filament::uberz {
 // ArchiveSpec is a parse-free binary format. The client simply casts a word-aligned content blob
 // into a ReadableArchive struct pointer, then calls the following function to convert all the
 // offset fields into pointers.
-void convertOffsetsToPointers(struct ReadableArchive* archive);
+void convertOffsetsToPointers(struct ReadableArchive* archive, size_t archiveSize);
 
 UTILS_WARNING_PUSH
 UTILS_WARNING_ENABLE_PADDED

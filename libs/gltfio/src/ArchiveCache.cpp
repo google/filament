@@ -67,7 +67,7 @@ void ArchiveCache::load(const void* archiveData, uint64_t archiveByteCount) {
     uint64_t* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
     ZSTD_decompress(basePointer, decompSize, archiveData, archiveByteCount);
     mArchive = (ReadableArchive*) basePointer;
-    convertOffsetsToPointers(mArchive);
+    convertOffsetsToPointers(mArchive, decompSize);
     mMaterials = FixedCapacityVector<Material*>(mArchive->specsCount, nullptr);
 }
 
