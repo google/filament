@@ -150,16 +150,23 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     // One aspect of the KTX spec is that the semantics differ for non-array cubemaps.
     const bool isNonArrayCube = mNumCubeFaces > 1 && mArrayLength == 1;
     const uint32_t facesPerMip = mArrayLength * mNumCubeFaces;
+    const uint8_t* const fileEnd = bytes + nbytes;
 
     // Extract blobs from the serialized byte stream.
     const uint32_t totalSize = nbytes - (pdata - bytes);
     mBlobs->blobs.resize(totalSize);
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
+        FILAMENT_CHECK_PRECONDITION(size_t(fileEnd - pdata) >= sizeof(uint32_t))
+                << "KTX image size header is truncated";
         const uint32_t imageSize = *((uint32_t const*) pdata);
-        const uint32_t faceSize = isNonArrayCube ? imageSize : (imageSize / facesPerMip);
-        const uint32_t levelSize = faceSize * mNumCubeFaces * mArrayLength;
         pdata += sizeof(uint32_t);
-        memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, levelSize);
+        const uint32_t faceSize = isNonArrayCube ? imageSize : (imageSize / facesPerMip);
+        const uint64_t levelSize = uint64_t(faceSize) * mNumCubeFaces * mArrayLength;
+        FILAMENT_CHECK_PRECONDITION(levelSize <= size_t(fileEnd - pdata))
+                << "KTX image data exceeds buffer";
+        FILAMENT_CHECK_PRECONDITION(levelSize <= mBlobs->blobs.size())
+                << "KTX image data exceeds destination buffer";
+        memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, size_t(levelSize));
         for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
             for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
                 mBlobs->sizes[flatten(this, {mipmap, layer, face})] = faceSize;
