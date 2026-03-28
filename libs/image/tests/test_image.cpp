@@ -32,6 +32,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -75,6 +76,41 @@ static void updateOrCompare(const LinearImage& limg, const utils::Path& fname);
 
 // Subtracts two images, does an abs(), then normalizes such that min/max transform to 0/1.
 static LinearImage diffImages(const LinearImage& a, const LinearImage& b);
+
+namespace {
+
+struct TestSerializationHeader {
+    uint8_t magic[12];
+    KtxInfo info;
+    uint32_t numberOfArrayElements;
+    uint32_t numberOfFaces;
+    uint32_t numberOfMipmapLevels;
+    uint32_t bytesOfKeyValueData;
+};
+
+static_assert(sizeof(TestSerializationHeader) == 16 * 4, "Unexpected KTX test header size.");
+
+static vector<uint8_t> createKtxWithUnterminatedMetadataKey() {
+    constexpr uint8_t kMagic[] = {
+            0xab, 0x4b, 0x54, 0x58, 0x20, 0x31, 0x31, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a};
+
+    TestSerializationHeader header = {};
+    memcpy(header.magic, kMagic, sizeof(kMagic));
+    header.numberOfMipmapLevels = 1;
+    header.bytesOfKeyValueData = 8;
+
+    vector<uint8_t> buffer(sizeof(header) + header.bytesOfKeyValueData, 0xff);
+    memcpy(buffer.data(), &header, sizeof(header));
+
+    uint8_t* metadata = buffer.data() + sizeof(header);
+    const uint32_t keyAndValueByteSize = 4;
+    memcpy(metadata, &keyAndValueByteSize, sizeof(keyAndValueByteSize));
+    metadata += sizeof(keyAndValueByteSize);
+    memcpy(metadata, "ABCD", keyAndValueByteSize);
+    return buffer;
+}
+
+} // namespace
 
 TEST_F(ImageTest, LuminanceFilters) { // NOLINT
     auto tiny = createGrayFromAscii("000 010 000");
@@ -425,6 +461,24 @@ TEST_F(ImageTest, Ktx) { // NOLINT
         val = string(bundleWithMetadata.getMetadata("foo"));
         ASSERT_EQ(val, "bar");
     }
+}
+
+TEST_F(ImageTest, KtxRejectsMetadataKeysWithoutNullTerminator) {
+    vector<uint8_t> buffer = createKtxWithUnterminatedMetadataKey();
+#if UTILS_EXCEPTIONS
+    try {
+        Ktx1Bundle bundle(buffer.data(), static_cast<uint32_t>(buffer.size()));
+        (void) bundle;
+        FAIL() << "Expected malformed metadata to be rejected.";
+    } catch (const utils::PreconditionPanic& exception) {
+        EXPECT_NE(string(exception.what()).find("null-terminated"), string::npos);
+    } catch (const std::exception& exception) {
+        FAIL() << "Unexpected exception: " << exception.what();
+    }
+#else
+    EXPECT_DEATH({ Ktx1Bundle bundle(buffer.data(), static_cast<uint32_t>(buffer.size())); },
+            "metadata key.*null");
+#endif
 }
 
 TEST_F(ImageTest, getSphericalHarmonics) {

@@ -19,6 +19,7 @@
 #include <utils/Panic.h>
 #include <utils/string.h>
 
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -129,16 +130,28 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     // We use std::string to store both the key and the value. Note that the spec says the value can
     // be a binary blob that contains null characters.
     uint8_t const* pdata = bytes + sizeof(SerializationHeader);
-    uint8_t const* end = pdata + header->bytesOfKeyValueData;
+    const size_t metadataByteCount = header->bytesOfKeyValueData;
+    FILAMENT_CHECK_PRECONDITION(metadataByteCount <= size_t(nbytes - sizeof(SerializationHeader)))
+            << "KTX metadata exceeds buffer";
+    uint8_t const* end = pdata + metadataByteCount;
     while (pdata < end) {
+        FILAMENT_CHECK_PRECONDITION(size_t(end - pdata) >= sizeof(uint32_t))
+                << "KTX metadata entry is truncated";
         const uint32_t keyAndValueByteSize = *((uint32_t const*) pdata);
         pdata += sizeof(uint32_t);
-        std::string key((const char*) pdata);
-        uint8_t const* pval = pdata + key.size() + 1;
-        pdata += keyAndValueByteSize;
-        std::string val((const char*) pval, (const char*) pdata);
+        FILAMENT_CHECK_PRECONDITION(keyAndValueByteSize <= size_t(end - pdata))
+                << "KTX metadata entry exceeds metadata block";
+        uint8_t const* const kvEnd = pdata + keyAndValueByteSize;
+        const void* const nul = memchr(pdata, 0, keyAndValueByteSize);
+        FILAMENT_CHECK_PRECONDITION(nul != nullptr) << "KTX metadata key must be null-terminated";
+        uint8_t const* const pval = static_cast<uint8_t const*>(nul) + 1;
+        std::string key((const char*) pdata, (const char*) nul);
+        std::string val((const char*) pval, (const char*) kvEnd);
+        pdata = kvEnd;
         mMetadata->keyvals.insert({key, val});
         const uint32_t paddingSize = 3 - ((keyAndValueByteSize + 3) % 4);
+        FILAMENT_CHECK_PRECONDITION(paddingSize <= size_t(end - pdata))
+                << "KTX metadata padding exceeds metadata block";
         pdata += paddingSize;
     }
 
