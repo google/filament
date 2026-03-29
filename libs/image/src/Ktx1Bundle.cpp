@@ -124,11 +124,23 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     mNumMipLevels = header->numberOfMipmapLevels ? header->numberOfMipmapLevels : 1;
     mArrayLength = header->numberOfArrayElements ? header->numberOfArrayElements : 1;
     mNumCubeFaces = header->numberOfFaces ? header->numberOfFaces : 1;
-    mBlobs->sizes.resize(mNumMipLevels * mArrayLength * mNumCubeFaces);
+
+    // Validate that the sizes multiplication does not overflow.
+    FILAMENT_CHECK_PRECONDITION(
+            mArrayLength == 0 || mNumCubeFaces <= UINT32_MAX / mArrayLength)
+            << "KTX: arrayLength * numCubeFaces overflow";
+    uint32_t const facesTimesLayers = mArrayLength * mNumCubeFaces;
+    FILAMENT_CHECK_PRECONDITION(
+            facesTimesLayers == 0 || mNumMipLevels <= UINT32_MAX / facesTimesLayers)
+            << "KTX: mipLevels * faces * layers overflow";
+    mBlobs->sizes.resize(mNumMipLevels * facesTimesLayers);
 
     // We use std::string to store both the key and the value. Note that the spec says the value can
     // be a binary blob that contains null characters.
     uint8_t const* pdata = bytes + sizeof(SerializationHeader);
+    uint32_t const remainingAfterHeader = nbytes - sizeof(SerializationHeader);
+    FILAMENT_CHECK_PRECONDITION(header->bytesOfKeyValueData <= remainingAfterHeader)
+            << "KTX: bytesOfKeyValueData exceeds buffer size";
     uint8_t const* end = pdata + header->bytesOfKeyValueData;
     while (pdata < end) {
         const uint32_t keyAndValueByteSize = *((uint32_t const*) pdata);
@@ -150,15 +162,33 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     // One aspect of the KTX spec is that the semantics differ for non-array cubemaps.
     const bool isNonArrayCube = mNumCubeFaces > 1 && mArrayLength == 1;
     const uint32_t facesPerMip = mArrayLength * mNumCubeFaces;
+    // facesPerMip was already validated above (facesTimesLayers), so it cannot be zero here.
 
     // Extract blobs from the serialized byte stream.
-    const uint32_t totalSize = nbytes - (pdata - bytes);
+    FILAMENT_CHECK_PRECONDITION(pdata >= bytes && pdata <= bytes + nbytes)
+            << "KTX: data pointer out of bounds after key-value parsing";
+    const uint32_t totalSize = nbytes - (uint32_t)(pdata - bytes);
     mBlobs->blobs.resize(totalSize);
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
+        FILAMENT_CHECK_PRECONDITION(pdata + sizeof(uint32_t) <= bytes + nbytes)
+                << "KTX: not enough data for imageSize";
         const uint32_t imageSize = *((uint32_t const*) pdata);
         const uint32_t faceSize = isNonArrayCube ? imageSize : (imageSize / facesPerMip);
-        const uint32_t levelSize = faceSize * mNumCubeFaces * mArrayLength;
+
+        // Validate levelSize multiplication does not overflow.
+        FILAMENT_CHECK_PRECONDITION(
+                mNumCubeFaces == 0 || faceSize <= UINT32_MAX / mNumCubeFaces)
+                << "KTX: faceSize * numCubeFaces overflow";
+        uint32_t const faceSizeTimesFaces = faceSize * mNumCubeFaces;
+        FILAMENT_CHECK_PRECONDITION(
+                mArrayLength == 0 || faceSizeTimesFaces <= UINT32_MAX / mArrayLength)
+                << "KTX: levelSize overflow";
+        const uint32_t levelSize = faceSizeTimesFaces * mArrayLength;
+
         pdata += sizeof(uint32_t);
+        size_t const remainingData = (bytes + nbytes) - pdata;
+        FILAMENT_CHECK_PRECONDITION(levelSize <= remainingData)
+                << "KTX: levelSize exceeds remaining data";
         memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, levelSize);
         for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
             for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
