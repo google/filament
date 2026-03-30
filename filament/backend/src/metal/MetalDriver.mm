@@ -1261,6 +1261,9 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
 
 bool MetalDriver::isTextureFormatFilterable(TextureFormat format) {
     if (isFp32ColorFormat(format)) {
+        if (@available(macOS 11.0, iOS 14.0, *)) {
+            return mContext->device.supports32BitFloatFiltering;
+        }
         return mContext->highestSupportedGpuFamily.apple >= 7 ||
                mContext->highestSupportedGpuFamily.mac >= 1;
     }
