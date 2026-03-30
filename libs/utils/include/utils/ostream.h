@@ -130,10 +130,13 @@ private:
 template<template<typename T> class VECTOR, typename T>
 inline ostream& operator<<(ostream& stream, const VECTOR<T>& v) {
     stream << "< ";
-    for (size_t i = 0; i < v.size() - 1; i++) {
-        stream << v[i] << ", ";
+    if (v.size() > 0) {
+        for (size_t i = 0; i < v.size() - 1; i++) {
+            stream << v[i] << ", ";
+        }
+        stream << v[v.size() - 1];
     }
-    stream << v[v.size() - 1] << " >";
+    stream << " >";
     return stream;
 }
 
