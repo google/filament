@@ -104,6 +104,14 @@
 #   define UTILS_UNLIKELY( exp )  (!!(exp))
 #endif
 
+#if __has_builtin(__builtin_mul_overflow)
+#   define UTILS_HAS_BUILTIN_MUL_OVERFLOW 1
+#   define UTILS_MUL_OVERFLOW(a, b, res) __builtin_mul_overflow((a), (b), (res))
+#else
+#   define UTILS_HAS_BUILTIN_MUL_OVERFLOW 0
+#   define UTILS_MUL_OVERFLOW(a, b, res) (*(res) = (a) * (b), false)
+#endif
+
 #if __has_builtin(__builtin_expect_with_probability)
 #   ifdef __cplusplus
 #      define UTILS_VERY_LIKELY( exp )    (__builtin_expect_with_probability( !!(exp), true, 0.995 ))
