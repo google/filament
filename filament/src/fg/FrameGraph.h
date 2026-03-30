@@ -448,7 +448,25 @@ public:
      * Export a fgviewer::FrameGraphInfo for current graph.
      * Note that this function should be called after FrameGraph::compile().
      */
+#if FILAMENT_ENABLE_FGVIEWER
     fgviewer::FrameGraphInfo getFrameGraphInfo(const char *viewName) const;
+
+    /**
+     * Retrieve a texture handle by its name. This is used for debugging/visualization tools.
+     * @param name Name of the resource
+     * @return Handle to the texture, or an uninitialized handle if not found.
+     */
+    FrameGraphId<FrameGraphTexture> getTextureByIdName(uint32_t id, const char* name) const;
+
+    /**
+     * Dump all resources to log.
+     */
+    void dumpResources() const;
+#else
+    fgviewer::FrameGraphInfo getFrameGraphInfo(const char*) const {
+        return fgviewer::FrameGraphInfo();
+    }
+#endif
 
 private:
     friend class FrameGraphResources;

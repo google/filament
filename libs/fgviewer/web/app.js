@@ -51,6 +51,8 @@ const IS_SUBRESOURCE_KEY = 'is_subresource_of'
 const VIEW_MODE_TABLE = 'table';
 const VIEW_MODE_GRAPHVIZ = 'graphviz';
 
+const MONITORED_REFRESH_RATE = 10;
+
 const COLORS = [
   "#FFB3BA",
   "#BAFFC9",
@@ -558,6 +560,7 @@ class FrameGraphTable extends LitElement {
             frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
             selectedResourceId: {type: Number, attribute: 'selected-resource'},
             selectedPassIndex: {type: Number, attribute: 'selected-pass'},
+            monitoredResources: {type: Array, state: true},
             tooltipText: {type: String, state: true},
             tooltipVisible: {type: Boolean, state: true},
             tooltipX: {type: Number, state: true},
@@ -565,11 +568,44 @@ class FrameGraphTable extends LitElement {
         };
     }
 
+    _toggleMonitor(resource) {
+        const enabled = !this.monitoredResources.some(r => r.id === resource.id);
+        toggleMonitor(this.selectedFrameGraph, resource.id, resource.name, enabled).then(() => {
+            // Update local state immediately upon success
+            if (!enabled) {
+                const idx = this.monitoredResources.findIndex(r => r.id === resource.id);
+                if (idx >= 0) {
+                    const newResources = [...this.monitoredResources];
+                    newResources.splice(idx, 1);
+                    this.monitoredResources = newResources;
+
+                    // Fire custom event to update parent state
+                    this.dispatchEvent(new CustomEvent('update-monitored', {
+                        detail: newResources,
+                        bubbles: true,
+                        composed: true
+                    }));
+                }
+            } else {
+                // If enabling, we'll let the polling loop populate the image url.
+                // But we can add a placeholder so the checkbox immediately checks.
+                const newResources = [...this.monitoredResources, { id: resource.id, name: resource.name, url: '' }];
+                this.monitoredResources = newResources;
+
+                this.dispatchEvent(new CustomEvent('update-monitored', {
+                    detail: newResources,
+                    bubbles: true,
+                    composed: true
+                }));
+            }
+        });
+    }
     constructor() {
         super();
         this.frameGraphData = null;
         this.selectedResourceId = -1;
         this.selectedPassIndex = -1;
+        this.monitoredResources = [];
         this.expandedResourceSet = new Set();
         this.subresourceToParent = {};
         this._hoverTimeout = null;
@@ -764,6 +800,10 @@ class FrameGraphTable extends LitElement {
                             </span>`
                         : nothing}
                     ${resource.name}
+                    <input type="checkbox"
+                           .checked="${this.monitoredResources.some(r => r.id === resource.id)}"
+                           @change="${(e) => { e.stopPropagation(); this._toggleMonitor(resource); }}"
+                           title="Monitor this buffer">
                     ${hasSubresources && !isExpanded ? html`(${subresourceIds.length})` : nothing}
                 </div>
                 ${this._renderResourceUsage(allPasses, resourceIds, defaultColor, lastRow)}
@@ -865,12 +905,19 @@ class GraphvizView extends LitElement {
             return;
 
         try {
-            const viz = d3.select(container)
-                .graphviz({ useWorker: false })
-                .zoom(true)
-                .fit(true);
+            if (!this._viz) {
+                this._viz = d3.select(container)
+                    .graphviz({ useWorker: false })
+                    .zoom(true)
+                    .fit(true);
+            }
 
-            viz.renderDot(this.graphvizData);
+            if (this._lastGraphvizData === this.graphvizData) {
+                return;
+            }
+            this._lastGraphvizData = this.graphvizData;
+
+            this._viz.renderDot(this.graphvizData);
         } catch (error) {
             console.error('Failed to render graphviz:', error);
             container.innerHTML = `<div class="error">Failed to render graphviz: ${error.message}</div>`;
@@ -890,6 +937,137 @@ class GraphvizView extends LitElement {
 }
 
 customElements.define("graphviz-view", GraphvizView);
+
+class MonitorPanel extends LitElement {
+    static get properties() {
+        return {
+            monitoredResources: { type: Array },
+            expandedResourceId: { type: Number }
+        };
+    }
+
+    static get styles() {
+        return css`
+            :host {
+                display: flex;
+                flex-direction: row;
+                gap: 10px;
+                pointer-events: none;
+                margin-left: 20px;
+                margin-top: 40px;
+            }
+
+            .monitor-card {
+                background: white;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 10px;
+                pointer-events: auto;
+                width: 125px;
+                transition: all 0.2s ease;
+                cursor: pointer;
+            }
+
+            .monitor-card:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                transform: translateY(-2px);
+            }
+
+            .monitor-title {
+                margin-bottom: 5px;
+                font-size: 7px;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            .monitor-image {
+                width: 100%;
+                height: auto;
+                display: block;
+                border: 1px solid #eee;
+            }
+
+            .modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                pointer-events: auto;
+            }
+
+            .modal-content {
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                display: flex;
+                flex-direction: column;
+                max-width: 90vw;
+                max-height: 90vh;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            }
+
+            .modal-title {
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 10px;
+                text-align: center;
+                color: #333;
+            }
+
+            .modal-image {
+                max-width: 100%;
+                max-height: 80vh;
+                object-fit: contain;
+                border: 1px solid #ddd;
+            }
+        `;
+    }
+
+    constructor() {
+        super();
+        this.monitoredResources = [];
+        this.expandedResourceId = null;
+    }
+
+    render() {
+        const expandedRes = this.expandedResourceId !== null
+            ? this.monitoredResources.find(r => r.id === this.expandedResourceId)
+            : null;
+
+        // If the resource was removed from monitored list while modal is open, close it
+        if (this.expandedResourceId !== null && !expandedRes) {
+            this.expandedResourceId = null;
+        }
+
+        return html`
+            ${this.monitoredResources.map(res => html`
+                <div class="monitor-card" @click="${() => this.expandedResourceId = res.id}">
+                    <div class="monitor-title">
+                        <span>${res.name}</span>
+                    </div>
+                    <img class="monitor-image" src="${res.url}" alt="${res.name}">
+                </div>
+            `)}
+
+            ${expandedRes ? html`
+                <div class="modal-overlay" @click="${() => this.expandedResourceId = null}">
+                    <div class="modal-content" @click="${e => e.stopPropagation()}">
+                        <div class="modal-title">${expandedRes.name}</div>
+                        <img class="modal-image" src="${expandedRes.url}" alt="${expandedRes.name}">
+                    </div>
+                </div>
+            ` : nothing}
+        `;
+    }
+}
+
+customElements.define("monitor-panel", MonitorPanel);
 
 class FrameGraphViewer extends LitElement {
     static get styles() {
@@ -923,16 +1101,29 @@ class FrameGraphViewer extends LitElement {
                     this.connected = status == STATUS_CONNECTED || status == STATUS_FRAMEGRAPH_UPDATED;
 
                     if (status == STATUS_FRAMEGRAPH_UPDATED) {
-                        let fgInfo = await fetchFrameGraph(fgid);
-                        this.database[fgInfo.fgid] = fgInfo;
-                        this._framegraphTable.frameGraphData = fgInfo;
-                        this._graphvizView.graphvizData = fgInfo.graphviz;
+                      let fgInfo = await fetchFrameGraph(fgid);
+
+                      this.database[fgid] = fgInfo;
+                      this.requestUpdate();
+
+                      this._framegraphTable.frameGraphData = fgInfo;
+                      // Only update graphviz view if it's visible, else wait for tab switch
+                      if (this.viewMode === VIEW_MODE_GRAPHVIZ) {
+                          this._graphvizView.graphvizData = fgInfo.graphviz;
+                      }
                     }
                 }
         );
 
         let framegraphs = await fetchFrameGraphs();
         this.database = framegraphs;
+
+        let monitors = await fetchMonitoredResources();
+        this.monitoredResources = monitors.map(m => ({
+            id: m.id,
+            name: m.name,
+            url: `api/image?fgid=${m.fgid}&id=${m.id}&t=${Date.now()}`
+        }));
     }
 
     _getFrameGraph() {
@@ -949,7 +1140,10 @@ class FrameGraphViewer extends LitElement {
         this.selectedResourceId = -1;
         this.selectedPassIndex = -1;
         this.viewMode = VIEW_MODE_TABLE;
+        this.monitoredResources = [];
         this.init();
+
+        this._setupImagePolling();
 
         this.addEventListener('select-framegraph',
                 (ev) => {
@@ -970,8 +1164,40 @@ class FrameGraphViewer extends LitElement {
         );
 
         this.addEventListener('change-view-mode',
-            (ev) => {
+            async (ev) => {
                 this.viewMode = ev.detail;
+                if (this.viewMode === VIEW_MODE_GRAPHVIZ) {
+                    await clearMonitoredResources();
+                    this.monitoredResources = [];
+                    if (this.selectedFrameGraph) {
+                        let fgInfo = await fetchFrameGraph(this.selectedFrameGraph);
+                        this.database[this.selectedFrameGraph] = fgInfo;
+                        this.requestUpdate();
+                        this._graphvizView.graphvizData = fgInfo.graphviz;
+                    }
+                } else if (this.viewMode === VIEW_MODE_TABLE && this.selectedFrameGraph) {
+                    let fgInfo = await fetchFrameGraph(this.selectedFrameGraph);
+                    this.database[this.selectedFrameGraph] = fgInfo;
+                    this.requestUpdate();
+                    this._framegraphTable.frameGraphData = fgInfo;
+                }
+            }
+        );
+
+        this.addEventListener('update-monitored',
+            (ev) => {
+                // Keep the ordering when updated from child
+                const newResources = ev.detail;
+                const fg = this._getFrameGraph();
+                if (fg && fg.resources) {
+                    const resourceOrder = Object.values(fg.resources);
+                    newResources.sort((a, b) => {
+                        const idxA = resourceOrder.findIndex(r => r.id === a.id);
+                        const idxB = resourceOrder.findIndex(r => r.id === b.id);
+                        return idxA - idxB;
+                    });
+                }
+                this.monitoredResources = newResources;
             }
         );
     }
@@ -984,6 +1210,7 @@ class FrameGraphViewer extends LitElement {
             selectedResourceId: {type: Number, state: true},
             selectedPassIndex: {type: Number, state: true},
             viewMode: {type: String, state: true},
+            monitoredResources: {type: Array, state: true},
         }
     }
 
@@ -997,6 +1224,22 @@ class FrameGraphViewer extends LitElement {
     }
 
 
+    _setupImagePolling() {
+        if (this._pollingInterval) {
+            clearInterval(this._pollingInterval);
+        }
+        this._pollingInterval = setInterval(() => {
+            if (this.monitoredResources.length > 0 && this.selectedFrameGraph) {
+                const ts = Date.now();
+                const newResources = this.monitoredResources.map(r => ({
+                    ...r,
+                    url: `api/image?fgid=${this.selectedFrameGraph}&id=${r.id}&t=${ts}`
+                }));
+                this.monitoredResources = newResources;
+            }
+        }, 1000 / MONITORED_REFRESH_RATE);
+    }
+
     render() {
         return html`
             <framegraph-sidepanel id="sidepanel"
@@ -1007,13 +1250,17 @@ class FrameGraphViewer extends LitElement {
                 view-mode="${this.viewMode}">
             </framegraph-sidepanel>
 
-            <framegraph-table id="table"
-                style="display: ${this.viewMode === VIEW_MODE_TABLE ? 'block' : 'none'};"
-                ?connected="${this.connected}"
-                selected-framegraph="${this.selectedFrameGraph}"
-                selected-resource="${this.selectedResourceId}"
-                selected-pass="${this.selectedPassIndex}">
-            </framegraph-table>
+            <div style="display:flex;flex-direction:column">
+                <framegraph-table id="table"
+                           style="display: ${this.viewMode === VIEW_MODE_TABLE ? 'block' : 'none'};"
+                           ?connected="${this.connected}"
+                           selected-framegraph="${this.selectedFrameGraph}"
+                           selected-resource="${this.selectedResourceId}"
+                           selected-pass="${this.selectedPassIndex}"
+                    .monitoredResources="${this.monitoredResources}">
+                </framegraph-table>
+                <monitor-panel .monitoredResources="${this.monitoredResources}"></monitor-panel>
+            </div>
 
             <graphviz-view id="graphviz"
                 style="display: ${this.viewMode === VIEW_MODE_GRAPHVIZ ? 'block' : 'none'};"

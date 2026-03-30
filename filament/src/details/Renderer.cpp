@@ -34,6 +34,7 @@
 
 #include "ds/StructureDescriptorSet.h"
 
+#include "fg/FgviewerManager.h"
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
@@ -1549,24 +1550,22 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 //    auto debug = structure
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
 
-    fg.forwardResource(fgViewRenderTarget, input);
+    FgviewerManager::handleFgReadbacks(engine, fg, viewRenderTarget, view.getViewHandle());
 
+    fg.forwardResource(fgViewRenderTarget, input);
     fg.present(fgViewRenderTarget);
 
     fg.compile();
 
-#if FILAMENT_ENABLE_FGVIEWER
-    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
-    if (UTILS_LIKELY(fgviewerServer)) {
-        fgviewerServer->update(view.getViewHandle(), fg.getFrameGraphInfo(view.getName()));
-    }
-#endif
+    FgviewerManager::update(engine, fg, view);
 
     //utils::io::sstream graphviz;
     //fg.export_graphviz(graphviz, view.getName());
     //DLOG(INFO) << graphviz.c_str();
 
     fg.execute(driver);
+
+    FgviewerManager::tick(engine);
 
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);

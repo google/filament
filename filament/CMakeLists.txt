@@ -156,6 +156,7 @@ set(SRCS
         src/ds/StructureDescriptorSet.cpp
         src/fg/Blackboard.cpp
         src/fg/DependencyGraph.cpp
+        src/fg/FgviewerManager.cpp
         src/fg/FrameGraph.cpp
         src/fg/FrameGraphPass.cpp
         src/fg/FrameGraphResources.cpp

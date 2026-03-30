@@ -24,7 +24,6 @@ set(SRCS
     src/DebugServer.cpp
     src/FrameGraphInfo.cpp
     src/JsonWriter.cpp
-    src/WebSocketHandler.cpp
 )
 
 # ==================================================================================================
@@ -71,7 +70,7 @@ target_link_libraries(${TARGET} PUBLIC
         utils
 )
 
-target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
+target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src ${FILAMENT}/third_party/stb)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)

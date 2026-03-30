@@ -23,6 +23,10 @@
 #include <utils/CString.h>
 #include <utils/ostream.h>
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/FrameGraphInfo.h>
+#endif
+
 #include <iterator>
 #include <cstdint>
 
@@ -155,14 +159,32 @@ void DependencyGraph::export_graphviz(utils::io::ostream& out, char const* name)
 
     auto const& nodes = mNodes;
 
-    for (Node const* node : nodes) {
+    auto skipNode = [](char const* name) {
+#if FILAMENT_ENABLE_FGVIEWER
+        if (!name) {
+            return false;
+        }
+        std::string_view view{ name };
+        return view == std::string_view(fgviewer::READBACK_PASS_NAME) || view == std::string_view(fgviewer::RESOLVED_MONITOR_PASS_NAME);
+#else
+        return false;
+#endif
+    };
+
+    for (Node const* node: nodes) {
+        if (skipNode(node->getName())) {
+            continue;
+        }
         uint32_t id = node->getId();
         utils::CString s = node->graphvizify();
         out << "\"N" << id << "\" " << s.c_str() << "\n";
     }
 
     out << "\n";
-    for (Node const* node : nodes) {
+    for (Node const* node: nodes) {
+        if (skipNode(node->getName())) {
+            continue;
+        }
         uint32_t id = node->getId();
 
         auto edges = getOutgoingEdges(node);
@@ -174,22 +196,48 @@ void DependencyGraph::export_graphviz(utils::io::ostream& out, char const* name)
 
         // render the valid edges
         if (first != pos) {
-            out << "N" << id << " -> { ";
-            while (first != pos) {
-                Node const* ref = getNode((*first++)->to);
-                out << "N" << ref->getId() << " ";
+            bool hasValidEdges = false;
+            for (auto it = first; it != pos; ++it) {
+                Node const* ref = getNode((*it)->to);
+                if (skipNode(ref->getName())) {
+                    continue;
+                }
+                hasValidEdges = true;
             }
-            out << "} [color=" << s.c_str() << "2]\n";
+            if (hasValidEdges) {
+                out << "N" << id << " -> { ";
+                while (first != pos) {
+                    Node const* ref = getNode((*first++)->to);
+                    if (skipNode(ref->getName())) {
+                        continue;
+                    }
+                    out << "N" << ref->getId() << " ";
+                }
+                out << "} [color=" << s.c_str() << "2]\n";
+            }
         }
 
         // render the invalid edges
         if (first != edges.end()) {
-            out << "N" << id << " -> { ";
-            while (first != edges.end()) {
-                Node const* ref = getNode((*first++)->to);
-                out << "N" << ref->getId() << " ";
+            bool hasInvalidEdges = false;
+            for (auto it = first; it != edges.end(); ++it) {
+                Node const* ref = getNode((*it)->to);
+                if (skipNode(ref->getName())) {
+                    continue;
+                }
+                hasInvalidEdges = true;
             }
-            out << "} [color=" << s.c_str() << "4 style=dashed]\n";
+            if (hasInvalidEdges) {
+                out << "N" << id << " -> { ";
+                while (first != edges.end()) {
+                    Node const* ref = getNode((*first++)->to);
+                    if (skipNode(ref->getName())) {
+                        continue;
+                    }
+                    out << "N" << ref->getId() << " ";
+                }
+                out << "} [color=" << s.c_str() << "4 style=dashed]\n";
+            }
         }
     }
 

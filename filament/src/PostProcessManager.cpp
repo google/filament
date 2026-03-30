@@ -3687,7 +3687,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> const input,
-        FrameGraphTexture::Descriptor outDesc) noexcept {
+        FrameGraphTexture::Descriptor outDesc, utils::CString customPassName) noexcept {
 
     // Don't do anything if we're not a MSAA buffer
     auto const& inDesc = fg.getDescriptor(input);
@@ -3701,7 +3701,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
     //     through shaders or some other manipulation.
     if ((isDepthFormat(inDesc.format) || isStencilFormat(inDesc.format)) &&
             (!mDepthStencilResolveSupported)) {
-        return resolveDepthWithShader(fg, outputBufferName, input, outDesc);
+        return resolveDepthWithShader(fg, outputBufferName, input, outDesc,
+                std::move(customPassName));
     }
 
     outDesc.width = inDesc.width;
@@ -3714,7 +3715,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto const& ppResolve = fg.addPass<ResolveData>("resolve",
+    auto const& ppResolve = fg.addPass<ResolveData>(
+            customPassName.empty() ? "resolve" : customPassName.c_str(),
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
                 data.output = builder.createTexture(outputBufferName, outDesc);
@@ -3742,7 +3744,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepthWithShader(FrameGraph& fg,
         utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> const input,
-        FrameGraphTexture::Descriptor outDesc) noexcept {
+        FrameGraphTexture::Descriptor outDesc, utils::CString customPassName) noexcept {
 
     // Don't do anything if we're not a MSAA buffer
     auto const& inDesc = fg.getDescriptor(input);
@@ -3765,7 +3767,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepthWithShader(Frame
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto const& ppResolve = fg.addPass<ResolveData>("resolveDepthWithShader",
+    auto const& ppResolve = fg.addPass<ResolveData>(
+            customPassName.empty() ? "resolveDepthWithShader" : customPassName.c_str(),
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
                 data.output = builder.createTexture(outputBufferName, outDesc);
