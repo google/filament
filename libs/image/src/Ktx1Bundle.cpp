@@ -124,23 +124,43 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     mNumMipLevels = header->numberOfMipmapLevels ? header->numberOfMipmapLevels : 1;
     mArrayLength = header->numberOfArrayElements ? header->numberOfArrayElements : 1;
     mNumCubeFaces = header->numberOfFaces ? header->numberOfFaces : 1;
-    mBlobs->sizes.resize(mNumMipLevels * mArrayLength * mNumCubeFaces);
+
+    // Validate that the blob count computation does not overflow.
+    const uint64_t blobCount64 =
+            (uint64_t)mNumMipLevels * (uint64_t)mArrayLength * (uint64_t)mNumCubeFaces;
+    FILAMENT_CHECK_PRECONDITION(blobCount64 <= UINT32_MAX)
+            << "KTX blob count overflow";
+    mBlobs->sizes.resize((uint32_t)blobCount64);
+
+    uint8_t const* const bufEnd = bytes + nbytes;
 
     // We use std::string to store both the key and the value. Note that the spec says the value can
     // be a binary blob that contains null characters.
     uint8_t const* pdata = bytes + sizeof(SerializationHeader);
+
+    // Validate bytesOfKeyValueData against remaining buffer size.
+    FILAMENT_CHECK_PRECONDITION(header->bytesOfKeyValueData <= (uint32_t)(bufEnd - pdata))
+            << "KTX bytesOfKeyValueData exceeds buffer";
     uint8_t const* end = pdata + header->bytesOfKeyValueData;
+
     while (pdata < end) {
+        // Ensure we can read keyAndValueByteSize.
+        if (pdata + sizeof(uint32_t) > end) break;
         const uint32_t keyAndValueByteSize = *((uint32_t const*) pdata);
         pdata += sizeof(uint32_t);
+        // Ensure keyAndValueByteSize fits within remaining KV data.
+        if (pdata + keyAndValueByteSize > end) break;
         std::string key((const char*) pdata);
         uint8_t const* pval = pdata + key.size() + 1;
+        if (pval > pdata + keyAndValueByteSize) break;
         pdata += keyAndValueByteSize;
         std::string val((const char*) pval, (const char*) pdata);
         mMetadata->keyvals.insert({key, val});
         const uint32_t paddingSize = 3 - ((keyAndValueByteSize + 3) % 4);
         pdata += paddingSize;
     }
+    // Advance past any remaining KV data in case we broke out of the loop early.
+    pdata = end;
 
     // There is no compressed format that has a block size that is not a multiple of 4, so these
     // two padding constants can be safely hardcoded to 0. They are here for spec consistency.
@@ -152,13 +172,18 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     const uint32_t facesPerMip = mArrayLength * mNumCubeFaces;
 
     // Extract blobs from the serialized byte stream.
-    const uint32_t totalSize = nbytes - (pdata - bytes);
+    FILAMENT_CHECK_PRECONDITION(pdata <= bufEnd) << "KTX metadata parsing exceeded buffer";
+    const uint32_t totalSize = (uint32_t)(bufEnd - pdata);
     mBlobs->blobs.resize(totalSize);
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
+        // Validate that we can read imageSize.
+        if (pdata + sizeof(uint32_t) > bufEnd) break;
         const uint32_t imageSize = *((uint32_t const*) pdata);
         const uint32_t faceSize = isNonArrayCube ? imageSize : (imageSize / facesPerMip);
         const uint32_t levelSize = faceSize * mNumCubeFaces * mArrayLength;
         pdata += sizeof(uint32_t);
+        // Validate that levelSize fits within remaining buffer.
+        if (pdata + levelSize > bufEnd || levelSize > totalSize) break;
         memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, levelSize);
         for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
             for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
