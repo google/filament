@@ -884,6 +884,13 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
      */
     FrameGraph fg(*mResourceAllocator,
         isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
+
+#if FILAMENT_ENABLE_FGVIEWER
+    if (UTILS_LIKELY(engine.debug.fgviewer)) {
+        fg.setFgviewerData(engine.debug.fgviewer, &view);
+    }
+#endif
+
     auto& blackboard = fg.getBlackboard();
 
     PostProcessManager::ScreenSpaceRefConfig const ssrConfig = PostProcessManager::prepareMipmapSSR(
@@ -1550,17 +1557,9 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
 
     fg.forwardResource(fgViewRenderTarget, input);
-
     fg.present(fgViewRenderTarget);
 
     fg.compile();
-
-#if FILAMENT_ENABLE_FGVIEWER
-    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
-    if (UTILS_LIKELY(fgviewerServer)) {
-        fgviewerServer->update(view.getViewHandle(), fg.getFrameGraphInfo(view.getName()));
-    }
-#endif
 
     //utils::io::sstream graphviz;
     //fg.export_graphviz(graphviz, view.getName());

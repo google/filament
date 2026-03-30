@@ -38,10 +38,14 @@
 
 #if FILAMENT_ENABLE_FGVIEWER
 #include <fgviewer/FrameGraphInfo.h>
+#include "fg/FgviewerManager.h"
 #else
 namespace filament::fgviewer {
     class FrameGraphInfo{};
 } // namespace filament::fgviewer
+namespace filament {
+    class FgviewerManager;
+}
 #endif
 
 namespace filament {
@@ -234,6 +238,13 @@ public:
 
     explicit FrameGraph(TextureCacheInterface& resourceAllocator,
             Mode mode = Mode::UNPROTECTED);
+
+#if FILAMENT_ENABLE_FGVIEWER
+    // When fgviewer is enabled, we update the fgviewer at different points of framegraph
+    // life-cycles. The view is useful for associating a graph with the view it's rendering into.
+    void setFgviewerData(FgviewerManager* manager, FView const* view);
+#endif
+
     FrameGraph(FrameGraph const&) = delete;
     FrameGraph& operator=(FrameGraph const&) = delete;
     ~FrameGraph() noexcept;
@@ -448,7 +459,25 @@ public:
      * Export a fgviewer::FrameGraphInfo for current graph.
      * Note that this function should be called after FrameGraph::compile().
      */
+#if FILAMENT_ENABLE_FGVIEWER
     fgviewer::FrameGraphInfo getFrameGraphInfo(const char *viewName) const;
+
+    /**
+     * Retrieve a texture handle by its name. This is used for debugging/visualization tools.
+     * @param name Name of the resource
+     * @return Handle to the texture, or an uninitialized handle if not found.
+     */
+    FrameGraphId<FrameGraphTexture> getTextureByIdName(uint32_t id, const char* name) const;
+
+    /**
+     * Dump all resources to log.
+     */
+    void dumpResources() const;
+#else
+    fgviewer::FrameGraphInfo getFrameGraphInfo(const char*) const {
+        return fgviewer::FrameGraphInfo();
+    }
+#endif
 
 private:
     friend class FrameGraphResources;
@@ -547,6 +576,11 @@ private:
     Vector<ResourceNode*> mResourceNodes;
     Vector<PassNode*> mPassNodes;
     Vector<PassNode*>::iterator mActivePassNodesEnd;
+
+#if FILAMENT_ENABLE_FGVIEWER
+    FgviewerManager* mFgviewer = nullptr;
+    FView const* mView = nullptr;
+#endif
 };
 
 template<typename Data, typename Setup, typename Execute>

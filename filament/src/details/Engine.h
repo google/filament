@@ -47,7 +47,6 @@
 #include "details/Skybox.h"
 #include "details/Sync.h"
 
-
 #include <private/filament/EngineEnums.h>
 
 #include <private/backend/CommandBufferQueue.h>
@@ -99,16 +98,8 @@ using MaterialKey = uint32_t;
 } // namespace filament::matdbg
 #endif
 
-#if FILAMENT_ENABLE_FGVIEWER
-#include <fgviewer/DebugServer.h>
-#else
-namespace filament::fgviewer {
-    class DebugServer;
-} // namespace filament::fgviewer
-#endif
-
 namespace filament {
-
+class FgviewerManager;
 class Renderer;
 class MaterialParser;
 class TextureCacheDisposer;
@@ -771,7 +762,7 @@ public:
             bool combine_multiview_images = false;
         } stereo;
         matdbg::DebugServer* server = nullptr;
-        fgviewer::DebugServer* fgviewerServer = nullptr;
+        FgviewerManager* fgviewer = nullptr;
     } debug;
 };
 
