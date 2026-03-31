@@ -69,6 +69,7 @@ public:
     MOCK_METHOD(bool, isTextureFormatSupported, (backend::TextureFormat format), (override));
     MOCK_METHOD(bool, isTextureSwizzleSupported, (), (override));
     MOCK_METHOD(bool, isTextureFormatMipmappable, (backend::TextureFormat format), (override));
+    MOCK_METHOD(bool, isTextureFormatFilterable, (backend::TextureFormat format), (override));
     MOCK_METHOD(bool, isRenderTargetFormatSupported, (backend::TextureFormat format), (override));
     MOCK_METHOD(bool, isFrameBufferFetchSupported, (), (override));
     MOCK_METHOD(bool, isFrameBufferFetchMultiSampleSupported, (), (override));
