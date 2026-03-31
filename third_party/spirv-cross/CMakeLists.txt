@@ -56,6 +56,7 @@ option(SPIRV_CROSS_SANITIZE_THREADS "Sanitize threads" OFF)
 option(SPIRV_CROSS_SANITIZE_UNDEFINED "Sanitize undefined" OFF)
 
 option(SPIRV_CROSS_NAMESPACE_OVERRIDE "" "Override the namespace used in the C++ API.")
+option(SPIRV_CROSS_SPV_HEADER_NAMESPACE_OVERRIDE "" "Override the namespace used by spirv.hpp (to workaround conflicts).")
 option(SPIRV_CROSS_FORCE_STL_TYPES "Force use of STL types instead of STL replacements in certain places. Might reduce performance." OFF)
 
 option(SPIRV_CROSS_SKIP_INSTALL "Skips installation targets." OFF)
@@ -188,6 +189,14 @@ macro(spirv_cross_add_library name config_name library_type)
 		endif()
 	endif()
 
+	if (SPIRV_CROSS_SPV_HEADER_NAMESPACE_OVERRIDE)
+		if (${library_type} MATCHES "STATIC")
+			target_compile_definitions(${name} PUBLIC SPIRV_CROSS_SPV_HEADER_NAMESPACE_OVERRIDE=${SPIRV_CROSS_SPV_HEADER_NAMESPACE_OVERRIDE})
+		else()
+			target_compile_definitions(${name} PRIVATE SPIRV_CROSS_SPV_HEADER_NAMESPACE_OVERRIDE=${SPIRV_CROSS_SPV_HEADER_NAMESPACE_OVERRIDE})
+		endif()
+	endif()
+
 	if (NOT SPIRV_CROSS_SKIP_INSTALL)
 		install(TARGETS ${name}
 			EXPORT ${config_name}Config
@@ -246,7 +255,7 @@ set(spirv-cross-util-sources
 		${CMAKE_CURRENT_SOURCE_DIR}/spirv_cross_util.hpp)
 
 set(spirv-cross-abi-major 0)
-set(spirv-cross-abi-minor 67)
+set(spirv-cross-abi-minor 68)
 set(spirv-cross-abi-patch 0)
 set(SPIRV_CROSS_VERSION ${spirv-cross-abi-major}.${spirv-cross-abi-minor}.${spirv-cross-abi-patch})
 
@@ -542,6 +551,14 @@ if (SPIRV_CROSS_CLI)
 				target_link_libraries(spirv-cross-typed-id-test spirv-cross-core)
 				set_target_properties(spirv-cross-typed-id-test PROPERTIES LINK_FLAGS "${spirv-cross-link-flags}")
 
+				add_executable(spirv-cross-debug-lines-test tests-other/debug-lines.cpp)
+				target_link_libraries(spirv-cross-debug-lines-test spirv-cross-core)
+				set_target_properties(spirv-cross-debug-lines-test PROPERTIES LINK_FLAGS "${spirv-cross-link-flags}")
+
+				add_executable(spirv-cross-debug-info-test tests-other/debug-info.cpp)
+				target_link_libraries(spirv-cross-debug-info-test spirv-cross-core)
+				set_target_properties(spirv-cross-debug-info-test PROPERTIES LINK_FLAGS "${spirv-cross-link-flags}")
+
 				if (CMAKE_COMPILER_IS_GNUCXX OR (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang"))
 					target_compile_options(spirv-cross-c-api-test PRIVATE -std=c89 -Wall -Wextra)
 				endif()
@@ -564,6 +581,10 @@ if (SPIRV_CROSS_CLI)
 						COMMAND $<TARGET_FILE:spirv-cross-msl-ycbcr-conversion-test> ${CMAKE_CURRENT_SOURCE_DIR}/tests-other/msl_ycbcr_conversion_test_2.spv)
 				add_test(NAME spirv-cross-typed-id-test
 						COMMAND $<TARGET_FILE:spirv-cross-typed-id-test>)
+				add_test(NAME spirv-cross-debug-lines-test
+						COMMAND $<TARGET_FILE:spirv-cross-debug-lines-test> ${CMAKE_CURRENT_SOURCE_DIR}/tests-other/debug-lines.spv)
+				add_test(NAME spirv-cross-debug-info-test
+						COMMAND $<TARGET_FILE:spirv-cross-debug-info-test> ${CMAKE_CURRENT_SOURCE_DIR}/tests-other/debug-info.spv)
 				add_test(NAME spirv-cross-test
 						COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_shaders.py --parallel
 						${spirv-cross-externals}

@@ -4,13 +4,11 @@
 
 # News
 
-1. Building glslang as a DLL or shared library is now possible and supported.
+1. The --shift-texture-binding\[s\] option no longer affects combined samplers. The new --shift-combined-sampler-binding\[s\] option should be used to control combined sampler bindings independently from separate textures. The old behavior can be achieved by setting both options to the same value.
 
-2. The `GenericCodeGen`, `MachineIndependent`, `OSDependent`, and `SPIRV` libraries have been integrated into the main `glslang` library. The old separate libraries have replaced with empty stubs for a temporary compatibility period, and they will be removed entirely in the future.
+2. The spirv-remap utility from glslang has been ported to the SPIRV-Tools repository as a new optimization pass called canonicalize-ids, available in spirv-opt. See spirv-opt --help for usage details.
 
-3. A new CMake `ENABLE_SPIRV` option has been added to control whether glslang is built with SPIR-V support. Its default value is `ON`.
-
-4. `OGLCompiler` and `HLSL` stub libraries have been fully removed from the build.
+3. Building glslang as a DLL or shared library is now possible and supported.
 
 # Glslang Components and Status
 

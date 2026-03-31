@@ -13,7 +13,7 @@ struct TessLevels
     float outer3;
 };
 
-kernel void main0(const device TessLevels& sb_levels [[buffer(0)]], uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_PrimitiveID [[threadgroup_position_in_grid]], constant uint* spvIndirectParams [[buffer(29)]], device MTLTriangleTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
+kernel void main0(device TessLevels& sb_levels [[buffer(0)]], uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_PrimitiveID [[threadgroup_position_in_grid]], constant uint* spvIndirectParams [[buffer(29)]], device MTLTriangleTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
 {
     spvTessLevel[gl_PrimitiveID].insideTessellationFactor = half(sb_levels.inner0);
     spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[0] = half(sb_levels.outer0);

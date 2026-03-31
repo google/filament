@@ -195,7 +195,8 @@ spv_result_t CheckRequiredCapabilities(ValidationState_t& state,
     // registers a capability with the module *before* checking capabilities.
     // So in the case of an OpCapability instruction, don't bother checking
     // enablement by another capability.
-    if (inst->opcode() != spv::Op::OpCapability) {
+    if (inst->opcode() != spv::Op::OpCapability &&
+        inst->opcode() != spv::Op::OpConditionalCapabilityINTEL) {
       const bool enabled_by_cap =
           state.HasAnyOfCapabilities(enabling_capabilities);
       if (!enabling_capabilities.empty() && !enabled_by_cap) {
@@ -461,10 +462,13 @@ spv_result_t CheckIfKnownExtension(ValidationState_t& _,
 
 spv_result_t InstructionPass(ValidationState_t& _, const Instruction* inst) {
   const spv::Op opcode = inst->opcode();
-  if (opcode == spv::Op::OpExtension) {
+  if (opcode == spv::Op::OpExtension ||
+      opcode == spv::Op::OpConditionalExtensionINTEL) {
     CheckIfKnownExtension(_, inst);
   } else if (opcode == spv::Op::OpCapability) {
     _.RegisterCapability(inst->GetOperandAs<spv::Capability>(0));
+  } else if (opcode == spv::Op::OpConditionalCapabilityINTEL) {
+    _.RegisterCapability(inst->GetOperandAs<spv::Capability>(1));
   } else if (opcode == spv::Op::OpMemoryModel) {
     if (_.has_memory_model_specified()) {
       return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)

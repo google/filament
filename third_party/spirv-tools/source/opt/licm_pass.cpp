@@ -118,7 +118,6 @@ bool LICMPass::IsImmediatelyContainedInLoop(Loop* loop, Function* f,
 }
 
 bool LICMPass::HoistInstruction(Loop* loop, Instruction* inst) {
-  // TODO(1841): Handle failure to create pre-header.
   BasicBlock* pre_header_bb = loop->GetOrCreatePreHeaderBlock();
   if (!pre_header_bb) {
     return false;

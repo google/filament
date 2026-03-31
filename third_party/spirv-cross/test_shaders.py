@@ -117,6 +117,8 @@ def print_msl_compiler_version():
         pass
 
 def path_to_msl_standard(shader):
+    if '.msl4.' in shader:
+        return '-std=metal4.0'
     if '.msl32.' in shader:
         return '-std=metal3.2'
     if '.msl31.' in shader:
@@ -157,9 +159,11 @@ def path_to_msl_standard(shader):
             return '-std=macos-metal1.2'
 
 def path_to_msl_standard_cli(shader):
-    if '.msl32.' in shader:
+    if '.msl4.' in shader:
+        return '40000'
+    elif '.msl32.' in shader:
         return '30200'
-    if '.msl31.' in shader:
+    elif '.msl31.' in shader:
         return '30100'
     elif '.msl3.' in shader:
         return '30000'
@@ -181,6 +185,13 @@ def path_to_msl_standard_cli(shader):
 ignore_win_metal_tool = False
 def validate_shader_msl(shader, opt):
     msl_path = reference_path(shader[0], shader[1], opt)
+
+    # The 4.0 compiler for Windows is outdated and broken, so we cannot rely on version checks either.
+    cli_standard = path_to_msl_standard_cli(msl_path)
+    ci_supports_version = int(cli_standard) <= 30200
+    if not ci_supports_version:
+        return
+
     global ignore_win_metal_tool
     try:
         if '.ios.' in msl_path:
@@ -192,10 +203,8 @@ def validate_shader_msl(shader, opt):
             subprocess.check_call(['xcrun', '--sdk', msl_os, 'metal', '-x', 'metal', path_to_msl_standard(msl_path), '-Werror', '-Wno-unused-variable', msl_path])
             print('Compiled Metal shader: ' + msl_path)   # display after so xcrun FNF is silent
         elif not ignore_win_metal_tool:
-            # Use Metal Windows toolkit to test on Linux (Wine) and Windows. Running offline tool on Linux gets weird.
-            # Normal winepath doesn't work, it must be Z:/abspath *exactly* for some bizarre reason.
-            target_path = msl_path if platform.system == 'Windows' else ('Z:' + os.path.abspath(msl_path))
-            subprocess.check_call(['metal', '-x', 'metal', path_to_msl_standard(msl_path), '-Werror', '-Wno-unused-variable', target_path])
+            # Use Metal Windows toolkit to test on Linux (Wine) and Windows.
+            subprocess.check_call(['metal', '-x', 'metal', path_to_msl_standard(msl_path), '-Werror', '-Wno-unused-variable', msl_path])
 
     except OSError as oe:
         if (oe.errno != errno.ENOENT):   # Ignore xcrun or metal not found error
@@ -228,7 +237,12 @@ def cross_compile_msl(shader, spirv, opt, iterations, paths):
     if spirv:
         subprocess.check_call(spirv_cmd)
     else:
-        subprocess.check_call([paths.glslang, '--amb' ,'--target-env', glslang_env, '-V', '-o', spirv_path, shader])
+        glslang_cmd = [paths.glslang, '--amb' ,'--target-env', glslang_env, '-V', '-o', spirv_path, shader]
+        if '.g.' in shader:
+            glslang_cmd.append('-g')
+        if '.gV.' in shader:
+            glslang_cmd.append('-gV')
+        subprocess.check_call(glslang_cmd)
 
     if opt and (not shader_is_invalid_spirv(shader)):
         if '.graphics-robust-access.' in shader:
@@ -521,7 +535,12 @@ def cross_compile_hlsl(shader, spirv, opt, force_no_external_validation, iterati
     if spirv:
         subprocess.check_call(spirv_cmd)
     else:
-        subprocess.check_call([paths.glslang, '--amb', '--target-env', glslang_env, '-V', '-o', spirv_path, shader])
+        glslang_cmd = [paths.glslang, '--amb', '--target-env', glslang_env, '-V', '-o', spirv_path, shader]
+        if '.g.' in shader:
+            glslang_cmd.append('-g')
+        if '.gV.' in shader:
+            glslang_cmd.append('-gV')
+        subprocess.check_call(glslang_cmd)
 
     if opt and (not shader_is_invalid_spirv(hlsl_path)):
         subprocess.check_call([paths.spirv_opt, '--skip-validation', '-O', '-o', spirv_path, spirv_path])
@@ -551,6 +570,8 @@ def cross_compile_hlsl(shader, spirv, opt, force_no_external_validation, iterati
         hlsl_args.append('--hlsl-preserve-structured-buffers')
     if '.flip-vert-y.' in shader:
         hlsl_args.append('--flip-vert-y')
+    if '.user-semantic.' in shader:
+        hlsl_args.append('--hlsl-user-semantic')
 
     subprocess.check_call(hlsl_args)
 
@@ -908,6 +929,10 @@ def test_shader_msl(stats, shader, args, paths):
 
 def test_shader_hlsl(stats, shader, args, paths):
     joined_path = os.path.join(shader[0], shader[1])
+
+    if os.path.splitext(joined_path)[1] == '.hlsl':
+        return
+
     print('Testing HLSL shader:', joined_path)
     is_spirv = shader_is_spirv(shader[1])
     noopt = shader_is_noopt(shader[1])

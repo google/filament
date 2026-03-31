@@ -373,6 +373,7 @@ void ShaderIndex::writeChunks(ostream& stream) {
     for (const auto& record : mShaderRecords) {
         lines.addText(record.stage, record.shader);
     }
+    lines.resolve();
     sortRecords(mShaderRecords);
 
     filamat::ChunkContainer cc;

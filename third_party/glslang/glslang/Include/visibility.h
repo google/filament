@@ -51,4 +51,8 @@
 // Symbols marked with this macro are only meant for public use by the test suite
 // and do not appear in publicly installed headers. They are not considered to be
 // part of the glslang library ABI.
-#define GLSLANG_EXPORT_FOR_TESTS GLSLANG_EXPORT
+#ifdef GLSLANG_TEST_BUILD
+    #define GLSLANG_EXPORT_FOR_TESTS GLSLANG_EXPORT
+#else
+    #define GLSLANG_EXPORT_FOR_TESTS
+#endif

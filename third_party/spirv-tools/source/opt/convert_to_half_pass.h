@@ -130,6 +130,9 @@ class ConvertToHalfPass : public Pass {
     }
   };
 
+  // The status of the pass.
+  Pass::Status status_;
+
   // Set of core operations to be processed
   std::unordered_set<spv::Op, hasher> target_ops_core_;
 
@@ -141,6 +144,9 @@ class ConvertToHalfPass : public Pass {
 
   // Set of only dref sample operations
   std::unordered_set<spv::Op, hasher> dref_image_ops_;
+
+  // Set of only sample operations that have a Coordinate operand
+  std::unordered_set<spv::Op, hasher> coordinate_image_ops_;
 
   // Set of operations that can be marked as relaxed
   std::unordered_set<spv::Op, hasher> closure_ops_;

@@ -37,6 +37,7 @@
 #define _IOMAPPER_INCLUDED
 
 #include <cstdint>
+#include <array>
 #include <unordered_map>
 #include <unordered_set>
 //
@@ -55,6 +56,7 @@ public:
     TDefaultIoResolverBase(const TIntermediate& intermediate);
     typedef std::vector<int> TSlotSet;
     typedef std::unordered_map<int, TSlotSet> TSlotSetMap;
+    typedef std::array<TSlotSetMap, EResCount> TSlotSetMapResourceArray;
 
     // grow the reflection stage by stage
     void notifyBinding(EShLanguage, TVarEntryInfo& /*ent*/) override {}
@@ -72,11 +74,11 @@ public:
     virtual TResourceType getResourceType(const glslang::TType& type) = 0;
     bool doAutoBindingMapping() const;
     bool doAutoLocationMapping() const;
-    TSlotSet::iterator findSlot(int set, int slot);
-    bool checkEmpty(int set, int slot);
+    TSlotSet::iterator findSlot(int resource, int set, int slot);
+    bool checkEmpty(int resource, int set, int slot);
     bool validateInOut(EShLanguage /*stage*/, TVarEntryInfo& /*ent*/) override { return true; }
-    int reserveSlot(int set, int slot, int size = 1);
-    int getFreeSlot(int set, int base, int size = 1);
+    int reserveSlot(int resource, int set, int slot, int size = 1);
+    int getFreeSlot(int resource, int set, int base, int size = 1);
     int resolveSet(EShLanguage /*stage*/, TVarEntryInfo& ent) override;
     int resolveUniformLocation(EShLanguage /*stage*/, TVarEntryInfo& ent) override;
     int resolveInOutLocation(EShLanguage stage, TVarEntryInfo& ent) override;
@@ -90,7 +92,7 @@ public:
     }
     uint32_t computeTypeLocationSize(const TType& type, EShLanguage stage);
 
-    TSlotSetMap slots;
+    TSlotSetMapResourceArray slots;
     bool hasError = false;
 
 protected:
@@ -120,12 +122,12 @@ protected:
     }
 
     static bool isTextureType(const glslang::TType& type) {
-        return (type.getBasicType() == glslang::EbtSampler &&
+        return (type.getBasicType() == glslang::EbtSampler && !type.getSampler().isCombined() &&
                 (type.getSampler().isTexture() || type.getSampler().isSubpass()));
     }
 
     static bool isUboType(const glslang::TType& type) {
-        return type.getQualifier().storage == EvqUniform;
+        return type.getQualifier().storage == EvqUniform && type.isStruct();
     }
 
     static bool isImageType(const glslang::TType& type) {
@@ -134,6 +136,24 @@ protected:
 
     static bool isSsboType(const glslang::TType& type) {
         return type.getQualifier().storage == EvqBuffer;
+    }
+
+    static bool isCombinedSamplerType(const glslang::TType& type) {
+        return type.getBasicType() == glslang::EbtSampler && type.getSampler().isCombined();
+    }
+
+    static bool isAsType(const glslang::TType& type) {
+        return type.getBasicType() == glslang::EbtAccStruct;
+    }
+
+    static bool isTensorType(const glslang::TType& type) {
+        return type.isTensorARM();
+    }
+
+    static bool isValidGlslType(const glslang::TType& type) {
+        // at most one must be true
+        return (isSamplerType(type) + isTextureType(type) + isUboType(type) + isImageType(type) +
+            isSsboType(type) + isCombinedSamplerType(type) + isAsType(type) + isTensorType(type)) <= 1;
     }
 
     // Return true if this is a SRV (shader resource view) type:
@@ -155,6 +175,7 @@ struct TDefaultGlslIoResolver : public TDefaultIoResolverBase {
 public:
     typedef std::map<TString, int> TVarSlotMap;  // <resourceName, location/binding>
     typedef std::map<int, TVarSlotMap> TSlotMap; // <resourceKey, TVarSlotMap>
+    typedef std::array<TSlotMap, EResCount> TResourceSlotMap;
     TDefaultGlslIoResolver(const TIntermediate& intermediate);
     bool validateBinding(EShLanguage /*stage*/, TVarEntryInfo& /*ent*/) override { return true; }
     TResourceType getResourceType(const glslang::TType& type) override;
@@ -182,7 +203,7 @@ protected:
     // Use for mark current shader stage for resolver
     EShLanguage currentStage;
     // Slot map for storage resource(location of uniform and interface symbol) It's a program share slot
-    TSlotMap resourceSlotMap;
+    TResourceSlotMap resourceSlotMap;
     // Slot map for other resource(image, ubo, ssbo), It's a program share slot.
     TSlotMap storageSlotMap;
 };

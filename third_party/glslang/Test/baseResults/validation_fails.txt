@@ -47,6 +47,7 @@ Test/baseResults/link.vk.crossStageIO.1.vert.out
 Test/baseResults/link.vk.differentPC.0.0.frag.out
 Test/baseResults/link.vk.differentPC.1.0.frag.out
 Test/baseResults/link.vk.missingCrossStageIO.0.vert.out
+Test/baseResults/link.vk.multiUnitLayout.2.comp.out
 Test/baseResults/link.vk.pcNamingInvalid.0.0.vert.out
 Test/baseResults/spv.130.frag.out
 Test/baseResults/spv.140.frag.out
@@ -77,5 +78,5 @@ Test/baseResults/spv.queryL.frag.out
 Test/baseResults/spv.separate.frag.out
 Test/baseResults/spv.sparseTextureClamp.frag.out
 Test/baseResults/spv.sparseTexture.frag.out
-Test/baseResults/spv.tensorARM.params.comp.out
 Test/baseResults/vk.relaxed.errorcheck.vert.out
+Test/baseResults/vk.relaxed.syntaxerror.vert.out

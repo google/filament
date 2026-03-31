@@ -1,0 +1,38 @@
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+static const uint _7 = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 2
+#endif
+static const int A = SPIRV_CROSS_CONSTANT_ID_1;
+static const uint _22 = (uint(A) + 0u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+static const uint _23 = SPIRV_CROSS_CONSTANT_ID_0;
+static const uint3 _25 = uint3(_23, 1u, 1u);
+static const uint _26 = _25.x;
+static const uint _27 = (_22 * _26);
+static const uint _31 = (uint(A) + 0u);
+static const uint _32 = _25.x;
+static const uint _33 = (_31 * _32);
+
+RWByteAddressBuffer _49 : register(u0);
+
+static float D[_33];
+
+void comp_main()
+{
+    for (int i = 0; uint(i) < _27; i++)
+    {
+        D[i] = 1.0f + float(i);
+    }
+    _49.Store(4, asuint(D[int(_49.Load(0))] + D[int(_49.Load(0)) ^ 1]));
+}
+
+[numthreads(SPIRV_CROSS_CONSTANT_ID_0, 1, 1)]
+void main()
+{
+    comp_main();
+}

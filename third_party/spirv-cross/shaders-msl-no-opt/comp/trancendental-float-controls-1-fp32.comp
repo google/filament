@@ -1,0 +1,35 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+layout(local_size_x = 4) in;
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	float v[4];
+	float16_t f16[4];
+};
+
+// SignedZeroInfNanPreserve 32
+spirv_execution_mode(capabilities = [4466], extensions = ["SPV_KHR_float_controls"], 4461, 32);
+
+void main ()
+{
+	v[gl_LocalInvocationIndex] = cos(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += sin(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += tan(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += acos(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += asin(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += atan(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += exp(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += exp2(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += log(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += log2(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += sqrt(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += inversesqrt(v[gl_LocalInvocationIndex]);
+	v[gl_LocalInvocationIndex] += pow(v[gl_LocalInvocationIndex], 4.0);
+
+	f16[gl_LocalInvocationIndex] = cos(f16[gl_LocalInvocationIndex]);
+	f16[gl_LocalInvocationIndex] += sin(f16[gl_LocalInvocationIndex]);
+	f16[gl_LocalInvocationIndex] += cosh(f16[gl_LocalInvocationIndex]);
+	f16[gl_LocalInvocationIndex] += sinh(f16[gl_LocalInvocationIndex]);
+}

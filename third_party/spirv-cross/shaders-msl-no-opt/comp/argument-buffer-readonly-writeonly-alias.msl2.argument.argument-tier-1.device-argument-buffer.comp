@@ -1,0 +1,9 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout (binding = 0) readonly buffer A {float data_a[];} a[];
+layout (binding = 0) writeonly buffer D {float data_d[];} d[];
+
+void main() {
+	d[gl_WorkGroupID.x].data_d[0] = a[gl_WorkGroupID.x].data_a[0];
+}

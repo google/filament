@@ -34,10 +34,13 @@ void FeatureManager::AddExtensions(Module* module) {
 }
 
 void FeatureManager::AddExtension(Instruction* ext) {
-  assert(ext->opcode() == spv::Op::OpExtension &&
+  assert((ext->opcode() == spv::Op::OpExtension ||
+          ext->opcode() == spv::Op::OpConditionalExtensionINTEL) &&
          "Expecting an extension instruction.");
 
-  const std::string name = ext->GetInOperand(0u).AsString();
+  const uint32_t name_i =
+      ext->opcode() == spv::Op::OpConditionalExtensionINTEL ? 1u : 0u;
+  const std::string name = ext->GetInOperand(name_i).AsString();
   Extension extension;
   if (GetExtensionFromString(name.c_str(), &extension)) {
     extensions_.insert(extension);
@@ -72,7 +75,10 @@ void FeatureManager::RemoveCapability(spv::Capability cap) {
 
 void FeatureManager::AddCapabilities(Module* module) {
   for (Instruction& inst : module->capabilities()) {
-    AddCapability(static_cast<spv::Capability>(inst.GetSingleWordInOperand(0)));
+    const uint32_t i_cap =
+        inst.opcode() == spv::Op::OpConditionalCapabilityINTEL ? 1 : 0;
+    AddCapability(
+        static_cast<spv::Capability>(inst.GetSingleWordInOperand(i_cap)));
   }
 }
 

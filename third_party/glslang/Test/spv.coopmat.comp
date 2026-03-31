@@ -31,6 +31,7 @@ layout(set = 0, binding = 0, buffer_reference) coherent buffer Block {
 } block;
 
 layout(set = 0, binding = 0) coherent buffer Block16 {
+    float16_t arr[256][256];
     float16_t y[1024*1024];
     float16_t x[];
 
@@ -111,5 +112,8 @@ void main()
     fcoopmatNV<16, gl_ScopeSubgroup, 16, 8> ms;
     coopMatLoadNV(ms, shmatrix, 1, 2, false);
     coopMatStoreNV(ms, shmatrix, 1, 2, false);
+
+    coopMatLoadNV(ms, block16.arr[8], 1, 2, false);
+    coopMatStoreNV(ms, block16.arr[16], 1, 2, false);
 
 }

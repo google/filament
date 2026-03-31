@@ -19,7 +19,7 @@ local_path_override(
 )
 
 bazel_dep(name = "rules_python",
-          version = "0.34.0")
+          version = "1.5.1")
 
 # https://rules-python.readthedocs.io/en/stable/toolchains.html#library-modules-with-dev-only-python-usage
 python = use_extension(

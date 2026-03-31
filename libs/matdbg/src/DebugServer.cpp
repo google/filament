@@ -273,8 +273,7 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
     }
 
     const ShaderInfo info = infos[shaderIndex];
-    if (!editor.replaceShaderSource(info.shaderModel, info.variant, info.pipelineStage, source,
-            size)) {
+    if (!editor.replaceShaderSource(info.shaderModel, info.variant, info.pipelineStage, source, size)) {
         return error(__LINE__);
     }
 

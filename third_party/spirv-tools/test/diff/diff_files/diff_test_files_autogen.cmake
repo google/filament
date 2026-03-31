@@ -18,6 +18,7 @@
 list(APPEND DIFF_TEST_FILES
 "diff_files/OpExtInst_in_dst_only_autogen.cpp"
 "diff_files/OpExtInst_in_src_only_autogen.cpp"
+"diff_files/OpExtInst_in_variables_autogen.cpp"
 "diff_files/OpTypeForwardPointer_basic_autogen.cpp"
 "diff_files/OpTypeForwardPointer_intertwined_autogen.cpp"
 "diff_files/OpTypeForwardPointer_mismatching_class_autogen.cpp"

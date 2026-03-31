@@ -121,6 +121,8 @@ INSTANTIATE_TEST_SUITE_P(
         {"link.vk.pcNamingInvalid.0.0.vert", "link.vk.pcNamingInvalid.0.1.vert"},
         {"link.vk.multiBlocksValid.0.0.vert", "link.vk.multiBlocksValid.0.1.vert"},
         {"link.vk.multiBlocksValid.1.0.geom", "link.vk.multiBlocksValid.1.1.geom"},
+        {"link.vk.multiUnitLayout.0.comp", "link.vk.multiUnitLayout.1.comp"},
+        {"link.vk.multiUnitLayout.2.comp", "link.vk.multiUnitLayout.0.comp"},
         {"link.vk.inconsistentGLPerVertex.0.vert", "link.vk.inconsistentGLPerVertex.0.geom"},
         {"link.vk.crossStageIO.0.vert", "link.vk.crossStageIO.0.frag"},
         {"link.vk.crossStageIO.1.vert", "link.vk.crossStageIO.1.geom", "link.vk.crossStageIO.1.frag"},

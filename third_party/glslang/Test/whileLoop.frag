@@ -12,5 +12,9 @@ void main()
         color += bigColor;
     }
 
+    while (bool test = color.y < d) {
+        color += bigColor;
+    }
+
     gl_FragColor = color;
 }

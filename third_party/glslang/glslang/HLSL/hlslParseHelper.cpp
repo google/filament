@@ -801,9 +801,16 @@ TIntermTyped* HlslParseContext::handleBracketDereference(const TSourceLoc& loc, 
         return result;  // it was handled as an operator[]
 
     bool flattened = false;
-    int indexValue = 0;
-    if (index->getQualifier().isFrontEndConstant())
-        indexValue = index->getAsConstantUnion()->getConstArray()[0].getIConst();
+    int64_t indexValue = 0;
+    if (index->getQualifier().isFrontEndConstant()) {
+        if (index->getType().contains64BitInt()) {
+            indexValue = index->getAsConstantUnion()->getConstArray()[0].getI64Const();
+        } else if (index->getType().getBasicType() == EbtUint) {
+            indexValue = index->getAsConstantUnion()->getConstArray()[0].getUConst();
+        } else {
+            indexValue = index->getAsConstantUnion()->getConstArray()[0].getIConst();
+        }
+    }
 
     variableCheck(base);
     if (! base->isArray() && ! base->isMatrix() && ! base->isVector()) {

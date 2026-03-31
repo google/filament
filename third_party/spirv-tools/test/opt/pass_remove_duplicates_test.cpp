@@ -639,6 +639,131 @@ OpFunctionEnd
   EXPECT_EQ(GetErrorMessage(), "");
 }
 
+TEST_F(RemoveDuplicatesTest, DuplicateExtensions) {
+  const std::string spirv = R"(
+OpExtension "SPV_INTEL_function_variants"
+OpExtension "SPV_INTEL_function_variants"
+)";
+  const std::string after = R"(OpExtension "SPV_INTEL_function_variants"
+)";
+
+  EXPECT_EQ(RunPass(spirv), after);
+  EXPECT_EQ(GetErrorMessage(), "");
+}
+
+TEST_F(RemoveDuplicatesTest, DuplicateConditionalExtensions) {
+  const std::string spirv = R"(
+OpConditionalExtensionINTEL %1 "SPV_INTEL_function_variants"
+OpConditionalExtensionINTEL %1 "SPV_INTEL_function_variants"
+)";
+  const std::string after =
+      R"(OpConditionalExtensionINTEL %1 "SPV_INTEL_function_variants"
+)";
+
+  EXPECT_EQ(RunPass(spirv), after);
+  EXPECT_EQ(GetErrorMessage(), "");
+}
+
+TEST_F(RemoveDuplicatesTest, MixedConditionalExtensions) {
+  const std::string spirv = R"(
+OpConditionalExtensionINTEL %1 "SPV_INTEL_function_variants"
+OpConditionalExtensionINTEL %2 "SPV_INTEL_function_variants"
+OpConditionalExtensionINTEL %2 "SPV_INTEL_inline_assembly"
+OpConditionalExtensionINTEL %2 "SPV_INTEL_inline_assembly"
+OpExtension "SPV_INTEL_function_variants"
+)";
+  const std::string after =
+      R"(OpConditionalExtensionINTEL %1 "SPV_INTEL_function_variants"
+OpConditionalExtensionINTEL %2 "SPV_INTEL_function_variants"
+OpConditionalExtensionINTEL %2 "SPV_INTEL_inline_assembly"
+OpExtension "SPV_INTEL_function_variants"
+)";
+
+  EXPECT_EQ(RunPass(spirv), after);
+  EXPECT_EQ(GetErrorMessage(), "");
+}
+
+TEST_F(RemoveDuplicatesTest, MixedConditionalExtensionsReordered) {
+  const std::string spirv = R"(
+OpConditionalExtensionINTEL %2 "SPV_INTEL_function_variants"
+OpConditionalExtensionINTEL %2 "SPV_INTEL_inline_assembly"
+OpConditionalExtensionINTEL %2 "SPV_INTEL_inline_assembly"
+OpConditionalExtensionINTEL %1 "SPV_INTEL_function_variants"
+OpExtension "SPV_INTEL_function_variants"
+%3 = OpTypeBool
+%1 = OpSpecConstantTrue %3
+%2 = OpSpecConstantFalse %3
+)";
+  const std::string after =
+      R"(OpConditionalExtensionINTEL %1 "SPV_INTEL_function_variants"
+OpConditionalExtensionINTEL %1 "SPV_INTEL_inline_assembly"
+OpConditionalExtensionINTEL %2 "SPV_INTEL_function_variants"
+OpExtension "SPV_INTEL_function_variants"
+%3 = OpTypeBool
+%2 = OpSpecConstantTrue %3
+%1 = OpSpecConstantFalse %3
+)";
+
+  EXPECT_EQ(RunPass(spirv), after);
+  EXPECT_EQ(GetErrorMessage(), "");
+}
+
+TEST_F(RemoveDuplicatesTest, DuplicateConditionalCapabilities) {
+  const std::string spirv = R"(
+OpConditionalCapabilityINTEL %1 Kernel
+OpConditionalCapabilityINTEL %1 Kernel
+)";
+  const std::string after = R"(OpConditionalCapabilityINTEL %1 Kernel
+)";
+
+  EXPECT_EQ(RunPass(spirv), after);
+  EXPECT_EQ(GetErrorMessage(), "");
+}
+
+TEST_F(RemoveDuplicatesTest, MixedConditionalCapabilities) {
+  const std::string spirv = R"(
+OpConditionalCapabilityINTEL %1 Kernel
+OpConditionalCapabilityINTEL %2 Kernel
+OpConditionalCapabilityINTEL %2 Linkage
+OpConditionalCapabilityINTEL %2 Linkage
+OpCapability Kernel
+)";
+  const std::string after =
+      R"(OpConditionalCapabilityINTEL %1 Kernel
+OpConditionalCapabilityINTEL %2 Kernel
+OpConditionalCapabilityINTEL %2 Linkage
+OpCapability Kernel
+)";
+
+  EXPECT_EQ(RunPass(spirv), after);
+  EXPECT_EQ(GetErrorMessage(), "");
+}
+
+TEST_F(RemoveDuplicatesTest, MixedConditionalCapabilitiesReordered) {
+  const std::string spirv = R"(
+OpConditionalCapabilityINTEL %2 Kernel
+OpConditionalCapabilityINTEL %2 Linkage
+OpConditionalCapabilityINTEL %2 Linkage
+OpConditionalCapabilityINTEL %1 Kernel
+OpCapability Kernel
+%3 = OpTypeBool
+%1 = OpSpecConstantTrue %3
+%2 = OpSpecConstantFalse %3
+)";
+  const std::string after =
+      R"(OpConditionalCapabilityINTEL %1 Kernel
+OpConditionalCapabilityINTEL %1 Linkage
+OpConditionalCapabilityINTEL %2 Kernel
+OpCapability Kernel
+%3 = OpTypeBool
+%2 = OpSpecConstantTrue %3
+%1 = OpSpecConstantFalse %3
+)";
+
+  EXPECT_EQ(RunPass(spirv), after);
+  EXPECT_EQ(GetErrorMessage(), "");
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

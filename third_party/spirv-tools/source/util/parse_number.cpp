@@ -185,7 +185,15 @@ EncodeNumberStatus ParseAndEncodeFloatingPointNumber(
       emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
       return EncodeNumberStatus::kSuccess;
     } break;
-    case SPV_FP_ENCODING_BFLOAT16:  // FIXME this likely needs separate handling
+    case SPV_FP_ENCODING_BFLOAT16: {
+      HexFloat<FloatProxy<BFloat16>> hVal(0);
+      if (!ParseNumber(text, &hVal)) {
+        ErrorMsgStream(error_msg) << "Invalid bfloat16 literal: " << text;
+        return EncodeNumberStatus::kInvalidText;
+      }
+      emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
+      return EncodeNumberStatus::kSuccess;
+    } break;
     case SPV_FP_ENCODING_IEEE754_BINARY16: {
       HexFloat<FloatProxy<Float16>> hVal(0);
       if (!ParseNumber(text, &hVal)) {

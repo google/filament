@@ -5,7 +5,7 @@
 
 #extension GL_KHR_memory_scope_semantics : enable
 #extension GL_KHR_cooperative_matrix : enable
-//#extension GL_NV_cooperative_vector : enable
+#extension GL_NV_cooperative_vector : enable
 layout (constant_id = 0) const float spec_const = 0;
 
 layout (set = 0, binding = 0) uniform UBO {
@@ -17,7 +17,7 @@ void main() {
     vec4 a = vec4(0.0);
     mat4 b = mat4(vec4(1.0), vec4(1.0), vec4(1.0), vec4(1.0));
     coopmat<float16_t, gl_ScopeWorkgroup, 16, 16, gl_MatrixUseAccumulator> matrix = coopmat<float16_t, gl_ScopeWorkgroup, 16, 16, gl_MatrixUseAccumulator>(0);
-    //coopvecNV<float16_t, 16> vec = coopvecNV<float16_t, 16>(0);
+    coopvecNV<float16_t, 16> vec = coopvecNV<float16_t, 16>(0);
     vec4 c = vec4(spec_const);
     float array[] = float[](1.0, 1.0, 1.0, 1.0, 1.0, 1.0f, 1.0, 1.0f);
 
@@ -25,4 +25,5 @@ void main() {
     vec4 d = vec4(ubo.uniform_float);
     mat4 e = mat4(d, d, d, d);
     coopmat<float16_t, gl_ScopeWorkgroup, 16, 16, gl_MatrixUseAccumulator> matrix2 = coopmat<float16_t, gl_ScopeWorkgroup, 16, 16, gl_MatrixUseAccumulator>(ubo.uniform_float);
+    coopvecNV<float16_t, 16> vec_dynamic = coopvecNV<float16_t, 16>(ubo.uniform_float);
 }

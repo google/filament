@@ -34,7 +34,8 @@ class LoopUnswitchPass : public Pass {
   Pass::Status Process() override;
 
  private:
-  bool ProcessFunction(Function* f);
+  // Process the given function.
+  Pass::Status ProcessFunction(Function* f);
 };
 
 }  // namespace opt

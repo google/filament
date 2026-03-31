@@ -114,7 +114,7 @@ class MemPass : public Pass {
   void DCEInst(Instruction* inst, const std::function<void(Instruction*)>&);
 
   // Call all the cleanup helper functions on |func|.
-  bool CFGCleanup(Function* func);
+  Status CFGCleanup(Function* func);
 
   // Return true if |op| is supported decorate.
   inline bool IsNonTypeDecorate(spv::Op op) const {
@@ -142,15 +142,15 @@ class MemPass : public Pass {
   bool HasOnlySupportedRefs(uint32_t varId);
 
   // Remove all the unreachable basic blocks in |func|.
-  bool RemoveUnreachableBlocks(Function* func);
+  Status RemoveUnreachableBlocks(Function* func);
 
   // Remove the block pointed by the iterator |*bi|. This also removes
   // all the instructions in the pointed-to block.
   void RemoveBlock(Function::iterator* bi);
 
   // Remove Phi operands in |phi| that are coming from blocks not in
-  // |reachable_blocks|.
-  void RemovePhiOperands(
+  // |reachable_blocks|. Returns false if it fails.
+  bool RemovePhiOperands(
       Instruction* phi,
       const std::unordered_set<BasicBlock*>& reachable_blocks);
 

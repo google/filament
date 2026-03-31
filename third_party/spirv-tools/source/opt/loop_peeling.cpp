@@ -45,7 +45,7 @@ void GetBlocksInPath(uint32_t block, uint32_t entry,
 
 size_t LoopPeelingPass::code_grow_threshold_ = 1000;
 
-void LoopPeeling::DuplicateAndConnectLoop(
+bool LoopPeeling::DuplicateAndConnectLoop(
     LoopUtils::LoopCloningResult* clone_results) {
   CFG& cfg = *context_->cfg();
   analysis::DefUseManager* def_use_mgr = context_->get_def_use_mgr();
@@ -53,12 +53,17 @@ void LoopPeeling::DuplicateAndConnectLoop(
   assert(CanPeelLoop() && "Cannot peel loop!");
 
   std::vector<BasicBlock*> ordered_loop_blocks;
-  // TODO(1841): Handle failure to create pre-header.
   BasicBlock* pre_header = loop_->GetOrCreatePreHeaderBlock();
+  if (!pre_header) {
+    return false;
+  }
 
   loop_->ComputeLoopStructuredOrder(&ordered_loop_blocks);
 
   cloned_loop_ = loop_utils_.CloneLoop(clone_results, ordered_loop_blocks);
+  if (!cloned_loop_) {
+    return false;
+  }
 
   // Add the basic block to the function.
   Function::iterator it =
@@ -146,17 +151,21 @@ void LoopPeeling::DuplicateAndConnectLoop(
 
   // Force the creation of a new preheader for the original loop and set it as
   // the merge block for the cloned loop.
-  // TODO(1841): Handle failure to create pre-header.
-  cloned_loop_->SetMergeBlock(loop_->GetOrCreatePreHeaderBlock());
+  BasicBlock* new_pre_header = loop_->GetOrCreatePreHeaderBlock();
+  if (!new_pre_header) {
+    return false;
+  }
+  cloned_loop_->SetMergeBlock(new_pre_header);
+  return true;
 }
 
-void LoopPeeling::InsertCanonicalInductionVariable(
+bool LoopPeeling::InsertCanonicalInductionVariable(
     LoopUtils::LoopCloningResult* clone_results) {
   if (original_loop_canonical_induction_variable_) {
     canonical_induction_variable_ =
         context_->get_def_use_mgr()->GetDef(clone_results->value_map_.at(
             original_loop_canonical_induction_variable_->result_id()));
-    return;
+    return true;
   }
 
   BasicBlock::iterator insert_point = GetClonedLoop()->GetLatchBlock()->tail();
@@ -168,19 +177,25 @@ void LoopPeeling::InsertCanonicalInductionVariable(
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
   Instruction* uint_1_cst =
       builder.GetIntConstant<uint32_t>(1, int_type_->IsSigned());
+  if (!uint_1_cst) return false;
   // Create the increment.
   // Note that we do "1 + 1" here, one of the operand should the phi
   // value but we don't have it yet. The operand will be set latter.
   Instruction* iv_inc = builder.AddIAdd(
       uint_1_cst->type_id(), uint_1_cst->result_id(), uint_1_cst->result_id());
+  if (!iv_inc) return false;
 
   builder.SetInsertPoint(&*GetClonedLoop()->GetHeaderBlock()->begin());
 
+  Instruction* initial_value =
+      builder.GetIntConstant<uint32_t>(0, int_type_->IsSigned());
+  if (!initial_value) return false;
+
   canonical_induction_variable_ = builder.AddPhi(
       uint_1_cst->type_id(),
-      {builder.GetIntConstant<uint32_t>(0, int_type_->IsSigned())->result_id(),
-       GetClonedLoop()->GetPreHeaderBlock()->id(), iv_inc->result_id(),
-       GetClonedLoop()->GetLatchBlock()->id()});
+      {initial_value->result_id(), GetClonedLoop()->GetPreHeaderBlock()->id(),
+       iv_inc->result_id(), GetClonedLoop()->GetLatchBlock()->id()});
+  if (!canonical_induction_variable_) return false;
   // Connect everything.
   iv_inc->SetInOperand(0, {canonical_induction_variable_->result_id()});
 
@@ -191,6 +206,7 @@ void LoopPeeling::InsertCanonicalInductionVariable(
   if (do_while_form_) {
     canonical_induction_variable_ = iv_inc;
   }
+  return true;
 }
 
 void LoopPeeling::GetIteratorUpdateOperations(
@@ -308,7 +324,7 @@ void LoopPeeling::GetIteratingExitValues() {
   }
 }
 
-void LoopPeeling::FixExitCondition(
+bool LoopPeeling::FixExitCondition(
     const std::function<uint32_t(Instruction*)>& condition_builder) {
   CFG& cfg = *context_->cfg();
 
@@ -329,7 +345,11 @@ void LoopPeeling::FixExitCondition(
     --insert_point;
   }
 
-  exit_condition->SetInOperand(0, {condition_builder(&*insert_point)});
+  uint32_t new_cond_id = condition_builder(&*insert_point);
+  if (new_cond_id == 0) {
+    return false;
+  }
+  exit_condition->SetInOperand(0, {new_cond_id});
 
   uint32_t to_continue_block_idx =
       GetClonedLoop()->IsInsideLoop(exit_condition->GetSingleWordInOperand(1))
@@ -341,6 +361,7 @@ void LoopPeeling::FixExitCondition(
 
   // Update def/use manager.
   context_->get_def_use_mgr()->AnalyzeInstUse(exit_condition);
+  return true;
 }
 
 BasicBlock* LoopPeeling::CreateBlockBefore(BasicBlock* bb) {
@@ -348,10 +369,13 @@ BasicBlock* LoopPeeling::CreateBlockBefore(BasicBlock* bb) {
   CFG& cfg = *context_->cfg();
   assert(cfg.preds(bb->id()).size() == 1 && "More than one predecessor");
 
-  // TODO(1841): Handle id overflow.
+  uint32_t new_id = context_->TakeNextId();
+  if (new_id == 0) {
+    return nullptr;
+  }
   std::unique_ptr<BasicBlock> new_bb =
-      MakeUnique<BasicBlock>(std::unique_ptr<Instruction>(new Instruction(
-          context_, spv::Op::OpLabel, 0, context_->TakeNextId(), {})));
+      MakeUnique<BasicBlock>(std::unique_ptr<Instruction>(
+          new Instruction(context_, spv::Op::OpLabel, 0, new_id, {})));
   // Update the loop descriptor.
   Loop* in_loop = (*loop_utils_.GetLoopDescriptor())[bb];
   if (in_loop) {
@@ -394,8 +418,10 @@ BasicBlock* LoopPeeling::CreateBlockBefore(BasicBlock* bb) {
 
 BasicBlock* LoopPeeling::ProtectLoop(Loop* loop, Instruction* condition,
                                      BasicBlock* if_merge) {
-  // TODO(1841): Handle failure to create pre-header.
   BasicBlock* if_block = loop->GetOrCreatePreHeaderBlock();
+  if (!if_block) {
+    return nullptr;
+  }
   // Will no longer be a pre-header because of the if.
   loop->SetPreHeaderBlock(nullptr);
   // Kill the branch to the header.
@@ -411,48 +437,63 @@ BasicBlock* LoopPeeling::ProtectLoop(Loop* loop, Instruction* condition,
   return if_block;
 }
 
-void LoopPeeling::PeelBefore(uint32_t peel_factor) {
+bool LoopPeeling::PeelBefore(uint32_t peel_factor) {
   assert(CanPeelLoop() && "Cannot peel loop");
   LoopUtils::LoopCloningResult clone_results;
 
   // Clone the loop and insert the cloned one before the loop.
-  DuplicateAndConnectLoop(&clone_results);
+  if (!DuplicateAndConnectLoop(&clone_results)) {
+    return false;
+  }
 
   // Add a canonical induction variable "canonical_induction_variable_".
-  InsertCanonicalInductionVariable(&clone_results);
+  if (!InsertCanonicalInductionVariable(&clone_results)) {
+    return false;
+  }
 
   InstructionBuilder builder(
       context_, &*cloned_loop_->GetPreHeaderBlock()->tail(),
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
   Instruction* factor =
       builder.GetIntConstant(peel_factor, int_type_->IsSigned());
+  if (!factor) return false;
 
   Instruction* has_remaining_iteration = builder.AddLessThan(
       factor->result_id(), loop_iteration_count_->result_id());
+  if (!has_remaining_iteration) return false;
   Instruction* max_iteration = builder.AddSelect(
       factor->type_id(), has_remaining_iteration->result_id(),
       factor->result_id(), loop_iteration_count_->result_id());
+  if (!max_iteration) return false;
 
   // Change the exit condition of the cloned loop to be (exit when become
   // false):
   //  "canonical_induction_variable_" < min("factor", "loop_iteration_count_")
-  FixExitCondition([max_iteration, this](Instruction* insert_before_point) {
-    return InstructionBuilder(context_, insert_before_point,
-                              IRContext::kAnalysisDefUse |
-                                  IRContext::kAnalysisInstrToBlockMapping)
-        .AddLessThan(canonical_induction_variable_->result_id(),
-                     max_iteration->result_id())
-        ->result_id();
-  });
+  if (!FixExitCondition(
+          [max_iteration, this](Instruction* insert_before_point) {
+            Instruction* new_cond =
+                InstructionBuilder(context_, insert_before_point,
+                                   IRContext::kAnalysisDefUse |
+                                       IRContext::kAnalysisInstrToBlockMapping)
+                    .AddLessThan(canonical_induction_variable_->result_id(),
+                                 max_iteration->result_id());
+            return new_cond ? new_cond->result_id() : 0;
+          })) {
+    return false;
+  }
 
   // "Protect" the second loop: the second loop can only be executed if
   // |has_remaining_iteration| is true (i.e. factor < loop_iteration_count_).
   BasicBlock* if_merge_block = loop_->GetMergeBlock();
-  loop_->SetMergeBlock(CreateBlockBefore(loop_->GetMergeBlock()));
+  BasicBlock* new_merge_block = CreateBlockBefore(loop_->GetMergeBlock());
+  if (!new_merge_block) return false;
+  loop_->SetMergeBlock(new_merge_block);
   // Prevent the second loop from being executed if we already executed all the
   // required iterations.
   BasicBlock* if_block =
       ProtectLoop(loop_, has_remaining_iteration, if_merge_block);
+  if (!if_block) return false;
+
   // Patch the phi of the merge block.
   if_merge_block->ForEachPhiInst(
       [&clone_results, if_block, this](Instruction* phi) {
@@ -471,14 +512,17 @@ void LoopPeeling::PeelBefore(uint32_t peel_factor) {
   context_->InvalidateAnalysesExceptFor(
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping |
       IRContext::kAnalysisLoopAnalysis | IRContext::kAnalysisCFG);
+  return true;
 }
 
-void LoopPeeling::PeelAfter(uint32_t peel_factor) {
+bool LoopPeeling::PeelAfter(uint32_t peel_factor) {
   assert(CanPeelLoop() && "Cannot peel loop");
   LoopUtils::LoopCloningResult clone_results;
 
   // Clone the loop and insert the cloned one before the loop.
-  DuplicateAndConnectLoop(&clone_results);
+  if (!DuplicateAndConnectLoop(&clone_results)) {
+    return false;
+  }
 
   // Add a canonical induction variable "canonical_induction_variable_".
   InsertCanonicalInductionVariable(&clone_results);
@@ -488,40 +532,55 @@ void LoopPeeling::PeelAfter(uint32_t peel_factor) {
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
   Instruction* factor =
       builder.GetIntConstant(peel_factor, int_type_->IsSigned());
+  if (!factor) return false;
 
   Instruction* has_remaining_iteration = builder.AddLessThan(
       factor->result_id(), loop_iteration_count_->result_id());
+  if (!has_remaining_iteration) return false;
 
   // Change the exit condition of the cloned loop to be (exit when become
   // false):
   //  "canonical_induction_variable_" + "factor" < "loop_iteration_count_"
-  FixExitCondition([factor, this](Instruction* insert_before_point) {
-    InstructionBuilder cond_builder(
-        context_, insert_before_point,
-        IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
-    // Build the following check: canonical_induction_variable_ + factor <
-    // iteration_count
-    return cond_builder
-        .AddLessThan(cond_builder
-                         .AddIAdd(canonical_induction_variable_->type_id(),
-                                  canonical_induction_variable_->result_id(),
-                                  factor->result_id())
-                         ->result_id(),
-                     loop_iteration_count_->result_id())
-        ->result_id();
-  });
+  if (!FixExitCondition([factor,
+                         this](Instruction* insert_before_point) -> uint32_t {
+        InstructionBuilder cond_builder(
+            context_, insert_before_point,
+            IRContext::kAnalysisDefUse |
+                IRContext::kAnalysisInstrToBlockMapping);
+        // Build the following check: canonical_induction_variable_ + factor <
+        // iteration_count
+        Instruction* add = cond_builder.AddIAdd(
+            canonical_induction_variable_->type_id(),
+            canonical_induction_variable_->result_id(), factor->result_id());
+        if (!add) return 0;
+        Instruction* new_cond = cond_builder.AddLessThan(
+            add->result_id(), loop_iteration_count_->result_id());
+        return new_cond ? new_cond->result_id() : 0;
+      })) {
+    return false;
+  }
 
   // "Protect" the first loop: the first loop can only be executed if
   // factor < loop_iteration_count_.
 
   // The original loop's pre-header was the cloned loop merge block.
-  GetClonedLoop()->SetMergeBlock(
-      CreateBlockBefore(GetOriginalLoop()->GetPreHeaderBlock()));
+  BasicBlock* pre_header = GetOriginalLoop()->GetPreHeaderBlock();
+  if (!pre_header) {
+    return false;
+  }
+  BasicBlock* new_merge_block = CreateBlockBefore(pre_header);
+  if (!new_merge_block) {
+    return false;
+  }
+  GetClonedLoop()->SetMergeBlock(new_merge_block);
   // Use the second loop preheader as if merge block.
 
   // Prevent the first loop if only the peeled loop needs it.
   BasicBlock* if_block = ProtectLoop(cloned_loop_, has_remaining_iteration,
                                      GetOriginalLoop()->GetPreHeaderBlock());
+  if (!if_block) {
+    return false;
+  }
 
   // Patch the phi of the header block.
   // We added an if to enclose the first loop and because the phi node are
@@ -529,8 +588,10 @@ void LoopPeeling::PeelAfter(uint32_t peel_factor) {
   // dominate the preheader.
   // We had to the preheader (our if merge block) the required phi instruction
   // and patch the header phi.
+  bool ok = true;
   GetOriginalLoop()->GetHeaderBlock()->ForEachPhiInst(
-      [&clone_results, if_block, this](Instruction* phi) {
+      [&clone_results, if_block, &ok, this](Instruction* phi) {
+        if (!ok) return;
         analysis::DefUseManager* def_use_mgr = context_->get_def_use_mgr();
 
         auto find_value_idx = [](Instruction* phi_inst, Loop* loop) {
@@ -554,15 +615,21 @@ void LoopPeeling::PeelAfter(uint32_t peel_factor) {
                              find_value_idx(phi, GetOriginalLoop())),
                          GetClonedLoop()->GetMergeBlock()->id(),
                          cloned_preheader_value, if_block->id()});
+        if (!new_phi) {
+          ok = false;
+          return;
+        }
 
         phi->SetInOperand(find_value_idx(phi, GetOriginalLoop()),
                           {new_phi->result_id()});
         def_use_mgr->AnalyzeInstUse(phi);
       });
+  if (!ok) return false;
 
   context_->InvalidateAnalysesExceptFor(
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping |
       IRContext::kAnalysisLoopAnalysis | IRContext::kAnalysisCFG);
+  return true;
 }
 
 Pass::Status LoopPeelingPass::Process() {
@@ -571,13 +638,19 @@ Pass::Status LoopPeelingPass::Process() {
 
   // Process each function in the module
   for (Function& f : *module) {
-    modified |= ProcessFunction(&f);
+    Pass::Status status = ProcessFunction(&f);
+    if (status == Status::Failure) {
+      return Status::Failure;
+    }
+    if (status == Status::SuccessWithChange) {
+      modified = true;
+    }
   }
 
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
-bool LoopPeelingPass::ProcessFunction(Function* f) {
+Pass::Status LoopPeelingPass::ProcessFunction(Function* f) {
   bool modified = false;
   LoopDescriptor& loop_descriptor = *context()->GetLoopDescriptor(f);
 
@@ -593,41 +666,56 @@ bool LoopPeelingPass::ProcessFunction(Function* f) {
     CodeMetrics loop_size;
     loop_size.Analyze(*loop);
 
-    auto try_peel = [&loop_size, &modified, this](Loop* loop_to_peel) -> Loop* {
+    auto try_peel = [&loop_size, &modified, this](
+                        Loop* loop_to_peel) -> std::pair<Pass::Status, Loop*> {
       if (!loop_to_peel->IsLCSSA()) {
-        LoopUtils(context(), loop_to_peel).MakeLoopClosedSSA();
+        if (!LoopUtils(context(), loop_to_peel).MakeLoopClosedSSA()) {
+          return {Pass::Status::Failure, nullptr};
+        }
       }
 
-      bool peeled_loop;
+      Pass::Status status;
       Loop* still_peelable_loop;
-      std::tie(peeled_loop, still_peelable_loop) =
+      std::tie(status, still_peelable_loop) =
           ProcessLoop(loop_to_peel, &loop_size);
 
-      if (peeled_loop) {
+      if (status == Pass::Status::SuccessWithChange) {
         modified = true;
       }
 
-      return still_peelable_loop;
+      return {status, still_peelable_loop};
     };
 
-    Loop* still_peelable_loop = try_peel(loop);
+    Pass::Status status;
+    Loop* still_peelable_loop;
+    std::tie(status, still_peelable_loop) = try_peel(loop);
+
+    if (status == Pass::Status::Failure) {
+      return Pass::Status::Failure;
+    }
+
     // The pass is working out the maximum factor by which a loop can be peeled.
     // If the loop can potentially be peeled again, then there is only one
     // possible direction, so only one call is still needed.
     if (still_peelable_loop) {
-      try_peel(loop);
+      std::tie(status, still_peelable_loop) = try_peel(still_peelable_loop);
+      if (status == Pass::Status::Failure) {
+        return Pass::Status::Failure;
+      }
     }
   }
 
-  return modified;
+  return modified ? Pass::Status::SuccessWithChange
+                  : Pass::Status::SuccessWithoutChange;
 }
 
-std::pair<bool, Loop*> LoopPeelingPass::ProcessLoop(Loop* loop,
-                                                    CodeMetrics* loop_size) {
+std::tuple<Pass::Status, Loop*> LoopPeelingPass::ProcessLoop(
+    Loop* loop, CodeMetrics* loop_size) {
   ScalarEvolutionAnalysis* scev_analysis =
       context()->GetScalarEvolutionAnalysis();
   // Default values for bailing out.
-  std::pair<bool, Loop*> bail_out{false, nullptr};
+  std::tuple<Pass::Status, Loop*> bail_out{Pass::Status::SuccessWithoutChange,
+                                           nullptr};
 
   BasicBlock* exit_block = loop->FindConditionBlock();
   if (!exit_block) {
@@ -744,7 +832,9 @@ std::pair<bool, Loop*> LoopPeelingPass::ProcessLoop(Loop* loop,
   Loop* extra_opportunity = nullptr;
 
   if (direction == PeelDirection::kBefore) {
-    peeler.PeelBefore(factor);
+    if (!peeler.PeelBefore(factor)) {
+      return {Pass::Status::Failure, nullptr};
+    }
     if (stats_) {
       stats_->peeled_loops_.emplace_back(loop, PeelDirection::kBefore, factor);
     }
@@ -753,7 +843,9 @@ std::pair<bool, Loop*> LoopPeelingPass::ProcessLoop(Loop* loop,
       extra_opportunity = peeler.GetOriginalLoop();
     }
   } else {
-    peeler.PeelAfter(factor);
+    if (!peeler.PeelAfter(factor)) {
+      return {Pass::Status::Failure, nullptr};
+    }
     if (stats_) {
       stats_->peeled_loops_.emplace_back(loop, PeelDirection::kAfter, factor);
     }
@@ -763,7 +855,7 @@ std::pair<bool, Loop*> LoopPeelingPass::ProcessLoop(Loop* loop,
     }
   }
 
-  return {true, extra_opportunity};
+  return {Pass::Status::SuccessWithChange, extra_opportunity};
 }
 
 uint32_t LoopPeelingPass::LoopPeelingInfo::GetFirstLoopInvariantOperand(

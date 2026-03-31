@@ -84,16 +84,19 @@ bool SSAPropagator::SetStatus(Instruction* inst, PropStatus status) {
   return status_changed;
 }
 
-bool SSAPropagator::Simulate(Instruction* instr) {
+Pass::Status SSAPropagator::Simulate(Instruction* instr) {
   bool changed = false;
 
   // Don't bother visiting instructions that should not be simulated again.
   if (!ShouldSimulateAgain(instr)) {
-    return changed;
+    return Pass::Status::SuccessWithoutChange;
   }
 
   BasicBlock* dest_bb = nullptr;
   PropStatus status = visit_fn_(instr, &dest_bb);
+  if (status == SSAPropagator::kFailed) {
+    return Pass::Status::Failure;
+  }
   bool status_changed = SetStatus(instr, status);
 
   if (status == kVarying) {
@@ -112,7 +115,7 @@ bool SSAPropagator::Simulate(Instruction* instr) {
         AddControlEdge(e);
       }
     }
-    return false;
+    return Pass::Status::SuccessWithoutChange;
   } else if (status == kInteresting) {
     // Add the SSA edges coming out of this instruction if the propagation
     // status has changed.
@@ -169,12 +172,13 @@ bool SSAPropagator::Simulate(Instruction* instr) {
     DontSimulateAgain(instr);
   }
 
-  return changed;
+  return changed ? Pass::Status::SuccessWithChange
+                 : Pass::Status::SuccessWithoutChange;
 }
 
-bool SSAPropagator::Simulate(BasicBlock* block) {
+Pass::Status SSAPropagator::Simulate(BasicBlock* block) {
   if (block == ctx_->cfg()->pseudo_exit_block()) {
-    return false;
+    return Pass::Status::SuccessWithoutChange;
   }
 
   // Always simulate Phi instructions, even if we have simulated this block
@@ -182,17 +186,29 @@ bool SSAPropagator::Simulate(BasicBlock* block) {
   // incoming edges. When those edges are marked executable, the corresponding
   // operand can be simulated.
   bool changed = false;
-  block->ForEachPhiInst(
-      [&changed, this](Instruction* instr) { changed |= Simulate(instr); });
+  bool succeeded =
+      block->WhileEachPhiInst([&changed, this](Instruction* instr) {
+        auto Status = Simulate(instr);
+        if (Status == Pass::Status::Failure) return false;
+        changed |= Status == Pass::Status::SuccessWithChange;
+        return true;
+      });
+  if (!succeeded) {
+    return Pass::Status::Failure;
+  }
 
   // If this is the first time this block is being simulated, simulate every
   // statement in it.
   if (!BlockHasBeenSimulated(block)) {
-    block->ForEachInst([this, &changed](Instruction* instr) {
-      if (instr->opcode() != spv::Op::OpPhi) {
-        changed |= Simulate(instr);
-      }
+    succeeded = block->WhileEachInst([&changed, this](Instruction* instr) {
+      auto Status = Simulate(instr);
+      if (Status == Pass::Status::Failure) return false;
+      changed |= Status == Pass::Status::SuccessWithChange;
+      return true;
     });
+    if (!succeeded) {
+      return Pass::Status::Failure;
+    }
 
     MarkBlockSimulated(block);
 
@@ -203,7 +219,8 @@ bool SSAPropagator::Simulate(BasicBlock* block) {
     }
   }
 
-  return changed;
+  return changed ? Pass::Status::SuccessWithChange
+                 : Pass::Status::SuccessWithoutChange;
 }
 
 void SSAPropagator::Initialize(Function* fn) {
@@ -245,7 +262,11 @@ bool SSAPropagator::Run(Function* fn) {
     // follow after all the blocks have been simulated.
     if (!blocks_.empty()) {
       auto block = blocks_.front();
-      changed |= Simulate(block);
+      Pass::Status status = Simulate(block);
+      if (status == Pass::Status::Failure) {
+        return false;
+      }
+      changed |= status == Pass::Status::SuccessWithChange;
       blocks_.pop();
       continue;
     }
@@ -253,7 +274,11 @@ bool SSAPropagator::Run(Function* fn) {
     // Simulate edges from the SSA queue.
     if (!ssa_edge_uses_.empty()) {
       Instruction* instr = ssa_edge_uses_.front();
-      changed |= Simulate(instr);
+      Pass::Status status = Simulate(instr);
+      if (status == Pass::Status::Failure) {
+        return changed;
+      }
+      changed |= status == Pass::Status::SuccessWithChange;
       ssa_edge_uses_.pop();
     }
   }

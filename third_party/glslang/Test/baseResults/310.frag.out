@@ -58,7 +58,7 @@ ERROR: 0:159: 'vAnon' : redefinition
 ERROR: 0:173: 'origin_upper_left' : not supported with this profile: es
 ERROR: 0:173: 'pixel_center_integer' : not supported with this profile: es
 ERROR: 0:173: 'redeclaration' : cannot redeclare with different qualification: gl_FragCoord
-ERROR: 0:177: 'depth layout qualifier' : not supported with this profile: es
+ERROR: 0:177: 'depth layout qualifier' : not supported for this version or the enabled extensions 
 ERROR: 0:181: 'assign' :  l-value required "gl_FragDepth" (can't modify gl_FragDepth if using early_fragment_tests)
 ERROR: 0:182: 'gl_Layer' : required extension not requested: Possible extensions include:
 GL_EXT_geometry_shader

@@ -4,7 +4,7 @@ spv.nv.dmm-allops.rahit
 // Id's are bound by 77
 
                               Capability RayTracingKHR
-                              Capability CapabilityRayTracingDisplacementMicromapNV
+                              Capability RayTracingDisplacementMicromapNV
                               Extension  "SPV_KHR_ray_tracing"
                               Extension  "SPV_NV_displacement_micromap"
                1:             ExtInstImport  "GLSL.std.450"

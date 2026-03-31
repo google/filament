@@ -26,7 +26,7 @@
 #include <assert.h>
 
 using namespace std;
-using namespace spv;
+using namespace SPIRV_CROSS_SPV_HEADER_NAMESPACE;
 
 namespace SPIRV_CROSS_NAMESPACE
 {
@@ -49,6 +49,7 @@ ParsedIR::ParsedIR()
 	pool_group->pools[TypeAccessChain].reset(new ObjectPool<SPIRAccessChain>);
 	pool_group->pools[TypeUndef].reset(new ObjectPool<SPIRUndef>);
 	pool_group->pools[TypeString].reset(new ObjectPool<SPIRString>);
+	pool_group->pools[TypeDebugLocalVariable].reset(new ObjectPool<SPIRDebugLocalVariable>);
 }
 
 // Should have been default-implemented, but need this on MSVC 2013.
@@ -78,7 +79,7 @@ ParsedIR &ParsedIR::operator=(ParsedIR &&other) SPIRV_CROSS_NOEXCEPT
 		memory_model = other.memory_model;
 
 		default_entry_point = other.default_entry_point;
-		source = other.source;
+		sources = std::move(other.sources);
 		loop_iteration_depth_hard = other.loop_iteration_depth_hard;
 		loop_iteration_depth_soft = other.loop_iteration_depth_soft;
 
@@ -110,7 +111,7 @@ ParsedIR &ParsedIR::operator=(const ParsedIR &other)
 		continue_block_to_loop_header = other.continue_block_to_loop_header;
 		entry_points = other.entry_points;
 		default_entry_point = other.default_entry_point;
-		source = other.source;
+		sources = other.sources;
 		loop_iteration_depth_hard = other.loop_iteration_depth_hard;
 		loop_iteration_depth_soft = other.loop_iteration_depth_soft;
 		addressing_model = other.addressing_model;
@@ -366,8 +367,8 @@ void ParsedIR::set_decoration_string(ID id, Decoration decoration, const string 
 
 	switch (decoration)
 	{
-	case DecorationHlslSemanticGOOGLE:
-		dec.hlsl_semantic = argument;
+	case DecorationUserSemantic:
+		dec.user_semantic = argument;
 		break;
 
 	case DecorationUserTypeGOOGLE:
@@ -527,8 +528,27 @@ void ParsedIR::mark_used_as_array_length(ID id)
 	switch (ids[id].get_type())
 	{
 	case TypeConstant:
-		get<SPIRConstant>(id).is_used_as_array_length = true;
+	{
+		auto &c = get<SPIRConstant>(id);
+		c.is_used_as_array_length = true;
+
+		// Mark composite dependencies as well.
+		for (auto &sub_id: c.m.id)
+			if (sub_id)
+				mark_used_as_array_length(sub_id);
+
+		for (uint32_t col = 0; col < c.m.columns; col++)
+		{
+			for (auto &sub_id : c.m.c[col].id)
+				if (sub_id)
+					mark_used_as_array_length(sub_id);
+		}
+
+		for (auto &sub_id : c.subconstants)
+			if (sub_id)
+				mark_used_as_array_length(sub_id);
 		break;
+	}
 
 	case TypeConstantOp:
 	{
@@ -667,8 +687,8 @@ const string &ParsedIR::get_decoration_string(ID id, Decoration decoration) cons
 
 	switch (decoration)
 	{
-	case DecorationHlslSemanticGOOGLE:
-		return dec.hlsl_semantic;
+	case DecorationUserSemantic:
+		return dec.user_semantic;
 
 	case DecorationUserTypeGOOGLE:
 		return dec.user_type;
@@ -728,8 +748,8 @@ void ParsedIR::unset_decoration(ID id, Decoration decoration)
 		dec.spec_id = 0;
 		break;
 
-	case DecorationHlslSemanticGOOGLE:
-		dec.hlsl_semantic.clear();
+	case DecorationUserSemantic:
+		dec.user_semantic.clear();
 		break;
 
 	case DecorationFPRoundingMode:
@@ -824,8 +844,8 @@ void ParsedIR::set_member_decoration_string(TypeID id, uint32_t index, Decoratio
 
 	switch (decoration)
 	{
-	case DecorationHlslSemanticGOOGLE:
-		dec.hlsl_semantic = argument;
+	case DecorationUserSemantic:
+		dec.user_semantic = argument;
 		break;
 
 	default:
@@ -845,8 +865,8 @@ const string &ParsedIR::get_member_decoration_string(TypeID id, uint32_t index, 
 
 		switch (decoration)
 		{
-		case DecorationHlslSemanticGOOGLE:
-			return dec.hlsl_semantic;
+		case DecorationUserSemantic:
+			return dec.user_semantic;
 
 		default:
 			return empty_string;
@@ -899,8 +919,8 @@ void ParsedIR::unset_member_decoration(TypeID id, uint32_t index, Decoration dec
 		dec.spec_id = 0;
 		break;
 
-	case DecorationHlslSemanticGOOGLE:
-		dec.hlsl_semantic.clear();
+	case DecorationUserSemantic:
+		dec.user_semantic.clear();
 		break;
 
 	default:

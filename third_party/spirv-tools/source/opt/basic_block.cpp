@@ -29,11 +29,19 @@ constexpr uint32_t kSelectionMergeMergeBlockIdInIdx = 0;
 }  // namespace
 
 BasicBlock* BasicBlock::Clone(IRContext* context) const {
-  BasicBlock* clone = new BasicBlock(
-      std::unique_ptr<Instruction>(GetLabelInst()->Clone(context)));
+  Instruction* label_clone = GetLabelInst()->Clone(context);
+  if (!label_clone) {
+    return nullptr;
+  }
+  BasicBlock* clone = new BasicBlock(std::unique_ptr<Instruction>(label_clone));
   for (const auto& inst : insts_) {
     // Use the incoming context
-    clone->AddInstruction(std::unique_ptr<Instruction>(inst.Clone(context)));
+    Instruction* inst_clone = inst.Clone(context);
+    if (!inst_clone) {
+      delete clone;
+      return nullptr;
+    }
+    clone->AddInstruction(std::unique_ptr<Instruction>(inst_clone));
   }
 
   if (context->AreAnalysesValid(

@@ -1,0 +1,6 @@
+spv.descriptorHeap.HeapStrideNotHeap.error.comp
+ERROR: 0:4: 'descriptor_stride' : must specify 'descriptor_heap' to use 'descriptor_stride' 
+ERROR: 1 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

@@ -43,7 +43,7 @@ struct spvDescriptorSetBuffer1
 {
     array<texture2d<float>, 4> uTexture2 [[id(0)]];
     array<sampler, 2> uSampler [[id(4)]];
-    device SSBO* m_60 [[id(6)]];
+    const device SSBO* m_60 [[id(6)]];
     const device SSBOs* ssbos [[id(7)]][2];
 };
 
@@ -63,7 +63,7 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-float4 sample_in_function2(texture2d<float> uTexture, sampler uTextureSmplr, thread float2& vUV, constant array<texture2d<float>, 4>& uTexture2, constant array<sampler, 2>& uSampler, constant array<texture2d<float>, 2>& uTextures, constant array<sampler, 2>& uTexturesSmplr, device SSBO& _60, const device SSBOs* constant (&ssbos)[2], constant Push& registers)
+float4 sample_in_function2(texture2d<float> uTexture, sampler uTextureSmplr, thread float2& vUV, constant array<texture2d<float>, 4>& uTexture2, constant array<sampler, 2>& uSampler, constant array<texture2d<float>, 2>& uTextures, constant array<sampler, 2>& uTexturesSmplr, const device SSBO& _60, const device SSBOs* constant (&ssbos)[2], constant Push& registers)
 {
     float4 ret = uTexture.sample(uTextureSmplr, vUV);
     ret += uTexture2[2].sample(uSampler[1], vUV);
@@ -75,7 +75,7 @@ float4 sample_in_function2(texture2d<float> uTexture, sampler uTextureSmplr, thr
 }
 
 static inline __attribute__((always_inline))
-float4 sample_in_function(texture2d<float> uTexture, sampler uTextureSmplr, thread float2& vUV, constant array<texture2d<float>, 4>& uTexture2, constant array<sampler, 2>& uSampler, constant array<texture2d<float>, 2>& uTextures, constant array<sampler, 2>& uTexturesSmplr, device SSBO& _60, const device SSBOs* constant (&ssbos)[2], constant Push& registers, constant UBO& _90, constant UBOs* constant (&ubos)[4])
+float4 sample_in_function(texture2d<float> uTexture, sampler uTextureSmplr, thread float2& vUV, constant array<texture2d<float>, 4>& uTexture2, constant array<sampler, 2>& uSampler, constant array<texture2d<float>, 2>& uTextures, constant array<sampler, 2>& uTexturesSmplr, const device SSBO& _60, const device SSBOs* constant (&ssbos)[2], constant Push& registers, constant UBO& _90, constant UBOs* constant (&ubos)[4])
 {
     float4 ret = sample_in_function2(uTexture, uTextureSmplr, vUV, uTexture2, uSampler, uTextures, uTexturesSmplr, _60, ssbos, registers);
     ret += _90.ubo;

@@ -59,6 +59,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   fold_spec_constant_op_and_composite_pass.h
   freeze_spec_constant_value_pass.h
   function.h
+  graph.h
   graphics_robust_access_pass.h
   if_conversion.h
   inline_exhaustive_pass.h
@@ -181,6 +182,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   fold_spec_constant_op_and_composite_pass.cpp
   freeze_spec_constant_value_pass.cpp
   function.cpp
+  graph.cpp
   graphics_robust_access_pass.cpp
   if_conversion.cpp
   inline_exhaustive_pass.cpp
@@ -255,20 +257,15 @@ set(SPIRV_TOOLS_OPT_SOURCES
   wrap_opkill.cpp
 )
 
-if(MSVC AND (NOT ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")))
-  # Enable parallel builds across four cores for this lib
-  add_definitions(/MP4)
-endif()
-
 spvtools_pch(SPIRV_TOOLS_OPT_SOURCES pch_source_opt)
 
-if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+if (SPIRV_TOOLS_USE_MIMALLOC AND (NOT SPIRV_TOOLS_BUILD_STATIC OR SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD))
   list(APPEND SPIRV_TOOLS_OPT_SOURCES ${spirv-tools_SOURCE_DIR}/source/mimalloc.cpp)
 endif()
 
 add_library(SPIRV-Tools-opt ${SPIRV_TOOLS_LIBRARY_TYPE} ${SPIRV_TOOLS_OPT_SOURCES})
 
-if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+if (SPIRV_TOOLS_USE_MIMALLOC AND (NOT SPIRV_TOOLS_BUILD_STATIC OR SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD))
   target_link_libraries(SPIRV-Tools-opt PRIVATE mimalloc-static)
 endif()
 
@@ -290,7 +287,7 @@ spvtools_check_symbol_exports(SPIRV-Tools-opt)
 if(ENABLE_SPIRV_TOOLS_INSTALL)
   set(SPIRV-Tools-opt-InstallTargets SPIRV-Tools-opt)
 
-  if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+  if (SPIRV_TOOLS_USE_MIMALLOC AND (NOT SPIRV_TOOLS_BUILD_STATIC OR SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD))
     list(APPEND SPIRV-Tools-opt-InstallTargets mimalloc-static)
   endif()
 

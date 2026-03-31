@@ -958,7 +958,7 @@ OpFunctionEnd
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("Before SPIR-V 1.5, Id must be a constant instruction"));
+      HasSubstr("In SPIR-V 1.4 or earlier, Id must be a constant instruction"));
 }
 
 TEST_F(ValidateGroupNonUniform, BroadcastNonConstantSpv1p5) {
@@ -1028,7 +1028,8 @@ OpFunctionEnd
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("Before SPIR-V 1.5, Index must be a constant instruction"));
+      HasSubstr(
+          "In SPIR-V 1.4 or earlier, Index must be a constant instruction"));
 }
 
 TEST_F(ValidateGroupNonUniform, QuadBroadcastNonConstantSpv1p5) {

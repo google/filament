@@ -7,5 +7,5 @@ layout(set = 0, binding = 0) buffer ssbo { uint64_t y; };
 layout(set = 0, binding = 1) uniform ubo { uint64_t z; };
 
 void main() {
-    atomicStore(y, z, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelaxed);
+    atomicStore(y, z, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
 }

@@ -126,6 +126,7 @@ Pass::Status IfConversion::Process() {
           condition = SplatCondition(vec_data_ty, condition, &builder);
         }
 
+        // TODO(1841): Handle id overflow.
         Instruction* select = builder.AddSelect(phi->type_id(), condition,
                                                 true_value->result_id(),
                                                 false_value->result_id());
@@ -205,6 +206,7 @@ uint32_t IfConversion::SplatCondition(analysis::Vector* vec_data_ty,
   uint32_t bool_vec_id =
       context()->get_type_mgr()->GetTypeInstruction(&bool_vec_ty);
   std::vector<uint32_t> ids(vec_data_ty->element_count(), cond);
+  // TODO(1841): Handle id overflow.
   return builder->AddCompositeConstruct(bool_vec_id, ids)->result_id();
 }
 

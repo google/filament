@@ -122,7 +122,8 @@ bool isMissingOffsetInStruct(uint32_t struct_id, ValidationState_t& vstate) {
     hasOffset.resize(struct_members.size(), false);
 
     for (auto& decoration : vstate.id_decorations(struct_id)) {
-      if (spv::Decoration::Offset == decoration.dec_type() &&
+      if ((spv::Decoration::Offset == decoration.dec_type() ||
+           spv::Decoration::OffsetIdEXT == decoration.dec_type()) &&
           Decoration::kInvalidMember != decoration.struct_member_index()) {
         // Offset 0xffffffff is not valid so ignore it for simplicity's sake.
         if (decoration.params()[0] == 0xffffffff) return true;
@@ -170,6 +171,10 @@ uint32_t getBaseAlignment(uint32_t member_id, bool roundUp,
     case spv::Op::OpTypeImage:
       if (vstate.HasCapability(spv::Capability::BindlessTextureNV))
         return vstate.samplerimage_variable_address_mode() / 8;
+      // SPV_EXT_descriptor_heap provides a way to access opaque images, we
+      // assume alignment is validated at runtime as it is determined by the
+      // client API
+      if (vstate.HasCapability(spv::Capability::DescriptorHeapEXT)) return 1;
       assert(0);
       return 0;
     case spv::Op::OpTypeInt:
@@ -182,7 +187,19 @@ uint32_t getBaseAlignment(uint32_t member_id, bool roundUp,
       const auto componentAlignment = getBaseAlignment(
           componentId, roundUp, inherited, constraints, vstate);
       baseAlignment =
-          componentAlignment * (numComponents == 3 ? 4 : numComponents);
+          componentAlignment *
+          ((numComponents == 3 || numComponents > 4) ? 4 : numComponents);
+      break;
+    }
+    case spv::Op::OpTypeVectorIdEXT: {
+      const auto componentId = words[2];
+      const auto numComponents = vstate.GetDimension(inst->id());
+      assert(numComponents != 0);
+      const auto componentAlignment = getBaseAlignment(
+          componentId, roundUp, inherited, constraints, vstate);
+      baseAlignment =
+          componentAlignment *
+          ((numComponents == 3 || numComponents > 4) ? 4 : numComponents);
       break;
     }
     case spv::Op::OpTypeMatrix: {
@@ -245,12 +262,17 @@ uint32_t getScalarAlignment(uint32_t type_id, ValidationState_t& vstate) {
     case spv::Op::OpTypeImage:
       if (vstate.HasCapability(spv::Capability::BindlessTextureNV))
         return vstate.samplerimage_variable_address_mode() / 8;
+      // SPV_EXT_descriptor_heap provides a way to access opaque images, we
+      // assume alignment is validated at runtime as it is determined by the
+      // client API
+      if (vstate.HasCapability(spv::Capability::DescriptorHeapEXT)) return 1;
       assert(0);
       return 0;
     case spv::Op::OpTypeInt:
     case spv::Op::OpTypeFloat:
       return words[2] / 8;
     case spv::Op::OpTypeVector:
+    case spv::Op::OpTypeVectorIdEXT:
     case spv::Op::OpTypeMatrix:
     case spv::Op::OpTypeArray:
     case spv::Op::OpTypeRuntimeArray: {
@@ -293,6 +315,10 @@ uint32_t getSize(uint32_t member_id, const LayoutConstraints& inherited,
     case spv::Op::OpTypeImage:
       if (vstate.HasCapability(spv::Capability::BindlessTextureNV))
         return vstate.samplerimage_variable_address_mode() / 8;
+      // SPV_EXT_descriptor_heap provides a way to access opaque images, we
+      // assume alignment is validated at runtime as it is determined by the
+      // client API
+      if (vstate.HasCapability(spv::Capability::DescriptorHeapEXT)) return 1;
       assert(0);
       return 0;
     case spv::Op::OpTypeInt:
@@ -301,6 +327,15 @@ uint32_t getSize(uint32_t member_id, const LayoutConstraints& inherited,
     case spv::Op::OpTypeVector: {
       const auto componentId = words[2];
       const auto numComponents = words[3];
+      const auto componentSize =
+          getSize(componentId, inherited, constraints, vstate);
+      const auto size = componentSize * numComponents;
+      return size;
+    }
+    case spv::Op::OpTypeVectorIdEXT: {
+      const auto componentId = words[2];
+      const auto numComponents = vstate.GetDimension(inst->id());
+      assert(numComponents != 0);
       const auto componentSize =
           getSize(componentId, inherited, constraints, vstate);
       const auto size = componentSize * numComponents;
@@ -398,24 +433,6 @@ bool IsAlignedTo(uint32_t offset, uint32_t alignment) {
   return 0 == (offset % alignment);
 }
 
-std::string getStorageClassString(spv::StorageClass sc) {
-  switch (sc) {
-    case spv::StorageClass::Uniform:
-      return "Uniform";
-    case spv::StorageClass::UniformConstant:
-      return "UniformConstant";
-    case spv::StorageClass::PushConstant:
-      return "PushConstant";
-    case spv::StorageClass::Workgroup:
-      return "Workgroup";
-    case spv::StorageClass::PhysicalStorageBuffer:
-      return "PhysicalStorageBuffer";
-    default:
-      // Only other valid storage class in these checks
-      return "StorageBuffer";
-  }
-}
-
 // Returns SPV_SUCCESS if the given struct satisfies standard layout rules for
 // Block or BufferBlocks in Vulkan.  Otherwise emits a diagnostic and returns
 // something other than SPV_SUCCESS.  Matrices inherit the specified column
@@ -442,7 +459,7 @@ spv_result_t checkLayout(uint32_t struct_id, spv::StorageClass storage_class,
     DiagnosticStream ds = std::move(
         vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(struct_id))
         << "Structure id " << struct_id << " decorated as " << decoration_str
-        << " for variable in " << getStorageClassString(storage_class)
+        << " for variable in " << StorageClassToString(storage_class)
         << " storage class must follow "
         << (scalar_block_layout
                 ? "scalar "
@@ -471,7 +488,7 @@ spv_result_t checkLayout(uint32_t struct_id, spv::StorageClass storage_class,
         return vstate.MissingFeature("uniformBufferStandardLayout feature",
                                      "--uniform-buffer-standard-layout", true);
       } else {
-        return vstate.MissingFeature("scalarBlockLayoutfeature feature",
+        return vstate.MissingFeature("scalarBlockLayout feature",
                                      "--scalar-block-layout", true);
       }
     }
@@ -562,7 +579,8 @@ spv_result_t checkLayout(uint32_t struct_id, spv::StorageClass storage_class,
     }
 
     if (!scalar_block_layout && relaxed_block_layout &&
-        opcode == spv::Op::OpTypeVector) {
+        (opcode == spv::Op::OpTypeVector ||
+         opcode == spv::Op::OpTypeVectorIdEXT)) {
       // In relaxed block layout, the vector offset must be aligned to the
       // vector's scalar element type.
       const auto componentId = inst->words()[2];
@@ -586,7 +604,8 @@ spv_result_t checkLayout(uint32_t struct_id, spv::StorageClass storage_class,
                              << nextValidOffset - 1 << extra();
     if (!scalar_block_layout && relaxed_block_layout) {
       // Check improper straddle of vectors.
-      if (spv::Op::OpTypeVector == opcode &&
+      if ((spv::Op::OpTypeVector == opcode ||
+           spv::Op::OpTypeVectorIdEXT == opcode) &&
           hasImproperStraddle(id, offset, constraint, constraints, vstate))
         return fail(memberIdx)
                << "is an improperly straddling vector at offset " << offset
@@ -848,38 +867,46 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
           if (storage_class == spv::StorageClass::TaskPayloadWorkgroupEXT) {
             if (has_task_payload) {
               return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
-                     << "There can be at most one OpVariable with storage "
+                     << "There can be at most one "
+                        "OpVariable with storage "
                         "class TaskPayloadWorkgroupEXT associated with "
                         "an OpEntryPoint";
             }
             has_task_payload = true;
           }
-        }
-        if (vstate.version() >= SPV_SPIRV_VERSION_WORD(1, 4)) {
+
           // Starting in 1.4, OpEntryPoint must list all global variables
           // it statically uses and those interfaces must be unique.
           if (storage_class == spv::StorageClass::Function) {
             return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
-                   << "OpEntryPoint interfaces should only list global "
+                   << "In SPIR-V 1.4 or later, OpEntryPoint interfaces should "
+                      "only list global "
                       "variables";
           }
 
           if (!seen_vars.insert(var_instr).second) {
             return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
-                   << "Non-unique OpEntryPoint interface "
+                   << "In SPIR-V 1.4 or later, non-unique OpEntryPoint "
+                      "interface "
                    << vstate.getIdName(interface) << " is disallowed";
           }
         } else {
           if (storage_class != spv::StorageClass::Input &&
               storage_class != spv::StorageClass::Output) {
             return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
-                   << "OpEntryPoint interfaces must be OpVariables with "
+                   << "In SPIR-V 1.3 or earlier, OpEntryPoint interfaces must "
+                      "be OpVariables with "
                       "Storage Class of Input(1) or Output(3). Found Storage "
                       "Class "
                    << uint32_t(storage_class) << " for Entry Point id "
                    << entry_point << ".";
           }
         }
+
+        // Descriptor heap's base variables have no data type in declaration.
+        if (untyped_pointers && var_instr->words().size() < 5 &&
+            vstate.IsDescriptorHeapBaseVariable(var_instr))
+          continue;
 
         // It is guaranteed (by validator ID checks) that ptr_instr is
         // OpTypePointer. Word 3 of this instruction is the type being pointed
@@ -1013,8 +1040,7 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
               hasDecoration(var_instr->id(), spv::Decoration::Flat, vstate);
           if (has_frag && storage_class == spv::StorageClass::Input &&
               !has_flat &&
-              ((vstate.IsFloatScalarType(type_id) &&
-                vstate.GetBitWidth(type_id) == 64) ||
+              (vstate.IsFloatScalarType(type_id, 64) ||
                vstate.IsIntScalarOrVectorType(type_id))) {
             return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
                      << vstate.VkErrorID(4744)
@@ -1176,6 +1202,59 @@ void ComputeMemberConstraintsForArray(MemberConstraints* constraints,
   }
 }
 
+spv_result_t CheckDecorationsOfVariables(ValidationState_t& vstate) {
+  if (!spvIsVulkanEnv(vstate.context()->target_env)) {
+    return SPV_SUCCESS;
+  }
+  for (const auto& inst : vstate.ordered_instructions()) {
+    if ((spv::Op::OpVariable == inst.opcode()) ||
+        (spv::Op::OpUntypedVariableKHR == inst.opcode())) {
+      const auto var_id = inst.id();
+      const auto storageClass = inst.GetOperandAs<spv::StorageClass>(2);
+      const bool uniform = storageClass == spv::StorageClass::Uniform;
+      const bool uniform_constant =
+          storageClass == spv::StorageClass::UniformConstant;
+      const bool storage_buffer =
+          storageClass == spv::StorageClass::StorageBuffer;
+
+      const char* sc_str = uniform            ? "Uniform"
+                           : uniform_constant ? "UniformConstant"
+                                              : "StorageBuffer";
+      // Check variables in the UniformConstant, StorageBuffer, and Uniform
+      // storage classes are decorated with DescriptorSet and Binding
+      // (VUID-06677).
+      if (uniform_constant || storage_buffer || uniform) {
+        if (vstate.IsDescriptorHeapBaseVariable(&inst)) {
+          continue;
+        }
+        // Skip validation if the variable is not used and we're looking
+        // at a module coming from HLSL that has not been legalized yet.
+        if (vstate.options()->before_hlsl_legalization &&
+            vstate.EntryPointReferences(var_id).empty()) {
+          continue;
+        }
+        if (!hasDecoration(var_id, spv::Decoration::DescriptorSet, vstate)) {
+          return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
+                 << vstate.VkErrorID(6677) << sc_str << " id '" << var_id
+                 << "' is missing DescriptorSet decoration.\n"
+                 << "From Vulkan spec:\n"
+                 << "These variables must have DescriptorSet and Binding "
+                    "decorations specified";
+        }
+        if (!hasDecoration(var_id, spv::Decoration::Binding, vstate)) {
+          return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
+                 << vstate.VkErrorID(6677) << sc_str << " id '" << var_id
+                 << "' is missing Binding decoration.\n"
+                 << "From Vulkan spec:\n"
+                 << "These variables must have DescriptorSet and Binding "
+                    "decorations specified";
+        }
+      }
+    }
+  }
+  return SPV_SUCCESS;
+}
+
 spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
   // Set of entry points that are known to use a push constant.
   std::unordered_set<uint32_t> uses_push_constant;
@@ -1195,8 +1274,6 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
       const auto storageClassVal = words[3];
       const auto storageClass = spv::StorageClass(storageClassVal);
       const bool uniform = storageClass == spv::StorageClass::Uniform;
-      const bool uniform_constant =
-          storageClass == spv::StorageClass::UniformConstant;
       const bool push_constant =
           storageClass == spv::StorageClass::PushConstant;
       const bool storage_buffer =
@@ -1205,7 +1282,8 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
       if (spvIsVulkanEnv(vstate.context()->target_env)) {
         // Vulkan: There must be no more than one PushConstant block per entry
         // point.
-        if (push_constant) {
+        if (push_constant &&
+            !(vstate.HasCapability(spv::Capability::PushConstantBanksNV))) {
           auto entry_points = vstate.EntryPointReferences(var_id);
           for (auto ep_id : entry_points) {
             const bool already_used = !uses_push_constant.insert(ep_id).second;
@@ -1217,29 +1295,6 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
                      << "There must be no more than one push constant block "
                      << "statically used per shader entry point.";
             }
-          }
-        }
-        // Vulkan: Check DescriptorSet and Binding decoration for
-        // UniformConstant which cannot be a struct.
-        if (uniform_constant) {
-          auto entry_points = vstate.EntryPointReferences(var_id);
-          if (!entry_points.empty() &&
-              !hasDecoration(var_id, spv::Decoration::DescriptorSet, vstate)) {
-            return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                   << vstate.VkErrorID(6677) << "UniformConstant id '" << var_id
-                   << "' is missing DescriptorSet decoration.\n"
-                   << "From Vulkan spec:\n"
-                   << "These variables must have DescriptorSet and Binding "
-                      "decorations specified";
-          }
-          if (!entry_points.empty() &&
-              !hasDecoration(var_id, spv::Decoration::Binding, vstate)) {
-            return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                   << vstate.VkErrorID(6677) << "UniformConstant id '" << var_id
-                   << "' is missing Binding decoration.\n"
-                   << "From Vulkan spec:\n"
-                   << "These variables must have DescriptorSet and Binding "
-                      "decorations specified";
           }
         }
       }
@@ -1254,7 +1309,7 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
           if (!entry_points.empty() &&
               !hasDecoration(var_id, spv::Decoration::Binding, vstate)) {
             return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                   << getStorageClassString(storageClass) << " id '" << var_id
+                   << StorageClassToString(storageClass) << " id '" << var_id
                    << "' is missing Binding decoration.\n"
                    << "From ARB_gl_spirv extension:\n"
                    << "Uniform and shader storage block variables must "
@@ -1269,6 +1324,24 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
           storageClass == spv::StorageClass::Workgroup &&
           vstate.HasCapability(
               spv::Capability::WorkgroupMemoryExplicitLayoutKHR);
+
+      if (spvIsVulkanEnv(vstate.context()->target_env) &&
+          inst.opcode() == spv::Op::OpUntypedVariableKHR &&
+          storageClass != spv::StorageClass::UniformConstant &&
+          vstate.IsDescriptorHeapBaseVariable(&inst)) {
+        if (vstate.IsBuiltin(inst.id(), spv::BuiltIn::ResourceHeapEXT)) {
+          return vstate.diag(SPV_ERROR_INVALID_DATA, &inst)
+                 << vstate.VkErrorID(11241)
+                 << "The variable decorated with ResourceHeapEXT must be "
+                 << "declared using the UniformConstant storage class.";
+        }
+        if (vstate.IsBuiltin(inst.id(), spv::BuiltIn::SamplerHeapEXT)) {
+          return vstate.diag(SPV_ERROR_INVALID_DATA, &inst)
+                 << vstate.VkErrorID(11239)
+                 << "The variable decorated with SamplerHeapEXT must be "
+                 << "declared using the UniformConstant storage class.";
+        }
+      }
       if (uniform || push_constant || storage_buffer || phys_storage_buffer ||
           workgroup) {
         const auto ptrInst = vstate.FindDef(words[1]);
@@ -1327,32 +1400,6 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
                    << "Such variables must be identified with a Block or "
                       "BufferBlock decoration";
           }
-          // Vulkan: Check DescriptorSet and Binding decoration for
-          // Uniform and StorageBuffer variables.
-          if (uniform || storage_buffer) {
-            auto entry_points = vstate.EntryPointReferences(var_id);
-            if (!entry_points.empty() &&
-                !hasDecoration(var_id, spv::Decoration::DescriptorSet,
-                               vstate)) {
-              return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                     << vstate.VkErrorID(6677)
-                     << getStorageClassString(storageClass) << " id '" << var_id
-                     << "' is missing DescriptorSet decoration.\n"
-                     << "From Vulkan spec:\n"
-                     << "These variables must have DescriptorSet and Binding "
-                        "decorations specified";
-            }
-            if (!entry_points.empty() &&
-                !hasDecoration(var_id, spv::Decoration::Binding, vstate)) {
-              return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                     << vstate.VkErrorID(6677)
-                     << getStorageClassString(storageClass) << " id '" << var_id
-                     << "' is missing Binding decoration.\n"
-                     << "From Vulkan spec:\n"
-                     << "These variables must have DescriptorSet and Binding "
-                        "decorations specified";
-            }
-          }
         }
 
         if (id != 0) {
@@ -1392,12 +1439,14 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
               if (!checkForRequiredDecoration(
                       id,
                       [](spv::Decoration d) {
-                        return d == spv::Decoration::ArrayStride;
+                        return d == spv::Decoration::ArrayStride ||
+                               d == spv::Decoration::ArrayStrideIdEXT;
                       },
                       spv::Op::OpTypeArray, vstate)) {
                 return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(id))
                        << "Structure id " << id << " decorated as " << deco_str
-                       << " must be explicitly laid out with ArrayStride "
+                       << " must be explicitly laid out with ArrayStride or "
+                          "ArrayStrideIdEXT "
                           "decorations.";
               }
 
@@ -1545,10 +1594,13 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
           bufferRules
               ? (sc == spv::StorageClass::Uniform ? "BufferBlock" : "Block")
               : "Block";
-      if (auto result =
-              checkLayout(data_type_id, sc, deco_str, !bufferRules,
-                          scalar_block_layout, 0, constraints, vstate)) {
-        return result;
+
+      if (!vstate.IsDescriptorHeapBaseVariable(&inst)) {
+        if (auto result =
+                checkLayout(data_type_id, sc, deco_str, !bufferRules,
+                            scalar_block_layout, 0, constraints, vstate)) {
+          return result;
+        }
       }
     }
   }
@@ -1583,7 +1635,8 @@ spv_result_t CheckDecorationsCompatibility(ValidationState_t& vstate) {
   // An Array of pairs where the decorations in the pair cannot both be applied
   // to the same member.
   static const spv::Decoration mutually_exclusive_per_member[][2] = {
-      {spv::Decoration::RowMajor, spv::Decoration::ColMajor}};
+      {spv::Decoration::RowMajor, spv::Decoration::ColMajor},
+      {spv::Decoration::Offset, spv::Decoration::OffsetIdEXT}};
   static const auto num_mutually_exclusive_per_mem_pairs =
       sizeof(mutually_exclusive_per_member) / (2 * sizeof(spv::Decoration));
 
@@ -1625,7 +1678,8 @@ spv_result_t CheckDecorationsCompatibility(ValidationState_t& vstate) {
                  << " is not allowed.";
         }
       }
-    } else if (spv::Op::OpMemberDecorate == inst.opcode()) {
+    } else if (spv::Op::OpMemberDecorate == inst.opcode() ||
+               spv::Op::OpMemberDecorateIdEXT == inst.opcode()) {
       const auto id = words[1];
       const auto member_id = words[2];
       const auto dec_type = static_cast<spv::Decoration>(words[3]);
@@ -1788,6 +1842,7 @@ spv_result_t CheckNonReadableWritableDecorations(ValidationState_t& vstate,
     const auto type_id = inst.type_id();
     if (opcode != spv::Op::OpVariable &&
         opcode != spv::Op::OpUntypedVariableKHR &&
+        opcode != spv::Op::OpBufferPointerEXT &&
         opcode != spv::Op::OpFunctionParameter &&
         opcode != spv::Op::OpRawAccessChainNV) {
       return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
@@ -1803,6 +1858,19 @@ spv_result_t CheckNonReadableWritableDecorations(ValidationState_t& vstate,
             : opcode == spv::Op::OpUntypedVariableKHR
                   ? inst.GetOperandAs<spv::StorageClass>(3)
                   : spv::StorageClass::Max;
+
+    if (opcode == spv::Op::OpBufferPointerEXT) {
+      auto result_type = vstate.FindDef(inst.type_id());
+      auto sc = result_type->GetOperandAs<spv::StorageClass>(1);
+      if (sc == spv::StorageClass::Uniform && is_non_writable) {
+        return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
+               << "Target of NonWritable decoration is invalid: "
+               << "cannot be used to OpBufferPointerEXT "
+               << "with Uniform storage class";
+      }
+      return SPV_SUCCESS;
+    }
+
     if ((var_storage_class == spv::StorageClass::Function ||
          var_storage_class == spv::StorageClass::Private) &&
         vstate.features().nonwritable_var_in_function_or_private &&
@@ -2174,17 +2242,19 @@ bool AllowsLayout(ValidationState_t& vstate, const spv::StorageClass sc) {
   }
 }
 
-bool UsesExplicitLayout(ValidationState_t& vstate, uint32_t type_id,
-                        std::unordered_map<uint32_t, bool>& cache) {
+// Returns a decoration used to make it explicit
+spv::Decoration UsesExplicitLayout(
+    ValidationState_t& vstate, uint32_t type_id,
+    std::unordered_map<uint32_t, spv::Decoration>& cache) {
   if (type_id == 0) {
-    return false;
+    return spv::Decoration::Max;
   }
 
   if (cache.count(type_id)) {
     return cache[type_id];
   }
 
-  bool res = false;
+  spv::Decoration res = spv::Decoration::Max;
   const auto type_inst = vstate.FindDef(type_id);
   if (type_inst->opcode() == spv::Op::OpTypeStruct ||
       type_inst->opcode() == spv::Op::OpTypeArray ||
@@ -2195,26 +2265,32 @@ bool UsesExplicitLayout(ValidationState_t& vstate, uint32_t type_id,
     const auto iter = id_decs.find(type_id);
     if (iter != id_decs.end()) {
       bool allowLayoutDecorations = false;
-      if (type_inst->opcode() == spv::Op::OpTypePointer) {
+      if (type_inst->opcode() == spv::Op::OpTypePointer ||
+          type_inst->opcode() == spv::Op::OpTypeUntypedPointerKHR) {
         const auto sc = type_inst->GetOperandAs<spv::StorageClass>(1);
         allowLayoutDecorations = AllowsLayout(vstate, sc);
       }
       if (!allowLayoutDecorations) {
-        res = std::any_of(
-            iter->second.begin(), iter->second.end(), [](const Decoration& d) {
-              return d.dec_type() == spv::Decoration::Block ||
-                     d.dec_type() == spv::Decoration::BufferBlock ||
-                     d.dec_type() == spv::Decoration::Offset ||
-                     d.dec_type() == spv::Decoration::ArrayStride ||
-                     d.dec_type() == spv::Decoration::MatrixStride;
-            });
+        for (const auto& d : iter->second) {
+          const spv::Decoration dec = d.dec_type();
+          if (dec == spv::Decoration::Block ||
+              dec == spv::Decoration::BufferBlock ||
+              dec == spv::Decoration::Offset ||
+              dec == spv::Decoration::ArrayStride ||
+              dec == spv::Decoration::MatrixStride) {
+            res = dec;
+            break;
+          }
+        }
       }
     }
 
-    if (!res) {
+    if (res == spv::Decoration::Max) {
       switch (type_inst->opcode()) {
         case spv::Op::OpTypeStruct:
-          for (uint32_t i = 1; !res && i < type_inst->operands().size(); i++) {
+          for (uint32_t i = 1;
+               res == spv::Decoration::Max && i < type_inst->operands().size();
+               i++) {
             res = UsesExplicitLayout(
                 vstate, type_inst->GetOperandAs<uint32_t>(i), cache);
           }
@@ -2246,11 +2322,15 @@ spv_result_t CheckInvalidVulkanExplicitLayout(ValidationState_t& vstate) {
     return SPV_SUCCESS;
   }
 
-  std::unordered_map<uint32_t, bool> cache;
+  std::unordered_map<uint32_t, spv::Decoration> cache;
   for (const auto& inst : vstate.ordered_instructions()) {
     const auto type_id = inst.type_id();
     const auto type_inst = vstate.FindDef(type_id);
+
+    spv::StorageClass sc = spv::StorageClass::Max;
+    spv::Decoration layout_dec = spv::Decoration::Max;
     uint32_t fail_id = 0;
+    uint32_t base_id = 0;
     // Variables are the main place to check for improper decorations, but some
     // untyped pointer instructions must also be checked since those types may
     // never be instantiated by a variable. Unlike verifying a valid layout,
@@ -2259,16 +2339,19 @@ spv_result_t CheckInvalidVulkanExplicitLayout(ValidationState_t& vstate) {
     switch (inst.opcode()) {
       case spv::Op::OpVariable:
       case spv::Op::OpUntypedVariableKHR: {
-        const auto sc = inst.GetOperandAs<spv::StorageClass>(2);
+        sc = inst.GetOperandAs<spv::StorageClass>(2);
         auto check_id = type_id;
+        base_id = inst.id();
         if (inst.opcode() == spv::Op::OpUntypedVariableKHR) {
           if (inst.operands().size() > 3) {
             check_id = inst.GetOperandAs<uint32_t>(3);
           }
         }
-        if (!AllowsLayout(vstate, sc) &&
-            UsesExplicitLayout(vstate, check_id, cache)) {
-          fail_id = check_id;
+        if (!AllowsLayout(vstate, sc)) {
+          layout_dec = UsesExplicitLayout(vstate, check_id, cache);
+          if (layout_dec != spv::Decoration::Max) {
+            fail_id = check_id;
+          }
         }
         break;
       }
@@ -2278,13 +2361,18 @@ spv_result_t CheckInvalidVulkanExplicitLayout(ValidationState_t& vstate) {
       case spv::Op::OpUntypedInBoundsPtrAccessChainKHR: {
         // Check both the base type and return type. The return type may have an
         // invalid array stride.
-        const auto sc = type_inst->GetOperandAs<spv::StorageClass>(1);
-        const auto base_type_id = inst.GetOperandAs<uint32_t>(2);
+        sc = type_inst->GetOperandAs<spv::StorageClass>(1);
+        base_id = vstate.FindDef(inst.GetOperandAs<uint32_t>(3))->id();
         if (!AllowsLayout(vstate, sc)) {
-          if (UsesExplicitLayout(vstate, base_type_id, cache)) {
+          const auto base_type_id = inst.GetOperandAs<uint32_t>(2);
+          layout_dec = UsesExplicitLayout(vstate, base_type_id, cache);
+          if (layout_dec != spv::Decoration::Max) {
             fail_id = base_type_id;
-          } else if (UsesExplicitLayout(vstate, type_id, cache)) {
-            fail_id = type_id;
+          } else {
+            layout_dec = UsesExplicitLayout(vstate, type_id, cache);
+            if (layout_dec != spv::Decoration::Max) {
+              fail_id = type_id;
+            }
           }
         }
         break;
@@ -2294,23 +2382,29 @@ spv_result_t CheckInvalidVulkanExplicitLayout(ValidationState_t& vstate) {
         const auto ptr_ty_id =
             vstate.FindDef(inst.GetOperandAs<uint32_t>(3))->type_id();
         const auto ptr_ty = vstate.FindDef(ptr_ty_id);
-        const auto sc = ptr_ty->GetOperandAs<spv::StorageClass>(1);
-        const auto base_type_id = inst.GetOperandAs<uint32_t>(2);
-        if (!AllowsLayout(vstate, sc) &&
-            UsesExplicitLayout(vstate, base_type_id, cache)) {
-          fail_id = base_type_id;
+        sc = ptr_ty->GetOperandAs<spv::StorageClass>(1);
+        base_id = vstate.FindDef(inst.GetOperandAs<uint32_t>(3))->id();
+        if (!AllowsLayout(vstate, sc)) {
+          const auto base_type_id = inst.GetOperandAs<uint32_t>(2);
+          layout_dec = UsesExplicitLayout(vstate, base_type_id, cache);
+          if (layout_dec != spv::Decoration::Max) {
+            fail_id = base_type_id;
+          }
         }
         break;
       }
       case spv::Op::OpLoad: {
         const auto ptr_id = inst.GetOperandAs<uint32_t>(2);
         const auto ptr_type = vstate.FindDef(vstate.FindDef(ptr_id)->type_id());
+        base_id = ptr_id;
         if (ptr_type->opcode() == spv::Op::OpTypeUntypedPointerKHR) {
           // For untyped pointers check the return type for an invalid layout.
-          const auto sc = ptr_type->GetOperandAs<spv::StorageClass>(1);
-          if (!AllowsLayout(vstate, sc) &&
-              UsesExplicitLayout(vstate, type_id, cache)) {
-            fail_id = type_id;
+          sc = ptr_type->GetOperandAs<spv::StorageClass>(1);
+          if (!AllowsLayout(vstate, sc)) {
+            layout_dec = UsesExplicitLayout(vstate, type_id, cache);
+            if (layout_dec != spv::Decoration::Max) {
+              fail_id = type_id;
+            }
           }
         }
         break;
@@ -2318,26 +2412,55 @@ spv_result_t CheckInvalidVulkanExplicitLayout(ValidationState_t& vstate) {
       case spv::Op::OpStore: {
         const auto ptr_id = inst.GetOperandAs<uint32_t>(1);
         const auto ptr_type = vstate.FindDef(vstate.FindDef(ptr_id)->type_id());
+        base_id = inst.GetOperandAs<uint32_t>(0);
         if (ptr_type->opcode() == spv::Op::OpTypeUntypedPointerKHR) {
           // For untyped pointers, check the type of the data operand for an
           // invalid layout.
-          const auto sc = ptr_type->GetOperandAs<spv::StorageClass>(1);
-          const auto data_type_id = vstate.GetOperandTypeId(&inst, 1);
-          if (!AllowsLayout(vstate, sc) &&
-              UsesExplicitLayout(vstate, data_type_id, cache)) {
-            fail_id = inst.GetOperandAs<uint32_t>(2);
+          sc = ptr_type->GetOperandAs<spv::StorageClass>(1);
+          if (!AllowsLayout(vstate, sc)) {
+            const auto data_type_id = vstate.GetOperandTypeId(&inst, 1);
+            layout_dec = UsesExplicitLayout(vstate, data_type_id, cache);
+            if (layout_dec != spv::Decoration::Max) {
+              fail_id = inst.GetOperandAs<uint32_t>(2);
+            }
           }
+        }
+        break;
+      }
+      case spv::Op::OpBufferPointerEXT: {
+        const auto ptr_id = inst.GetOperandAs<uint32_t>(1);
+        const auto ptr_type = vstate.FindDef(vstate.FindDef(ptr_id)->type_id());
+        // Check the type of the data operand for an invalid layout.
+        sc = ptr_type->GetOperandAs<spv::StorageClass>(1);
+        if (!AllowsLayout(vstate, sc) &&
+            UsesExplicitLayout(vstate, type_id, cache) !=
+                spv::Decoration::Max) {
+          return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
+                 << vstate.VkErrorID(11346)
+                 << "The result type operand of OpBufferPointerEXT must have "
+                 << "a Type operand that is explicitly laid out : "
+                 << vstate.getIdName(type_id);
+        } else if (sc != spv::StorageClass::StorageBuffer &&
+                   sc != spv::StorageClass::Uniform) {
+          return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
+                 << "OpBufferPointerEXT's Result Type must be a pointer type "
+                 << "with a Storage Class of Uniform or StorageBuffer.";
         }
         break;
       }
       default:
         break;
     }
-    if (fail_id != 0) {
+
+    if (fail_id != 0 &&
+        !vstate.IsDescriptorHeapBaseVariable(vstate.FindDef(base_id))) {
       return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
              << vstate.VkErrorID(10684)
              << "Invalid explicit layout decorations on type for operand "
-             << vstate.getIdName(fail_id);
+             << vstate.getIdName(fail_id) << ", the "
+             << spvtools::StorageClassToString(sc)
+             << " storage class has a explicit layout from the "
+             << vstate.SpvDecorationString(layout_dec) << " decoration.";
     }
   }
 
@@ -2350,6 +2473,7 @@ spv_result_t ValidateDecorations(ValidationState_t& vstate) {
   if (auto error = CheckImportedVariableInitialization(vstate)) return error;
   if (auto error = CheckDecorationsOfEntryPoints(vstate)) return error;
   if (auto error = CheckDecorationsOfBuffers(vstate)) return error;
+  if (auto error = CheckDecorationsOfVariables(vstate)) return error;
   if (auto error = CheckDecorationsCompatibility(vstate)) return error;
   if (auto error = CheckLinkageAttrOfFunctions(vstate)) return error;
   if (auto error = CheckVulkanMemoryModelDeprecatedDecorations(vstate))

@@ -1344,6 +1344,7 @@ OpReturn
 OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndCheck<LocalAccessChainConvertPass>(assembly, assembly, false,
                                                      true);
 }

@@ -42,7 +42,7 @@ const glslang_resource_t* glslang_default_resource(void)
     return reinterpret_cast<const glslang_resource_t*>(GetDefaultResources());
 }
 
-const char* glslang_default_resource_string()
+const char* glslang_default_resource_string(void)
 {
     std::string cpp_str = GetDefaultTBuiltInResourceString();
     char* c_str = (char*)malloc(cpp_str.length() + 1);

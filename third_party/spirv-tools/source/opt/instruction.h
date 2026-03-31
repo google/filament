@@ -318,7 +318,7 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   inline void SetDebugScope(const DebugScope& scope);
   inline const DebugScope& GetDebugScope() const { return dbg_scope_; }
   // Add debug line inst. Renew result id if Debug[No]Line
-  void AddDebugLine(const Instruction* inst);
+  bool AddDebugLine(const Instruction* inst);
   // Updates DebugInlinedAt of DebugScope and OpLine.
   void UpdateDebugInlinedAt(uint32_t new_inlined_at);
   // Clear line-related debug instructions attached to this instruction
@@ -338,7 +338,7 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // Updates lexical scope of DebugScope and OpLine.
   void UpdateLexicalScope(uint32_t scope);
   // Updates OpLine and DebugScope based on the information of |from|.
-  void UpdateDebugInfoFrom(const Instruction* from,
+  bool UpdateDebugInfoFrom(const Instruction* from,
                            const Instruction* line = nullptr);
   // Remove the |index|-th operand
   void RemoveOperand(uint32_t index) {

@@ -103,6 +103,34 @@ class Float16 {
   uint16_t val;
 };
 
+class BFloat16 {
+ public:
+  BFloat16(uint16_t v) : val(v) {}
+  BFloat16() = default;
+  BFloat16(const BFloat16& other) { val = other.val; }
+
+  // Exponent mask: 0x7F80, Mantissa mask: 0x007F
+  static bool isNan(const BFloat16& val) {
+    return ((val.val & 0x7F80) == 0x7F80) && ((val.val & 0x007F) != 0);
+  }
+  static bool isInfinity(const BFloat16& val) {
+    return ((val.val & 0x7F80) == 0x7F80) && ((val.val & 0x007F) == 0);
+  }
+
+  uint16_t get_value() const { return val; }
+
+  // a sign bit of 0, and an all 1 mantissa.
+  static BFloat16 max() { return BFloat16(0x7F7F); }
+  // a sign bit of 1, and an all 1 mantissa.
+  static BFloat16 lowest() { return BFloat16(0xFF7F); }
+
+ private:
+  // 15: Sign
+  // 14-7: Exponent
+  // 6-0: Mantissa
+  uint16_t val;
+};
+
 // To specialize this type, you must override uint_type to define
 // an unsigned integer that can fit your floating point type.
 // You must also add a isNan function that returns true if
@@ -208,6 +236,24 @@ struct FloatProxyTraits<Float16> {
   static Float16 getAsFloat(const uint_type& t) { return Float16(t); }
   // Returns the bits from the given floating pointer number.
   static uint_type getBitsFromFloat(const Float16& t) { return t.get_value(); }
+  // Returns the bitwidth.
+  static uint32_t width() { return 16u; }
+};
+
+template <>
+struct FloatProxyTraits<BFloat16> {
+  using uint_type = uint16_t;
+  static bool isNan(BFloat16 f) { return BFloat16::isNan(f); }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(BFloat16 f) { return BFloat16::isInfinity(f); }
+  // Returns the maximum normal value.
+  static BFloat16 max() { return BFloat16::max(); }
+  // Returns the lowest normal value.
+  static BFloat16 lowest() { return BFloat16::lowest(); }
+  // Returns the value as the native floating point format.
+  static BFloat16 getAsFloat(const uint_type& t) { return BFloat16(t); }
+  // Returns the bits from the given floating pointer number.
+  static uint_type getBitsFromFloat(const BFloat16& t) { return t.get_value(); }
   // Returns the bitwidth.
   static uint32_t width() { return 16u; }
 };
@@ -401,6 +447,23 @@ struct HexFloatTraits<FloatProxy<Float16>> {
   static const uint_type exponent_bias = 15;
   static const bool has_infinity = true;
   static const uint_type NaN_pattern = 0x7c00;
+};
+
+// Traits for BFloat16.
+// 1 sign bit, 7 exponent bits, 8 fractional bits.
+template <>
+struct HexFloatTraits<FloatProxy<BFloat16>> {
+  using uint_type = uint16_t;
+  using int_type = int16_t;
+  using underlying_type = FloatProxy<BFloat16>;
+  using underlying_typetraits = FloatProxyTraits<BFloat16>;
+  using native_type = uint16_t;
+  static const uint_type num_used_bits = 16;
+  static const uint_type num_exponent_bits = 8;
+  static const uint_type num_fraction_bits = 7;
+  static const uint_type exponent_bias = 127;
+  static const bool has_infinity = true;
+  static const uint_type NaN_pattern = 0x7F80;
 };
 
 enum class round_direction {
@@ -1038,6 +1101,26 @@ ParseNormalFloat<FloatProxy<Float16>, HexFloatTraits<FloatProxy<Float16>>>(
   }
   return is;
 }
+
+// Same flow as Float16
+template <>
+inline std::istream&
+ParseNormalFloat<FloatProxy<BFloat16>, HexFloatTraits<FloatProxy<BFloat16>>>(
+    std::istream& is, bool negate_value,
+    HexFloat<FloatProxy<BFloat16>, HexFloatTraits<FloatProxy<BFloat16>>>&
+        value) {
+  HexFloat<FloatProxy<float>> float_val(0.0f);
+  ParseNormalFloat(is, negate_value, float_val);
+
+  float_val.castTo(value, round_direction::kToZero);
+
+  if (BFloat16::isInfinity(value.value().getAsFloat())) {
+    value.set_value(value.isNegative() ? BFloat16::lowest() : BFloat16::max());
+    is.setstate(std::ios_base::failbit);
+  }
+  return is;
+}
+
 // Specialization of ParseNormalFloat for FloatProxy<Float8_E4M3> values.
 // This will parse the float as it were a 32-bit floating point number,
 // and then round it down to fit into a Float8_E4M3 value.
@@ -1465,6 +1548,13 @@ template <>
 inline std::ostream& operator<<<Float16>(std::ostream& os,
                                          const FloatProxy<Float16>& value) {
   os << HexFloat<FloatProxy<Float16>>(value);
+  return os;
+}
+
+template <>
+inline std::ostream& operator<< <BFloat16>(std::ostream& os,
+                                           const FloatProxy<BFloat16>& value) {
+  os << HexFloat<FloatProxy<BFloat16>>(value);
   return os;
 }
 

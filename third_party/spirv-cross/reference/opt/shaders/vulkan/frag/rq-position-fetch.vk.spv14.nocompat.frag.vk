@@ -1,0 +1,22 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_ray_tracing_position_fetch : require
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT uAS;
+
+layout(location = 0) out vec3 o_color;
+rayQueryEXT query;
+
+void main()
+{
+    rayQueryInitializeEXT(query, uAS, 4u, 255u, vec3(0.0), 0.00999999977648258209228515625, vec3(1.0, 0.0, 0.0), 1.0);
+    bool _32 = rayQueryProceedEXT(query);
+    uint _36 = rayQueryGetIntersectionTypeEXT(query, bool(1));
+    if (_36 != 0u)
+    {
+        vec3 _45[3];
+        rayQueryGetIntersectionTriangleVertexPositionsEXT(query, bool(1), _45);
+        o_color = (_45[0] + _45[1]) + _45[2];
+    }
+}
+

@@ -58,6 +58,9 @@ spv_ext_inst_type_t spvExtInstImportTypeGet(const char* name) {
   if (!strcmp("TOSA.001000.1", name)) {
     return SPV_EXT_INST_TYPE_TOSA_001000_1;
   }
+  if (!strcmp("Arm.MotionEngine.100", name)) {
+    return SPV_EXT_INST_TYPE_ARM_MOTION_ENGINE_100;
+  }
   // ensure to add any known non-semantic extended instruction sets
   // above this point, and update spvExtInstIsNonSemantic()
   if (!strncmp("NonSemantic.", name, 12)) {

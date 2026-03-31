@@ -119,11 +119,17 @@ if(${COMPILER_IS_LIKE_GNU})
     set(SPIRV_WARNINGS ${SPIRV_WARNINGS} -Werror)
   endif()
 elseif(MSVC)
-  set(SPIRV_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS /wd4800 /wd4819)
+  set(SPIRV_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS /wd4800 /wd4819 /wd4251 /W2 /WX)
 
   if(${SPIRV_WERROR})
     set(SPIRV_WARNINGS ${SPIRV_WARNINGS} /WX)
   endif()
+endif()
+
+if (PROJECT_IS_TOP_LEVEL)
+  # enable parallel builds for msbuild
+  list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
+  list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/)

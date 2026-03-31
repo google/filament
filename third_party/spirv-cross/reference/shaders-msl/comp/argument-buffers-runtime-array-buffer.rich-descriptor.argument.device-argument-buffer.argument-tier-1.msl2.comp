@@ -12,47 +12,32 @@ struct spvDescriptor
 };
 
 template<typename T>
-struct spvBufferDescriptor
+struct spvBufferDescriptor;
+
+template<typename T>
+struct spvBufferDescriptor<device T*>
 {
-    T value;
+    device T* value;
     int length;
-    const device T& operator -> () const device
-    {
-        return value;
-    }
-    const device T& operator * () const device
-    {
-        return value;
-    }
+    int padding;
 };
 
 template<typename T>
 struct spvDescriptorArray
 {
-    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(&ptr->value)
-    {
-    }
-    const device T& operator [] (size_t i) const
-    {
-        return ptr[i];
-    }
+    spvDescriptorArray(const device spvDescriptor<T>* ptr_) : ptr(&ptr_->value) {}
+    spvDescriptorArray(const device void *ptr_) : spvDescriptorArray(static_cast<const device spvDescriptor<T>*>(ptr_)) {}
+    const device T& operator [] (size_t i) const { return ptr[i]; }
     const device T* ptr;
 };
 
 template<typename T>
 struct spvDescriptorArray<device T*>
 {
-    spvDescriptorArray(const device spvBufferDescriptor<device T*>* ptr) : ptr(ptr)
-    {
-    }
-    const device T* operator [] (size_t i) const
-    {
-        return ptr[i].value;
-    }
-    const int length(int i) const
-    {
-        return ptr[i].length;
-    }
+    spvDescriptorArray(const device spvBufferDescriptor<device T*>* ptr_) : ptr(ptr_) {}
+    spvDescriptorArray(const device void *ptr_) : spvDescriptorArray(static_cast<const device spvBufferDescriptor<device T*>*>(ptr_)) {}
+    device T* operator [] (size_t i) const { return ptr[i].value; }
+    int length(int i) const { return ptr[i].length; }
     const device spvBufferDescriptor<device T*>* ptr;
 };
 
@@ -105,7 +90,7 @@ void in_func(device SSBO& o, thread uint3& gl_GlobalInvocationID, constant UBO& 
     o.v[gl_GlobalInvocationID.x] = ws[gl_WorkGroupID.x]->v;
 }
 
-kernel void main0(const device spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], const device spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+kernel void main0(device spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], device spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
 {
     spvDescriptorArray<constant UBOs*> vs {spvDescriptorSet0.vs};
     spvDescriptorArray<device SSBOIns*> ws {spvDescriptorSet1.ws};

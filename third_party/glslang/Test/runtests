@@ -3,12 +3,10 @@
 # Arguments:
 #  1- TargetDirectory, where to write test results and intermediary files
 #  2- Path to glslang
-#  3- Path to spirv-remap
 
 TARGETDIR=${1:-localResults}
 BASEDIR=baseResults
 EXE=${2:-../build/install/bin/glslang}
-REMAPEXE=${3:-../build/install/bin/spirv-remap}
 HASERROR=0
 mkdir -p "$TARGETDIR"
 
@@ -245,15 +243,6 @@ run -H -e foo --source-entrypoint bar glsl.entryPointRename.vert > "$TARGETDIR/g
 diff -b $BASEDIR/glsl.entryPointRename.vert.bad.out "$TARGETDIR/glsl.entryPointRename.vert.bad.out" || HASERROR=1
 run -H -e foo --source-entrypoint main glsl.entryPointRename2.vert > "$TARGETDIR/glsl.entryPointRename2.vert.out"
 diff -b $BASEDIR/glsl.entryPointRename2.vert.out "$TARGETDIR/glsl.entryPointRename2.vert.out" || HASERROR=1
-
-#
-# Testing remapper error handling
-#
-echo "Testing remapper error handling"
-"$REMAPEXE" --do-everything -i remap.invalid-spirv-1.spv -o "$TARGETDIR" > "$TARGETDIR/remap.invalid-spirv-1.out" && HASERROR=1
-diff -b $BASEDIR/remap.invalid-spirv-1.out "$TARGETDIR/remap.invalid-spirv-1.out" || HASERROR=1
-"$REMAPEXE" --do-everything -i remap.invalid-spirv-2.spv -o "$TARGETDIR" > "$TARGETDIR/remap.invalid-spirv-2.out" && HASERROR=1
-diff -b $BASEDIR/remap.invalid-spirv-2.out "$TARGETDIR/remap.invalid-spirv-2.out" || HASERROR=1
 
 #
 # Testing position Y inversion

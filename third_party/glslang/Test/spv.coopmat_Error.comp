@@ -73,4 +73,11 @@ void main()
     float16_t(2.0)*f32_16_8;
 
     transpose(f16_8_8);
+
+    //Buf[] argument needs be in Shared/StorageBuffer storage classes
+    float16_t larr[16];
+    fcoopmatNV<16, gl_ScopeSubgroup, 16, 8> lvar;
+    coopMatLoadNV(lvar, larr, 1, 2, false);
+    coopMatStoreNV(lvar, larr, 1, 2, false);
+
 }

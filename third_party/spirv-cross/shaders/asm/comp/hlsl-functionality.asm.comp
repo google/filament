@@ -30,17 +30,17 @@
                OpDecorateId %Buf_0 HlslCounterBufferGOOGLE %Buf_count_0
        %void = OpTypeVoid
           %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+  %Buf_count = OpTypeStruct %int
+%_ptr_Uniform_Buf_count = OpTypePointer Uniform %Buf_count
+%Buf_count_0 = OpVariable %_ptr_Uniform_Buf_count Uniform
       %float = OpTypeFloat 32
     %v4float = OpTypeVector %float 4
 %_runtimearr_v4float = OpTypeRuntimeArray %v4float
         %Buf = OpTypeStruct %_runtimearr_v4float
 %_ptr_Uniform_Buf = OpTypePointer Uniform %Buf
       %Buf_0 = OpVariable %_ptr_Uniform_Buf Uniform
-        %int = OpTypeInt 32 1
-      %int_0 = OpConstant %int 0
-  %Buf_count = OpTypeStruct %int
-%_ptr_Uniform_Buf_count = OpTypePointer Uniform %Buf_count
-%Buf_count_0 = OpVariable %_ptr_Uniform_Buf_count Uniform
 %_ptr_Uniform_int = OpTypePointer Uniform %int
       %int_1 = OpConstant %int 1
        %uint = OpTypeInt 32 0

@@ -49,14 +49,13 @@ class ReplaceDescArrayAccessUsingVarIndex : public Pass {
  private:
   // Replaces all accesses to |var| using variable indices with constant
   // elements of the array |var|. Creates switch-case statements to determine
-  // the value of the variable index for all the possible cases. Returns
-  // whether replacement is done or not.
-  bool ReplaceVariableAccessesWithConstantElements(Instruction* var) const;
+  // the value of the variable index for all the possible cases.
+  Status ReplaceVariableAccessesWithConstantElements(Instruction* var) const;
 
   // Replaces the OpAccessChain or OpInBoundsAccessChain instruction |use| that
   // uses the descriptor variable |var| with the OpAccessChain or
   // OpInBoundsAccessChain instruction with a constant Indexes operand.
-  void ReplaceAccessChain(Instruction* var, Instruction* use) const;
+  bool ReplaceAccessChain(Instruction* var, Instruction* use) const;
 
   // Updates the first Indexes operand of the OpAccessChain or
   // OpInBoundsAccessChain instruction |access_chain| to let it use a constant
@@ -68,7 +67,7 @@ class ReplaceDescArrayAccessUsingVarIndex : public Pass {
   // |access_chain| that accesses an array descriptor variable using variable
   // indices with constant elements. |number_of_elements| is the number
   // of array elements.
-  void ReplaceUsersOfAccessChain(Instruction* access_chain,
+  bool ReplaceUsersOfAccessChain(Instruction* access_chain,
                                  uint32_t number_of_elements) const;
 
   // Puts all the recursive users of |access_chain| with concrete result types
@@ -102,7 +101,7 @@ class ReplaceDescArrayAccessUsingVarIndex : public Pass {
   // OpInBoundsAccessChain) will have a constant index for its first index. The
   // OpSwitch instruction will have the cases for the variable index of
   // |access_chain| from 0 to |number_of_elements| - 1.
-  void ReplaceNonUniformAccessWithSwitchCase(
+  bool ReplaceNonUniformAccessWithSwitchCase(
       Instruction* access_chain_final_user, Instruction* access_chain,
       uint32_t number_of_elements,
       const std::deque<Instruction*>& non_uniform_accesses_to_clone) const;
@@ -124,7 +123,7 @@ class ReplaceDescArrayAccessUsingVarIndex : public Pass {
   // |access_chain| to |case_block|. The clone of |access_chain| will use
   // |const_element_idx| for its first index. |old_ids_to_new_ids| keeps the
   // mapping from the result id of |access_chain| to the result of its clone.
-  void AddConstElementAccessToCaseBlock(
+  bool AddConstElementAccessToCaseBlock(
       BasicBlock* case_block, Instruction* access_chain,
       uint32_t const_element_idx,
       std::unordered_map<uint32_t, uint32_t>* old_ids_to_new_ids) const;
@@ -132,7 +131,7 @@ class ReplaceDescArrayAccessUsingVarIndex : public Pass {
   // Clones all instructions in |insts_to_be_cloned| and put them to |block|.
   // |old_ids_to_new_ids| keeps the mapping from the result id of each
   // instruction of |insts_to_be_cloned| to the result of their clones.
-  void CloneInstsToBlock(
+  bool CloneInstsToBlock(
       BasicBlock* block, Instruction* inst_to_skip_cloning,
       const std::deque<Instruction*>& insts_to_be_cloned,
       std::unordered_map<uint32_t, uint32_t>* old_ids_to_new_ids) const;
@@ -183,7 +182,8 @@ class ReplaceDescArrayAccessUsingVarIndex : public Pass {
   // |case_block_ids| and |default_block_id| as incoming blocks. The size of
   // |phi_operands| must be exactly 1 larger than the size of |case_block_ids|.
   // The last element of |phi_operands| will be used for |default_block_id|. It
-  // adds the phi instruction to the beginning of |parent_block|.
+  // adds the phi instruction to the beginning of |parent_block|. Returns 0 if
+  // it fails to create the Phi instruction.
   uint32_t CreatePhiInstruction(BasicBlock* parent_block,
                                 const std::vector<uint32_t>& phi_operands,
                                 const std::vector<uint32_t>& case_block_ids,

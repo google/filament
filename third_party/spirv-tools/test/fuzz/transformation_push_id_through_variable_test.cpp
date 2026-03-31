@@ -99,6 +99,7 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
       BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
 
   spvtools::ValidatorOptions validator_options;
+  validator_options.SetRelaxLogicalPointer(true);
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Tests the reference shader validity.
@@ -339,6 +340,7 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
       BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
 
   spvtools::ValidatorOptions validator_options;
+  validator_options.SetRelaxLogicalPointer(true);
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   uint32_t value_id = 80;
@@ -606,6 +608,7 @@ TEST(TransformationPushIdThroughVariableTest, AddSynonymsForRelevantIds) {
       BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
 
   spvtools::ValidatorOptions validator_options;
+  validator_options.SetRelaxLogicalPointer(true);
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Tests the reference shader validity.
@@ -707,6 +710,7 @@ TEST(TransformationPushIdThroughVariableTest, DontAddSynonymsForIrrelevantIds) {
       BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
 
   spvtools::ValidatorOptions validator_options;
+  validator_options.SetRelaxLogicalPointer(true);
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Tests the reference shader validity.
@@ -772,6 +776,7 @@ TEST(TransformationPushIdThroughVariableTest, DontAddSynonymsInDeadBlocks) {
       BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
 
   spvtools::ValidatorOptions validator_options;
+  validator_options.SetRelaxLogicalPointer(true);
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Tests the reference shader validity.

@@ -294,8 +294,12 @@ bool InvocationInterlockPlacementPass::removeUnneededInstructions(
 BasicBlock* InvocationInterlockPlacementPass::splitEdge(BasicBlock* block,
                                                         uint32_t succ_id) {
   // Create a new block to replace the critical edge.
+  uint32_t new_id = context()->TakeNextId();
+  if (new_id == 0) {
+    return nullptr;
+  }
   auto new_succ_temp = MakeUnique<BasicBlock>(
-      MakeUnique<Instruction>(context(), spv::Op::OpLabel, 0, TakeNextId(),
+      MakeUnique<Instruction>(context(), spv::Op::OpLabel, 0, new_id,
                               std::initializer_list<Operand>{}));
   auto* new_succ = new_succ_temp.get();
 
@@ -325,7 +329,7 @@ BasicBlock* InvocationInterlockPlacementPass::splitEdge(BasicBlock* block,
   return new_succ;
 }
 
-bool InvocationInterlockPlacementPass::placeInstructionsForEdge(
+Pass::Status InvocationInterlockPlacementPass::placeInstructionsForEdge(
     BasicBlock* block, uint32_t next_id, BlockSet& inside,
     BlockSet& previous_inside, spv::Op opcode, bool reverse_cfg) {
   bool modified = false;
@@ -372,31 +376,45 @@ bool InvocationInterlockPlacementPass::placeInstructionsForEdge(
         new_branch = splitEdge(cfg()->block(next_id), block->id());
       }
 
+      if (!new_branch) {
+        return Status::Failure;
+      }
+
       auto inst = new Instruction(context(), opcode);
       inst->InsertBefore(&*new_branch->tail());
     }
   }
 
-  return modified;
+  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
-bool InvocationInterlockPlacementPass::placeInstructions(BasicBlock* block) {
-  bool modified = false;
+Pass::Status InvocationInterlockPlacementPass::placeInstructions(
+    BasicBlock* block) {
+  Status status = Status::SuccessWithoutChange;
 
-  block->ForEachSuccessorLabel([this, block, &modified](uint32_t succ_id) {
-    modified |= placeInstructionsForEdge(
+  block->ForEachSuccessorLabel([this, block, &status](uint32_t succ_id) {
+    if (status == Status::Failure) {
+      return;
+    }
+    Status edge_status = placeInstructionsForEdge(
         block, succ_id, after_begin_, predecessors_after_begin_,
         spv::Op::OpBeginInvocationInterlockEXT, /* reverse_cfg= */ true);
-    modified |= placeInstructionsForEdge(cfg()->block(succ_id), block->id(),
-                                         before_end_, successors_before_end_,
-                                         spv::Op::OpEndInvocationInterlockEXT,
-                                         /* reverse_cfg= */ false);
+    status = CombineStatus(status, edge_status);
+    if (status == Status::Failure) {
+      return;
+    }
+
+    edge_status = placeInstructionsForEdge(cfg()->block(succ_id), block->id(),
+                                           before_end_, successors_before_end_,
+                                           spv::Op::OpEndInvocationInterlockEXT,
+                                           /* reverse_cfg= */ false);
+    status = CombineStatus(status, edge_status);
   });
 
-  return modified;
+  return status;
 }
 
-bool InvocationInterlockPlacementPass::processFragmentShaderEntry(
+Pass::Status InvocationInterlockPlacementPass::processFragmentShaderEntry(
     Function* entry_func) {
   bool modified = false;
 
@@ -417,9 +435,15 @@ bool InvocationInterlockPlacementPass::processFragmentShaderEntry(
 
   for (BasicBlock* block : original_blocks) {
     modified |= removeUnneededInstructions(block);
-    modified |= placeInstructions(block);
+    Status place_status = placeInstructions(block);
+    if (place_status == Status::Failure) {
+      return Status::Failure;
+    }
+    if (place_status == Status::SuccessWithChange) {
+      modified = true;
+    }
   }
-  return modified;
+  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
 bool InvocationInterlockPlacementPass::isFragmentShaderInterlockEnabled() {
@@ -452,7 +476,7 @@ Pass::Status InvocationInterlockPlacementPass::Process() {
     return Status::SuccessWithoutChange;
   }
 
-  bool modified = false;
+  Status status = Status::SuccessWithoutChange;
 
   std::unordered_set<Function*> entry_points;
   for (Instruction& entry_inst : context()->module()->entry_points()) {
@@ -466,7 +490,9 @@ Pass::Status InvocationInterlockPlacementPass::Process() {
     Function* func = &*fi;
     recordBeginOrEndInFunction(func);
     if (!entry_points.count(func) && extracted_functions_.count(func)) {
-      modified |= removeBeginAndEndInstructionsFromFunction(func);
+      if (removeBeginAndEndInstructionsFromFunction(func)) {
+        status = Status::SuccessWithChange;
+      }
     }
   }
 
@@ -482,11 +508,14 @@ Pass::Status InvocationInterlockPlacementPass::Process() {
       continue;
     }
 
-    modified |= processFragmentShaderEntry(entry_func);
+    Status frag_status = processFragmentShaderEntry(entry_func);
+    if (frag_status == Status::Failure) {
+      return Status::Failure;
+    }
+    status = CombineStatus(status, frag_status);
   }
 
-  return modified ? Pass::Status::SuccessWithChange
-                  : Pass::Status::SuccessWithoutChange;
+  return status;
 }
 
 }  // namespace opt

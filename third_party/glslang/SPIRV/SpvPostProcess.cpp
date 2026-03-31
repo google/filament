@@ -43,6 +43,7 @@
 #include <unordered_set>
 #include <algorithm>
 
+#include "SPIRV/spvIR.h"
 #include "SpvBuilder.h"
 #include "spirv.hpp11"
 #include "spvUtil.h"
@@ -82,7 +83,10 @@ void Builder::postProcessType(const Instruction& inst, Id typeId)
             if (containsType(typeId, Op::OpTypeFloat, 16))
                 addCapability(Capability::Float16);
         } else {
-            StorageClass storageClass = getStorageClass(inst.getIdOperand(0));
+            StorageClass storageClass = StorageClass::Max;
+            if (module.getInstruction(inst.getIdOperand(0))->getOpCode() != Op::OpUntypedAccessChainKHR) {
+                storageClass = getStorageClass(inst.getIdOperand(0));
+            }
             if (width == 8) {
                 switch (storageClass) {
                 case StorageClass::PhysicalStorageBufferEXT:
@@ -201,6 +205,37 @@ void Builder::postProcessType(const Instruction& inst, Id typeId)
     }
 }
 
+unsigned int Builder::postProcessGetLargestScalarSize(const Instruction& type)
+{
+    switch (type.getOpCode()) {
+    case Op::OpTypeBool:
+        return 1;
+    case Op::OpTypeInt:
+    case Op::OpTypeFloat:
+        return type.getImmediateOperand(0) / 8;
+    case Op::OpTypePointer:
+        return 8;
+    case Op::OpTypeVector:
+    case Op::OpTypeMatrix:
+    case Op::OpTypeArray:
+    case Op::OpTypeRuntimeArray: {
+        const Instruction* elem_type = module.getInstruction(type.getIdOperand(0));
+        return postProcessGetLargestScalarSize(*elem_type);
+    }
+    case Op::OpTypeStruct: {
+        unsigned int largest = 0;
+        for (int i = 0; i < type.getNumOperands(); ++i) {
+            const Instruction* elem_type = module.getInstruction(type.getIdOperand(i));
+            unsigned int elem_size = postProcessGetLargestScalarSize(*elem_type);
+            largest = std::max(largest, elem_size);
+        }
+        return largest;
+    }
+    default:
+        return 0;
+    }
+}
+
 // Called for each instruction that resides in a block.
 void Builder::postProcess(Instruction& inst)
 {
@@ -249,12 +284,12 @@ void Builder::postProcess(Instruction& inst)
             // and this function computes the rest from the SPIR-V Offset decorations.
             Instruction *accessChain = module.getInstruction(inst.getIdOperand(0));
             if (accessChain->getOpCode() == Op::OpAccessChain) {
-                Instruction *base = module.getInstruction(accessChain->getIdOperand(0));
+                const Instruction* base = module.getInstruction(accessChain->getIdOperand(0));
                 // Get the type of the base of the access chain. It must be a pointer type.
                 Id typeId = base->getTypeId();
                 Instruction *type = module.getInstruction(typeId);
                 assert(type->getOpCode() == Op::OpTypePointer);
-                if (type->getImmediateOperand(0) != StorageClass::PhysicalStorageBufferEXT) {
+                if (type->getImmediateOperand(0) != StorageClass::PhysicalStorageBuffer) {
                     break;
                 }
                 // Get the pointee type.
@@ -265,6 +300,7 @@ void Builder::postProcess(Instruction& inst)
                 // Offset/ArrayStride/MatrixStride decorations, and bitwise OR them all
                 // together.
                 int alignment = 0;
+                bool first_struct_elem = false;
                 for (int i = 1; i < accessChain->getNumOperands(); ++i) {
                     Instruction *idx = module.getInstruction(accessChain->getIdOperand(i));
                     if (type->getOpCode() == Op::OpTypeStruct) {
@@ -277,7 +313,12 @@ void Builder::postProcess(Instruction& inst)
                                 decoration.get()->getImmediateOperand(1) == c &&
                                 (decoration.get()->getImmediateOperand(2) == Decoration::Offset ||
                                  decoration.get()->getImmediateOperand(2) == Decoration::MatrixStride)) {
-                                alignment |= decoration.get()->getImmediateOperand(3);
+                                unsigned int opernad_value = decoration.get()->getImmediateOperand(3);
+                                alignment |= opernad_value;
+                                if (opernad_value == 0 &&
+                                    decoration.get()->getImmediateOperand(2) == Decoration::Offset) {
+                                    first_struct_elem = true;
+                                }
                             }
                         };
                         std::for_each(decorations.begin(), decorations.end(), function);
@@ -303,18 +344,51 @@ void Builder::postProcess(Instruction& inst)
                     }
                 }
                 assert(inst.getNumOperands() >= 3);
-                auto const memoryAccess = (MemoryAccessMask)inst.getImmediateOperand((inst.getOpCode() == Op::OpStore) ? 2 : 1);
+                const bool is_store = inst.getOpCode() == Op::OpStore;
+                auto const memoryAccess = (MemoryAccessMask)inst.getImmediateOperand(is_store ? 2 : 1);
                 assert(anySet(memoryAccess, MemoryAccessMask::Aligned));
                 static_cast<void>(memoryAccess);
+
                 // Compute the index of the alignment operand.
                 int alignmentIdx = 2;
-                if (inst.getOpCode() == Op::OpStore)
+                if (is_store)
                     alignmentIdx++;
                 // Merge new and old (mis)alignment
                 alignment |= inst.getImmediateOperand(alignmentIdx);
+
+                if (!is_store) {
+                    Instruction* inst_type = module.getInstruction(inst.getTypeId());
+                    if (inst_type->getOpCode() == Op::OpTypePointer &&
+                        inst_type->getImmediateOperand(0) == StorageClass::PhysicalStorageBuffer) {
+                        // This means we are loading a pointer which means need to ensure it is at least 8-byte aligned
+                        // See https://github.com/KhronosGroup/glslang/issues/4084
+                        // In case the alignment is currently 4, need to ensure it is 8 before grabbing the LSB
+                        alignment |= 8;
+                        alignment &= 8;
+                    }
+                }
+
                 // Pick the LSB
                 alignment = alignment & ~(alignment & (alignment-1));
+
+                // The edge case we find is when copying a struct to another struct, we never find the alignment anywhere,
+                // so in this case, fallback to doing a full size lookup on the type
+                if (alignment == 0 && first_struct_elem) {
+                    // Quick get the struct type back
+                    const Instruction* pointer_type = module.getInstruction(base->getTypeId());
+                    const Instruction* struct_type = module.getInstruction(pointer_type->getIdOperand(1));
+                    assert(struct_type->getOpCode() == Op::OpTypeStruct);
+
+                    const Instruction* elem_type = module.getInstruction(struct_type->getIdOperand(0));
+                    unsigned int largest_scalar = postProcessGetLargestScalarSize(*elem_type);
+                    if (largest_scalar != 0) {
+                        alignment = largest_scalar;
+                    } else {
+                        alignment = 16; // fallback if can't determine a godo alignment
+                    }
+                }
                 // update the Aligned operand
+                assert(alignment != 0);
                 inst.setImmediateOperand(alignmentIdx, alignment);
             }
             break;

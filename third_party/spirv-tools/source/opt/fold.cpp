@@ -597,6 +597,9 @@ Instruction* InstructionFolder::FoldInstructionToConstant(
   const analysis::Constant* folded_const = nullptr;
   for (auto rule : GetConstantFoldingRules().GetRulesForInstruction(inst)) {
     folded_const = rule(context_, inst, constants);
+    if (folded_const == nullptr && inst->context()->id_overflow()) {
+      return nullptr;
+    }
     if (folded_const != nullptr) {
       Instruction* const_inst =
           const_mgr->GetDefiningInstruction(folded_const, inst->type_id());

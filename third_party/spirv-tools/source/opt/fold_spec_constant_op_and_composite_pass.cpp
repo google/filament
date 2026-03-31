@@ -1,4 +1,5 @@
 // Copyright (c) 2016 Google Inc.
+// Copyright (c) 2025 Arm Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,21 +32,20 @@ Pass::Status FoldSpecConstantOpAndCompositePass::Process() {
   // instructions, records their values in two internal maps: id_to_const_val_
   // and const_val_to_id_ so that we can use them to infer the value of Spec
   // Constants later.
-  // For Spec Constants defined with OpSpecConstantComposite instructions, if
-  // all of their components are Normal Constants, they will be turned into
-  // Normal Constants too. For Spec Constants defined with OpSpecConstantOp
-  // instructions, we check if they only depends on Normal Constants and fold
-  // them when possible. The two maps for Normal Constants: id_to_const_val_
-  // and const_val_to_id_ will be updated along the traversal so that the new
-  // Normal Constants generated from folding can be used to fold following Spec
-  // Constants.
-  // This algorithm depends on the SSA property of SPIR-V when
-  // defining constants. The dependent constants must be defined before the
-  // dependee constants. So a dependent Spec Constant must be defined and
-  // will be processed before its dependee Spec Constant. When we encounter
-  // the dependee Spec Constants, all its dependent constants must have been
-  // processed and all its dependent Spec Constants should have been folded if
-  // possible.
+  // For Spec Constants defined with OpSpecConstantComposite or
+  // OpSpecConstantCompositeReplicateEXT instructions, if all of their
+  // components are Normal Constants, they will be turned into Normal Constants
+  // too. For Spec Constants defined with OpSpecConstantOp instructions, we
+  // check if they only depends on Normal Constants and fold them when possible.
+  // The two maps for Normal Constants: id_to_const_val_ and const_val_to_id_
+  // will be updated along the traversal so that the new Normal Constants
+  // generated from folding can be used to fold following Spec Constants. This
+  // algorithm depends on the SSA property of SPIR-V when defining constants.
+  // The dependent constants must be defined before the dependee constants. So a
+  // dependent Spec Constant must be defined and will be processed before its
+  // dependee Spec Constant. When we encounter the dependee Spec Constants, all
+  // its dependent constants must have been processed and all its dependent Spec
+  // Constants should have been folded if possible.
   Module::inst_iterator next_inst = context()->types_values_begin();
   for (Module::inst_iterator inst_iter = next_inst;
        // Need to re-evaluate the end iterator since we may modify the list of
@@ -54,8 +54,9 @@ Pass::Status FoldSpecConstantOpAndCompositePass::Process() {
     ++next_inst;
     Instruction* inst = &*inst_iter;
     // Collect constant values of normal constants and process the
-    // OpSpecConstantOp and OpSpecConstantComposite instructions if possible.
-    // The constant values will be stored in analysis::Constant instances.
+    // OpSpecConstantOp, OpSpecConstantComposite, and
+    // OpSpecConstantCompositeReplicateEXT instructions if possible. The
+    // constant values will be stored in analysis::Constant instances.
     // OpConstantSampler instruction is not collected here because it cannot be
     // used in OpSpecConstant{Composite|Op} instructions.
     // TODO(qining): If the constant or its type has decoration, we may need
@@ -70,19 +71,27 @@ Pass::Status FoldSpecConstantOpAndCompositePass::Process() {
       case spv::Op::OpConstant:
       case spv::Op::OpConstantNull:
       case spv::Op::OpConstantComposite:
-      case spv::Op::OpSpecConstantComposite: {
+      case spv::Op::OpSpecConstantComposite:
+      case spv::Op::OpSpecConstantCompositeReplicateEXT: {
         // A Constant instance will be created if the given instruction is a
         // Normal Constant whose value(s) are fixed. Note that for a composite
-        // Spec Constant defined with OpSpecConstantComposite instruction, if
-        // all of its components are Normal Constants already, the Spec
-        // Constant will be turned in to a Normal Constant. In that case, a
-        // Constant instance should also be created successfully and recorded
-        // in the id_to_const_val_ and const_val_to_id_ mapps.
+        // Spec Constant defined with OpSpecConstantComposite or
+        // OpSpecConstantCompositeReplicateEXT instruction, if all of its
+        // components are Normal Constants already, the Spec Constant will be
+        // turned in to a Normal Constant. In that case, a Constant instance
+        // should also be created successfully and recorded in the
+        // id_to_const_val_ and const_val_to_id_ mapps.
         if (auto const_value = const_mgr->GetConstantFromInst(inst)) {
-          // Need to replace the OpSpecConstantComposite instruction with a
-          // corresponding OpConstantComposite instruction.
+          // Need to replace the OpSpecConstantComposite or
+          // OpSpecConstantCompositeReplicateEXT instruction with a
+          // corresponding OpConstantComposite or
+          // OpConstantCompositeReplicateEXT instruction.
           if (opcode == spv::Op::OpSpecConstantComposite) {
             inst->SetOpcode(spv::Op::OpConstantComposite);
+            modified = true;
+          }
+          if (opcode == spv::Op::OpSpecConstantCompositeReplicateEXT) {
+            inst->SetOpcode(spv::Op::OpConstantCompositeReplicateEXT);
             modified = true;
           }
           const_mgr->MapConstantToInst(const_value, inst);
@@ -96,9 +105,16 @@ Pass::Status FoldSpecConstantOpAndCompositePass::Process() {
       // Constants will be added to id_to_const_val_ and const_val_to_id_ so
       // that we can use the new Normal Constants when folding following Spec
       // Constants.
-      case spv::Op::OpSpecConstantOp:
-        modified |= ProcessOpSpecConstantOp(&inst_iter);
+      case spv::Op::OpSpecConstantOp: {
+        const auto status = ProcessOpSpecConstantOp(&inst_iter);
+        if (status == Status::Failure) {
+          return Status::Failure;
+        }
+        if (status == Status::SuccessWithChange) {
+          modified = true;
+        }
         break;
+      }
       default:
         break;
     }
@@ -106,7 +122,7 @@ Pass::Status FoldSpecConstantOpAndCompositePass::Process() {
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
-bool FoldSpecConstantOpAndCompositePass::ProcessOpSpecConstantOp(
+Pass::Status FoldSpecConstantOpAndCompositePass::ProcessOpSpecConstantOp(
     Module::inst_iterator* pos) {
   Instruction* inst = &**pos;
   Instruction* folded_inst = nullptr;
@@ -116,10 +132,17 @@ bool FoldSpecConstantOpAndCompositePass::ProcessOpSpecConstantOp(
          "SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER type");
 
   folded_inst = FoldWithInstructionFolder(pos);
+  if (context()->id_overflow()) {
+    return Status::Failure;
+  }
+
   if (!folded_inst) {
     folded_inst = DoComponentWiseOperation(pos);
+    if (context()->id_overflow()) {
+      return Status::Failure;
+    }
   }
-  if (!folded_inst) return false;
+  if (!folded_inst) return Status::SuccessWithoutChange;
 
   // Replace the original constant with the new folded constant, kill the
   // original constant.
@@ -127,7 +150,7 @@ bool FoldSpecConstantOpAndCompositePass::ProcessOpSpecConstantOp(
   uint32_t old_id = inst->result_id();
   context()->ReplaceAllUsesWith(old_id, new_id);
   context()->KillDef(old_id);
-  return true;
+  return Status::SuccessWithChange;
 }
 
 Instruction* FoldSpecConstantOpAndCompositePass::FoldWithInstructionFolder(
@@ -186,7 +209,11 @@ Instruction* FoldSpecConstantOpAndCompositePass::FoldWithInstructionFolder(
 
   if (need_to_clone) {
     new_const_inst = new_const_inst->Clone(context());
-    new_const_inst->SetResultId(TakeNextId());
+    uint32_t new_id = TakeNextId();
+    if (new_id == 0) {
+      return nullptr;
+    }
+    new_const_inst->SetResultId(new_id);
     new_const_inst->InsertAfter(insert_pos);
     get_def_use_mgr()->AnalyzeInstDefUse(new_const_inst);
   }

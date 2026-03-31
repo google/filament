@@ -24,12 +24,12 @@ struct Position
 struct Registers
 {
     float4x4 view_projection;
-    device PositionReferences* references;
+    const device PositionReferences* references;
 };
 
 struct PositionReferences
 {
-    device Position* buffers[1];
+    const device Position* buffers[1];
 };
 
 struct main0_out

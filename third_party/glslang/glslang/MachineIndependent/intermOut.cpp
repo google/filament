@@ -81,6 +81,7 @@ public:
     virtual bool visitLoop(TVisit, TIntermLoop* node);
     virtual bool visitBranch(TVisit, TIntermBranch* node);
     virtual bool visitSwitch(TVisit, TIntermSwitch* node);
+    virtual bool visitVariableDecl(TVisit, TIntermVariableDecl* node);
 
     TInfoSink& infoSink;
 protected:
@@ -657,6 +658,11 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     case EOpConstructCooperativeMatrixKHR:  out.debug << "Construct cooperative matrix KHR";  break;
     case EOpConstructCooperativeVectorNV:  out.debug << "Construct cooperative vector NV";  break;
     case EOpConstructAccStruct: out.debug << "Construct acceleration structure"; break;
+
+    case EOpBitCastArrayQCOM:              out.debug << "Bitcast To Array QCOM"; break;
+    case EOpExtractSubArrayQCOM:           out.debug << "Extract Subarray QCOM"; break;
+    case EOpCompositeConstructCoopMatQCOM:   out.debug << "Construct Cooperative Matrix QCOM"; break;
+    case EOpCompositeExtractCoopMatQCOM:     out.debug << "Extract Cooperative Matrix QCOM"; break;
 
     case EOpLessThan:         out.debug << "Compare Less Than";             break;
     case EOpGreaterThan:      out.debug << "Compare Greater Than";          break;
@@ -1392,6 +1398,16 @@ bool TOutputTraverser::visitSwitch(TVisit /* visit */, TIntermSwitch* node)
     --depth;
 
     return false;
+}
+
+bool TOutputTraverser::visitVariableDecl(TVisit /* visit */, TIntermVariableDecl* node)
+{
+    TInfoSink& out = infoSink;
+
+    OutputTreeText(out, node, depth);
+
+    out.debug << "VarDecl: " << node->getDeclSymbol()->getName() << '\n';
+    return true;
 }
 
 //

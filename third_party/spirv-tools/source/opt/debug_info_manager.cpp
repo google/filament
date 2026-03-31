@@ -331,6 +331,7 @@ Instruction* DebugInfoManager::GetDebugOperationWithDeref() {
   if (deref_operation_ != nullptr) return deref_operation_;
 
   uint32_t result_id = context()->TakeNextId();
+  if (result_id == 0) return nullptr;
   std::unique_ptr<Instruction> deref_operation;
 
   if (context()->get_feature_mgr()->GetExtInstImportId_OpenCL100DebugInfo()) {
@@ -374,10 +375,13 @@ Instruction* DebugInfoManager::GetDebugOperationWithDeref() {
 Instruction* DebugInfoManager::DerefDebugExpression(Instruction* dbg_expr) {
   assert(dbg_expr->GetCommonDebugOpcode() == CommonDebugInfoDebugExpression);
   std::unique_ptr<Instruction> deref_expr(dbg_expr->Clone(context()));
-  deref_expr->SetResultId(context()->TakeNextId());
-  deref_expr->InsertOperand(
-      kDebugExpressOperandOperationIndex,
-      {SPV_OPERAND_TYPE_ID, {GetDebugOperationWithDeref()->result_id()}});
+  uint32_t result_id = context()->TakeNextId();
+  if (result_id == 0) return nullptr;
+  deref_expr->SetResultId(result_id);
+  Instruction* deref_op = GetDebugOperationWithDeref();
+  if (!deref_op) return nullptr;
+  deref_expr->InsertOperand(kDebugExpressOperandOperationIndex,
+                            {SPV_OPERAND_TYPE_ID, {deref_op->result_id()}});
   auto* deref_expr_instr =
       context()->ext_inst_debuginfo_end()->InsertBefore(std::move(deref_expr));
   AnalyzeDebugInst(deref_expr_instr);
@@ -390,6 +394,7 @@ Instruction* DebugInfoManager::GetDebugInfoNone() {
   if (debug_info_none_inst_ != nullptr) return debug_info_none_inst_;
 
   uint32_t result_id = context()->TakeNextId();
+  if (result_id == 0) return nullptr;
   std::unique_ptr<Instruction> dbg_info_none_inst(new Instruction(
       context(), spv::Op::OpExtInst, context()->get_type_mgr()->GetVoidTypeId(),
       result_id,

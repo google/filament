@@ -8,7 +8,7 @@ ERROR: 0:27: 'location' : not supported for this version or the enabled extensio
 ERROR: 0:27: 'location qualifier on output' : not supported for this version or the enabled extensions 
 ERROR: 0:41: 'assign' :  l-value required "v" (can't modify shader input)
 ERROR: 0:41: 'out' : Non-L-value cannot be passed for 'out' or 'inout' parameters. 
-ERROR: 0:56: '' :  syntax error, unexpected IDENTIFIER, expecting LEFT_BRACE or COMMA or SEMICOLON
+ERROR: 0:56: '' :  syntax error, unexpected IDENTIFIER, expecting COMMA or SEMICOLON
 ERROR: 9 compilation errors.  No code generated.
 
 

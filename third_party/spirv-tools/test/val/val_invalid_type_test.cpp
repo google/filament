@@ -48,6 +48,7 @@ OpEntryPoint GLCompute %main "main"
 OpExecutionMode %main LocalSize 1 1 1
 OpSource GLSL 450
 OpName %main "main"
+%bool = OpTypeBool
 %void = OpTypeVoid
 %bfloat16 = OpTypeFloat 16 BFloat16KHR
 %func = OpTypeFunction %void
@@ -86,6 +87,22 @@ TEST_F(ValidateInvalidType, Bfloat16InvalidArithmeticInstruction) {
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("FMul doesn't support BFloat16 type."));
+}
+
+TEST_F(ValidateInvalidType, Bfloat16InvalidRelationalInstruction) {
+  const std::string body = R"(
+%v1 = OpVariable %_ptr_Function_bfloat16 Function
+%v2 = OpVariable %_ptr_Function_bfloat16 Function
+%12 = OpLoad %bfloat16 %v1
+%14 = OpLoad %bfloat16 %v2
+%15 = OpFOrdEqual %bool %12 %14
+)";
+
+  CompileSuccessfully(GenerateBFloatCode(body).c_str(), SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("FOrdEqual doesn't support BFloat16 type."));
 }
 
 TEST_F(ValidateInvalidType, Bfloat16InvalidAtomicInstruction) {
@@ -128,6 +145,7 @@ OpEntryPoint GLCompute %main "main"
 OpExecutionMode %main LocalSize 1 1 1
 OpSource GLSL 450
 OpName %main "main"
+%bool = OpTypeBool
 %void = OpTypeVoid
 %fp8e4m3 = OpTypeFloat 8 Float8E4M3EXT
 %fp8e5m2 = OpTypeFloat 8 Float8E5M2EXT
@@ -189,6 +207,38 @@ TEST_F(ValidateInvalidType, FP8E5M2InvalidArithmeticInstruction) {
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("FMul doesn't support FP8 E4M3/E5M2 types."));
+}
+
+TEST_F(ValidateInvalidType, FP8E4M3InvalidRelationalInstruction) {
+  const std::string body = R"(
+%v1 = OpVariable %_ptr_Function_fp8e4m3 Function
+%v2 = OpVariable %_ptr_Function_fp8e4m3 Function
+%12 = OpLoad %fp8e4m3 %v1
+%14 = OpLoad %fp8e4m3 %v2
+%15 = OpFOrdEqual %bool %12 %14
+)";
+
+  CompileSuccessfully(GenerateFP8Code(body).c_str(), SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("FOrdEqual doesn't support FP8 E4M3/E5M2 types."));
+}
+
+TEST_F(ValidateInvalidType, FP8E5M2InvalidRelationalInstruction) {
+  const std::string body = R"(
+%v1 = OpVariable %_ptr_Function_fp8e5m2 Function
+%v2 = OpVariable %_ptr_Function_fp8e5m2 Function
+%12 = OpLoad %fp8e5m2 %v1
+%14 = OpLoad %fp8e5m2 %v2
+%15 = OpFOrdEqual %bool %12 %14
+)";
+
+  CompileSuccessfully(GenerateFP8Code(body).c_str(), SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("FOrdEqual doesn't support FP8 E4M3/E5M2 types."));
 }
 
 TEST_F(ValidateInvalidType, FP8E4M3InvalidAtomicInstruction) {

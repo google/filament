@@ -1,14 +1,13 @@
 tokenPaste.vert
 ERROR: 0:38: '##' : unexpected location 
-ERROR: 0:40: '##' : unexpected location; end of replacement list 
+ERROR: 0:40: '#' : Macro ended with incomplete '#' paste/stringify operators 
 ERROR: 0:49: '##' : combined tokens are too long 
 ERROR: 0:52: '##' : not supported for these tokens 
 ERROR: 0:81: '##' : combined token is invalid 
+ERROR: 0:94: '#' : Macro ended with incomplete '#' paste/stringify operators 
 ERROR: 0:94: 'macro expansion' : Too few args in Macro rec
-ERROR: 0:94: '##' : unexpected location 
-ERROR: 0:94: '##' : unexpected location 
 ERROR: 0:98: '##' : unexpected location; end of argument 
-ERROR: 9 compilation errors.  No code generated.
+ERROR: 8 compilation errors.  No code generated.
 
 
 Shader version: 450

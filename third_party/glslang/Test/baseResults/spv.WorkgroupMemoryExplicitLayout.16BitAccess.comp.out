@@ -6,8 +6,8 @@ spv.WorkgroupMemoryExplicitLayout.16BitAccess.comp
                               Capability Shader
                               Capability Float16
                               Capability Int16
-                              Capability CapabilityWorkgroupMemoryExplicitLayoutKHR
-                              Capability CapabilityWorkgroupMemoryExplicitLayout16BitAccessKHR
+                              Capability WorkgroupMemoryExplicitLayoutKHR
+                              Capability WorkgroupMemoryExplicitLayout16BitAccessKHR
                               Extension  "SPV_KHR_workgroup_memory_explicit_layout"
                1:             ExtInstImport  "GLSL.std.450"
                               MemoryModel Logical GLSL450

@@ -222,6 +222,7 @@ public:
     }
     Id getResultId() const { return resultId; }
     Id getTypeId() const { return typeId; }
+    void setTypeId(Id tId) { typeId = tId; }
     Id getIdOperand(int op) const {
         assert(idOperand[op]);
         return operands[op];
@@ -574,7 +575,8 @@ public:
     }
     StorageClass getStorageClass(Id typeId) const
     {
-        assert(idToInstruction[typeId]->getOpCode() == spv::Op::OpTypePointer);
+        assert(idToInstruction[typeId]->getOpCode() == spv::Op::OpTypePointer ||
+               idToInstruction[typeId]->getOpCode() == spv::Op::OpTypeUntypedPointerKHR);
         return (StorageClass)idToInstruction[typeId]->getImmediateOperand(0);
     }
 

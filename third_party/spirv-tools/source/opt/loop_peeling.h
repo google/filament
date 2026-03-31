@@ -148,11 +148,11 @@ class LoopPeeling {
 
   // Moves the execution of the |factor| first iterations of the loop into a
   // dedicated loop.
-  void PeelBefore(uint32_t factor);
+  bool PeelBefore(uint32_t factor);
 
   // Moves the execution of the |factor| last iterations of the loop into a
   // dedicated loop.
-  void PeelAfter(uint32_t factor);
+  bool PeelAfter(uint32_t factor);
 
   // Returns the cloned loop.
   Loop* GetClonedLoop() { return cloned_loop_; }
@@ -184,19 +184,19 @@ class LoopPeeling {
   // Duplicate |loop_| and place the new loop before the cloned loop. Iterating
   // values from the cloned loop are then connected to the original loop as
   // initializer.
-  void DuplicateAndConnectLoop(LoopUtils::LoopCloningResult* clone_results);
+  bool DuplicateAndConnectLoop(LoopUtils::LoopCloningResult* clone_results);
 
   // Insert the canonical induction variable into the first loop as a simplified
-  // counter.
-  void InsertCanonicalInductionVariable(
+  // counter. Returns true on success.
+  bool InsertCanonicalInductionVariable(
       LoopUtils::LoopCloningResult* clone_results);
 
   // Fixes the exit condition of the before loop. The function calls
   // |condition_builder| to get the condition to use in the conditional branch
   // of the loop exit. The loop will be exited if the condition evaluate to
   // true. |condition_builder| takes an Instruction* that represent the
-  // insertion point.
-  void FixExitCondition(
+  // insertion point. Returns true on success.
+  bool FixExitCondition(
       const std::function<uint32_t(Instruction*)>& condition_builder);
 
   // Gathers all operations involved in the update of |iterator| into
@@ -321,10 +321,14 @@ class LoopPeelingPass : public Pass {
     ScalarEvolutionAnalysis* scev_analysis_;
     size_t loop_max_iterations_;
   };
-  // Peel profitable loops in |f|.
-  bool ProcessFunction(Function* f);
-  // Peel |loop| if profitable.
-  std::pair<bool, Loop*> ProcessLoop(Loop* loop, CodeMetrics* loop_size);
+  // Peel profitable loops in |f|. Returns Pass::Status::Failure if an error
+  // occurs.
+  Pass::Status ProcessFunction(Function* f);
+  // Peel |loop| if profitable. Returns Pass::Status::Failure if an error
+  // occurs. Returns {Pass::Status::SuccessWithChange, Loop*} if the loop is
+  // peeled and there is another peeling opportunity.
+  std::tuple<Pass::Status, Loop*> ProcessLoop(Loop* loop,
+                                              CodeMetrics* loop_size);
 
   static size_t code_grow_threshold_;
   LoopPeelingStats* stats_;

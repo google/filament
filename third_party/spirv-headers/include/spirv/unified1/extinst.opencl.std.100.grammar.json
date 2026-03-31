@@ -709,6 +709,130 @@
       ]
     },
     {
+      "opname" : "fclamp",
+      "opcode" : 95,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "x" },
+        { "kind" : "IdRef", "name" : "minval" },
+        { "kind" : "IdRef", "name" : "maxval" }
+      ]
+    },
+    {
+      "opname" : "degrees",
+      "opcode" :96,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "radians" }
+      ]
+    },
+    {
+      "opname" : "fmax_common",
+      "opcode" : 97,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "x" },
+        { "kind" : "IdRef", "name" : "y" }
+      ]
+    },
+    {
+      "opname" : "fmin_common",
+      "opcode" : 98,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "x" },
+        { "kind" : "IdRef", "name" : "y" }
+      ]
+    },
+    {
+      "opname" : "mix",
+      "opcode" : 99,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "x" },
+        { "kind" : "IdRef", "name" : "y" },
+        { "kind" : "IdRef", "name" : "a" }
+      ]
+    },
+    {
+      "opname" : "radians",
+      "opcode" : 100,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "degrees" }
+      ]
+    },
+    {
+      "opname" : "step",
+      "opcode" : 101,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "edge" },
+        { "kind" : "IdRef", "name" : "x" }
+      ]
+    },
+    {
+      "opname" : "smoothstep",
+      "opcode" : 102,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "edge0" },
+        { "kind" : "IdRef", "name" : "edge1" },
+        { "kind" : "IdRef", "name" : "x" }
+      ]
+    },
+    {
+      "opname" : "sign",
+      "opcode" : 103,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "x" }
+      ]
+    },
+    {
+      "opname" : "cross",
+      "opcode" : 104,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "p0" },
+        { "kind" : "IdRef", "name" : "p1" }
+      ]
+    },
+    {
+      "opname" : "distance",
+      "opcode" : 105,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "p0" },
+        { "kind" : "IdRef", "name" : "p1" }
+      ]
+    },
+    {
+      "opname" : "length",
+      "opcode" : 106,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "p" }
+      ]
+    },
+    {
+      "opname" : "normalize",
+      "opcode" : 107,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "p" }
+      ]
+    },
+    {
+      "opname" : "fast_distance",
+      "opcode" : 108,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "p0" },
+        { "kind" : "IdRef", "name" : "p1" }
+      ]
+    },
+    {
+      "opname" : "fast_length",
+      "opcode" : 109,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "p" }
+      ]
+    },
+    {
+      "opname" : "fast_normalize",
+      "opcode" : 110,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "p" }
+      ]
+    },
+    {
       "opname" : "s_abs",
       "opcode" : 141,
       "operands" : [
@@ -952,180 +1076,6 @@
       ]
     },
     {
-      "opname" : "u_abs",
-      "opcode" : 201,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "x" }
-      ]
-    },
-    {
-      "opname" : "u_abs_diff",
-      "opcode" : 202,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "x" },
-        { "kind" : "IdRef", "name" : "y" }
-      ]
-    },
-    {
-      "opname" : "u_mul_hi",
-      "opcode" : 203,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "x" },
-        { "kind" : "IdRef", "name" : "y" }
-      ]
-    },
-    {
-      "opname" : "u_mad_hi",
-      "opcode" : 204,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "a" },
-        { "kind" : "IdRef", "name" : "b" },
-        { "kind" : "IdRef", "name" : "c" }
-      ]
-    },
-    {
-      "opname" : "fclamp",
-      "opcode" : 95,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "x" },
-        { "kind" : "IdRef", "name" : "minval" },
-        { "kind" : "IdRef", "name" : "maxval" }
-      ]
-    },
-    {
-      "opname" : "degrees",
-      "opcode" :96,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "radians" }
-      ]
-    },
-    {
-      "opname" : "fmax_common",
-      "opcode" : 97,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "x" },
-        { "kind" : "IdRef", "name" : "y" }
-      ]
-    },
-    {
-      "opname" : "fmin_common",
-      "opcode" : 98,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "x" },
-        { "kind" : "IdRef", "name" : "y" }
-      ]
-    },
-    {
-      "opname" : "mix",
-      "opcode" : 99,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "x" },
-        { "kind" : "IdRef", "name" : "y" },
-        { "kind" : "IdRef", "name" : "a" }
-      ]
-    },
-    {
-      "opname" : "radians",
-      "opcode" : 100,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "degrees" }
-      ]
-    },
-    {
-      "opname" : "step",
-      "opcode" : 101,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "edge" },
-        { "kind" : "IdRef", "name" : "x" }
-      ]
-    },
-    {
-      "opname" : "smoothstep",
-      "opcode" : 102,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "edge0" },
-        { "kind" : "IdRef", "name" : "edge1" },
-        { "kind" : "IdRef", "name" : "x" }
-      ]
-    },
-    {
-      "opname" : "sign",
-      "opcode" : 103,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "x" }
-      ]
-    },
-    {
-      "opname" : "cross",
-      "opcode" : 104,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "p0" },
-        { "kind" : "IdRef", "name" : "p1" }
-      ]
-    },
-    {
-      "opname" : "distance",
-      "opcode" : 105,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "p0" },
-        { "kind" : "IdRef", "name" : "p1" }
-      ]
-    },
-    {
-      "opname" : "length",
-      "opcode" : 106,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "p" }
-      ]
-    },
-    {
-      "opname" : "normalize",
-      "opcode" : 107,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "p" }
-      ]
-    },
-    {
-      "opname" : "fast_distance",
-      "opcode" : 108,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "p0" },
-        { "kind" : "IdRef", "name" : "p1" }
-      ]
-    },
-    {
-      "opname" : "fast_length",
-      "opcode" : 109,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "p" }
-      ]
-    },
-    {
-      "opname" : "fast_normalize",
-      "opcode" : 110,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "p" }
-      ]
-    },
-    {
-      "opname" : "bitselect",
-      "opcode" : 186,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "a" },
-        { "kind" : "IdRef", "name" : "b" },
-        { "kind" : "IdRef", "name" : "c" }
-      ]
-    },
-    {
-      "opname" : "select",
-      "opcode" : 187,
-      "operands" : [
-        { "kind" : "IdRef", "name" : "a" },
-        { "kind" : "IdRef", "name" : "b" },
-        { "kind" : "IdRef", "name" : "c" }
-      ]
-    },
-    {
       "opname" : "vloadn",
       "opcode" : 171,
       "operands" : [
@@ -1257,6 +1207,56 @@
       "operands" : [
         { "kind" : "IdRef", "name" : "ptr" },
         { "kind" : "IdRef", "name" : "num elements" }
+      ]
+    },
+    {
+      "opname" : "bitselect",
+      "opcode" : 186,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "a" },
+        { "kind" : "IdRef", "name" : "b" },
+        { "kind" : "IdRef", "name" : "c" }
+      ]
+    },
+    {
+      "opname" : "select",
+      "opcode" : 187,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "a" },
+        { "kind" : "IdRef", "name" : "b" },
+        { "kind" : "IdRef", "name" : "c" }
+      ]
+    },
+    {
+      "opname" : "u_abs",
+      "opcode" : 201,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "x" }
+      ]
+    },
+    {
+      "opname" : "u_abs_diff",
+      "opcode" : 202,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "x" },
+        { "kind" : "IdRef", "name" : "y" }
+      ]
+    },
+    {
+      "opname" : "u_mul_hi",
+      "opcode" : 203,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "x" },
+        { "kind" : "IdRef", "name" : "y" }
+      ]
+    },
+    {
+      "opname" : "u_mad_hi",
+      "opcode" : 204,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "a" },
+        { "kind" : "IdRef", "name" : "b" },
+        { "kind" : "IdRef", "name" : "c" }
       ]
     }
   ]

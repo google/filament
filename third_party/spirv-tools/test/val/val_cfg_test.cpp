@@ -2600,20 +2600,20 @@ TEST_F(ValidateCFG, VarPtrShaderWithPhiPtr) {
                OpExecutionMode %1 LocalSize 1 1 1
                OpSource HLSL 600
        %bool = OpTypeBool
-%_ptr_Function_bool = OpTypePointer Function %bool
+%_ptr_Workgroup_bool = OpTypePointer Workgroup %bool
+          %7 = OpVariable %_ptr_Workgroup_bool Workgroup
+          %8 = OpVariable %_ptr_Workgroup_bool Workgroup
        %void = OpTypeVoid
           %5 = OpTypeFunction %void
           %1 = OpFunction %void None %5
           %6 = OpLabel
-          %7 = OpVariable %_ptr_Function_bool Function
-          %8 = OpVariable %_ptr_Function_bool Function
           %9 = OpUndef %bool
                OpSelectionMerge %10 None
                OpBranchConditional %9 %11 %10
          %11 = OpLabel
                OpBranch %10
          %10 = OpLabel
-         %12 = OpPhi %_ptr_Function_bool %7 %6 %8 %11
+         %12 = OpPhi %_ptr_Workgroup_bool %7 %6 %8 %11
                OpReturn
                OpFunctionEnd
 )";
@@ -2625,7 +2625,7 @@ TEST_F(ValidateCFG, VarPtrShaderWithPhiPtr) {
 TEST_F(ValidateCFG, VarPtrStgBufShaderWithPhiStgBufPtr) {
   const std::string text = R"(
                OpCapability Shader
-               OpCapability VariablePointersStorageBuffer
+               OpCapability VariablePointers
                OpExtension "SPV_KHR_variable_pointers"
                OpMemoryModel Logical GLSL450
                OpEntryPoint GLCompute %1 "main"

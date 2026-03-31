@@ -2775,6 +2775,39 @@ bool OpenGLDriver::isTextureFormatMipmappable(TextureFormat const format) {
     }
 }
 
+bool OpenGLDriver::isTextureFormatFilterable(TextureFormat format) {
+    auto const& gl = getBackendState();
+    switch (format) {
+        case TextureFormat::R8:
+        case TextureFormat::RG8:
+        case TextureFormat::RGB8:
+        case TextureFormat::RGB565:
+        case TextureFormat::RGBA4:
+        case TextureFormat::RGB5_A1:
+        case TextureFormat::RGBA8:
+        case TextureFormat::RGBA8_SNORM:
+        case TextureFormat::RGB10_A2:
+        case TextureFormat::SRGB8:
+        case TextureFormat::SRGB8_A8:
+        case TextureFormat::R11F_G11F_B10F:
+        case TextureFormat::RGB9_E5:
+            return true;
+        case TextureFormat::R16F:
+        case TextureFormat::RG16F:
+        case TextureFormat::RGB16F:
+        case TextureFormat::RGBA16F:
+            return gl.ext.OES_texture_half_float_linear;
+        case TextureFormat::R32F:
+        case TextureFormat::RG32F:
+        case TextureFormat::RGB32F:
+        case TextureFormat::RGBA32F:
+            return gl.ext.OES_texture_float_linear;
+        default:
+            return false;
+    }
+    return true;
+}
+
 bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat const format) {
     // Supported formats per http://docs.gl/es3/glRenderbufferStorage, note that desktop OpenGL may
     // support more formats, but it requires querying GL_INTERNALFORMAT_SUPPORTED which is not

@@ -48,7 +48,7 @@ void testCompSwap()
 
 void testStore()
 {
-  atomicStore(var, 10u, gl_ScopeDevice, gl_StorageSemanticsShared, gl_SemanticsRelaxed);
+  atomicStore(var, 10u, gl_ScopeDevice, 0, gl_SemanticsRelaxed);
 }
 
 void foo()
