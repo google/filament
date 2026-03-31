@@ -19,12 +19,14 @@
 #include <utils/compiler.h>
 #include <utils/Logger.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cstdarg>
 #include <cstddef>
+#include <limits>
 #include <memory>
 
 
@@ -107,7 +109,9 @@ CString& CString::replace(size_type const pos, size_type len, char const* str, s
 
     len = std::min(len, size() - pos);
 
-    const size_type newSize = size() - len + l;
+    const size_type remainder = size() - len;
+    FILAMENT_CHECK_POSTCONDITION(l <= std::numeric_limits<size_type>::max() - remainder);
+    const size_type newSize = remainder + l;
 
     // if the new string is not longer, we can do it in-place, which is much faster.
     if (newSize <= size()) {
