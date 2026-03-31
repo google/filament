@@ -59,14 +59,19 @@ UniformBuffer::UniformBuffer(UniformBuffer&& rhs) noexcept
 UniformBuffer& UniformBuffer::operator=(UniformBuffer&& rhs) noexcept {
     if (this != &rhs) {
         mSomethingDirty = rhs.mSomethingDirty;
+        if (mBuffer && !isLocalStorage()) {
+            free(mBuffer, mSize);
+        }
         if (UTILS_LIKELY(rhs.isLocalStorage())) {
             mBuffer = mStorage;
             mSize = rhs.mSize;
             memcpy(mBuffer, rhs.mBuffer, rhs.mSize);
         } else {
-            std::swap(mBuffer, rhs.mBuffer);
-            std::swap(mSize, rhs.mSize);
+            mBuffer = rhs.mBuffer;
+            mSize = rhs.mSize;
         }
+        rhs.mBuffer = nullptr;
+        rhs.mSize = 0;
     }
     return *this;
 }
