@@ -295,7 +295,7 @@ public:
     void ensureCapacity(size_t needed) {
         if (UTILS_UNLIKELY(needed > mCapacity)) {
             // not enough space, increase the capacity
-            const size_t capacity = (needed * 3 + 1) / 2;
+            const size_t capacity = (needed > SIZE_MAX / 3) ? needed : (needed * 3 + 1) / 2;
             setCapacity(capacity);
         }
     }
