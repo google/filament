@@ -30,8 +30,8 @@ using namespace filament;
 namespace {
 
 constexpr std::array<backend::Platform::DeviceInfoType, 3> VULKAN_INFO = {
-    backend::Platform::DeviceInfoType::VULKAN_DEVICE_NAME,
     backend::Platform::DeviceInfoType::VULKAN_DRIVER_NAME,
+    backend::Platform::DeviceInfoType::VULKAN_DEVICE_NAME,
     backend::Platform::DeviceInfoType::VULKAN_DRIVER_INFO,
 };
 

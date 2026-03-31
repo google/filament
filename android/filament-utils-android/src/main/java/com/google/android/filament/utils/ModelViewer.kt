@@ -390,36 +390,43 @@ class ModelViewer(
         view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: android.view.View) {}
             override fun onViewDetachedFromWindow(v: android.view.View) {
-                uiHelper.detach()
-
-                destroyModel()
-                assetLoader.destroy()
-                materialProvider.destroyMaterials()
-                materialProvider.destroy()
-                resourceLoader.destroy()
-
-                if (indirectLightCubemap != null) {
-                    engine.destroyTexture(indirectLightCubemap!!)
-                    indirectLightCubemap = null
-                }
-
-                if (skyboxCubemap != null) {
-                    engine.destroyTexture(skyboxCubemap!!)
-                    skyboxCubemap = null
-                }
-
-                engine.destroyEntity(light)
-                engine.destroyRenderer(renderer)
-                engine.destroyView(this@ModelViewer.view)
-                engine.destroyScene(scene)
-                engine.destroyCameraComponent(camera.entity)
-                EntityManager.get().destroy(camera.entity)
-
-                EntityManager.get().destroy(light)
-
-                engine.destroy()
+                destroy()
             }
         })
+    }
+
+    /**
+     * Explicitly destroys the ModelViewer and its underlying Filament engine and resources.
+     */
+    fun destroy() {
+        uiHelper.detach()
+
+        destroyModel()
+        assetLoader.destroy()
+        materialProvider.destroyMaterials()
+        materialProvider.destroy()
+        resourceLoader.destroy()
+
+        if (indirectLightCubemap != null) {
+            engine.destroyTexture(indirectLightCubemap!!)
+            indirectLightCubemap = null
+        }
+
+        if (skyboxCubemap != null) {
+            engine.destroyTexture(skyboxCubemap!!)
+            skyboxCubemap = null
+        }
+
+        engine.destroyEntity(light)
+        engine.destroyRenderer(renderer)
+        engine.destroyView(this@ModelViewer.view)
+        engine.destroyScene(scene)
+        engine.destroyCameraComponent(camera.entity)
+        EntityManager.get().destroy(camera.entity)
+
+        EntityManager.get().destroy(light)
+
+        engine.destroy()
     }
 
     /**
