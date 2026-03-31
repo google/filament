@@ -186,16 +186,20 @@ void Systrace::init(uint32_t tag) noexcept {
         len = snprintf(buf, sizeof(buf), format_begin "%.*s" format_end, pid,   \
             name_len, name, value);                                             \
     }                                                                           \
-    write(fd, buf, len);                                                        \
+    if (len >= 0) {                                                             \
+        write(fd, buf, len);                                                    \
+    }                                                                           \
 }
 
 void Systrace::begin_body(int fd, int pid, const char* name) noexcept {
     char buf[ATRACE_MESSAGE_LENGTH];
     ssize_t len = snprintf(buf, sizeof(buf), "B|%d|%s", pid, name);
-    if (len >= sizeof(buf)) {
-        len = sizeof(buf) - 1;
+    if (len >= 0) {
+        if (len >= sizeof(buf)) {
+            len = sizeof(buf) - 1;
+        }
+        write(fd, buf, size_t(len));
     }
-    write(fd, buf, size_t(len));
 }
 
 void Systrace::end_body(int fd, int pid) noexcept {
