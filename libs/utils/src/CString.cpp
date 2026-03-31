@@ -61,24 +61,26 @@ void CString::do_tracking(bool ctor) {
 UTILS_NOINLINE
 CString::CString(const char* cstr, size_t const length) {
     track(true);
-    if (length && cstr) {
-        Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + length + 1));
-        p->length = size_type(length);
+    size_t const len = std::min(length, (size_t)std::numeric_limits<size_type>::max());
+    if (len && cstr) {
+        Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + len + 1));
+        p->length = size_type(len);
         mCStr = reinterpret_cast<value_type*>(p + 1);
         // we don't use memcpy here to avoid a call to libc, the generated code is pretty good.
-        std::uninitialized_copy_n(cstr, length, mCStr);
-        mCStr[length] = '\0';
+        std::uninitialized_copy_n(cstr, len, mCStr);
+        mCStr[len] = '\0';
     }
 }
 
 CString::CString(size_t const length) {
     track(true);
-    if (length) {
-        Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + length + 1));
-        p->length = size_type(length);
+    size_t const len = std::min(length, (size_t)std::numeric_limits<size_type>::max());
+    if (len) {
+        Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + len + 1));
+        p->length = size_type(len);
         mCStr = reinterpret_cast<value_type*>(p + 1);
-        std::fill_n(mCStr, length, 0);
-        mCStr[length] = '\0';
+        std::fill_n(mCStr, len, 0);
+        mCStr[len] = '\0';
     }
 }
 
