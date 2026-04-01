@@ -250,7 +250,9 @@ void ShaderGenerator::generateVertexDomainDefines(io::sstream& out, VertexDomain
 }
 
 void ShaderGenerator::generatePostProcessMaterialVariantDefines(io::sstream& out,
-        PostProcessVariant const variant) noexcept {
+        ShaderStage const, MaterialBuilder::FeatureLevel const featureLevel,
+        MaterialInfo const&, PostProcessVariant const variant) noexcept {
+    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
     switch (variant) {
         case PostProcessVariant::OPAQUE:
             CodeGenerator::generateDefine(out, "POST_PROCESS_OPAQUE", 1u);
@@ -737,7 +739,8 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
     }
 
     CodeGenerator::generatePostProcessInputs(vs, ShaderStage::VERTEX);
-    generatePostProcessMaterialVariantDefines(vs, PostProcessVariant(variantKey));
+    generatePostProcessMaterialVariantDefines(vs, ShaderStage::VERTEX,
+            featureLevel, material, PostProcessVariant(variantKey));
 
     cg.generateUniforms(vs, ShaderStage::VERTEX,
             DescriptorSetBindingPoints::PER_VIEW,
@@ -765,14 +768,16 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
 std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const sm,
         MaterialBuilder::TargetApi const targetApi, MaterialBuilder::TargetLanguage const targetLanguage,
         MaterialBuilder::FeatureLevel const featureLevel,
-        MaterialInfo const& material, uint8_t variant, uint32_t apiLevel) const noexcept {
+        MaterialInfo const& material, filament::Variant::type_t variantKey,
+        uint32_t apiLevel) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage, featureLevel);
     io::sstream fs;
     cg.generateCommonProlog(fs, ShaderStage::FRAGMENT, material, {}, apiLevel);
 
     generateUserSpecConstants(cg, fs, mConstants);
 
-    generatePostProcessMaterialVariantDefines(fs, PostProcessVariant(variant));
+    generatePostProcessMaterialVariantDefines(fs, ShaderStage::FRAGMENT,
+            featureLevel, material, PostProcessVariant(variantKey));
 
     // custom material variables
     size_t variableIndex = 0;
