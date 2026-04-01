@@ -1030,8 +1030,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         return "unknown";
                     };
                     char filename[256];
-                    snprintf(filename, sizeof(filename), "%s_0x%02x.%s", mMaterialName.c_str_safe(),
-                            variantKey, getExtension(v.stage));
+                    snprintf(filename, sizeof(filename), "%s_0x%02x_fl%d.%s",
+                            mMaterialName.c_str_safe(), variantKey, (int) featureLevel,
+                            getExtension(v.stage));
                     printf("Writing variant 0x%02x to %s\n", variantKey, filename);
                     std::ofstream file(filename);
                     if (file.is_open()) {
