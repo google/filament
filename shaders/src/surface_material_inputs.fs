@@ -105,6 +105,10 @@ struct MaterialInputs {
     float shadowStrength;
 #endif
 
+#if defined(FRAG_OUTPUT0)
+    FRAG_OUTPUT_MATERIAL_TYPE0 FRAG_OUTPUT0;
+#endif
+
 };
 
 void initMaterial(out MaterialInputs material) {
@@ -207,6 +211,10 @@ void initMaterial(out MaterialInputs material) {
 
 #if defined(MATERIAL_HAS_SHADOW_STRENGTH)
     material.shadowStrength = 0.0;
+#endif
+
+#if defined(FRAG_OUTPUT0)
+    material.FRAG_OUTPUT0 = FRAG_OUTPUT_MATERIAL_TYPE0(0.0);
 #endif
 }
 
