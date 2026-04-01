@@ -822,6 +822,17 @@ bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
     return WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(webGpuFormat);
 }
 
+bool WebGPUDriver::isTextureFormatFilterable(TextureFormat format) {
+    if (isFp32ColorFormat(format)) {
+        return mDevice.HasFeature(wgpu::FeatureName::Float32Filterable);
+    }
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+        isDepthFormat(format) || isStencilFormat(format)) {
+        return false;
+    }
+    return true;
+}
+
 bool WebGPUDriver::isRenderTargetFormatSupported(const TextureFormat format) {
     //todo
     return true;

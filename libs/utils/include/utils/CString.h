@@ -66,11 +66,15 @@ public:
 
     // Allocates memory and appends a null. This constructor can be used to hold arbitrary data
     // inside the string (i.e. it can contain nulls or non-ASCII encodings).
+    // Note: If length exceeds the 32-bit maximum capacity of CString, it will be safely
+    // truncated to std::numeric_limits<size_type>::max().
     CString(const char* cstr, size_t length);
 
     // Allocates memory for a string of size length plus space for the null terminating character.
     // Also initializes the memory to 0. This constructor can be used to hold arbitrary data
     // inside the string.
+    // Note: If length exceeds the 32-bit maximum capacity of CString, it will be safely
+    // truncated to std::numeric_limits<size_type>::max().
     explicit CString(size_t length);
 
     // Conversion from std::string_view

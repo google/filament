@@ -206,7 +206,10 @@ void updateDataAt(DriverApi& driver,
     size_t const elementSize = sizeof(float2);
     size_t const size = getSkinningBufferSize(count);
     auto* out = (float2*)malloc(size);
-    memcpy(out, pairs.begin(), size);
+    memcpy(out, pairs.begin(), count * elementSize);
+    if (size > count * elementSize) {
+        memset(out + count, 0, size - count * elementSize);
+    }
 
     size_t const textureWidth = getSkinningBufferWidth(count);
     size_t const lineCount = count / textureWidth;

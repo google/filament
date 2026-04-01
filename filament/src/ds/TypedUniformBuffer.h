@@ -88,12 +88,6 @@ public:
         return mTypedBuffer.toBufferDescriptor(driver);
     }
 
-    // copy the UBO data and cleans the dirty bits
-    backend::BufferDescriptor toBufferDescriptor(
-            backend::DriverApi& driver, size_t offset, size_t size) const noexcept {
-        return mTypedBuffer.toBufferDescriptor(driver, offset, size);
-    }
-
 private:
     TypedBuffer<T,N> mTypedBuffer;
     backend::BufferObjectHandle mUboHandle;

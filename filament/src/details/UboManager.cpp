@@ -163,13 +163,20 @@ void UboManager::finishBeginFrame(DriverApi& driver) {
 
 void UboManager::endFrame(DriverApi& driver) {
     auto allocationIds =
-            FenceManager::AllocationIdContainer::with_capacity(mManagedInstances.size());
+            FenceManager::AllocationIdContainer::with_capacity(
+                    mManagedInstances.size() + mFreedAllocations.size());
     for (const auto* mi: mManagedInstances) {
         const AllocationId id = mi->getAllocationId();
         if (UTILS_UNLIKELY(!BufferAllocator::isValid(id))) {
             continue;
         }
 
+        mAllocator.acquireGpu(id);
+        allocationIds.push_back(id);
+    }
+
+    // Also track MIs that were freed during this frame.
+    for (const AllocationId id: mFreedAllocations) {
         mAllocator.acquireGpu(id);
         allocationIds.push_back(id);
     }

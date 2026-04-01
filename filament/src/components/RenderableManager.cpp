@@ -55,6 +55,7 @@
 #include <math/vec4.h>
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -476,6 +477,9 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
     FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT)
             << "bone count > " << CONFIG_MAX_BONE_COUNT;
+
+    FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBufferOffset <= std::numeric_limits<uint16_t>::max())
+            << "skinning buffer offset > " << std::numeric_limits<uint16_t>::max();
 
     FILAMENT_CHECK_PRECONDITION(
             mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES || !mImpl->mInstanceBuffer)
@@ -928,6 +932,9 @@ void FRenderableManager::setBones(Instance const ci,
         FILAMENT_CHECK_PRECONDITION(!bones.skinningBufferMode)
                 << "Disable skinning buffer mode to use this API";
 
+        FILAMENT_CHECK_PRECONDITION(offset <= bones.count)
+                << "bone offset is out of bounds (" << offset << " > " << bones.count << ")";
+
         assert_invariant(bones.handle && offset + boneCount <= bones.count);
         if (bones.handle) {
             boneCount = std::min(boneCount, bones.count - offset);
@@ -943,6 +950,9 @@ void FRenderableManager::setBones(Instance const ci,
 
         FILAMENT_CHECK_PRECONDITION(!bones.skinningBufferMode)
                 << "Disable skinning buffer mode to use this API";
+
+        FILAMENT_CHECK_PRECONDITION(offset <= bones.count)
+                << "bone offset is out of bounds (" << offset << " > " << bones.count << ")";
 
         assert_invariant(bones.handle && offset + boneCount <= bones.count);
         if (bones.handle) {

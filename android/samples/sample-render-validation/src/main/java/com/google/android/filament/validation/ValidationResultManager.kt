@@ -28,12 +28,12 @@ import org.json.JSONObject
 data class ValidationResult(
     val testName: String,
     val passed: Boolean,
-    val diffMetric: Float = 0f
+    val diffMetric: Float = 0f,
+    val goldenPath: String? = null
 )
 
 class ValidationResultManager(
     private val outputDir: File,
-    private val gpuDriverInfo: String,
     private val deviceName: String,
     private val deviceCodeName: String,
     private val androidVersion: String,
@@ -45,11 +45,16 @@ class ValidationResultManager(
     }
 
     private val results = mutableListOf<ValidationResult>()
+    private val gpuDriverInfos = JSONObject()
 
     init {
         if (!outputDir.exists()) {
             outputDir.mkdirs()
         }
+    }
+
+    fun addGpuDriverInfo(backend: String, info: String) {
+        gpuDriverInfos.put(backend, info)
     }
 
     fun addResult(result: ValidationResult) {
@@ -235,7 +240,7 @@ class ValidationResultManager(
 
                 // Backends (optional override)
                  val testBackends = JSONArray()
-                 test.backends.forEach { testBackends.put(it) }
+                 testBackends.put(test.backend)
                  testJson.put("backends", testBackends)
 
                 testsArray.put(testJson)
@@ -277,7 +282,7 @@ class ValidationResultManager(
         val rootObject = JSONObject()
 
         val metadataObject = JSONObject()
-        metadataObject.put("gpu_driver_info", gpuDriverInfo ?: "")
+        metadataObject.put("gpu_driver_info", gpuDriverInfos)
         metadataObject.put("total_time_ms", totalTimeMs)
         metadataObject.put("device_name", deviceName ?: "")
         metadataObject.put("device_code_name", deviceCodeName ?: "")

@@ -845,8 +845,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     half4* UTILS_RESTRICT src = (half4*) data +
                             b * config.lutDimension * config.lutDimension;
                     // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to
-                    // write eight 32-bits results in one go.
-                    const size_t count = (config.lutDimension * config.lutDimension) & ~0x7u; // tell the compiler that we're a multiple of 8
+                    // write eight 32-bits results in one go. The compiler will automatically generate
+                    // a scalar epilogue loop for any remainder elements.
+                    const size_t count = config.lutDimension * config.lutDimension;
 #if defined(__clang__)
 #pragma clang loop vectorize_width(8)
 #endif

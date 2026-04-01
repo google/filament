@@ -59,22 +59,23 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
     private lateinit var surfaceView: SurfaceView
     private lateinit var choreographer: Choreographer
-    private lateinit var modelViewer: ModelViewer
     private lateinit var statusTextView: TextView
     private lateinit var testResultsHeader: TextView
+    private lateinit var testProgress: android.widget.ProgressBar
     private lateinit var resultsContainer: LinearLayout
     private lateinit var inputManager: ValidationInputManager
     private var currentInput: ValidationInputManager.ValidationInput? = null
 
     private var currentAlphaDiffBitmap: Bitmap? = null
     private var globalEnhancementFactor: Float = 1.0f
+    private var modelViewer: ModelViewer? = null
 
     private data class TestImages(
         val testName: String,
-        val golden: Bitmap?,
-        val rendered: Bitmap?,
-        val diff: Bitmap?,
-        val alphaDiff: Bitmap?
+        val golden: File?,
+        val rendered: File?,
+        val diff: File?,
+        val alphaDiff: File?
     )
 
     private val diffImageViews = mutableListOf<ImageView>()
@@ -84,6 +85,8 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private lateinit var loadButton: Button
     private lateinit var optionsButton: Button
     private lateinit var enhancementContainer: LinearLayout
+    private lateinit var backendFilterContainer: LinearLayout
+    private lateinit var backendRadioGroup: android.widget.RadioGroup
     private lateinit var enhancementLabel: TextView
     private lateinit var enhancementSlider: android.widget.SeekBar
 
@@ -94,7 +97,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private val frameScheduler = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             choreographer.postFrameCallback(this)
-            modelViewer.render(frameTimeNanos)
+            modelViewer?.render(frameTimeNanos)
             validationRunner?.onFrame(frameTimeNanos)
         }
     }
@@ -109,12 +112,15 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
         statusTextView = findViewById(R.id.status_text)
         testResultsHeader = findViewById(R.id.test_results_header)
+        testProgress = findViewById(R.id.test_progress)
         resultsContainer = findViewById(R.id.results_container)
 
         runButton = findViewById(R.id.run_button)
         loadButton = findViewById(R.id.load_button)
         optionsButton = findViewById(R.id.options_button)
         enhancementContainer = findViewById(R.id.enhancement_container)
+        backendFilterContainer = findViewById(R.id.backend_filter_container)
+        backendRadioGroup = findViewById(R.id.backend_radio_group)
         enhancementLabel = findViewById(R.id.enhancement_label)
         enhancementSlider = findViewById(R.id.enhancement_slider)
 
@@ -150,6 +156,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             popup.menu.add(0, 4, 0, "Test ADB Info")
             popup.menu.add(0, 5, 0, "Result ADB Info")
             popup.menu.add(0, 6, 0, "Toggle Enhancement Slider")
+            popup.menu.add(0, 7, 0, "Toggle Backend Filter")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -166,6 +173,9 @@ class MainActivity : Activity(), ValidationRunner.Callback {
                     6 -> {
                         enhancementContainer.visibility = if (enhancementContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
                     }
+                    7 -> {
+                        backendFilterContainer.visibility = if (backendFilterContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                    }
                 }
                 true
             }
@@ -175,11 +185,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         choreographer = Choreographer.getInstance()
-        modelViewer = ModelViewer(surfaceView=surfaceView, manipulator=null)
         inputManager = ValidationInputManager(this)
-
-        // Initialize IBL
-        createIndirectLight()
 
         handleIntent()
     }
@@ -315,29 +321,31 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
     private fun createIndirectLight() {
         try {
-            val engine = modelViewer.engine
-            val scene = modelViewer.scene
-            val iblName = "default_env"
+            modelViewer?.let { mv ->
+                val engine = mv.engine
+                val scene = mv.scene
+                val iblName = "default_env"
 
-            fun readAsset(path: String): ByteBuffer {
-                val input = assets.open(path)
-                val bytes = input.readBytes()
-                return ByteBuffer.wrap(bytes)
-            }
+                fun readAsset(path: String): ByteBuffer {
+                    val input = assets.open(path)
+                    val bytes = input.readBytes()
+                    return ByteBuffer.wrap(bytes)
+                }
 
-            readAsset("envs/$iblName/${iblName}_ibl.ktx").let {
-                val bundle = KTX1Loader.createIndirectLight(engine, it)
-                scene.indirectLight = bundle.indirectLight
-                modelViewer.indirectLightCubemap = bundle.cubemap
-                scene.indirectLight!!.intensity = 30_000.0f
-            }
+                readAsset("envs/$iblName/${iblName}_ibl.ktx").let {
+                    val bundle = KTX1Loader.createIndirectLight(engine, it)
+                    scene.indirectLight = bundle.indirectLight
+                    mv.indirectLightCubemap = bundle.cubemap
+                    scene.indirectLight!!.intensity = 30_000.0f
+                }
 
-            readAsset("envs/$iblName/${iblName}_skybox.ktx").let {
-                val bundle = KTX1Loader.createSkybox(engine, it)
-                scene.skybox = bundle.skybox
-                modelViewer.skyboxCubemap = bundle.cubemap
+                readAsset("envs/$iblName/${iblName}_skybox.ktx").let {
+                    val bundle = KTX1Loader.createSkybox(engine, it)
+                    scene.skybox = bundle.skybox
+                    mv.skyboxCubemap = bundle.cubemap
+                }
+                Log.i(TAG, "IBL loaded successfully")
             }
-            Log.i(TAG, "IBL loaded successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load IBL", e)
             statusTextView.text = "Warning: Failed to load IBL"
@@ -369,10 +377,8 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     }
 
     private fun createResultManager(outputDir: File): ValidationResultManager {
-        val gpuDriverInfo = com.google.android.filament.utils.DeviceUtils.getGpuDriverInfo(modelViewer.engine)
         return ValidationResultManager(
             outputDir = outputDir,
-            gpuDriverInfo = gpuDriverInfo,
             deviceName = android.os.Build.MODEL,
             deviceCodeName = android.os.Build.DEVICE,
             androidVersion = android.os.Build.VERSION.RELEASE,
@@ -389,10 +395,24 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             Log.i(TAG, "Output dir: ${input.outputDir.absolutePath}")
 
             testResultsHeader.text = "${input.config.name}"
+            testProgress.visibility = View.VISIBLE
+            testProgress.progress = 0
 
             resultManager = createResultManager(input.outputDir)
 
-            validationRunner = ValidationRunner(this, modelViewer, input.config, resultManager!!)
+            val backendFilter = when (backendRadioGroup.checkedRadioButtonId) {
+                R.id.radio_gles -> "gles"
+                R.id.radio_vulkan -> "vulkan"
+                else -> "both"
+            }
+
+            // If we are starting another run, we need to clean up the previous runner's
+            // resources before we can proceed.
+            validationRunner?.let {
+                it.cleanup()
+            }
+
+            validationRunner = ValidationRunner(this, surfaceView, input.config, resultManager!!, backendFilter)
             validationRunner?.callback = this
             validationRunner?.generateGoldens = input.generateGoldens
             validationRunner?.start()
@@ -400,6 +420,14 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start validation", e)
             statusTextView.text = "Error: ${e.message}"
+        }
+    }
+
+    override fun onModelViewerRecreated(modelViewer: ModelViewer?) {
+        runOnUiThread {
+            this.modelViewer = modelViewer
+            // Re-apply IBL to the new engine/scene
+            createIndirectLight()
         }
     }
 
@@ -468,12 +496,18 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             val imagesRow = LinearLayout(this)
             imagesRow.orientation = LinearLayout.HORIZONTAL
 
+            val outDir = resultManager!!.getOutputDir()
+            val renderedFile = File(outDir, "${result.testName}.png")
+            val diffFile = File(outDir, "${result.testName}_diff.png")
+            val alphaDiffFile = File(outDir, "${result.testName}_alpha_diff.png")
+            val goldenFile = result.goldenPath?.let { File(it) }
+
             val testImages = TestImages(
                 testName = result.testName,
-                golden = currentGoldenBitmap,
-                rendered = currentRenderedBitmap,
-                diff = currentDiffBitmap,
-                alphaDiff = currentAlphaDiffBitmap
+                golden = goldenFile?.takeIf { currentGoldenBitmap != null },
+                rendered = renderedFile.takeIf { currentRenderedBitmap != null },
+                diff = diffFile.takeIf { currentDiffBitmap != null },
+                alphaDiff = alphaDiffFile.takeIf { currentAlphaDiffBitmap != null }
             )
 
             fun addImage(label: String, bitmap: Bitmap?, isDiff: Boolean) {
@@ -528,8 +562,16 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         }
     }
 
+    override fun onTestProgress(current: Int, total: Int) {
+        runOnUiThread {
+            testProgress.max = total
+            testProgress.progress = current
+        }
+    }
+
     override fun onAllTestsFinished() {
         runOnUiThread {
+            testProgress.visibility = View.GONE
             statusTextView.text = "All tests finished!"
             enhancementSlider.isEnabled = true
             Log.i(TAG, "All tests finished " + if (currentInput?.autoExport == true) "Exporting bundle" else "x")
@@ -582,20 +624,24 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     }
 
     override fun onImageResult(type: String, bitmap: Bitmap) {
+        // Create a scaled-down thumbnail (e.g. 128x128) to save memory in the UI scroll view.
+        // We use true for filter to smooth the scaling.
+        val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 128, 128, true)
+
         runOnUiThread {
             // Update the "live" views
             when (type) {
                 "Rendered" -> {
-                    currentRenderedBitmap = bitmap
+                    currentRenderedBitmap = scaledBitmap
                 }
                 "Golden" -> {
-                    currentGoldenBitmap = bitmap
+                    currentGoldenBitmap = scaledBitmap
                 }
                 "Diff" -> {
-                    currentDiffBitmap = bitmap
+                    currentDiffBitmap = scaledBitmap
                 }
                 "Alpha Diff" -> {
-                    currentAlphaDiffBitmap = bitmap
+                    currentAlphaDiffBitmap = scaledBitmap
                 }
             }
         }
@@ -633,16 +679,22 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
         titleView.text = images.testName
 
-        val availableImages = mutableListOf<Pair<String, Bitmap>>()
-        images.rendered?.let { availableImages.add(Pair("Rendered", it)) }
-        images.golden?.let { availableImages.add(Pair("Golden", it)) }
-        images.diff?.let { availableImages.add(Pair("Diff", it)) }
-        images.alphaDiff?.let { availableImages.add(Pair("Alpha Diff", it)) }
+        val availableFiles = mutableListOf<Pair<String, File>>()
+        images.rendered?.takeIf { it.exists() }?.let { availableFiles.add(Pair("Rendered", it)) }
+        images.golden?.takeIf { it.exists() }?.let { availableFiles.add(Pair("Golden", it)) }
+        images.diff?.takeIf { it.exists() }?.let { availableFiles.add(Pair("Diff", it)) }
+        images.alphaDiff?.takeIf { it.exists() }?.let { availableFiles.add(Pair("Alpha Diff", it)) }
 
-        if (availableImages.isEmpty()) return
+        if (availableFiles.isEmpty()) return
 
-        var currentIndex = availableImages.indexOfFirst { it.first == initialLabel }
+        var currentIndex = availableFiles.indexOfFirst { it.first == initialLabel }
         if (currentIndex == -1) currentIndex = 0
+
+        var currentDialogBitmap: Bitmap? = null
+        dialog.setOnDismissListener {
+            currentDialogBitmap?.recycle()
+            currentDialogBitmap = null
+        }
 
         var currentDialogEnhancement = globalEnhancementFactor
 
@@ -686,9 +738,13 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         }
 
         fun updateView() {
-            val (label, bitmap) = availableImages[currentIndex]
+            val (label, file) = availableFiles[currentIndex]
             typeView.text = label
-            imageView.setImageBitmap(bitmap)
+
+            currentDialogBitmap?.recycle()
+            currentDialogBitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
+
+            imageView.setImageBitmap(currentDialogBitmap)
             (imageView.drawable as? android.graphics.drawable.BitmapDrawable)?.setAntiAlias(false)
             (imageView.drawable as? android.graphics.drawable.BitmapDrawable)?.setFilterBitmap(false)
             imageView.imageMatrix = matrix
@@ -706,8 +762,11 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             val drawable = imageView.drawable ?: return
             val width = imageView.width.toFloat()
             val height = imageView.height.toFloat()
+            if (width <= 0f || height <= 0f) return
+
             val dw = drawable.intrinsicWidth.toFloat()
             val dh = drawable.intrinsicHeight.toFloat()
+            if (dw <= 0f || dh <= 0f) return
 
             val scaleX = width / dw
             val scaleY = height / dh
@@ -722,14 +781,20 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             imageView.imageMatrix = matrix
         }
 
+        imageView.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
+                resetMatrix()
+            }
+        }
+
         btnClose.setOnClickListener { dialog.dismiss() }
         btnReset.setOnClickListener { resetMatrix() }
         btnPrev.setOnClickListener {
-            currentIndex = (currentIndex - 1 + availableImages.size) % availableImages.size
+            currentIndex = (currentIndex - 1 + availableFiles.size) % availableFiles.size
             updateView()
         }
         btnNext.setOnClickListener {
-            currentIndex = (currentIndex + 1) % availableImages.size
+            currentIndex = (currentIndex + 1) % availableFiles.size
             updateView()
         }
 
@@ -747,10 +812,6 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
         })
-
-        imageView.post {
-            resetMatrix()
-        }
 
         updateView()
         dialog.show()

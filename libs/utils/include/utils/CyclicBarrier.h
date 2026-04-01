@@ -77,6 +77,7 @@ private:
     State m_state = State::TRAP;
     size_t m_trapped_threads = 0;
     size_t m_released_threads = 0;
+    size_t m_generation = 0;
 };
 
 } // namespace utils

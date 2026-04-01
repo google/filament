@@ -541,7 +541,7 @@ class TPanicStream : public PanicStream {
 public:
     using PanicStream::PanicStream;
     ~TPanicStream() noexcept(false) UTILS_NORETURN {
-        T::panic(mFunction, mFile, mLine, mLiteral, mStream.c_str());
+        T::panic(mFunction, mFile, mLine, mLiteral, "%s", mStream.c_str());
     }
 };
 
@@ -554,7 +554,7 @@ public:
           mEnablePanic(enable) {}
     ~FlagGuardedStream() noexcept(false) {
         if (mEnablePanic) {
-            PanicType::panic(mFunction, mFile, mLine, mLiteral, mStream.c_str());
+            PanicType::panic(mFunction, mFile, mLine, mLiteral, "%s", mStream.c_str());
         } else {
             logWarning();
         }

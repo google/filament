@@ -183,9 +183,16 @@ void GLDescriptorSet::update(OpenGLState& gl, HandleAllocatorGL& handleAllocator
                 params.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
                 params.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
             }
+
             // GLES3.x specification forbids depth textures to be filtered.
-            if (t && isDepthFormat(t->format)
-                    && params.compareMode == SamplerCompareMode::NONE) {
+            bool const depthTextureNoPcf = isDepthFormat(t->format) &&
+                    params.compareMode == SamplerCompareMode::NONE;
+
+            // GLES3.x may not support filtering of fp32 textures
+            bool const fp32TextureNotFilterable = isFp32ColorFormat(t->format) &&
+                    !gl.context().ext.OES_texture_float_linear;
+
+            if (t && (depthTextureNoPcf || fp32TextureNotFilterable)) {
                 params.filterMag = SamplerMagFilter::NEAREST;
                 switch (params.filterMin) {
                     case SamplerMinFilter::LINEAR:

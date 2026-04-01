@@ -208,6 +208,8 @@ public:
         bool OES_packed_depth_stencil;
         bool OES_rgb8_rgba8;
         bool OES_standard_derivatives;
+        bool OES_texture_float_linear;
+        bool OES_texture_half_float_linear;
         bool OES_texture_npot;
         bool OES_vertex_array_object;
         bool OVR_multiview2;
