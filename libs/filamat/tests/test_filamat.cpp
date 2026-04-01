@@ -923,7 +923,7 @@ TEST_F(MaterialCompiler, FeatureLevel0Sampler2D) {
   std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
-            material.baseColor = texture2D(materialParams_sampler, vec2(0.0, 0.0));
+            material.baseColor = texture(materialParams_sampler, vec2(0.0, 0.0));
         }
     )");
   filamat::MaterialBuilder builder;
@@ -941,7 +941,7 @@ TEST_F(MaterialCompiler, SamplerTransformName) {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             vec3 uvw = materialParams.sampler_transform * vec3(0.0, 0.0, 0.0);
-            material.baseColor = texture2D(materialParams_sampler, uvw.xy);
+            material.baseColor = texture(materialParams_sampler, uvw.xy);
         }
     )");
   filamat::MaterialBuilder builder;
@@ -960,7 +960,7 @@ TEST_F(MaterialCompiler, SamplerMissingTransformName) {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             vec3 uvw = materialParams.sampler_transform * vec3(0.0, 0.0, 0.0);
-            material.baseColor = texture2D(materialParams_sampler, uvw.xy);
+            material.baseColor = texture(materialParams_sampler, uvw.xy);
         }
     )");
   filamat::MaterialBuilder builder;
