@@ -56,7 +56,7 @@ public:
     using ProgramCache =
             utils::RefCountedMap<ProgramSpecialization, backend::Handle<backend::HwProgram>>;
 
-    MaterialCache();
+    MaterialCache(uint32_t materialCapacity = 0, uint32_t programCapacity = 0);
     ~MaterialCache();
 
     // All reference-counted resources should be freed by the time MaterialCache is destructed, but

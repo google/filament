@@ -441,6 +441,24 @@ public:
          * invoking asynchronous methods.
          */
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
+
+        /**
+         * Capacity of the LRU cache for material definitions.
+         *
+         * A value of 0 indicates that definitions will be destroyed immediately when they are no
+         * longer referenced by any material instances or scenes. A value greater than 0 defines
+         * the maximum number of unreferenced definitions to keep alive to avoid re-compilation.
+         */
+        uint32_t materialCacheCapacity = 0;
+
+        /**
+         * Capacity of the LRU cache for program specializations.
+         *
+         * Similar to materialCacheCapacity, but applies to the underlying shader programs generated
+         * for materials. A value of 0 means immediate destruction of unreferenced programs. A
+         * positive value caches up to that number of programs.
+         */
+        uint32_t programCacheCapacity = 0;
     };
 
 
