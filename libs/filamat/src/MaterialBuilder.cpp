@@ -131,7 +131,7 @@ void MaterialBuilderBase::prepare(bool const vulkanSemantics,
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
     TargetLanguage glTargetLanguage = mOptimization > Optimization::PREPROCESSOR ?
                                       TargetLanguage::SPIRV : TargetLanguage::GLSL;
-    if (vulkanSemantics) {
+    if (vulkanSemantics || featureLevel == backend::FeatureLevel::FEATURE_LEVEL_0) {
         // Currently GLSLPostProcessor.cpp is incapable of compiling SPIRV to GLSL without
         // running the optimizer. For now we just activate the optimizer in that case.
         mOptimization = Optimization::PERFORMANCE;
@@ -1319,8 +1319,7 @@ error:
     CodeGenParams const semanticCodeGenParams = {
             .shaderModel = ShaderModel::MOBILE,
             .targetApi = TargetApi::OPENGL,
-            .targetLanguage = (info.featureLevel == FeatureLevel::FEATURE_LEVEL_0) ?
-                              TargetLanguage::GLSL : TargetLanguage::SPIRV,
+            .targetLanguage = TargetLanguage::SPIRV,
             .featureLevel = info.featureLevel,
     };
 
