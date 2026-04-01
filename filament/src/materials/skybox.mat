@@ -37,7 +37,7 @@ fragment {
             sky = materialParams.color;
         } else {
 #if MATERIAL_FEATURE_LEVEL == 0
-            sky = vec4(textureCube(materialParams_skybox, variable_eyeDirection.xyz).rgb, 1.0);
+            sky = vec4(texture(materialParams_skybox, variable_eyeDirection.xyz).rgb, 1.0);
 #else
             sky = vec4(textureLod(materialParams_skybox, variable_eyeDirection.xyz, 0.0).rgb, 1.0);
             sky.rgb *= frameUniforms.iblLuminance;

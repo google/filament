@@ -689,6 +689,8 @@ std::string ShaderGenerator::createSurfaceComputeProgram(ShaderModel const shade
 
     generateUserSpecConstants(cg, s, mConstants);
 
+    CodeGenerator::generateDefine(s, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
+
     CodeGenerator::generateSurfaceTypes(s, ShaderStage::COMPUTE);
 
     cg.generateUniforms(s, ShaderStage::COMPUTE,

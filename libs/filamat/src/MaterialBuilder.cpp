@@ -131,7 +131,7 @@ void MaterialBuilderBase::prepare(bool const vulkanSemantics,
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
     TargetLanguage glTargetLanguage = mOptimization > Optimization::PREPROCESSOR ?
                                       TargetLanguage::SPIRV : TargetLanguage::GLSL;
-    if (vulkanSemantics) {
+    if (vulkanSemantics || featureLevel == backend::FeatureLevel::FEATURE_LEVEL_0) {
         // Currently GLSLPostProcessor.cpp is incapable of compiling SPIRV to GLSL without
         // running the optimizer. For now we just activate the optimizer in that case.
         mOptimization = Optimization::PERFORMANCE;
@@ -167,7 +167,7 @@ void MaterialBuilderBase::prepare(bool const vulkanSemantics,
                     && featureLevel == backend::FeatureLevel::FEATURE_LEVEL_0
                     && shaderModel == ShaderModel::MOBILE) {
                 mCodeGenPermutations.push_back({
-                    shaderModel,
+                    ShaderModel::MOBILE,
                     TargetApi::OPENGL,
                     glTargetLanguage,
                     backend::FeatureLevel::FEATURE_LEVEL_0
@@ -938,6 +938,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         JobSystem::Job* parent = jobSystem.createJob();
 
         for (const auto& v : variants) {
+            if (params.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+                assert_invariant(params.shaderModel == ShaderModel::MOBILE);
+                assert_invariant(params.targetApi == TargetApi::OPENGL);
+                if (filament::Variant::isStereoVariant(v.variant)) {
+                    // the stereo variant can never be used at feature level 0
+                    continue;
+                }
+            }
+
             JobSystem::Job* job = jobs::createJob(jobSystem, parent, [&]() {
                 if (cancelJobs.load()) {
                     return;
@@ -1319,8 +1328,7 @@ error:
     CodeGenParams const semanticCodeGenParams = {
             .shaderModel = ShaderModel::MOBILE,
             .targetApi = TargetApi::OPENGL,
-            .targetLanguage = (info.featureLevel == FeatureLevel::FEATURE_LEVEL_0) ?
-                              TargetLanguage::GLSL : TargetLanguage::SPIRV,
+            .targetLanguage = TargetLanguage::SPIRV,
             .featureLevel = info.featureLevel,
     };
 
