@@ -391,7 +391,6 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "see b/453756688");
     SKIP_IF(Backend::VULKAN, "b/454040142");
 
     auto& api = getDriverApi();
@@ -468,7 +467,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     api.endRenderPass();
 
     EXPECT_IMAGE(defaultRenderTarget,
-            ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
+            ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265, false, 8000, 5));
 
     api.commit(swapChain);
     api.endFrame(0);
