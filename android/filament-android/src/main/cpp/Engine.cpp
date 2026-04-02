@@ -22,6 +22,12 @@
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
+#include <utils/tribool.h>
+
+#include <filament/Material.h>
+#include <filament/View.h>
+
+#include "common/CallbackUtils.h"
 
 using namespace filament;
 using namespace utils;
@@ -427,6 +433,24 @@ Java_com_google_android_filament_Engine_nIsPaused(JNIEnv*, jclass,
         jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
     return (jboolean)engine->isPaused();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nCompile(JNIEnv* env, jclass,
+        jlong nativeEngine, jint priority, jlong nativeMaterial, jlong nativeView,
+        jint shadowReceiver, jint skinning, jobject handler, jobject runnable) {
+    Engine* engine = (Engine*) nativeEngine;
+    Material* material = (Material*) nativeMaterial;
+    View* view = (View*) nativeView;
+    JniCallback* jniCallback = JniCallback::make(env, handler, runnable);
+    engine->compile(
+            (backend::CompilerPriorityQueue) priority,
+            material, view,
+            (utils::tribool::value_t) shadowReceiver,
+            (utils::tribool::value_t) skinning,
+            jniCallback->getHandler(), [jniCallback](Material*){
+                JniCallback::postToJavaAndDestroy(jniCallback);
+            });
 }
 
 extern "C" JNIEXPORT void JNICALL
