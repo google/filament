@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.71.0
+
+- matc: better material compression using a Multi-Base Variable-Length Interleaved Token Stream [⚠️ **New Material Version**]
+
 ## v1.70.2
 
 

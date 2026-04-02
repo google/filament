@@ -62,6 +62,7 @@
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
@@ -72,6 +73,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/tribool.h>
 
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -1672,6 +1674,89 @@ std::optional<bool> FEngine::getFeatureFlag(char const* name) const noexcept {
 
 bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant) const noexcept {
     return FeatureFlagManager::getFeatureFlagPtr(name, allowConstant);
+}
+
+FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
+        FView const* view,
+        tribool const shadowReceiver,
+        tribool const skinning) noexcept {
+
+    // the maximum possible is 6 variants (4 color + 2 depth)
+    auto variants = FixedCapacityVector<Variant>::with_capacity(6);
+
+    // apply() iteratively expands the `variants` vector by mutating existing elements
+    // in-place if `value` is determinate, or by duplicating them if `value` is indeterminate.
+    //
+    // @param start   The index in `variants` to begin the operation.
+    // @param value   The tribool state (false, true, or indeterminate) of the feature.
+    // @param setter  A pointer to a member function of Variant that sets the feature bit.
+    auto apply = [&variants](size_t const start, tribool const value, auto setter) {
+        if (value.is_indeterminate()) {
+            size_t const count = variants.size();
+            for (size_t i = start; i < count; ++i) {
+                // To maintain permutations, we first grab a copy of the variant
+                Variant v = variants[i];
+                // Mutate the original in-place for the `false` state
+                (variants[i].*setter)(false);
+                // Set the `true` state on our copy and push it as a new permutation
+                (v.*setter)(true);
+                variants.push_back(v);
+            }
+        } else {
+            // The feature is statically known, so just mutate all existing elements in-place
+            bool const b = value.is_true();
+            for (size_t i = start; i < variants.size(); ++i) {
+                (variants[i].*setter)(b);
+            }
+        }
+    };
+
+    Variant baseVariant{};
+    baseVariant.setDirectionalLighting(view->hasDirectionalLighting());
+    baseVariant.setDynamicLighting(view->hasDynamicLighting());
+    baseVariant.setFog(view->hasFog());
+    baseVariant.setShadowSampler2D(view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
+    baseVariant.setStereo(view->hasStereo());
+
+    variants.push_back(baseVariant);
+    apply(0, skinning, &Variant::setSkinning);
+    apply(0, shadowReceiver, &Variant::setShadowReceiver);
+
+    Variant depthVariant{};
+    if (view->hasShadowing()) {
+        // needsShadowMap() is no good here, because it can change based on the visibility of the shadow maps
+        depthVariant = Variant{Variant::DEPTH_VARIANT};
+        depthVariant.setDepthMoments(view->getShadowType() == ShadowType::VSM);
+    }
+    if (view->hasPostProcessPass()) {
+        // This is needed if we're going to generate the structure pass. That is however very hard to tell
+        // because the logic exists only in the FrameGraph. For now, we assume that if postFx is enabled, we'll
+        // need the depth variant.
+        depthVariant = Variant{Variant::DEPTH_VARIANT};
+    }
+
+    if (Variant::isValidDepthVariant(depthVariant)) {
+        // if we have a valid depth variant, add the stereo and skinning bits
+        depthVariant.setStereo(view->hasStereo());
+        
+        size_t const depthStart = variants.size();
+        variants.push_back(depthVariant);
+        apply(depthStart, skinning, &Variant::setSkinning);
+    }
+
+    return variants;
+}
+
+void FEngine::compile(
+        CompilerPriorityQueue const priority,
+        FMaterial const* material,
+        FView const* view,
+        tribool const shadowReceiver,
+        tribool const skinning,
+        CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) {
+    auto const variants = getMaterialCompileVariants(view, shadowReceiver, skinning);
+    material->compile(priority, variants, handler, std::move(callback));
 }
 
 // ------------------------------------------------------------------------------------------------

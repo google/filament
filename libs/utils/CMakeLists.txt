@@ -22,6 +22,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compressed_pair.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/tribool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/ImmutableCString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
@@ -179,6 +180,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_algorithm.cpp
             test/test_Allocators.cpp
             test/test_bitset.cpp
+            test/test_tribool.cpp
             test/test_CountDownLatch.cpp
             test/test_CString.cpp
             test/test_ImmutableCString.cpp
