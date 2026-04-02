@@ -48,14 +48,8 @@ public:
     // flattening. If we set mStart = nullptr and mEnd=nullptr, we would hit an error about
     // offsetting on null when ubsan is enabled. Instead we point mStart to a fake address, and
     // mCursor is offset from that.
-    static Flattener& getDryRunner() {
-        static Flattener dryRunner = Flattener(nullptr);
-        dryRunner.mStart = (uint8_t*) FAKE_DRY_RUNNER_START_ADDR;
-        dryRunner.mCursor =  (uint8_t*) FAKE_DRY_RUNNER_START_ADDR;
-        dryRunner.mOffsetPlaceholders.clear();
-        dryRunner.mSizePlaceholders.clear();
-        dryRunner.mValuePlaceholders.clear();
-        return dryRunner;
+    static Flattener getDryRunner() {
+        return Flattener((uint8_t*) FAKE_DRY_RUNNER_START_ADDR);
     }
 
     bool isDryRunner() {

@@ -24,7 +24,8 @@ namespace filamat {
 // when the container is about to be flattened.
 
 size_t ChunkContainer::getSize() const {
-    return flatten(Flattener::getDryRunner());
+    auto flattener = Flattener::getDryRunner();
+    return flatten(flattener);
 }
 
 size_t ChunkContainer::flatten(Flattener& f) const {
