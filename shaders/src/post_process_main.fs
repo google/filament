@@ -4,6 +4,14 @@ void main() {
     // Invoke user code
     postProcess(inputs);
 
+#if MATERIAL_FEATURE_LEVEL == 0
+    if (CONFIG_SRGB_SWAPCHAIN_EMULATION) {
+        if (frameUniforms.rec709 != 0) {
+            inputs.FRAG_OUTPUT0.rgb = pow(inputs.FRAG_OUTPUT0.rgb, vec3(0.45454));
+        }
+    }
+#endif
+
 #if defined(FRAG_OUTPUT0)
     FRAG_OUTPUT_AT0 FRAG_OUTPUT_SWIZZLE0 = inputs.FRAG_OUTPUT0;
 #endif
