@@ -47,8 +47,6 @@ option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
 
 option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
 
-option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
-
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 
 option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filament" OFF)

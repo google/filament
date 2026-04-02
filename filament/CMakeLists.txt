@@ -313,11 +313,6 @@ if (NOT FILAMENT_DISABLE_GTAO)
     )
 endif()
 
-set(MATERIAL_FL0_SRCS
-        src/materials/defaultMaterial.mat
-        src/materials/skybox.mat
-)
-
 set(MATERIAL_MULTIVIEW_SRCS
         src/materials/clearDepth.mat
         src/materials/defaultMaterial.mat
@@ -342,11 +337,6 @@ if (NOT DFG_LUT_SIZE)
     endif()
 endif()
 message(STATUS "DFG LUT size set to ${DFG_LUT_SIZE}x${DFG_LUT_SIZE}")
-
-# Whether to include FL0 materials.
-if (FILAMENT_ENABLE_FEATURE_LEVEL_0)
-    add_definitions(-DFILAMENT_ENABLE_FEATURE_LEVEL_0)
-endif()
 
 # Whether to include MULTIVIEW materials.
 if (FILAMENT_ENABLE_MULTIVIEW)
@@ -428,21 +418,6 @@ foreach(mat_dir ${MATERIAL_DIRS})
         )
         list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path})
         list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path})
-
-        # --- Feature Level 0 variant ---
-        list(FIND MATERIAL_FL0_SRCS ${mat_src} index)
-        if (${index} GREATER -1 AND FILAMENT_ENABLE_FEATURE_LEVEL_0)
-            string(REGEX REPLACE "[.]filamat$" "_fl0.filamat" output_path_fl0 ${output_path})
-            add_custom_command(
-                    OUTPUT ${output_path_fl0}
-                    COMMAND matc ${MATC_BASE_FLAGS} -PfeatureLevel=0 -o ${output_path_fl0} ${fullname}
-                    MAIN_DEPENDENCY ${fullname}
-                    DEPENDS matc
-                    COMMENT "Compiling material ${fullname} (FL0)"
-            )
-            list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path_fl0})
-            list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path_fl0})
-        endif()
 
         # --- Multiview variant ---
         list(FIND MATERIAL_MULTIVIEW_SRCS ${mat_src} index)
