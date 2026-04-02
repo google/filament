@@ -12,6 +12,7 @@ set(PUBLIC_HDR_DIR include)
 file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 
 set(DIST_HDRS
+        ${PUBLIC_HDR_DIR}/${TARGET}/getopt.h
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CallStack.h
@@ -122,6 +123,11 @@ endif()
 include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
+if (HAS_SYSTEM_GETOPT)
+    target_compile_definitions(${TARGET} PUBLIC HAS_SYSTEM_GETOPT)
+else()
+    target_link_libraries(${TARGET} PUBLIC getopt)
+endif()
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} PUBLIC tsl)

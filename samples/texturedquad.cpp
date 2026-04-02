@@ -36,7 +36,7 @@
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <stb_image.h>
 
@@ -103,15 +103,15 @@ static void printUsage(char* name) {
 
 static int handleCommandLineArguments(int argc, char* argv[], Config& config) {
     static constexpr const char* OPTSTR = "ha:";
-    static const struct option OPTIONS[] = {
-        { "help", no_argument, nullptr, 'h' },
-        { "api", required_argument, nullptr, 'a' },
+    static const utils::getopt::option OPTIONS[] = {
+        { "help", utils::getopt::no_argument, nullptr, 'h' },
+        { "api", utils::getopt::required_argument, nullptr, 'a' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -122,7 +122,7 @@ static int handleCommandLineArguments(int argc, char* argv[], Config& config) {
                 break;
         }
     }
-    return optind;
+    return utils::getopt::optind;
 }
 
 int main(int argc, char** argv) {

@@ -106,6 +106,8 @@ FView::FView(FEngine& engine)
 {
     DriverApi& driver = engine.getDriverApi();
 
+    mFeatureLevel = engine.getSupportedFeatureLevel();
+
     auto const& layout = engine.getPerRenderableDescriptorSetLayout();
 
     // initialize the common descriptor set with dummy descriptors
@@ -1138,6 +1140,7 @@ void FView::prepareShadowMapping() const noexcept {
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
     auto& s = mUniforms.edit();
     s.cascadeSplits = uniforms.cascadeSplits;
+    s.shadowAtlasResolution = uniforms.atlasResolution;
     s.ssContactShadowDistance = uniforms.ssContactShadowDistance;
     s.directionalShadows = int32_t(uniforms.directionalShadows);
     s.cascades = int32_t(uniforms.cascades);
@@ -1437,9 +1440,12 @@ void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) 
 }
 
 void FView::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
-    options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
-    mMultiSampleAntiAliasingOptions = options;
-    assert_invariant(!options.enabled || !mRenderTarget || !mRenderTarget->hasSampleableDepth());
+    // MSAA is a post-process effect, and post-processing is disabled at FL0
+    if (mFeatureLevel >= backend::FeatureLevel::FEATURE_LEVEL_1) {
+        options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
+        mMultiSampleAntiAliasingOptions = options;
+        assert_invariant(!options.enabled || !mRenderTarget || !mRenderTarget->hasSampleableDepth());
+    }
 }
 
 void FView::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {

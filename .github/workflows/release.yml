@@ -63,6 +63,39 @@ jobs:
             const globber = await glob.create('out/*.tgz');
             await upload({ github, context }, await globber.glob(), TAG);
 
+  build-arm-linux:
+    name: build-arm-linux
+    runs-on: 'arm-ubuntu-24.04-16core'
+    if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo "ref=${REF}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4.1.6
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - uses: ./.github/actions/linux-prereq
+      - name: Run build script
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+        run: |
+          cd build/linux && printf "y" | ./build.sh release
+          cd ../..
+          mv out/filament-release-linux.tgz out/filament-${TAG}-arm-linux.tgz
+      - uses: actions/github-script@v6
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+        with:
+          script: |
+            const upload = require('./build/common/upload-release-assets');
+            const { TAG } = process.env;
+            const globber = await glob.create('out/*.tgz');
+            await upload({ github, context }, await globber.glob(), TAG);
+
   build-mac:
     name: build-mac
     runs-on: macos-14-xlarge
@@ -99,7 +132,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'arm-ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'web'
 
     steps:

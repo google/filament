@@ -34,6 +34,7 @@
 
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
+#include <utils/Panic.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 
@@ -119,31 +120,41 @@ bool PlatformEGL::isOpenGL() const noexcept {
 
 PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
 
+void PlatformEGL::setEglDisplay(EGLDisplay display) noexcept {
+    FILAMENT_CHECK_PRECONDITION(mEGLDisplay == EGL_NO_DISPLAY)
+        << "EGL Display has already been set.";
+    FILAMENT_CHECK_PRECONDITION(display != EGL_NO_DISPLAY)
+        << "Must specify a valid EGL Display.";
+    mEGLDisplay = display;
+}
+
 Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) {
-    mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
+    if (mEGLDisplay == EGL_NO_DISPLAY) {
+        mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+        assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
-    EGLint major, minor;
-    EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);
+        EGLint major, minor;
+        EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);
 
-    if (!initialized) {
-        EGLDeviceEXT eglDevice;
-        EGLint numDevices;
-        PFNEGLQUERYDEVICESEXTPROC const eglQueryDevicesEXT =
-                PFNEGLQUERYDEVICESEXTPROC(eglGetProcAddress("eglQueryDevicesEXT"));
-        if (eglQueryDevicesEXT != nullptr) {
-            eglQueryDevicesEXT(1, &eglDevice, &numDevices);
-            if(auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
-                    eglGetProcAddress("eglGetPlatformDisplay"))) {
-                mEGLDisplay = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, eglDevice, nullptr);
-                initialized = eglInitialize(mEGLDisplay, &major, &minor);
+        if (!initialized) {
+            EGLDeviceEXT eglDevice;
+            EGLint numDevices;
+            PFNEGLQUERYDEVICESEXTPROC const eglQueryDevicesEXT =
+                    PFNEGLQUERYDEVICESEXTPROC(eglGetProcAddress("eglQueryDevicesEXT"));
+            if (eglQueryDevicesEXT != nullptr) {
+                eglQueryDevicesEXT(1, &eglDevice, &numDevices);
+                if(auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
+                        eglGetProcAddress("eglGetPlatformDisplay"))) {
+                    mEGLDisplay = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, eglDevice, nullptr);
+                    initialized = eglInitialize(mEGLDisplay, &major, &minor);
+                }
             }
         }
-    }
 
-    if (UTILS_UNLIKELY(!initialized)) {
-        LOG(ERROR) << "eglInitialize failed";
-        return nullptr;
+        if (UTILS_UNLIKELY(!initialized)) {
+            LOG(ERROR) << "eglInitialize failed";
+            return nullptr;
+        }
     }
 
 #if defined(FILAMENT_IMPORT_ENTRY_POINTS)

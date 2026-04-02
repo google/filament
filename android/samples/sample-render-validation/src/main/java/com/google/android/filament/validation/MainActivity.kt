@@ -66,10 +66,26 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private lateinit var inputManager: ValidationInputManager
     private var currentInput: ValidationInputManager.ValidationInput? = null
 
+    private var currentAlphaDiffBitmap: Bitmap? = null
+    private var globalEnhancementFactor: Float = 1.0f
+
+    private data class TestImages(
+        val testName: String,
+        val golden: Bitmap?,
+        val rendered: Bitmap?,
+        val diff: Bitmap?,
+        val alphaDiff: Bitmap?
+    )
+
+    private val diffImageViews = mutableListOf<ImageView>()
+
     // UI Elements
     private lateinit var runButton: Button
     private lateinit var loadButton: Button
     private lateinit var optionsButton: Button
+    private lateinit var enhancementContainer: LinearLayout
+    private lateinit var enhancementLabel: TextView
+    private lateinit var enhancementSlider: android.widget.SeekBar
 
     private var resultManager: ValidationResultManager? = null
     private var validationRunner: ValidationRunner? = null
@@ -98,6 +114,19 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         runButton = findViewById(R.id.run_button)
         loadButton = findViewById(R.id.load_button)
         optionsButton = findViewById(R.id.options_button)
+        enhancementContainer = findViewById(R.id.enhancement_container)
+        enhancementLabel = findViewById(R.id.enhancement_label)
+        enhancementSlider = findViewById(R.id.enhancement_slider)
+
+        enhancementSlider.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                globalEnhancementFactor = 1.0f + (progress / 100f) * 49.0f
+                enhancementLabel.text = String.format(Locale.US, "Enhancement: %.1fx", globalEnhancementFactor)
+                applyGlobalEnhancement()
+            }
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+        })
 
         // Setup Run Button
         runButton.setOnClickListener {
@@ -120,6 +149,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             popup.menu.add(0, 3, 0, "Export Result")
             popup.menu.add(0, 4, 0, "Test ADB Info")
             popup.menu.add(0, 5, 0, "Result ADB Info")
+            popup.menu.add(0, 6, 0, "Toggle Enhancement Slider")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -133,6 +163,9 @@ class MainActivity : Activity(), ValidationRunner.Callback {
                     3 -> exportTestResultsAction()
                     4 -> showTestAdbInfo()
                     5 -> showResultAdbInfo()
+                    6 -> {
+                        enhancementContainer.visibility = if (enhancementContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                    }
                 }
                 true
             }
@@ -142,7 +175,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         choreographer = Choreographer.getInstance()
-        modelViewer = ModelViewer(surfaceView)
+        modelViewer = ModelViewer(surfaceView=surfaceView, manipulator=null)
         inputManager = ValidationInputManager(this)
 
         // Initialize IBL
@@ -256,6 +289,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
                  // Clear existing results UI and state
                  resultsContainer.removeAllViews()
+                 diffImageViews.clear()
                  resultManager = null
 
                  val newInput = ValidationInputManager.ValidationInput(
@@ -334,15 +368,29 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         }
     }
 
+    private fun createResultManager(outputDir: File): ValidationResultManager {
+        val gpuDriverInfo = com.google.android.filament.utils.DeviceUtils.getGpuDriverInfo(modelViewer.engine)
+        return ValidationResultManager(
+            outputDir = outputDir,
+            gpuDriverInfo = gpuDriverInfo,
+            deviceName = android.os.Build.MODEL,
+            deviceCodeName = android.os.Build.DEVICE,
+            androidVersion = android.os.Build.VERSION.RELEASE,
+            androidBuildNumber = android.os.Build.DISPLAY
+        )
+    }
+
     private fun startValidation(input: ValidationInputManager.ValidationInput) {
         try {
             resultsContainer.removeAllViews()
+            diffImageViews.clear()
+            enhancementSlider.isEnabled = false
             Log.i(TAG, "Starting validation with config: ${input.config.name}")
             Log.i(TAG, "Output dir: ${input.outputDir.absolutePath}")
 
             testResultsHeader.text = "${input.config.name}"
 
-            resultManager = ValidationResultManager(input.outputDir)
+            resultManager = createResultManager(input.outputDir)
 
             validationRunner = ValidationRunner(this, modelViewer, input.config, resultManager!!)
             validationRunner?.callback = this
@@ -420,7 +468,15 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             val imagesRow = LinearLayout(this)
             imagesRow.orientation = LinearLayout.HORIZONTAL
 
-            fun addImage(label: String, bitmap: Bitmap?) {
+            val testImages = TestImages(
+                testName = result.testName,
+                golden = currentGoldenBitmap,
+                rendered = currentRenderedBitmap,
+                diff = currentDiffBitmap,
+                alphaDiff = currentAlphaDiffBitmap
+            )
+
+            fun addImage(label: String, bitmap: Bitmap?, isDiff: Boolean) {
                 if (bitmap != null) {
                     val container = LinearLayout(this)
                     container.orientation = LinearLayout.VERTICAL
@@ -436,16 +492,29 @@ class MainActivity : Activity(), ValidationRunner.Callback {
                     iv.layoutParams = LinearLayout.LayoutParams(250, 250) // Smaller thumbnails
                     iv.scaleType = ImageView.ScaleType.FIT_CENTER
                     iv.setBackgroundColor(0xFF404040.toInt())
+
+                    if (isDiff) {
+                        diffImageViews.add(iv)
+                        applyEnhancementToView(iv, globalEnhancementFactor)
+                    }
+
+                    iv.setOnClickListener {
+                        showImageDialog(testImages, label)
+                    }
+
                     container.addView(iv)
 
                     imagesRow.addView(container)
                 }
             }
 
-            addImage("Rendered", currentRenderedBitmap)
-            addImage("Golden", currentGoldenBitmap)
+            addImage("Rendered", currentRenderedBitmap, false)
+            addImage("Golden", currentGoldenBitmap, false)
             if (!result.passed) {
-                addImage("Diff", currentDiffBitmap)
+                addImage("Diff", currentDiffBitmap, true)
+            }
+            if (currentAlphaDiffBitmap != null) {
+                addImage("Alpha Diff", currentAlphaDiffBitmap, true)
             }
 
             resultContainer.addView(imagesRow)
@@ -455,12 +524,14 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             currentRenderedBitmap = null
             currentGoldenBitmap = null
             currentDiffBitmap = null
+            currentAlphaDiffBitmap = null
         }
     }
 
     override fun onAllTestsFinished() {
         runOnUiThread {
             statusTextView.text = "All tests finished!"
+            enhancementSlider.isEnabled = true
             Log.i(TAG, "All tests finished " + if (currentInput?.autoExport == true) "Exporting bundle" else "x")
 
             if (currentInput?.autoExport == true) {
@@ -475,7 +546,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private fun exportTestBundleAction() {
         currentInput?.let { input ->
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val rm = resultManager ?: ValidationResultManager(input.outputDir)
+            val rm = resultManager ?: createResultManager(input.outputDir)
             val zip = rm.exportTestBundle(input.config, timestamp)
             if (zip != null) {
                 val msg = "Exported Bundle: ${zip.name}"
@@ -491,7 +562,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private fun exportTestResultsAction() {
         currentInput?.let { input ->
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val rm = resultManager ?: ValidationResultManager(input.outputDir)
+            val rm = resultManager ?: createResultManager(input.outputDir)
             val zip = rm.exportTestResults(input.sourceZip, timestamp)
             if (zip != null) {
                 val msg = "Exported Results: ${zip.name}"
@@ -523,7 +594,165 @@ class MainActivity : Activity(), ValidationRunner.Callback {
                 "Diff" -> {
                     currentDiffBitmap = bitmap
                 }
+                "Alpha Diff" -> {
+                    currentAlphaDiffBitmap = bitmap
+                }
             }
         }
+    }
+
+    private fun applyEnhancementToView(iv: ImageView, factor: Float) {
+        val cm = android.graphics.ColorMatrix()
+        cm.setScale(factor, factor, factor, 1.0f)
+        iv.colorFilter = android.graphics.ColorMatrixColorFilter(cm)
+    }
+
+    private fun applyGlobalEnhancement() {
+        for (iv in diffImageViews) {
+            applyEnhancementToView(iv, globalEnhancementFactor)
+        }
+    }
+
+    private fun showImageDialog(images: TestImages, initialLabel: String) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_image_viewer, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        val titleView = dialogView.findViewById<TextView>(R.id.dialog_title)
+        val typeView = dialogView.findViewById<TextView>(R.id.dialog_image_type)
+        val imageView = dialogView.findViewById<ImageView>(R.id.dialog_image)
+        val btnClose = dialogView.findViewById<View>(R.id.btn_close)
+        val btnReset = dialogView.findViewById<View>(R.id.btn_reset)
+        val btnPrev = dialogView.findViewById<View>(R.id.btn_prev)
+        val btnNext = dialogView.findViewById<View>(R.id.btn_next)
+
+        val enhancementContainer = dialogView.findViewById<View>(R.id.dialog_enhancement_container)
+        val enhancementLabel = dialogView.findViewById<TextView>(R.id.dialog_enhancement_label)
+        val enhancementSlider = dialogView.findViewById<android.widget.SeekBar>(R.id.dialog_enhancement_slider)
+
+        titleView.text = images.testName
+
+        val availableImages = mutableListOf<Pair<String, Bitmap>>()
+        images.rendered?.let { availableImages.add(Pair("Rendered", it)) }
+        images.golden?.let { availableImages.add(Pair("Golden", it)) }
+        images.diff?.let { availableImages.add(Pair("Diff", it)) }
+        images.alphaDiff?.let { availableImages.add(Pair("Alpha Diff", it)) }
+
+        if (availableImages.isEmpty()) return
+
+        var currentIndex = availableImages.indexOfFirst { it.first == initialLabel }
+        if (currentIndex == -1) currentIndex = 0
+
+        var currentDialogEnhancement = globalEnhancementFactor
+
+        val matrix = android.graphics.Matrix()
+        // Save initial values for translation tracking
+        var lastTouchX = 0f
+        var lastTouchY = 0f
+        var isDragging = false
+
+        val scaleDetector = android.view.ScaleGestureDetector(this, object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: android.view.ScaleGestureDetector): Boolean {
+                matrix.postScale(detector.scaleFactor, detector.scaleFactor, detector.focusX, detector.focusY)
+                imageView.imageMatrix = matrix
+                return true
+            }
+        })
+
+        imageView.setOnTouchListener { _, event ->
+            scaleDetector.onTouchEvent(event)
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                    isDragging = true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    if (isDragging && !scaleDetector.isInProgress) {
+                        val dx = event.x - lastTouchX
+                        val dy = event.y - lastTouchY
+                        matrix.postTranslate(dx, dy)
+                        imageView.imageMatrix = matrix
+                    }
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    isDragging = false
+                }
+            }
+            true
+        }
+
+        fun updateView() {
+            val (label, bitmap) = availableImages[currentIndex]
+            typeView.text = label
+            imageView.setImageBitmap(bitmap)
+            (imageView.drawable as? android.graphics.drawable.BitmapDrawable)?.setAntiAlias(false)
+            (imageView.drawable as? android.graphics.drawable.BitmapDrawable)?.setFilterBitmap(false)
+            imageView.imageMatrix = matrix
+
+            if (label == "Diff" || label == "Alpha Diff") {
+                enhancementContainer.visibility = View.VISIBLE
+                applyEnhancementToView(imageView, currentDialogEnhancement)
+            } else {
+                enhancementContainer.visibility = View.GONE
+                imageView.colorFilter = null
+            }
+        }
+
+        fun resetMatrix() {
+            val drawable = imageView.drawable ?: return
+            val width = imageView.width.toFloat()
+            val height = imageView.height.toFloat()
+            val dw = drawable.intrinsicWidth.toFloat()
+            val dh = drawable.intrinsicHeight.toFloat()
+
+            val scaleX = width / dw
+            val scaleY = height / dh
+            val scale = Math.min(scaleX, scaleY)
+
+            val dx = (width - dw * scale) / 2f
+            val dy = (height - dh * scale) / 2f
+
+            matrix.reset()
+            matrix.postScale(scale, scale)
+            matrix.postTranslate(dx, dy)
+            imageView.imageMatrix = matrix
+        }
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnReset.setOnClickListener { resetMatrix() }
+        btnPrev.setOnClickListener {
+            currentIndex = (currentIndex - 1 + availableImages.size) % availableImages.size
+            updateView()
+        }
+        btnNext.setOnClickListener {
+            currentIndex = (currentIndex + 1) % availableImages.size
+            updateView()
+        }
+
+        val defaultProgress = ((currentDialogEnhancement - 1.0f) / 49.0f * 100).toInt()
+        val safeProgress = Math.max(0, Math.min(100, defaultProgress))
+        enhancementSlider.progress = safeProgress
+        enhancementLabel.text = String.format(Locale.US, "Enhance: %.1fx", currentDialogEnhancement)
+
+        enhancementSlider.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                currentDialogEnhancement = 1.0f + (progress / 100f) * 49.0f
+                enhancementLabel.text = String.format(Locale.US, "Enhance: %.1fx", currentDialogEnhancement)
+                updateView()
+            }
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+        })
+
+        imageView.post {
+            resetMatrix()
+        }
+
+        updateView()
+        dialog.show()
     }
 }

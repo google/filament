@@ -2248,6 +2248,18 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
     float bloomHeight = float(inoutBloomOptions.resolution);
     float bloomWidth  = bloomHeight * aspect;
 
+    // With extreme aspect ratios the major axis can exceed the GPU's maximum
+    // texture dimension. Scale both axes down proportionally so that the larger
+    // one stays within the hardware limit.
+    const float maxDimension = float(
+            FTexture::getMaxTextureSize(mEngine, SamplerType::SAMPLER_2D));
+    const float bloomMajor = std::max(bloomWidth, bloomHeight);
+    if (bloomMajor > maxDimension) {
+        const float clampScale = maxDimension / bloomMajor;
+        bloomWidth  *= clampScale;
+        bloomHeight *= clampScale;
+    }
+
     // we might need to adjust the max # of levels
     const uint32_t major = uint32_t(std::max(bloomWidth,  bloomHeight));
     const uint8_t maxLevels = FTexture::maxLevelCount(major);

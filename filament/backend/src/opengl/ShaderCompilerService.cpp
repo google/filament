@@ -117,6 +117,13 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
         cond.wait(l, [this] { return signaled; });
     }
 
+    // Used in THREAD_POOL mode. Returns true if the token is signaled, meaning it's ready to be
+    // used.
+    bool isReady() const noexcept {
+        std::unique_lock const l(lock);
+        return signaled;
+    }
+
     // This is invoked upon token completion, which occurs after a successful `gl.program`
     // population or upon cancellation. In either scenario, the callback handle must be submitted
     // to notify the caller that resource loading has concluded.
@@ -360,14 +367,15 @@ void ShaderCompilerService::compileProgram(
                                     << " failed to link or compile";
 #endif
                         }
+                        // The program blob is cached prior to signaling to ensure data integrity.
+                        // Since the receiving thread may immediately modify gl.program (e.g., via
+                        // glUniformBlockBinding) upon receipt of the signal, caching must be
+                        // finalized first.
+                        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
                         // Now `token->gl.program` must be populated, so we signal the completion
                         // of the linking. We don't need to check the result of the program here
                         // because it'll be done in the engine thread.
                         token->signal();
-                        // We try caching the program blob after sending the signal. This allows us
-                        // to unblock the engine thread as soon as the token is ready while
-                        // performing an expensive caching operation still in the pool.
-                        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
                         // Updates the token's state. If the token is canceled while this function
                         // executes, this update notifies `tick` that GL resource loading is
                         // complete, allowing `tick` to proceed with resource destruction.
@@ -524,8 +532,15 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
 }
 
 void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
-    if (token->gl.program) {
-        return;// It's ready.
+    if (mMode == Mode::THREAD_POOL) {
+        // Check if `token->gl.program` is populated
+        if (token->isReady()) {
+            return;
+        }
+    } else {
+        if (token->gl.program) {
+            return;
+        }
     }
 
     switch (mMode) {
@@ -935,6 +950,7 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
         return false;
     }
     token->retrievedFromBlobCache = true;
+    token->signal(); // notify that `token->gl.program` is ready to use
     return true;
 }
 

@@ -42,6 +42,7 @@ class ValidationRunner(
     private var currentModelName: String? = null
 
     private var frameCounter = 0
+    private var suiteStartTime: Long = 0
 
     enum class State {
         IDLE,
@@ -65,6 +66,7 @@ class ValidationRunner(
             callback?.onAllTestsFinished()
             return
         }
+        suiteStartTime = System.currentTimeMillis()
         currentTestIndex = 0
         currentModelIndex = 0
         startTest(config.tests[0])
@@ -81,6 +83,17 @@ class ValidationRunner(
     }
 
     private fun startModel(modelName: String) {
+        if (currentModelName == modelName) {
+            Log.i("ValidationRunner", "Reusing model $modelName")
+            callback?.onStatusChanged("Reusing $modelName for ${currentTestConfig?.name}")
+
+            modelViewer.resetToDefaultState()
+
+            frameCounter = 0
+            currentState = State.WARMUP
+            return
+        }
+
         currentModelName = modelName
         val modelPath = config.models[modelName]
         if (modelPath == null) {
@@ -115,10 +128,6 @@ class ValidationRunner(
     }
 
     fun onFrame(frameTimeNanos: Long) {
-        if (frameCounter % 60 == 0) {
-            Log.i("ValidationRunner", "onFrame: $currentState (frame: $frameCounter)")
-        }
-
         when (currentState) {
             State.IDLE -> {}
             State.WAITING_FOR_RESOURCES -> {
@@ -136,7 +145,6 @@ class ValidationRunner(
                 }
             }
             State.RUNNING_TEST -> {
-                // Log.i("ValidationRunner", "Running test...")
                 currentEngine?.let { engine ->
                     val content = AutomationEngine.ViewerContent()
                     content.view = modelViewer.view
@@ -257,10 +265,54 @@ class ValidationRunner(
                             passed = (result.status == ImageDiff.Result.Status.PASSED)
                             diffMetric = result.failingPixelCount.toFloat()
 
-                             if (!passed) {
+                            if (!passed) {
                                 if (result.diffImage != null) {
-                                    callback?.onImageResult("Diff", result.diffImage!!)
-                                    resultManager.saveImage("${testFullName}_diff", result.diffImage!!)
+                                    val diffImg = result.diffImage!!
+                                    val width = diffImg.width
+                                    val height = diffImg.height
+                                    val pixels = IntArray(width * height)
+                                    diffImg.getPixels(pixels, 0, width, 0, 0, width, height)
+
+                                    var hasAlphaDiff = false
+                                    val alphaPixels = IntArray(width * height)
+
+                                    for (i in pixels.indices) {
+                                        val color = pixels[i]
+
+                                        val a = android.graphics.Color.alpha(color)
+                                        val r = android.graphics.Color.red(color)
+                                        val g = android.graphics.Color.green(color)
+                                        val b = android.graphics.Color.blue(color)
+
+                                        if (a > 0) {
+                                            hasAlphaDiff = true
+                                        }
+
+                                        // Map alpha diff to grayscale RGB
+                                        alphaPixels[i] = android.graphics.Color.argb(255, a, a, a)
+
+                                        // Force main diff image alpha to 255
+                                        pixels[i] = android.graphics.Color.argb(255, r, g, b)
+                                    }
+
+                                    // Apply updated pixels to diff image
+                                    diffImg.setPixels(pixels, 0, width, 0, 0, width, height)
+
+                                    // The C++ ImageDiff code sets isPremultiplied to false so Android
+                                    // doesn't erase RGB diff values when Alpha diff is 0. However, Android's
+                                    // Canvas will crash if we try to draw a non-premultiplied bitmap.
+                                    // Since we just forced all alpha values to 255 (fully opaque) in the
+                                    // loop above, we can safely mark it as premultiplied again here.
+                                    diffImg.isPremultiplied = true
+                                    callback?.onImageResult("Diff", diffImg)
+                                    resultManager.saveImage("${testFullName}_diff", diffImg)
+
+                                    if (hasAlphaDiff) {
+                                        val alphaDiffImg = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                                        alphaDiffImg.setPixels(alphaPixels, 0, width, 0, 0, width, height)
+                                        callback?.onImageResult("Alpha Diff", alphaDiffImg)
+                                        resultManager.saveImage("${testFullName}_alpha_diff", alphaDiffImg)
+                                    }
                                 }
                              }
                         } else {
@@ -306,7 +358,10 @@ class ValidationRunner(
             startTest(config.tests[currentTestIndex])
         } else {
             currentState = State.IDLE
-            resultManager.finalizeResults()
+
+            val totalTimeMs = System.currentTimeMillis() - suiteStartTime
+
+            resultManager.finalizeResults(totalTimeMs)
             callback?.onAllTestsFinished()
         }
     }

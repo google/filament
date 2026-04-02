@@ -30,11 +30,11 @@
         "view": {
           "postProcessingEnabled": true,
           "dithering": "NONE"
-        },
-        "tolerance": {
-          "maxAbsDiff": 0.1,
-          "maxFailingPixelsFraction": 0.0
         }
+      },
+      "tolerance": {
+        "maxAbsDiff": 0.1,
+        "maxFailingPixelsFraction": 0.0
       }
     },
     {

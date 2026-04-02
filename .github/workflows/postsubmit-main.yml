@@ -10,7 +10,7 @@ jobs:
   # a branch on filament-assets.
   update-renderdiff-goldens:
     name: update-renderdiff-goldens
-    runs-on: 'macos-14-xlarge'
+    runs-on: 'macos-14'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -90,7 +90,7 @@ jobs:
   # filament-assets
   update-sizeguard:
     name: update-sizeguard
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:

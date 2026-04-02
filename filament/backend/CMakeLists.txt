@@ -616,7 +616,6 @@ if (FILAMENT_BUILD_TESTING)
         set(BACKEND_TEST_LIBS
             absl::str_format
             backend
-            getopt
             gtest
             imageio
             filamat
@@ -725,7 +724,6 @@ if (FILAMENT_BUILD_TESTING)
 
         target_link_libraries(metal_utils_test PRIVATE
                 backend
-                getopt
                 gtest
                 )
 
