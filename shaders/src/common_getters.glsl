@@ -46,7 +46,7 @@ highp mat4 getViewFromClipMatrix() {
     return frameUniforms.viewFromClipMatrix;
 }
 
-#if FILAMENT_EFFECTIVE_VERSION > 100
+#if MATERIAL_FEATURE_LEVEL > 0
 /** @public-api */
 highp mat4 getEyeFromViewMatrix() {
     return frameUniforms.eyeFromViewMatrix[getEyeIndex()];

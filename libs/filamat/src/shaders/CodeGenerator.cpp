@@ -202,36 +202,6 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         out << "#define FILAMENT_HAS_FEATURE_INSTANCING\n";
     }
 
-    // During compilation and optimization, __VERSION__ reflects the shader language version of the
-    // intermediate code, not the version of the final code. spirv-cross automatically adapts
-    // certain language features (e.g. fragment output) but leaves others untouched (e.g. sampler
-    // functions, bit shift operations). Client code may have to make decisions based on this
-    // information, so define a FILAMENT_EFFECTIVE_VERSION constant.
-    const char *effective_version;
-    if (mTargetLanguage == TargetLanguage::GLSL) {
-        effective_version = "__VERSION__";
-    } else {
-        switch (mShaderModel) {
-            case ShaderModel::MOBILE:
-                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
-                    effective_version = "300";
-                } else {
-                    effective_version = "100";
-                }
-                break;
-            case ShaderModel::DESKTOP:
-                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
-                    effective_version = "450";
-                } else {
-                    effective_version = "410";
-                }
-                break;
-            default:
-                assert(false);
-        }
-    }
-    generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
-
     switch (material.stereoscopicType) {
     case StereoscopicType::INSTANCED:
         generateDefine(out, "FILAMENT_STEREO_INSTANCED", true);
@@ -253,17 +223,11 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH", material.userMaterialHasCustomDepth);
     }
 
-    if (mTargetLanguage == TargetLanguage::SPIRV ||
-        mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
-        if (stage == ShaderStage::VERTEX) {
-            generateDefine(out, "VARYING", "out");
-            generateDefine(out, "ATTRIBUTE", "in");
-        } else if (stage == ShaderStage::FRAGMENT) {
-            generateDefine(out, "VARYING", "in");
-        }
-    } else {
-        generateDefine(out, "VARYING", "varying");
-        generateDefine(out, "ATTRIBUTE", "attribute");
+    if (stage == ShaderStage::VERTEX) {
+        generateDefine(out, "VARYING", "out");
+        generateDefine(out, "ATTRIBUTE", "in");
+    } else if (stage == ShaderStage::FRAGMENT) {
+        generateDefine(out, "VARYING", "in");
     }
 
     auto getShadingDefine = [](Shading shading) -> const char* {
@@ -360,31 +324,6 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
 
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
-
-    if (material.featureLevel == FeatureLevel::FEATURE_LEVEL_0 &&
-            (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0
-                    || mTargetLanguage == TargetLanguage::SPIRV)) {
-        // Insert compatibility definitions for ESSL 1.0 functions which were removed in ESSL 3.0.
-
-        // This is the minimum required value according to the OpenGL ES Shading Language Version
-        // 1.00 document. glslang forbids defining symbols beginning with gl_ as const, hence the
-        // #define.
-        generateDefine(out, "gl_MaxVaryingVectors", "8");
-
-        generateDefine(out, "texture2D", "texture");
-        generateDefine(out, "texture2DProj", "textureProj");
-        generateDefine(out, "texture3D", "texture");
-        generateDefine(out, "texture3DProj", "textureProj");
-        generateDefine(out, "textureCube", "texture");
-
-        if (stage == ShaderStage::VERTEX) {
-            generateDefine(out, "texture2DLod", "textureLod");
-            generateDefine(out, "texture2DProjLod", "textureProjLod");
-            generateDefine(out, "texture3DLod", "textureLod");
-            generateDefine(out, "texture3DProjLod", "textureProjLod");
-            generateDefine(out, "textureCubeLod", "textureLod");
-        }
-    }
 
     // Api level enforcement.
     generateDefine(out, "CLIENT_MATERIAL_API_LEVEL", apiLevel);
