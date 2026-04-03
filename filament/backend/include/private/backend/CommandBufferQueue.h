@@ -27,6 +27,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <functional>
+
 namespace filament::backend {
 
 /*
@@ -64,7 +66,7 @@ public:
 
     // all commands buffers (Slices) written to this point are returned by waitForCommand(). This
     // call blocks until the CircularBuffer has at least mRequiredSize bytes available.
-    void flush();
+    void flush(std::function<void(void*, void*)> const& debugPrintHistogram = nullptr);
 
     // returns from waitForCommands() immediately.
     void requestExit();
