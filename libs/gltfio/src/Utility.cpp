@@ -168,7 +168,20 @@ bool primitiveHasVertexColor(cgltf_primitive* inPrim) {
 // private but its implementation file is available in this cpp file.
 uint32_t computeBindingSize(cgltf_accessor const* accessor) {
     cgltf_size element_size = cgltf_calc_size(accessor->type, accessor->component_type);
-    return uint32_t(accessor->stride * (accessor->count - 1) + element_size);
+    // Validate against overflow, consistent with the check in decodeMeshoptCompression above.
+    FILAMENT_CHECK_POSTCONDITION(accessor->count > 0)
+            << "gltfio: accessor count must be > 0";
+    cgltf_size const countMinus1 = accessor->count - 1;
+    if (accessor->stride > 0) {
+        cgltf_size const maxCount = std::numeric_limits<cgltf_size>::max() / accessor->stride;
+        FILAMENT_CHECK_POSTCONDITION(countMinus1 <= maxCount)
+                << "gltfio: binding size overflow (stride=" << accessor->stride
+                << ", count=" << accessor->count << ")";
+    }
+    cgltf_size const result = accessor->stride * countMinus1 + element_size;
+    FILAMENT_CHECK_POSTCONDITION(result <= std::numeric_limits<uint32_t>::max())
+            << "gltfio: binding size exceeds uint32_t max";
+    return uint32_t(result);
 }
 
 void convertBytesToShorts(uint16_t* dst, uint8_t const* src, size_t count) {
