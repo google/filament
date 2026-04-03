@@ -226,6 +226,11 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
         ImGui::Combo("Quality##colorGradingQuality", &quality, "Low\0Medium\0High\0Ultra\0\0");
         colorGrading.quality = (decltype(colorGrading.quality)) quality;
 
+        int customLut = (int) colorGrading.customLut;
+        if (ImGui::Combo("Custom LUT##colorGradingCustomLut", &customLut, "None\0Negative\0Grayscale\0Sepia\0Teal and Orange\0\0")) {
+            colorGrading.customLut = (CustomLut) customLut;
+        }
+
         int colorspace = (colorGrading.colorspace == Rec709-Linear-D65) ? 0 : 1;
         ImGui::Combo("Output color space", &colorspace, "Rec709-Linear-D65\0Rec709-sRGB-D65\0\0");
         colorGrading.colorspace = (colorspace == 0) ? Rec709-Linear-D65 : Rec709-sRGB-D65;

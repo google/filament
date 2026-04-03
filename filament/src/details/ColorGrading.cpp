@@ -33,6 +33,7 @@
 
 #include <utils/JobSystem.h>
 #include <utils/Mutex.h>
+#include <utils/Panic.h>
 
 #include <cmath>
 #include <cstdlib>
@@ -101,6 +102,10 @@ struct ColorGrading::BuilderDetails {
     // Output color space
     ColorSpace outputColorSpace = Rec709-sRGB-D65;
 
+    // Custom LUT
+    utils::FixedCapacityVector<math::float3> customLutData;
+    uint8_t customLutDimension = 0;
+
     bool operator!=(const BuilderDetails &rhs) const {
         return !(rhs == *this);
     }
@@ -130,7 +135,9 @@ struct ColorGrading::BuilderDetails {
                shadowGamma == rhs.shadowGamma &&
                midPoint == rhs.midPoint &&
                highlightScale == rhs.highlightScale &&
-               outputColorSpace == rhs.outputColorSpace;
+               outputColorSpace == rhs.outputColorSpace &&
+               customLutData == rhs.customLutData &&
+               customLutDimension == rhs.customLutDimension;
     }
 };
 
@@ -272,11 +279,27 @@ ColorGrading::Builder& ColorGrading::Builder::outputColorSpace(
     return *this;
 }
 
+ColorGrading::Builder& ColorGrading::Builder::customLut(
+        utils::FixedCapacityVector<math::float3> data, uint8_t dimension) noexcept {
+    mImpl->customLutData = std::move(data);
+    mImpl->customLutDimension = dimension;
+    return *this;
+}
+
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 ColorGrading* ColorGrading::Builder::build(Engine& engine) {
+    if (mImpl->customLutDimension == 0 || mImpl->customLutData.empty()) {
+        mImpl->customLutData.clear();
+        mImpl->customLutDimension = 0;
+    } else {
+        FILAMENT_CHECK_PRECONDITION(mImpl->customLutData.size() == 
+                size_t(mImpl->customLutDimension) * mImpl->customLutDimension * mImpl->customLutDimension)
+                << "Custom LUT data size does not match dimension^3";
+    }
+
     // We want to see if any of the default adjustment values have been modified
     // We skip the tonemapping operator on purpose since we always want to apply it
     BuilderDetails defaults;
@@ -544,6 +567,39 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
     };
 }
 
+static float3 applyCustomLut(float3 v, const math::float3* lut, uint8_t dim) noexcept {
+    float3 pos = v * float(dim - 1);
+    float3 pos_floor = floor(pos);
+    float3 pos_ceil = min(pos_floor + 1.0f, float(dim - 1));
+    float3 d = pos - pos_floor;
+    
+    int3 i0 = int3(pos_floor);
+    int3 i1 = int3(pos_ceil);
+    
+    auto fetch = [&](int r, int g, int b) {
+        return lut[r + g * dim + b * dim * dim];
+    };
+    
+    float3 c000 = fetch(i0.x, i0.y, i0.z);
+    float3 c100 = fetch(i1.x, i0.y, i0.z);
+    float3 c010 = fetch(i0.x, i1.y, i0.z);
+    float3 c110 = fetch(i1.x, i1.y, i0.z);
+    float3 c001 = fetch(i0.x, i0.y, i1.z);
+    float3 c101 = fetch(i1.x, i0.y, i1.z);
+    float3 c011 = fetch(i0.x, i1.y, i1.z);
+    float3 c111 = fetch(i1.x, i1.y, i1.z);
+    
+    float3 c00 = c000 * (1.0f - d.x) + c100 * d.x;
+    float3 c10 = c010 * (1.0f - d.x) + c110 * d.x;
+    float3 c01 = c001 * (1.0f - d.x) + c101 * d.x;
+    float3 c11 = c011 * (1.0f - d.x) + c111 * d.x;
+    
+    float3 c0 = c00 * (1.0f - d.y) + c10 * d.y;
+    float3 c1 = c01 * (1.0f - d.y) + c11 * d.y;
+    
+    return c0 * (1.0f - d.z) + c1 * d.z;
+}
+
 //------------------------------------------------------------------------------
 // Luminance scaling
 //------------------------------------------------------------------------------
@@ -665,6 +721,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     // spaces are the same, but we currently don't check that. We must revise these conditions if we
     // ever handle this case.
     mIsOneDimensional = !builder->hasAdjustments && !builder->luminanceScaling
+            && builder->customLutData.empty()
             && builder->toneMapper->isOneDimensional()
             && engine.features.engine.color_grading.use_1d_lut;
     mIsLDR = mIsOneDimensional && builder->toneMapper->isLDR();
@@ -794,6 +851,11 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
         // Apply OETF
         v = config.oetf(v);
+
+        // Apply custom LUT if provided
+        if (!builder->customLutData.empty()) {
+            v = applyCustomLut(v, builder->customLutData.data(), builder->customLutDimension);
+        }
 
         return v;
     };
