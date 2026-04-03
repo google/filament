@@ -3,3 +3,7 @@ src_mdbook/book
 src_mdbook/src/dup/*.md
 src_mdbook/src/main/filament.md
 src_mdbook/src/main/materials.md
+src_mdbook/src/samples/web/*.md
+src_mdbook/src/web
+src_mdbook/src/release/cocoapods.md
+src_mdbook/src/remote
