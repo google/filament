@@ -146,6 +146,14 @@ struct AgxToneMapperSettings {
     bool operator==(const AgxToneMapperSettings& rhs) const;
 };
 
+enum class CustomLut : uint8_t {
+    NONE = 0,
+    NEGATIVE = 1,
+    GRAYSCALE = 2,
+    SEPIA = 3,
+    TEAL_AND_ORANGE = 4,
+};
+
 struct ColorGradingSettings {
     // fields are ordered to avoid padding
     bool enabled = true;
@@ -154,7 +162,7 @@ struct ColorGradingSettings {
     bool gamutMapping = false;
     filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::MEDIUM;
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
-    bool padding0{};
+    CustomLut customLut = CustomLut::NONE;
     AgxToneMapperSettings agxToneMapper;
     color::ColorSpace colorspace = Rec709-sRGB-D65;
     GenericToneMapperSettings genericToneMapper;
