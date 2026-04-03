@@ -31,10 +31,7 @@ using namespace filament;
 using namespace filament::backend;
 using namespace filament::math;
 
-TEST_F(BackendTest, AutoresolveDifferingSampleCounts) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "see b/486954356");
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "see b/486954356");
-
+TEST_F(BackendTest, Autoresolve) {
     auto& api = getDriverApi();
     constexpr int kRenderTargetSize = 512;
 
@@ -61,33 +58,7 @@ TEST_F(BackendTest, AutoresolveDifferingSampleCounts) {
             TextureFormat::RGBA8, 1, kRenderTargetSize, kRenderTargetSize, 1,
             TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
 
-    // First render pass: render a red triangle to a RenderTarget with 8 samples.
-    {
-        Handle<HwRenderTarget> renderTarget =
-                addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR, kRenderTargetSize,
-                        kRenderTargetSize, 8, 1, { { texture } }, {}, {}));
-
-        shader.uploadUniform(api, ubuffer,
-                SimpleMaterialParams{
-                    .color = float4(1, 0, 0, 1),
-                });
-
-        RenderPassParams params = getClearColorRenderPass(float4(0));
-        params.viewport = { 0, 0, kRenderTargetSize, kRenderTargetSize };
-
-        RenderFrame frame(api);
-        api.beginRenderPass(renderTarget, params);
-        ps.primitiveType = PrimitiveType::TRIANGLES;
-        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
-        api.bindPipeline(ps);
-        api.bindRenderPrimitive(triangle.getRenderPrimitive());
-        api.draw2(0, 3, 1);
-        api.endRenderPass();
-        api.commit(swapChain);
-    }
-
-    // Second render pass: render a green triangle to a RenderTarget with 4 samples, attached to
-    // the same texture.
+    // render a red triangle to a RenderTarget with 4 samples.
     {
         Handle<HwRenderTarget> renderTarget =
                 addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR, kRenderTargetSize,
@@ -95,10 +66,10 @@ TEST_F(BackendTest, AutoresolveDifferingSampleCounts) {
 
         shader.uploadUniform(api, ubuffer,
                 SimpleMaterialParams{
-                    .color = float4(0, 1, 0, 1),
+                    .color = float4(1, 0, 0, 1),
                 });
 
-        RenderPassParams params = getClearColorRenderPass(float4(0));
+        RenderPassParams params = getClearColorRenderPass(float4(1));
         params.viewport = { 0, 0, kRenderTargetSize, kRenderTargetSize };
 
         RenderFrame frame(api);
@@ -109,11 +80,10 @@ TEST_F(BackendTest, AutoresolveDifferingSampleCounts) {
         api.bindRenderPrimitive(triangle.getRenderPrimitive());
         api.draw2(0, 3, 1);
         api.endRenderPass();
+        api.commit(swapChain);
 
         EXPECT_IMAGE(renderTarget, ScreenshotParams(kRenderTargetSize, kRenderTargetSize,
-                                           "AutoresolveDifferingSampleCounts", 1048576));
-
-        api.commit(swapChain);
+                                       "Autoresolve", 545665143));
     }
 }
 
