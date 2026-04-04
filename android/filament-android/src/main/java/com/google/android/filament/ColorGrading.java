@@ -557,6 +557,22 @@ public class ColorGrading {
         }
 
         /**
+         * Specifies a custom 3D color grading LUT to map the final sRGB color.
+         * The LUT is applied after post-processing and in LDR (sRGB space).
+         * The data must be a 3D array of float3 (RGB) values.
+         * The data must remain valid until build() is called.
+         *
+         * @param buffer Direct ByteBuffer containing the custom LUT data (3D array of float3).
+         * @param dimension Dimension of the custom LUT (e.g., 16, 32, 64).
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder customLut(@NonNull java.nio.Buffer buffer, int dimension) {
+            nBuilderCustomLut(mNativeBuilder, buffer, dimension);
+            return this;
+        }
+
+        /**
          * Creates the IndirectLight object and returns a pointer to it.
          *
          * @param engine The {@link Engine} to associate this <code>IndirectLight</code> with.
@@ -620,6 +636,7 @@ public class ColorGrading {
     private static native void nBuilderVibrance(long nativeBuilder, float vibrance);
     private static native void nBuilderSaturation(long nativeBuilder, float saturation);
     private static native void nBuilderCurves(long nativeBuilder, float[] gamma, float[] midPoint, float[] scale);
+    private static native void nBuilderCustomLut(long nativeBuilder, java.nio.Buffer buffer, int dim);
 
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 }

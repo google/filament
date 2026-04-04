@@ -23,6 +23,7 @@
 #include <filament/ToneMapper.h>
 
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <math/mathfwd.h>
 
@@ -460,6 +461,22 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& curves(math::float3 shadowGamma, math::float3 midPoint, math::float3 highlightScale) noexcept;
+
+        /**
+         * Specifies a custom 3D color grading LUT to map the final sRGB color.
+         * The LUT is applied after post-processing and in LDR (sRGB space).
+         * The data must be a 3D array of float3 (RGB) values.
+         * The dimension does not need to be a power of two, but must be non-zero.
+         * The values are always interpolated (trilinear) because the input color from previous steps is continuous.
+         * The dimension doesn't need to match dimensions().
+         * If the dimension is 0 or the data is empty, the custom LUT is skipped (ignored).
+         *
+         * @param data FixedCapacityVector containing the custom LUT data (3D array of float3).
+         * @param dimension Dimension of the custom LUT.
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& customLut(utils::FixedCapacityVector<math::float3> data, uint8_t dimension) noexcept;
 
         /**
          * Sets the output color space for this ColorGrading object. After all color grading steps

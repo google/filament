@@ -220,3 +220,23 @@ Java_com_google_android_filament_ColorGrading_nBuilderCurves(JNIEnv* env, jclass
     env->ReleaseFloatArrayElements(midPoint_, midPoint, JNI_ABORT);
     env->ReleaseFloatArrayElements(scale_, scale, JNI_ABORT);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderCustomLut(JNIEnv *env, jclass,
+        jlong nativeBuilder, jobject buffer, jint dimension) {
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    if (dimension == 0) {
+        return;
+    }
+    float3* data = (float3*) env->GetDirectBufferAddress(buffer);
+    size_t count = size_t(dimension) * dimension * dimension;
+    
+    utils::FixedCapacityVector<math::float3> lut = 
+            utils::FixedCapacityVector<math::float3>::with_capacity(count);
+            
+    for (size_t i = 0; i < count; ++i) {
+        lut.push_back(data[i]);
+    }
+    
+    builder->customLut(std::move(lut), (uint8_t)dimension);
+}
