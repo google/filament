@@ -19,11 +19,18 @@
 #include <cstring> // for memset
 #include <memory>
 
+#include <new>
+#include <limits>
+
 namespace image  {
 
 struct LinearImage::SharedReference {
     SharedReference(uint32_t width, uint32_t height, uint32_t channels) {
-        const uint32_t nfloats = width * height * channels;
+        const uint64_t nfloats64 = (uint64_t)width * (uint64_t)height * (uint64_t)channels;
+        if (nfloats64 > UINT32_MAX || nfloats64 > (std::numeric_limits<size_t>::max() / sizeof(float))) {
+            throw std::bad_alloc();
+        }
+        const uint32_t nfloats = (uint32_t)nfloats64;
         float* floats = new float[nfloats];
         memset(floats, 0, sizeof(float) * nfloats);
         pixels = std::shared_ptr<float>(floats, std::default_delete<float[]>());
