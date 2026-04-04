@@ -34,10 +34,11 @@
 #include <utils/Mutex.h>
 
 #include <atomic>
-
 #include <chrono>
 #include <list>
+#include <type_traits>
 #include <utility>
+#include <variant>
 
 namespace filament::backend {
 
@@ -72,7 +73,11 @@ struct VulkanCommandBuffer {
 
     ~VulkanCommandBuffer();
 
-    inline void acquire(fvkmemory::resource_ptr<fvkmemory::Resource> resource) {
+    template <typename T,
+              typename = std::enable_if_t<
+                std::is_base_of_v<fvkmemory::Resource, T> ||
+                std::is_base_of_v<fvkmemory::ThreadSafeResource, T>>>
+    inline void acquire(fvkmemory::resource_ptr<T> resource) {
         mResources.push_back(resource);
     }
 
@@ -115,6 +120,9 @@ struct VulkanCommandBuffer {
     }
 
 private:
+    using HeldResource = std::variant<fvkmemory::resource_ptr<Resource>,
+                                      fvkmemory::resource_ptr<ThreadSafeResource>>;
+
     static uint32_t sAgeCounter;
 
     VulkanContext const& mContext;
@@ -129,7 +137,7 @@ private:
     fvkmemory::resource_ptr<VulkanSemaphore> mSubmission;
     VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
-    std::vector<fvkmemory::resource_ptr<Resource>> mResources;
+    std::vector<HeldResource> mResources;
     uint32_t mAge;
 };
 

@@ -67,7 +67,10 @@ ResourceType getTypeEnum() noexcept;
 std::string_view getTypeStr(ResourceType type);
 
 inline bool isThreadSafeType(ResourceType type) {
-    return type == ResourceType::FENCE || type == ResourceType::TIMER_QUERY;
+    return type == ResourceType::PROGRAM ||
+           type == ResourceType::FENCE ||
+           type == ResourceType::TIMER_QUERY ||
+           type == ResourceType::SYNC;
 }
 
 struct Resource {

@@ -16,6 +16,10 @@
 
 #include "VulkanAsyncHandles.h"
 
+#include "VulkanConstants.h"
+
+#include "vulkan/utils/Spirv.h"
+
 #include <backend/DriverEnums.h>
 
 #include <utils/debug.h>
@@ -28,6 +32,154 @@
 using namespace bluevk;
 
 namespace filament::backend {
+
+namespace {
+
+inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
+    switch(stage) {
+        case backend::ShaderStage::VERTEX:
+            return VK_SHADER_STAGE_VERTEX_BIT;
+        case backend::ShaderStage::FRAGMENT:
+            return VK_SHADER_STAGE_FRAGMENT_BIT;
+        case backend::ShaderStage::COMPUTE:
+            PANIC_POSTCONDITION("Unsupported stage");
+    }
+}
+
+} // namespace
+
+PushConstantDescription::PushConstantDescription(backend::Program const& program) {
+    mRangeCount = 0;
+    uint32_t offset = 0;
+
+    // The range is laid out so that the vertex constants are defined as the first set of bytes,
+    // followed by fragment and compute. This means we need to keep track of the offset for each
+    // stage. We do the bookeeping in mDescriptions.
+    for (auto stage: { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
+        auto const& constants = program.getPushConstants(stage);
+        if (constants.empty()) {
+            continue;
+        }
+
+        auto& description = mDescriptions[(uint8_t) stage];
+        // We store the type of the constant for type-checking when writing.
+        description.types.reserve(constants.size());
+        std::for_each(constants.cbegin(), constants.cend(),
+                [&description](Program::PushConstant t) { description.types.push_back(t.type); });
+
+        uint32_t const constantsSize = (uint32_t) constants.size() * ENTRY_SIZE;
+        mRanges[mRangeCount++] = {
+            .stageFlags = getVkStage(stage),
+            .offset = offset,
+            .size = constantsSize,
+        };
+        description.offset = offset;
+        offset += constantsSize;
+    }
+}
+
+void PushConstantDescription::write(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
+        backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
+
+    uint32_t binaryValue = 0;
+    auto const& description = mDescriptions[(uint8_t) stage];
+    UTILS_UNUSED_IN_RELEASE auto const& types = description.types;
+    uint32_t const offset = description.offset;
+
+    if (std::holds_alternative<bool>(value)) {
+        assert_invariant(types[index] == ConstantType::BOOL);
+        bool const bval = std::get<bool>(value);
+        binaryValue = static_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
+    } else if (std::holds_alternative<float>(value)) {
+        assert_invariant(types[index] == ConstantType::FLOAT);
+        float const fval = std::get<float>(value);
+        binaryValue = *reinterpret_cast<uint32_t const*>(&fval);
+    } else {
+        assert_invariant(types[index] == ConstantType::INT);
+        int const ival = std::get<int>(value);
+        binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
+    }
+
+    vkCmdPushConstants(cmdbuf, layout, getVkStage(stage), offset + index * ENTRY_SIZE, ENTRY_SIZE,
+            &binaryValue);
+}
+
+VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
+    : HwProgram(builder.getName()),
+      mInfo(new(std::nothrow) PipelineInfo(builder)),
+      mDevice(device) {
+
+    Program::ShaderSource const& blobs = builder.getShadersSource();
+    auto& modules = mInfo->shaders;
+    auto const& specializationConstants = builder.getSpecializationConstants();
+    std::vector<uint32_t> shader;
+
+    static_assert(static_cast<ShaderStage>(0) == ShaderStage::VERTEX &&
+            static_cast<ShaderStage>(1) == ShaderStage::FRAGMENT &&
+            MAX_SHADER_MODULES == 2);
+
+    for (size_t i = 0; i < MAX_SHADER_MODULES; i++) {
+        Program::ShaderBlob const& blob = blobs[i];
+
+        uint32_t* data = (uint32_t*) blob.data();
+        size_t dataSize = blob.size();
+
+        if (!specializationConstants.empty()) {
+            fvkutils::workaroundSpecConstant(blob, specializationConstants, shader);
+            data = (uint32_t*) shader.data();
+            dataSize = shader.size() * 4;
+        }
+
+        VkShaderModule& module = modules[i];
+        VkShaderModuleCreateInfo moduleInfo = {
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = dataSize,
+            .pCode = data,
+        };
+        VkResult result = vkCreateShaderModule(mDevice, &moduleInfo, VKALLOC, &module);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "Unable to create shader module."
+                << " error=" << static_cast<int32_t>(result);
+
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+        utils::CString name{ builder.getName().c_str(), builder.getName().size() };
+        switch (static_cast<ShaderStage>(i)) {
+            case ShaderStage::VERTEX:
+                name += "_vs";
+                break;
+            case ShaderStage::FRAGMENT:
+                name += "_fs";
+                break;
+            default:
+                PANIC_POSTCONDITION("Unexpected stage");
+                break;
+        }
+        VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SHADER_MODULE,
+                reinterpret_cast<uint64_t>(module), name.c_str());
+#endif
+    }
+
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+    FVK_LOGD << "Created VulkanProgram " << builder << ", shaders = (" << modules[0]
+             << ", " << modules[1] << ")";
+#endif
+}
+
+VulkanProgram::~VulkanProgram() {
+    for (auto shader: mInfo->shaders) {
+        vkDestroyShaderModule(mDevice, shader, VKALLOC);
+    }
+    delete mInfo;
+}
+
+void VulkanProgram::flushPushConstants(VkPipelineLayout layout) {
+    // At this point, we really ought to have a VkPipelineLayout.
+    assert_invariant(layout != VK_NULL_HANDLE);
+    for (const auto& c : mQueuedPushConstants) {
+        mInfo->pushConstantDescription.write(c.cmdbuf, layout, c.stage, c.index, c.value);
+    }
+    mQueuedPushConstants.clear();
+}
 
 std::shared_ptr<VulkanCmdFence> VulkanCmdFence::completed() noexcept {
     auto cmdFence = std::make_shared<VulkanCmdFence>(VK_NULL_HANDLE);
