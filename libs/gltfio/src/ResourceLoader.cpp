@@ -163,9 +163,45 @@ inline void normalizeSkinningWeights(cgltf_data const* gltf) {
             LOG(WARNING) << "Cannot normalize weights, unsupported attribute type.";
             return;
         }
+        if (!data->buffer_view || !data->buffer_view->buffer ||
+                !data->buffer_view->buffer->data) {
+            LOG(WARNING) << "Cannot normalize weights, missing buffer data.";
+            return;
+        }
+        const cgltf_size bufferSize = data->buffer_view->buffer->size;
+        const cgltf_size viewOffset = data->buffer_view->offset;
+        const cgltf_size accessorOffset = data->offset;
+        const cgltf_size totalOffset = viewOffset + accessorOffset;
+
+        // Validate that the starting offset is within the buffer.
+        if (totalOffset >= bufferSize) {
+            LOG(WARNING) << "Cannot normalize weights, accessor offset exceeds buffer size.";
+            return;
+        }
+
+        const cgltf_size availableBytes = bufferSize - totalOffset;
+        const cgltf_size stride = data->stride;
+
+        // Compute the maximum number of elements that fit within bounds.
+        // Each element requires at least sizeof(float4) bytes, and elements
+        // are separated by 'stride' bytes.
+        cgltf_size maxCount = 0;
+        if (stride > 0 && availableBytes >= sizeof(float4)) {
+            // The last element needs sizeof(float4) bytes; preceding elements need 'stride' each.
+            maxCount = 1 + (availableBytes - sizeof(float4)) / stride;
+        }
+
+        cgltf_size safeCount = data->count;
+        if (safeCount > maxCount) {
+            LOG(WARNING) << "Skinning weights accessor count (" << safeCount
+                         << ") exceeds buffer capacity (" << maxCount
+                         << "), clamping to prevent out-of-bounds access.";
+            safeCount = maxCount;
+        }
+
         uint8_t* bytes = (uint8_t*) data->buffer_view->buffer->data;
-        bytes += data->offset + data->buffer_view->offset;
-        for (cgltf_size i = 0, n = data->count; i < n; ++i, bytes += data->stride) {
+        bytes += totalOffset;
+        for (cgltf_size i = 0, n = safeCount; i < n; ++i, bytes += stride) {
             float4* weights = (float4*) bytes;
             const float sum = weights->x + weights->y + weights->z + weights->w;
             *weights /= sum;
