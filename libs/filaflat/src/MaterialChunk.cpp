@@ -186,6 +186,9 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
     if (!unflattener.read(&shaderSize)){
         return false;
     }
+    if (shaderSize == 0) {
+        return false;
+    }
 
     // Read how many lines there are.
     uint32_t lineCount = 0;

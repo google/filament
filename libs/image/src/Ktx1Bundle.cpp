@@ -106,7 +106,10 @@ Ktx1Bundle::Ktx1Bundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubem
     mNumMipLevels = numMipLevels;
     mArrayLength = arrayLength;
     mNumCubeFaces = isCubemap ? 6 : 1;
-    mBlobs->sizes.resize(numMipLevels * arrayLength * mNumCubeFaces);
+    uint64_t const totalBlobs = (uint64_t)numMipLevels * arrayLength * mNumCubeFaces;
+    FILAMENT_CHECK_POSTCONDITION(totalBlobs <= (uint64_t)std::numeric_limits<uint32_t>::max())
+            << "KTX dimensions overflow";
+    mBlobs->sizes.resize((uint32_t)totalBlobs);
 }
 
 Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
