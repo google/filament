@@ -223,6 +223,8 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
         bpp *= componentCount;
     }
 
+    uint32_t const samples = srcTexture->samples > 1 ? srcTexture->samples : 1;
+
     // Use a VkBuffer as the staging area for readback.
     // Using a buffer instead of a linearly tiled VkImage unifies the readback path and avoids
     // driver/validation layer issues since some implementations strictly prohibit linear tiling
@@ -230,9 +232,10 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
     VkBuffer stagingBuffer = VK_NULL_HANDLE;
     VkMemoryRequirements memReqs;
 
+    uint32_t const stagingSize = width * height * bpp * samples;
     VkBufferCreateInfo bufferInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = width * height * bpp,
+        .size = stagingSize,
         .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     };
     // TODO: we could use a staging buffer pool, but this is on another thread.  We'd need to
@@ -371,6 +374,9 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
         uint8_t const* srcPixels;
         vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
 
+        // If MSAA, MoltenVK returns samples in planar layout (Sample 0 is the first width * height
+        // pixels). So we can simply ask DataReshaper to read width * height elements with standard
+        // row pitch!
         int const rowPitch = width * bpp;
         if (!DataReshaper::reshapeImage(&p, componentType, componentCount, srcPixels, rowPitch,
                     static_cast<int>(width), static_cast<int>(height), swizzle)) {

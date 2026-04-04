@@ -15,7 +15,9 @@
  */
 
 #include "fg/FrameGraph.h"
+
 #include "fg/details/DependencyGraph.h"
+
 #include "fg/details/PassNode.h"
 #include "fg/details/Resource.h"
 #include "fg/details/ResourceNode.h"
@@ -484,8 +486,8 @@ void FrameGraph::export_graphviz(utils::io::ostream& out, char const* name) cons
     mGraph.export_graphviz(out, name);
 }
 
-fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) const {
 #if FILAMENT_ENABLE_FGVIEWER
+fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char* viewName) const {
     fgviewer::FrameGraphInfo info{utils::CString(viewName)};
     std::vector<fgviewer::FrameGraphInfo::Pass> passes;
 
@@ -494,6 +496,12 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
     while (first != activePassNodesEnd) {
         PassNode *const pass = *first;
         ++first;
+
+        auto const nameStrView = std::string_view(pass->getName());
+        if (nameStrView == fgviewer::READBACK_PASS_NAME ||
+                nameStrView == fgviewer::RESOLVED_MONITOR_PASS_NAME) {
+            continue;
+        }
 
         assert_invariant(!pass->isCulled());
         std::vector<fgviewer::ResourceId> reads;
@@ -528,7 +536,13 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
     }
 
     std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
-    for (const auto &resourceNode: mResourceNodes) {
+    for (const auto& resourceNode: mResourceNodes) {
+        auto const nameStrView = std::string_view(resourceNode->getName());
+        if (nameStrView == fgviewer::READBACK_PASS_NAME ||
+                nameStrView == fgviewer::RESOLVED_MONITOR_PASS_NAME) {
+            continue;
+        }
+
         const FrameGraphHandle resourceHandle = resourceNode->resourceHandle;
         if (resources.find(resourceHandle.index) != resources.end())
             continue;
@@ -578,13 +592,61 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
     info.setGraphvizData(utils::CString(out.c_str()));
 
     return info;
-#else
-    return fgviewer::FrameGraphInfo();
+}
 #endif
+
+#if FILAMENT_ENABLE_FGVIEWER
+
+FrameGraphId<FrameGraphTexture> FrameGraph::getTextureByIdName(uint32_t id,
+        const char* name) const {
+    // 1. Try the fast path: check if the requested ID matches the expected name.
+    if (id < mResourceSlots.size()) {
+        auto const& slot = mResourceSlots[id];
+        if (slot.rid > 0) {
+            VirtualResource const* resource = mResources[slot.rid];
+            if (resource && strcmp(resource->name.c_str(), name) == 0) {
+                FrameGraphHandle handle;
+                handle.index = (uint16_t) id;
+                handle.version = slot.version;
+                return FrameGraphId<FrameGraphTexture>(handle);
+            }
+        }
+    }
+
+    // 2. Slow path fallback: graph shifts across frames, so the ID might be invalid.
+    // Search all resource slots for a matching name.
+    for (size_t i = 1; i < mResourceSlots.size(); ++i) {
+        auto const& slot = mResourceSlots[i];
+        if (slot.rid > 0) {
+            VirtualResource const* resource = mResources[slot.rid];
+            if (resource && strcmp(resource->name.c_str(), name) == 0) {
+                FrameGraphHandle handle;
+                handle.index = (uint16_t) i;
+                handle.version = slot.version;
+                return FrameGraphId<FrameGraphTexture>(handle);
+            }
+        }
+    }
+
+    return {};
 }
 
+void FrameGraph::dumpResources() const {
+    for (size_t i = 1; i < mResourceSlots.size(); ++i) {
+        auto const& slot = mResourceSlots[i];
+        if (slot.rid > 0) {
+            VirtualResource const* resource = mResources[slot.rid];
+            if (resource) {
+                fprintf(stderr, "[fgviewer]   Slot %zu rid %u: \"%s\"\n", i, (uint32_t) slot.rid,
+                        resource->name.c_str());
+            }
+        }
+    }
+}
+#endif
 
 // ------------------------------------------------------------------------------------------------
+
 
 /*
  * Explicit template instantiation for FrameGraphTexture which is a known type,

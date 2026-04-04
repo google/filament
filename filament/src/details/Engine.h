@@ -570,6 +570,26 @@ public:
 
     backend::Driver& getDriver() const noexcept { return *mDriver; }
 
+#if FILAMENT_ENABLE_FGVIEWER
+    struct ReadbackRequest {
+        using Callback = std::function<void(fgviewer::DebugServer::PixelBuffer, uint32_t, uint32_t,
+                fgviewer::DebugServer::PixelDataFormat, fgviewer::DebugServer::FormatInfo)>;
+        fgviewer::ViewHandle viewId;
+        uint32_t id;
+        utils::CString name;
+        Callback callback;
+    };
+
+    void requestTextureReadback(fgviewer::ViewHandle viewId, uint32_t id,
+            utils::CString const& name,
+            std::function<void(fgviewer::DebugServer::PixelBuffer, uint32_t, uint32_t,
+                    fgviewer::DebugServer::PixelDataFormat, fgviewer::DebugServer::FormatInfo)>&&
+                    callback);
+
+    utils::Mutex mReadbackRequestsMutex;
+    std::vector<ReadbackRequest> mReadbackRequests;
+#endif
+
     utils::Slice<const Engine::FeatureFlag> getFeatureFlags() const noexcept;
     bool setFeatureFlag(char const* name, bool value) noexcept;
     std::optional<bool> getFeatureFlag(char const* name) const noexcept;
