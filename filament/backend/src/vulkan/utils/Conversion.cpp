@@ -770,6 +770,7 @@ PixelDataType getComponentType(VkFormat format) {
         case VK_FORMAT_D16_UNORM: return PixelDataType::USHORT;
         case VK_FORMAT_D32_SFLOAT: return PixelDataType::FLOAT;
         case VK_FORMAT_X8_D24_UNORM_PACK32: return PixelDataType::UINT;
+        case VK_FORMAT_B10G11R11_UFLOAT_PACK32: return PixelDataType::UINT_10F_11F_11F_REV;
         // For combined depth/stencil formats, we return the primary (depth) aspect type.
         // Stencil aspect overrides are handled dynamically during readback.
         case VK_FORMAT_D24_UNORM_S8_UINT: return PixelDataType::UINT;
@@ -848,6 +849,8 @@ uint32_t getComponentCount(VkFormat format) {
         case VK_FORMAT_R32G32B32_UINT:
         case VK_FORMAT_R32G32B32_SINT:
         case VK_FORMAT_R32G32B32_SFLOAT:
+        case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
+        case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
             return 3;
 
         case VK_FORMAT_R8G8B8A8_UNORM:
