@@ -17,6 +17,8 @@
 
 #include "ShaderMinifier.h"
 
+#include <cstring>
+
 #include <utils/Log.h>
 
 namespace filamat {
