@@ -373,6 +373,13 @@ LinearImage PSDDecoder::decode() {
         uint32_t width = ntohl(h.width);
         uint32_t height = ntohl(h.height);
 
+        if (width == 0 || height == 0) {
+            throw std::runtime_error("invalid PSD dimensions: width and height must be non-zero");
+        }
+        if (width > 300000 || height > 300000) {
+            throw std::runtime_error("PSD dimensions exceed maximum allowed size");
+        }
+
         uint32_t length;
 
         // color mode data section
