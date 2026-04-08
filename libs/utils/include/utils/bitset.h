@@ -48,14 +48,20 @@ template<typename T, size_t N = 1,
         typename = std::enable_if_t<std::is_integral_v<T> &&
                                            std::is_unsigned_v<T>>>
 class UTILS_PUBLIC bitset {
-    T storage[N];
-
 public:
-    static constexpr T BITS_PER_WORD = sizeof(T) * 8;
-    static constexpr T BIT_COUNT = BITS_PER_WORD * N;
-    static constexpr T WORLD_COUNT = N;
+    static constexpr size_t BITS_PER_WORD = sizeof(T) * 8;
+    static constexpr size_t BIT_COUNT = BITS_PER_WORD * N;
+    static constexpr size_t WORD_COUNT = N;
     using container_type = T;
 
+private:
+    alignas(BIT_COUNT % 128 == 0 ? 16 : alignof(T)) T storage[N];
+
+#if defined(TNT_UTILS_BITSET_USE_NEON)
+    static_assert(alignof(uint64x2_t) == 16, "NEON types must be 16-byte aligned");
+#endif
+
+public:
     bitset() noexcept {
         std::fill(std::begin(storage), std::end(storage), 0);
     }
@@ -101,7 +107,6 @@ public:
         for (size_t i = 0; i < N; i++) {
             if (T v = storage[i]) {
                 T k = utils::ctz(v);
-                v &= ~(T(1) << k);
                 return size_t(k + BITS_PER_WORD * i);
             }
         }
@@ -112,25 +117,25 @@ public:
 
     bool empty() const noexcept { return none(); }
 
-    bool test(size_t bit) const noexcept { return operator[](bit); }
+    bool test(size_t const bit) const noexcept { return operator[](bit); }
 
-    void set(size_t b) noexcept {
+    void set(size_t const b) noexcept {
         assert(b / BITS_PER_WORD < N);
         storage[b / BITS_PER_WORD] |= T(1) << (b % BITS_PER_WORD);
     }
 
-    void set(size_t b, bool value) noexcept {
+    void set(size_t const b, bool value) noexcept {
         assert(b / BITS_PER_WORD < N);
         storage[b / BITS_PER_WORD] &= ~(T(1) << (b % BITS_PER_WORD));
         storage[b / BITS_PER_WORD] |= T(value) << (b % BITS_PER_WORD);
     }
 
-    void unset(size_t b) noexcept {
+    void unset(size_t const b) noexcept {
         assert(b / BITS_PER_WORD < N);
         storage[b / BITS_PER_WORD] &= ~(T(1) << (b % BITS_PER_WORD));
     }
 
-    void flip(size_t b) noexcept {
+    void flip(size_t const b) noexcept {
         assert(b / BITS_PER_WORD < N);
         storage[b / BITS_PER_WORD] ^= T(1) << (b % BITS_PER_WORD);
     }
@@ -143,7 +148,7 @@ public:
         reset();
     }
 
-    bool operator[](size_t b) const noexcept {
+    bool operator[](size_t const b) const noexcept {
         assert(b / BITS_PER_WORD < N);
         return bool(storage[b / BITS_PER_WORD] & (T(1) << (b % BITS_PER_WORD)));
     }
@@ -154,7 +159,7 @@ public:
             // Use NEON for bitset multiple of 128 bits.
             // The intermediate computation can't handle more than 31*128 bits because
             // intermediate counts must be 8 bits.
-            uint8x16_t const* const p = (uint8x16_t const*) storage;
+            uint8x16_t const* const p = reinterpret_cast<uint8x16_t const*>(storage);
             uint8x16_t counts = vcntq_u8(p[0]);
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
                 counts += vcntq_u8(p[i]);
@@ -163,7 +168,7 @@ public:
         } else
 #endif
         {
-            T r = utils::popcount(storage[0]);
+            size_t r = utils::popcount(storage[0]);
             for (size_t i = 1; i < N; ++i) {
                 r += utils::popcount(storage[i]);
             }
@@ -174,7 +179,7 @@ public:
     bool any() const noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint64x2_t const* const p = (uint64x2_t const*) storage;
+            uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(storage);
             uint64x2_t r = p[0];
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
                 r |= p[i];
@@ -198,12 +203,12 @@ public:
     bool all() const noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint64x2_t const* const p = (uint64x2_t const*) storage;
+            uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(storage);
             uint64x2_t r = p[0];
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
                 r &= p[i];
             }
-            return T(~(r[0] & r[1])) == T(0);
+            return ~(r[0] & r[1]) == 0ULL;
         } else
 #endif
         {
@@ -218,8 +223,8 @@ public:
     bool operator!=(const bitset& b) const noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            bitset temp(*this ^ b);
-            uint64x2_t const* const p = (uint64x2_t const*) temp.storage;
+            bitset const temp(*this ^ b);
+            uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(temp.storage);
             uint64x2_t r = p[0];
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
                 r |= p[i];
@@ -243,8 +248,8 @@ public:
     bitset& operator&=(const bitset& b) noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint8x16_t* const p = (uint8x16_t*) storage;
-            uint8x16_t const* const q = (uint8x16_t const*) b.storage;
+            uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
+            uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
                 p[i] &= q[i];
             }
@@ -261,8 +266,8 @@ public:
     bitset& operator|=(const bitset& b) noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint8x16_t* const p = (uint8x16_t*) storage;
-            uint8x16_t const* const q = (uint8x16_t const*) b.storage;
+            uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
+            uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
                 p[i] |= q[i];
             }
@@ -279,8 +284,8 @@ public:
     bitset& operator^=(const bitset& b) noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint8x16_t* const p = (uint8x16_t*) storage;
-            uint8x16_t const* const q = (uint8x16_t const*) b.storage;
+            uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
+            uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
                 p[i] ^= q[i];
             }

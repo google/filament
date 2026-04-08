@@ -336,7 +336,7 @@ spv_result_t AssemblyContext::recordTypeDefinition(
       return diagnostic() << "Invalid OpTypeFloat instruction";
     spv_fp_encoding_t enc = SPV_FP_ENCODING_UNKNOWN;
     if (pInst->words.size() >= 4) {
-      const spvtools::OperandDesc* desc;
+      const spvtools::OperandDesc* desc = nullptr;
       spv_result_t status = spvtools::LookupOperand(SPV_OPERAND_TYPE_FPENCODING,
                                                     pInst->words[3], &desc);
       if (status == SPV_SUCCESS) {

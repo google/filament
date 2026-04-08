@@ -40,20 +40,20 @@ void main()
     uint gid = gl_WorkGroupID.x;
 
     blk[iid].f               = 11.0;
-    blk[iid+1].fArr[gid]     = blk[iid].f;
+    blk[iid+1].fArr[gid]     = 11.0;
     blk[iid/2].pos.yzx       = vec3(14.0, 15.0, 13.0);
-    blk[iid*2].posArr[1].yzw = blk[iid/2].pos;
+    blk[iid*2].posArr[1].yzw = vec3(14.0, 15.0, 13.0);
     blk[iid/4].m[2].wzyx     = vec4(13.0, 14.0, 15.0, 16.0);
-    blk[iid].mArr[0][1][1]   = blk[iid/4].m[2].w;
+    blk[iid].mArr[0][1][1]   = 16.0;
     blk[iid*4].mArr[1][gid]  = vec3(17.0, 18.0, 19.0);
 
     BARRIER();
 
-    blk2[iid].f           = blk2[iid-1].f + 20.0;
+    blk2[iid].f           = 20.0;
     blk2[iid].pos         = vec4(21.0, 22.0, 23.0, 24.0);
-    blk2[iid+1].m[gid]    = blk2[iid].pos;
+    blk2[iid+1].m[gid]    = vec4(21.0, 22.0, 23.0, 24.0);
     blk2[iid+1].m[gid][2] = 29.0;
-    blk2[iid+2].m[3]      = blk2[iid+1].m[gid];
+    blk2[iid+2].m[3]      = vec4(21.0, 22.0, 23.0, 24.0);
 
     BARRIER();
 }

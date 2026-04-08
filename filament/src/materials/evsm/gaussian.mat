@@ -1,0 +1,52 @@
+material {
+    name : gaussian,
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : input,
+            precision: high
+        },
+        {
+            type : float[32],
+            name : kernel,
+            precision: high
+        },
+        {
+            type : int2,
+            name : bounds,
+            precision: high
+        },
+        {
+            type : int2,
+            name : dir
+        },
+        {
+            type : int,
+            name : layer
+        },
+        {
+            type : int,
+            name : radius
+        }
+    ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4,
+            precision : high
+        }
+    ],
+    constants : [
+    ],
+    variables : [
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false,
+    culling: none
+}
+
+fragment {
+    #include "gaussian.fs"
+}

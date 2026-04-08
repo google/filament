@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "source/opt/basic_block.h"
+#include "source/opt/graph.h"
 #include "source/opt/instruction.h"
 #include "source/opt/module.h"
 #include "spirv-tools/libspirv.hpp"
@@ -80,6 +81,8 @@ class IrLoader {
   std::unique_ptr<Function> function_;
   // The current BasicBlock under construction.
   std::unique_ptr<BasicBlock> block_;
+  // The current Graph under construction.
+  std::unique_ptr<Graph> graph_;
   // Line related debug instructions accumulated thus far.
   std::vector<Instruction> dbg_line_info_;
   // If doing extra line tracking, this is the line instruction that should be

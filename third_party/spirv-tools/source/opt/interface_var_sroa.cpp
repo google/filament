@@ -239,28 +239,34 @@ void InterfaceVariableScalarReplacement::KillLocationAndComponentDecorations(
       });
 }
 
-bool InterfaceVariableScalarReplacement::ReplaceInterfaceVariableWithScalars(
+Pass::Status
+InterfaceVariableScalarReplacement::ReplaceInterfaceVariableWithScalars(
     Instruction* interface_var, Instruction* interface_var_type,
     uint32_t location, uint32_t component, uint32_t extra_array_length) {
-  NestedCompositeComponents scalar_interface_vars =
+  std::optional<NestedCompositeComponents> scalar_interface_vars =
       CreateScalarInterfaceVarsForReplacement(interface_var_type,
                                               GetStorageClass(interface_var),
                                               extra_array_length);
 
-  AddLocationAndComponentDecorations(scalar_interface_vars, &location,
+  if (!scalar_interface_vars) {
+    return Status::Failure;
+  }
+
+  AddLocationAndComponentDecorations(*scalar_interface_vars, &location,
                                      component);
   KillLocationAndComponentDecorations(interface_var->result_id());
 
-  if (!ReplaceInterfaceVarWith(interface_var, extra_array_length,
-                               scalar_interface_vars)) {
-    return false;
+  Status status = ReplaceInterfaceVarWith(interface_var, extra_array_length,
+                                          *scalar_interface_vars);
+  if (status == Status::Failure) {
+    return status;
   }
 
   context()->KillInst(interface_var);
-  return true;
+  return status;
 }
 
-bool InterfaceVariableScalarReplacement::ReplaceInterfaceVarWith(
+Pass::Status InterfaceVariableScalarReplacement::ReplaceInterfaceVarWith(
     Instruction* interface_var, uint32_t extra_array_length,
     const NestedCompositeComponents& scalar_interface_vars) {
   std::vector<Instruction*> users;
@@ -276,21 +282,24 @@ bool InterfaceVariableScalarReplacement::ReplaceInterfaceVarWith(
     // interface variable.
     for (uint32_t index = 0; index < extra_array_length; ++index) {
       std::unordered_map<Instruction*, Instruction*> loads_to_component_values;
-      if (!ReplaceComponentsOfInterfaceVarWith(
-              interface_var, users, scalar_interface_vars,
-              interface_var_component_indices, &index,
-              &loads_to_component_values,
-              &loads_for_access_chain_to_composites)) {
-        return false;
+      Status status = ReplaceComponentsOfInterfaceVarWith(
+          interface_var, users, scalar_interface_vars,
+          interface_var_component_indices, &index, &loads_to_component_values,
+          &loads_for_access_chain_to_composites);
+      if (status == Status::Failure) {
+        return Status::Failure;
       }
       AddComponentsToCompositesForLoads(loads_to_component_values,
                                         &loads_to_composites, 0);
     }
-  } else if (!ReplaceComponentsOfInterfaceVarWith(
-                 interface_var, users, scalar_interface_vars,
-                 interface_var_component_indices, nullptr, &loads_to_composites,
-                 &loads_for_access_chain_to_composites)) {
-    return false;
+  } else {
+    Status status = ReplaceComponentsOfInterfaceVarWith(
+        interface_var, users, scalar_interface_vars,
+        interface_var_component_indices, nullptr, &loads_to_composites,
+        &loads_for_access_chain_to_composites);
+    if (status == Status::Failure) {
+      return Status::Failure;
+    }
   }
 
   ReplaceLoadWithCompositeConstruct(context(), loads_to_composites);
@@ -298,7 +307,7 @@ bool InterfaceVariableScalarReplacement::ReplaceInterfaceVarWith(
                                     loads_for_access_chain_to_composites);
 
   KillInstructionsAndUsers(users);
-  return true;
+  return Status::SuccessWithChange;
 }
 
 void InterfaceVariableScalarReplacement::AddLocationAndComponentDecorations(
@@ -318,7 +327,8 @@ void InterfaceVariableScalarReplacement::AddLocationAndComponentDecorations(
   }
 }
 
-bool InterfaceVariableScalarReplacement::ReplaceComponentsOfInterfaceVarWith(
+Pass::Status
+InterfaceVariableScalarReplacement::ReplaceComponentsOfInterfaceVarWith(
     Instruction* interface_var,
     const std::vector<Instruction*>& interface_var_users,
     const NestedCompositeComponents& scalar_interface_vars,
@@ -329,15 +339,16 @@ bool InterfaceVariableScalarReplacement::ReplaceComponentsOfInterfaceVarWith(
         loads_for_access_chain_to_composites) {
   if (!scalar_interface_vars.HasMultipleComponents()) {
     for (Instruction* interface_var_user : interface_var_users) {
-      if (!ReplaceComponentOfInterfaceVarWith(
-              interface_var, interface_var_user,
-              scalar_interface_vars.GetComponentVariable(),
-              interface_var_component_indices, extra_array_index,
-              loads_to_composites, loads_for_access_chain_to_composites)) {
-        return false;
+      Status status = ReplaceComponentOfInterfaceVarWith(
+          interface_var, interface_var_user,
+          scalar_interface_vars.GetComponentVariable(),
+          interface_var_component_indices, extra_array_index,
+          loads_to_composites, loads_for_access_chain_to_composites);
+      if (status == Status::Failure) {
+        return Status::Failure;
       }
     }
-    return true;
+    return Status::SuccessWithChange;
   }
   return ReplaceMultipleComponentsOfInterfaceVarWith(
       interface_var, interface_var_users, scalar_interface_vars.GetComponents(),
@@ -345,27 +356,28 @@ bool InterfaceVariableScalarReplacement::ReplaceComponentsOfInterfaceVarWith(
       loads_for_access_chain_to_composites);
 }
 
-bool InterfaceVariableScalarReplacement::
-    ReplaceMultipleComponentsOfInterfaceVarWith(
-        Instruction* interface_var,
-        const std::vector<Instruction*>& interface_var_users,
-        const std::vector<NestedCompositeComponents>& components,
-        std::vector<uint32_t>& interface_var_component_indices,
-        const uint32_t* extra_array_index,
-        std::unordered_map<Instruction*, Instruction*>* loads_to_composites,
-        std::unordered_map<Instruction*, Instruction*>*
-            loads_for_access_chain_to_composites) {
+Pass::Status
+InterfaceVariableScalarReplacement::ReplaceMultipleComponentsOfInterfaceVarWith(
+    Instruction* interface_var,
+    const std::vector<Instruction*>& interface_var_users,
+    const std::vector<NestedCompositeComponents>& components,
+    std::vector<uint32_t>& interface_var_component_indices,
+    const uint32_t* extra_array_index,
+    std::unordered_map<Instruction*, Instruction*>* loads_to_composites,
+    std::unordered_map<Instruction*, Instruction*>*
+        loads_for_access_chain_to_composites) {
   for (uint32_t i = 0; i < components.size(); ++i) {
     interface_var_component_indices.push_back(i);
     std::unordered_map<Instruction*, Instruction*> loads_to_component_values;
     std::unordered_map<Instruction*, Instruction*>
         loads_for_access_chain_to_component_values;
-    if (!ReplaceComponentsOfInterfaceVarWith(
-            interface_var, interface_var_users, components[i],
-            interface_var_component_indices, extra_array_index,
-            &loads_to_component_values,
-            &loads_for_access_chain_to_component_values)) {
-      return false;
+    Status status = ReplaceComponentsOfInterfaceVarWith(
+        interface_var, interface_var_users, components[i],
+        interface_var_component_indices, extra_array_index,
+        &loads_to_component_values,
+        &loads_for_access_chain_to_component_values);
+    if (status == Status::Failure) {
+      return Status::Failure;
     }
     interface_var_component_indices.pop_back();
 
@@ -378,10 +390,11 @@ bool InterfaceVariableScalarReplacement::
     AddComponentsToCompositesForLoads(loads_to_component_values,
                                       loads_to_composites, depth_to_component);
   }
-  return true;
+  return Status::SuccessWithChange;
 }
 
-bool InterfaceVariableScalarReplacement::ReplaceComponentOfInterfaceVarWith(
+Pass::Status
+InterfaceVariableScalarReplacement::ReplaceComponentOfInterfaceVarWith(
     Instruction* interface_var, Instruction* interface_var_user,
     Instruction* scalar_var,
     const std::vector<uint32_t>& interface_var_component_indices,
@@ -395,42 +408,49 @@ bool InterfaceVariableScalarReplacement::ReplaceComponentOfInterfaceVarWith(
     StoreComponentOfValueToScalarVar(value_id, interface_var_component_indices,
                                      scalar_var, extra_array_index,
                                      interface_var_user);
-    return true;
+    return Status::SuccessWithChange;
   }
   if (opcode == spv::Op::OpLoad) {
     Instruction* scalar_load =
         LoadScalarVar(scalar_var, extra_array_index, interface_var_user);
+    if (scalar_load == nullptr) {
+      return Status::Failure;
+    }
     loads_to_component_values->insert({interface_var_user, scalar_load});
-    return true;
+    return Status::SuccessWithChange;
   }
 
   // Copy OpName and annotation instructions only once. Therefore, we create
   // them only for the first element of the extra array.
-  if (extra_array_index && *extra_array_index != 0) return true;
+  if (extra_array_index && *extra_array_index != 0)
+    return Status::SuccessWithChange;
 
   if (opcode == spv::Op::OpDecorateId || opcode == spv::Op::OpDecorateString ||
       opcode == spv::Op::OpDecorate) {
     CloneAnnotationForVariable(interface_var_user, scalar_var->result_id());
-    return true;
+    return Status::SuccessWithChange;
   }
 
   if (opcode == spv::Op::OpName) {
     std::unique_ptr<Instruction> new_inst(interface_var_user->Clone(context()));
     new_inst->SetInOperand(0, {scalar_var->result_id()});
     context()->AddDebug2Inst(std::move(new_inst));
-    return true;
+    return Status::SuccessWithChange;
   }
 
   if (opcode == spv::Op::OpEntryPoint) {
-    return ReplaceInterfaceVarInEntryPoint(interface_var, interface_var_user,
-                                           scalar_var->result_id());
+    if (ReplaceInterfaceVarInEntryPoint(interface_var, interface_var_user,
+                                        scalar_var->result_id())) {
+      return Status::SuccessWithChange;
+    }
+    return Status::Failure;
   }
 
   if (opcode == spv::Op::OpAccessChain) {
     ReplaceAccessChainWith(interface_var_user, interface_var_component_indices,
                            scalar_var,
                            loads_for_access_chain_to_component_values);
-    return true;
+    return Status::SuccessWithChange;
   }
 
   std::string message("Unhandled instruction");
@@ -440,7 +460,7 @@ bool InterfaceVariableScalarReplacement::ReplaceComponentOfInterfaceVarWith(
       "\nfor interface variable scalar replacement\n  " +
       interface_var->PrettyPrint(SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
   context()->consumer()(SPV_MSG_ERROR, "", {0, 0, 0}, message.c_str());
-  return false;
+  return Status::Failure;
 }
 
 void InterfaceVariableScalarReplacement::UseBaseAccessChainForAccessChain(
@@ -470,10 +490,14 @@ Instruction* InterfaceVariableScalarReplacement::CreateAccessChainToVar(
   uint32_t ptr_type_id =
       GetPointerType(*component_type_id, GetStorageClass(var));
 
-  std::unique_ptr<Instruction> new_access_chain(new Instruction(
-      context(), spv::Op::OpAccessChain, ptr_type_id, TakeNextId(),
-      std::initializer_list<Operand>{
-          {SPV_OPERAND_TYPE_ID, {var->result_id()}}}));
+  uint32_t new_id = TakeNextId();
+  if (new_id == 0) {
+    return nullptr;
+  }
+  std::unique_ptr<Instruction> new_access_chain(
+      new Instruction(context(), spv::Op::OpAccessChain, ptr_type_id, new_id,
+                      std::initializer_list<Operand>{
+                          {SPV_OPERAND_TYPE_ID, {var->result_id()}}}));
   for (uint32_t index_id : index_ids) {
     new_access_chain->AddOperand({SPV_OPERAND_TYPE_ID, {index_id}});
   }
@@ -490,12 +514,16 @@ Instruction* InterfaceVariableScalarReplacement::CreateAccessChainWithIndex(
   uint32_t ptr_type_id =
       GetPointerType(component_type_id, GetStorageClass(var));
   uint32_t index_id = context()->get_constant_mgr()->GetUIntConstId(index);
-  std::unique_ptr<Instruction> new_access_chain(new Instruction(
-      context(), spv::Op::OpAccessChain, ptr_type_id, TakeNextId(),
-      std::initializer_list<Operand>{
-          {SPV_OPERAND_TYPE_ID, {var->result_id()}},
-          {SPV_OPERAND_TYPE_ID, {index_id}},
-      }));
+  uint32_t new_id = TakeNextId();
+  if (new_id == 0) {
+    return nullptr;
+  }
+  std::unique_ptr<Instruction> new_access_chain(
+      new Instruction(context(), spv::Op::OpAccessChain, ptr_type_id, new_id,
+                      std::initializer_list<Operand>{
+                          {SPV_OPERAND_TYPE_ID, {var->result_id()}},
+                          {SPV_OPERAND_TYPE_ID, {index_id}},
+                      }));
   Instruction* inst = new_access_chain.get();
   context()->get_def_use_mgr()->AnalyzeInstDefUse(inst);
   insert_before->InsertBefore(std::move(new_access_chain));
@@ -617,6 +645,9 @@ void InterfaceVariableScalarReplacement::StoreComponentOfValueToScalarVar(
     component_type_id = ty_mgr->GetTypeInstruction(array_type->element_type());
     ptr = CreateAccessChainWithIndex(component_type_id, scalar_var,
                                      *extra_array_index, insert_before);
+    if (ptr == nullptr) {
+      return;
+    }
   }
 
   StoreComponentOfValueTo(component_type_id, value_id, component_indices, ptr,
@@ -635,6 +666,9 @@ Instruction* InterfaceVariableScalarReplacement::LoadScalarVar(
     component_type_id = ty_mgr->GetTypeInstruction(array_type->element_type());
     ptr = CreateAccessChainWithIndex(component_type_id, scalar_var,
                                      *extra_array_index, insert_before);
+    if (ptr == nullptr) {
+      return nullptr;
+    }
   }
 
   return CreateLoad(component_type_id, ptr, insert_before);
@@ -642,8 +676,12 @@ Instruction* InterfaceVariableScalarReplacement::LoadScalarVar(
 
 Instruction* InterfaceVariableScalarReplacement::CreateLoad(
     uint32_t type_id, Instruction* ptr, Instruction* insert_before) {
+  uint32_t new_id = TakeNextId();
+  if (new_id == 0) {
+    return nullptr;
+  }
   std::unique_ptr<Instruction> load(
-      new Instruction(context(), spv::Op::OpLoad, type_id, TakeNextId(),
+      new Instruction(context(), spv::Op::OpLoad, type_id, new_id,
                       std::initializer_list<Operand>{
                           {SPV_OPERAND_TYPE_ID, {ptr->result_id()}}}));
   Instruction* load_inst = load.get();
@@ -658,6 +696,9 @@ void InterfaceVariableScalarReplacement::StoreComponentOfValueTo(
     const uint32_t* extra_array_index, Instruction* insert_before) {
   std::unique_ptr<Instruction> composite_extract(CreateCompositeExtract(
       component_type_id, value_id, component_indices, extra_array_index));
+  if (composite_extract == nullptr) {
+    return;
+  }
 
   std::unique_ptr<Instruction> new_store(
       new Instruction(context(), spv::Op::OpStore));
@@ -677,6 +718,9 @@ Instruction* InterfaceVariableScalarReplacement::CreateCompositeExtract(
     uint32_t type_id, uint32_t composite_id,
     const std::vector<uint32_t>& indexes, const uint32_t* extra_first_index) {
   uint32_t component_id = TakeNextId();
+  if (component_id == 0) {
+    return nullptr;
+  }
   Instruction* composite_extract = new Instruction(
       context(), spv::Op::OpCompositeExtract, type_id, component_id,
       std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {composite_id}}});
@@ -716,6 +760,9 @@ Instruction* InterfaceVariableScalarReplacement::LoadAccessChainToVar(
   if (!indexes.empty()) {
     ptr = CreateAccessChainToVar(component_type_id, var, indexes, insert_before,
                                  &component_type_id);
+    if (ptr == nullptr) {
+      return nullptr;
+    }
   }
 
   return CreateLoad(component_type_id, ptr, insert_before);
@@ -730,7 +777,10 @@ InterfaceVariableScalarReplacement::CreateCompositeConstructForComponentOfLoad(
     type_id = GetComponentTypeOfArrayMatrix(def_use_mgr, load->type_id(),
                                             depth_to_component);
   }
-  uint32_t new_id = context()->TakeNextId();
+  uint32_t new_id = TakeNextId();
+  if (new_id == 0) {
+    return nullptr;
+  }
   std::unique_ptr<Instruction> new_composite_construct(new Instruction(
       context(), spv::Op::OpCompositeConstruct, type_id, new_id, {}));
   Instruction* composite_construct = new_composite_construct.get();
@@ -767,6 +817,10 @@ void InterfaceVariableScalarReplacement::AddComponentsToCompositesForLoads(
     if (itr == loads_to_composites->end()) {
       composite_construct =
           CreateCompositeConstructForComponentOfLoad(load, depth_to_component);
+      if (composite_construct == nullptr) {
+        assert(false && "Could not create composite construct");
+        return;
+      }
       loads_to_composites->insert({load, composite_construct});
     } else {
       composite_construct = itr->second;
@@ -795,7 +849,7 @@ uint32_t InterfaceVariableScalarReplacement::GetPointerType(
   return context()->get_type_mgr()->GetTypeInstruction(&ptr_type);
 }
 
-InterfaceVariableScalarReplacement::NestedCompositeComponents
+std::optional<InterfaceVariableScalarReplacement::NestedCompositeComponents>
 InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForArray(
     Instruction* interface_var_type, spv::StorageClass storage_class,
     uint32_t extra_array_length) {
@@ -807,16 +861,19 @@ InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForArray(
 
   NestedCompositeComponents scalar_vars;
   while (array_length > 0) {
-    NestedCompositeComponents scalar_vars_for_element =
+    std::optional<NestedCompositeComponents> scalar_vars_for_element =
         CreateScalarInterfaceVarsForReplacement(elem_type, storage_class,
                                                 extra_array_length);
-    scalar_vars.AddComponent(scalar_vars_for_element);
+    if (!scalar_vars_for_element) {
+      return std::nullopt;
+    }
+    scalar_vars.AddComponent(*scalar_vars_for_element);
     --array_length;
   }
   return scalar_vars;
 }
 
-InterfaceVariableScalarReplacement::NestedCompositeComponents
+std::optional<InterfaceVariableScalarReplacement::NestedCompositeComponents>
 InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForMatrix(
     Instruction* interface_var_type, spv::StorageClass storage_class,
     uint32_t extra_array_length) {
@@ -830,16 +887,19 @@ InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForMatrix(
 
   NestedCompositeComponents scalar_vars;
   while (column_count > 0) {
-    NestedCompositeComponents scalar_vars_for_column =
+    std::optional<NestedCompositeComponents> scalar_vars_for_column =
         CreateScalarInterfaceVarsForReplacement(column_type, storage_class,
                                                 extra_array_length);
-    scalar_vars.AddComponent(scalar_vars_for_column);
+    if (!scalar_vars_for_column) {
+      return std::nullopt;
+    }
+    scalar_vars.AddComponent(*scalar_vars_for_column);
     --column_count;
   }
   return scalar_vars;
 }
 
-InterfaceVariableScalarReplacement::NestedCompositeComponents
+std::optional<InterfaceVariableScalarReplacement::NestedCompositeComponents>
 InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForReplacement(
     Instruction* interface_var_type, spv::StorageClass storage_class,
     uint32_t extra_array_length) {
@@ -864,6 +924,9 @@ InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForReplacement(
   uint32_t ptr_type_id =
       context()->get_type_mgr()->FindPointerToType(type_id, storage_class);
   uint32_t id = TakeNextId();
+  if (id == 0) {
+    return std::nullopt;
+  }
   std::unique_ptr<Instruction> variable(
       new Instruction(context(), spv::Op::OpVariable, ptr_type_id, id,
                       std::initializer_list<Operand>{
@@ -953,9 +1016,9 @@ InterfaceVariableScalarReplacement::ReplaceInterfaceVarsWithScalars(
       continue;
     }
 
-    if (!ReplaceInterfaceVariableWithScalars(interface_var, interface_var_type,
-                                             location, component,
-                                             extra_array_length)) {
+    if (ReplaceInterfaceVariableWithScalars(
+            interface_var, interface_var_type, location, component,
+            extra_array_length) == Pass::Status::Failure) {
       return Pass::Status::Failure;
     }
     status = Pass::Status::SuccessWithChange;

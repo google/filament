@@ -1,3 +1,17 @@
+# Copyright 2021 The Draco Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
 if(DRACO_CMAKE_DRACO_OPTIONS_CMAKE_)
   return()
 endif() # DRACO_CMAKE_DRACO_OPTIONS_CMAKE_
@@ -18,17 +32,22 @@ macro(draco_option)
   cmake_parse_arguments(option "${optional_args}" "${single_value_args}"
                         "${multi_value_args}" ${ARGN})
 
-  if(NOT (option_NAME AND option_HELPSTRING AND DEFINED option_VALUE))
+  if(NOT
+     (option_NAME
+      AND option_HELPSTRING
+      AND DEFINED option_VALUE))
     message(FATAL_ERROR "draco_option: NAME HELPSTRING and VALUE required.")
   endif()
 
   option(${option_NAME} ${option_HELPSTRING} ${option_VALUE})
 
   if(DRACO_VERBOSE GREATER 2)
-    message("--------- draco_option ---------\n" "option_NAME=${option_NAME}\n"
-            "option_HELPSTRING=${option_HELPSTRING}\n"
-            "option_VALUE=${option_VALUE}\n"
-            "------------------------------------------\n")
+    message(
+      "--------- draco_option ---------\n"
+      "option_NAME=${option_NAME}\n"
+      "option_HELPSTRING=${option_HELPSTRING}\n"
+      "option_VALUE=${option_VALUE}\n"
+      "------------------------------------------\n")
   endif()
 
   list(APPEND draco_options ${option_NAME})
@@ -44,33 +63,78 @@ endmacro()
 
 # Set default options.
 macro(draco_set_default_options)
-  draco_option(NAME DRACO_FAST HELPSTRING "Try to build faster libs." VALUE OFF)
-  draco_option(NAME DRACO_JS_GLUE HELPSTRING
-               "Enable JS Glue and JS targets when using Emscripten." VALUE ON)
-  draco_option(NAME DRACO_IE_COMPATIBLE HELPSTRING
-               "Enable support for older IE builds when using Emscripten." VALUE
-               OFF)
-  draco_option(NAME DRACO_MESH_COMPRESSION HELPSTRING "Enable mesh compression."
-               VALUE ON)
-  draco_option(NAME DRACO_POINT_CLOUD_COMPRESSION HELPSTRING
-               "Enable point cloud compression." VALUE ON)
-  draco_option(NAME DRACO_PREDICTIVE_EDGEBREAKER HELPSTRING
-               "Enable predictive edgebreaker." VALUE ON)
-  draco_option(NAME DRACO_STANDARD_EDGEBREAKER HELPSTRING
-               "Enable stand edgebreaker." VALUE ON)
-  draco_option(NAME DRACO_BACKWARDS_COMPATIBILITY HELPSTRING
-               "Enable backwards compatibility." VALUE ON)
-  draco_option(NAME DRACO_DECODER_ATTRIBUTE_DEDUPLICATION HELPSTRING
-               "Enable attribute deduping." VALUE OFF)
-  draco_option(NAME DRACO_TESTS HELPSTRING "Enables tests." VALUE OFF)
-  draco_option(NAME DRACO_WASM HELPSTRING "Enables WASM support." VALUE OFF)
-  draco_option(NAME DRACO_UNITY_PLUGIN HELPSTRING
-               "Build plugin library for Unity." VALUE OFF)
-  draco_option(NAME DRACO_ANIMATION_ENCODING HELPSTRING "Enable animation."
-               VALUE OFF)
-  draco_option(NAME DRACO_GLTF HELPSTRING "Support GLTF." VALUE OFF)
-  draco_option(NAME DRACO_MAYA_PLUGIN HELPSTRING
-               "Build plugin library for Maya." VALUE OFF)
+  draco_option(
+    NAME DRACO_FAST
+    HELPSTRING "Try to build faster libs."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_JS_GLUE
+    HELPSTRING "Enable JS Glue and JS targets when using Emscripten."
+    VALUE ON)
+  draco_option(
+    NAME DRACO_IE_COMPATIBLE
+    HELPSTRING "Enable support for older IE builds when using Emscripten."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_MESH_COMPRESSION
+    HELPSTRING "Enable mesh compression."
+    VALUE ON)
+  draco_option(
+    NAME DRACO_POINT_CLOUD_COMPRESSION
+    HELPSTRING "Enable point cloud compression."
+    VALUE ON)
+  draco_option(
+    NAME DRACO_PREDICTIVE_EDGEBREAKER
+    HELPSTRING "Enable predictive edgebreaker."
+    VALUE ON)
+  draco_option(
+    NAME DRACO_STANDARD_EDGEBREAKER
+    HELPSTRING "Enable stand edgebreaker."
+    VALUE ON)
+  draco_option(
+    NAME DRACO_BACKWARDS_COMPATIBILITY
+    HELPSTRING "Enable backwards compatibility."
+    VALUE ON)
+  draco_option(
+    NAME DRACO_DECODER_ATTRIBUTE_DEDUPLICATION
+    HELPSTRING "Enable attribute deduping."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_TESTS
+    HELPSTRING "Enables tests."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_WASM
+    HELPSTRING "Enables WASM support."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_UNITY_PLUGIN
+    HELPSTRING "Build plugin library for Unity."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_ANIMATION_ENCODING
+    HELPSTRING "Enable animation."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_GLTF_BITSTREAM
+    HELPSTRING "Draco GLTF extension bitstream specified features only."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_MAYA_PLUGIN
+    HELPSTRING "Build plugin library for Maya."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_TRANSCODER_SUPPORTED
+    HELPSTRING "Enable the Draco transcoder."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_DEBUG_COMPILER_WARNINGS
+    HELPSTRING "Turn on more warnings."
+    VALUE OFF)
+  draco_option(
+    NAME DRACO_INSTALL
+    HELPSTRING "Enable installation."
+    VALUE ON)
   draco_check_deprecated_options()
 endmacro()
 
@@ -117,14 +181,16 @@ macro(draco_check_deprecated_options)
                                  DRACO_MAYA_PLUGIN)
   draco_handle_deprecated_option(OLDNAME BUILD_USD_PLUGIN NEWNAME
                                  BUILD_SHARED_LIBS)
+  draco_handle_deprecated_option(OLDNAME DRACO_GLTF NEWNAME
+                                 DRACO_GLTF_BITSTREAM)
 
 endmacro()
 
 # Macro for setting Draco features based on user configuration. Features enabled
 # by this macro are Draco global.
 macro(draco_set_optional_features)
-  if(DRACO_GLTF)
-    # Override settings when building for GLTF.
+  if(DRACO_GLTF_BITSTREAM)
+    # Enable only the features included in the Draco GLTF bitstream spec.
     draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
     draco_enable_feature(FEATURE "DRACO_NORMAL_ENCODING_SUPPORTED")
     draco_enable_feature(FEATURE "DRACO_STANDARD_EDGEBREAKER_SUPPORTED")
@@ -169,6 +235,11 @@ macro(draco_set_optional_features)
     draco_enable_feature(FEATURE "DRACO_MAYA_PLUGIN")
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   endif()
+
+  if(DRACO_TRANSCODER_SUPPORTED)
+    draco_enable_feature(FEATURE "DRACO_TRANSCODER_SUPPORTED")
+  endif()
+
 
 endmacro()
 
@@ -221,8 +292,56 @@ function(draco_generate_features_h)
     file(APPEND "${draco_features_file_name}.new" "#define ${feature}\n")
   endforeach()
 
+  if(MSVC)
+    if(NOT DRACO_DEBUG_COMPILER_WARNINGS)
+      file(APPEND "${draco_features_file_name}.new"
+           "// Enable DRACO_DEBUG_COMPILER_WARNINGS at CMake generation \n"
+           "// time to remove these pragmas.\n")
+
+      # warning C4018: '<operator>': signed/unsigned mismatch.
+      file(APPEND "${draco_features_file_name}.new"
+           "#pragma warning(disable:4018)\n")
+
+      # warning C4146: unary minus operator applied to unsigned type, result
+      # still unsigned
+      file(APPEND "${draco_features_file_name}.new"
+           "#pragma warning(disable:4146)\n")
+
+      # warning C4244: 'return': conversion from '<type>' to '<type>', possible
+      # loss of data.
+      file(APPEND "${draco_features_file_name}.new"
+           "#pragma warning(disable:4244)\n")
+
+      # warning C4267: 'initializing' conversion from '<type>' to '<type>',
+      # possible loss of data.
+      file(APPEND "${draco_features_file_name}.new"
+           "#pragma warning(disable:4267)\n")
+
+      # warning C4305: 'context' : truncation from 'type1' to 'type2'.
+      file(APPEND "${draco_features_file_name}.new"
+           "#pragma warning(disable:4305)\n")
+
+      # warning C4661: 'identifier' : no suitable definition provided for
+      # explicit template instantiation request.
+      file(APPEND "${draco_features_file_name}.new"
+           "#pragma warning(disable:4661)\n")
+
+      # warning C4800: Implicit conversion from 'type' to bool. Possible
+      # information loss.
+      # Also, in older MSVC releases:
+      # warning C4800: 'type' : forcing value to bool 'true' or 'false'
+      # (performance warning).
+      file(APPEND "${draco_features_file_name}.new"
+           "#pragma warning(disable:4800)\n")
+
+      # warning C4804: '<operator>': unsafe use of type '<type>' in operation.
+      file(APPEND "${draco_features_file_name}.new"
+           "#pragma warning(disable:4804)\n")
+    endif()
+  endif()
+
   file(APPEND "${draco_features_file_name}.new"
-       "\n#endif  // DRACO_FEATURES_H_")
+       "\n#endif  // DRACO_FEATURES_H_\n")
 
   # Will replace ${draco_features_file_name} only if the file content has
   # changed. This prevents forced Draco rebuilds after CMake runs.

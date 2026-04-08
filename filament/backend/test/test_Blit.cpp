@@ -507,6 +507,7 @@ TEST_F(BlitTest, BlitRegion) {
 
 TEST_F(BlitTest, BlitRegionToSwapChain) {
     SKIP_IF(Backend::WEBGPU, "WebGPU Crashes due to not finding color attachment");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/495913675");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 

@@ -206,6 +206,15 @@ public class Engine {
     };
 
     /**
+     * Three-state feature state.
+     */
+    public enum FeatureState {
+        FALSE,
+        TRUE,
+        INDETERMINATE
+    }
+
+    /**
      * Constructs <code>Engine</code> objects using a builder pattern.
      */
     public static class Builder {
@@ -616,6 +625,35 @@ public class Engine {
      */
     public boolean isValid() {
         return mNativeObject != 0;
+    }
+
+    /**
+     * Asynchronously ensures that the variants of the specified Material required to render it
+     * in the provided View are compiled. This determines the necessary permutations of 
+     * feature flags based on the supplied View, and compiles the corresponding shader variants.
+     *
+     * See {@link Material#compile(Material.CompilerPriorityQueue, int, Object, Runnable)} for 
+     * important details about the compilation process, callback scheduling, priorities, and flushing the engine.
+     *
+     * @param priority       Which priority queue to use, LOW or HIGH.
+     * @param material       The Material whose variants will be compiled.
+     * @param view           The View in which the material will be rendered.
+     * @param shadowReceiver Indicates whether to compile variants where the material receives shadows.
+     *                       Use FeatureState.INDETERMINATE to compile both permutations.
+     * @param skinning       Indicates whether to compile variants with skinning.
+     *                       Use FeatureState.INDETERMINATE to compile both permutations.
+     * @param handler        An {@link java.util.concurrent.Executor Executor}. On Android this can also be a {@link android.os.Handler Handler}.
+     * @param callback       callback called on the main thread when the compilation is done
+     *                       by backend.
+     */
+    public void compile(@NonNull Material.CompilerPriorityQueue priority,
+                        @NonNull Material material,
+                        @NonNull View view,
+                        @NonNull FeatureState shadowReceiver,
+                        @NonNull FeatureState skinning,
+                        @Nullable Object handler,
+                        @Nullable Runnable callback) {
+        nCompile(getNativeObject(), priority.ordinal(), material.getNativeObject(), view.getNativeObject(), shadowReceiver.ordinal(), skinning.ordinal(), handler, callback);
     }
 
     /**
@@ -1531,6 +1569,7 @@ public class Engine {
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native boolean nFlushAndWait(long nativeEngine, long timeout);
     private static native void nFlush(long nativeEngine);
+    private static native void nCompile(long nativeEngine, int priority, long nativeMaterial, long nativeView, int shadowReceiver, int skinning, Object handler, Runnable callback);
     private static native boolean nIsPaused(long nativeEngine);
     private static native void nSetPaused(long nativeEngine, boolean paused);
     private static native void nUnprotected(long nativeEngine);

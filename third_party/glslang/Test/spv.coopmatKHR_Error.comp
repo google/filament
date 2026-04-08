@@ -66,4 +66,11 @@ void main()
     f16_16_8.x;
 
     transpose(f16_8_8);
+
+    //buf[] argument needs be in Shared/StorageBuffer storage classes
+    float16_t larr[16];
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 8, gl_MatrixUseAccumulator> lvar;
+    coopMatLoad(lvar, larr, 1, 2, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(lvar, larr, 1, 2, gl_CooperativeMatrixLayoutRowMajor);
+
 }

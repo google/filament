@@ -39,7 +39,7 @@ TEST_F(PlyReaderTest, TestReader) {
   buf.Init(data.data(), data.size());
   PlyReader reader;
   Status status = reader.Read(&buf);
-  ASSERT_TRUE(status.ok()) << status;
+  DRACO_ASSERT_OK(status);
   ASSERT_EQ(reader.num_elements(), 2);
   ASSERT_EQ(reader.element(0).num_properties(), 7);
   ASSERT_EQ(reader.element(1).num_properties(), 1);
@@ -64,14 +64,14 @@ TEST_F(PlyReaderTest, TestReaderAscii) {
   buf.Init(data.data(), data.size());
   PlyReader reader;
   Status status = reader.Read(&buf);
-  ASSERT_TRUE(status.ok()) << status;
+  DRACO_ASSERT_OK(status);
 
   const std::string file_name_ascii = "test_pos_color_ascii.ply";
   const std::vector<char> data_ascii = ReadPlyFile(file_name_ascii);
   buf.Init(data_ascii.data(), data_ascii.size());
   PlyReader reader_ascii;
   status = reader_ascii.Read(&buf);
-  ASSERT_TRUE(status.ok()) << status;
+  DRACO_ASSERT_OK(status);
   ASSERT_EQ(reader.num_elements(), reader_ascii.num_elements());
   ASSERT_EQ(reader.element(0).num_properties(),
             reader_ascii.element(0).num_properties());
@@ -96,7 +96,7 @@ TEST_F(PlyReaderTest, TestReaderExtraWhitespace) {
   buf.Init(data.data(), data.size());
   PlyReader reader;
   Status status = reader.Read(&buf);
-  ASSERT_TRUE(status.ok()) << status;
+  DRACO_ASSERT_OK(status);
 
   ASSERT_EQ(reader.num_elements(), 2);
   ASSERT_EQ(reader.element(0).num_properties(), 7);
@@ -122,7 +122,7 @@ TEST_F(PlyReaderTest, TestReaderMoreDataTypes) {
   buf.Init(data.data(), data.size());
   PlyReader reader;
   Status status = reader.Read(&buf);
-  ASSERT_TRUE(status.ok()) << status;
+  DRACO_ASSERT_OK(status);
 
   ASSERT_EQ(reader.num_elements(), 2);
   ASSERT_EQ(reader.element(0).num_properties(), 7);

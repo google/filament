@@ -9,7 +9,7 @@ ERROR: 0:30: 'texture2DProjLod' : no matching overloaded function found
 ERROR: 0:31: 'texture' : no matching overloaded function found 
 ERROR: 0:32: 'textureProjLod' : no matching overloaded function found 
 ERROR: 0:38: 'samplerExternalOES' : required extension not requested: GL_OES_EGL_image_external_essl3
-ERROR: 0:41: '' :  syntax error, unexpected IDENTIFIER, expecting LEFT_BRACE or COMMA or SEMICOLON
+ERROR: 0:41: '' :  syntax error, unexpected IDENTIFIER, expecting COMMA or SEMICOLON
 ERROR: 11 compilation errors.  No code generated.
 
 

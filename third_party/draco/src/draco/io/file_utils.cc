@@ -14,6 +14,8 @@
 //
 #include "draco/io/file_utils.h"
 
+#include <string>
+
 #include "draco/io/file_reader_factory.h"
 #include "draco/io/file_reader_interface.h"
 #include "draco/io/file_writer_factory.h"
@@ -30,7 +32,7 @@ void SplitPath(const std::string &full_path, std::string *out_folder_path,
 
 std::string ReplaceFileExtension(const std::string &in_file_name,
                                  const std::string &new_extension) {
-  const auto pos = in_file_name.find_last_of(".");
+  const auto pos = in_file_name.find_last_of('.');
   if (pos == std::string::npos) {
     // No extension found.
     return in_file_name + "." + new_extension;
@@ -44,6 +46,22 @@ std::string LowercaseFileExtension(const std::string &filename) {
     return "";
   }
   return parser::ToLower(filename.substr(pos + 1));
+}
+
+std::string LowercaseMimeTypeExtension(const std::string &mime_type) {
+  const size_t pos = mime_type.find_last_of('/');
+  if (pos == 0 || pos == std::string::npos || pos == mime_type.length() - 1) {
+    return "";
+  }
+  return parser::ToLower(mime_type.substr(pos + 1));
+}
+
+std::string RemoveFileExtension(const std::string &filename) {
+  const size_t pos = filename.find_last_of('.');
+  if (pos == 0 || pos == std::string::npos || pos == filename.length() - 1) {
+    return filename;
+  }
+  return filename.substr(0, pos);
 }
 
 std::string GetFullPath(const std::string &input_file_relative_path,
@@ -74,6 +92,23 @@ bool ReadFileToBuffer(const std::string &file_name,
     return false;
   }
   return file_reader->ReadFileToBuffer(buffer);
+}
+
+bool ReadFileToString(const std::string &file_name, std::string *contents) {
+  if (!contents) {
+    return false;
+  }
+  std::unique_ptr<FileReaderInterface> file_reader =
+      FileReaderFactory::OpenReader(file_name);
+  if (file_reader == nullptr) {
+    return false;
+  }
+  std::vector<char> buffer;
+  if (!ReadFileToBuffer(file_name, &buffer)) {
+    return false;
+  }
+  contents->assign(buffer.begin(), buffer.end());
+  return true;
 }
 
 bool WriteBufferToFile(const char *buffer, size_t buffer_size,

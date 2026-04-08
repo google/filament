@@ -10,7 +10,7 @@ struct t24
     int4 m0[2];
     int m1;
     ulong2 m2[2];
-    device t21* m3;
+    const device t21* m3;
     float2x4 m4;
 };
 
@@ -19,7 +19,7 @@ struct t21
     int4 m0[2];
     int m1;
     ulong2 m2[2];
-    device t21* m3;
+    const device t21* m3;
     float2x4 m4;
 };
 
@@ -40,20 +40,20 @@ kernel void main0(constant t24& u24 [[buffer(0)]], constant t35& u35 [[buffer(1)
     v8 |= int(u24.m4[1u][0] - 5.0);
     v8 |= int(u24.m4[0u][1] - 4.0);
     v8 |= int(u24.m4[1u][1] - 6.0);
-    v8 |= (((device t21*)u24.m2[0].x)->m0[0].x - 3);
-    v8 |= (((device t21*)u24.m2[0].x)->m0[u35.m0[1]].x - 4);
-    v8 |= (((device t21*)u24.m2[0].x)->m1 - 5);
-    v8 |= int(((device t21*)u24.m2[0].x)->m4[0u][0] - 6.0);
-    v8 |= int(((device t21*)u24.m2[0].x)->m4[1u][0] - 8.0);
-    v8 |= int(((device t21*)u24.m2[0].x)->m4[0u][1] - 7.0);
-    v8 |= int(((device t21*)u24.m2[0].x)->m4[1u][1] - 9.0);
-    v8 |= (((device t21*)u24.m2[u35.m0[1]].x)->m0[0].x - 6);
-    v8 |= (((device t21*)u24.m2[u35.m0[1]].x)->m0[u35.m0[1]].x - 7);
-    v8 |= (((device t21*)u24.m2[u35.m0[1]].x)->m1 - 8);
-    v8 |= int(((device t21*)u24.m2[u35.m0[1]].x)->m4[0u][0] - 9.0);
-    v8 |= int(((device t21*)u24.m2[u35.m0[1]].x)->m4[1u][0] - 11.0);
-    v8 |= int(((device t21*)u24.m2[u35.m0[1]].x)->m4[0u][1] - 10.0);
-    v8 |= int(((device t21*)u24.m2[u35.m0[1]].x)->m4[1u][1] - 12.0);
+    v8 |= (((const device t21*)u24.m2[0].x)->m0[0].x - 3);
+    v8 |= (((const device t21*)u24.m2[0].x)->m0[u35.m0[1]].x - 4);
+    v8 |= (((const device t21*)u24.m2[0].x)->m1 - 5);
+    v8 |= int(((const device t21*)u24.m2[0].x)->m4[0u][0] - 6.0);
+    v8 |= int(((const device t21*)u24.m2[0].x)->m4[1u][0] - 8.0);
+    v8 |= int(((const device t21*)u24.m2[0].x)->m4[0u][1] - 7.0);
+    v8 |= int(((const device t21*)u24.m2[0].x)->m4[1u][1] - 9.0);
+    v8 |= (((const device t21*)u24.m2[u35.m0[1]].x)->m0[0].x - 6);
+    v8 |= (((const device t21*)u24.m2[u35.m0[1]].x)->m0[u35.m0[1]].x - 7);
+    v8 |= (((const device t21*)u24.m2[u35.m0[1]].x)->m1 - 8);
+    v8 |= int(((const device t21*)u24.m2[u35.m0[1]].x)->m4[0u][0] - 9.0);
+    v8 |= int(((const device t21*)u24.m2[u35.m0[1]].x)->m4[1u][0] - 11.0);
+    v8 |= int(((const device t21*)u24.m2[u35.m0[1]].x)->m4[0u][1] - 10.0);
+    v8 |= int(((const device t21*)u24.m2[u35.m0[1]].x)->m4[1u][1] - 12.0);
     v8 |= (u24.m3->m0[0].x - 9);
     v8 |= (u24.m3->m0[u35.m0[1]].x - 10);
     v8 |= (u24.m3->m1 - 11);

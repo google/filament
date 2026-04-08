@@ -4,8 +4,10 @@ _**Contents**_
   * [Mac OS X](#mac-os-x)
   * [Windows](#windows)
   * [CMake Build Configuration](#cmake-build-configuration)
+    * [Transcoder](#transcoder)
     * [Debugging and Optimization](#debugging-and-optimization)
     * [Googletest Integration](#googletest-integration)
+    * [Third Party Libraries](#third-party-libraries)
     * [Javascript Encoder/Decoder](#javascript-encoderdecoder)
     * [WebAssembly Decoder](#webassembly-decoder)
     * [WebAssembly Mesh Only Decoder](#webassembly-mesh-only-decoder)
@@ -72,6 +74,43 @@ C:\Users\nobody> cmake ../ -G "Visual Studio 16 2019" -A x64
 CMake Build Configuration
 -------------------------
 
+Transcoder
+----------
+
+Before attempting to build Draco with transcoding support you must run an
+additional Git command to obtain the submodules:
+
+~~~~~ bash
+# Run this command from within your Draco clone.
+$ git submodule update --init
+# See below if you prefer to use existing versions of Draco dependencies.
+~~~~~
+
+In order to build the `draco_transcoder` target, the transcoding support needs
+to be explicitly enabled when you run `cmake`, for example:
+
+~~~~~ bash
+$ cmake ../ -DDRACO_TRANSCODER_SUPPORTED=ON
+~~~~~
+
+The above option is currently not compatible with our Javascript or WebAssembly
+builds but all other use cases are supported. Note that binaries and libraries
+built with the transcoder support may result in increased binary sizes of the
+produced libraries and executables compared to the default CMake settings.
+
+The following CMake variables can be used to configure Draco to use local
+copies of third party dependencies instead of git submodules.
+
+- `DRACO_EIGEN_PATH`: this path must contain an Eigen directory that includes
+  the Eigen sources.
+- `DRACO_FILESYSTEM_PATH`: this path must contain the ghc directory where the
+  filesystem includes are located.
+- `DRACO_TINYGLTF_PATH`: this path must contain tiny_gltf.h and its
+  dependencies.
+
+When not specified the Draco build requires the presence of the submodules that
+are stored within `draco/third_party`.
+
 Debugging and Optimization
 --------------------------
 
@@ -114,17 +153,52 @@ $ cmake ../ -DDRACO_SANITIZE=address
 Googletest Integration
 ----------------------
 
-Draco includes testing support built using Googletest. To enable Googletest unit
-test support the DRACO_TESTS cmake variable must be turned on at cmake
-generation time:
+Draco includes testing support built using Googletest. The Googletest repository
+is included as a submodule of the Draco git repository. Run the following
+command to clone the Googletest repository:
+
+~~~~~ bash
+$ git submodule update --init
+~~~~~
+
+To enable Googletest unit test support the DRACO_TESTS cmake variable must be
+turned on at cmake generation time:
 
 ~~~~~ bash
 $ cmake ../ -DDRACO_TESTS=ON
 ~~~~~
 
-When cmake is used as shown in the above example the googletest directory must
-be a sibling of the Draco repository root directory. To run the tests execute
-`draco_tests` from your build output directory.
+To run the tests execute `draco_tests` from your build output directory:
+
+~~~~~ bash
+$ ./draco_tests
+~~~~~
+
+Draco can be configured to use a local Googletest installation. The
+`DRACO_GOOGLETEST_PATH` variable overrides the behavior described above and
+configures Draco to use the Googletest at the specified path.
+
+Third Party Libraries
+---------------------
+
+When Draco is built with transcoding and/or testing support enabled the project
+has dependencies on third party libraries:
+
+- [Eigen](https://eigen.tuxfamily.org/)
+  - Provides various math utilites.
+- [Googletest](https://github.com/google/googletest)
+  - Provides testing support.
+- [Gulrak/filesystem](https://github.com/gulrak/filesystem)
+  - Provides C++17 std::filesystem emulation for pre-C++17 environments.
+- [TinyGLTF](https://github.com/syoyo/tinygltf)
+  - Provides GLTF I/O support.
+
+These dependencies are managed as Git submodules. To obtain the dependencies
+run the following command in your Draco repository:
+
+~~~~~ bash
+$ git submodule update --init
+~~~~~
 
 WebAssembly Decoder
 -------------------

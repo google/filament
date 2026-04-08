@@ -130,7 +130,7 @@ spv_result_t ValidateGroupNonUniformBroadcastShuffle(ValidationState_t& _,
     if (!spvOpcodeIsConstant(id_op)) {
       std::string operand = GetOperandName(inst->opcode());
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << "Before SPIR-V 1.5, " << operand
+             << "In SPIR-V 1.4 or earlier, " << operand
              << " must be a constant instruction";
     }
   }

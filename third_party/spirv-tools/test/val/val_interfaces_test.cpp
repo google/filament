@@ -160,6 +160,7 @@ OpReturn
 OpFunctionEnd
 )";
 
+  getValidatorOptions()->relax_logical_pointer = true;
   CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(
@@ -215,9 +216,9 @@ OpFunctionEnd
 
   CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_4);
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Non-unique OpEntryPoint interface '2[%var]' is disallowed"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("In SPIR-V 1.4 or later, non-unique OpEntryPoint "
+                        "interface '2[%var]' is disallowed"));
 }
 
 TEST_F(ValidateInterfacesTest, MissingGlobalVarSPV1p3) {
@@ -1996,6 +1997,8 @@ OpFunctionEnd
 
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpTypeFloat-10823"));
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("FP8 E4M3/E5M2 OpVariable <id> '2[%2]' must not be declared "
@@ -2028,10 +2031,71 @@ OpFunctionEnd
 
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpTypeFloat-10823"));
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("FP8 E4M3/E5M2 OpVariable <id> '2[%2]' must not be declared "
                 "with a Storage Class of Input or Output.\n"));
+}
+
+TEST_F(ValidateInterfacesTest, VectorIdFragmentInputOutputPass) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability LongVectorEXT
+OpExtension "SPV_EXT_long_vector"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in %out
+OpExecutionMode %main OriginUpperLeft
+OpDecorate %in Location 0
+OpDecorate %out Location 0
+%void = OpTypeVoid
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+%u4 = OpConstant %u32 4
+%f32vec = OpTypeVectorIdEXT %f32 %u4
+%in_ptr = OpTypePointer Input %f32vec
+%out_ptr = OpTypePointer Output %f32vec
+%in = OpVariable %in_ptr Input
+%out = OpVariable %out_ptr Output
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateInterfacesTest, VectorIdVertexInputOutputPass) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability LongVectorEXT
+OpExtension "SPV_EXT_long_vector"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %main "main" %in %out
+OpDecorate %in Location 0
+OpDecorate %out Location 0
+%void = OpTypeVoid
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+%u4 = OpConstant %u32 4
+%f32vec = OpTypeVectorIdEXT %f32 %u4
+%in_ptr = OpTypePointer Input %f32vec
+%out_ptr = OpTypePointer Output %f32vec
+%in = OpVariable %in_ptr Input
+%out = OpVariable %out_ptr Output
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
 }
 
 }  // namespace

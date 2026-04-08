@@ -129,6 +129,34 @@ inline vec<bool, N> spvSubgroupShuffle(vec<bool, N> value, ushort lane)
     return (vec<bool, N>)simd_shuffle((vec<ushort, N>)value, lane);
 }
 
+template<>
+inline ulong spvSubgroupShuffle(ulong value, ushort lane)
+{
+    return as_type<ulong>(spvSubgroupShuffle(as_type<uint2>(value), lane));
+}
+
+template<>
+inline ulong2 spvSubgroupShuffle(ulong2 value, ushort lane)
+{
+    return ulong2(spvSubgroupShuffle(value.x, lane), spvSubgroupShuffle(value.y, lane));
+}
+
+inline ulong3 spvSubgroupShuffle(ulong3 value, ushort lane)
+{
+    return ulong3(spvSubgroupShuffle(value.xy, lane), spvSubgroupShuffle(value.z, lane));
+}
+
+inline ulong4 spvSubgroupShuffle(ulong4 value, ushort lane)
+{
+    return ulong4(spvSubgroupShuffle(value.xy, lane), spvSubgroupShuffle(value.zw, lane));
+}
+
+template<uint N>
+inline vec<long, N> spvSubgroupShuffle(vec<long, N> value, ushort lane)
+{
+    return vec<long, N>(spvSubgroupShuffle(vec<ulong, N>(value), lane));
+}
+
 template<typename T>
 inline T spvSubgroupShuffleXor(T value, ushort mask)
 {

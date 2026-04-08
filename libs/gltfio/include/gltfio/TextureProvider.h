@@ -171,26 +171,26 @@ public:
  * Creates a simple decoder based on stb_image that can handle "image/png" and "image/jpeg".
  * This works only if your build configuration includes STB.
  */
-TextureProvider* createStbProvider(filament::Engine* engine);
+UTILS_PUBLIC TextureProvider* createStbProvider(filament::Engine* engine);
 
 /**
  * Creates a decoder that can handle certain types of "image/ktx2" content as specified in
  * the KHR_texture_basisu specification.
  */
-TextureProvider* createKtx2Provider(filament::Engine* engine);
+UTILS_PUBLIC TextureProvider* createKtx2Provider(filament::Engine* engine);
 
 /**
  * If webp support is enabled at build time, creates a decoder that can handle "image/webp"
  * lossless and lossy content.
  * If webp support is not enabled at build time, returns nullptr.
  */
-TextureProvider* createWebpProvider(filament::Engine* engine);
+UTILS_PUBLIC TextureProvider* createWebpProvider(filament::Engine* engine);
 
 /**
  * Indicates if build-time webp support was included.
  * Returns true if it was and false if not.
  */
-bool isWebpSupported();
+UTILS_PUBLIC bool isWebpSupported();
 
 } // namespace filament::gltfio
 

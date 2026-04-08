@@ -248,7 +248,8 @@ JobSystem::~JobSystem() {
 inline void JobSystem::incRef(Job const* job) noexcept {
     // no action is taken when incrementing the reference counter, therefore we can safely use
     // memory_order_relaxed.
-    job->refCount.fetch_add(1, std::memory_order_relaxed);
+    UTILS_UNUSED_IN_RELEASE auto c = job->refCount.fetch_add(1, std::memory_order_relaxed);
+    assert_invariant(c < 255);
 }
 
 UTILS_NOINLINE

@@ -78,9 +78,10 @@ class MeshEncoderTest : public ::testing::TestWithParam<MeshEncoderTestParams> {
       encoder.SetAttributeQuantization(i, 12);
     }
     EncoderBuffer buffer;
-    ASSERT_TRUE(encoder.EncodeToBuffer(&buffer).ok())
-        << "Failed encoding test mesh " << file_name << " with method "
-        << GetParam().encoding_method;
+    const Status status = encoder.EncodeToBuffer(&buffer);
+    EXPECT_TRUE(status.ok()) << "Failed encoding test mesh " << file_name
+                             << " with method " << GetParam().encoding_method;
+    DRACO_ASSERT_OK(status);
     // Check that the encoded mesh was really encoded with the selected method.
     DecoderBuffer decoder_buffer;
     decoder_buffer.Init(buffer.data(), buffer.size());
@@ -88,6 +89,7 @@ class MeshEncoderTest : public ::testing::TestWithParam<MeshEncoderTestParams> {
     uint8_t encoded_method;
     ASSERT_TRUE(decoder_buffer.Decode(&encoded_method));
     ASSERT_EQ(encoded_method, method);
+
     if (!FLAGS_update_golden_files) {
       EXPECT_TRUE(
           CompareGoldenFile(golden_file_name, buffer.data(), buffer.size()))

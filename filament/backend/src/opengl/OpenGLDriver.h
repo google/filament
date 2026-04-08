@@ -74,6 +74,7 @@
 namespace filament::backend {
 
 class OpenGLPlatform;
+class OpenGLState;
 class PixelBufferDescriptor;
 struct TargetBufferInfo;
 class OpenGLProgram;
@@ -224,11 +225,24 @@ public:
 private:
     OpenGLPlatform& mPlatform;
     OpenGLContext mContext;
+    OpenGLState* mBackendState = nullptr; // owned by backend thread
+    OpenGLState* mWorkerState = nullptr;  // owned by worker thread (initialized for async mode)
     ShaderCompilerService mShaderCompilerService;
 
     friend class TimerQueryFactory;
     friend class TimerQueryNativeFactory;
     OpenGLContext& getContext() noexcept { return mContext; }
+    OpenGLState& getBackendState() const noexcept {
+        // mBackendState should always be available.
+        assert_invariant(mBackendState);
+        return *mBackendState;
+    }
+    OpenGLState& getWorkerState() const noexcept {
+        // mWorkerState should be available only when the asynchronous mode is enabled.
+        // Ideally, this method should be called within asynchronous jobs.
+        assert_invariant(mWorkerState);
+        return *mWorkerState;
+    }
 
     ShaderCompilerService& getShaderCompilerService() noexcept {
         return mShaderCompilerService;
@@ -243,15 +257,15 @@ private:
      */
 
     utils::CString getVendorString() const noexcept override {
-        return utils::CString{ mContext.state.vendor };
+        return utils::CString{ mContext.vendor };
     }
 
     utils::CString getRendererString() const noexcept override {
-        return utils::CString{ mContext.state.renderer };
+        return utils::CString{ mContext.renderer };
     }
 
     utils::CString getVersionString() const noexcept override {
-        return utils::CString{ mContext.state.version };
+        return utils::CString{ mContext.version };
     }
 
     JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
@@ -335,13 +349,13 @@ private:
 
     void setStencilState(StencilState ss) noexcept;
 
-    void setTextureData(GLTexture const* t,
+    void setTextureData(OpenGLState& gl, GLTexture const* t,
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& p);
 
-    void setCompressedTextureData(GLTexture const* t,
+    void setCompressedTextureData(OpenGLState& gl, GLTexture const* t,
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
@@ -350,7 +364,7 @@ private:
     void renderBufferStorage(GLuint rbo, GLenum internalformat, uint32_t width,
             uint32_t height, uint8_t samples) const noexcept;
 
-    void textureStorage(GLTexture* t, uint32_t width, uint32_t height,
+    void textureStorage(OpenGLState& gl, GLTexture* t, uint32_t width, uint32_t height,
             uint32_t depth, bool useProtectedMemory) noexcept;
 
     /* State tracking GL wrappers... */
@@ -370,32 +384,32 @@ private:
     // Common methods
     void readPixelsFromBoundFramebuffer(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
             PixelBufferDescriptor&& p);
-    void createTextureCommon(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+    void createTextureCommon(OpenGLState& gl, Handle<HwTexture> th, SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
             TextureUsage usage, utils::ImmutableCString&& tag);
-    void update3DImageCommon(Handle<HwTexture> th,
+    void update3DImageCommon(OpenGLState& gl, Handle<HwTexture> th,
             uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& data);
     void createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
             TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
             TextureSwizzle a, utils::ImmutableCString&& tag);
-    void importTextureCommon(Handle<HwTexture> th, intptr_t id, SamplerType target, uint8_t levels,
+    void importTextureCommon(OpenGLState& gl, Handle<HwTexture> th, intptr_t id, SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
             TextureUsage usage, utils::ImmutableCString&& tag);
-    void createBufferObjectCommon(Handle<HwBufferObject> boh, uint32_t byteCount,
+    void createBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh, uint32_t byteCount,
             BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag);
     void setVertexBufferObjectCommon(Handle<HwVertexBuffer> vbh, uint32_t index,
             Handle<HwBufferObject> boh);
-    void updateBufferObjectCommon(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
+    void updateBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh, BufferDescriptor&& bd,
             uint32_t byteOffset);
-    void createIndexBufferCommon(Handle<HwIndexBuffer> ibh, ElementType const elementType,
+    void createIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh, ElementType const elementType,
             uint32_t indexCount, BufferUsage const usage, utils::ImmutableCString&& tag);
-    void updateIndexBufferCommon(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
+    void updateIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
             uint32_t const byteOffset);
-    void destroyTextureCommon(Handle<HwTexture> th);
-    void destroyBufferObjectCommon(Handle<HwBufferObject> boh);
-    void destroyIndexBufferCommon(Handle<HwIndexBuffer> ibh);
+    void destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th);
+    void destroyBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh);
+    void destroyIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh);
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;

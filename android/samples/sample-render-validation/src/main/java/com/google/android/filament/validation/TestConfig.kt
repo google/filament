@@ -31,7 +31,7 @@ data class RenderTestConfig(
 data class TestConfig(
     val name: String,
     val description: String?,
-    val backends: List<String>,
+    val backend: String,
     val models: Set<String>,
     val rendering: JSONObject,
     val tolerance: JSONObject?
@@ -102,7 +102,7 @@ class ConfigParser {
             val testsJson = json.getJSONArray("tests")
             val tests = mutableListOf<TestConfig>()
             for (i in 0 until testsJson.length()) {
-                tests.add(parseTestConfig(testsJson.getJSONObject(i), models.keys, presets, backends))
+                tests.addAll(parseTestConfig(testsJson.getJSONObject(i), models.keys, presets, backends))
             }
 
             return RenderTestConfig(name, backends, models, tests)
@@ -125,7 +125,7 @@ class ConfigParser {
             existingModels: Set<String>, 
             presets: Map<String, PresetConfig>, 
             defaultBackends: List<String>
-        ): TestConfig {
+        ): List<TestConfig> {
             val name = json.getString("name")
             val description = json.optString("description")
             val backends = json.optJSONArray("backends")?.toList<String>() ?: defaultBackends
@@ -165,7 +165,9 @@ class ConfigParser {
 
             val tolerance = json.optJSONObject("tolerance") ?: lastTolerance
 
-            return TestConfig(name, description, backends, combinedModels, rendering, tolerance)
+            return backends.map { backend ->
+                TestConfig(name, description, backend, combinedModels, rendering, tolerance)
+            }
         }
     }
 }

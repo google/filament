@@ -237,7 +237,7 @@ void ShaderCompilerService::init() noexcept {
         uint32_t poolSize = 1;
         JobSystem::Priority priority = JobSystem::Priority::DISPLAY;
 
-        auto const& renderer = mDriver.getContext().state.renderer;
+        auto const& renderer = mDriver.getContext().renderer;
         // Some drivers support parallel shader compilation well, so we use N
         // threads, we can use lower priority threads here because urgent compilations
         // will most likely happen on the main gl thread. Using too many thread can

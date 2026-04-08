@@ -3000,8 +3000,8 @@ TEST_F(TrimCapabilitiesPassTest, GroupNonUniform_RemovedWhenUnused) {
 ; CHECK-NOT:   OpCapability GroupNonUniformArithmetic
                OpCapability GroupNonUniformClustered
 ; CHECK-NOT:   OpCapability GroupNonUniformClustered
-               OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:   OpCapability GroupNonUniformPartitionedNV
+               OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:   OpCapability GroupNonUniformPartitionedEXT
                OpCapability GroupNonUniform
 ; CHECK-NOT:   OpCapability GroupNonUniform
                OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3030,8 +3030,8 @@ TEST_F(TrimCapabilitiesPassTest,
 ; CHECK-NOT:       OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK-NOT:       OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK:           OpCapability GroupNonUniform
                    OpCapability Shader
@@ -3066,8 +3066,8 @@ TEST_F(TrimCapabilitiesPassTest,
 ; CHECK-NOT:       OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK-NOT:       OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3102,8 +3102,8 @@ TEST_F(TrimCapabilitiesPassTest,
 ; CHECK-NOT:       OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK-NOT:       OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3138,8 +3138,8 @@ TEST_F(TrimCapabilitiesPassTest,
 ; CHECK:           OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK-NOT:       OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3175,8 +3175,8 @@ TEST_F(TrimCapabilitiesPassTest,
 ; CHECK:           OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK-NOT:       OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3212,8 +3212,8 @@ TEST_F(TrimCapabilitiesPassTest,
 ; CHECK:           OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK-NOT:       OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3249,8 +3249,8 @@ TEST_F(TrimCapabilitiesPassTest,
 ; CHECK-NOT:       OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK:           OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3306,10 +3306,10 @@ static const std::vector<SubgroupTestCase> kSubgroupTestCases{
     // clang-format on
 };
 
-using TrimCapabilitiesPassTestSubgroupNV_Unsigned = PassTest<
+using TrimCapabilitiesPassTestSubgroupEXT_Unsigned = PassTest<
     ::testing::TestWithParam<std::tuple<SubgroupTestCase, std::string>>>;
-TEST_P(TrimCapabilitiesPassTestSubgroupNV_Unsigned,
-       GroupNonUniformPartitionedNV_Remains) {
+TEST_P(TrimCapabilitiesPassTestSubgroupEXT_Unsigned,
+       GroupNonUniformPartitionedEXT_Remains) {
   SubgroupTestCase test_case = std::get<0>(GetParam());
   const std::string operation = std::get<1>(GetParam());
 
@@ -3321,8 +3321,8 @@ TEST_P(TrimCapabilitiesPassTestSubgroupNV_Unsigned,
 ; CHECK-NOT:       OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK-NOT:       OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK:           OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK:           OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3358,14 +3358,14 @@ TEST_P(TrimCapabilitiesPassTestSubgroupNV_Unsigned,
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    TrimCapabilitiesPassTestSubgroupNV_Unsigned_I,
-    TrimCapabilitiesPassTestSubgroupNV_Unsigned,
+    TrimCapabilitiesPassTestSubgroupEXT_Unsigned_I,
+    TrimCapabilitiesPassTestSubgroupEXT_Unsigned,
     ::testing::Combine(::testing::ValuesIn(kSubgroupTestCases),
-                       ::testing::Values("PartitionedReduceNV",
-                                         "PartitionedInclusiveScanNV",
-                                         "PartitionedExclusiveScanNV")),
+                       ::testing::Values("PartitionedReduceEXT",
+                                         "PartitionedInclusiveScanEXT",
+                                         "PartitionedExclusiveScanEXT")),
     [](const ::testing::TestParamInfo<
-        TrimCapabilitiesPassTestSubgroupNV_Unsigned::ParamType>& info) {
+        TrimCapabilitiesPassTestSubgroupEXT_Unsigned::ParamType>& info) {
       return std::get<0>(info.param).opcode + "_" + std::get<1>(info.param);
     });
 
@@ -3384,8 +3384,8 @@ TEST_P(TrimCapabilitiesPassTestSubgroupArithmetic_Unsigned,
 ; CHECK:           OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK-NOT:       OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3445,8 +3445,8 @@ TEST_P(TrimCapabilitiesPassTestSubgroupClustered_Unsigned,
 ; CHECK-NOT:       OpCapability GroupNonUniformArithmetic
                    OpCapability GroupNonUniformClustered
 ; CHECK:           OpCapability GroupNonUniformClustered
-                   OpCapability GroupNonUniformPartitionedNV
-; CHECK-NOT:       OpCapability GroupNonUniformPartitionedNV
+                   OpCapability GroupNonUniformPartitionedEXT
+; CHECK-NOT:       OpCapability GroupNonUniformPartitionedEXT
                    OpCapability GroupNonUniform
 ; CHECK-NOT:       OpCapability GroupNonUniform
                    OpExtension "SPV_NV_shader_subgroup_partitioned"
@@ -3629,6 +3629,167 @@ TEST_F(TrimCapabilitiesPassTest, PhysicalStorageBuffer_RecursiveTypes) {
           %7 = OpLabel
                OpReturn
                OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
+TEST_F(TrimCapabilitiesPassTest, Geometry_Remains) {
+  const std::string kTest = R"(
+               OpCapability Geometry
+; CHECK:       OpCapability Geometry
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Geometry %gs_main "gs_main" %gl_Position
+               OpExecutionMode %gs_main OutputVertices 3
+               OpExecutionMode %gs_main Invocations 1
+               OpExecutionMode %gs_main Triangles
+               OpExecutionMode %gs_main OutputTriangleStrip
+               OpSource HLSL 660
+               OpName %gs_main "gs_main"
+               OpDecorate %gl_Position BuiltIn Position
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+%gl_Position = OpVariable %_ptr_Output_v4float Output
+    %gs_main = OpFunction %void None %7
+          %8 = OpLabel
+               OpEmitVertex
+               OpReturn
+               OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
+// FIXME(6277): enable once spirv-opt supports SPV_INTEL_function_variants
+#if 0
+TEST_F(TrimCapabilitiesPassTest, Geometry_RemainsIntel) {
+  const std::string kTest = R"(
+                OpCapability Geometry
+ ; CHECK:       OpCapability Geometry
+                OpCapability SpecConditionalINTEL
+                OpExtension "SPV_INTEL_function_variants"
+                OpMemoryModel Logical GLSL450
+                OpConditionalEntryPointINTEL %false Geometry %gs_main "gs_main"
+                OpExecutionMode %gs_main OutputVertices 3
+                OpExecutionMode %gs_main Invocations 1
+                OpExecutionMode %gs_main Triangles
+                OpExecutionMode %gs_main OutputTriangleStrip
+                OpSource HLSL 660
+                OpName %gs_main "gs_main"
+                OpDecorate %gl_Position BuiltIn Position
+        %bool = OpTypeBool
+       %false = OpSpecConstantFalse %bool
+       %float = OpTypeFloat 32
+     %v4float = OpTypeVector %float 4
+ %_ptr_Output_v4float = OpTypePointer Output %v4float
+        %void = OpTypeVoid
+           %7 = OpTypeFunction %void
+ %gl_Position = OpVariable %_ptr_Output_v4float Output
+     %gs_main = OpFunction %void None %7
+           %8 = OpLabel
+                OpEmitVertex
+                OpReturn
+                OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+#endif
+
+TEST_F(TrimCapabilitiesPassTest, Geometry_Removed) {
+  const std::string kTest = R"(
+               OpCapability Shader
+               OpCapability Geometry
+; CHECK-NOT:   OpCapability Geometry
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %ps_main "ps_main" %in_var_POSITION %out_var_SV_Target
+               OpExecutionMode %ps_main OriginUpperLeft
+               OpSource HLSL 660
+               OpName %in_var_POSITION "in.var.POSITION"
+               OpName %out_var_SV_Target "out.var.SV_Target"
+               OpName %ps_main "ps_main"
+               OpDecorate %in_var_POSITION Location 0
+               OpDecorate %out_var_SV_Target Location 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+%in_var_POSITION = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+    %ps_main = OpFunction %void None %9
+         %10 = OpLabel
+         %11 = OpLoad %v4float %in_var_POSITION
+               OpStore %out_var_SV_Target %11
+               OpReturn
+               OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
+}
+
+// FIXME(6277): enable once spirv-opt supports SPV_INTEL_function_variants
+#if 0
+TEST_F(TrimCapabilitiesPassTest, Geometry_RemovedIntel) {
+  const std::string kTest = R"(
+               OpCapability Shader
+               OpCapability Geometry
+; CHECK-NOT:   OpCapability Geometry
+               OpCapability SpecConditionalINTEL
+               OpExtension "SPV_INTEL_function_variants"
+               OpMemoryModel Logical GLSL450
+               OpConditionalEntryPointINTEL %false Fragment %ps_main "ps_main" %in_var_POSITION %out_var_SV_Target
+               OpExecutionMode %ps_main OriginUpperLeft
+               OpSource HLSL 660
+               OpName %in_var_POSITION "in.var.POSITION"
+               OpName %out_var_SV_Target "out.var.SV_Target"
+               OpName %ps_main "ps_main"
+               OpDecorate %in_var_POSITION Location 0
+               OpDecorate %out_var_SV_Target Location 0
+       %bool = OpTypeBool
+      %false = OpSpecConstantFalse %bool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+%in_var_POSITION = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+    %ps_main = OpFunction %void None %9
+         %10 = OpLabel
+         %11 = OpLoad %v4float %in_var_POSITION
+               OpStore %out_var_SV_Target %11
+               OpReturn
+               OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
+}
+#endif
+
+TEST_F(TrimCapabilitiesPassTest, CheckNop) {
+  const std::string kTest = R"(
+               OpCapability Shader
+; CHECK: OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+          %1 = OpFunction %void None %3
+          %6 = OpLabel
+               OpNop
+               OpReturn
+               OpFunctionEnd;
   )";
   const auto result =
       SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);

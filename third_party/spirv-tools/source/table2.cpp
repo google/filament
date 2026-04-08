@@ -372,4 +372,69 @@ bool GetExtensionFromString(const char* name, Extension* extension) {
   return false;
 }
 
+// This is dirty copy of the spirv.hpp11 function
+// TODO - Use a generated version of this function
+const char* StorageClassToString(spv::StorageClass value) {
+  switch (value) {
+    case spv::StorageClass::UniformConstant:
+      return "UniformConstant";
+    case spv::StorageClass::Input:
+      return "Input";
+    case spv::StorageClass::Uniform:
+      return "Uniform";
+    case spv::StorageClass::Output:
+      return "Output";
+    case spv::StorageClass::Workgroup:
+      return "Workgroup";
+    case spv::StorageClass::CrossWorkgroup:
+      return "CrossWorkgroup";
+    case spv::StorageClass::Private:
+      return "Private";
+    case spv::StorageClass::Function:
+      return "Function";
+    case spv::StorageClass::Generic:
+      return "Generic";
+    case spv::StorageClass::PushConstant:
+      return "PushConstant";
+    case spv::StorageClass::AtomicCounter:
+      return "AtomicCounter";
+    case spv::StorageClass::Image:
+      return "Image";
+    case spv::StorageClass::StorageBuffer:
+      return "StorageBuffer";
+    case spv::StorageClass::TileImageEXT:
+      return "TileImageEXT";
+    case spv::StorageClass::TileAttachmentQCOM:
+      return "TileAttachmentQCOM";
+    case spv::StorageClass::NodePayloadAMDX:
+      return "NodePayloadAMDX";
+    case spv::StorageClass::CallableDataKHR:
+      return "CallableDataKHR";
+    case spv::StorageClass::IncomingCallableDataKHR:
+      return "IncomingCallableDataKHR";
+    case spv::StorageClass::RayPayloadKHR:
+      return "RayPayloadKHR";
+    case spv::StorageClass::HitAttributeKHR:
+      return "HitAttributeKHR";
+    case spv::StorageClass::IncomingRayPayloadKHR:
+      return "IncomingRayPayloadKHR";
+    case spv::StorageClass::ShaderRecordBufferKHR:
+      return "ShaderRecordBufferKHR";
+    case spv::StorageClass::PhysicalStorageBuffer:
+      return "PhysicalStorageBuffer";
+    case spv::StorageClass::HitObjectAttributeNV:
+      return "HitObjectAttributeNV";
+    case spv::StorageClass::TaskPayloadWorkgroupEXT:
+      return "TaskPayloadWorkgroupEXT";
+    case spv::StorageClass::CodeSectionINTEL:
+      return "CodeSectionINTEL";
+    case spv::StorageClass::DeviceOnlyINTEL:
+      return "DeviceOnlyINTEL";
+    case spv::StorageClass::HostOnlyINTEL:
+      return "HostOnlyINTEL";
+    default:
+      return "Unknown";
+  }
+}
+
 }  // namespace spvtools

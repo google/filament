@@ -44,7 +44,8 @@ inline bool IsAnnotationInst(spv::Op opcode) {
           opcode <= spv::Op::OpGroupMemberDecorate) ||
          opcode == spv::Op::OpDecorateId ||
          opcode == spv::Op::OpDecorateStringGOOGLE ||
-         opcode == spv::Op::OpMemberDecorateStringGOOGLE;
+         opcode == spv::Op::OpMemberDecorateStringGOOGLE ||
+         opcode == spv::Op::OpMemberDecorateIdEXT;
 }
 inline bool IsTypeInst(spv::Op opcode) {
   return spvOpcodeGeneratesType(opcode) ||

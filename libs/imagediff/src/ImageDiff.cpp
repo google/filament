@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstdlib> // strtof, strtol
 #include <cstring>
+#include <functional>
 #include <vector>
 
 // JSMN inclusion
@@ -44,38 +45,108 @@ bool checkThresholds(float maxAbsDiff, float valRef, float valCand, float mask) 
     return diff <= maxAbsDiff;
 }
 
-bool checkPixelRecursive(ImageDiffConfig const& config, float const* pxRef, float const* pxCand,
-        float maskVal, float* outMaxDiffs) {
-    if (config.mode == ImageDiffConfig::Mode::LEAF) {
-        bool passed = true;
-        // Check channels using enum
-        Channel const channels[] = { Channel::R, Channel::G, Channel::B, Channel::A };
-        for (int i = 0; i < 4; ++i) {
-            if (config.channelMask & (uint8_t) channels[i]) {
-                float const valRef = pxRef[i];
-                float const valCand = pxCand[i];
+bool checkPixelRecursive(ImageDiffConfig const& config, uint32_t x, uint32_t y, uint32_t width,
+        uint32_t height, float maskVal, float* outMaxDiffs,
+        std::function<void(uint32_t, uint32_t, float*)> const& fetchRef,
+        std::function<void(uint32_t, uint32_t, float*)> const& fetchCand) {
 
-                float const diffUnmasked = std::abs(valRef - valCand);
-                if (outMaxDiffs) {
-                    outMaxDiffs[i] = std::max(outMaxDiffs[i], diffUnmasked);
+    if (config.mode == ImageDiffConfig::Mode::LEAF) {
+        bool passed = false;
+
+        // 1. Positional Robustness (shiftRadius)
+        // Instead of strict pixel-to-pixel matching, we search a local neighborhood
+        // (2*sRad + 1)^2 window in the reference image. If ANY pixel in that window
+        // matches our candidate pixel (within the threshold), we consider it a pass.
+        // This absorbs 1-pixel shifts caused by rasterization rules or MSAA artifacts.
+        int const sRad = config.shiftRadius;
+        for (int dy = -sRad; dy <= sRad; ++dy) {
+            for (int dx = -sRad; dx <= sRad; ++dx) {
+                // Clamp search window to image boundaries
+                int const nx = std::max(0, std::min((int) width - 1, (int) x + dx));
+                int const ny = std::max(0, std::min((int) height - 1, (int) y + dy));
+
+                float pxRef[4] = { 0, 0, 0, 0 };
+                float pxCand[4] = { 0, 0, 0, 0 };
+
+                if (config.blurRadius > 0) {
+                    // 2. Frequency Robustness (blurRadius)
+                    // We apply a local box-blur (average) before comparing. This
+                    // elegantly smooths out high-frequency noise like hardware dithering
+                    // matrices or varying texture filtering weights without requiring
+                    // complex image distribution metrics.
+                    int const bRad = config.blurRadius;
+                    float count = 0.0f;
+                    for (int by = -bRad; by <= bRad; ++by) {
+                        for (int bx = -bRad; bx <= bRad; ++bx) {
+                            // Compute blur neighborhood around current shift position
+                            int const bnx = std::max(0, std::min((int) width - 1, nx + bx));
+                            int const bny = std::max(0, std::min((int) height - 1, ny + by));
+                            // Compute blur neighborhood around candidate pixel
+                            int const bcx = std::max(0, std::min((int) width - 1, (int) x + bx));
+                            int const bcy = std::max(0, std::min((int) height - 1, (int) y + by));
+
+                            float tRef[4], tCand[4];
+                            fetchRef(bnx, bny, tRef);
+                            fetchCand(bcx, bcy, tCand);
+                            for (int c = 0; c < 4; ++c) {
+                                pxRef[c] += tRef[c];
+                                pxCand[c] += tCand[c];
+                            }
+                            count += 1.0f;
+                        }
+                    }
+                    for (int c = 0; c < 4; ++c) {
+                        pxRef[c] /= count;
+                        pxCand[c] /= count;
+                    }
+                } else {
+                    // Fast path: strict fetching if no blur is required
+                    fetchRef(nx, ny, pxRef);
+                    fetchCand(x, y, pxCand);
                 }
 
-                if (!checkThresholds(config.maxAbsDiff, valRef, valCand, maskVal)) {
-                    passed = false;
+                bool match = true;
+                Channel const channels[] = { Channel::R, Channel::G, Channel::B, Channel::A };
+                for (int c = 0; c < 4; ++c) {
+                    if (config.channelMask & (uint8_t) channels[c]) {
+                        float const valRef = pxRef[c];
+                        float const valCand = pxCand[c];
+                        float const diffUnmasked = std::abs(valRef - valCand);
+
+                        // We only record max diffs for the exact center pixel (dx=0, dy=0)
+                        // to ensure failure statistics represent the true location, not the search
+                        // space.
+                        if (dx == 0 && dy == 0 && outMaxDiffs) {
+                            outMaxDiffs[c] = std::max(outMaxDiffs[c], diffUnmasked);
+                        }
+
+                        if (!checkThresholds(config.maxAbsDiff, valRef, valCand, maskVal)) {
+                            match = false;
+                        }
+                    }
+                }
+
+                // If we found a matching pixel in the shift radius, we can stop searching.
+                if (match) {
+                    passed = true;
+                    break;
                 }
             }
+            if (passed) break;
         }
         return passed;
     } else if (config.mode == ImageDiffConfig::Mode::AND) {
         for (auto const& child: config.children) {
-            if (!checkPixelRecursive(child, pxRef, pxCand, maskVal, outMaxDiffs)) {
+            if (!checkPixelRecursive(child, x, y, width, height, maskVal, outMaxDiffs, fetchRef,
+                        fetchCand)) {
                 return false;
             }
         }
         return true;
     } else if (config.mode == ImageDiffConfig::Mode::OR) {
         for (auto const& child: config.children) {
-            if (checkPixelRecursive(child, pxRef, pxCand, maskVal, outMaxDiffs)) {
+            if (checkPixelRecursive(child, x, y, width, height, maskVal, outMaxDiffs, fetchRef,
+                        fetchCand)) {
                 return true;
             }
         }
@@ -150,6 +221,14 @@ int parseJsonRecursive(char const* json, std::vector<jsmntok_t> const& tokens, i
             utils::CString val = getTokenString(json, tokens[current]);
             outConfig->maxAbsDiff = strtof(val.c_str(), nullptr);
             current++;
+        } else if (key == "shiftRadius") {
+            utils::CString val = getTokenString(json, tokens[current]);
+            outConfig->shiftRadius = (uint8_t) strtol(val.c_str(), nullptr, 10);
+            current++;
+        } else if (key == "blurRadius") {
+            utils::CString val = getTokenString(json, tokens[current]);
+            outConfig->blurRadius = (uint8_t) strtol(val.c_str(), nullptr, 10);
+            current++;
         } else if (key == "children") {
             if (tokens[current].type == JSMN_ARRAY) {
                 int const childCount = tokens[current].size;
@@ -205,40 +284,72 @@ ImageDiffResult compare(LinearImage const& reference, LinearImage const& candida
     // We assume data is packed float, row-major.
     size_t const totalPixels = width * height;
 
-    for (size_t i = 0; i < totalPixels; ++i) {
-        // Extract pixel
-        // LinearImage channels can vary. we assume at least RGB(A).
-        float pxRef[4] = { 0, 0, 0, 1 };
-        float pxCand[4] = { 0, 0, 0, 1 };
-
+    auto fetchRef = [dataRef, width, channels](uint32_t cx, uint32_t cy, float* out) {
+        size_t const idx = (cy * width + cx) * channels;
         for (uint32_t c = 0; c < channels && c < 4; ++c) {
-            pxRef[c] = dataRef[i * channels + c];
-            pxCand[c] = dataCand[i * channels + c];
+            out[c] = dataRef[idx + c];
         }
+        for (uint32_t c = channels; c < 4; ++c) {
+            out[c] = (c == 3) ? 1.0f : 0.0f;
+        }
+    };
+    auto fetchCand = [dataCand, width, channels](uint32_t cx, uint32_t cy, float* out) {
+        size_t const idx = (cy * width + cx) * channels;
+        for (uint32_t c = 0; c < channels && c < 4; ++c) {
+            out[c] = dataCand[idx + c];
+        }
+        for (uint32_t c = channels; c < 4; ++c) {
+            out[c] = (c == 3) ? 1.0f : 0.0f;
+        }
+    };
+
+    for (size_t i = 0; i < totalPixels; ++i) {
+        uint32_t const x = i % width;
+        uint32_t const y = i / width;
 
         uint32_t const maskChannels = mask ? mask->getChannels() : 0;
         float const maskVal = dataMask ? dataMask[i * maskChannels + 0] : 1.0f;
 
-        bool const pass = checkPixelRecursive(config, pxRef, pxCand, maskVal, result.maxDiffFound);
+        float localMaxDiff[4] = { 0, 0, 0, 0 };
+        bool const pass = checkPixelRecursive(config, x, y, width, height, maskVal, localMaxDiff,
+                fetchRef, fetchCand);
+
+        for (int c = 0; c < 4; ++c) {
+            result.maxDiffFound[c] = std::max(result.maxDiffFound[c], localMaxDiff[c]);
+        }
 
         if (!pass) {
             result.failingPixelCount++;
+            float maxError = 0.0f;
+            for (int c = 0; c < 4; ++c) {
+                result.errorSum[c] += localMaxDiff[c];
+                maxError = std::max(maxError, localMaxDiff[c]);
+            }
+            int bin = (int) (maxError * 10.0f);
+            if (bin > 9) bin = 9;
+            if (bin < 0) bin = 0;
+            result.errorHistogram[bin]++;
         } else if (maskVal < 1.0f) {
             // Check if it would have failed without the mask
-            bool const passUnmasked = checkPixelRecursive(config, pxRef, pxCand, 1.0f, nullptr);
+            bool const passUnmasked = checkPixelRecursive(config, x, y, width, height, 1.0f,
+                    nullptr, fetchRef, fetchCand);
             if (!passUnmasked) {
                 result.maskedIgnoredPixelCount++;
             }
         }
 
-        if (dataDiff) {
-            for (uint32_t c = 0; c < channels && c < 4; ++c) {
-                float const d = std::abs(pxRef[c] - pxCand[c]); // Unmasked
-                dataDiff[i * channels + c] = d;
+        if (dataDiff || dataMaskOut) {
+            float pxRef[4], pxCand[4];
+            fetchRef(x, y, pxRef);
+            fetchCand(x, y, pxCand);
+            if (dataDiff) {
+                for (uint32_t c = 0; c < channels && c < 4; ++c) {
+                    dataDiff[i * channels + c] = std::abs(pxRef[c] - pxCand[c]); // Unmasked
+                }
             }
-        }
-        if (dataMaskOut) {
-            dataMaskOut[i] = maskVal;
+            if (dataMaskOut) {
+                dataMaskOut[i] = maskVal;
+            }
         }
     }
 
@@ -295,7 +406,34 @@ utils::CString serializeResult(ImageDiffResult const& result) {
     s += std::to_string(result.maxDiffFound[2]).c_str();
     s += ", ";
     s += std::to_string(result.maxDiffFound[3]).c_str();
+    s += "], ";
+
+    float const avgErrR =
+            result.failingPixelCount ? result.errorSum[0] / result.failingPixelCount : 0.0f;
+    float const avgErrG =
+            result.failingPixelCount ? result.errorSum[1] / result.failingPixelCount : 0.0f;
+    float const avgErrB =
+            result.failingPixelCount ? result.errorSum[2] / result.failingPixelCount : 0.0f;
+    float const avgErrA =
+            result.failingPixelCount ? result.errorSum[3] / result.failingPixelCount : 0.0f;
+
+    s += "\"averageError\": [";
+    s += std::to_string(avgErrR).c_str();
+    s += ", ";
+    s += std::to_string(avgErrG).c_str();
+    s += ", ";
+    s += std::to_string(avgErrB).c_str();
+    s += ", ";
+    s += std::to_string(avgErrA).c_str();
+    s += "], ";
+
+    s += "\"errorHistogram\": [";
+    for (int i = 0; i < 10; ++i) {
+        s += std::to_string(result.errorHistogram[i]).c_str();
+        if (i < 9) s += ", ";
+    }
     s += "]";
+
     s += "}";
     return s;
 }
@@ -331,57 +469,79 @@ ImageDiffResult compare(Bitmap const& reference, Bitmap const& candidate,
 
     bool const isBGRA = (config.swizzle == ImageDiffConfig::Swizzle::BGRA);
 
+    auto unpackPixel = [isBGRA](uint8_t const* src, float* out) {
+        if (!isBGRA) {
+            out[0] = (float) src[0] / 255.0f;
+            out[1] = (float) src[1] / 255.0f;
+            out[2] = (float) src[2] / 255.0f;
+            out[3] = (float) src[3] / 255.0f;
+        } else {
+            out[0] = (float) src[2] / 255.0f;
+            out[1] = (float) src[1] / 255.0f;
+            out[2] = (float) src[0] / 255.0f;
+            out[3] = (float) src[3] / 255.0f;
+        }
+    };
+
+    auto fetchRef = [refBytes, &reference, unpackPixel](uint32_t cx, uint32_t cy, float* out) {
+        uint8_t const* src = refBytes + cy * reference.stride + cx * 4;
+        unpackPixel(src, out);
+    };
+    auto fetchCand = [candBytes, &candidate, unpackPixel](uint32_t cx, uint32_t cy, float* out) {
+        uint8_t const* src = candBytes + cy * candidate.stride + cx * 4;
+        unpackPixel(src, out);
+    };
+
     for (uint32_t y = 0; y < height; ++y) {
-        uint8_t const* rowRef = refBytes + y * reference.stride;
-        uint8_t const* rowCand = candBytes + y * candidate.stride;
         uint8_t const* rowMask = mask ? maskBytes + y * mask->stride : nullptr;
 
         for (uint32_t x = 0; x < width; ++x) {
-            float pxRef[4], pxCand[4];
-
-            auto unpackPixel = [isBGRA](uint8_t const* src, float* out) {
-                if (!isBGRA) {
-                    out[0] = (float) src[0] / 255.0f;
-                    out[1] = (float) src[1] / 255.0f;
-                    out[2] = (float) src[2] / 255.0f;
-                    out[3] = (float) src[3] / 255.0f;
-                } else {
-                    out[0] = (float) src[2] / 255.0f;
-                    out[1] = (float) src[1] / 255.0f;
-                    out[2] = (float) src[0] / 255.0f;
-                    out[3] = (float) src[3] / 255.0f;
-                }
-            };
-
-            unpackPixel(rowRef + x * 4, pxRef);
-            unpackPixel(rowCand + x * 4, pxCand);
-
             float maskVal = 1.0f;
             if (rowMask) {
                 maskVal = (float) rowMask[x] / 255.0f;
             }
 
-            bool const pass =
-                    checkPixelRecursive(config, pxRef, pxCand, maskVal, result.maxDiffFound);
+            float localMaxDiff[4] = { 0, 0, 0, 0 };
+            bool const pass = checkPixelRecursive(config, x, y, width, height, maskVal,
+                    localMaxDiff, fetchRef, fetchCand);
+
+            for (int c = 0; c < 4; ++c) {
+                result.maxDiffFound[c] = std::max(result.maxDiffFound[c], localMaxDiff[c]);
+            }
 
             if (!pass) {
                 result.failingPixelCount++;
+                float maxError = 0.0f;
+                for (int c = 0; c < 4; ++c) {
+                    result.errorSum[c] += localMaxDiff[c];
+                    maxError = std::max(maxError, localMaxDiff[c]);
+                }
+                int bin = (int) (maxError * 10.0f);
+                if (bin > 9) bin = 9;
+                if (bin < 0) bin = 0;
+                result.errorHistogram[bin]++;
             } else if (maskVal < 1.0f) {
                 // Check if it would have failed without the mask
-                bool const passUnmasked = checkPixelRecursive(config, pxRef, pxCand, 1.0f, nullptr);
+                bool const passUnmasked = checkPixelRecursive(config, x, y, width, height, 1.0f,
+                        nullptr, fetchRef, fetchCand);
                 if (!passUnmasked) {
                     result.maskedIgnoredPixelCount++;
                 }
             }
 
-            if (dataDiff) {
-                size_t const idx = (y * width + x) * 4;
-                for (int c = 0; c < 4; ++c) {
-                    dataDiff[idx + c] = std::abs(pxRef[c] - pxCand[c]);
+            if (dataDiff || dataMaskOut) {
+                float pxRef[4], pxCand[4];
+                fetchRef(x, y, pxRef);
+                fetchCand(x, y, pxCand);
+                if (dataDiff) {
+                    size_t const idx = (y * width + x) * 4;
+                    for (int c = 0; c < 4; ++c) {
+                        dataDiff[idx + c] = std::abs(pxRef[c] - pxCand[c]);
+                    }
                 }
-            }
-            if (dataMaskOut) {
-                dataMaskOut[y * width + x] = maskVal;
+                if (dataMaskOut) {
+                    dataMaskOut[y * width + x] = maskVal;
+                }
             }
         }
     }

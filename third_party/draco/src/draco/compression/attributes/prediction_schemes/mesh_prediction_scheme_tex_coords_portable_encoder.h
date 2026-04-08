@@ -98,7 +98,10 @@ bool MeshPredictionSchemeTexCoordsPortableEncoder<DataTypeT, TransformT,
            static_cast<int>(this->mesh_data().data_to_corner_map()->size() - 1);
        p >= 0; --p) {
     const CornerIndex corner_id = this->mesh_data().data_to_corner_map()->at(p);
-    predictor_.template ComputePredictedValue<true>(corner_id, in_data, p);
+    if (!predictor_.template ComputePredictedValue<true>(corner_id, in_data,
+                                                         p)) {
+      return false;
+    }
 
     const int dst_offset = p * num_components;
     this->transform().ComputeCorrection(in_data + dst_offset,

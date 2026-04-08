@@ -93,6 +93,7 @@ void Module::ForEachInst(const std::function<void(Instruction*)>& f,
   if (sampled_image_address_mode_)
     sampled_image_address_mode_->ForEachInst(f, run_on_debug_line_insts);
   DELEGATE(entry_points_);
+  DELEGATE(graph_entry_points_);
   DELEGATE(execution_modes_);
   DELEGATE(debugs1_);
   DELEGATE(debugs2_);
@@ -102,6 +103,10 @@ void Module::ForEachInst(const std::function<void(Instruction*)>& f,
   DELEGATE(types_values_);
   for (auto& i : functions_) {
     i->ForEachInst(f, run_on_debug_line_insts,
+                   /* run_on_non_semantic_insts = */ true);
+  }
+  for (auto& g : graphs_) {
+    g->ForEachInst(f, run_on_debug_line_insts,
                    /* run_on_non_semantic_insts = */ true);
   }
 #undef DELEGATE
@@ -129,6 +134,12 @@ void Module::ForEachInst(const std::function<void(const Instruction*)>& f,
   for (auto& i : ext_inst_debuginfo_) DELEGATE(i);
   for (auto& i : functions_) {
     static_cast<const Function*>(i.get())->ForEachInst(
+        f, run_on_debug_line_insts,
+        /* run_on_non_semantic_insts = */ true);
+  }
+  for (auto& i : graph_entry_points_) DELEGATE(i);
+  for (auto& i : graphs_) {
+    static_cast<const Graph*>(i.get())->ForEachInst(
         f, run_on_debug_line_insts,
         /* run_on_non_semantic_insts = */ true);
   }

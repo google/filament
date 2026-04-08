@@ -70,6 +70,14 @@ class ValueNumberTable {
   // Assigns a value number to every result id in the module.
   void BuildDominatorTreeValueNumberTable();
 
+  // Returns true if |inst| is a load from read-only memory. This is a cached
+  // version of |Instruction::IsReadOnlyLoad| that is local to this pass.
+  bool IsReadOnlyLoad(Instruction* inst);
+
+  // Returns true if the variable pointed to by |address_def| is read-only.
+  // This is the part of |IsReadOnlyLoad| that is cached.
+  bool IsReadOnlyVariable(Instruction* address_def);
+
   // Returns the new value number.
   uint32_t TakeNextValueNumber() { return next_value_number_++; }
 
@@ -81,6 +89,10 @@ class ValueNumberTable {
   std::unordered_map<Instruction, uint32_t, ValueTableHash, ComputeSameValue>
       instruction_to_value_;
   std::unordered_map<uint32_t, uint32_t> id_to_value_;
+  // A cache for the results of |IsReadOnlyVariable|. The key is the base
+  // variable of a load.
+  std::unordered_map<uint32_t, bool> read_only_variable_cache_;
+
   IRContext* context_;
   uint32_t next_value_number_;
 };

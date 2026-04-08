@@ -1,0 +1,20 @@
+#version 450 core
+#extension GL_NV_gpu_shader5 : require
+#extension GL_NV_cooperative_vector : require
+
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0, rgba8) uniform image2D image;
+
+layout(std430, binding = 1) buffer MatrixBuffer
+{
+    float matrix[];
+};
+
+void main()
+{
+    float vecOut[4];
+    coopvecNV<float, 4> coopVecOut;
+
+    coopVecStoreNV(coopVecOut, vecOut, 0);
+}
+

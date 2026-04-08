@@ -865,6 +865,7 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
         } else {
             scene->remove(sunlight);
         }
+        // FIXME: currently the LightType cannot be set/changed
         lm->setIntensity(light, settings.sunlight.intensity);
         lm->setSunHaloSize(light, settings.sunlight.sunHaloSize);
         lm->setSunHaloFalloff(light, settings.sunlight.sunHaloFalloff);
@@ -1288,6 +1289,31 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "}";
 }
 
+static std::ostream& operator<<(std::ostream& out, const Renderer::ClearOptions& in) {
+    return out << "{\n"
+        << "\"clearColor\": " << in.clearColor << ",\n"
+        << "\"clearStencil\": " << (int)in.clearStencil << ",\n"
+        << "\"clear\": " << to_string(in.clear) << ",\n"
+        << "\"discard\": " << to_string(in.discard) << "\n"
+        << "}";
+}
+
+static std::ostream& operator<<(std::ostream& out, const Renderer::FrameRateOptions& in) {
+    return out << "{\n"
+        << "\"headRoomRatio\": " << in.headRoomRatio << ",\n"
+        << "\"scaleRate\": " << in.scaleRate << ",\n"
+        << "\"history\": " << (int)in.history << ",\n"
+        << "\"interval\": " << (int)in.interval << "\n"
+        << "}";
+}
+
+static std::ostream& operator<<(std::ostream& out, const RenderSettings& in) {
+    return out << "{\n"
+        << "\"clearOptions\": " << in.clearOptions << ",\n"
+        << "\"frameRateOptions\": " << in.frameRateOptions << "\n"
+        << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const Settings& in) {
     return out << "{\n"
                << "\"view\": " << (in.view) << ",\n"
@@ -1295,6 +1321,7 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
                << "\"lighting\": " << (in.lighting) << ",\n"
                << "\"viewer\": " << (in.viewer) << ",\n"
                << "\"camera\": " << (in.camera) << ",\n"
+               << "\"render\": " << (in.render) << ",\n"
                << "\"debug\": " << (in.debug) << "}";
 }
 

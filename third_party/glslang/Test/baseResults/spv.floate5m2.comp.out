@@ -9,8 +9,8 @@ spv.floate5m2.comp
                               Capability Int64
                               Capability Int16
                               Capability Int8
-                              Capability CapabilityFloat8EXT
-                              Capability CapabilityFloat8CooperativeMatrixEXT
+                              Capability Float8EXT
+                              Capability Float8CooperativeMatrixEXT
                               Capability VulkanMemoryModelKHR
                               Capability CooperativeMatrixConversionsNV
                               Capability CooperativeMatrixKHR

@@ -8,5 +8,5 @@ layout(set = 0, binding = 1, r64ui) uniform u64image2D z;
 
 void main() {
     // Test imageAtomicStore exclusively. Do NOT add other atomic operations to this test.
-    imageAtomicStore(z, ivec2(1, 1), y, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelaxed);
+    imageAtomicStore(z, ivec2(1, 1), y, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsRelease);
 }

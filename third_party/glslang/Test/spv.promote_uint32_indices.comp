@@ -1,0 +1,24 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_NV_cooperative_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_shader_64bit_indexing : enable
+
+#pragma promote_uint32_indices
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, buffer_reference) coherent buffer Block {
+    float x[];
+} block;
+
+void main()
+{
+    uint32_t element = 3000000000u;
+
+    float y = block.x[element];
+    y = block.x[4000000000u];
+    y = block.x[5000000000ul];
+}

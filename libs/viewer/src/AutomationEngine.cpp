@@ -212,6 +212,10 @@ void AutomationEngine::applySettings(Engine* engine, const char* json, size_t js
             content.assetLights, content.assetLightCount, content.lightManager, content.scene, content.view);
     updateCustomLights(engine, mSettings->lighting.lights, content.scene);
 
+    // Apply RenderSettings
+    content.renderer->setClearOptions(mSettings->render.clearOptions);
+    content.renderer->setFrameRateOptions(mSettings->render.frameRateOptions);
+
     Camera* camera = &content.view->getCamera();
     Skybox* skybox = content.scene->getSkybox();
     viewer::applySettings(engine, mSettings->viewer, camera, skybox, content.renderer);
@@ -221,10 +225,6 @@ void AutomationEngine::applySettings(Engine* engine, const char* json, size_t js
     double const aspect = (double) content.view->getViewport().width /
                           (double) content.view->getViewport().height;
     viewer::applySettings(engine, mSettings->camera, camera, aspect);
-
-    // Apply RenderSettings
-    content.renderer->setClearOptions(mSettings->render.clearOptions);
-    content.renderer->setFrameRateOptions(mSettings->render.frameRateOptions);
 }
 
 ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
@@ -257,14 +257,19 @@ void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float 
                 content.view);
         updateCustomLights(engine, mSettings->lighting.lights, content.scene);
 
+        // Apply RenderSettings
+        content.renderer->setClearOptions(mSettings->render.clearOptions);
+        content.renderer->setFrameRateOptions(mSettings->render.frameRateOptions);
+
+        Camera* camera = &content.view->getCamera();
+        Skybox* skybox = content.scene->getSkybox();
+        viewer::applySettings(engine, mSettings->viewer, camera, skybox, content.renderer);
+        viewer::applySettings(engine, mSettings->debug, content.renderer);
+
         // Apply CameraSettings
         double const aspect = (double) content.view->getViewport().width /
                               (double) content.view->getViewport().height;
         viewer::applySettings(engine, mSettings->camera, &content.view->getCamera(), aspect);
-
-        // Apply RenderSettings
-        content.renderer->setClearOptions(mSettings->render.clearOptions);
-        content.renderer->setFrameRateOptions(mSettings->render.frameRateOptions);
 
         if (mOptions.verbose) {
             utils::slog.i << "Running test " << mCurrentTest << utils::io::endl;

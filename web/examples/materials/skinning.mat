@@ -1,0 +1,12 @@
+material {
+    name : skinning,
+    shadingModel : unlit,
+    culling : none
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = float4(0.8, 0.8, 0.8, 1.0);
+    }
+}

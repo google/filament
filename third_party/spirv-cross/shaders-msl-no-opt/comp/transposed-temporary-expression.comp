@@ -1,0 +1,17 @@
+#version 450
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	layout(row_major) mat4x3 A;
+	layout(row_major) mat4x3 B;
+	layout(row_major) mat4x3 C;
+	vec4 D;
+	float w0;
+	float w1;
+};
+
+void main()
+{
+	D = vec4((A * w0 + B * w1) * D, 1.0);
+}

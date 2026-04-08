@@ -58,7 +58,7 @@ bool DescriptorScalarReplacement::ReplaceCandidate(Instruction* var) {
   std::vector<Instruction*> access_chain_work_list;
   std::vector<Instruction*> load_work_list;
   std::vector<Instruction*> entry_point_work_list;
-  bool failed = !get_def_use_mgr()->WhileEachUser(
+  bool ok = get_def_use_mgr()->WhileEachUser(
       var->result_id(), [this, &access_chain_work_list, &load_work_list,
                          &entry_point_work_list](Instruction* use) {
         if (use->opcode() == spv::Op::OpName) {
@@ -88,7 +88,7 @@ bool DescriptorScalarReplacement::ReplaceCandidate(Instruction* var) {
         return true;
       });
 
-  if (failed) {
+  if (!ok) {
     return false;
   }
 
@@ -128,6 +128,9 @@ bool DescriptorScalarReplacement::ReplaceAccessChain(Instruction* var,
 
   uint32_t idx = const_index->GetU32();
   uint32_t replacement_var = GetReplacementVariable(var, idx);
+  if (replacement_var == 0) {
+    return false;
+  }
 
   if (use->NumInOperands() == 2) {
     // We are not indexing into the replacement variable.  We can replaces the
@@ -186,8 +189,11 @@ bool DescriptorScalarReplacement::ReplaceEntryPoint(Instruction* var,
   uint32_t num_replacement_vars =
       descsroautil::GetNumberOfElementsForArrayOrStruct(context(), var);
   for (uint32_t i = 0; i < num_replacement_vars; i++) {
-    new_operands.push_back(
-        {SPV_OPERAND_TYPE_ID, {GetReplacementVariable(var, i)}});
+    uint32_t replacement_var_id = GetReplacementVariable(var, i);
+    if (replacement_var_id == 0) {
+      return false;
+    }
+    new_operands.push_back({SPV_OPERAND_TYPE_ID, {replacement_var_id}});
   }
 
   use->ReplaceOperands(new_operands);
@@ -310,7 +316,10 @@ uint32_t DescriptorScalarReplacement::CreateReplacementVariable(
       element_type_id, storage_class);
 
   // Create the variable.
-  uint32_t id = TakeNextId();
+  uint32_t id = context()->TakeNextId();
+  if (id == 0) {
+    return 0;
+  }
   std::unique_ptr<Instruction> variable(
       new Instruction(context(), spv::Op::OpVariable, ptr_element_type_id, id,
                       std::initializer_list<Operand>{
@@ -444,10 +453,16 @@ bool DescriptorScalarReplacement::ReplaceCompositeExtract(
 
   uint32_t replacement_var =
       GetReplacementVariable(var, extract->GetSingleWordInOperand(1));
+  if (replacement_var == 0) {
+    return false;
+  }
 
   // The result type of the OpLoad is the same as the result type of the
   // OpCompositeExtract.
-  uint32_t load_id = TakeNextId();
+  uint32_t load_id = context()->TakeNextId();
+  if (load_id == 0) {
+    return false;
+  }
   std::unique_ptr<Instruction> load(
       new Instruction(context(), spv::Op::OpLoad, extract->type_id(), load_id,
                       std::initializer_list<Operand>{

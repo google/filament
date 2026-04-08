@@ -1,0 +1,6 @@
+spv.descriptorHeap.HeapStrideNotPow2.error.comp
+ERROR: 0:4: 'descriptor_stride' : must be a power of 2 
+ERROR: 1 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

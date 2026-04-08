@@ -200,7 +200,7 @@ bool MeshPredictionSchemeConstrainedMultiParallelogramEncoder<
 
   // Bit-field used for computing permutations of excluded edges
   // (parallelograms).
-  bool exluded_parallelograms[kMaxNumParallelograms];
+  bool excluded_parallelograms[kMaxNumParallelograms];
 
   // Data about the number of used parallelogram and total number of available
   // parallelogram for each context. Used to compute overhead needed for storing
@@ -291,12 +291,12 @@ bool MeshPredictionSchemeConstrainedMultiParallelogramEncoder<
          num_used_parallelograms <= num_parallelograms;
          ++num_used_parallelograms) {
       // Mark all parallelograms as excluded.
-      std::fill(exluded_parallelograms,
-                exluded_parallelograms + num_parallelograms, true);
+      std::fill(excluded_parallelograms,
+                excluded_parallelograms + num_parallelograms, true);
       // TODO(draco-eng) maybe this should be another std::fill.
       // Mark the first |num_used_parallelograms| as not excluded.
       for (int j = 0; j < num_used_parallelograms; ++j) {
-        exluded_parallelograms[j] = false;
+        excluded_parallelograms[j] = false;
       }
       // Permute over the excluded edges and compute error for each
       // configuration (permutation of excluded parallelograms).
@@ -307,7 +307,7 @@ bool MeshPredictionSchemeConstrainedMultiParallelogramEncoder<
         }
         uint8_t configuration = 0;
         for (int j = 0; j < num_parallelograms; ++j) {
-          if (exluded_parallelograms[j]) {
+          if (excluded_parallelograms[j]) {
             continue;
           }
           for (int c = 0; c < num_components; ++c) {
@@ -322,15 +322,13 @@ bool MeshPredictionSchemeConstrainedMultiParallelogramEncoder<
         }
         error = ComputeError(multi_pred_vals.data(), in_data + dst_offset,
                              &current_residuals[0], num_components);
-        if (num_parallelograms > 0) {
-          const int64_t new_overhead_bits = ComputeOverheadBits(
-              total_used_parallelograms[num_parallelograms - 1] +
-                  num_used_parallelograms,
-              total_parallelograms[num_parallelograms - 1]);
+        const int64_t new_overhead_bits = ComputeOverheadBits(
+            total_used_parallelograms[num_parallelograms - 1] +
+                num_used_parallelograms,
+            total_parallelograms[num_parallelograms - 1]);
 
-          // Add overhead bits to the total error.
-          error.num_bits += new_overhead_bits;
-        }
+        // Add overhead bits to the total error.
+        error.num_bits += new_overhead_bits;
         if (error < best_prediction.error) {
           best_prediction.error = error;
           best_prediction.configuration = configuration;
@@ -340,8 +338,9 @@ bool MeshPredictionSchemeConstrainedMultiParallelogramEncoder<
           best_prediction.residuals.assign(current_residuals.begin(),
                                            current_residuals.end());
         }
-      } while (std::next_permutation(
-          exluded_parallelograms, exluded_parallelograms + num_parallelograms));
+      } while (
+          std::next_permutation(excluded_parallelograms,
+                                excluded_parallelograms + num_parallelograms));
     }
     if (num_parallelograms > 0) {
       total_used_parallelograms[num_parallelograms - 1] +=
@@ -392,7 +391,7 @@ bool MeshPredictionSchemeConstrainedMultiParallelogramEncoder<
       RAnsBitEncoder encoder;
       encoder.StartEncoding();
       // Encode the crease edge flags in the reverse vertex order that is needed
-      // be the decoder. Note that for the currently supported mode, each vertex
+      // by the decoder. Note that for the currently supported mode, each vertex
       // has exactly |num_used_parallelograms| edges that need to be encoded.
       for (int j = static_cast<int>(is_crease_edge_[i].size()) -
                    num_used_parallelograms;

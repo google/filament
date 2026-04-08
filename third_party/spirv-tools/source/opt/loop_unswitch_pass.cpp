@@ -92,12 +92,16 @@ class LoopUnswitch {
   // position |ip|. This function preserves the def/use and instr to block
   // managers.
   BasicBlock* CreateBasicBlock(Function::iterator ip) {
+    uint32_t new_label_id = TakeNextId();
+    if (new_label_id == 0) {
+      return nullptr;
+    }
+
     analysis::DefUseManager* def_use_mgr = context_->get_def_use_mgr();
 
-    // TODO(1841): Handle id overflow.
     BasicBlock* bb = &*ip.InsertBefore(std::unique_ptr<BasicBlock>(
         new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
-            context_, spv::Op::OpLabel, 0, context_->TakeNextId(), {})))));
+            context_, spv::Op::OpLabel, 0, new_label_id, {})))));
     bb->SetParent(function_);
     def_use_mgr->AnalyzeInstDef(bb->GetLabelInst());
     context_->set_instr_block(bb->GetLabelInst(), bb);
@@ -135,7 +139,7 @@ class LoopUnswitch {
   }
 
   // Unswitches |loop_|.
-  void PerformUnswitch() {
+  bool PerformUnswitch() {
     assert(CanUnswitchLoop() &&
            "Cannot unswitch if there is not constant condition");
     assert(loop_->GetPreHeaderBlock() && "This loop has no pre-header block");
@@ -165,6 +169,9 @@ class LoopUnswitch {
         if_merge_block
             ? CreateBasicBlock(FindBasicBlockPosition(if_merge_block))
             : nullptr;
+    if (if_merge_block && !loop_merge_block) {
+      return false;
+    }
     if (loop_merge_block) {
       // Add the instruction and update managers.
       InstructionBuilder builder(
@@ -174,17 +181,24 @@ class LoopUnswitch {
       builder.SetInsertPoint(&*loop_merge_block->begin());
       cfg.RegisterBlock(loop_merge_block);
       def_use_mgr->AnalyzeInstDef(loop_merge_block->GetLabelInst());
-      // Update CFG.
+      bool ok = true;
       if_merge_block->ForEachPhiInst(
-          [loop_merge_block, &builder, this](Instruction* phi) {
+          [loop_merge_block, &ok, &builder, this](Instruction* phi) -> bool {
             Instruction* cloned = phi->Clone(context_);
-            cloned->SetResultId(TakeNextId());
+            uint32_t new_id = TakeNextId();
+            if (new_id == 0) {
+              ok = false;
+              return false;
+            }
+            cloned->SetResultId(new_id);
             builder.AddInstruction(std::unique_ptr<Instruction>(cloned));
             phi->SetInOperand(0, {cloned->result_id()});
             phi->SetInOperand(1, {loop_merge_block->id()});
             for (uint32_t j = phi->NumInOperands() - 1; j > 1; j--)
               phi->RemoveInOperand(j);
+            return true;
           });
+      if (!ok) return false;
       // Copy the predecessor list (will get invalidated otherwise).
       std::vector<uint32_t> preds = cfg.preds(if_merge_block->id());
       for (uint32_t pid : preds) {
@@ -227,6 +241,9 @@ class LoopUnswitch {
     // we need to create a dedicated block for the if.
     BasicBlock* loop_pre_header =
         CreateBasicBlock(++FindBasicBlockPosition(if_block));
+    if (!loop_pre_header) {
+      return false;
+    }
     InstructionBuilder(
         context_, loop_pre_header,
         IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping)
@@ -308,6 +325,12 @@ class LoopUnswitch {
       // specific value.
       original_loop_constant_value =
           GetValueForDefaultPathForSwitch(iv_condition);
+      if (!original_loop_constant_value) {
+        return false;
+      }
+      if (!original_loop_constant_value) {
+        return false;
+      }
 
       for (uint32_t i = 2; i < iv_condition->NumInOperands(); i += 2) {
         constant_branch.emplace_back(
@@ -341,6 +364,9 @@ class LoopUnswitch {
 
       Loop* cloned_loop =
           loop_utils.CloneLoop(&clone_result, ordered_loop_blocks_);
+      if (!cloned_loop) {
+        return false;
+      }
       specialisation_pair.second = cloned_loop->GetPreHeaderBlock();
 
       ////////////////////////////////////
@@ -416,6 +442,7 @@ class LoopUnswitch {
 
     context_->InvalidateAnalysesExceptFor(
         IRContext::Analysis::kAnalysisLoopAnalysis);
+    return true;
   }
 
  private:
@@ -434,10 +461,7 @@ class LoopUnswitch {
   std::vector<BasicBlock*> ordered_loop_blocks_;
 
   // Returns the next usable id for the context.
-  uint32_t TakeNextId() {
-    // TODO(1841): Handle id overflow.
-    return context_->TakeNextId();
-  }
+  uint32_t TakeNextId() { return context_->TakeNextId(); }
 
   // Simplifies |loop| assuming the instruction |to_version_insn| takes the
   // value |cst_value|. |block_range| is an iterator range returning the loop
@@ -573,13 +597,15 @@ Pass::Status LoopUnswitchPass::Process() {
 
   // Process each function in the module
   for (Function& f : *module) {
-    modified |= ProcessFunction(&f);
+    Pass::Status status = ProcessFunction(&f);
+    if (status == Status::Failure) return Status::Failure;
+    if (status == Status::SuccessWithChange) modified = true;
   }
 
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
-bool LoopUnswitchPass::ProcessFunction(Function* f) {
+Pass::Status LoopUnswitchPass::ProcessFunction(Function* f) {
   bool modified = false;
   std::unordered_set<Loop*> processed_loop;
 
@@ -597,17 +623,21 @@ bool LoopUnswitchPass::ProcessFunction(Function* f) {
       LoopUnswitch unswitcher(context(), f, &loop, &loop_descriptor);
       while (unswitcher.CanUnswitchLoop()) {
         if (!loop.IsLCSSA()) {
-          LoopUtils(context(), &loop).MakeLoopClosedSSA();
+          if (!LoopUtils(context(), &loop).MakeLoopClosedSSA()) {
+            return Status::Failure;
+          }
+        }
+        if (!unswitcher.PerformUnswitch()) {
+          return Status::Failure;
         }
         modified = true;
         loop_changed = true;
-        unswitcher.PerformUnswitch();
       }
       if (loop_changed) break;
     }
   }
 
-  return modified;
+  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
 }  // namespace opt

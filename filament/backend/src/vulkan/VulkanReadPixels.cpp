@@ -124,7 +124,9 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         uint32_t const graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
         SelecteMemoryFunction const& selectMemoryFunc,
         OnReadCompleteFunction const& readCompleteFunc) {
-    VulkanAttachment const srcAttachment = srcTarget->getColor0();
+    bool const isDepth = pbd.format == PixelDataFormat::DEPTH_COMPONENT ||
+                         pbd.format == PixelDataFormat::DEPTH_STENCIL;
+    VulkanAttachment const srcAttachment = isDepth ? srcTarget->getDepth() : srcTarget->getColor0();
     run(srcAttachment.texture, srcAttachment.level, srcAttachment.layer, x, y, width, height,
             graphicsQueueFamilyIndex, std::move(pbd), selectMemoryFunc, readCompleteFunc);
 }
@@ -158,35 +160,93 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
     VkCommandPool const cmdpool = mCommandPool;
 
     VkFormat const srcFormat = srcTexture->getVkFormat();
+    VkImageAspectFlags const aspectMask = fvkutils::getImageAspect(srcFormat);
+
     bool const swizzle
             = srcFormat == VK_FORMAT_B8G8R8A8_UNORM || srcFormat == VK_FORMAT_B8G8R8A8_SRGB;
 
-    // Create a host visible, linearly tiled image as a staging area.
-    VkImageCreateInfo const imageInfo = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = srcFormat,
-        .extent = { width, height, 1 },
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_LINEAR,
-        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-    };
+    bool const isDepth =
+            (aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) || (aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT);
 
-    VkImage stagingImage;
-    vkCreateImage(device, &imageInfo, VKALLOC, &stagingImage);
+    VkImageAspectFlags copyAspect = aspectMask;
+    if (isDepth) {
+        // If the user requested DEPTH_COMPONENT or DEPTH_STENCIL, we only extract the depth aspect
+        // since Vulkan cannot copy interleaved depth/stencil data into a buffer via vkCmdCopyImageToBuffer.
+        copyAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+
+    uint32_t componentCount = fvkutils::getComponentCount(srcFormat);
+    PixelDataType componentType = fvkutils::getComponentType(srcFormat);
+
+    if (isDepth) {
+        // When extracting depth or stencil, Vulkan returns tightly packed 1-component data.
+        componentCount = 1;
+        if (srcFormat == VK_FORMAT_D16_UNORM) {
+            componentType = PixelDataType::USHORT;
+        } else if (copyAspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
+            componentType = PixelDataType::UBYTE;
+        } else {
+            componentType =
+                    (srcFormat == VK_FORMAT_D32_SFLOAT || srcFormat == VK_FORMAT_D32_SFLOAT_S8_UINT)
+                            ? PixelDataType::FLOAT
+                            : PixelDataType::UINT;
+        }
+    }
+
+    uint32_t bpp = 0;
+    switch (componentType) {
+        case PixelDataType::UBYTE:
+        case PixelDataType::BYTE:
+            bpp = 1;
+            break;
+        case PixelDataType::USHORT:
+        case PixelDataType::SHORT:
+        case PixelDataType::HALF:
+        case PixelDataType::USHORT_565:
+            bpp = 2;
+            break;
+        case PixelDataType::UINT:
+        case PixelDataType::INT:
+        case PixelDataType::FLOAT:
+        case PixelDataType::UINT_10F_11F_11F_REV:
+        case PixelDataType::UINT_2_10_10_10_REV:
+            bpp = 4;
+            break;
+        case PixelDataType::COMPRESSED:
+            bpp = 1; // Note: Compressed formats aren't fully supported for readPixels.
+            break;
+    }
+    if (componentType != PixelDataType::UINT_10F_11F_11F_REV &&
+        componentType != PixelDataType::USHORT_565 &&
+        componentType != PixelDataType::UINT_2_10_10_10_REV &&
+        componentType != PixelDataType::COMPRESSED) {
+        bpp *= componentCount;
+    }
+
+    // Use a VkBuffer as the staging area for readback.
+    // Using a buffer instead of a linearly tiled VkImage unifies the readback path and avoids
+    // driver/validation layer issues since some implementations strictly prohibit linear tiling
+    // for certain formats (such as depth/stencil).
+    VkBuffer stagingBuffer = VK_NULL_HANDLE;
+    VkMemoryRequirements memReqs;
+
+    VkBufferCreateInfo bufferInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = width * height * bpp,
+        .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    };
+    // TODO: we could use a staging buffer pool, but this is on another thread.  We'd need to
+    // have a separate pool, or make our backend-thread one thread-safe.
+    vkCreateBuffer(device, &bufferInfo, VKALLOC, &stagingBuffer);
+    vkGetBufferMemoryRequirements(device, stagingBuffer, &memReqs);
 
 #if FVK_ENABLED(FVK_DEBUG_READ_PIXELS)
-    FVK_LOGD << "readPixels created image=" << stagingImage
+    FVK_LOGD << "readPixels created staging area buffer"
              << " to copy from image=" << srcTexture->getVkImage()
              << " src-layout=" << srcTexture->getLayout(level, layer);
 #endif
 
-    VkMemoryRequirements memReqs;
     VkDeviceMemory stagingMemory;
-    vkGetImageMemoryRequirements(device, stagingImage, &memReqs);
 
     uint32_t memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -211,7 +271,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
     };
 
     vkAllocateMemory(device, &allocInfo, VKALLOC, &stagingMemory);
-    vkBindImageMemory(device, stagingImage, stagingMemory, 0);
+    vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
 
     VkCommandBuffer cmdbuffer;
     VkCommandBufferAllocateInfo const allocateInfo = {
@@ -228,21 +288,8 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
     };
     vkBeginCommandBuffer(cmdbuffer, &binfo);
 
-    fvkutils::transitionLayout(cmdbuffer, {
-        .image = stagingImage,
-        .oldLayout = VulkanLayout::UNDEFINED,
-        .newLayout = VulkanLayout::TRANSFER_DST,
-        .subresources = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
-    });
-
     VkImageSubresourceRange const srcRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .aspectMask = aspectMask,
         .baseMipLevel = level,
         .levelCount = 1,
         .baseArrayLayer = layer,
@@ -252,37 +299,32 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
     srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::TRANSFER_SRC);
 
     uint32_t const mipHeight = std::max(1u, srcTexture->height >> level);
-    VkImageCopy const imageCopyRegion = {
-        .srcSubresource = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+
+    VkBufferImageCopy const region = {
+        .bufferOffset = 0,
+        .bufferRowLength = width,
+        .bufferImageHeight = height,
+        .imageSubresource = {
+            .aspectMask = copyAspect,
             .mipLevel = level,
             .baseArrayLayer = layer,
             .layerCount = 1,
         },
-        .srcOffset = {
+        .imageOffset = {
             .x = (int32_t)x,
             .y = (int32_t)(mipHeight - (height + y)),
+            .z = 0,
         },
-        .dstSubresource = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .layerCount = 1,
-        },
-        .extent = {
+        .imageExtent = {
             .width = width,
             .height = height,
             .depth = 1,
         },
     };
 
-    // Perform the copy into the staging area. At this point we know that the src
-    // layout is TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
-    UTILS_UNUSED_IN_RELEASE uint32_t const mipWidth = std::max(1u, srcTexture->width >> level);
-    assert_invariant(imageCopyRegion.srcOffset.x + imageCopyRegion.extent.width <= mipWidth);
-    assert_invariant(imageCopyRegion.srcOffset.y + imageCopyRegion.extent.height <= mipHeight);
-
-    vkCmdCopyImage(cmdbuffer, srcTexture->getVkImage(),
-            fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC), stagingImage,
-            fvkutils::getVkLayout(VulkanLayout::TRANSFER_DST), 1, &imageCopyRegion);
+    // Copy the specific aspect from the image into the tightly packed staging buffer.
+    vkCmdCopyImageToBuffer(cmdbuffer, srcTexture->getVkImage(),
+            fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC), stagingBuffer, 1, &region);
 
     // Restore the source image layout.
     srcTexture->transitionLayout(cmdbuffer, srcRange, srcLayout);
@@ -314,8 +356,8 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
         readCompleteFunc(std::move(p));
         delete pUserBuffer;
     };
-    auto waitFenceFunc = [device, width, height, swizzle, srcFormat, stagingImage, stagingMemory,
-                                 cmdpool, cmdbuffer, pUserBuffer,
+    auto waitFenceFunc = [device, width, height, swizzle, stagingBuffer, stagingMemory, cmdpool,
+                                 cmdbuffer, pUserBuffer, bpp, componentType, componentCount,
                                  fence = readCompleteFence]() mutable {
         VkResult status = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
         if (status != VK_SUCCESS) {
@@ -324,24 +366,19 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
         }
 
         PixelBufferDescriptor& p = *pUserBuffer;
-        VkImageSubresource subResource{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT};
-        VkSubresourceLayout subResourceLayout;
-        vkGetImageSubresourceLayout(device, stagingImage, &subResource, &subResourceLayout);
 
-        // Map image memory so that we can start copying from it.
+        // Map memory so that we can start copying from it.
         uint8_t const* srcPixels;
         vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
-        srcPixels += subResourceLayout.offset;
 
-        if (!DataReshaper::reshapeImage(&p, fvkutils::getComponentType(srcFormat),
-                    fvkutils::getComponentCount(srcFormat), srcPixels,
-                    static_cast<int>(subResourceLayout.rowPitch), static_cast<int>(width),
-                    static_cast<int>(height), swizzle)) {
+        int const rowPitch = width * bpp;
+        if (!DataReshaper::reshapeImage(&p, componentType, componentCount, srcPixels, rowPitch,
+                    static_cast<int>(width), static_cast<int>(height), swizzle)) {
             FVK_LOGE << "Unsupported PixelDataFormat or PixelDataType";
         }
 
         vkUnmapMemory(device, stagingMemory);
-        vkDestroyImage(device, stagingImage, VKALLOC);
+        vkDestroyBuffer(device, stagingBuffer, VKALLOC);
         vkFreeMemory(device, stagingMemory, VKALLOC);
         vkDestroyFence(device, fence, VKALLOC);
         vkFreeCommandBuffers(device, cmdpool, 1, &cmdbuffer);

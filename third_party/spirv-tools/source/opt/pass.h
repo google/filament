@@ -25,6 +25,7 @@
 #include "source/opt/def_use_manager.h"
 #include "source/opt/ir_context.h"
 #include "source/opt/module.h"
+#include "source/util/status.h"
 #include "spirv-tools/libspirv.hpp"
 #include "types.h"
 
@@ -46,11 +47,7 @@ class Pass {
   //
   // The numbers for the cases are assigned to make sure that Failure & anything
   // is Failure, SuccessWithChange & any success is SuccessWithChange.
-  enum class Status {
-    Failure = 0x00,
-    SuccessWithChange = 0x10,
-    SuccessWithoutChange = 0x11,
-  };
+  using Status = utils::Status;
 
   using ProcessFunction = std::function<bool(Function*)>;
 

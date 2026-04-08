@@ -1548,6 +1548,16 @@ bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
     }
 }
 
+bool VulkanDriver::isTextureFormatFilterable(TextureFormat format) {
+    VkFormat vkformat = fvkutils::getVkFormat(format);
+    if (vkformat == VK_FORMAT_UNDEFINED) {
+        return false;
+    }
+    VkFormatProperties info;
+    vkGetPhysicalDeviceFormatProperties(mPlatform->getPhysicalDevice(), vkformat, &info);
+    return (info.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0;
+}
+
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     VkFormat vkformat = fvkutils::getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {

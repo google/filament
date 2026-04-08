@@ -171,6 +171,9 @@ bool TParseContextBase::lValueErrorCheck(const TSourceLoc& loc, const char* op, 
         case EbtHitObjectNV:
             message = "can't modify hitObjectNV";
             break;
+        case EbtHitObjectEXT:
+            message = "can't modify hitObjectEXT";
+            break;
         default:
             break;
         }
@@ -279,7 +282,7 @@ void TParseContextBase::trackLinkage(TSymbol& symbol)
 
 // Ensure index is in bounds, correct if necessary.
 // Give an error if not.
-void TParseContextBase::checkIndex(const TSourceLoc& loc, const TType& type, int& index)
+void TParseContextBase::checkIndex(const TSourceLoc& loc, const TType& type, int64_t& index)
 {
     const auto sizeIsSpecializationExpression = [&type]() {
         return type.containsSpecializationSize() &&
@@ -484,6 +487,16 @@ const TFunction* TParseContextBase::selectFunction(
         return true;
     };
 
+    const auto enabled = [this](const TFunction& candidate) -> bool {
+        bool enabled = candidate.getNumExtensions() == 0;
+        for (int i = 0; i < candidate.getNumExtensions(); ++i) {
+            TExtensionBehavior behavior = getExtensionBehavior(candidate.getExtensions()[i]);
+            if (behavior == EBhEnable || behavior == EBhRequire)
+                enabled = true;
+        }
+        return enabled;
+    };
+
     const TFunction* incumbent = viableCandidates.front();
     for (auto it = viableCandidates.begin() + 1; it != viableCandidates.end(); ++it) {
         const TFunction& candidate = *(*it);
@@ -499,7 +512,7 @@ const TFunction* TParseContextBase::selectFunction(
 
         // In the case of default parameters, it may have an identical initial set, which is
         // also ambiguous
-        if (betterParam(*incumbent, candidate) || equivalentParams(*incumbent, candidate))
+        if ((betterParam(*incumbent, candidate) || equivalentParams(*incumbent, candidate)) && enabled(candidate))
             tie = true;
     }
 

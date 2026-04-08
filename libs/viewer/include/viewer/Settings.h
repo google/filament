@@ -262,6 +262,7 @@ struct LightSettings {
           .direction  = {0.6, -1.0, -0.8},
           .color = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89}),
           .intensity = 100000.0f,
+          .castShadows = true,
     };
     std::vector<LightDefinition> lights;
 };

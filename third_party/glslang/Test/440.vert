@@ -146,7 +146,7 @@ struct T {
 };  // total size = 36
 
 out layout(xfb_buffer=0, xfb_offset=0, xfb_stride=92) bblck8 {  // ERROR, stride not multiple of 8
-    bool b;    // offset 0
+    bool b;    // offset 0                    // ERROR, out block containing bool
     T t;       // offset 8, size 40
     int i;     // offset 40 + 4 = 48
     mat3x3 m3; // offset 52

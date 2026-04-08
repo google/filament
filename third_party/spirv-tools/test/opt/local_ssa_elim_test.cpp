@@ -4225,6 +4225,7 @@ TEST_F(LocalSSAElimTest, PointerVariables) {
                OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndMatch<SSARewritePass>(text, true);
 }
 

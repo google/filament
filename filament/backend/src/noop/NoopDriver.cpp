@@ -194,6 +194,10 @@ bool NoopDriver::isTextureFormatMipmappable(TextureFormat format) {
     return true;
 }
 
+bool NoopDriver::isTextureFormatFilterable(TextureFormat format) {
+    return true;
+}
+
 bool NoopDriver::isRenderTargetFormatSupported(TextureFormat format) {
     return true;
 }

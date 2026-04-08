@@ -80,6 +80,8 @@ typedef enum spv_result_t {
   SPV_ERROR_INVALID_DATA = -14,  // Indicates data rules validation failure.
   SPV_ERROR_MISSING_EXTENSION = -15,
   SPV_ERROR_WRONG_VERSION = -16,  // Indicates wrong SPIR-V version
+  SPV_ERROR_FNVAR =
+      -17,  // Error related to SPV_INTEL_function_variants extension
   SPV_FORCE_32_BIT_ENUM(spv_result_t)
 } spv_result_t;
 
@@ -362,6 +364,7 @@ typedef enum spv_ext_inst_type_t {
   SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100,
   SPV_EXT_INST_TYPE_NONSEMANTIC_VKSPREFLECTION,
   SPV_EXT_INST_TYPE_TOSA_001000_1,
+  SPV_EXT_INST_TYPE_ARM_MOTION_ENGINE_100,
 
   // Multiple distinct extended instruction set types could return this
   // value, if they are prefixed with NonSemantic. and are otherwise
@@ -430,7 +433,7 @@ typedef enum spv_binary_to_text_options_t {
 
 // The default id bound is to the minimum value for the id limit
 // in the spir-v specification under the section "Universal Limits".
-const uint32_t kDefaultMaxIdBound = 0x3FFFFF;
+const static uint32_t kDefaultMaxIdBound = 0x3FFFFF;
 
 // Structures
 

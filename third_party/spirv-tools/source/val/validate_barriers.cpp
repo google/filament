@@ -45,10 +45,10 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
                       model != spv::ExecutionModel::MeshNV) {
                     if (message) {
                       *message =
-                          "OpControlBarrier requires one of the following "
-                          "Execution "
-                          "Models: TessellationControl, GLCompute, Kernel, "
-                          "MeshNV or TaskNV";
+                          "In SPIR-V 1.2 or earlier, OpControlBarrier requires "
+                          "one of the following "
+                          "Execution Models: TessellationControl, GLCompute, "
+                          "Kernel, MeshNV or TaskNV";
                     }
                     return false;
                   }
@@ -94,8 +94,7 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
       }
 
       const uint32_t subgroup_count_type = _.GetOperandTypeId(inst, 2);
-      if (!_.IsIntScalarType(subgroup_count_type) ||
-          _.GetBitWidth(subgroup_count_type) != 32) {
+      if (!_.IsIntScalarType(subgroup_count_type, 32)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << ": expected Subgroup Count to be a 32-bit int";

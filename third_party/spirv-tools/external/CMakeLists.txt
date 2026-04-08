@@ -38,16 +38,22 @@ endif()
 # Used on Windows by default, but allow opt-in on other platforms
 if (WIN32)
   set(SPIRV_TOOLS_USE_MIMALLOC_DEFAULT_VALUE ON)
+  set(SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD_DEFAULT_VALUE OFF)
 else()
   set(SPIRV_TOOLS_USE_MIMALLOC_DEFAULT_VALUE OFF)
+  set(SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD_DEFAULT_VALUE OFF)
 endif()
 
 # To avoid unexpected side effects on users of the static library, mimalloc
-# may only be used when building executables and shared libraries.
+# must be explicitly enabled when building static libraries.
 include(CMakeDependentOption)
 cmake_dependent_option(SPIRV_TOOLS_USE_MIMALLOC
   "Executables and shared libraries use mimalloc instead of the default allocator"
   ${SPIRV_TOOLS_USE_MIMALLOC_DEFAULT_VALUE} "MIMALLOC_DIR" OFF)
+
+cmake_dependent_option(SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD
+  "Static libraries use mimalloc instead of the default allocator"
+  ${SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD_DEFAULT_VALUE} SPIRV_TOOLS_USE_MIMALLOC OFF)
 
 if (SPIRV_TOOLS_USE_MIMALLOC)
   if (NOT WIN32)

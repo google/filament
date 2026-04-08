@@ -102,5 +102,44 @@
     },
     "filament/backend/test/README.md": {
         "dest": "dup/backend_test.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/triangle/triangle.md": {
+        "dest": "samples/web/triangle.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/redball/redball.md": {
+        "dest": "samples/web/redball.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/suzanne/suzanne.md": {
+        "dest": "samples/web/suzanne.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/animation/animation.html": {
+        "dest": "samples/web/animation.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/cube_fl0/cube_fl0.html": {
+        "dest": "samples/web/cube_fl0.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/helmet/helmet.html": {
+        "dest": "samples/web/helmet.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/morphing/morphing.html": {
+        "dest": "samples/web/morphing.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/parquet/parquet.html": {
+        "dest": "samples/web/parquet.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/skinning/skinning.html": {
+        "dest": "samples/web/skinning.md"
+    },
+    "out/cmake-webgl-release/web/examples/examples/sky/sky.html": {
+        "dest": "samples/web/sky.md",
+        "replacements": {
+            "<!-- mdbook: add fullscreen mode -->": "<a href=\"../../web/sky.html\">Full screen</a>"
+        }
+    },
+    "./out/cmake-webgl-release/web/examples/examples/sky/sky.html": {
+        "dest": "web/sky.html"
+    },
+    "out/cmake-webgl-release/web/examples/examples/remote/remote.html": {
+        "dest": "remote/index.html"
     }
 }

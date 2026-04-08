@@ -436,6 +436,7 @@ void LocalAccessChainConvertPass::InitExtensions() {
       "SPV_NV_shader_subgroup_partitioned",
       "SPV_EXT_demote_to_helper_invocation",
       "SPV_EXT_descriptor_indexing",
+      "SPV_EXT_descriptor_heap",
       "SPV_NV_fragment_shader_barycentric",
       "SPV_NV_compute_shader_derivatives",
       "SPV_NV_shader_image_footprint",
@@ -467,6 +468,7 @@ void LocalAccessChainConvertPass::InitExtensions() {
       "SPV_NV_shader_invocation_reorder",
       "SPV_NV_cluster_acceleration_structure",
       "SPV_NV_linear_swept_spheres",
+      "SPV_KHR_maximal_reconvergence",
   });
 }
 

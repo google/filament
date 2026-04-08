@@ -16,10 +16,12 @@
 
 #include <sstream>
 
+#include "draco/attributes/geometry_attribute.h"
 #include "draco/core/draco_test_base.h"
 #include "draco/core/draco_test_utils.h"
 #include "draco/io/file_reader_factory.h"
 #include "draco/io/file_reader_interface.h"
+#include "draco/io/file_utils.h"
 #include "draco/io/obj_decoder.h"
 
 namespace draco {
@@ -27,6 +29,8 @@ namespace draco {
 class ObjEncoderTest : public ::testing::Test {
  protected:
   void CompareMeshes(const Mesh *mesh0, const Mesh *mesh1) {
+    ASSERT_NE(mesh0, nullptr);
+    ASSERT_NE(mesh1, nullptr);
     ASSERT_EQ(mesh0->num_faces(), mesh1->num_faces());
     ASSERT_EQ(mesh0->num_attributes(), mesh1->num_attributes());
     for (size_t att_id = 0; att_id < mesh0->num_attributes(); ++att_id) {
@@ -105,6 +109,36 @@ TEST_F(ObjEncoderTest, TestObjEncodingAll) {
   test_encoding("three_faces_312.obj");
   test_encoding("two_faces_123.obj");
   test_encoding("two_faces_312.obj");
+}
+
+TEST_F(ObjEncoderTest, TestObjOctagonPreserved) {
+  // Test verifies that OBJ encoder can reconstruct and encode an octagon.
+  // Decode triangulated octagon and an extra attribute for reconstruction.
+  std::unique_ptr<draco::Mesh> mesh =
+      ReadMeshFromTestFile("octagon_preserved.drc");
+  ASSERT_NE(mesh, nullptr);
+  ASSERT_EQ(mesh->num_faces(), 6);
+  ASSERT_EQ(mesh->NumNamedAttributes(GeometryAttribute::GENERIC), 1);
+  ASSERT_NE(mesh->GetMetadata()->GetAttributeMetadataByStringEntry(
+                "name", "added_edges"),
+            nullptr);
+
+  // Reconstruct octagon and encode it into an OBJ file.
+  draco::ObjEncoder obj_encoder;
+  ASSERT_TRUE(obj_encoder.EncodeToFile(
+      *mesh, draco::GetTestTempFileFullPath("encoded.obj")));
+
+  // Read encoded OBJ file and golden OBJ file contents into buffers.
+  std::vector<char> data_encoded;
+  std::vector<char> data_golden;
+  ASSERT_TRUE(
+      ReadFileToBuffer(GetTestTempFileFullPath("encoded.obj"), &data_encoded));
+  ASSERT_TRUE(ReadFileToBuffer(GetTestFileFullPath("octagon_preserved.obj"),
+                               &data_golden));
+
+  // Check that encoded OBJ file contents are correct.
+  ASSERT_EQ(data_encoded.size(), data_golden.size());
+  ASSERT_EQ(data_encoded, data_golden);
 }
 
 }  // namespace draco

@@ -24,6 +24,7 @@
 #include <utils/PrivateImplementation-impl.h>
 
 #include <algorithm>
+#include <limits>
 #include <mutex>
 #include <string_view>
 #include <utility>
@@ -103,6 +104,10 @@ ostream& ostream::print(const char* format, ...) noexcept {
     ssize_t const s = vsnprintf(nullptr, 0, format, args0);
     va_end(args0);
 
+    if (UTILS_UNLIKELY(s < 0)) {
+        va_end(args1);
+        return *this;
+    }
 
     { // scope for the lock
         std::lock_guard const lock(mImpl->mLock);
@@ -270,6 +275,12 @@ std::pair<char*, size_t> ostream::Buffer::grow(size_t s) noexcept {
     if (UTILS_UNLIKELY(sizeRemaining < s)) {
         size_t const usedSize = curr - buffer;
         size_t const neededCapacity = usedSize + s;
+
+        // Bounded capacity scale check to gracefully drop the write
+        if (UTILS_UNLIKELY(neededCapacity < usedSize || neededCapacity > std::numeric_limits<size_t>::max() / 3)) {
+            return { nullptr, 0 };
+        }
+
         size_t const newCapacity = std::max(size_t(32), (neededCapacity * 3 + 1) / 2); // 32 bytes minimum
         reserve(newCapacity);
         assert(sizeRemaining >= s);

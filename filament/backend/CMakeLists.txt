@@ -86,6 +86,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
             src/opengl/OpenGLBlobCache.h
             src/opengl/OpenGLContext.cpp
             src/opengl/OpenGLContext.h
+            src/opengl/OpenGLState.cpp
+            src/opengl/OpenGLState.h
             src/opengl/OpenGLDriver.cpp
             src/opengl/OpenGLDriver.h
             src/opengl/OpenGLDriverFactory.h

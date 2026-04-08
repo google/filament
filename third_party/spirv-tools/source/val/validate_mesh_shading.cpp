@@ -132,9 +132,9 @@ spv_result_t MeshShadingPass(ValidationState_t& _, const Instruction* inst) {
     }
     case spv::Op::OpVariable: {
       if (_.HasCapability(spv::Capability::MeshShadingEXT)) {
-        bool meshInterfaceVar =
+        bool is_mesh_interface_var =
             IsInterfaceVariable(_, inst, spv::ExecutionModel::MeshEXT);
-        bool fragInterfaceVar =
+        bool is_frag_interface_var =
             IsInterfaceVariable(_, inst, spv::ExecutionModel::Fragment);
 
         const spv::StorageClass storage_class =
@@ -143,19 +143,33 @@ spv_result_t MeshShadingPass(ValidationState_t& _, const Instruction* inst) {
         bool storage_input = (storage_class == spv::StorageClass::Input);
 
         if (_.HasDecoration(inst->id(), spv::Decoration::PerPrimitiveEXT)) {
-          if (fragInterfaceVar && !storage_input) {
+          if (is_frag_interface_var && !storage_input) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << "PerPrimitiveEXT decoration must be applied only to "
                       "variables in the Input Storage Class in the Fragment "
                       "Execution Model.";
           }
 
-          if (meshInterfaceVar && !storage_output) {
+          if (is_mesh_interface_var && !storage_output) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << _.VkErrorID(4336)
                    << "PerPrimitiveEXT decoration must be applied only to "
                       "variables in the Output Storage Class in the "
                       "Storage Class in the MeshEXT Execution Model.";
+          }
+        }
+
+        // This only applies to user interface variables, not built-ins (they
+        // are validated with the rest of the builtin)
+        if (is_mesh_interface_var && storage_output &&
+            !_.HasDecoration(inst->id(), spv::Decoration::BuiltIn)) {
+          const Instruction* pointer_inst = _.FindDef(inst->type_id());
+          if (pointer_inst->opcode() == spv::Op::OpTypePointer) {
+            if (!_.IsArrayType(pointer_inst->word(3))) {
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << "In the MeshEXT Execution Mode, all Output Variables "
+                        "must contain an Array.";
+            }
           }
         }
       }

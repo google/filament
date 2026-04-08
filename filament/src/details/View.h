@@ -586,6 +586,7 @@ private:
     bool mCulling = true;
     bool mFrontFaceWindingInverted = false;
     bool mIsTransparentPickingEnabled = false;
+    bool mIsHighPrecisionEvsmSupported = true;
 
     FRenderTarget* mRenderTarget = nullptr;
 

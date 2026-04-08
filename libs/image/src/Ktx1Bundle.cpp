@@ -19,6 +19,8 @@
 #include <utils/Panic.h>
 #include <utils/string.h>
 
+#include <algorithm>
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -109,11 +111,11 @@ Ktx1Bundle::Ktx1Bundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubem
 
 Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
         mBlobs(new KtxBlobList), mMetadata(new KtxMetadata) {
-    FILAMENT_CHECK_PRECONDITION(sizeof(SerializationHeader) <= nbytes) << "KTX buffer is too small";
+    FILAMENT_CHECK_POSTCONDITION(sizeof(SerializationHeader) <= nbytes) << "KTX buffer is too small";
 
     // First, "parse" the header by casting it to a struct.
     SerializationHeader const* header = (SerializationHeader const*) bytes;
-    FILAMENT_CHECK_PRECONDITION(memcmp(header->magic, MAGIC, 12) == 0)
+    FILAMENT_CHECK_POSTCONDITION(memcmp(header->magic, MAGIC, 12) == 0)
             << "KTX has unexpected identifier";
     mInfo = header->info;
 
@@ -124,21 +126,39 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     mNumMipLevels = header->numberOfMipmapLevels ? header->numberOfMipmapLevels : 1;
     mArrayLength = header->numberOfArrayElements ? header->numberOfArrayElements : 1;
     mNumCubeFaces = header->numberOfFaces ? header->numberOfFaces : 1;
-    mBlobs->sizes.resize(mNumMipLevels * mArrayLength * mNumCubeFaces);
+
+    uint64_t const totalBlobs = (uint64_t)mNumMipLevels * mArrayLength * mNumCubeFaces;
+    FILAMENT_CHECK_POSTCONDITION(totalBlobs <= (uint64_t)std::numeric_limits<uint32_t>::max()) << "KTX dimensions overflow";
+    mBlobs->sizes.resize((uint32_t)totalBlobs);
+
+    FILAMENT_CHECK_POSTCONDITION(nbytes - sizeof(SerializationHeader) >= header->bytesOfKeyValueData) << "KTX metadata length exceeds buffer";
 
     // We use std::string to store both the key and the value. Note that the spec says the value can
     // be a binary blob that contains null characters.
     uint8_t const* pdata = bytes + sizeof(SerializationHeader);
     uint8_t const* end = pdata + header->bytesOfKeyValueData;
     while (pdata < end) {
+        FILAMENT_CHECK_POSTCONDITION((size_t)(end - pdata) >= sizeof(uint32_t)) << "KTX truncation in metadata";
         const uint32_t keyAndValueByteSize = *((uint32_t const*) pdata);
         pdata += sizeof(uint32_t);
-        std::string key((const char*) pdata);
-        uint8_t const* pval = pdata + key.size() + 1;
+        FILAMENT_CHECK_POSTCONDITION(keyAndValueByteSize <= (size_t)(end - pdata)) << "KTX metadata entry exceeds bounds";
+
+        // Use std::find to safely find the null terminator
+        const char* keyStart = (const char*) pdata;
+        const char* keyEnd = (const char*) std::find(keyStart, keyStart + keyAndValueByteSize, '\0');
+        size_t const keyLength = keyEnd - keyStart;
+        FILAMENT_CHECK_POSTCONDITION(keyLength < keyAndValueByteSize) << "KTX metadata key is not null terminated";
+
+        std::string key(keyStart, keyLength);
+        uint8_t const* pval = pdata + keyLength + 1;
+        size_t const valLength = keyAndValueByteSize - (keyLength + 1);
+
         pdata += keyAndValueByteSize;
-        std::string val((const char*) pval, (const char*) pdata);
+        std::string val((const char*) pval, valLength);
         mMetadata->keyvals.insert({key, val});
+
         const uint32_t paddingSize = 3 - ((keyAndValueByteSize + 3) % 4);
+        FILAMENT_CHECK_POSTCONDITION(paddingSize <= (size_t)(end - pdata)) << "KTX metadata padding exceeds bounds";
         pdata += paddingSize;
     }
 
@@ -151,22 +171,41 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     const bool isNonArrayCube = mNumCubeFaces > 1 && mArrayLength == 1;
     const uint32_t facesPerMip = mArrayLength * mNumCubeFaces;
 
-    // Extract blobs from the serialized byte stream.
-    const uint32_t totalSize = nbytes - (pdata - bytes);
-    mBlobs->blobs.resize(totalSize);
+    // Extract blobs from the serialized byte stream. First measure required memory to avoid heap overflow and state mismatch.
+    uint8_t const* scan_pdata = pdata;
+    uint8_t const* b_end = bytes + nbytes;
+    uint64_t measuredTotalSize = 0;
+
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
-        const uint32_t imageSize = *((uint32_t const*) pdata);
+        FILAMENT_CHECK_POSTCONDITION((size_t)(b_end - scan_pdata) >= sizeof(uint32_t)) << "KTX truncation during image sizes";
+        const uint32_t imageSize = *((uint32_t const*) scan_pdata);
+        scan_pdata += sizeof(uint32_t);
+
         const uint32_t faceSize = isNonArrayCube ? imageSize : (imageSize / facesPerMip);
-        const uint32_t levelSize = faceSize * mNumCubeFaces * mArrayLength;
+        const uint64_t levelSize = (uint64_t)faceSize * mNumCubeFaces * mArrayLength;
+
+        FILAMENT_CHECK_POSTCONDITION(levelSize <= (size_t)(b_end - scan_pdata)) << "KTX image data exceeds buffer";
+        scan_pdata += levelSize;
+
+        measuredTotalSize += levelSize;
+        FILAMENT_CHECK_POSTCONDITION(measuredTotalSize <= (uint64_t)std::numeric_limits<uint32_t>::max()) << "KTX images total size overflow";
+
+        const uint64_t numElements = (uint64_t)mArrayLength * mNumCubeFaces;
+        std::fill_n(&mBlobs->sizes[flatten(this, {mipmap, 0, 0})], numElements, faceSize);
+
+        const uint64_t paddingAdvances = (uint64_t)cubePadding * mNumCubeFaces * mArrayLength + mipPadding;
+        FILAMENT_CHECK_POSTCONDITION(paddingAdvances <= (size_t)(b_end - scan_pdata)) << "KTX padding data exceeds buffer";
+        scan_pdata += paddingAdvances;
+    }
+
+    mBlobs->blobs.resize((uint32_t)measuredTotalSize);
+    for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
         pdata += sizeof(uint32_t);
+        const uint32_t faceSize = mBlobs->sizes[flatten(this, {mipmap, 0, 0})];
+        const uint32_t levelSize = faceSize * mNumCubeFaces * mArrayLength;
         memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, levelSize);
-        for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
-            for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
-                mBlobs->sizes[flatten(this, {mipmap, layer, face})] = faceSize;
-                pdata += faceSize;
-                pdata += cubePadding;
-            }
-        }
+        pdata += levelSize;
+        pdata += cubePadding * mNumCubeFaces * mArrayLength;
         pdata += mipPadding;
     }
 }
@@ -229,27 +268,23 @@ bool Ktx1Bundle::serialize(uint8_t* destination, uint32_t numBytes) const {
         // by simply looking at the first blob in the LOD.
         uint32_t faceSize;
         uint8_t* blobData;
-        getBlob({mipmap, 0, 0}, &blobData, &faceSize);
+        if (!getBlob({mipmap, 0, 0}, &blobData, &faceSize)) {
+            return false;
+        }
         uint32_t imageSize = isNonArrayCube ? faceSize : (faceSize * facesPerMip);
         *((uint32_t*) pdata) = imageSize;
         pdata += sizeof(imageSize);
 
-        // Next, copy out the actual blobs.
-        for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
-            for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
-                if (!getBlob({mipmap, layer, face}, &blobData, &faceSize)) {
-                    return false;
-                }
-                memcpy(pdata, blobData, faceSize);
-                pdata += faceSize;
-            }
-        }
+        // Copy out all layer and face blobs for this mipmap at once, since they are contiguous
+        const uint32_t levelSize = faceSize * facesPerMip;
+        memcpy(pdata, blobData, levelSize);
+        pdata += levelSize;
     }
     return true;
 }
 
 uint32_t Ktx1Bundle::getSerializedLength() const {
-    uint32_t total = sizeof(SerializationHeader);
+    uint64_t total = sizeof(SerializationHeader);
     for (const auto& iter : mMetadata->keyvals) {
         const uint32_t kvsize = iter.first.size() + 1 + iter.second.size();
         const uint32_t kvpadding = 3 - ((kvsize + 3) % 4);
@@ -257,20 +292,19 @@ uint32_t Ktx1Bundle::getSerializedLength() const {
     }
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
         total += sizeof(uint32_t);
-        size_t blobSize = 0;
-        for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
-            for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
-                uint32_t thisBlobSize = mBlobs->sizes[flatten(this, {mipmap, layer, face})];
-                if (blobSize == 0) {
-                    blobSize = thisBlobSize;
-                }
-                FILAMENT_CHECK_PRECONDITION(blobSize == thisBlobSize)
-                        << "Inconsistent blob sizes within LOD";
-                total += thisBlobSize;
-            }
+        const size_t startIndex = flatten(this, {mipmap, 0, 0});
+        const size_t numElements = (size_t)mArrayLength * mNumCubeFaces;
+        const uint32_t blobSize = mBlobs->sizes[startIndex];
+        
+        for (size_t i = 0; i < numElements; ++i) {
+            FILAMENT_CHECK_POSTCONDITION(mBlobs->sizes[startIndex + i] == blobSize)
+                    << "Inconsistent blob sizes within LOD";
         }
+        total += (uint64_t)blobSize * numElements;
     }
-    return total;
+    FILAMENT_CHECK_POSTCONDITION(total <= (uint64_t)std::numeric_limits<uint32_t>::max())
+            << "KTX serialization size overflow";
+    return (uint32_t)total;
 }
 
 const char* Ktx1Bundle::getMetadata(const char* key, size_t* valueSize) const {

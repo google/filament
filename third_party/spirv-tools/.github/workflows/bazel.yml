@@ -7,9 +7,11 @@ on:
     branches:
       - 'main'
   pull_request:
+    types: [opened, synchronize, reopened, unlabeled]
 
 jobs:
   build:
+    if: github.event.action != 'unlabeled' || github.event.label.name == 'kokoro:run'
     timeout-minutes: 120
     strategy:
       matrix:
@@ -18,13 +20,13 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: '0'
       - name: Download dependencies
         run: python3 utils/git-sync-deps
       - name: Mount Bazel cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ~/.bazel/cache
           key: bazel-cache-${{ runner.os }}
@@ -41,13 +43,13 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: '0'
       - name: Download dependencies
         run: python3 utils/git-sync-deps
       - name: Mount Bazel cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ~/.bazel/cache
           key: bazel-cache-${{ runner.os }}

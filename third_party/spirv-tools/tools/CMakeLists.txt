@@ -77,7 +77,7 @@ if (NOT ${SPIRV_SKIP_EXECUTABLES})
   target_include_directories(spirv-cfg PRIVATE ${spirv-tools_SOURCE_DIR}
                                                ${SPIRV_HEADER_INCLUDE_DIR})
   set(SPIRV_INSTALL_TARGETS spirv-as spirv-dis spirv-val spirv-opt
-                            spirv-cfg spirv-link spirv-lint)
+                            spirv-cfg spirv-link spirv-lint spirv-diff)
 
   if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Android"))
     add_spvtools_tool(TARGET spirv-objdump

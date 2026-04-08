@@ -40,12 +40,12 @@ class CombineAccessChains : public Pass {
  private:
   // Combine access chains in |function|. Blocks are processed in reverse
   // post-order. Returns true if the function is modified.
-  bool ProcessFunction(Function& function);
+  Status ProcessFunction(Function& function);
 
   // Combines an access chain (normal, in bounds or pointer) |inst| if its base
   // pointer is another access chain. Returns true if the access chain was
   // modified.
-  bool CombineAccessChain(Instruction* inst);
+  Status CombineAccessChain(Instruction* inst);
 
   // Returns the value of |constant_inst| as a uint32_t.
   uint32_t GetConstantValue(const analysis::Constant* constant_inst);
@@ -59,13 +59,13 @@ class CombineAccessChains : public Pass {
 
   // Populates |new_operands| with the operands for the combined access chain.
   // Returns false if the access chains cannot be combined.
-  bool CreateNewInputOperands(Instruction* ptr_input, Instruction* inst,
-                              std::vector<Operand>* new_operands);
+  Status CreateNewInputOperands(Instruction* ptr_input, Instruction* inst,
+                                std::vector<Operand>* new_operands);
 
   // Combines the last index of |ptr_input| with the element operand of |inst|.
   // Adds the combined operand to |new_operands|.
-  bool CombineIndices(Instruction* ptr_input, Instruction* inst,
-                      std::vector<Operand>* new_operands);
+  Status CombineIndices(Instruction* ptr_input, Instruction* inst,
+                        std::vector<Operand>* new_operands);
 
   // Returns the opcode to use for the combined access chain.
   spv::Op UpdateOpcode(spv::Op base_opcode, spv::Op input_opcode);

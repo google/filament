@@ -958,7 +958,7 @@ TEST_F(EliminateDeadMemberTest, RemoveMemberPtrAccessChain) {
 ; CHECK: OpMemberDecorate %type__Globals 1 Offset 16
 ; CHECK: %type__Globals = OpTypeStruct %float %float
 ; CHECK: [[ac:%\w+]] = OpAccessChain %_ptr_Uniform_type__Globals %_Globals %uint_0
-; CHECK: OpPtrAccessChain %_ptr_Uniform_float [[ac]] %uint_1 %uint_0
+; CHECK: OpPtrAccessChain %_ptr_Uniform_float [[ac]] %uint_0 %uint_0
 ; CHECK: OpPtrAccessChain %_ptr_Uniform_float [[ac]] %uint_0 %uint_1
                OpCapability Shader
                OpCapability VariablePointersStorageBuffer
@@ -995,12 +995,13 @@ TEST_F(EliminateDeadMemberTest, RemoveMemberPtrAccessChain) {
        %main = OpFunction %void None %14
          %16 = OpLabel
          %17 = OpAccessChain %_ptr_Uniform_type__Globals %_Globals %uint_0
-         %18 = OpPtrAccessChain %_ptr_Uniform_float %17 %uint_1 %uint_0
+         %18 = OpPtrAccessChain %_ptr_Uniform_float %17 %uint_0 %uint_0
          %19 = OpPtrAccessChain %_ptr_Uniform_float %17 %uint_0 %uint_2
                OpReturn
                OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndMatch<opt::EliminateDeadMembersPass>(text, true);
 }
 
@@ -1060,6 +1061,7 @@ TEST_F(EliminateDeadMemberTest, RemoveMemberInBoundsPtrAccessChain) {
                OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndMatch<opt::EliminateDeadMembersPass>(text, true);
 }
 

@@ -86,6 +86,7 @@ void TType::buildMangledName(TString& mangledName) const
     case EbtRayQuery:           mangledName += "rq";     break;
     case EbtSpirvType:          mangledName += "spv-t";  break;
     case EbtHitObjectNV:        mangledName += "ho";     break;
+    case EbtHitObjectEXT:       mangledName += "ho";     break;
     case EbtTensorLayoutNV:     mangledName += "tl";     break;
     case EbtTensorViewNV:       mangledName += "tv";     break;
     case EbtSampler:
@@ -340,6 +341,24 @@ void TSymbolTableLevel::setFunctionExtensions(const char* name, int num, const c
         if (parenAt != candidateName.npos && candidateName.compare(0, parenAt, name) == 0) {
             TSymbol* symbol = candidate->second;
             symbol->setExtensions(num, extensions);
+        } else
+            break;
+        ++candidate;
+    }
+}
+
+// Call the callback function to determine the required extensions
+void TSymbolTableLevel::setFunctionExtensionsCallback(const char* name, std::function<std::vector<const char *>(const char *)> const &func)
+{
+    tLevel::const_iterator candidate = level.lower_bound(name);
+    while (candidate != level.end()) {
+        const TString& candidateName = (*candidate).first;
+        TString::size_type parenAt = candidateName.find_first_of('(');
+        if (parenAt != candidateName.npos && candidateName.compare(0, parenAt, name) == 0) {
+            TSymbol* symbol = candidate->second;
+
+            auto exts = func(candidateName.c_str());
+            symbol->setExtensions(exts.size(), exts.data());
         } else
             break;
         ++candidate;

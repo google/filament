@@ -15,20 +15,25 @@
  */
 
 #include <filaflat/ChunkContainer.h>
-
 #include <filaflat/Unflattener.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+
+#include <cstddef>
+#include <cstdint>
 
 namespace filaflat {
 
 ChunkContainer::~ChunkContainer() noexcept = default;
 
-bool ChunkContainer::hasChunk(Type type) const noexcept {
+bool ChunkContainer::hasChunk(Type const type) const noexcept {
     auto const& chunks = mChunks;
     auto pos = chunks.find(type);
     return pos != chunks.end();
 }
 
-bool ChunkContainer::hasChunk(Type type, ChunkDesc* pChunkDesc) const noexcept {
+bool ChunkContainer::hasChunk(Type const type, ChunkDesc* pChunkDesc) const noexcept {
     assert_invariant(pChunkDesc);
     auto const& chunks = mChunks;
     auto pos = chunks.find(type);
@@ -53,8 +58,11 @@ bool ChunkContainer::parseChunk(Unflattener& unflattener) {
     // If size goes beyond the boundaries of the package, this is an invalid chunk. Discard it.
     // All remaining chunks cannot be accessed and will not be mapped.
     auto cursor = unflattener.getCursor();
-    if (!(cursor + size >= (uint8_t *)mData &&
-          cursor + size <= (uint8_t *)mData + mSize)) {
+    const uint8_t* start = static_cast<const uint8_t*>(mData);
+    const uint8_t* end = start + mSize;
+
+    // Secure boundary check bypassing hardware pointer-overflow undefined behavior 
+    if (size > size_t(end - cursor)) {
         return false;
     }
 

@@ -199,8 +199,8 @@ of markdown files that are then processed with <code>mdBook</code>.</p>
 <p>The <a href="https://google.github.io/filament">github landing page</a> for Filament displays an extensive introduction to Filament. It
 links to <code>BUILDING.md</code> and <code>CONTRIBUTING.md</code>, which are conventional pages for building or
 contributing to the project. We copy these pages from their respective locations in the project
-tree into <code>docs_src/src_mdbook/src/dup</code>. Moreover, to restore valid linkage between the pages, we need
-to perform a number of URL replacements in addition to the copy. These replacements are
+tree into <code>docs_src/src_mdbook/src/dup</code>. Moreover, to restore valid linkage between the pages,
+we need to perform a number of URL replacements in addition to the copy. These replacements are
 described in <a href="https://github.com/google/filament/blob/main/docs_src/build/duplicates.json"><code>docs_src/build/duplicates.json</code></a>.</p>
 <h3 id="core-concept-docs"><a class="header" href="#core-concept-docs">Core concept docs</a></h3>
 <p>The primary design of Filament as a physically-based renderer and details of its materials
@@ -215,28 +215,54 @@ documents are written in <a href="https://casual-effects.com/markdeep/"><code>ma
 <ul>
 <li>Start a local-only server to serve the markdeep file (e.g. <code>Filament.md.html</code>)</li>
 <li>Start a <code>selenium</code> driver (essentially run chromium in headless mode)</li>
-<li>Visit the local page through the driver (i.e. open url <code>http://localhost:xx/Filament.md.html?export</code>)</li>
+<li>Visit the local page through the driver (i.e. open url
+<code>http://localhost:xx/Filament.md.html?export</code>)</li>
 <li>Parse out the exported output in the retrieved html (note that the output of the markdeep
 export is an html with the output captured in a <code>&lt;pre&gt;</code> tag).</li>
-<li>Replace css styling in the exported output as needed (so they don't interfere with the book's css.</li>
+<li>Replace css styling in the exported output as needed (so they don't interfere with the
+book's css.</li>
 <li>Replace resource urls to refer to locations relative to the mdbook structure.</li>
 </ul>
-<p>Any <code>markdeep</code> doc can be placed in <code>docs_src/src_markdeep/</code> and they will be parsed to html and included
-in the book as above.</p>
+<p>Any <code>markdeep</code> doc can be placed in <code>docs_src/src_markdeep/</code> and they will be parsed to html and
+included in the book as above.</p>
 <h3 id="readmes"><a class="header" href="#readmes">READMEs</a></h3>
 <p>Filament depends on a number of libraries, which reside in the directory <code>libs</code>. These individual
-libaries often have README.md in their root to describe itself. We collect these descriptions into our
-book. In addition, client usage of Filament also requires using a set of binary tools, which are
-located in <code>tools</code>. Some of tools also have README.md as description. We also collect them into the book.</p>
-<p>The process for copying and processing these READMEs is outlined in <a href="#introductory-doc">Introductory docs</a>.</p>
+libaries often have README.md in their root to describe itself. We collect these descriptions into
+our book. In addition, client usage of Filament also requires using a set of binary tools, which are
+located in <code>tools</code>. Some of tools also have README.md as description. We also collect them into the
+book.</p>
+<p>The process for copying and processing these READMEs is outlined in
+<a href="#introductory-doc">Introductory docs</a>.</p>
+<h3 id="web-examples-and-tutorials"><a class="header" href="#web-examples-and-tutorials">Web Examples and Tutorials</a></h3>
+<p>Filament provides a number of WebGL tutorials and examples in the <code>web/</code> directory. These are
+compiled during the WebGL CMake build and are integrated into the documentation via
+<code>duplicates.json</code>. The process is entirely automated:</p>
+<ol>
+<li><code>run.py</code> maps the <code>.html</code> and <code>.md</code> WebGL outputs from the <code>out/cmake-webgl-release/...</code>
+directory into <code>docs_src/src_mdbook/src/samples/web/</code> using the instructions in <code>duplicates.json</code>.</li>
+<li>While transferring <code>.html</code> to <code>.md</code>, <code>run.py</code> strips away the <code>&lt;!DOCTYPE html&gt;</code>, <code>&lt;head&gt;</code>, and
+<code>&lt;html&gt;</code> tags. By retaining only the <code>&lt;style&gt;</code> and <code>&lt;body&gt;</code> elements, the HTML samples can be
+embedded cleanly into the <code>mdbook</code> site template without corrupting the DOM. It additionally
+collapses double-newlines (<code>\n\n</code>) because Markdown parsers will mistakenly fragment and wrap
+multi-line HTML tags into <code>&lt;p&gt;</code> blocks.</li>
+<li>After <code>mdbook build</code> concludes, <code>docs_src/build/copy_web_docs.py</code> is invoked. This script creates
+<code>web/lib</code> and <code>web/assets</code> directories inside the final <code>book/</code> output directory, copying in the
+compiled WebAssembly engine (<code>filament.wasm</code>/<code>filament.js</code>) and any necessary assets
+(<code>.filamat</code>, <code>.glb</code>, <code>.ktx</code>, etc.).</li>
+<li>Finally, <code>copy_web_docs.py</code> performs a regex pass over all HTML pages in <code>book/samples/web/</code> and
+<code>book/remote/</code> to rewrite their inline resource URLs to securely point to the shared <code>web/lib</code> and
+<code>web/assets</code> directories. It also dynamically overrides the <code>asset.loadResources()</code> Javascript call
+with an absolute URL (<code>new URL(..., window.location.href)</code>) so that <code>.glb</code>/<code>.gltf</code> assets fetch
+their internal <code>.bin</code> chunks correctly.</li>
+</ol>
 <h3 id="other-technical-notes"><a class="header" href="#other-technical-notes">Other technical notes</a></h3>
 <p>These are technical documents that do not fit into a library, tool, or directory of the
-Filament source tree. We collect them into the <code>docs_src/src_mdbook/src/notes</code> directory. No additional
-processing is needed for these documents.</p>
+Filament source tree. We collect them into the <code>docs_src/src_mdbook/src/notes</code> directory. No
+additional processing is needed for these documents.</p>
 <h3 id="raw-source-files"><a class="header" href="#raw-source-files">Raw source files</a></h3>
-<p>These are files that are not part of the <code>mdbook</code> generation, but should be included output in <code>/docs</code>
-to point to standalone pages or components (for example, the remote page for Android's <code>gltf_viewer</code>). These
-files are stored in <code>docs_src/src_raw</code>.</p>
+<p>These are files that are not part of the <code>mdbook</code> generation, but should be included output in
+<code>/docs</code> to point to standalone pages or components (for example, the remote page for Android's
+<code>gltf_viewer</code>). These files are stored in <code>docs_src/src_raw</code>.</p>
 <h2 id="adding-more-documents"><a class="header" href="#adding-more-documents">Adding more documents</a></h2>
 <p>To add any documentation, first consider the type of the document you like to add. If it
 belongs to any of the above sources, then simply place the document in the appropriate place,

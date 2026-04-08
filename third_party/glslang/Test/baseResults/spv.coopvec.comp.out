@@ -10,7 +10,7 @@ spv.coopvec.comp
                               Capability StorageBuffer8BitAccess
                               Capability VulkanMemoryModelKHR
                               Capability CooperativeVectorNV
-                              Capability CapabilityReplicatedCompositesEXT
+                              Capability ReplicatedCompositesEXT
                               Extension  "SPV_EXT_replicated_composites"
                               Extension  "SPV_KHR_8bit_storage"
                               Extension  "SPV_KHR_vulkan_memory_model"

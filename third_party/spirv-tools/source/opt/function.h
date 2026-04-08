@@ -48,7 +48,7 @@ class Function {
 
   explicit Function(const Function& f) = delete;
 
-  // Creates a clone of the instruction in the given |context|
+  // Creates a clone of the function in the given |context|
   //
   // The parent module will default to null and needs to be explicitly set by
   // the user.

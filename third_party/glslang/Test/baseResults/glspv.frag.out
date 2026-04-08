@@ -8,7 +8,7 @@ ERROR: 0:23: 'noise3' : no matching overloaded function found
 ERROR: 0:24: 'noise4' : no matching overloaded function found 
 ERROR: 0:27: 'atomic_uint' : layout(binding=X) is required 
 ERROR: 0:28: 'input_attachment_index' : only allowed when using GLSL for Vulkan 
-ERROR: 0:28: '' :  syntax error, unexpected IDENTIFIER, expecting LEFT_BRACE or COMMA or SEMICOLON
+ERROR: 0:28: '' :  syntax error, unexpected IDENTIFIER, expecting COMMA or SEMICOLON
 ERROR: 10 compilation errors.  No code generated.
 
 

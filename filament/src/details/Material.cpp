@@ -240,8 +240,7 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
 void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
-        Invocable<void(Material*)>&& callback) noexcept {
-
+        Invocable<void(Material*)>&& callback) const noexcept {
     DriverApi& driver = mEngine.getDriverApi();
 
     // Turn off the STE variant if stereo is not supported.
@@ -249,8 +248,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         variantSpec &= ~UserVariantFilterMask(UserVariantFilterBit::STE);
     }
 
-    UserVariantFilterMask const variantFilter =
-            ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
+    UserVariantFilterMask const variantFilter = ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
     ShaderModel const shaderModel = mEngine.getShaderModel();
     bool const isStereoSupported = mEngine.getDriverApi().isStereoSupported();
 
@@ -264,6 +262,34 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         }
     }
 
+    compileAllPrograms(priority, handler, std::move(callback));
+}
+
+void FMaterial::compile(CompilerPriorityQueue const priority,
+        FixedCapacityVector<Variant> const& variants,
+        CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) const noexcept {
+    DriverApi& driver = mEngine.getDriverApi();
+
+    ShaderModel const shaderModel = mEngine.getShaderModel();
+    bool const isStereoSupported = driver.isStereoSupported();
+
+    if (UTILS_LIKELY(mIsParallelShaderCompileSupported)) {
+        for (auto const variant : variants) {
+            if (mDefinition.hasVariant(variant, shaderModel, isStereoSupported)) {
+                prepareProgram(driver, variant, priority);
+            }
+        }
+    }
+
+    compileAllPrograms(priority, handler, std::move(callback));
+}
+
+void FMaterial::compileAllPrograms(CompilerPriorityQueue const priority,
+        CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) const noexcept {
+    DriverApi& driver = mEngine.getDriverApi();
+
     if (callback) {
         struct Callback {
             Invocable<void(Material*)> f;
@@ -274,7 +300,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
                 delete c;
             }
         };
-        auto* const user = new(std::nothrow) Callback{ std::move(callback), this };
+        auto* const user = new(std::nothrow) Callback{ std::move(callback), const_cast<FMaterial*>(this) };
         driver.compilePrograms(priority, handler, &Callback::func, user);
     } else {
         driver.compilePrograms(priority, nullptr, nullptr, nullptr);

@@ -767,6 +767,13 @@ PixelDataType getComponentType(VkFormat format) {
         case VK_FORMAT_R32G32B32A32_UINT: return PixelDataType::UINT;
         case VK_FORMAT_R32G32B32A32_SINT: return PixelDataType::INT;
         case VK_FORMAT_R32G32B32A32_SFLOAT: return PixelDataType::FLOAT;
+        case VK_FORMAT_D16_UNORM: return PixelDataType::USHORT;
+        case VK_FORMAT_D32_SFLOAT: return PixelDataType::FLOAT;
+        case VK_FORMAT_X8_D24_UNORM_PACK32: return PixelDataType::UINT;
+        // For combined depth/stencil formats, we return the primary (depth) aspect type.
+        // Stencil aspect overrides are handled dynamically during readback.
+        case VK_FORMAT_D24_UNORM_S8_UINT: return PixelDataType::UINT;
+        case VK_FORMAT_D32_SFLOAT_S8_UINT: return PixelDataType::FLOAT;
         default: assert_invariant(false && "Unknown data type, conversion is not supported.");
     }
     return {};
@@ -791,6 +798,9 @@ uint32_t getComponentCount(VkFormat format) {
         case VK_FORMAT_R32_UINT:
         case VK_FORMAT_R32_SINT:
         case VK_FORMAT_R32_SFLOAT:
+        case VK_FORMAT_D16_UNORM:
+        case VK_FORMAT_D32_SFLOAT:
+        case VK_FORMAT_X8_D24_UNORM_PACK32:
             return 1;
 
         case VK_FORMAT_R8G8_UNORM:
@@ -810,6 +820,8 @@ uint32_t getComponentCount(VkFormat format) {
         case VK_FORMAT_R32G32_UINT:
         case VK_FORMAT_R32G32_SINT:
         case VK_FORMAT_R32G32_SFLOAT:
+        case VK_FORMAT_D24_UNORM_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
             return 2;
 
         case VK_FORMAT_R8G8B8_UNORM:

@@ -14,7 +14,6 @@ spv.uniformInitializer.frag
                               Name 14  "in_color"
                               Decorate 9(color) Location 0
                               Decorate 14(in_color) Location 0
-                              Decorate 14(in_color) Binding 0
                               Decorate 14(in_color) DescriptorSet 0
                2:             TypeVoid
                3:             TypeFunction 2

@@ -269,6 +269,10 @@ MetalAttachment MetalSwapChain::acquireStencilTexture() {
 }
 
 id<MTLTexture> MetalSwapChain::ensureDepthStencilTexture(uint32_t width, uint32_t height) {
+    // Metal does not allow zero-sized textures, and will abort if we try to
+    // create one ([MTLTextureDescriptorInternal validateWithDevice:]).
+    width = std::max(width, 1u);
+    height = std::max(height, 1u);
     if (UTILS_LIKELY(depthStencilTexture && depthStencilTexture.width == width &&
                      depthStencilTexture.height == height)) {
         return depthStencilTexture;

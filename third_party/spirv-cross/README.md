@@ -265,6 +265,10 @@ Some examples below.
 glslangValidator -H -V -o test.spv test.frag
 ```
 
+NOTE: This assumes Vulkan GLSL input. In general, only modern GLSL (#version 330+ for desktop) can be compiled to SPIR-V.
+Typically when cross compiling GLSL, you start with modern GLSL and cross compile to older targets for compatibility,
+not the other way around.
+
 #### Converting a SPIR-V file to GLSL ES
 
 ```

@@ -20,6 +20,7 @@ ERROR: 0:60: 'location' : cannot apply to uniform or buffer block
 ERROR: 0:68: 'layout-id value' : cannot be negative 
 ERROR: 0:69: 'layout-id value' : cannot be negative 
 ERROR: 0:76: 'f2' : cannot use layout qualifiers on structure members 
+ERROR: 0:79: 'in' : cannot contain bool 
 ERROR: 0:91: 'location on block member' : can only use in an in/out block 
 ERROR: 0:91: 'location qualifier on uniform or buffer' : not supported for this version or the enabled extensions 
 ERROR: 0:91: 'location' : overlapping use of location 3
@@ -38,7 +39,7 @@ ERROR: 0:128: 'output block' : not supported in this stage: fragment
 ERROR: 0:138: 'index' : value must be 0 or 1 
 ERROR: 0:140: 'location qualifier on uniform or buffer' : not supported for this version or the enabled extensions 
 ERROR: 0:146: 'location' : cannot apply to uniform or buffer block 
-ERROR: 39 compilation errors.  No code generated.
+ERROR: 40 compilation errors.  No code generated.
 
 
 Shader version: 330

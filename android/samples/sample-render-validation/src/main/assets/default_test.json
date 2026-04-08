@@ -1,7 +1,8 @@
 {
   "name": "Default Test",
   "backends": [
-    "opengl"
+    "opengl",
+    "vulkan"
   ],
   "models": {
     "DamagedHelmet": "helmet.glb"

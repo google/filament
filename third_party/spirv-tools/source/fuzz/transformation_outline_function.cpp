@@ -819,6 +819,8 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
     // Clone the block so that it can be added to the new function.
     auto cloned_block =
         std::unique_ptr<opt::BasicBlock>(block_it->Clone(ir_context));
+    // TODO: Handle a nullptr.
+    assert(cloned_block);
 
     // If this is the region's exit block, then the cloned block is the outlined
     // region's exit block.

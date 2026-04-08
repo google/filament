@@ -637,7 +637,7 @@ TEST_F(UpgradeMemoryModelTest, VariablePointerIndirectSelect) {
   const std::string text = R"(
 ; CHECK-NOT: OpDecorate {{%\w+}} Coherent
 ; CHECK: [[scope:%\w+]] = OpConstant {{%\w+}} 5
-; CHECK: [[buffer:%\w+]] = OpLoad {{%\w+}} {{%\w+}}
+; CHECK: [[buffer:%\w+]] = OpSelect {{%\w+}} {{%\w+}}
 ; CHECK: [[ld_gep:%\w+]] = OpAccessChain {{%\w+}} [[buffer]] {{%\w+}} {{%\w+}}
 ; CHECK: OpLoad {{%\w+}} [[ld_gep]] MakePointerVisible|NonPrivatePointer [[scope]]
 OpCapability Shader
@@ -660,15 +660,15 @@ OpDecorate %_struct_4 Block
 %_ptr_Function__ptr_StorageBuffer__struct_4 = OpTypePointer Function %_ptr_StorageBuffer__struct_4
 %functy = OpTypeFunction %uint %_ptr_Function__ptr_StorageBuffer__struct_4 %_ptr_Function_uint
 %_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
-%null = OpConstantNull %_ptr_Function__ptr_StorageBuffer__struct_4
+%null = OpConstantNull %_ptr_StorageBuffer__struct_4
 %func = OpFunction %uint None %functy
 %param_buf = OpFunctionParameter %_ptr_Function__ptr_StorageBuffer__struct_4
 %param_offset = OpFunctionParameter %_ptr_Function_uint
 %bb_entry = OpLabel
-%select = OpSelect %_ptr_Function__ptr_StorageBuffer__struct_4 %true %param_buf %null
-%buf = OpLoad %_ptr_StorageBuffer__struct_4 %select
+%buf = OpLoad %_ptr_StorageBuffer__struct_4 %param_buf
+%select = OpSelect %_ptr_StorageBuffer__struct_4 %true %buf %null
 %offset = OpLoad %uint %param_offset
-%ld_gep = OpAccessChain %_ptr_StorageBuffer_uint %buf %uint_0 %offset
+%ld_gep = OpAccessChain %_ptr_StorageBuffer_uint %select %uint_0 %offset
 %data = OpLoad %uint %ld_gep
 OpReturnValue %data
 OpFunctionEnd
@@ -720,7 +720,7 @@ TEST_F(UpgradeMemoryModelTest, VariablePointerIndirectPhi) {
   const std::string text = R"(
 ; CHECK-NOT: OpDecorate {{%\w+}} Coherent
 ; CHECK: [[scope:%\w+]] = OpConstant {{%\w+}} 5
-; CHECK: [[buffer:%\w+]] = OpLoad {{%\w+}} {{%\w+}}
+; CHECK: [[buffer:%\w+]] = OpPhi {{%\w+}} {{%\w+}}
 ; CHECK: [[ld_gep:%\w+]] = OpAccessChain {{%\w+}} [[buffer]] {{%\w+}} {{%\w+}}
 ; CHECK: OpLoad {{%\w+}} [[ld_gep]] MakePointerVisible|NonPrivatePointer [[scope]]
 OpCapability Shader
@@ -743,11 +743,12 @@ OpDecorate %_struct_4 Block
 %_ptr_Function__ptr_StorageBuffer__struct_4 = OpTypePointer Function %_ptr_StorageBuffer__struct_4
 %functy = OpTypeFunction %uint %_ptr_Function__ptr_StorageBuffer__struct_4 %_ptr_Function_uint
 %_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
-%null = OpConstantNull %_ptr_Function__ptr_StorageBuffer__struct_4
+%null = OpConstantNull %_ptr_StorageBuffer__struct_4
 %func = OpFunction %uint None %functy
 %param_buf = OpFunctionParameter %_ptr_Function__ptr_StorageBuffer__struct_4
 %param_offset = OpFunctionParameter %_ptr_Function_uint
 %bb_entry = OpLabel
+%buf = OpLoad %_ptr_StorageBuffer__struct_4 %param_buf
 OpSelectionMerge %bb_end None
 OpBranchConditional %true %bb_then %bb_else
 %bb_then = OpLabel
@@ -755,10 +756,9 @@ OpBranch %bb_end
 %bb_else = OpLabel
 OpBranch %bb_end
 %bb_end = OpLabel
-%phi_buf_ptr = OpPhi %_ptr_Function__ptr_StorageBuffer__struct_4 %param_buf %bb_then %null %bb_else
-%buf = OpLoad %_ptr_StorageBuffer__struct_4 %phi_buf_ptr
+%phi_buf_ptr = OpPhi %_ptr_StorageBuffer__struct_4 %buf %bb_then %null %bb_else
 %offset = OpLoad %uint %param_offset
-%ld_gep = OpAccessChain %_ptr_StorageBuffer_uint %buf %uint_0 %offset
+%ld_gep = OpAccessChain %_ptr_StorageBuffer_uint %phi_buf_ptr %uint_0 %offset
 %data = OpLoad %uint %ld_gep
 OpReturnValue %data
 OpFunctionEnd
@@ -1562,9 +1562,9 @@ OpFunctionEnd
 
 TEST_F(UpgradeMemoryModelTest, TessellationControlBarrierNoChange) {
   const std::string text = R"(
-; CHECK: [[none:%\w+]] = OpConstant {{%\w+}} 0
-; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2
-; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[none]]
+; CHECK: [[none:%\w+]] = OpConstant {{%\w+}} 0{{\s*$}}
+; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2{{\s*$}}
+; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[none]]{{\s*$}}
 OpCapability Tessellation
 OpMemoryModel Logical GLSL450
 OpEntryPoint TessellationControl %func "func"
@@ -1583,11 +1583,11 @@ OpFunctionEnd
   SinglePassRunAndMatch<opt::UpgradeMemoryModel>(text, true);
 }
 
-TEST_F(UpgradeMemoryModelTest, TessellationControlBarrierAddOutput) {
+TEST_F(UpgradeMemoryModelTest, TessellationControlBarrierRelaxedNoChange) {
   const std::string text = R"(
-; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2
-; CHECK: [[output:%\w+]] = OpConstant {{%\w+}} 4096
-; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[output]]
+; CHECK: [[none:%\w+]] = OpConstant {{%\w+}} 0{{\s*$}}
+; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2{{\s*$}}
+; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[none]]{{\s*$}}
 OpCapability Tessellation
 OpMemoryModel Logical GLSL450
 OpEntryPoint TessellationControl %func "func" %var
@@ -1610,25 +1610,52 @@ OpFunctionEnd
   SinglePassRunAndMatch<opt::UpgradeMemoryModel>(text, true);
 }
 
-TEST_F(UpgradeMemoryModelTest, TessellationMemoryBarrierNoChange) {
+TEST_F(UpgradeMemoryModelTest, TessellationControlBarrierAddOutput) {
   const std::string text = R"(
-; CHECK: [[none:%\w+]] = OpConstant {{%\w+}} 0
-; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2
-; CHECK: OpMemoryBarrier [[workgroup]] [[none]]
+; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2{{\s*$}}
+; CHECK: [[acqrel_workgroup_output:%\w+]] = OpConstant {{%\w+}} 4360{{\s*$}}
+; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[acqrel_workgroup_output]]{{\s*$}}
 OpCapability Tessellation
 OpMemoryModel Logical GLSL450
 OpEntryPoint TessellationControl %func "func" %var
 %void = OpTypeVoid
 %int = OpTypeInt 32 0
-%none = OpConstant %int 0
 %workgroup = OpConstant %int 2
+%acqrel_workgroup = OpConstant %int 264
 %ptr_int_Output = OpTypePointer Output %int
 %var = OpVariable %ptr_int_Output Output
 %func_ty = OpTypeFunction %void
 %func = OpFunction %void None %func_ty
 %1 = OpLabel
 %ld = OpLoad %int %var
-OpMemoryBarrier %workgroup %none
+OpControlBarrier %workgroup %workgroup %acqrel_workgroup
+OpStore %var %ld
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<opt::UpgradeMemoryModel>(text, true);
+}
+
+TEST_F(UpgradeMemoryModelTest, TessellationMemoryBarrierNoChange) {
+  const std::string text = R"(
+; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2{{\s*$}}
+; CHECK: [[acqrel_workgroup:%\w+]] = OpConstant {{%\w+}} 264{{\s*$}}
+; CHECK: OpMemoryBarrier [[workgroup]] [[acqrel_workgroup]]{{\s*$}}
+OpCapability Tessellation
+OpMemoryModel Logical GLSL450
+OpEntryPoint TessellationControl %func "func" %var
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%workgroup = OpConstant %int 2
+%acqrel_workgroup = OpConstant %int 264
+%ptr_int_Output = OpTypePointer Output %int
+%var = OpVariable %ptr_int_Output Output
+%func_ty = OpTypeFunction %void
+%func = OpFunction %void None %func_ty
+%1 = OpLabel
+%ld = OpLoad %int %var
+OpMemoryBarrier %workgroup %acqrel_workgroup
 OpStore %var %ld
 OpReturn
 OpFunctionEnd
@@ -1639,16 +1666,16 @@ OpFunctionEnd
 
 TEST_F(UpgradeMemoryModelTest, TessellationControlBarrierAddOutputSubFunction) {
   const std::string text = R"(
-; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2
-; CHECK: [[output:%\w+]] = OpConstant {{%\w+}} 4096
-; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[output]]
+; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2{{\s*$}}
+; CHECK: [[acqrel_workgroup_output:%\w+]] = OpConstant {{%\w+}} 4360{{\s*$}}
+; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[acqrel_workgroup_output]]{{\s*$}}
 OpCapability Tessellation
 OpMemoryModel Logical GLSL450
 OpEntryPoint TessellationControl %func "func" %var
 %void = OpTypeVoid
 %int = OpTypeInt 32 0
-%none = OpConstant %int 0
 %workgroup = OpConstant %int 2
+%acqrel_workgroup = OpConstant %int 264
 %ptr_int_Output = OpTypePointer Output %int
 %var = OpVariable %ptr_int_Output Output
 %func_ty = OpTypeFunction %void
@@ -1660,7 +1687,7 @@ OpFunctionEnd
 %sub_func = OpFunction %void None %func_ty
 %2 = OpLabel
 %ld = OpLoad %int %var
-OpControlBarrier %workgroup %workgroup %none
+OpControlBarrier %workgroup %workgroup %acqrel_workgroup
 OpStore %var %ld
 OpReturn
 OpFunctionEnd
@@ -1672,16 +1699,16 @@ OpFunctionEnd
 TEST_F(UpgradeMemoryModelTest,
        TessellationControlBarrierAddOutputDifferentFunctions) {
   const std::string text = R"(
-; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2
-; CHECK: [[output:%\w+]] = OpConstant {{%\w+}} 4096
-; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[output]]
+; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2{{\s*$}}
+; CHECK: [[acqrel_workgroup_output:%\w+]] = OpConstant {{%\w+}} 4360{{\s*$}}
+; CHECK: OpControlBarrier [[workgroup]] [[workgroup]] [[acqrel_workgroup_output]]{{\s*$}}
 OpCapability Tessellation
 OpMemoryModel Logical GLSL450
 OpEntryPoint TessellationControl %func "func" %var
 %void = OpTypeVoid
 %int = OpTypeInt 32 0
-%none = OpConstant %int 0
 %workgroup = OpConstant %int 2
+%acqrel_workgroup = OpConstant %int 264
 %ptr_int_Output = OpTypePointer Output %int
 %var = OpVariable %ptr_int_Output Output
 %func_ty = OpTypeFunction %void
@@ -1701,7 +1728,7 @@ OpReturnValue %ld
 OpFunctionEnd
 %barrier_func = OpFunction %void None %func_ty
 %3 = OpLabel
-OpControlBarrier %workgroup %workgroup %none
+OpControlBarrier %workgroup %workgroup %acqrel_workgroup
 OpReturn
 OpFunctionEnd
 %st_func = OpFunction %void None %st_func_ty
@@ -1717,21 +1744,22 @@ OpFunctionEnd
 
 TEST_F(UpgradeMemoryModelTest, ChangeControlBarrierMemoryScope) {
   std::string text = R"(
-; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2
-; CHECK: [[queuefamily:%\w+]] = OpConstant {{%\w+}} 5
-; CHECK: OpControlBarrier [[workgroup]] [[queuefamily]]
+; CHECK: [[workgroup:%\w+]] = OpConstant {{%\w+}} 2{{\s*$}}
+; CHECK: [[acqrel_workgroup:%\w+]] = OpConstant {{%\w+}} 264{{\s*$}}
+; CHECK: [[queuefamily:%\w+]] = OpConstant {{%\w+}} 5{{\s*$}}
+; CHECK: OpControlBarrier [[workgroup]] [[queuefamily]] [[acqrel_workgroup]]{{\s*$}}
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %func "func"
 %void = OpTypeVoid
 %int = OpTypeInt 32 0
-%none = OpConstant %int 0
 %device = OpConstant %int 1
 %workgroup = OpConstant %int 2
+%acqrel_workgroup = OpConstant %int 264
 %func_ty = OpTypeFunction %void
 %func = OpFunction %void None %func_ty
 %1 = OpLabel
-OpControlBarrier %workgroup %device %none
+OpControlBarrier %workgroup %device %acqrel_workgroup
 OpReturn
 OpFunctionEnd
 )";
@@ -1741,19 +1769,20 @@ OpFunctionEnd
 
 TEST_F(UpgradeMemoryModelTest, ChangeMemoryBarrierMemoryScope) {
   std::string text = R"(
-; CHECK: [[queuefamily:%\w+]] = OpConstant {{%\w+}} 5
-; CHECK: OpMemoryBarrier [[queuefamily]]
+; CHECK: [[acqrel_workgroup:%\w+]] = OpConstant {{%\w+}} 264{{\s*$}}
+; CHECK: [[queuefamily:%\w+]] = OpConstant {{%\w+}} 5{{\s*$}}
+; CHECK: OpMemoryBarrier [[queuefamily]] [[acqrel_workgroup]]{{\s*$}}
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %func "func"
 %void = OpTypeVoid
 %int = OpTypeInt 32 0
-%none = OpConstant %int 0
 %device = OpConstant %int 1
+%acqrel_workgroup = OpConstant %int 264
 %func_ty = OpTypeFunction %void
 %func = OpFunction %void None %func_ty
 %1 = OpLabel
-OpMemoryBarrier %device %none
+OpMemoryBarrier %device %acqrel_workgroup
 OpReturn
 OpFunctionEnd
 )";

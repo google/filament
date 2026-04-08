@@ -1,0 +1,94 @@
+vk.relaxed.syntaxerror.vert
+Shader version: 460
+0:? Sequence
+0:5  Function Definition: main( ( global void)
+0:5    Function Parameters: 
+0:6    Sequence
+0:6      move second child to first child ( temp highp 4-component vector of float)
+0:6        'io' (layout( location=0) smooth out highp 4-component vector of float)
+0:6        Constant:
+0:6          0.000000
+0:6          0.000000
+0:6          0.000000
+0:6          0.000000
+0:?   Linker Objects
+0:?     'io' (layout( location=0) smooth out highp 4-component vector of float)
+0:?     'gl_VertexIndex' ( in int VertexIndex)
+0:?     'gl_InstanceIndex' ( in int InstanceIndex)
+
+vk.relaxed.syntaxerror.frag
+ERROR: 0:20: '' :  syntax error, unexpected SAMPLER, expecting RIGHT_PAREN
+ERROR: 1 compilation errors.  No code generated.
+
+
+Shader version: 460
+gl_FragCoord origin is upper left
+ERROR: node is still EOpNull!
+0:16  Function Definition: main( ( global void)
+0:16    Function Parameters: 
+0:17    Sequence
+0:17      move second child to first child ( temp highp 4-component vector of float)
+0:17        'o' ( out highp 4-component vector of float)
+0:17        add ( temp highp 4-component vector of float)
+0:17          'io' (layout( location=0) smooth in highp 4-component vector of float)
+0:17          Function Call: foo(struct-OpaqueInStruct-s211;s21; ( global highp 4-component vector of float)
+0:17            uniformStruct: direct index for structure ( uniform structure{ global highp int /*smp*/})
+0:17              'anon@0' (layout( column_major std140) uniform block{ uniform structure{ global highp int /*smp*/} uniformStruct})
+0:17              Constant:
+0:17                0 (const uint)
+0:17            'uniformStruct.smp' ( uniform highp sampler2D)
+0:?   Linker Objects
+0:?     'io' (layout( location=0) smooth in highp 4-component vector of float)
+0:?     'o' ( out highp 4-component vector of float)
+0:?     'uniformStruct.smp' ( uniform highp sampler2D)
+0:?     'anon@0' (layout( column_major std140) uniform block{ uniform structure{ global highp int /*smp*/} uniformStruct})
+
+
+Linked vertex stage:
+
+
+Linked fragment stage:
+
+ERROR: Linking fragment stage: No function definition (body) found: 
+    foo(struct-OpaqueInStruct-s211;s21;
+
+Shader version: 460
+0:? Sequence
+0:5  Function Definition: main( ( global void)
+0:5    Function Parameters: 
+0:6    Sequence
+0:6      move second child to first child ( temp highp 4-component vector of float)
+0:6        'io' (layout( location=0) smooth out highp 4-component vector of float)
+0:6        Constant:
+0:6          0.000000
+0:6          0.000000
+0:6          0.000000
+0:6          0.000000
+0:?   Linker Objects
+0:?     'io' (layout( location=0) smooth out highp 4-component vector of float)
+0:?     'gl_VertexIndex' ( in int VertexIndex)
+0:?     'gl_InstanceIndex' ( in int InstanceIndex)
+Shader version: 460
+gl_FragCoord origin is upper left
+ERROR: node is still EOpNull!
+0:16  Function Definition: main( ( global void)
+0:16    Function Parameters: 
+0:17    Sequence
+0:17      move second child to first child ( temp highp 4-component vector of float)
+0:17        'o' ( out highp 4-component vector of float)
+0:17        add ( temp highp 4-component vector of float)
+0:17          'io' (layout( location=0) smooth in highp 4-component vector of float)
+0:17          Function Call: foo(struct-OpaqueInStruct-s211;s21; ( global highp 4-component vector of float)
+0:17            uniformStruct: direct index for structure ( uniform structure{ global highp int /*smp*/})
+0:17              'anon@0' (layout( column_major std140) uniform block{ uniform structure{ global highp int /*smp*/} uniformStruct})
+0:17              Constant:
+0:17                0 (const uint)
+0:17            'uniformStruct.smp' ( uniform highp sampler2D)
+0:?   Linker Objects
+0:?     'io' (layout( location=0) smooth in highp 4-component vector of float)
+0:?     'o' ( out highp 4-component vector of float)
+0:?     'uniformStruct.smp' ( uniform highp sampler2D)
+0:?     'anon@0' (layout( column_major std140) uniform block{ uniform structure{ global highp int /*smp*/} uniformStruct})
+
+Validation failed
+SPIR-V is not generated for failed compile or link

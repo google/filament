@@ -168,7 +168,13 @@ Instruction* Instruction::Clone(IRContext* c) const {
   clone->dbg_line_insts_ = dbg_line_insts_;
   for (auto& i : clone->dbg_line_insts_) {
     i.unique_id_ = c->TakeNextUniqueId();
-    if (i.IsDebugLineInst()) i.SetResultId(c->TakeNextId());
+    if (i.IsDebugLineInst()) {
+      uint32_t new_id = c->TakeNextId();
+      if (new_id == 0) {
+        return nullptr;
+      }
+      i.SetResultId(new_id);
+    }
   }
   clone->dbg_scope_ = dbg_scope_;
   return clone;
@@ -546,27 +552,37 @@ void Instruction::ClearDbgLineInsts() {
   clear_dbg_line_insts();
 }
 
-void Instruction::UpdateDebugInfoFrom(const Instruction* from,
+bool Instruction::UpdateDebugInfoFrom(const Instruction* from,
                                       const Instruction* line) {
-  if (from == nullptr) return;
+  if (from == nullptr) return true;
   ClearDbgLineInsts();
   const Instruction* fromLine = line != nullptr ? line : from;
-  if (!fromLine->dbg_line_insts().empty())
-    AddDebugLine(&fromLine->dbg_line_insts().back());
+  if (!fromLine->dbg_line_insts().empty()) {
+    if (!AddDebugLine(&fromLine->dbg_line_insts().back())) {
+      return false;
+    }
+  }
   SetDebugScope(from->GetDebugScope());
   if (!IsLineInst() &&
       context()->AreAnalysesValid(IRContext::kAnalysisDebugInfo)) {
     context()->get_debug_info_mgr()->AnalyzeDebugInst(this);
   }
+  return true;
 }
 
-void Instruction::AddDebugLine(const Instruction* inst) {
+bool Instruction::AddDebugLine(const Instruction* inst) {
   dbg_line_insts_.push_back(*inst);
   dbg_line_insts_.back().unique_id_ = context()->TakeNextUniqueId();
-  if (inst->IsDebugLineInst())
-    dbg_line_insts_.back().SetResultId(context_->TakeNextId());
+  if (inst->IsDebugLineInst()) {
+    uint32_t new_id = context()->TakeNextId();
+    if (new_id == 0) {
+      return false;
+    }
+    dbg_line_insts_.back().SetResultId(new_id);
+  }
   if (context()->AreAnalysesValid(IRContext::kAnalysisDefUse))
     context()->get_def_use_mgr()->AnalyzeInstDefUse(&dbg_line_insts_.back());
+  return true;
 }
 
 bool Instruction::IsDebugLineInst() const {
@@ -770,7 +786,7 @@ bool Instruction::IsFoldableByFoldScalar() const {
   // Even if the type of the instruction is foldable, its operands may not be
   // foldable (e.g., comparisons of 64bit types).  Check that all operand types
   // are foldable before accepting the instruction.
-  return WhileEachInOperand([&folder, this](const uint32_t* op_id) {
+  return WhileEachInId([&folder, this](const uint32_t* op_id) {
     Instruction* def_inst = context()->get_def_use_mgr()->GetDef(*op_id);
     Instruction* def_inst_type =
         context()->get_def_use_mgr()->GetDef(def_inst->type_id());
@@ -792,7 +808,7 @@ bool Instruction::IsFoldableByFoldVector() const {
   // Even if the type of the instruction is foldable, its operands may not be
   // foldable (e.g., comparisons of 64bit types).  Check that all operand types
   // are foldable before accepting the instruction.
-  return WhileEachInOperand([&folder, this](const uint32_t* op_id) {
+  return WhileEachInId([&folder, this](const uint32_t* op_id) {
     Instruction* def_inst = context()->get_def_use_mgr()->GetDef(*op_id);
     Instruction* def_inst_type =
         context()->get_def_use_mgr()->GetDef(def_inst->type_id());
@@ -1032,6 +1048,12 @@ bool Instruction::IsScalarizable() const {
 
 bool Instruction::IsOpcodeSafeToDelete() const {
   if (context()->IsCombinatorInstruction(this)) {
+    return true;
+  }
+
+  if (IsNonSemanticInstruction() &&
+      (GetShader100DebugOpcode() == NonSemanticShaderDebugInfo100DebugDeclare ||
+       GetShader100DebugOpcode() == NonSemanticShaderDebugInfo100DebugValue)) {
     return true;
   }
 

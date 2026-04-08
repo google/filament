@@ -106,6 +106,8 @@ FView::FView(FEngine& engine)
 {
     DriverApi& driver = engine.getDriverApi();
 
+    mIsHighPrecisionEvsmSupported = driver.isTextureFormatFilterable(TextureFormat::RGBA32F);
+
     mFeatureLevel = engine.getSupportedFeatureLevel();
 
     auto const& layout = engine.getPerRenderableDescriptorSetLayout();
@@ -1483,6 +1485,9 @@ void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept
 }
 void FView::setVsmShadowOptions(VsmShadowOptions options) noexcept {
     options.msaaSamples = std::max(uint8_t(0), options.msaaSamples);
+    if (!mIsHighPrecisionEvsmSupported) {
+        options.highPrecision = false;
+    }
     mVsmShadowOptions = options;
 }
 

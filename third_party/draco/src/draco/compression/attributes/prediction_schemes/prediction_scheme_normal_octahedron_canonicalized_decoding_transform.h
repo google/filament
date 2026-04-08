@@ -21,6 +21,7 @@
 #include "draco/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_transform_base.h"
 #include "draco/core/decoder_buffer.h"
 #include "draco/core/macros.h"
+#include "draco/core/math_utils.h"
 #include "draco/core/vector_d.h"
 
 namespace draco {
@@ -98,9 +99,8 @@ class PredictionSchemeNormalOctahedronCanonicalizedDecodingTransform
     if (!pred_is_in_bottom_left) {
       pred = this->RotatePoint(pred, rotation_count);
     }
-    Point2 orig = pred + corr;
-    orig[0] = this->ModMax(orig[0]);
-    orig[1] = this->ModMax(orig[1]);
+    Point2 orig(this->ModMax(AddAsUnsigned(pred[0], corr[0])),
+                this->ModMax(AddAsUnsigned(pred[1], corr[1])));
     if (!pred_is_in_bottom_left) {
       const int32_t reverse_rotation_count = (4 - rotation_count) % 4;
       orig = this->RotatePoint(orig, reverse_rotation_count);

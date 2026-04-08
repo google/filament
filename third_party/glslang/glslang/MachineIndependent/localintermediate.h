@@ -48,6 +48,7 @@
 #include <functional>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 class TInfoSink;
@@ -351,6 +352,7 @@ public:
         hlslOffsets(false),
         hlslIoMapping(false),
         useVariablePointers(false),
+        bindingsPerResourceType(false),
         textureSamplerTransformMode(EShTexSampTransKeep),
         needToLegalize(false),
         binaryDoubleOutput(false),
@@ -574,8 +576,8 @@ public:
     TIntermConstantUnion* addConstantUnion(const TString*, const TSourceLoc&, bool literal = false) const;
     TIntermTyped* promoteConstantUnion(TBasicType, TIntermConstantUnion*) const;
     bool parseConstTree(TIntermNode*, TConstUnionArray, TOperator, const TType&, bool singleConstantParam = false);
-    TIntermLoop* addLoop(TIntermNode*, TIntermTyped*, TIntermTyped*, bool testFirst, const TSourceLoc&);
-    TIntermAggregate* addForLoop(TIntermNode*, TIntermNode*, TIntermTyped*, TIntermTyped*, bool testFirst,
+    TIntermLoop* addLoop(TIntermNode*, TIntermNode*, TIntermTyped*, bool testFirst, const TSourceLoc&);
+    TIntermAggregate* addForLoop(TIntermNode*, TIntermNode*, TIntermNode*, TIntermTyped*, bool testFirst,
         const TSourceLoc&, TIntermLoop*&);
     TIntermBranch* addBranch(TOperator, const TSourceLoc&);
     TIntermBranch* addBranch(TOperator, TIntermTyped*, const TSourceLoc&);
@@ -763,6 +765,16 @@ public:
         useReplicatedComposites = true;
     }
     bool usingReplicatedComposites() const { return useReplicatedComposites; }
+    void setPromoteUint32Indices()
+    {
+        promoteUint32Indices = true;
+    }
+    bool usingPromoteUint32Indices() const { return promoteUint32Indices; }
+    void setShader64BitIndexing()
+    {
+        shader64BitIndexing = true;
+    }
+    bool usingShader64BitIndexing() const { return shader64BitIndexing; }
     void setUseVariablePointers()
     {
         useVariablePointers = true;
@@ -828,6 +840,13 @@ public:
     }
 
     bool usingVariablePointers() const { return useVariablePointers; }
+
+    void setBindingsPerResourceType()
+    {
+        bindingsPerResourceType = true;
+        processes.addProcess("bindings-per-resource-type");
+    }
+    bool getBindingsPerResourceType() const { return bindingsPerResourceType; }
 
 #ifdef ENABLE_HLSL
     template<class T> T addCounterBufferName(const T& name) const { return name + implicitCounterName; }
@@ -1151,6 +1170,13 @@ public:
     void updateNumericFeature(TNumericFeatures::feature f, bool on)
         { on ? numericFeatures.insert(f) : numericFeatures.erase(f); }
 
+    void setBuiltinAliasLookup(std::unordered_multimap<std::string, std::string> symbolMap) {
+        builtinAliasLookup = std::move(symbolMap);
+    }
+    const std::unordered_multimap<std::string, std::string>& getBuiltinAliasLookup() const {
+        return builtinAliasLookup;
+    }
+
 protected:
     TIntermSymbol* addSymbol(long long Id, const TString&, const TString&, const TType&, const TConstUnionArray&, TIntermTyped* subtree, const TSourceLoc&);
     void error(TInfoSink& infoSink, const TSourceLoc* loc, EShMessages messages, const char*, EShLanguage unitStage = EShLangCount);
@@ -1284,6 +1310,7 @@ protected:
     bool hlslOffsets;
     bool hlslIoMapping;
     bool useVariablePointers;
+    bool bindingsPerResourceType;
 
     std::set<TString> semanticNameSet;
 
@@ -1295,6 +1322,8 @@ protected:
     bool maximallyReconverges;
     bool usePhysicalStorageBuffer;
     bool useReplicatedComposites { false };
+    bool promoteUint32Indices { false };
+    bool shader64BitIndexing { false };
 
     TSpirvRequirement* spirvRequirement;
     TSpirvExecutionMode* spirvExecutionMode;
@@ -1322,6 +1351,9 @@ protected:
 
     // Included text. First string is a name, second is the included text
     std::map<std::string, std::string> includeText;
+
+    // Maps from canonical symbol name to alias symbol names
+    std::unordered_multimap<std::string, std::string> builtinAliasLookup;
 
     // for OpModuleProcessed, or equivalent
     TProcesses processes;

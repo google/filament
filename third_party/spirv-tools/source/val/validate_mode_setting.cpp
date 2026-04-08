@@ -27,6 +27,48 @@ namespace spvtools {
 namespace val {
 namespace {
 
+// TODO - Make a common util if someone else needs it too outside this file
+const char* ExecutionModelToString(spv::ExecutionModel value) {
+  switch (value) {
+    case spv::ExecutionModel::Vertex:
+      return "Vertex";
+    case spv::ExecutionModel::TessellationControl:
+      return "TessellationControl";
+    case spv::ExecutionModel::TessellationEvaluation:
+      return "TessellationEvaluation";
+    case spv::ExecutionModel::Geometry:
+      return "Geometry";
+    case spv::ExecutionModel::Fragment:
+      return "Fragment";
+    case spv::ExecutionModel::GLCompute:
+      return "GLCompute";
+    case spv::ExecutionModel::Kernel:
+      return "Kernel";
+    case spv::ExecutionModel::TaskNV:
+      return "TaskNV";
+    case spv::ExecutionModel::MeshNV:
+      return "MeshNV";
+    case spv::ExecutionModel::RayGenerationKHR:
+      return "RayGenerationKHR";
+    case spv::ExecutionModel::IntersectionKHR:
+      return "IntersectionKHR";
+    case spv::ExecutionModel::AnyHitKHR:
+      return "AnyHitKHR";
+    case spv::ExecutionModel::ClosestHitKHR:
+      return "ClosestHitKHR";
+    case spv::ExecutionModel::MissKHR:
+      return "MissKHR";
+    case spv::ExecutionModel::CallableKHR:
+      return "CallableKHR";
+    case spv::ExecutionModel::TaskEXT:
+      return "TaskEXT";
+    case spv::ExecutionModel::MeshEXT:
+      return "MeshEXT";
+    default:
+      return "Unknown";
+  }
+}
+
 spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
   const auto entry_point_id = inst->GetOperandAs<uint32_t>(1);
   auto entry_point = _.FindDef(entry_point_id);
@@ -59,20 +101,22 @@ spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
   }
 
   const auto* execution_modes = _.GetExecutionModes(entry_point_id);
+  auto has_mode = [&execution_modes](spv::ExecutionMode mode) {
+    return execution_modes && execution_modes->count(mode);
+  };
+
   if (_.HasCapability(spv::Capability::Shader)) {
     switch (execution_model) {
       case spv::ExecutionModel::Fragment:
-        if (execution_modes &&
-            execution_modes->count(spv::ExecutionMode::OriginUpperLeft) &&
-            execution_modes->count(spv::ExecutionMode::OriginLowerLeft)) {
+        if (has_mode(spv::ExecutionMode::OriginUpperLeft) &&
+            has_mode(spv::ExecutionMode::OriginLowerLeft)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << "Fragment execution model entry points can only specify "
                     "one of OriginUpperLeft or OriginLowerLeft execution "
                     "modes.";
         }
-        if (!execution_modes ||
-            (!execution_modes->count(spv::ExecutionMode::OriginUpperLeft) &&
-             !execution_modes->count(spv::ExecutionMode::OriginLowerLeft))) {
+        if (!has_mode(spv::ExecutionMode::OriginUpperLeft) &&
+            !has_mode(spv::ExecutionMode::OriginLowerLeft)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << "Fragment execution model entry points require either an "
                     "OriginUpperLeft or OriginLowerLeft execution mode.";
@@ -285,115 +329,105 @@ spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
     }
   }
 
+  bool has_workgroup_size = false;
+  bool has_local_size_id = false;
+  for (auto& i : _.ordered_instructions()) {
+    if (i.opcode() == spv::Op::OpFunction) break;
+    if (i.opcode() == spv::Op::OpDecorate && i.operands().size() > 2) {
+      if (i.GetOperandAs<spv::Decoration>(1) == spv::Decoration::BuiltIn &&
+          i.GetOperandAs<spv::BuiltIn>(2) == spv::BuiltIn::WorkgroupSize) {
+        has_workgroup_size = true;
+      }
+    }
+    if (i.opcode() == spv::Op::OpExecutionModeId) {
+      if (i.GetOperandAs<spv::ExecutionMode>(1) ==
+          spv::ExecutionMode::LocalSizeId) {
+        has_local_size_id = true;
+      }
+    }
+  }
+
   if (spvIsVulkanEnv(_.context()->target_env)) {
-    switch (execution_model) {
-      case spv::ExecutionModel::GLCompute:
-        if (!execution_modes ||
-            !execution_modes->count(spv::ExecutionMode::LocalSize)) {
-          bool ok = false;
-          for (auto& i : _.ordered_instructions()) {
-            if (i.opcode() == spv::Op::OpDecorate) {
-              if (i.operands().size() > 2) {
-                if (i.GetOperandAs<spv::Decoration>(1) ==
-                        spv::Decoration::BuiltIn &&
-                    i.GetOperandAs<spv::BuiltIn>(2) ==
-                        spv::BuiltIn::WorkgroupSize) {
-                  ok = true;
-                  break;
-                }
-              }
-            }
-            if (i.opcode() == spv::Op::OpExecutionModeId) {
-              const auto mode = i.GetOperandAs<spv::ExecutionMode>(1);
-              if (mode == spv::ExecutionMode::LocalSizeId) {
-                ok = true;
-                break;
-              }
-            }
-          }
-          if (!ok && _.HasCapability(spv::Capability::TileShadingQCOM)) {
-            ok =
-                execution_modes &&
-                execution_modes->count(spv::ExecutionMode::TileShadingRateQCOM);
-          }
-          if (!ok) {
+    // SPV_QCOM_tile_shading checks
+    if (execution_model == spv::ExecutionModel::GLCompute) {
+      if (_.HasCapability(spv::Capability::TileShadingQCOM)) {
+        if (has_mode(spv::ExecutionMode::TileShadingRateQCOM) &&
+            (has_mode(spv::ExecutionMode::LocalSize) ||
+             has_mode(spv::ExecutionMode::LocalSizeId))) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "If the TileShadingRateQCOM execution mode is used, "
+                 << "LocalSize and LocalSizeId must not be specified.";
+        }
+        if (has_mode(spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "The NonCoherentTileAttachmentQCOM execution mode must "
+                    "not be used in any stage other than fragment.";
+        }
+      } else {
+        if (has_mode(spv::ExecutionMode::TileShadingRateQCOM)) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "If the TileShadingRateQCOM execution mode is used, the "
+                    "TileShadingQCOM capability must be enabled.";
+        }
+      }
+    } else {
+      if (has_mode(spv::ExecutionMode::TileShadingRateQCOM)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "The TileShadingRateQCOM execution mode must not be used "
+                  "in any stage other than compute.";
+      }
+      if (execution_model != spv::ExecutionModel::Fragment) {
+        if (has_mode(spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "The NonCoherentTileAttachmentQCOM execution mode must "
+                    "not be used in any stage other than fragment.";
+        }
+        if (_.HasCapability(spv::Capability::TileShadingQCOM)) {
+          return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
+                 << "The TileShadingQCOM capability must not be enabled in "
+                    "any stage other than compute or fragment.";
+        }
+      } else {
+        if (has_mode(spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
+          if (!_.HasCapability(spv::Capability::TileShadingQCOM)) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                   << (_.HasCapability(spv::Capability::TileShadingQCOM)
-                           ? _.VkErrorID(10685)
-                           : _.VkErrorID(6426))
-                   << "In the Vulkan environment, GLCompute execution model "
-                      "entry points require either the "
-                   << (_.HasCapability(spv::Capability::TileShadingQCOM)
-                           ? "TileShadingRateQCOM, "
-                           : "")
-                   << "LocalSize or LocalSizeId execution mode or an object "
-                      "decorated with WorkgroupSize must be specified.";
+                   << "If the NonCoherentTileAttachmentReadQCOM execution "
+                      "mode is used, the TileShadingQCOM capability must be "
+                      "enabled.";
           }
         }
+      }
+    }
 
-        if (_.HasCapability(spv::Capability::TileShadingQCOM)) {
-          if (execution_modes) {
-            if (execution_modes->count(
-                    spv::ExecutionMode::TileShadingRateQCOM) &&
-                (execution_modes->count(spv::ExecutionMode::LocalSize) ||
-                 execution_modes->count(spv::ExecutionMode::LocalSizeId))) {
-              return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                     << "If the TileShadingRateQCOM execution mode is used, "
-                     << "LocalSize and LocalSizeId must not be specified.";
-            }
-            if (execution_modes->count(
-                    spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
-              return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                     << "The NonCoherentTileAttachmentQCOM execution mode must "
-                        "not be used in any stage other than fragment.";
-            }
-          }
-        } else {
-          if (execution_modes &&
-              execution_modes->count(spv::ExecutionMode::TileShadingRateQCOM)) {
-            return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                   << "If the TileShadingRateQCOM execution mode is used, the "
-                      "TileShadingQCOM capability must be enabled.";
-          }
+    switch (execution_model) {
+      case spv::ExecutionModel::GLCompute:
+      case spv::ExecutionModel::MeshEXT:
+      case spv::ExecutionModel::MeshNV:
+      case spv::ExecutionModel::TaskEXT:
+      case spv::ExecutionModel::TaskNV:
+        if (!has_mode(spv::ExecutionMode::LocalSize) && !has_workgroup_size &&
+            !has_local_size_id &&
+            !has_mode(spv::ExecutionMode::TileShadingRateQCOM)) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << _.VkErrorID(10685) << "In the Vulkan environment, "
+                 << ExecutionModelToString(execution_model)
+                 << " execution model "
+                    "entry points require either the "
+                 << (_.HasCapability(spv::Capability::TileShadingQCOM)
+                         ? "TileShadingRateQCOM, "
+                         : "")
+                 << "LocalSize or LocalSizeId execution mode or an object "
+                    "decorated with WorkgroupSize must be specified.";
         }
         break;
       default:
-        if (execution_modes &&
-            execution_modes->count(spv::ExecutionMode::TileShadingRateQCOM)) {
-          return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << "The TileShadingRateQCOM execution mode must not be used "
-                    "in any stage other than compute.";
-        }
-        if (execution_model != spv::ExecutionModel::Fragment) {
-          if (execution_modes &&
-              execution_modes->count(
-                  spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
-            return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                   << "The NonCoherentTileAttachmentQCOM execution mode must "
-                      "not be used in any stage other than fragment.";
-          }
-          if (_.HasCapability(spv::Capability::TileShadingQCOM)) {
-            return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
-                   << "The TileShadingQCOM capability must not be enabled in "
-                      "any stage other than compute or fragment.";
-          }
-        } else {
-          if (execution_modes &&
-              execution_modes->count(
-                  spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
-            if (!_.HasCapability(spv::Capability::TileShadingQCOM)) {
-              return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                     << "If the NonCoherentTileAttachmentReadQCOM execution "
-                        "mode is used, the TileShadingQCOM capability must be "
-                        "enabled.";
-            }
-          }
-        }
         break;
     }
   }
 
-  if (_.EntryPointHasLocalSizeOrId(entry_point_id)) {
+  // WorkgroupSize decoration takes precedence over any LocalSize or LocalSizeId
+  // execution mode, so the values can be ignored
+  if (_.EntryPointHasLocalSizeOrId(entry_point_id) && !has_workgroup_size) {
     const Instruction* local_size_inst =
         _.EntryPointLocalSizeOrId(entry_point_id);
     if (local_size_inst) {
@@ -402,13 +436,40 @@ spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
       const uint32_t operand_y = local_size_inst->GetOperandAs<uint32_t>(3);
       const uint32_t operand_z = local_size_inst->GetOperandAs<uint32_t>(4);
       if (mode == spv::ExecutionMode::LocalSize) {
-        if ((operand_x * operand_y * operand_z) == 0) {
+        const uint64_t product_size = operand_x * operand_y * operand_z;
+        if (product_size == 0) {
           return _.diag(SPV_ERROR_INVALID_DATA, local_size_inst)
                  << "Local Size execution mode must not have a product of zero "
                     "(X "
                     "= "
                  << operand_x << ", Y = " << operand_y << ", Z = " << operand_z
                  << ").";
+        }
+        if (has_mode(spv::ExecutionMode::DerivativeGroupQuadsKHR)) {
+          if (operand_x % 2 != 0 || operand_y % 2 != 0) {
+            return _.diag(SPV_ERROR_INVALID_DATA, local_size_inst)
+                   << _.VkErrorID(10151)
+                   << "Local Size execution mode dimensions is "
+                      "(X = "
+                   << operand_x << ", Y = " << operand_y
+                   << ") but Entry Point id " << entry_point_id
+                   << " also has an DerivativeGroupQuadsKHR execution mode, so "
+                      "both dimensions must be a multiple of 2";
+          }
+        }
+        if (has_mode(spv::ExecutionMode::DerivativeGroupLinearKHR)) {
+          if (product_size % 4 != 0) {
+            return _.diag(SPV_ERROR_INVALID_DATA, local_size_inst)
+                   << _.VkErrorID(10152)
+                   << "Local Size execution mode dimensions is (X = "
+                   << operand_x << ", Y = " << operand_y
+                   << ", Z = " << operand_z << ") but Entry Point id "
+                   << entry_point_id
+                   << " also has an DerivativeGroupLinearKHR execution mode, "
+                      "so "
+                      "the product ("
+                   << product_size << ") must be a multiple of 4";
+          }
         }
       } else if (mode == spv::ExecutionMode::LocalSizeId) {
         // can only validate product if static and not spec constant
@@ -417,13 +478,42 @@ spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
         bool static_x = _.EvalConstantValUint64(operand_x, &x_size);
         bool static_y = _.EvalConstantValUint64(operand_y, &y_size);
         bool static_z = _.EvalConstantValUint64(operand_z, &z_size);
-        if (static_x && static_y && static_z &&
-            ((x_size * y_size * z_size) == 0)) {
-          return _.diag(SPV_ERROR_INVALID_DATA, local_size_inst)
-                 << "Local Size Id execution mode must not have a product of "
-                    "zero "
-                    "(X = "
-                 << x_size << ", Y = " << y_size << ", Z = " << z_size << ").";
+        if (static_x && static_y && static_z) {
+          const uint64_t product_size = x_size * y_size * z_size;
+          if (product_size == 0) {
+            return _.diag(SPV_ERROR_INVALID_DATA, local_size_inst)
+                   << "LocalSizeId execution mode must not have a product of "
+                      "zero "
+                      "(X = "
+                   << x_size << ", Y = " << y_size << ", Z = " << z_size
+                   << ").";
+          }
+          if (has_mode(spv::ExecutionMode::DerivativeGroupQuadsKHR)) {
+            if (x_size % 2 != 0 || y_size % 2 != 0) {
+              return _.diag(SPV_ERROR_INVALID_DATA, local_size_inst)
+                     << _.VkErrorID(10151)
+                     << "LocalSizeId execution mode dimensions is "
+                        "(X = "
+                     << x_size << ", Y = " << y_size << ") but Entry Point id "
+                     << entry_point_id
+                     << " also has an DerivativeGroupQuadsKHR execution mode, "
+                        "so "
+                        "both dimensions must be a multiple of 2";
+            }
+          }
+          if (has_mode(spv::ExecutionMode::DerivativeGroupLinearKHR)) {
+            if (product_size % 4 != 0) {
+              return _.diag(SPV_ERROR_INVALID_DATA, local_size_inst)
+                     << _.VkErrorID(10152)
+                     << "LocalSizeId execution mode dimensions is (X = "
+                     << x_size << ", Y = " << y_size << ", Z = " << z_size
+                     << ") but Entry Point id " << entry_point_id
+                     << " also has an DerivativeGroupLinearKHR execution mode, "
+                        "so "
+                        "the product ("
+                     << product_size << ") must be a multiple of 4";
+            }
+          }
         }
       }
     }

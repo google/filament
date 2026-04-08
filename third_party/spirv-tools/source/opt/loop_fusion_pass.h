@@ -39,7 +39,7 @@ class LoopFusionPass : public Pass {
  private:
   // Fuse loops in |function| if compatible, legal and the fused loop won't use
   // too many registers.
-  bool ProcessFunction(Function* function);
+  Status ProcessFunction(Function* function);
 
   // The maximum number of registers a fused loop is allowed to use.
   size_t max_registers_per_loop_;

@@ -115,7 +115,7 @@ const int start2 = 5;
 layout(location = start2 * start2 - 2 - 4) in vec4 v6;
 
 layout(location = 28) in inblock2 {  // ERROR, input block in vertex shader, other errors are valid checks still...
-    bool b1;
+    bool b1;                         // ERROR
     float f1;
     layout(location = 25) float f2;
 } ininst2;

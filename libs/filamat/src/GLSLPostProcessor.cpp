@@ -752,15 +752,11 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
 
     if (internalConfig.glslOutput) {
         if (!mGenerateDebugInfo) {
-            *internalConfig.glslOutput =
-                    internalConfig.minifier.removeWhitespace(
-                            *internalConfig.glslOutput,
-                            mOptimization == MaterialBuilder::Optimization::SIZE);
-
+            *internalConfig.glslOutput = internalConfig.minifier.removeWhitespace( *internalConfig.glslOutput,
+                    mOptimization == MaterialBuilder::Optimization::SIZE);
             // In theory this should only be enabled for SIZE, but in practice we often use PERFORMANCE.
             if (mOptimization != MaterialBuilder::Optimization::NONE) {
-                *internalConfig.glslOutput =
-                        internalConfig.minifier.renameStructFields(*internalConfig.glslOutput);
+                *internalConfig.glslOutput = internalConfig.minifier.renameStructFields(*internalConfig.glslOutput);
             }
         }
         if (mPrintShaders) {

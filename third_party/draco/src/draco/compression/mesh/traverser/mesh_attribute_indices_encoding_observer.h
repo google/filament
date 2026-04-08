@@ -25,7 +25,7 @@ namespace draco {
 // values based on the traversal of the encoded mesh. The class should be used
 // as the TraversalObserverT member of a Traverser class such as the
 // DepthFirstTraverser (depth_first_traverser.h).
-// TODO(hemmer): rename to AttributeIndicesCodingTraverserObserver
+// TODO(b/199760123): Rename to AttributeIndicesCodingTraverserObserver.
 template <class CornerTableT>
 class MeshAttributeIndicesEncodingObserver {
  public:

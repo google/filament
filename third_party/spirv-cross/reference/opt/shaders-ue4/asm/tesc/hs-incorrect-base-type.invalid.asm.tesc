@@ -298,7 +298,7 @@ struct main0_in
     float4 in_var_VS_To_DS_Position [[attribute(7)]];
 };
 
-kernel void main0(main0_in in [[stage_in]], constant type_View& View [[buffer(0)]], const device type_StructuredBuffer_v4float& View_PrimitiveSceneData [[buffer(1)]], uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_PrimitiveID [[threadgroup_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLTriangleTessellationFactorsHalf* spvTessLevel [[buffer(26)]], threadgroup main0_in* gl_in [[threadgroup(0)]])
+kernel void main0(main0_in in [[stage_in]], constant type_View& View [[buffer(0)]], device type_StructuredBuffer_v4float& View_PrimitiveSceneData [[buffer(1)]], uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_PrimitiveID [[threadgroup_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLTriangleTessellationFactorsHalf* spvTessLevel [[buffer(26)]], threadgroup main0_in* gl_in [[threadgroup(0)]])
 {
     threadgroup spvUnsafeArray<FPNTessellationHSToDS, 3> temp_var_hullMainRetVal;
     device main0_out* gl_out = &spvOut[gl_PrimitiveID * 3];

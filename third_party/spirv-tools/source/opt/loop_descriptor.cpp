@@ -25,6 +25,7 @@
 #include "source/opt/dominator_tree.h"
 #include "source/opt/ir_context.h"
 #include "source/opt/iterator.h"
+#include "source/opt/pass.h"
 #include "source/opt/tree_iterator.h"
 #include "source/util/make_unique.h"
 
@@ -278,6 +279,9 @@ BasicBlock* Loop::GetOrCreatePreHeaderBlock() {
 
   CFG* cfg = context_->cfg();
   loop_header_ = cfg->SplitLoopHeader(loop_header_);
+  if (loop_header_ == nullptr) {
+    return nullptr;
+  }
   return loop_preheader_;
 }
 
@@ -920,18 +924,19 @@ Instruction* Loop::FindConditionVariable(
   return induction;
 }
 
-bool LoopDescriptor::CreatePreHeaderBlocksIfMissing() {
-  auto modified = false;
+LoopDescriptor::Status LoopDescriptor::CreatePreHeaderBlocksIfMissing() {
+  bool modified = false;
 
   for (auto& loop : *this) {
     if (!loop.GetPreHeaderBlock()) {
+      if (!loop.GetOrCreatePreHeaderBlock()) {
+        return Status::Failure;
+      }
       modified = true;
-      // TODO(1841): Handle failure to create pre-header.
-      loop.GetOrCreatePreHeaderBlock();
     }
   }
 
-  return modified;
+  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
 // Add and remove loops which have been marked for addition and removal to

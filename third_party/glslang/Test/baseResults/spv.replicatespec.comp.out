@@ -6,7 +6,7 @@ spv.replicatespec.comp
                               Capability Shader
                               Capability VulkanMemoryModelKHR
                               Capability CooperativeMatrixKHR
-                              Capability CapabilityReplicatedCompositesEXT
+                              Capability ReplicatedCompositesEXT
                               Extension  "SPV_EXT_replicated_composites"
                               Extension  "SPV_KHR_cooperative_matrix"
                               Extension  "SPV_KHR_vulkan_memory_model"

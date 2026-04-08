@@ -1,0 +1,98 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 2
+#endif
+constant int A = SPIRV_CROSS_CONSTANT_ID_1;
+constant uint _20 = (uint(A) + 0u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+constant uint _21 = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 1u
+#endif
+constant uint _22 = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 1u
+#endif
+constant uint _23 = SPIRV_CROSS_CONSTANT_ID_3;
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(_21, _22, _23);
+constant uint _26 = _21;
+constant uint _27 = (_20 * _26);
+constant uint _31 = (uint(A) + 0u);
+constant uint _32 = _21;
+constant uint _33 = (_31 * _32);
+constant uint _59 = (uint(A) + 0u);
+constant uint _61 = _23;
+constant uint _62 = (_59 * _61);
+
+struct SSBO
+{
+    int I;
+    float V;
+};
+
+constant uint _88 = (uint(A) + 0u);
+constant uint _89 = _23;
+constant uint _90 = (_88 * _89);
+
+kernel void main0(device SSBO& _76 [[buffer(0)]])
+{
+    spvUnsafeArray<float, _33> D;
+    spvUnsafeArray<float, _90> E;
+    for (int i = 0; uint(i) < _27; i++)
+    {
+        D[i] = 1.0 + float(uint(i) + gl_WorkGroupSize.y);
+    }
+    for (int i_1 = 0; uint(i_1) < _62; i_1++)
+    {
+        D[i_1] = 1.0 + float(uint(i_1) + gl_WorkGroupSize.y);
+    }
+    _76.V = (D[_76.I] + D[_76.I ^ 1]) + E[_76.I];
+}
+

@@ -19,16 +19,20 @@
 #include "LineDictionary.h"
 #include "ShaderEntry.h"
 
-#include <exception>
+#include <private/filament/LineDictionaryUtils.h>
+
 #include <utils/Log.h>
 #include <utils/ostream.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cassert>
 #include <cstddef>
+#include <exception>
+#include <string>
 #include <string_view>
 #include <unordered_map>
-#include <string>
+#include <vector>
 
 namespace filamat {
 
@@ -39,45 +43,85 @@ void MaterialTextChunk::writeEntryAttributes(size_t const entryIndex, Flattener&
     f.writeUint8(uint8_t(entry.stage));
 }
 
-void compressShader(std::string_view const src, Flattener &f, const LineDictionary& dictionary) {
+void compressShader(const std::string& src, ShaderStage const stage, Flattener& f, const LineDictionary& dictionary) {
     if (dictionary.getDictionaryLineCount() > 65536) {
         slog.e << "Dictionary is too large!" << io::endl;
         std::terminate();
     }
 
     f.writeUint32(static_cast<uint32_t>(src.size() + 1));
-    f.writeValuePlaceholder();
+    f.writeValuePlaceholder(); // Num Lines
+    
+    // F.writeValue resolves backwards matching the LIFO queue of Placeholders!
+    f.writeValuePlaceholder(); // Ext Stream Size
+    f.writeValuePlaceholder(); // Base Stream Size
+    f.writeValuePlaceholder(); // Numeric Stream Size
 
     size_t numLines = 0;
+    std::vector<uint8_t> base_stream;
+    std::vector<uint8_t> ext_stream;
 
-    size_t cur = 0;
-    size_t const len = src.length();
-    const char* s = src.data();
-    while (cur < len) {
-        // Start of the current line
-        size_t const pos = cur;
-        // Find the end of the current line or end of text
-        while (cur < len && s[cur] != '\n') {
-            cur++;
-        }
-        // If we found a newline, advance past it for the next iteration, ensuring '\n' is included
-        if (cur < len) {
-            cur++;
-        }
-        std::string_view const newLine{ s + pos, cur - pos };
+    uint32_t const S = dictionary.getStageStringCount(0);
+    uint32_t const V = dictionary.getStageStringCount(1);
+    uint32_t const F = dictionary.getStageStringCount(2);
 
-        auto const indices = dictionary.getIndices(newLine);
-        if (indices.empty()) {
-            slog.e << "Line not found in dictionary!" << io::endl;
-            std::terminate();
+    auto const [indices, numerics] = dictionary.tokenize(src);
+    if (indices.empty() && !src.empty()) {
+        slog.e << "Shader completely failed to tokenize!" << io::endl;
+        slog.e << "Shader size: " << src.size() << " | src substring: " << src.substr(0, std::min(size_t(50), src.size())) << io::endl;
+        slog.e << "Indices map size: " << dictionary.size() << io::endl;
+        std::terminate();
+    }
+
+    numLines = indices.size();
+    for (auto const index : indices) {
+        if (index == filament::LineDictionaryUtils::DICTIONARY_NUMERIC_FLAG) {
+            base_stream.push_back(filament::LineDictionaryUtils::DICTIONARY_NUMERIC_ID);
+            continue;
         }
 
-        numLines += indices.size();
-        for (auto const index : indices) {
-            f.writeUint16(static_cast<uint16_t>(index));
+
+
+        uint32_t local_index = index;
+        if (stage == ShaderStage::FRAGMENT && index >= S) {
+            local_index -= V;
+        } else if (stage == ShaderStage::COMPUTE && index >= S) {
+            local_index -= V + F;
+        }
+
+        if (local_index < filament::LineDictionaryUtils::DICTIONARY_1_BYTE_ID_CAPACITY) {
+            base_stream.push_back(static_cast<uint8_t>(local_index));
+        } else if (local_index < filament::LineDictionaryUtils::DICTIONARY_2_BYTE_ID_MAX) {
+            auto const [prefix, ext] = filament::LineDictionaryUtils::pack2ByteDictionaryId(local_index);
+            base_stream.push_back(prefix);
+            ext_stream.push_back(ext);
+        } else {
+            base_stream.push_back(filament::LineDictionaryUtils::DICTIONARY_3_BYTE_ID);
+            auto const [extb0, extb1] = filament::LineDictionaryUtils::pack3ByteDictionaryId(local_index);
+            ext_stream.push_back(extb0);
+            ext_stream.push_back(extb1);
         }
     }
-    f.writeValue(numLines);
+
+    std::vector<uint8_t> numeric_stream;
+
+    for (auto const value : numerics) {
+        if (value < 128) {
+            numeric_stream.push_back(static_cast<uint8_t>(value));
+        } else {
+            numeric_stream.push_back(static_cast<uint8_t>((value & 0x7F) | 0x80));
+            numeric_stream.push_back(static_cast<uint8_t>((value >> 7) & 0xFF));
+        }
+    }
+
+    f.writeRaw(reinterpret_cast<const char*>(base_stream.data()), base_stream.size());
+    f.writeRaw(reinterpret_cast<const char*>(ext_stream.data()), ext_stream.size());
+    f.writeRaw(reinterpret_cast<const char*>(numeric_stream.data()), numeric_stream.size());
+
+    f.writeValue(static_cast<uint32_t>(numeric_stream.size()));
+    f.writeValue(static_cast<uint32_t>(base_stream.size()));
+    f.writeValue(static_cast<uint32_t>(ext_stream.size()));
+    f.writeValue(static_cast<uint32_t>(numLines));
 }
 
 void MaterialTextChunk::flatten(Flattener& f) {
@@ -103,6 +147,12 @@ void MaterialTextChunk::flatten(Flattener& f) {
     // All offsets expressed later will start at the current flattener cursor position
     f.markOffsetBase();
 
+    // Write stage partition counts for decoding restitution
+    f.writeUint16(static_cast<uint16_t>(mDictionary.getStageStringCount(0)));
+    f.writeUint16(static_cast<uint16_t>(mDictionary.getStageStringCount(1)));
+    f.writeUint16(static_cast<uint16_t>(mDictionary.getStageStringCount(2)));
+    f.writeUint16(static_cast<uint16_t>(mDictionary.getStageStringCount(3)));
+
     // Write how many shaders we have
     f.writeUint64(mEntries.size());
 
@@ -119,7 +169,7 @@ void MaterialTextChunk::flatten(Flattener& f) {
             continue;
         }
         f.writeOffsets(i);
-        compressShader(mEntries.at(i).shader, f, mDictionary);
+        compressShader(mEntries.at(i).shader, mEntries.at(i).stage, f, mDictionary);
     }
 }
 

@@ -434,6 +434,9 @@ enum TResourceType {
     EResUbo,
     EResSsbo,
     EResUav,
+    EResCombinedSampler,
+    EResAs,
+    EResTensor,
     EResCount
 };
 
@@ -463,59 +466,60 @@ enum TBlockStorageClass
 //
 // N.B.: Destruct a linked program *before* destructing the shaders linked into it.
 //
-class TShader {
+class GLSLANG_EXPORT TShader {
 public:
-    GLSLANG_EXPORT explicit TShader(EShLanguage);
-    GLSLANG_EXPORT virtual ~TShader();
-    GLSLANG_EXPORT void setStrings(const char* const* s, int n);
-    GLSLANG_EXPORT void setStringsWithLengths(
+    explicit TShader(EShLanguage);
+    virtual ~TShader();
+    void setStrings(const char* const* s, int n);
+    void setStringsWithLengths(
         const char* const* s, const int* l, int n);
-    GLSLANG_EXPORT void setStringsWithLengthsAndNames(
+    void setStringsWithLengthsAndNames(
         const char* const* s, const int* l, const char* const* names, int n);
     void setPreamble(const char* s) { preamble = s; }
-    GLSLANG_EXPORT void setEntryPoint(const char* entryPoint);
-    GLSLANG_EXPORT void setSourceEntryPoint(const char* sourceEntryPointName);
-    GLSLANG_EXPORT void addProcesses(const std::vector<std::string>&);
-    GLSLANG_EXPORT void setUniqueId(unsigned long long id);
-    GLSLANG_EXPORT void setOverrideVersion(int version);
-    GLSLANG_EXPORT void setDebugInfo(bool debugInfo);
+    void setEntryPoint(const char* entryPoint);
+    void setSourceEntryPoint(const char* sourceEntryPointName);
+    void addProcesses(const std::vector<std::string>&);
+    void setUniqueId(unsigned long long id);
+    void setOverrideVersion(int version);
+    void setDebugInfo(bool debugInfo);
 
     // IO resolver binding data: see comments in ShaderLang.cpp
-    GLSLANG_EXPORT void setShiftBinding(TResourceType res, unsigned int base);
-    GLSLANG_EXPORT void setShiftSamplerBinding(unsigned int base);  // DEPRECATED: use setShiftBinding
-    GLSLANG_EXPORT void setShiftTextureBinding(unsigned int base);  // DEPRECATED: use setShiftBinding
-    GLSLANG_EXPORT void setShiftImageBinding(unsigned int base);    // DEPRECATED: use setShiftBinding
-    GLSLANG_EXPORT void setShiftUboBinding(unsigned int base);      // DEPRECATED: use setShiftBinding
-    GLSLANG_EXPORT void setShiftUavBinding(unsigned int base);      // DEPRECATED: use setShiftBinding
-    GLSLANG_EXPORT void setShiftCbufferBinding(unsigned int base);  // synonym for setShiftUboBinding
-    GLSLANG_EXPORT void setShiftSsboBinding(unsigned int base);     // DEPRECATED: use setShiftBinding
-    GLSLANG_EXPORT void setShiftBindingForSet(TResourceType res, unsigned int base, unsigned int set);
-    GLSLANG_EXPORT void setResourceSetBinding(const std::vector<std::string>& base);
-    GLSLANG_EXPORT void setAutoMapBindings(bool map);
-    GLSLANG_EXPORT void setAutoMapLocations(bool map);
-    GLSLANG_EXPORT void addUniformLocationOverride(const char* name, int loc);
-    GLSLANG_EXPORT void setUniformLocationBase(int base);
-    GLSLANG_EXPORT void setInvertY(bool invert);
-    GLSLANG_EXPORT void setDxPositionW(bool dxPosW);
-    GLSLANG_EXPORT void setEnhancedMsgs();
+    void setShiftBinding(TResourceType res, unsigned int base);
+    void setShiftSamplerBinding(unsigned int base);  // DEPRECATED: use setShiftBinding
+    void setShiftTextureBinding(unsigned int base);  // DEPRECATED: use setShiftBinding
+    void setShiftImageBinding(unsigned int base);    // DEPRECATED: use setShiftBinding
+    void setShiftUboBinding(unsigned int base);      // DEPRECATED: use setShiftBinding
+    void setShiftUavBinding(unsigned int base);      // DEPRECATED: use setShiftBinding
+    void setShiftCbufferBinding(unsigned int base);  // synonym for setShiftUboBinding
+    void setShiftSsboBinding(unsigned int base);     // DEPRECATED: use setShiftBinding
+    void setShiftBindingForSet(TResourceType res, unsigned int base, unsigned int set);
+    void setResourceSetBinding(const std::vector<std::string>& base);
+    void setAutoMapBindings(bool map);
+    void setAutoMapLocations(bool map);
+    void setBindingsPerResourceType();
+    void addUniformLocationOverride(const char* name, int loc);
+    void setUniformLocationBase(int base);
+    void setInvertY(bool invert);
+    void setDxPositionW(bool dxPosW);
+    void setEnhancedMsgs();
 #ifdef ENABLE_HLSL
-    GLSLANG_EXPORT void setHlslIoMapping(bool hlslIoMap);
-    GLSLANG_EXPORT void setFlattenUniformArrays(bool flatten);
+    void setHlslIoMapping(bool hlslIoMap);
+    void setFlattenUniformArrays(bool flatten);
 #endif
-    GLSLANG_EXPORT void setNoStorageFormat(bool useUnknownFormat);
-    GLSLANG_EXPORT void setNanMinMaxClamp(bool nanMinMaxClamp);
-    GLSLANG_EXPORT void setTextureSamplerTransformMode(EShTextureSamplerTransformMode mode);
-    GLSLANG_EXPORT void addBlockStorageOverride(const char* nameStr, glslang::TBlockStorageClass backing);
+    void setNoStorageFormat(bool useUnknownFormat);
+    void setNanMinMaxClamp(bool nanMinMaxClamp);
+    void setTextureSamplerTransformMode(EShTextureSamplerTransformMode mode);
+    void addBlockStorageOverride(const char* nameStr, glslang::TBlockStorageClass backing);
 
-    GLSLANG_EXPORT void setGlobalUniformBlockName(const char* name);
-    GLSLANG_EXPORT void setAtomicCounterBlockName(const char* name);
-    GLSLANG_EXPORT void setGlobalUniformSet(unsigned int set);
-    GLSLANG_EXPORT void setGlobalUniformBinding(unsigned int binding);
-    GLSLANG_EXPORT void setAtomicCounterBlockSet(unsigned int set);
-    GLSLANG_EXPORT void setAtomicCounterBlockBinding(unsigned int binding);
+    void setGlobalUniformBlockName(const char* name);
+    void setAtomicCounterBlockName(const char* name);
+    void setGlobalUniformSet(unsigned int set);
+    void setGlobalUniformBinding(unsigned int binding);
+    void setAtomicCounterBlockSet(unsigned int set);
+    void setAtomicCounterBlockBinding(unsigned int binding);
 
-    GLSLANG_EXPORT void addSourceText(const char* text, size_t len);
-    GLSLANG_EXPORT void setSourceFile(const char* file);
+    void addSourceText(const char* text, size_t len);
+    void setSourceFile(const char* file);
 
     // For setting up the environment (cleared to nothingness in the constructor).
     // These must be called so that parsing is done for the right source language and
@@ -664,7 +668,7 @@ public:
         virtual void releaseInclude(IncludeResult*) override { }
     };
 
-    GLSLANG_EXPORT bool parse(
+    bool parse(
         const TBuiltInResource*, int defaultVersion, EProfile defaultProfile,
         bool forceDefaultVersionAndProfile, bool forwardCompatible,
         EShMessages, Includer&);
@@ -690,14 +694,14 @@ public:
 
     // NOTE: Doing just preprocessing to obtain a correct preprocessed shader string
     // is not an officially supported or fully working path.
-    GLSLANG_EXPORT bool preprocess(
+    bool preprocess(
         const TBuiltInResource* builtInResources, int defaultVersion,
         EProfile defaultProfile, bool forceDefaultVersionAndProfile,
         bool forwardCompatible, EShMessages message, std::string* outputString,
         Includer& includer);
 
-    GLSLANG_EXPORT const char* getInfoLog();
-    GLSLANG_EXPORT const char* getInfoDebugLog();
+    const char* getInfoLog();
+    const char* getInfoDebugLog();
     EShLanguage getStage() const { return stage; }
     TIntermediate* getIntermediate() const { return intermediate; }
 
@@ -744,16 +748,16 @@ private:
 //
 
 // Data needed for just a single object at the granularity exchanged by the reflection API
-class TObjectReflection {
+class GLSLANG_EXPORT TObjectReflection {
 public:
-    GLSLANG_EXPORT TObjectReflection(const std::string& pName, const TType& pType, int pOffset, int pGLDefineType, int pSize, int pIndex);
+    TObjectReflection(const std::string& pName, const TType& pType, int pOffset, int pGLDefineType, int pSize, int pIndex);
 
     const TType* getType() const { return type; }
-    GLSLANG_EXPORT int getBinding() const;
-    GLSLANG_EXPORT void dump() const;
+    int getBinding() const;
+    void dump() const;
     static TObjectReflection badReflection() { return TObjectReflection(); }
 
-    GLSLANG_EXPORT unsigned int layoutLocation() const;
+    unsigned int layoutLocation() const;
 
     std::string name;
     int offset;
@@ -804,8 +808,7 @@ struct TVarEntryInfo;
 //
 // NOTE: that still limit checks are applied to bindings and sets
 // and may result in an error.
-class TIoMapResolver
-{
+class GLSLANG_EXPORT TIoMapResolver {
 public:
     virtual ~TIoMapResolver() {}
 
@@ -877,41 +880,41 @@ GLSLANG_EXPORT TIoMapper* GetGlslIoMapper();
 //
 // N.B.: Destruct a linked program *before* destructing the shaders linked into it.
 //
-class TProgram {
+class GLSLANG_EXPORT TProgram {
 public:
-    GLSLANG_EXPORT TProgram();
-    GLSLANG_EXPORT virtual ~TProgram();
+    TProgram();
+    virtual ~TProgram();
     void addShader(TShader* shader) { stages[shader->stage].push_back(shader); }
     std::list<TShader*>& getShaders(EShLanguage stage) { return stages[stage]; }
     // Link Validation interface
-    GLSLANG_EXPORT bool link(EShMessages);
-    GLSLANG_EXPORT const char* getInfoLog();
-    GLSLANG_EXPORT const char* getInfoDebugLog();
+    bool link(EShMessages);
+    const char* getInfoLog();
+    const char* getInfoDebugLog();
 
     TIntermediate* getIntermediate(EShLanguage stage) const { return intermediate[stage]; }
 
     // Reflection Interface
 
     // call first, to do liveness analysis, index mapping, etc.; returns false on failure
-    GLSLANG_EXPORT bool buildReflection(int opts = EShReflectionDefault);
-    GLSLANG_EXPORT unsigned getLocalSize(int dim) const;                  // return dim'th local size
-    GLSLANG_EXPORT unsigned getTileShadingRateQCOM(int dim) const;        // return dim'th tile shading rate QCOM
-    GLSLANG_EXPORT int getReflectionIndex(const char *name) const;
-    GLSLANG_EXPORT int getReflectionPipeIOIndex(const char* name, const bool inOrOut) const;
-    GLSLANG_EXPORT int getNumUniformVariables() const;
-    GLSLANG_EXPORT const TObjectReflection& getUniform(int index) const;
-    GLSLANG_EXPORT int getNumUniformBlocks() const;
-    GLSLANG_EXPORT const TObjectReflection& getUniformBlock(int index) const;
-    GLSLANG_EXPORT int getNumPipeInputs() const;
-    GLSLANG_EXPORT const TObjectReflection& getPipeInput(int index) const;
-    GLSLANG_EXPORT int getNumPipeOutputs() const;
-    GLSLANG_EXPORT const TObjectReflection& getPipeOutput(int index) const;
-    GLSLANG_EXPORT int getNumBufferVariables() const;
-    GLSLANG_EXPORT const TObjectReflection& getBufferVariable(int index) const;
-    GLSLANG_EXPORT int getNumBufferBlocks() const;
-    GLSLANG_EXPORT const TObjectReflection& getBufferBlock(int index) const;
-    GLSLANG_EXPORT int getNumAtomicCounters() const;
-    GLSLANG_EXPORT const TObjectReflection& getAtomicCounter(int index) const;
+    bool buildReflection(int opts = EShReflectionDefault);
+    unsigned getLocalSize(int dim) const;                  // return dim'th local size
+    unsigned getTileShadingRateQCOM(int dim) const;        // return dim'th tile shading rate QCOM
+    int getReflectionIndex(const char *name) const;
+    int getReflectionPipeIOIndex(const char* name, const bool inOrOut) const;
+    int getNumUniformVariables() const;
+    const TObjectReflection& getUniform(int index) const;
+    int getNumUniformBlocks() const;
+    const TObjectReflection& getUniformBlock(int index) const;
+    int getNumPipeInputs() const;
+    const TObjectReflection& getPipeInput(int index) const;
+    int getNumPipeOutputs() const;
+    const TObjectReflection& getPipeOutput(int index) const;
+    int getNumBufferVariables() const;
+    const TObjectReflection& getBufferVariable(int index) const;
+    int getNumBufferBlocks() const;
+    const TObjectReflection& getBufferBlock(int index) const;
+    int getNumAtomicCounters() const;
+    const TObjectReflection& getAtomicCounter(int index) const;
 
     // Legacy Reflection Interface - expressed in terms of above interface
 
@@ -978,19 +981,19 @@ public:
     // returns a TType*
     const TType *getAttributeTType(int index) const    { return getPipeInput(index).getType(); }
 
-    GLSLANG_EXPORT void dumpReflection();
+    void dumpReflection();
 
     // Get the IO resolver to use for mapIO
-    GLSLANG_EXPORT TIoMapResolver* getGlslIoResolver(EShLanguage stage);
+    TIoMapResolver* getGlslIoResolver(EShLanguage stage);
 
     // I/O mapping: apply base offsets and map live unbound variables
     // If resolver is not provided it uses the previous approach
     // and respects auto assignment and offsets.
-    GLSLANG_EXPORT bool mapIO(TIoMapResolver* pResolver = nullptr, TIoMapper* pIoMapper = nullptr);
+    bool mapIO(TIoMapResolver* pResolver = nullptr, TIoMapper* pIoMapper = nullptr);
 
 protected:
-    GLSLANG_EXPORT bool linkStage(EShLanguage, EShMessages);
-    GLSLANG_EXPORT bool crossStageCheck(EShMessages);
+    bool linkStage(EShLanguage, EShMessages);
+    bool crossStageCheck(EShMessages);
 
     TPoolAllocator* pool;
     std::list<TShader*> stages[EShLangCount];

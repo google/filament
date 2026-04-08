@@ -182,6 +182,8 @@ void TransformationInlineFunction::Apply(
     }
 
     auto* cloned_block = block.Clone(ir_context);
+    // TODO: Handle the nullptr.
+    assert(cloned_block);
     cloned_block = caller_function->InsertBasicBlockBefore(
         std::unique_ptr<opt::BasicBlock>(cloned_block), successor_block);
     cloned_block->GetLabel()->SetResultId(result_id_map.at(cloned_block->id()));

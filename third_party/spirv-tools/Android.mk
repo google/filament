@@ -56,6 +56,7 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_extensions.cpp \
 		source/val/validate_execution_limitations.cpp \
 		source/val/validate_function.cpp \
+		source/val/validate_graph.cpp \
 		source/val/validate_id.cpp \
 		source/val/validate_image.cpp \
 		source/val/validate_interfaces.cpp \
@@ -67,6 +68,7 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_mode_setting.cpp \
 		source/val/validate_layout.cpp \
 		source/val/validate_literals.cpp \
+		source/val/validate_logical_pointers.cpp \
 		source/val/validate_logicals.cpp \
 		source/val/validate_non_uniform.cpp \
 		source/val/validate_primitives.cpp \
@@ -127,6 +129,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/fold_spec_constant_op_and_composite_pass.cpp \
 		source/opt/freeze_spec_constant_value_pass.cpp \
 		source/opt/function.cpp \
+		source/opt/graph.cpp \
 		source/opt/graphics_robust_access_pass.cpp \
 		source/opt/if_conversion.cpp \
 		source/opt/inline_pass.cpp \

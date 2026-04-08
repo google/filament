@@ -61,7 +61,7 @@ namespace spv {
         #include "GLSL.ext.QCOM.h"
     }
 }
-const char* GlslStd450DebugNames[spv::GLSLstd450Count];
+static const char* GlslStd450DebugNames[spv::GLSLstd450Count];
 
 namespace spv {
 
@@ -414,6 +414,7 @@ void SpirvStream::disassembleInstruction(Id resultId, Id /*typeId*/, Op opCode, 
                 idDescriptor[resultId] = "struct";
                 break;
             case Op::OpTypePointer:
+            case Op::OpTypeUntypedPointerKHR:
                 idDescriptor[resultId] = "ptr";
                 break;
             case Op::OpTypeVector:

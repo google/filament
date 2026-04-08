@@ -75,6 +75,13 @@ bool RAnsSymbolDecoder<unique_symbols_bit_length_t>::Create(
       return false;
     }
   }
+  // Check that decoded number of symbols is not unreasonably high. Remaining
+  // buffer size must be at least |num_symbols| / 64 bytes to contain the
+  // probability table. The |prob_data| below is one byte but it can be
+  // theoretically stored for each 64th symbol.
+  if (num_symbols_ / 64 > buffer->remaining_size()) {
+    return false;
+  }
   probability_table_.resize(num_symbols_);
   if (num_symbols_ == 0) {
     return true;

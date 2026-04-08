@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FF202020"
     android:padding="8dp">
 
     <!-- Header with title and close button -->
@@ -20,14 +19,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Test Result"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:textAppearance="?attr/textAppearanceTitleLarge"
             android:textStyle="bold" />
         <ImageButton
             android:id="@+id/btn_close"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="?attr/colorOnSurface"
             android:src="@android:drawable/ic_menu_close_clear_cancel" />
     </LinearLayout>
 
@@ -38,8 +37,8 @@
         android:layout_height="wrap_content"
         android:gravity="start"
         android:text="Rendered"
-        android:textColor="#BBBBBB"
-        android:textSize="14sp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?android:attr/textColorSecondary"
         android:paddingBottom="8dp" />
 
     <!-- Image Area with Arrows -->
@@ -78,7 +77,7 @@
             android:layout_height="64dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_media_previous"
-            app:tint="#FFFFFF" />
+            app:tint="?attr/colorOnSurface" />
 
         <ImageButton
             android:id="@+id/btn_reset"
@@ -87,7 +86,7 @@
             android:layout_marginHorizontal="16dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_revert"
-            app:tint="#FFFFFF" />
+            app:tint="?attr/colorOnSurface" />
 
         <ImageButton
             android:id="@+id/btn_next"
@@ -95,7 +94,7 @@
             android:layout_height="64dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_media_next"
-            app:tint="#FFFFFF" />
+            app:tint="?attr/colorOnSurface" />
     </LinearLayout>
 
     <!-- Enhancement Controls (only for diff images) -->
@@ -114,8 +113,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Enhance: 1.0x"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
             android:minWidth="100dp" />
 
         <SeekBar

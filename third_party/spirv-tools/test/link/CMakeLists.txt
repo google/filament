@@ -24,5 +24,6 @@ add_spvtools_unittest(TARGET link
        partial_linkage_test.cpp
        unique_ids_test.cpp
        type_match_test.cpp
+       function_variants.cpp
   LIBS SPIRV-Tools-opt SPIRV-Tools-link
 )
