@@ -36,6 +36,9 @@
 #include <new>
 #include <string_view>
 #include <utility>
+#if defined(__ANDROID__)
+#    include <android/set_abort_message.h>
+#endif
 
 namespace utils {
 
@@ -221,6 +224,13 @@ void TPanic<T>::panic(char const* function, char const* file, int line, char con
 
     // Call the user provided handler
     UserPanicHandler::get().call(e);
+
+    // Register the full panic message as the tombstone "Abort message:" so that it
+    // appears in crash reports collected by Google Play Console and other tools that
+    // read tombstones from field devices (which never have access to logcat output).
+#if defined(__ANDROID__)
+    android_set_abort_message(e.what());
+#endif
 
     // if exceptions are enabled, throw now.
 #ifdef __EXCEPTIONS
