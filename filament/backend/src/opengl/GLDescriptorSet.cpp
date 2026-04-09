@@ -185,11 +185,13 @@ void GLDescriptorSet::update(OpenGLState& gl, HandleAllocatorGL& handleAllocator
             }
 
             // GLES3.x specification forbids depth textures to be filtered.
-            bool const depthTextureNoPcf = isDepthFormat(t->format) &&
+            bool const isDepthFmt = t && isDepthFormat(t->format);
+            bool const depthTextureNoPcf = isDepthFmt &&
                     params.compareMode == SamplerCompareMode::NONE;
 
             // GLES3.x may not support filtering of fp32 textures
-            bool const fp32TextureNotFilterable = isFp32ColorFormat(t->format) &&
+            bool const isFp32Fmt = t && isFp32ColorFormat(t->format);
+            bool const fp32TextureNotFilterable = isFp32Fmt &&
                     !gl.context().ext.OES_texture_float_linear;
 
             if (t && (depthTextureNoPcf || fp32TextureNotFilterable)) {
