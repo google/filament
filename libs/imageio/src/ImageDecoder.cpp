@@ -376,8 +376,14 @@ LinearImage PSDDecoder::decode() {
         if (width == 0 || height == 0) {
             throw std::runtime_error("invalid PSD dimensions: width and height must be non-zero");
         }
-        if (width > 300000 || height > 300000) {
-            throw std::runtime_error("PSD dimensions exceed maximum allowed size");
+
+        // According to the PSD format specification, the maximum supported dimension 
+        // for a PSD file is 30,000 pixels. Images larger than 30,000 pixels require 
+        // the PSB (Photoshop Big) format, which is currently not supported.
+        // Enforcing this limit natively prevents integer overflow vulnerabilities 
+        // during subsequent memory allocation.
+        if (width > 30000 || height > 30000) {
+            throw std::runtime_error("PSD dimensions exceed maximum allowed size (30,000 pixels)");
         }
 
         uint32_t length;
