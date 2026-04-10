@@ -231,14 +231,15 @@ class ValidationInputManager(private val context: Context) {
             }
         }
 
-        // Copy DamagedHelmet.glb
+        // Copy models
         val modelsDir = File(filesDir, "models")
         modelsDir.mkdirs()
-        val modelOut = File(modelsDir, "helmet.glb")
-
-        assetManager.open("models/helmet.glb").use { input ->
-            FileOutputStream(modelOut).use { output ->
-                input.copyTo(output)
+        assetManager.list("models")?.forEach { modelFileName ->
+            val modelOut = File(modelsDir, modelFileName)
+            assetManager.open("models/$modelFileName").use { input ->
+                FileOutputStream(modelOut).use { output ->
+                    input.copyTo(output)
+                }
             }
         }
 
@@ -251,9 +252,15 @@ class ValidationInputManager(private val context: Context) {
 
         val models = configJson.getJSONObject("models")
 
-        // Ensure the default model points to the extracted file
-        // We can use absolute path to be safe since we know where it is now.
-        models.put("DamagedHelmet", modelOut.absolutePath)
+        // Update all model paths to point to the extracted files in the models directory
+        val keys = models.keys()
+        val newModels = JSONObject()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val fileName = models.getString(key)
+            newModels.put(key, java.io.File(modelsDir, fileName).absolutePath)
+        }
+        configJson.put("models", newModels)
 
         configOut.writeText(configJson.toString(2))
 

@@ -231,10 +231,11 @@ class ValidationRunner(
                         content.renderer = mv.renderer
                         content.scene = mv.scene
                         content.lightManager = mv.engine.lightManager
-
                         // Tick
                         val deltaTime = 1.0f / 60.0f
                         engine.tick(mv.engine, content, deltaTime)
+
+                        applyAnimation(mv, currentTestConfig!!.rendering)
 
                         frameCounter++
                         if (engine.shouldClose()) {
@@ -246,6 +247,30 @@ class ValidationRunner(
                     }
                 }
             }
+        }
+    }
+
+    private fun applyAnimation(mv: com.google.android.filament.utils.ModelViewer, rendering: JSONObject) {
+        val animator = mv.animator ?: return
+        if (animator.animationCount == 0) return
+
+        var enabled = false
+        var time = 0.0f
+
+        if (rendering.has("animation")) {
+            val anim = rendering.optJSONObject("animation")
+            if (anim != null) {
+                enabled = anim.optBoolean("enabled", false)
+                time = anim.optDouble("time", 0.0).toFloat()
+            }
+        } else {
+            enabled = rendering.optBoolean("animation.enabled", false)
+            time = rendering.optDouble("animation.time", 0.0).toFloat()
+        }
+
+        if (enabled) {
+            animator.applyAnimation(0, time)
+            animator.updateBoneMatrices()
         }
     }
 

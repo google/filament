@@ -5,7 +5,9 @@
     "vulkan"
   ],
   "models": {
-    "DamagedHelmet": "helmet.glb"
+    "DamagedHelmet": "DamagedHelmet.glb",
+    "Fox": "Fox.glb",
+    "TransmissionRoughnessTest": "TransmissionRoughnessTest.glb"
   },
   "presets": [
     {
@@ -20,7 +22,7 @@
           "center": [
             0,
             0,
-            0
+            -0.8
           ],
           "lookAt": [
             0,
@@ -81,7 +83,7 @@
       "tolerance": {
         "maxAbsDiff": 0.09,
         "shiftRadius": 2,
-        "blurRadius": 3,
+        "blurRadius": 4,
         "maxFailingPixelsFraction": 0.0005
       },
       "rendering": {}
@@ -573,6 +575,36 @@
       "rendering": {
         "view.antiAliasing": "FXAA",
         "view.dof.enabled": true
+      }
+    },
+    {
+      "name": "fox_animation",
+      "models": [
+        "Fox"
+      ],
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "animation": {
+          "enabled": true,
+          "time": 0.5
+        }
+      }
+    },
+    {
+      "name": "transmission",
+      "models": [
+        "TransmissionRoughnessTest"
+      ],
+      "apply_presets": [
+        "base"
+      ],
+      "rendering": {
+        "animation": {
+          "enabled": true,
+          "time": 0.5
+        }
       }
     }
   ]
