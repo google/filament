@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMENT_POSTPROCESSMANAGER_H
 #define TNT_FILAMENT_POSTPROCESSMANAGER_H
 
-#include <optional>
 
 #include "backend/DriverApiForward.h"
 
@@ -55,6 +54,7 @@
 #include <array>
 #include <random>
 #include <string_view>
+#include <optional>
 
 #include <stddef.h>
 #include <stdint.h>
