@@ -513,6 +513,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             validationRunner = ValidationRunner(this, surfaceView, config, resultManager!!, backendFilter)
             validationRunner?.callback = this
             validationRunner?.generateGoldens = input.generateGoldens
+            validationRunner?.testFilter = input.testFilter
             validationRunner?.start()
 
         } catch (e: Exception) {

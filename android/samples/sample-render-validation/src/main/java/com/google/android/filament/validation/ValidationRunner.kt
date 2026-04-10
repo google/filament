@@ -65,7 +65,22 @@ class ValidationRunner(
 
         // Sort by backend then model. This tries to minimize the number of times we need to
         // recreate the Engine, and then the ModelViewer.
-        expanded.sortedWith(compareBy({ it.first.backend }, { it.second }))
+        val sorted = expanded.sortedWith(compareBy({ it.first.backend }, { it.second }))
+
+        val filter = testFilter
+        if (filter != null && filter.count { it == '.' } == 2) {
+            val parts = filter.split(".")
+            val nameRegex = ("^" + parts[0].replace("*", ".*") + "$").toRegex()
+            val backendRegex = ("^" + parts[1].replace("*", ".*") + "$").toRegex()
+            val modelRegex = ("^" + parts[2].replace("*", ".*") + "$").toRegex()
+
+            sorted.filter { (test, model) ->
+                val testBackend = test.backend ?: "opengl"
+                test.name.matches(nameRegex) && testBackend.matches(backendRegex) && model.matches(modelRegex)
+            }
+        } else {
+            sorted
+        }
     }
 
     enum class State {
@@ -86,6 +101,7 @@ class ValidationRunner(
 
     var callback: Callback? = null
     var generateGoldens: Boolean = false
+    var testFilter: String? = null
 
     fun start() {
         if (sortedTests.isEmpty()) {
