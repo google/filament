@@ -39,9 +39,9 @@ bool MaterialCache::MaterialKey::operator==(MaterialKey const& rhs) const noexce
     return parser == rhs.parser;
 }
 
-MaterialCache::MaterialCache()
-        : mDefinitions("MaterialCache::mDefinitions", 0),
-          mPrograms("MaterialCache::mPrograms", 0) {}
+MaterialCache::MaterialCache(uint32_t materialCapacity, uint32_t programCapacity)
+        : mDefinitions("MaterialCache::mDefinitions", materialCapacity),
+          mPrograms("MaterialCache::mPrograms", programCapacity) {}
 
 MaterialCache::~MaterialCache() {
     assert_invariant(mDefinitions.empty());

@@ -298,7 +298,7 @@ class ValidationRunner(
          } else {
              Log.w("ValidationRunner", "Golden not found for $testFullName. Searched in: ${searchPaths.joinToString { it.absolutePath }}")
              // Fallback to old behavior for reference if everything else fails
-             goldenFile = modelParent.parentFile?.resolve("golden/${testFullName}.png") ?: File("nonexistent")
+             goldenFile = modelParent.parentFile?.resolve("golden/${testFullName}.png") ?: File(modelParent, "golden/${testFullName}.png")
          }
 
          Thread {

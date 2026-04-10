@@ -90,16 +90,23 @@ TEST_F(FilaflatSecurityTest, DictionaryTextOOBRead) {
 // 2. Heap Buffer Overflow writing dictionary arrays to undersized output buffers
 TEST_F(FilaflatSecurityTest, MaterialChunkHeapOverflow) {
     std::vector<uint8_t> payload;
+    write16(payload, 0); // mSharedStrings
+    write16(payload, 0); // mVertexStrings
+    write16(payload, 0); // mFragmentStrings
+    write16(payload, 0); // mComputeStrings
     write64(payload, 1); // numShaders
     payload.push_back(1); // model
     payload.push_back(0); // variant
     payload.push_back(0); // stage
-    write32(payload, 15); // offset (8 + 1 + 1 + 1 + 4 = 15)
+    write32(payload, 23); // offset (4*2 + 8 + 1 + 1 + 1 + 4 = 23)
     
     // Shader content layout
     write32(payload, 4);  // shaderSize (vulnerable tiny size)
     write32(payload, 1);  // lineCount = 1
-    write16(payload, 0);  // lineIndex = 0
+    write32(payload, 0);  // extLength
+    write32(payload, 0);  // baseLength
+    write32(payload, 0);  // numericLength
+    payload.push_back(0);  // lineIndex = 0
 
     std::vector<uint8_t> fileData;
     write64(fileData, (uint64_t)filamat::ChunkType::MaterialGlsl);
@@ -132,14 +139,21 @@ TEST_F(FilaflatSecurityTest, MaterialChunkHeapOverflow) {
 // 3. Out of Bounds Read via index mapping evasion (Text mode)
 TEST_F(FilaflatSecurityTest, MaterialChunkOOBReadText) {
     std::vector<uint8_t> payload;
+    write16(payload, 0); // mSharedStrings
+    write16(payload, 0); // mVertexStrings
+    write16(payload, 0); // mFragmentStrings
+    write16(payload, 0); // mComputeStrings
     write64(payload, 1); // numShaders
     payload.push_back(1); // model
     payload.push_back(0); // variant
     payload.push_back(0); // stage
-    write32(payload, 15); // offset (8 + 1 + 1 + 1 + 4 = 15)
+    write32(payload, 23); // offset
     write32(payload, 100);  // shaderSize 
     write32(payload, 1);  // lineCount = 1
-    write16(payload, 9999);  // lineIndex = 9999 (VULNERABLE ACCESS)
+    write32(payload, 0);  // extLength
+    write32(payload, 0);  // baseLength
+    write32(payload, 0);  // numericLength
+    payload.push_back(1);  // lineIndex = 1 (OOB for empty dict)
 
     std::vector<uint8_t> fileData;
     write64(fileData, (uint64_t)filamat::ChunkType::MaterialGlsl);

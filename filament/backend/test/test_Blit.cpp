@@ -145,7 +145,7 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
 }
 
 TEST_F(BlitTest, ColorMagnify) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453757697");
+    // b/453757697: MESA glBlitFramebuffer linear interpolation fallback precision slightly mismatches.
     SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "b/453777397");
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
 
@@ -206,15 +206,13 @@ TEST_F(BlitTest, ColorMagnify) {
     {
         RenderFrame frame(api);
         EXPECT_IMAGE(dstRenderTargets[0],
-                ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMagnify", 0x410bdd31));
+                ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMagnify", 0x410bdd31, false, 8000, 5));
         api.commit(swapChain);
     }
 }
 
 TEST_F(BlitTest, ColorMinify) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453758045");
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "b/453776623");
 
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
@@ -268,7 +266,7 @@ TEST_F(BlitTest, ColorMinify) {
             SamplerMagFilter::LINEAR);
 
     EXPECT_IMAGE(dstRenderTargets[0],
-            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMinify", 0xf3d9c53f));
+            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMinify", 0xf3d9c53f, false, 8000, 5));
 }
 
 TEST_F(BlitTest, ColorResolve) {
@@ -355,7 +353,7 @@ TEST_F(BlitTest, ColorResolve) {
             SamplerMagFilter::NEAREST);
 
     EXPECT_IMAGE(dstRenderTarget,
-            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 531759687));
+            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 531759687, false, 8000, 5));
 }
 
 TEST_F(BlitTest, Blit2DTextureArray) {

@@ -114,9 +114,7 @@ void main() {
 #if MATERIAL_FEATURE_LEVEL == 0
     if (CONFIG_SRGB_SWAPCHAIN_EMULATION) {
         if (frameUniforms.rec709 != 0) {
-            fragColor.r = pow(fragColor.r, 0.45454);
-            fragColor.g = pow(fragColor.g, 0.45454);
-            fragColor.b = pow(fragColor.b, 0.45454);
+            fragColor.rgb = pow(fragColor.rgb, vec3(0.45454));
         }
     }
 #endif
