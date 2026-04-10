@@ -28,6 +28,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center_horizontal"
+        android:clipChildren="false"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
         android:paddingTop="20dp"
@@ -168,13 +169,30 @@
             android:paddingTop="0dp"
             android:paddingBottom="12dp" />
 
-        <com.google.android.filament.validation.TestProgressBar
-            android:id="@+id/test_progress"
+        <FrameLayout
+            android:id="@+id/progress_container"
             android:layout_width="200dp"
-            android:layout_height="4dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:layout_marginBottom="4dp"
-            android:visibility="gone" />
+            android:clipChildren="false"
+            android:visibility="gone">
+
+            <com.google.android.filament.validation.TestProgressBar
+                android:id="@+id/test_progress"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginBottom="8dp" />
+
+            <ImageView
+                android:id="@+id/progress_triangle"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_gravity="bottom"
+                android:layout_marginTop="4dp"
+                android:scaleType="fitXY"
+                android:src="@drawable/ic_triangle_up" />
+        </FrameLayout>
 
         <TextView
             android:id="@+id/test_summary_text"
@@ -184,9 +202,18 @@
             android:layout_marginBottom="12dp"
             android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/device_info_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="10sp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
     </LinearLayout>
 
     <ScrollView
+        android:id="@+id/scroll_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/controls_container"
