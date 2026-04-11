@@ -53,8 +53,8 @@ function print_help {
     echo "    -e"
     echo "        Enable EGL on Linux support for desktop builds."
     echo "    -l"
-    echo "        Build arm64/x86_64 universal libraries."
-    echo "        For iOS, this builds universal binaries for devices and the simulator (implies -s)."
+    echo "        Build universal libraries/frameworks."
+    echo "        For iOS, this builds XCFrameworks for devices and the simulator (implies -s)."
     echo "        For macOS, this builds universal binaries for both Apple silicon and Intel-based Macs."
     echo "    -k sample1,sample2,..."
     echo "        When building for Android, also build select sample APKs."
@@ -685,9 +685,9 @@ function build_ios_target {
     local platform=$3
 
     echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
-    mkdir -p "out/cmake-ios-${lc_target}-${arch}"
+    mkdir -p "out/cmake-ios-${lc_target}-${arch}-${platform}"
 
-    pushd "out/cmake-ios-${lc_target}-${arch}" > /dev/null
+    pushd "out/cmake-ios-${lc_target}-${arch}-${platform}" > /dev/null
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
@@ -746,37 +746,66 @@ function build_ios {
     # only arm64 devices support OpenGL 3.0 / Metal
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
+        local out_dir="out/ios-debug/filament"
+        local lib_dir="${out_dir}/lib"
+        
         build_ios_target "Debug" "arm64" "iphoneos"
+        
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
+            build_ios_target "Debug" "arm64" "iphonesimulator"
             build_ios_target "Debug" "x86_64" "iphonesimulator"
+            
+            # Create a universal library for the simulator
+            build/ios/create-universal-libs.sh \
+                -o "${lib_dir}/universal" \
+                "${lib_dir}/arm64-iphonesimulator" \
+                "${lib_dir}/x86_64-iphonesimulator"
         fi
 
-        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
-            build/ios/create-universal-libs.sh \
-                -o out/ios-debug/filament/lib/universal \
-                out/ios-debug/filament/lib/arm64 \
-                out/ios-debug/filament/lib/x86_64
-            rm -rf out/ios-debug/filament/lib/arm64
-            rm -rf out/ios-debug/filament/lib/x86_64
+        # Always create XCFrameworks
+        local xcframework_paths=("${lib_dir}/arm64-iphoneos")
+        if [[ -d "${lib_dir}/universal" ]]; then
+            xcframework_paths+=("${lib_dir}/universal")
+        elif [[ -d "${lib_dir}/arm64-iphonesimulator" ]]; then
+            # If we built only one simulator arch but not both
+            xcframework_paths+=("${lib_dir}/arm64-iphonesimulator")
+        elif [[ -d "${lib_dir}/x86_64-iphonesimulator" ]]; then
+            xcframework_paths+=("${lib_dir}/x86_64-iphonesimulator")
         fi
+
+        build/ios/create-xc-frameworks.sh -o "${lib_dir}" "${xcframework_paths[@]}"
 
         archive_ios "Debug"
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+        local out_dir="out/ios-release/filament"
+        local lib_dir="${out_dir}/lib"
+
         build_ios_target "Release" "arm64" "iphoneos"
+        
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
+            build_ios_target "Release" "arm64" "iphonesimulator"
             build_ios_target "Release" "x86_64" "iphonesimulator"
+            
+            # Create a universal library for the simulator
+            build/ios/create-universal-libs.sh \
+                -o "${lib_dir}/universal" \
+                "${lib_dir}/arm64-iphonesimulator" \
+                "${lib_dir}/x86_64-iphonesimulator"
         fi
 
-        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
-            build/ios/create-universal-libs.sh \
-                -o out/ios-release/filament/lib/universal \
-                out/ios-release/filament/lib/arm64 \
-                out/ios-release/filament/lib/x86_64
-            rm -rf out/ios-release/filament/lib/arm64
-            rm -rf out/ios-release/filament/lib/x86_64
+        # Always create XCFrameworks
+        local xcframework_paths=("${lib_dir}/arm64-iphoneos")
+        if [[ -d "${lib_dir}/universal" ]]; then
+            xcframework_paths+=("${lib_dir}/universal")
+        elif [[ -d "${lib_dir}/arm64-iphonesimulator" ]]; then
+            xcframework_paths+=("${lib_dir}/arm64-iphonesimulator")
+        elif [[ -d "${lib_dir}/x86_64-iphonesimulator" ]]; then
+            xcframework_paths+=("${lib_dir}/x86_64-iphonesimulator")
         fi
+
+        build/ios/create-xc-frameworks.sh -o "${lib_dir}" "${xcframework_paths[@]}"
 
         archive_ios "Release"
     fi
