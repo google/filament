@@ -66,27 +66,27 @@
 		0CDCD26337640C57D07E41ED /* FilamentView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
 		2620C967534D81CFFAB5D3FF /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		350DC65C7EE8D98D8FE181DC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		3604FD7E74C46AC4FAB12BFA /* libutils.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libutils.xcframework; path = "../../../out/ios-debug/filament/lib/libutils.xcframework"; sourceTree = "<group>"; };
+		3604FD7E74C46AC4FAB12BFA /* libutils.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libutils.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libutils.xcframework"; sourceTree = "<group>"; };
 		3BB2247EC7FE4EFB2C3ED10A /* hello-triangle.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-triangle.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		41033B581E89DF4B33A2EB53 /* bakedColor.mat */ = {isa = PBXFileReference; path = bakedColor.mat; sourceTree = "<group>"; };
-		44224172FC58D500DEFE7A7D /* libgeometry.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libgeometry.xcframework; path = "../../../out/ios-debug/filament/lib/libgeometry.xcframework"; sourceTree = "<group>"; };
+		44224172FC58D500DEFE7A7D /* libgeometry.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libgeometry.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libgeometry.xcframework"; sourceTree = "<group>"; };
 		45FE9476D47ECFFEA65D7146 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		524293A0A8CDE9047347EF48 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		727785EA0395D939E6804AF4 /* libsmol-v.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "libsmol-v.xcframework"; path = "../../../out/ios-debug/filament/lib/libsmol-v.xcframework"; sourceTree = "<group>"; };
+		727785EA0395D939E6804AF4 /* libsmol-v.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "libsmol-v.xcframework"; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libsmol-v.xcframework"; sourceTree = "<group>"; };
 		761A2C7D6295697614AD3434 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		8D062C70EFE8916B7656BB4E /* libzstd.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libzstd.xcframework; path = "../../../out/ios-debug/filament/lib/libzstd.xcframework"; sourceTree = "<group>"; };
-		AC6CC7E260B2F20D0EA171E2 /* libktxreader.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libktxreader.xcframework; path = "../../../out/ios-debug/filament/lib/libktxreader.xcframework"; sourceTree = "<group>"; };
+		8D062C70EFE8916B7656BB4E /* libzstd.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libzstd.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libzstd.xcframework"; sourceTree = "<group>"; };
+		AC6CC7E260B2F20D0EA171E2 /* libktxreader.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libktxreader.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libktxreader.xcframework"; sourceTree = "<group>"; };
 		C16E9A84F33BDFAEDC1E4837 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		C311F8DEBEFEB185F0A7E4CC /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		C4952E6805DB5E7B871DF61C /* libfilaflat.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilaflat.xcframework; path = "../../../out/ios-debug/filament/lib/libfilaflat.xcframework"; sourceTree = "<group>"; };
+		C4952E6805DB5E7B871DF61C /* libfilaflat.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilaflat.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilaflat.xcframework"; sourceTree = "<group>"; };
 		CDBB6BE341D1C708FCB68750 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
-		D0F16339A5D96AB6AAF03A4C /* libabseil.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libabseil.xcframework; path = "../../../out/ios-debug/filament/lib/libabseil.xcframework"; sourceTree = "<group>"; };
-		DA668D9E9DC67AD1FA16422A /* libfilabridge.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilabridge.xcframework; path = "../../../out/ios-debug/filament/lib/libfilabridge.xcframework"; sourceTree = "<group>"; };
-		E36164E9425CAABBE17EF153 /* libfilament.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilament.xcframework; path = "../../../out/ios-debug/filament/lib/libfilament.xcframework"; sourceTree = "<group>"; };
+		D0F16339A5D96AB6AAF03A4C /* libabseil.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libabseil.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libabseil.xcframework"; sourceTree = "<group>"; };
+		DA668D9E9DC67AD1FA16422A /* libfilabridge.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilabridge.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilabridge.xcframework"; sourceTree = "<group>"; };
+		E36164E9425CAABBE17EF153 /* libfilament.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilament.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilament.xcframework"; sourceTree = "<group>"; };
 		E36D17DB3F44ADF8EFBEDBAF /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		E56C70616FF30C50DFA8238B /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		ED0BAF80B49E29533E492727 /* libibl.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libibl.xcframework; path = "../../../out/ios-debug/filament/lib/libibl.xcframework"; sourceTree = "<group>"; };
-		F3BA0FF5017E4FECD94CF3F2 /* libbackend.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libbackend.xcframework; path = "../../../out/ios-debug/filament/lib/libbackend.xcframework"; sourceTree = "<group>"; };
+		ED0BAF80B49E29533E492727 /* libibl.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libibl.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libibl.xcframework"; sourceTree = "<group>"; };
+		F3BA0FF5017E4FECD94CF3F2 /* libbackend.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libbackend.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libbackend.xcframework"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -257,7 +257,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Compile bakedColor material.\n\nHOST_TOOLS_PATH=\"${HOST_TOOLS_PATH:-../../../out/release/filament/bin}\"\nmatc_path=`find ${HOST_TOOLS_PATH} -name matc -type f | head -n 1`\n\nif [[ ! -e \"${matc_path}\" ]]; then\n  echo \"No matc binary could be found in ${HOST_TOOLS_PATH}.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nmkdir -p \"${PROJECT_DIR}/generated/\"\n\"${matc_path}\" \\\n    --api all \\\n    -f header \\\n    -o \"${PROJECT_DIR}/generated/bakedColor.inc\" \\\n    \"${PROJECT_DIR}/Materials/bakedColor.mat\"\n\n# FilamentView.mm includes bakedColor.filamat, so touch it to force Xcode to\n# recompile it.\ntouch \"${PROJECT_DIR}/hello-triangle/FilamentView.mm\"\n";
+			shellScript = "# Compile bakedColor material.\n\nHOST_TOOLS_PATH=\"${HOST_TOOLS_PATH:-../../../out/release/filament/bin}\"\nmatc_path=`find -L ${HOST_TOOLS_PATH} -name matc -type f | head -n 1`\n\nif [[ ! -e \"${matc_path}\" ]]; then\n  echo \"No matc binary could be found in ${HOST_TOOLS_PATH}.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nmkdir -p \"${PROJECT_DIR}/generated/\"\n\"${matc_path}\" \\\n    --api all \\\n    -f header \\\n    -o \"${PROJECT_DIR}/generated/bakedColor.inc\" \\\n    \"${PROJECT_DIR}/Materials/bakedColor.mat\"\n\n# FilamentView.mm includes bakedColor.filamat, so touch it to force Xcode to\n# recompile it.\ntouch \"${PROJECT_DIR}/hello-triangle/FilamentView.mm\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -302,16 +302,17 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FILAMENT_OUT_NAME = "ios-debug";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"../../../out/ios-debug/filament/lib\"",
+					"\"../../../out/$(FILAMENT_OUT_NAME)/filament/lib\"",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_OPENGL=1",
 					"$(inherited)",
 				);
 				HEADER_SEARCH_PATHS = (
-					"../../out/ios-debug/filament/include",
+					"$(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/include",
 					generated,
 				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
@@ -396,16 +397,17 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FILAMENT_OUT_NAME = "ios-release";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"../../../out/ios-debug/filament/lib\"",
+					"\"../../../out/$(FILAMENT_OUT_NAME)/filament/lib\"",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_METAL=1",
 					"$(inherited)",
 				);
 				HEADER_SEARCH_PATHS = (
-					"../../out/ios-release/filament/include",
+					"$(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/include",
 					generated,
 				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
@@ -428,16 +430,17 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FILAMENT_OUT_NAME = "ios-release";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"../../../out/ios-debug/filament/lib\"",
+					"\"../../../out/$(FILAMENT_OUT_NAME)/filament/lib\"",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_OPENGL=1",
 					"$(inherited)",
 				);
 				HEADER_SEARCH_PATHS = (
-					"../../out/ios-release/filament/include",
+					"$(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/include",
 					generated,
 				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
@@ -570,16 +573,17 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FILAMENT_OUT_NAME = "ios-debug";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"../../../out/ios-debug/filament/lib\"",
+					"\"../../../out/$(FILAMENT_OUT_NAME)/filament/lib\"",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_METAL=1",
 					"$(inherited)",
 				);
 				HEADER_SEARCH_PATHS = (
-					"../../out/ios-debug/filament/include",
+					"$(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/include",
 					generated,
 				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
