@@ -10,8 +10,6 @@ Pod::Spec.new do |spec|
 
   spec.libraries = 'c++'
 
-  spec.libraries = 'c++'
-
   spec.subspec "filament" do |ss|
     ss.source_files =
         "include/filament/*.h",
