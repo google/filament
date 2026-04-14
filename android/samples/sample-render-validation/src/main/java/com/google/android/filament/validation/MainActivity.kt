@@ -106,8 +106,10 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private val frameScheduler = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             choreographer.postFrameCallback(this)
-            modelViewer?.render(frameTimeNanos)
-            validationRunner?.onFrame(frameTimeNanos)
+            val rendered = modelViewer?.render(frameTimeNanos) ?: false
+            if (rendered) {
+                validationRunner?.onFrame(frameTimeNanos)
+            }
         }
     }
 
@@ -456,6 +458,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         return ValidationResultManager(
             outputDir = outputDir,
             deviceName = android.os.Build.MODEL,
+            deviceHardware = android.os.Build.HARDWARE,
             deviceCodeName = android.os.Build.DEVICE,
             androidVersion = android.os.Build.VERSION.RELEASE,
             androidBuildNumber = android.os.Build.DISPLAY

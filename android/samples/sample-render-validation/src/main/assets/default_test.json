@@ -203,7 +203,8 @@
     {
       "name": "ssao_bent_normals",
       "apply_presets": [
-        "base"
+        "base",
+        "relaxed_tolerance"
       ],
       "rendering": {
         "view.ssao.enabled": true,
@@ -444,7 +445,8 @@
     {
       "name": "shadow_vsm_highPrecision",
       "apply_presets": [
-        "base"
+        "base",
+        "relaxed_tolerance"
       ],
       "rendering": {
         "view.shadowType": "VSM",

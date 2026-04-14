@@ -284,12 +284,18 @@ class ValidationRunner(
         currentEngine = AutomationEngine(fullSpec)
         val options = AutomationEngine.Options()
         options.sleepDuration = 0.0f // Minimal sleep, let frames drive it
-        options.minFrameCount = 1 // Ensure some frames pass
+        options.minFrameCount = 15 // Ensure enough frames pass for temporal accumulation
         currentEngine?.setOptions(options)
 
         // Use batch mode to ensure shouldClose() works reliably
         currentEngine?.startBatchMode()
         currentEngine?.signalBatchMode() // Start immediately
+
+        // Clear the frame history so that temporal effects (like SSR or TAA) don't bleed over
+        // or ghost from the visual output of the previous test.
+        modelViewer?.let { mv ->
+            mv.view.clearFrameHistory(mv.engine)
+        }
 
         frameCounter = 0
         currentState = State.RUNNING_TEST
@@ -338,8 +344,6 @@ class ValidationRunner(
              Log.i("ValidationRunner", "Found golden at ${goldenFile.absolutePath}")
          } else {
              Log.w("ValidationRunner", "Golden not found for $testFullName. Searched in: ${searchPaths.joinToString { it.absolutePath }}")
-             // Fallback to old behavior for reference if everything else fails
-             goldenFile = modelParent.parentFile?.resolve("golden/${testFullName}.png") ?: File(modelParent, "golden/${testFullName}.png")
          }
 
          Thread {
