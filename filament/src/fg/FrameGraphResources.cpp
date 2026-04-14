@@ -38,7 +38,7 @@ const char* FrameGraphResources::getPassName() const noexcept {
 // this perhaps weirdly returns a reference, this is to express the fact that if this method
 // fails, it has to assert (or throw), it can't return for e.g. a nullptr, because the public
 // API doesn't return pointers.
-// We still use FILAMENT_CHECK_PRECONDITION() because these failures are due to post conditions not met.
+// We use FILAMENT_CHECK_PRECONDITION() because these failures are due to caller contract violations (preconditions).
 VirtualResource& FrameGraphResources::getResource(FrameGraphHandle const handle) const {
     FILAMENT_CHECK_PRECONDITION(handle) << "Uninitialized handle when using FrameGraphResources.";
 

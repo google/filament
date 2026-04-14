@@ -93,7 +93,7 @@ mat4 FCamera::projection(double const focalLengthInMillimeters,
  */
 
 void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& projection,
-        mat4 const& projectionForCulling, double const near, double const far) noexcept {
+        mat4 const& projectionForCulling, double const near, double const far) {
 
     FILAMENT_CHECK_PRECONDITION(near != far)
             << "Camera preconditions not met in setCustomProjection(): near = far = " << near;

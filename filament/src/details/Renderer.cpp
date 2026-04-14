@@ -365,7 +365,7 @@ bool FRenderer::shouldRenderFrame() const noexcept {
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
-    assert_invariant(swapChain);
+    FILAMENT_CHECK_PRECONDITION(swapChain) << "swapChain cannot be null.";
 
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT, "frameId", (mFrameId + 1));
 

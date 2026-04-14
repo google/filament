@@ -656,7 +656,7 @@ AsyncCallId FTexture::setImageAsync(FEngine& engine, size_t const level,
     return id;
 }
 
-void FTexture::setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept {
+void FTexture::setExternalImage(FEngine& engine, ExternalImageHandleRef image) {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
     FILAMENT_CHECK_PRECONDITION(isCreationComplete())
             << "Texture is not created yet. It may be in the process of asynchronous loading";
@@ -678,7 +678,7 @@ void FTexture::setExternalImage(FEngine& engine, ExternalImageHandleRef image) n
     setHandles(texture);
 }
 
-void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
+void FTexture::setExternalImage(FEngine& engine, void* image) {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
     FILAMENT_CHECK_PRECONDITION(isCreationComplete())
             << "Texture is not created yet. It may be in the process of asynchronous loading";
@@ -700,7 +700,7 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     setHandles(texture);
 }
 
-void FTexture::setExternalImage(FEngine& engine, void* image, size_t const plane) noexcept {
+void FTexture::setExternalImage(FEngine& engine, void* image, size_t const plane) {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
     FILAMENT_CHECK_PRECONDITION(isCreationComplete())
             << "Texture is not created yet. It may be in the process of asynchronous loading";
@@ -723,7 +723,7 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t const plane
     setHandles(texture);
 }
 
-void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
+void FTexture::setExternalStream(FEngine& engine, FStream* stream) {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
     FILAMENT_CHECK_PRECONDITION(isCreationComplete())
             << "Texture is not created yet. It may be in the process of asynchronous loading";
@@ -750,7 +750,7 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
     }
 }
 
-void FTexture::generateMipmaps(FEngine& engine) const noexcept {
+void FTexture::generateMipmaps(FEngine& engine) const {
     FILAMENT_CHECK_PRECONDITION(!mExternal)
             << "External Textures are not mipmappable.";
     FILAMENT_CHECK_PRECONDITION(isCreationComplete())
@@ -831,14 +831,14 @@ Handle<HwTexture> FTexture::createPlaceholderTexture(
     return handle;
 }
 
-backend::Handle<backend::HwTexture> FTexture::getHwHandle() const noexcept {
+backend::Handle<backend::HwTexture> FTexture::getHwHandle() const {
     FILAMENT_CHECK_PRECONDITION(isCreationComplete())
             << "Texture is not created yet. It may be in the process of asynchronous loading";
 
     return mHandle;
 }
 
-Handle<HwTexture> FTexture::getHwHandleForSampling() const noexcept {
+Handle<HwTexture> FTexture::getHwHandleForSampling() const {
     FILAMENT_CHECK_PRECONDITION(isCreationComplete())
             << "Texture is not created yet. It may be in the process of asynchronous loading";
 
