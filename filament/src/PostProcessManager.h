@@ -53,6 +53,7 @@
 #include <array>
 #include <random>
 #include <string_view>
+#include <optional>
 
 #include <stddef.h>
 #include <stdint.h>
