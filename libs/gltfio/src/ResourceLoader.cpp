@@ -273,6 +273,10 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
         }
         assert_invariant(bufferData);
         const uint32_t size = utility::computeBindingSize(accessor);
+        if (size == 0) {
+            // Skip buffer upload for this accessor as requested by user
+            continue;
+        }
         if (slot.vertexBuffer) {
             if (utility::requiresConversion(accessor)) {
                 const size_t floatsCount = accessor->count * cgltf_num_components(accessor->type);
@@ -467,7 +471,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             }
             utility::decodeDracoMeshes(gltf, prim, dracoCache);
         }
-        utility::decodeMeshoptCompression((cgltf_data*) gltf);
+        if (!utility::decodeMeshoptCompression((cgltf_data*) gltf)) {
+            return false;
+        }
 
         uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache);
 
