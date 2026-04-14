@@ -1,14 +1,10 @@
 #if defined(VARIANT_HAS_VSM)
 layout(location = 0) out highp vec4 fragColor;
 #elif defined(VARIANT_HAS_PICKING)
-#   if __VERSION__ == 100
-highp vec4 outPicking;
-#   else
-#       if MATERIAL_FEATURE_LEVEL == 0
+#   if MATERIAL_FEATURE_LEVEL == 0
 layout(location = 0) out highp vec4 outPicking;
-#       else
+#   else
 layout(location = 0) out highp uvec2 outPicking;
-#       endif
 #   endif
 #else
 // not color output
@@ -55,7 +51,7 @@ void main() {
     highp float depth = vertex_worldPosition.w;
     fragColor = computeDepthMomentsVSM(depth);
 #elif defined(VARIANT_HAS_PICKING)
-#if FILAMENT_EFFECTIVE_VERSION == 100
+#if MATERIAL_FEATURE_LEVEL == 0
     outPicking.a = mod(float(object_uniforms_objectId / 65536), 256.0) / 255.0;
     outPicking.b = mod(float(object_uniforms_objectId /   256), 256.0) / 255.0;
     outPicking.g = mod(float(object_uniforms_objectId)        , 256.0) / 255.0;
@@ -64,9 +60,7 @@ void main() {
     outPicking.x = uint(object_uniforms_objectId);
     outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
 #endif
-#if __VERSION__ == 100
-    gl_FragData[0] = outPicking;
-#endif
+
 #else
     // that's it
 #endif

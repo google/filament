@@ -102,7 +102,9 @@ private:
             MaterialInfo const& material, filament::Variant variant) noexcept;
 
     static void generatePostProcessMaterialVariantDefines(utils::io::sstream& out,
-            filament::PostProcessVariant variant) noexcept;
+            filament::backend::ShaderStage stage,
+            MaterialBuilder::FeatureLevel featureLevel,
+            MaterialInfo const& material, filament::PostProcessVariant variant) noexcept;
 
     static void generateUserSpecConstants(
             const CodeGenerator& cg, utils::io::sstream& fs,
@@ -117,7 +119,8 @@ private:
     std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             MaterialBuilder::FeatureLevel featureLevel,
-            MaterialInfo const& material, uint8_t variant, uint32_t apiLevel) const noexcept;
+            MaterialInfo const& material, filament::Variant::type_t variantKey,
+            uint32_t apiLevel) const noexcept;
 
     static void appendShader(utils::io::sstream& ss,
             const utils::CString& shader, size_t lineOffset) noexcept;

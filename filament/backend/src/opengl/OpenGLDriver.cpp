@@ -1740,6 +1740,10 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
                     assert_invariant(target == GL_TEXTURE_2D || target == GL_TEXTURE_EXTERNAL_OES);
                     glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
                             GL_RENDERBUFFER, t->gl.id);
+
+                    // Clear the resolve bit for this particular attachment. Note that other attachment(s)
+                    // might be sampleable, so this does not necessarily prevent the resolve from occurring.
+                    resolveFlags = TargetBufferFlags::NONE;
                 }
                 break;
             case GL_TEXTURE_3D:
@@ -1877,6 +1881,11 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
         }
 
         CHECK_GL_ERROR()
+    }
+
+    // We don't need to resolve attachments that match the rendertarget's sample count.
+    if (rt->gl.samples == t->samples) {
+        resolveFlags = TargetBufferFlags::NONE;
     }
 
     rt->gl.resolve |= resolveFlags;
@@ -3768,20 +3777,6 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // each render-pass starts with a disabled scissor
     gl.disable(GL_SCISSOR_TEST);
 
-    if (gl.ext.EXT_discard_framebuffer
-            && !gl.bugs.disable_invalidate_framebuffer) {
-        AttachmentArray attachments; // NOLINT
-        if (GLsizei const attachmentCount = getAttachments(attachments, discardFlags, !fbo)) {
-            gl.procs.invalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
-        }
-        CHECK_GL_ERROR()
-    } else {
-        // It's important to clear the framebuffer before drawing, as it resets
-        // the fb to a known state (resets fb compression and possibly other things).
-        // So we use glClear instead of glInvalidateFramebuffer
-        clearWithRasterPipe(discardFlags & ~clearFlags, { 0.0f }, 0.0f, 0);
-    }
-
     if (rt->gl.fbo_read) {
         // we have a multi-sample RenderTarget with non multi-sample attachments (i.e. this is the
         // EXT_multisampled_render_to_texture emulation).
@@ -3793,9 +3788,26 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         discardFlags |= rt->gl.resolve;
     }
 
+    // we don't discard attachments that are cleared (because clear is an implicit discard)
+    TargetBufferFlags const discardOnlyFlags = discardFlags & ~clearFlags;
+
+    if (any(discardOnlyFlags)) {
+        if (gl.ext.EXT_discard_framebuffer && !gl.bugs.disable_invalidate_framebuffer) {
+            AttachmentArray attachments; // NOLINT
+            if (GLsizei const attachmentCount = getAttachments(attachments, discardOnlyFlags, !fbo)) {
+                gl.procs.invalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
+            }
+            CHECK_GL_ERROR()
+        } else {
+            // It's important to clear the framebuffer before drawing, as it resets
+            // the fb to a known state (resets fb compression and possibly other things).
+            // So we use glClear instead of glInvalidateFramebuffer
+            clearWithRasterPipe(discardOnlyFlags, { 0.0f }, 0.0f, 0);
+        }
+    }
+
     if (any(clearFlags)) {
-        clearWithRasterPipe(clearFlags,
-                params.clearColor, GLfloat(params.clearDepth), GLint(params.clearStencil));
+        clearWithRasterPipe(clearFlags, params.clearColor, GLfloat(params.clearDepth), GLint(params.clearStencil));
     }
 
     // we need to reset those after we call clearWithRasterPipe()
@@ -3812,8 +3824,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
 #ifndef NDEBUG
     // clear the discarded (but not the cleared ones) buffers in debug builds
-    clearWithRasterPipe(discardFlags & ~clearFlags,
-            { 1, 0, 0, 1 }, 1.0, 0);
+    clearWithRasterPipe(discardOnlyFlags, { 1, 0, 0, 1 }, 1.0, 0);
 #endif
 }
 

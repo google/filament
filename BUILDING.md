@@ -5,7 +5,7 @@
 To build Filament, you must first install the following tools:
 
 - CMake 3.22.1 (or more recent)
-- clang 16.0 (or more recent)
+- clang 16.0 (or more recent) (Required for Linux and macOS; see [Windows](#windows) section for MSVC support)
 - [ninja 1.10](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
 Additional dependencies may be required for your operating system. Please refer to the appropriate

@@ -950,6 +950,38 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         if (found != std::string::npos) {
             str.replace(found, clipDistanceDefinition.length(), "");
         }
+
+        // Validate the transpiled ESSL1 shader dynamically before considering it successful.
+        // This proactively catches unsupported SPIR-V -> ESSL1 translation quirks (like textureLod)
+        // at compile-time since we can't easily test all variants on physical GLES 2.0 devices.
+        if (config.featureLevel == 0) {
+            // preampitively forbid spirv-cross from cheating and polyfilling disabled features
+            auto const& exts = glslCompiler.get_required_extensions();
+            for (auto const& ext : exts) {
+                if (ext != "GL_OES_standard_derivatives" &&
+                    ext != "GL_OES_EGL_image_external" &&
+                    ext != "GL_EXT_shader_framebuffer_fetch" &&
+                    ext != "GL_EXT_shader_framebuffer_fetch_non_coherent") {
+                    slog.e << "ERROR: Feature Level 0 shaders cannot require: " << ext << ". " 
+                           << "spirv-cross attempted to unilaterally inject it." << io::endl;
+                    return false;
+                }
+            }
+
+            TShader validateShader(internalConfig.shLang);
+            // The cleaner must be declared after the TShader to manage the glslang memory pool
+            // teardown order correctly and safely destroy the AST.
+            GLSLangCleaner const validateCleaner;
+
+            const char* shaderCString = str.c_str();
+            validateShader.setStrings(&shaderCString, 1);
+
+            bool const validateOk = validateShader.parse(&DefaultTBuiltInResource, glslOptions.version, false, EShMsgDefault);
+            if (!validateOk) {
+                slog.e << "ESSL1 Validation failed:\n" << validateShader.getInfoLog() << io::endl;
+                return false;
+            }
+        }
     }
     return true;
 }

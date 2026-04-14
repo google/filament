@@ -244,6 +244,9 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
             buf[0] = '_';
             auto const [ptr, ec] = std::to_chars(buf + 1, buf + 16, numericLiteral);
             size_t const len = ptr - buf;
+            if (UTILS_UNLIKELY(cursor + len >= shaderSize)) {
+                return false;
+            }
             memcpy(&shaderContent[cursor], buf, len);
             cursor += len;
             continue;
@@ -263,7 +266,7 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
         const auto& content = dictionary[globalIndex];
 
         // Ensure string is correctly formed and doesn't exceed reserved shader space.
-        if (UTILS_UNLIKELY(content.size() == 0 || cursor + content.size() - 1 > shaderSize)) {
+        if (UTILS_UNLIKELY(content.size() == 0 || cursor + content.size() - 1 >= shaderSize)) {
             return false;
         }
 
