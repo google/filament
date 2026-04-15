@@ -280,6 +280,9 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 continue;
             }
             const size_t floatsCount = accessor->count * components;
+            if (floatsCount == 0) {
+                continue;
+            }
             
             if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
                 continue;
@@ -347,6 +350,9 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                     continue;
                 }
                 const size_t floatsCount = safeCount * components;
+                if (floatsCount == 0) {
+                    continue;
+                }
                 
                 if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
                     continue;
@@ -416,6 +422,9 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 continue;
             }
             const size_t floatsCount = safeCount * components;
+            if (floatsCount == 0) {
+                continue;
+            }
             
             if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
                 continue;
