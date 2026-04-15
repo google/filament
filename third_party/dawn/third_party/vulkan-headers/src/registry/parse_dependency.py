@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2022-2025 The Khronos Group Inc.
+# Copyright 2022-2026 The Khronos Group Inc.
 # Copyright 2003-2019 Paul McGuire
 # SPDX-License-Identifier: MIT
 
@@ -47,6 +47,7 @@ from pyparsing import (
     Suppress,
     delimitedList,
     infixNotation,
+    Combine,
 )
 import math
 import operator
@@ -80,6 +81,16 @@ def leafMarkupC(name):
         return name
     else:
         return f'ext.{name}'
+
+def leafMarkupCProtect(name):
+    """Markup a leaf name as a C preprocessor defined() expression
+       for use in protect attributes. Supports '!' prefix for negation.
+
+       - name - preprocessor macro name (optionally prefixed with '!' for NOT)"""
+
+    if name.startswith('!'):
+        return f'!defined({name[1:]})'
+    return f'defined({name})'
 
 opMarkupAsciidocMap = { '+' : 'and', ',' : 'or' }
 
@@ -147,6 +158,37 @@ def dependencyBNF():
     return _bnf
 
 
+# Protect identifier: standard identifier optionally prefixed with '!' for negation
+protectIdent = Combine(pp.Optional(Literal('!')) + Word(f"{alphanums}_:"))
+
+_protect_bnf = None
+def protectBNF():
+    """BNF grammar for protect expressions; same as dependencyBNF but supports '!' unary NOT prefix.
+
+    boolop  :: '+' | ','
+    macroname :: '!'? Char(alphanums + '_:')
+    atom    :: macroname | '(' expr ')'
+    expr    :: atom [ boolop atom ]*
+    """
+    global _protect_bnf
+    if _protect_bnf is None:
+        and_, or_ = map(Literal, '+,')
+        lpar, rpar = map(Suppress, '()')
+        boolop = and_ | or_
+
+        expr = Forward()
+        atom = (
+            boolop[...]
+            + (
+                protectIdent.copy().setParseAction(push_first)
+                | Group(lpar + expr + rpar)
+            )
+        )
+        expr <<= atom + (boolop + atom).setParseAction(push_first)[...]
+        _protect_bnf = expr
+    return _protect_bnf
+
+
 # map operator symbols to corresponding arithmetic operations
 _opn = {
     '+': operator.and_,
@@ -187,27 +229,32 @@ def evaluateDependency(dependency, isSupported):
     val = evaluateStack(exprStack[:], isSupported)
     return val
 
-def evalDependencyLanguage(stack, leafMarkup, opMarkup, parenthesize, root):
+def evalDependencyLanguage(stack, leafMarkup, opMarkup, parenthesize, root, parent_op = None):
     """Evaluate an expression stack, returning an English equivalent
 
      - stack - the stack
      - leafMarkup, opMarkup, parenthesize - same as dependencyLanguage
-     - root - True only if this is the outer (root) expression level"""
+     - root - True only if this is the outer (root) expression level
+     - parent_op - the parent operator ('+' or ','), used to avoid unnecessary parentheses"""
 
     op, num_args = stack.pop(), 0
     if isinstance(op, tuple):
         op, num_args = op
     if op in '+,':
-        # Could parenthesize, not needed yet
-        rhs = evalDependencyLanguage(stack, leafMarkup, opMarkup, parenthesize, root = False)
+        # Recursively evaluate left and right sides, passing current op as parent
+        rhs = evalDependencyLanguage(stack, leafMarkup, opMarkup, parenthesize, root = False, parent_op = op)
         opname = opMarkup(op)
-        lhs = evalDependencyLanguage(stack, leafMarkup, opMarkup, parenthesize, root = False)
-        if parenthesize and not root:
+        lhs = evalDependencyLanguage(stack, leafMarkup, opMarkup, parenthesize, root = False, parent_op = op)
+        # Only add parentheses if:
+        # 1. parenthesize is True, AND
+        # 2. not at root level, AND
+        # 3. the current operator differs from parent operator (mixed precedence)
+        if parenthesize and not root and parent_op is not None and parent_op != op:
             return f'({lhs} {opname} {rhs})'
         else:
             return f'{lhs} {opname} {rhs}'
-    elif op[0].isalpha():
-        # This is an extension or feature name
+    elif op[0].isalpha() or (op.startswith('!') and len(op) > 1 and op[1].isalpha()):
+        # This is an extension or feature name (optionally negated with '!' for protect expressions)
         return leafMarkup(op)
     else:
         raise Exception(f'invalid op: {op}')
@@ -227,7 +274,7 @@ def dependencyLanguage(dependency, leafMarkup, opMarkup, parenthesize):
     global exprStack
     exprStack = []
     results = dependencyBNF().parseString(dependency, parseAll=True)
-    return evalDependencyLanguage(exprStack, leafMarkup, opMarkup, parenthesize, root = True)
+    return evalDependencyLanguage(exprStack, leafMarkup, opMarkup, parenthesize, root = True, parent_op = None)
 
 # aka specmacros = False
 def dependencyLanguageComment(dependency):
@@ -247,6 +294,29 @@ def dependencyLanguageC(dependency):
     """Return dependency expression translated to a form suitable for
        use in C expressions"""
     return dependencyLanguage(dependency, leafMarkup = leafMarkupC, opMarkup = opMarkupC, parenthesize = True)
+
+def protectLanguageC(protect):
+    """Return protect expression translated to a form suitable for
+       use in C preprocessor conditionals (#if expressions).
+
+       This wraps each identifier in defined() and converts operators:
+       - '+' becomes '&&' (AND)
+       - ',' becomes '||' (OR)
+       Supports '!' prefix on identifiers for NOT:
+       - '!A' becomes '!defined(A)'
+
+       Examples:
+         'VK_A,VK_B' -> 'defined(VK_A) || defined(VK_B)'
+         'VK_A+VK_B' -> 'defined(VK_A) && defined(VK_B)'
+         '(VK_A+VK_B),VK_C' -> '(defined(VK_A) && defined(VK_B)) || defined(VK_C)'
+         'VK_A+!VK_B' -> 'defined(VK_A) && !defined(VK_B)'
+
+       - protect - the protect expression string"""
+    global exprStack
+    exprStack = []
+    protectBNF().parseString(protect, parseAll=True)
+    return evalDependencyLanguage(exprStack, leafMarkupCProtect, opMarkupC,
+                                  parenthesize=True, root=True, parent_op=None)
 
 def evalDependencyNames(stack):
     """Evaluate an expression stack, returning the set of extension and

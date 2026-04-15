@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <limits>
 #include <ostream>
+#include <span>
 #include <utility>
 
 #include "src/tint/lang/core/evaluation_stage.h"
@@ -37,7 +38,6 @@
 #include "src/tint/lang/core/type/invalid.h"
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/void.h"
-#include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/ice/ice.h"
 #include "src/tint/utils/macros/defer.h"
 #include "src/tint/utils/text/string_stream.h"
@@ -222,6 +222,7 @@ Result<Overload, StyledText> MatchIntrinsic(Context& context,
     // How many candidates matched?
     if (DAWN_UNLIKELY(num_matched == 0)) {
         // Perform the full scoring of each overload
+        size_t candidate_idx = 0;
         for (size_t overload_idx = 0; overload_idx < num_overloads; overload_idx++) {
             auto& overload = context.data[intrinsic.overloads + overload_idx];
 
@@ -230,7 +231,7 @@ Result<Overload, StyledText> MatchIntrinsic(Context& context,
                 continue;
             }
 
-            candidates[overload_idx] = ScoreOverload<ScoreMode::kFull>(
+            candidates[candidate_idx++] = ScoreOverload<ScoreMode::kFull>(
                 context, overload, template_args, args, earliest_eval_stage);
         }
         // Sort the candidates with the most promising first
@@ -243,12 +244,9 @@ Result<Overload, StyledText> MatchIntrinsic(Context& context,
     if (num_matched == 1) {
         match = std::move(candidates[match_idx]);
     } else {
-        auto result =
-            ResolveCandidate(context, std::move(candidates), intrinsic_name, template_args, args);
-        if (DAWN_UNLIKELY(result != Success)) {
-            return result.Failure();
-        }
-        match = result.Get();
+        TINT_CHECK_RESULT_UNWRAP(result, ResolveCandidate(context, std::move(candidates),
+                                                          intrinsic_name, template_args, args));
+        match = result;
     }
 
     // Build the return type
@@ -408,7 +406,7 @@ Candidate ScoreOverload(Context& context,
         auto* matcher_indices = context.data[parameter.matcher_indices];
         auto* ty =
             context.Match(templates, overload, matcher_indices, earliest_eval_stage).Type(args[p]);
-        parameters.Emplace(ty, parameter.usage);
+        parameters.Emplace(ty, parameter.usage, parameter.is_const);
     }
 
     return Candidate{score, &overload, templates, parameters};
@@ -524,7 +522,7 @@ void PrintCandidate(StyledText& ss,
     auto prev_style = ss.Style();
     TINT_DEFER(ss << prev_style);
 
-    auto& overload = *candidate.overload;
+    const OverloadInfo& overload = *candidate.overload;
 
     TemplateState templates = candidate.templates;
 
@@ -536,11 +534,11 @@ void PrintCandidate(StyledText& ss,
     if (overload.num_explicit_templates > 0) {
         ss << "<";
         for (size_t i = 0; i < overload.num_explicit_templates; i++) {
-            const auto& tmpl = context.data[overload.templates + i];
+            const TemplateInfo& tmpl = context.data[overload.templates + i];
 
             bool matched = false;
             if (i < template_args.Length()) {
-                auto* matcher_indices = context.data[tmpl.matcher_indices];
+                const MatcherIndex* matcher_indices = context.data[tmpl.matcher_indices];
                 matched = (matcher_indices == nullptr) ||
                           (context.Match(templates, overload, matcher_indices, earliest_eval_stage)
                                .Type(template_args[i]) != nullptr);
@@ -562,8 +560,8 @@ void PrintCandidate(StyledText& ss,
     bool all_params_match = true;
     ss << "(";
     for (size_t i = 0; i < overload.num_parameters; i++) {
-        const auto& parameter = context.data[overload.parameters + i];
-        auto* matcher_indices = context.data[parameter.matcher_indices];
+        const ParameterInfo& parameter = context.data[overload.parameters + i];
+        const MatcherIndex* matcher_indices = context.data[parameter.matcher_indices];
 
         bool matched = false;
         if (i < args.Length()) {
@@ -591,7 +589,7 @@ void PrintCandidate(StyledText& ss,
     ss << ")";
     if (overload.return_matcher_indices.IsValid()) {
         ss << " -> ";
-        auto* matcher_indices = context.data[overload.return_matcher_indices];
+        const MatcherIndex* matcher_indices = context.data[overload.return_matcher_indices];
         context.Match(templates, overload, matcher_indices, earliest_eval_stage).PrintType(ss);
     }
 
@@ -618,35 +616,35 @@ void PrintCandidate(StyledText& ss,
     }
 
     for (size_t i = 0; i < overload.num_templates; i++) {
-        auto& tmpl = context.data[overload.templates + i];
-        if (auto* matcher_indices = context.data[tmpl.matcher_indices]) {
-            separator();
-            bool matched = false;
-            if (tmpl.kind == TemplateInfo::Kind::kType) {
-                if (auto* ty = templates.Type(i)) {
-                    matched =
-                        (context.Match(templates, overload, matcher_indices, earliest_eval_stage)
-                             .Type(ty) != nullptr);
-                }
-            } else {
-                matched = context.Match(templates, overload, matcher_indices, earliest_eval_stage)
-                              .Num(templates.Num(i))
-                              .IsValid();
-            }
-            if (matched) {
-                ss << style::Match(" ✓ ") << style::Plain(" ");
-            } else {
-                ss << style::Mismatch(" ✗ ") << style::Plain(" ");
-            }
+        const TemplateInfo& tmpl = context.data[overload.templates + i];
+        const MatcherIndex* matcher_indices = context.data[tmpl.matcher_indices];
+        if (!matcher_indices) {
+            continue;
+        }
 
-            ss << style::Type(tmpl.name) << style::Plain(" is ");
-            if (tmpl.kind == TemplateInfo::Kind::kType) {
-                context.Match(templates, overload, matcher_indices, earliest_eval_stage)
-                    .PrintType(ss);
-            } else {
-                context.Match(templates, overload, matcher_indices, earliest_eval_stage)
-                    .PrintNum(ss);
+        separator();
+        bool matched = false;
+        if (tmpl.kind == TemplateInfo::Kind::kType) {
+            if (const core::type::Type* ty = templates.Type(i)) {
+                matched = (context.Match(templates, overload, matcher_indices, earliest_eval_stage)
+                               .Type(ty) != nullptr);
             }
+        } else {
+            matched = context.Match(templates, overload, matcher_indices, earliest_eval_stage)
+                          .Num(templates.Num(i))
+                          .IsValid();
+        }
+        if (matched) {
+            ss << style::Match(" ✓ ") << style::Plain(" ");
+        } else {
+            ss << style::Mismatch(" ✗ ") << style::Plain(" ");
+        }
+
+        ss << style::Type(tmpl.name) << style::Plain(" is ");
+        if (tmpl.kind == TemplateInfo::Kind::kType) {
+            context.Match(templates, overload, matcher_indices, earliest_eval_stage).PrintType(ss);
+        } else {
+            context.Match(templates, overload, matcher_indices, earliest_eval_stage).PrintNum(ss);
         }
     }
 }

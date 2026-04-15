@@ -309,7 +309,7 @@ TEST_F(SpirvReader_TransposeRowMajorTest, ReadUniformSwizzle) {
     b.Append(f->Block(), [&] {
         auto* a = b.Access<ptr<uniform, vec3<f32>>>(var, 0_u, 1_u);
         auto* l = b.Load(a);
-        b.Let("x", b.Swizzle(ty.vec2<f32>(), l, Vector{2u, 0u}));
+        b.Let("x", b.Swizzle(ty.vec2f(), l, Vector{2u, 0u}));
         b.Return(f);
     });
 
@@ -480,7 +480,7 @@ TEST_F(SpirvReader_TransposeRowMajorTest, WriteStorageColumn) {
     auto* f = b.ComputeFunction("f");
     b.Append(f->Block(), [&] {
         auto* a = b.Access<ptr<storage, vec3<f32>, read_write>>(var, 0_u, 1_u);
-        auto* c = b.Construct(ty.vec3<f32>(), 1_f, 2_f, 3_f);
+        auto* c = b.Construct(ty.vec3f(), 1_f, 2_f, 3_f);
         b.Store(a, c);
         b.Return(f);
     });
@@ -656,7 +656,7 @@ TEST_F(SpirvReader_TransposeRowMajorTest, ExtractFromLoadedStruct) {
         auto* ls = b.Load(var);
         auto* load = b.Let("load", ls);
         b.Let("m", b.Access(ty.mat2x3<f32>(), load, 0_u));
-        b.Let("c", b.Access(ty.vec3<f32>(), load, 0_u, 1_u));
+        b.Let("c", b.Access(ty.vec3f(), load, 0_u, 1_u));
         b.Let("e", b.Access(ty.f32(), load, 0_u, 1_u, 2_u));
         b.Return(f);
     });
@@ -756,7 +756,7 @@ TEST_F(SpirvReader_TransposeRowMajorTest, ExtractFromLoadedVector) {
         auto* ls = b.Load(var);
         auto* load = b.Let("load", ls);
         b.Let("m", b.Access(ty.mat2x3<f32>(), load, 0_u));
-        auto* c = b.Let("c", b.Access(ty.vec3<f32>(), load, 0_u, 1_u));
+        auto* c = b.Let("c", b.Access(ty.vec3f(), load, 0_u, 1_u));
         b.Let("e", b.Access(ty.f32(), c, 2_u));
         b.Return(f);
     });
@@ -939,7 +939,7 @@ TEST_F(SpirvReader_TransposeRowMajorTest, DeeplyNested) {
     //   buffer.arr[0].m[3] = m[2];
     // }
     auto* matrix_member = ty.Get<core::type::StructMember>(mod.symbols.New("m"), ty.mat4x3<f32>(),
-                                                           0u, 16u, 24u, 48u, core::IOAttributes{});
+                                                           0u, 16u, 16u, 48u, core::IOAttributes{});
     matrix_member->SetRowMajor();
 
     auto* inner_strct = ty.Struct(mod.symbols.New("Inner"), Vector{matrix_member});
@@ -954,17 +954,17 @@ TEST_F(SpirvReader_TransposeRowMajorTest, DeeplyNested) {
     auto* f = b.ComputeFunction("f");
     b.Append(f->Block(), [&] {
         auto* m = b.Let("m", b.Load(b.Access<ptr<storage, mat4x3<f32>>>(var, 0_u, 1_u, 0_u)));
-        auto* ptr = b.Access(ty.ptr(storage, ty.vec3<f32>(), read_write), var, 0_u, 0_u, 0_u, 3_u);
-        b.Store(ptr, b.Access(ty.vec3<f32>(), m, 2_u));
+        auto* ptr = b.Access(ty.ptr(storage, ty.vec3f(), read_write), var, 0_u, 0_u, 0_u, 3_u);
+        b.Store(ptr, b.Access(ty.vec3f(), m, 2_u));
         b.Return(f);
     });
 
     auto* before = R"(
-Inner = struct @align(24) {
+Inner = struct @align(16) {
   m:mat4x3<f32> @offset(16) @size(48), @row_major
 }
 
-Outer = struct @align(24) {
+Outer = struct @align(16) {
   arr:array<Inner, 4> @offset(0)
 }
 
@@ -988,19 +988,19 @@ $B1: {  # root
     ASSERT_EQ(before, str());
 
     auto* after = R"(
-Inner = struct @align(24) {
+Inner = struct @align(16) {
   m:mat4x3<f32> @offset(16) @size(48), @row_major
 }
 
-Outer = struct @align(24) {
+Outer = struct @align(16) {
   arr:array<Inner, 4> @offset(0)
 }
 
-Inner_1 = struct @align(24) {
+Inner_1 = struct @align(16) {
   m:mat3x4<f32> @offset(16)
 }
 
-Outer_1 = struct @align(24) {
+Outer_1 = struct @align(16) {
   arr:array<Inner_1, 4> @offset(0)
 }
 
@@ -1061,11 +1061,11 @@ TEST_F(SpirvReader_TransposeRowMajorTest, MultipleColumnHelpers) {
     //   s.m2[3] = ps.m2[3];
     // }
     auto* matrix_member_0 = ty.Get<core::type::StructMember>(
-        mod.symbols.New("m"), ty.mat2x3<f32>(), 0u, 0u, 24u, 24u, core::IOAttributes{});
+        mod.symbols.New("m"), ty.mat2x3<f32>(), 0u, 0u, 16u, 24u, core::IOAttributes{});
     matrix_member_0->SetRowMajor();
 
     auto* matrix_member_1 = ty.Get<core::type::StructMember>(
-        mod.symbols.New("m"), ty.mat4x2<f32>(), 1u, 32u, 24u, 48u, core::IOAttributes{});
+        mod.symbols.New("m"), ty.mat4x2<f32>(), 1u, 32u, 16u, 48u, core::IOAttributes{});
     matrix_member_1->SetRowMajor();
 
     auto* strct = ty.Struct(mod.symbols.New("S"), Vector{matrix_member_0, matrix_member_1});
@@ -1103,7 +1103,7 @@ TEST_F(SpirvReader_TransposeRowMajorTest, MultipleColumnHelpers) {
     });
 
     auto* before = R"(
-S = struct @align(24) {
+S = struct @align(16) {
   m:mat2x3<f32> @offset(0) @size(24), @row_major
   m_1:mat4x2<f32> @offset(32) @size(48), @row_major
 }
@@ -1147,12 +1147,12 @@ $B1: {  # root
     ASSERT_EQ(before, str());
 
     auto* after = R"(
-S = struct @align(24) {
+S = struct @align(16) {
   m:mat2x3<f32> @offset(0) @size(24), @row_major
   m_1:mat4x2<f32> @offset(32) @size(48), @row_major
 }
 
-S_1 = struct @align(24) {
+S_1 = struct @align(16) {
   m:mat3x2<f32> @offset(0)
   m_1:mat2x4<f32> @offset(32) @size(48)
 }
@@ -1632,7 +1632,7 @@ TEST_F(SpirvReader_TransposeRowMajorTest, ArrayOfMatrix_NestedArray) {
         b.Store(sarr12, b.Access(ty.mat2x3<f32>(), x, 2_u, 3_u));
 
         auto* sarr231 = b.Access<ptr<storage, vec3<f32>, read_write>>(sarr, 2_u, 3_u, 1_u);
-        b.Store(sarr231, b.Access(ty.vec3<f32>(), x, 4_u, 3_u, 1_u));
+        b.Store(sarr231, b.Access(ty.vec3f(), x, 4_u, 3_u, 1_u));
 
         auto* sarr420 = b.Access<ptr<storage, vec3<f32>, read_write>>(sarr, 4_u, 2_u, 0_u);
         b.StoreVectorElement(sarr420, 1_u, b.Access(ty.f32(), x, 1_u, 3_u, 0_u, 2_u));
@@ -1883,12 +1883,12 @@ TEST_F(SpirvReader_TransposeRowMajorTest, ArrayOfMatrix_RuntimeSizedArray) {
         b.Store(sarr1,
                 b.Load(b.Access(ty.ptr(storage, ty.mat4x3<f32>(), read_write), var, 0_u, 0_u)));
 
-        auto* sarr23 = b.Access(ty.ptr(storage, ty.vec3<f32>(), read_write), var, 0_u, 2_u, 3_u);
+        auto* sarr23 = b.Access(ty.ptr(storage, ty.vec3f(), read_write), var, 0_u, 2_u, 3_u);
         b.Store(sarr23,
-                b.Load(b.Access(ty.ptr(storage, ty.vec3<f32>(), read_write), var, 0_u, 1_u, 2_u)));
+                b.Load(b.Access(ty.ptr(storage, ty.vec3f(), read_write), var, 0_u, 1_u, 2_u)));
 
-        auto* sarr32 = b.Access(ty.ptr(storage, ty.vec3<f32>(), read_write), var, 0_u, 2_u, 3_u);
-        auto* sarr43 = b.Access(ty.ptr(storage, ty.vec3<f32>(), read_write), var, 0_u, 2_u, 3_u);
+        auto* sarr32 = b.Access(ty.ptr(storage, ty.vec3f(), read_write), var, 0_u, 2_u, 3_u);
+        auto* sarr43 = b.Access(ty.ptr(storage, ty.vec3f(), read_write), var, 0_u, 2_u, 3_u);
         b.StoreVectorElement(sarr32, 1_u, b.LoadVectorElement(sarr43, 2_u));
 
         b.Return(f);
@@ -2208,6 +2208,92 @@ $B1: {  # root
     %4:mat3x2<f32> = load %3
     %5:mat2x3<f32> = transpose %4
     %x:mat2x3<f32> = let %5
+    ret
+  }
+}
+)";
+
+    Run(TransposeRowMajor);
+    EXPECT_EQ(after, str());
+}
+
+TEST_F(SpirvReader_TransposeRowMajorTest, AccessSiblingToMatrix) {
+    // struct S {
+    //   @offset(16) @row_major m : mat4x4<f32>,
+    //   c : vec4<i32>,
+    // };
+    //
+    // @group(0) @binding(0) var<uniform> s : S;
+    //
+    // @compute @workgroup_size(1)
+    // fn f() {
+    //   let x : i32 = s.c.z;
+    // }
+
+    auto* matrix_member = ty.Get<core::type::StructMember>(mod.symbols.New("m"), ty.mat4x4<f32>(),
+                                                           0u, 16u, 64u, 64u, core::IOAttributes{});
+    matrix_member->SetRowMajor();
+
+    auto* vec_member = ty.Get<core::type::StructMember>(mod.symbols.New("c"), ty.vec4i(), 1u, 80u,
+                                                        16u, 16u, core::IOAttributes{});
+
+    auto* strct = ty.Struct(mod.symbols.New("S"), Vector{matrix_member, vec_member});
+
+    core::ir::Var* var = nullptr;
+    b.Append(mod.root_block, [&] {
+        var = b.Var("s", ty.ptr<uniform>(strct));
+        var->SetBindingPoint(0, 0);
+    });
+
+    auto* f = b.ComputeFunction("f");
+    b.Append(f->Block(), [&] {
+        auto* a = b.Access<ptr<uniform, vec4<i32>>>(var, 1_u);
+        b.Let("x", b.LoadVectorElement(a, 2_u));
+        b.Return(f);
+    });
+
+    auto* before = R"(
+S = struct @align(64) {
+  m:mat4x4<f32> @offset(16), @row_major
+  c:vec4<i32> @offset(80)
+}
+
+$B1: {  # root
+  %s:ptr<uniform, S, read> = var undef @binding_point(0, 0)
+}
+
+%f = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<uniform, vec4<i32>, read> = access %s, 1u
+    %4:i32 = load_vector_element %3, 2u
+    %x:i32 = let %4
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(before, str());
+
+    auto* after = R"(
+S = struct @align(64) {
+  m:mat4x4<f32> @offset(16), @row_major
+  c:vec4<i32> @offset(80)
+}
+
+S_1 = struct @align(64) {
+  m:mat4x4<f32> @offset(16)
+  c:vec4<i32> @offset(80)
+}
+
+$B1: {  # root
+  %s:ptr<uniform, S_1, read> = var undef @binding_point(0, 0)
+}
+
+%f = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<uniform, vec4<i32>, read> = access %s, 1u
+    %4:i32 = load_vector_element %3, 2u
+    %x:i32 = let %4
     ret
   }
 }

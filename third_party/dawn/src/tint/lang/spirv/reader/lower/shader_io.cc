@@ -77,9 +77,7 @@ struct State {
     Result<SuccessType> Process() {
         // Process outputs first, as that may introduce new functions that input variables need to
         // be propagated through.
-        if (auto result = ProcessOutputs(); result != Success) {
-            return result;
-        }
+        TINT_CHECK_RESULT(ProcessOutputs());
         ProcessInputs();
 
         auto clean_members = [](const core::type::Struct* strct) {
@@ -121,9 +119,7 @@ struct State {
             }
         }
         for (auto& ep : entry_points) {
-            if (auto result = ProcessEntryPointOutputs(ep); result != Success) {
-                return result;
-            }
+            TINT_CHECK_RESULT(ProcessEntryPointOutputs(ep));
         }
         return Success;
     }
@@ -357,9 +353,7 @@ struct State {
                               var_attributes);
                 }
             });
-            if (result != Success) {
-                return result;
-            }
+            TINT_CHECK_RESULT(result);
         }
 
         if (output_descriptors.Length() == 1) {
@@ -466,7 +460,7 @@ struct State {
             if (!chain) {
                 continue;
             }
-            TINT_ASSERT(chain->Indices().Length() >= 1);
+            TINT_ASSERT(chain->Indices().size() >= 1);
 
             // A member access has to be a constant index
             auto* cnst = chain->Indices()[0]->As<core::ir::Constant>();
@@ -552,6 +546,7 @@ struct State {
                     break;
                 }
                 case core::BuiltinValue::kInstanceIndex:
+                case core::BuiltinValue::kPrimitiveIndex:
                 case core::BuiltinValue::kVertexIndex:
                 case core::BuiltinValue::kLocalInvocationIndex:
                 case core::BuiltinValue::kSubgroupInvocationId:
@@ -564,7 +559,7 @@ struct State {
                 case core::BuiltinValue::kGlobalInvocationId:
                 case core::BuiltinValue::kWorkgroupId:
                 case core::BuiltinValue::kNumWorkgroups: {
-                    var_type = ty.vec3<u32>();
+                    var_type = ty.vec3u();
                     break;
                 }
                 default: {
@@ -609,6 +604,7 @@ struct State {
                     break;
                 }
                 case core::BuiltinValue::kInstanceIndex:
+                case core::BuiltinValue::kPrimitiveIndex:
                 case core::BuiltinValue::kVertexIndex:
                 case core::BuiltinValue::kLocalInvocationIndex:
                 case core::BuiltinValue::kSubgroupInvocationId:
@@ -744,17 +740,18 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ShaderIO(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.ShaderIO",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowMultipleEntryPoints,
-                                              core::ir::Capability::kAllowOverrides,
-                                              core::ir::Capability::kAllowPhonyInstructions,
-                                              core::ir::Capability::kAllowNonCoreTypes,
-                                              core::ir::Capability::kAllowStructMatrixDecorations,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir,
+                core::ir::Capabilities{
+                    core::ir::Capability::kAllowMultipleEntryPoints,
+                    core::ir::Capability::kAllowOverrides,
+                    core::ir::Capability::kAllowPhonyInstructions,
+                    core::ir::Capability::kAllowNonCoreTypes,
+                    core::ir::Capability::kAllowStructMatrixDecorations,
+                    core::ir::Capability::kAllowLocationForNumericElements,
+                    core::ir::Capability::kAllowPointerToHandle,
+                    core::ir::Capability::kLoosenValidationForShaderIO,
+                },
+                "before spirv.ShaderIO");
 
     return State{ir}.Process();
 }

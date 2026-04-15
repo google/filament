@@ -35,6 +35,7 @@
 
 #include "dawn/common/Assert.h"
 #include "gmock/gmock.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace testing {
 
@@ -61,8 +62,7 @@ class MockCallback<R (*)(Args...)> : public ::testing::MockFunction<R(Args...)> 
     static CallbackType Callback() { return CallUnboundCallback; }
 
     void* MakeUserdata(void* userdata) {
-        auto mockAndUserdata =
-            std::unique_ptr<MockAndUserdata>(new MockAndUserdata{this, userdata});
+        auto mockAndUserdata = std::make_unique<MockAndUserdata>(this, userdata);
 
         // Add the userdata to a set of userdata for this mock. We never
         // remove from this set even if a callback should only be called once so that
@@ -75,8 +75,8 @@ class MockCallback<R (*)(Args...)> : public ::testing::MockFunction<R(Args...)> 
 
   private:
     struct MockAndUserdata {
-        MockCallback* mock;
-        void* userdata;
+        raw_ptr<MockCallback> mock;
+        raw_ptr<void> userdata;
     };
 
     static R CallUnboundCallback(Args... args) {

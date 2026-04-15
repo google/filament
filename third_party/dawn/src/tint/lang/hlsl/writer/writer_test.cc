@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/hlsl/writer/helper_test.h"
-
 #include "gmock/gmock.h"
+#include "src/tint/lang/hlsl/writer/helper_test.h"
 
 namespace tint::hlsl::writer {
 namespace {
@@ -36,11 +35,10 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 TEST_F(HlslWriterTest, StripAllNames) {
-    auto* str =
-        ty.Struct(mod.symbols.New("MyStruct"), {
-                                                   {mod.symbols.Register("a"), ty.i32()},
-                                                   {mod.symbols.Register("b"), ty.vec4<i32>()},
-                                               });
+    auto* str = ty.Struct(mod.symbols.New("MyStruct"), {
+                                                           {mod.symbols.Register("a"), ty.i32()},
+                                                           {mod.symbols.Register("b"), ty.vec4i()},
+                                                       });
     auto* foo = b.Function("foo", ty.u32());
     auto* param = b.FunctionParam("param", ty.u32());
     foo->AppendParam(param);
@@ -65,7 +63,8 @@ TEST_F(HlslWriterTest, StripAllNames) {
     Options options;
     options.remapped_entry_point_name = "tint_entry_point";
     options.strip_all_names = true;
-    ASSERT_TRUE(Generate(options)) << err_ << output_.hlsl;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(struct tint_struct {
   int tint_member;
   int4 tint_member_1;
@@ -92,6 +91,88 @@ void tint_entry_point(tint_struct_1 v_8) {
 }
 
 )");
+}
+
+TEST_F(HlslWriterTest, CanGenerate_TexelBufferUnsupported) {
+    auto* buffer_ty = ty.texel_buffer(core::TexelFormat::kRgba8Unorm, core::Access::kRead);
+    auto* var = b.Var("buf", ty.ptr<handle>(buffer_ty));
+    mod.root_block->Append(var);
+
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        b.Let("x", var);
+        b.Return(ep);
+    });
+
+    Options options;
+    options.entry_point_name = "main";
+    auto result = Generate(options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
+                testing::HasSubstr("texel buffers are not supported by the HLSL backend"));
+}
+
+TEST_F(HlslWriterTest, CanGenerate_AtomicStoreMax_Unsupported) {
+    auto* sb =
+        ty.Struct(mod.symbols.New("SB"), {
+                                             {mod.symbols.Register("a"), ty.atomic(ty.u64())},
+                                         });
+    auto* var = b.Var("sb", ty.ptr<storage, read_write>(sb));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        auto* access = b.Access(ty.ptr<storage, read_write>(ty.atomic(ty.u64())), var, 0_u);
+        b.Call<void>(core::BuiltinFn::kAtomicStoreMax, access, 1_u);
+        b.Return(func);
+    });
+
+    Options options;
+    options.entry_point_name = "main";
+    auto result = Generate(options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
+                testing::HasSubstr(
+                    "64-bit (vec2u) atomic operations are not yet supported by the HLSL backend"));
+}
+
+TEST_F(HlslWriterTest, CanGenerate_AtomicStoreMin_Unsupported) {
+    auto* sb =
+        ty.Struct(mod.symbols.New("SB"), {
+                                             {mod.symbols.Register("a"), ty.atomic(ty.u64())},
+                                         });
+    auto* var = b.Var("sb", ty.ptr<storage, read_write>(sb));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        auto* access = b.Access(ty.ptr<storage, read_write>(ty.atomic(ty.u64())), var, 0_u);
+        b.Call<void>(core::BuiltinFn::kAtomicStoreMin, access, 1_u);
+        b.Return(func);
+    });
+
+    Options options;
+    options.entry_point_name = "main";
+    auto result = Generate(options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
+                testing::HasSubstr(
+                    "64-bit (vec2u) atomic operations are not yet supported by the HLSL backend"));
+}
+
+TEST_F(HlslWriterTest, WorkgroupStorageSize_OverflowAfterAlign) {
+    auto* var = mod.root_block->Append(b.Var<workgroup, array<u32, 0x3FFFFFFFu>>("a"));
+    auto* foo = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+    b.Append(foo->Block(), [&] {  //
+        b.Load(b.Access<ptr<workgroup, u32>>(var, 0_u));
+        b.Return(foo);
+    });
+
+    // Note: We ignore the result here because it will fail if DXC validation is enabled.
+    [[maybe_unused]] auto result = Generate();
+    EXPECT_EQ(output_.workgroup_info.storage_size, 0x100000000ull);
 }
 
 }  // namespace

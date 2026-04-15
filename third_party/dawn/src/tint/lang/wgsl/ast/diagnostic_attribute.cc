@@ -31,30 +31,18 @@
 #include <utility>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::DiagnosticAttribute);
 
 namespace tint::ast {
 
-DiagnosticAttribute::DiagnosticAttribute(GenerationID pid,
-                                         NodeID nid,
-                                         const Source& src,
-                                         DiagnosticControl&& dc)
-    : Base(pid, nid, src), control(std::move(dc)) {}
+DiagnosticAttribute::DiagnosticAttribute(NodeID nid, const Source& src, DiagnosticControl&& dc)
+    : Base(nid, src), control(std::move(dc)) {}
 
 DiagnosticAttribute::~DiagnosticAttribute() = default;
 
 std::string DiagnosticAttribute::Name() const {
     return "diagnostic";
-}
-
-const DiagnosticAttribute* DiagnosticAttribute::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto rule = ctx.Clone(control.rule_name);
-    DiagnosticControl dc(control.severity, rule);
-    return ctx.dst->create<DiagnosticAttribute>(src, std::move(dc));
 }
 
 }  // namespace tint::ast

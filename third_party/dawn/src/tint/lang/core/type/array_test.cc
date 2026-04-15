@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/type/array.h"
+
 #include "src/tint/lang/core/type/helper_test.h"
 #include "src/tint/lang/core/type/i32.h"
 #include "src/tint/lang/core/type/manager.h"
@@ -39,54 +40,38 @@ using ArrayTest = TestHelper;
 
 TEST_F(ArrayTest, CreateSizedArray) {
     Manager ty;
-    auto* a = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* b = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* c = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(3u), 4u, 8u, 32u, 16u);
-    auto* d = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 5u, 8u, 32u, 16u);
-    auto* e = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 9u, 32u, 16u);
-    auto* f = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 33u, 16u);
-    auto* g = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 33u, 17u);
+    auto* a = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 8u);
+    auto* b = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 8u);
+    auto* c = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(3u), 8u);
+    auto* e = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 9u);
 
     EXPECT_EQ(a->ElemType(), ty.u32());
     EXPECT_EQ(a->Count(), ty.Get<ConstantArrayCount>(2u));
     EXPECT_EQ(a->Align(), 4u);
     EXPECT_EQ(a->Size(), 8u);
-    EXPECT_EQ(a->Stride(), 32u);
-    EXPECT_EQ(a->ImplicitStride(), 16u);
-    EXPECT_FALSE(a->IsStrideImplicit());
+    EXPECT_EQ(a->ImplicitStride(), 4u);
     EXPECT_FALSE(a->Count()->Is<RuntimeArrayCount>());
 
     EXPECT_EQ(a, b);
     EXPECT_NE(a, c);
-    EXPECT_NE(a, d);
     EXPECT_NE(a, e);
-    EXPECT_NE(a, f);
-    EXPECT_NE(a, g);
 }
 
 TEST_F(ArrayTest, CreateRuntimeArray) {
     Manager ty;
-    auto* a = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
-    auto* b = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
-    auto* c = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 5u, 8u, 32u, 32u);
-    auto* d = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 9u, 32u, 32u);
-    auto* e = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 33u, 32u);
-    auto* f = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 33u, 17u);
+    auto* a = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 8u);
+    auto* b = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 8u);
+    auto* d = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 9u);
 
     EXPECT_EQ(a->ElemType(), ty.u32());
     EXPECT_EQ(a->Count(), ty.Get<RuntimeArrayCount>());
     EXPECT_EQ(a->Align(), 4u);
     EXPECT_EQ(a->Size(), 8u);
-    EXPECT_EQ(a->Stride(), 32u);
-    EXPECT_EQ(a->ImplicitStride(), 32u);
-    EXPECT_TRUE(a->IsStrideImplicit());
+    EXPECT_EQ(a->ImplicitStride(), 4u);
     EXPECT_TRUE(a->Count()->Is<RuntimeArrayCount>());
 
     EXPECT_EQ(a, b);
-    EXPECT_NE(a, c);
     EXPECT_NE(a, d);
-    EXPECT_NE(a, e);
-    EXPECT_NE(a, f);
 }
 
 TEST_F(ArrayTest, Hash) {
@@ -99,20 +84,14 @@ TEST_F(ArrayTest, Hash) {
 
 TEST_F(ArrayTest, Equals) {
     Manager ty;
-    auto* a = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* b = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
-    auto* c = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(3u), 4u, 8u, 32u, 16u);
-    auto* d = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 5u, 8u, 32u, 16u);
-    auto* e = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 9u, 32u, 16u);
-    auto* f = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 33u, 16u);
-    auto* g = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 33u, 17u);
+    auto* a = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 8u);
+    auto* b = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 8u);
+    auto* c = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(3u), 8u);
+    auto* e = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 9u);
 
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
-    EXPECT_FALSE(a->Equals(*d));
     EXPECT_FALSE(a->Equals(*e));
-    EXPECT_FALSE(a->Equals(*f));
-    EXPECT_FALSE(a->Equals(*g));
     EXPECT_FALSE(a->Equals(Void{}));
 }
 
@@ -126,18 +105,6 @@ TEST_F(ArrayTest, FriendlyNameStaticSized) {
     Manager ty;
     auto* arr = ty.array(ty.i32(), 5u);
     EXPECT_EQ(arr->FriendlyName(), "array<i32, 5>");
-}
-
-TEST_F(ArrayTest, FriendlyNameRuntimeSizedNonImplicitStride) {
-    Manager ty;
-    auto* arr = ty.runtime_array(ty.i32(), 8u);
-    EXPECT_EQ(arr->FriendlyName(), "@stride(8) array<i32>");
-}
-
-TEST_F(ArrayTest, FriendlyNameStaticSizedNonImplicitStride) {
-    Manager ty;
-    auto* arr = ty.array(ty.i32(), 5u, 8u);
-    EXPECT_EQ(arr->FriendlyName(), "@stride(8) array<i32, 5>");
 }
 
 TEST_F(ArrayTest, IsConstructable) {
@@ -169,7 +136,7 @@ TEST_F(ArrayTest, HasFixedFootprint) {
 
 TEST_F(ArrayTest, CloneSizedArray) {
     Manager ty;
-    auto* ary = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 4u, 8u, 32u, 16u);
+    auto* ary = ty.Get<Array>(ty.u32(), ty.Get<ConstantArrayCount>(2u), 8u);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};
@@ -182,14 +149,12 @@ TEST_F(ArrayTest, CloneSizedArray) {
     EXPECT_EQ(val->Count()->As<ConstantArrayCount>()->value, 2u);
     EXPECT_EQ(val->Align(), 4u);
     EXPECT_EQ(val->Size(), 8u);
-    EXPECT_EQ(val->Stride(), 32u);
-    EXPECT_EQ(val->ImplicitStride(), 16u);
-    EXPECT_FALSE(val->IsStrideImplicit());
+    EXPECT_EQ(val->ImplicitStride(), 4u);
 }
 
 TEST_F(ArrayTest, CloneRuntimeArray) {
     Manager ty;
-    auto* ary = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 4u, 8u, 32u, 32u);
+    auto* ary = ty.Get<Array>(ty.u32(), ty.Get<RuntimeArrayCount>(), 8u);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};
@@ -200,9 +165,7 @@ TEST_F(ArrayTest, CloneRuntimeArray) {
     EXPECT_TRUE(val->Count()->Is<RuntimeArrayCount>());
     EXPECT_EQ(val->Align(), 4u);
     EXPECT_EQ(val->Size(), 8u);
-    EXPECT_EQ(val->Stride(), 32u);
-    EXPECT_EQ(val->ImplicitStride(), 32u);
-    EXPECT_TRUE(val->IsStrideImplicit());
+    EXPECT_EQ(val->ImplicitStride(), 4u);
 }
 
 }  // namespace

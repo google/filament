@@ -35,7 +35,7 @@ final class CodedInputStreamReader implements Reader {
 
   public static CodedInputStreamReader forCodedInput(CodedInputStream input) {
     if (input.wrapper != null) {
-      return input.wrapper;
+      return (CodedInputStreamReader) input.wrapper;
     }
     return new CodedInputStreamReader(input);
   }
@@ -1262,7 +1262,7 @@ final class CodedInputStreamReader implements Reader {
         } catch (InvalidProtocolBufferException.InvalidWireTypeException ignore) {
           // the type doesn't match, skip the field.
           if (!skipField()) {
-            throw new InvalidProtocolBufferException("Unable to parse map entry.");
+            throw new InvalidProtocolBufferException("Unable to parse map entry.", ignore);
           }
         }
       }

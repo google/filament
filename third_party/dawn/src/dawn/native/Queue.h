@@ -30,20 +30,20 @@
 
 #include <memory>
 
+#include "absl/container/flat_hash_set.h"
 #include "dawn/common/MutexProtected.h"
 #include "dawn/common/SerialMap.h"
 #include "dawn/common/WeakRefSupport.h"
 #include "dawn/native/CallbackTaskManager.h"
+#include "dawn/native/DawnNative.h"
 #include "dawn/native/Error.h"
 #include "dawn/native/ExecutionQueue.h"
 #include "dawn/native/Forward.h"
 #include "dawn/native/IntegerTypes.h"
 #include "dawn/native/ObjectBase.h"
-#include "partition_alloc/pointers/raw_ptr.h"
-
-#include "dawn/native/DawnNative.h"
 #include "dawn/native/dawn_platform.h"
 #include "dawn/platform/DawnPlatform.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native {
 
@@ -62,10 +62,10 @@ struct TrackTaskCallback : CallbackTask {
     ExecutionSerial mSerial = kMaxExecutionSerial;
 };
 
-class QueueBase : public ApiObjectBase,
-                  public ExecutionQueueBase,
-                  public WeakRefSupport<QueueBase> {
+class QueueBase : public ExecutionQueueBase, public WeakRefSupport<QueueBase> {
   public:
+    using BufferSet = absl::flat_hash_set<BufferBase*>;
+
     ~QueueBase() override;
 
     static Ref<QueueBase> MakeError(DeviceBase* device, StringView label);
@@ -115,7 +115,7 @@ class QueueBase : public ApiObjectBase,
     QueueBase(DeviceBase* device, const QueueDescriptor* descriptor);
     QueueBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     virtual MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) = 0;
     virtual MaybeError WriteBufferImpl(BufferBase* buffer,
@@ -142,8 +142,9 @@ class QueueBase : public ApiObjectBase,
                                                      const TexelCopyTextureInfo* destination,
                                                      const Extent3D* copySize,
                                                      const CopyTextureForBrowserOptions* options);
-
-    MaybeError ValidateSubmit(uint32_t commandCount, CommandBufferBase* const* commands) const;
+    MaybeError ValidateSubmit(uint32_t commandCount,
+                              CommandBufferBase* const* commands,
+                              BufferSet& buffersFromCommands) const;
     MaybeError ValidateOnSubmittedWorkDone() const;
     MaybeError ValidateWriteTexture(const TexelCopyTextureInfo* destination,
                                     size_t dataSize,

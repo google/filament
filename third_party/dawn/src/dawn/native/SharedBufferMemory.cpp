@@ -57,7 +57,7 @@ class ErrorSharedBufferMemory : public SharedBufferMemoryBase {
                                                      UnpackedPtr<EndAccessState>& state) override {
         DAWN_UNREACHABLE();
     }
-    void DestroyImpl() override {}
+    void DestroyImpl(DestroyReason reason) override {}
 };
 
 }  // namespace
@@ -107,7 +107,9 @@ BufferBase* SharedBufferMemoryBase::APICreateBuffer(const BufferDescriptor* desc
     if (descriptor == nullptr) {
         defaultDescriptor = {};
         defaultDescriptor.size = mProperties.size;
-        defaultDescriptor.usage = mProperties.usage;
+
+        // The buffers created with default descriptor won't contain buffer mapping usages.
+        defaultDescriptor.usage = mProperties.usage & ~kMappableBufferUsages;
         descriptor = &defaultDescriptor;
     }
 

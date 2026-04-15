@@ -27,6 +27,7 @@
 
 #include "src/tint/lang/wgsl/inspector/resource_binding.h"
 
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/array.h"
 #include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/i32.h"
@@ -59,28 +60,54 @@ ResourceBinding::TextureDimension TypeTextureDimensionToResourceBindingTextureDi
     return ResourceBinding::TextureDimension::kNone;
 }
 
-ResourceBinding::SampledKind BaseTypeToSampledKind(const core::type::Type* base_type) {
-    if (!base_type) {
-        return ResourceBinding::SampledKind::kUnknown;
+ResourceBinding::SampledKind ToFilterableSampledKind(const core::type::SampledTexture* tex) {
+    switch (tex->Filterable()) {
+        case core::TextureFilterable::kFilterable:
+            return ResourceBinding::SampledKind::kFilterable;
+        case core::TextureFilterable::kUnfilterable:
+            return ResourceBinding::SampledKind::kUnfilterable;
+        default:
+            break;
+    }
+    // We don't want to say `float` in this case, we want `unknown-filterable` to signify the
+    // unknown filterablity.
+    if (tex->Type()->Is<core::type::F32>()) {
+        return ResourceBinding::SampledKind::kUnknownFilterable;
     }
 
-    if (auto* at = base_type->As<core::type::Array>()) {
-        base_type = at->ElemType();
-    } else if (auto* mt = base_type->As<core::type::Matrix>()) {
-        base_type = mt->Type();
-    } else if (auto* vt = base_type->As<core::type::Vector>()) {
-        base_type = vt->Type();
-    }
+    return BaseTypeToSampledKind(tex->Type());
+}
+
+ResourceBinding::SampledKind BaseTypeToSampledKind(const core::type::Type* base_type) {
+    TINT_ASSERT(base_type);
 
     if (base_type->Is<core::type::F32>()) {
         return ResourceBinding::SampledKind::kFloat;
-    } else if (base_type->Is<core::type::U32>()) {
-        return ResourceBinding::SampledKind::kUInt;
-    } else if (base_type->Is<core::type::I32>()) {
-        return ResourceBinding::SampledKind::kSInt;
-    } else {
-        return ResourceBinding::SampledKind::kUnknown;
     }
+    if (base_type->Is<core::type::U32>()) {
+        return ResourceBinding::SampledKind::kUInt;
+    }
+    if (base_type->Is<core::type::I32>()) {
+        return ResourceBinding::SampledKind::kSInt;
+    }
+    TINT_UNREACHABLE();
+}
+
+ResourceBinding::SamplerType SamplerToSamplerType(const core::type::Sampler* sampler) {
+    if (sampler->Kind() == core::type::SamplerKind::kSampler) {
+        switch (sampler->Filtering()) {
+            case core::SamplerFiltering::kFiltering:
+                return ResourceBinding::SamplerType::kFiltering;
+            case core::SamplerFiltering::kNonFiltering:
+                return ResourceBinding::SamplerType::kNonFiltering;
+            default:
+                return ResourceBinding::SamplerType::kUnknownFiltering;
+        }
+    }
+    if (sampler->Kind() == core::type::SamplerKind::kComparisonSampler) {
+        return ResourceBinding::SamplerType::kComparison;
+    }
+    TINT_UNREACHABLE();
 }
 
 ResourceBinding::TexelFormat TypeTexelFormatToResourceBindingTexelFormat(

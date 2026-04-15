@@ -52,7 +52,7 @@ SharedResourceMemory::SharedResourceMemory(DeviceBase* device,
 
 SharedResourceMemory::~SharedResourceMemory() = default;
 
-void SharedResourceMemory::DestroyImpl() {}
+void SharedResourceMemory::DestroyImpl(DestroyReason reason) {}
 
 bool SharedResourceMemoryContents::HasWriteAccess() const {
     return mSharedResourceAccessState == SharedResourceAccessState::Write;

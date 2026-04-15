@@ -37,7 +37,7 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::ir::Value);
 
 namespace tint::core::ir {
 
-Value::Value() = default;
+Value::Value(const core::type::Type* type) : type_(type) {}
 
 Value::~Value() = default;
 

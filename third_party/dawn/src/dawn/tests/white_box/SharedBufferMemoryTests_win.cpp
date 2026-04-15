@@ -26,7 +26,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <d3d12.h>
+
 #include <vector>
+
 #include "dawn/native/D3D12Backend.h"
 #include "dawn/native/d3d12/DeviceD3D12.h"
 #include "dawn/tests/DawnTest.h"
@@ -84,10 +86,10 @@ void CopyD3D12Resource(ID3D12Device* device, ID3D12Resource* source, ID3D12Resou
     }
 }
 
-class Backend : public SharedBufferMemoryTestBackend {
+class ExistingD3D12ResourceBackend : public SharedBufferMemoryTestBackend {
   public:
-    static Backend* GetInstance() {
-        static Backend b;
+    static Backend GetInstance() {
+        static ExistingD3D12ResourceBackend b;
         return &b;
     }
 
@@ -169,9 +171,17 @@ class Backend : public SharedBufferMemoryTestBackend {
     ComPtr<ID3D12Resource> CreateD3D12Buffer(ID3D12Device* device,
                                              D3D12_HEAP_TYPE heapType,
                                              uint32_t bufferSize = kBufferSize) {
+        D3D12_HEAP_PROPERTIES heapProperties = {heapType, D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+                                                D3D12_MEMORY_POOL_UNKNOWN, 0, 0};
+        return CreateD3D12Buffer(device, heapProperties, bufferSize);
+    }
+
+    ComPtr<ID3D12Resource> CreateD3D12Buffer(ID3D12Device* device,
+                                             D3D12_HEAP_PROPERTIES heapProperties,
+                                             uint32_t bufferSize = kBufferSize) {
         D3D12_RESOURCE_STATES initialResourceState;
         D3D12_RESOURCE_FLAGS resourceFlags = D3D12_RESOURCE_FLAG_NONE;
-        switch (heapType) {
+        switch (heapProperties.Type) {
             case D3D12_HEAP_TYPE_UPLOAD:
                 initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
                 break;
@@ -182,9 +192,6 @@ class Backend : public SharedBufferMemoryTestBackend {
                 initialResourceState = D3D12_RESOURCE_STATE_COMMON;
                 resourceFlags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
-
-        D3D12_HEAP_PROPERTIES heapProperties = {heapType, D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-                                                D3D12_MEMORY_POOL_UNKNOWN, 0, 0};
 
         D3D12_RESOURCE_DESC descriptor;
         descriptor.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -207,11 +214,13 @@ class Backend : public SharedBufferMemoryTestBackend {
     }
 
   private:
-    Backend() {}
+    ExistingD3D12ResourceBackend() {}
 };
 
+class SharedBufferMemoryExistingD3D12ResourceTests : public SharedBufferMemoryTests {};
+
 // Ensure that importing a nullptr ID3D12Resource results in error.
-TEST_P(SharedBufferMemoryTests, nullResourceFailure) {
+TEST_P(SharedBufferMemoryExistingD3D12ResourceTests, NullResourceFailure) {
     native::d3d12::SharedBufferMemoryD3D12ResourceDescriptor sharedD3d12ResourceDesc;
     sharedD3d12ResourceDesc.resource = nullptr;
     wgpu::SharedBufferMemoryDescriptor desc;
@@ -221,13 +230,14 @@ TEST_P(SharedBufferMemoryTests, nullResourceFailure) {
 
 // Validate that importing an ID3D12Resource across devices results in failure. This is tested by
 // creating a resource with a WARP device and attempting to use it on a non-WARP device.
-TEST_P(SharedBufferMemoryTests, CrossDeviceResourceImportFailure) {
+TEST_P(SharedBufferMemoryExistingD3D12ResourceTests, CrossDeviceResourceImportFailure) {
     DAWN_TEST_UNSUPPORTED_IF(IsWARP());
     ComPtr<ID3D12Device> warpDevice =
-        static_cast<Backend*>(GetParam().mBackend)->CreateD3D12Device(device, true);
+        static_cast<ExistingD3D12ResourceBackend*>(GetParam().mBackend)
+            ->CreateD3D12Device(device, true);
     ComPtr<ID3D12Resource> d3d12Resource =
-        static_cast<Backend*>(GetParam().mBackend)
-            ->CreateD3D12Buffer(warpDevice.Get(), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE);
+        static_cast<ExistingD3D12ResourceBackend*>(GetParam().mBackend)
+            ->CreateD3D12Buffer(warpDevice.Get(), D3D12_HEAP_TYPE_UPLOAD);
     wgpu::SharedBufferMemoryDescriptor desc;
     native::d3d12::SharedBufferMemoryD3D12ResourceDescriptor sharedD3d12ResourceDesc;
     sharedD3d12ResourceDesc.resource = d3d12Resource.Get();
@@ -236,10 +246,158 @@ TEST_P(SharedBufferMemoryTests, CrossDeviceResourceImportFailure) {
     ASSERT_DEVICE_ERROR(device.ImportSharedBufferMemory(&desc));
 }
 
+// Validate that importing an ID3D12Resource allocated on a CUSTOM heap that is equivalent to UPLOAD
+// works correctly.
+TEST_P(SharedBufferMemoryExistingD3D12ResourceTests, CustomUploadHeapImport) {
+    ComPtr<ID3D12Device> d3d12Device =
+        static_cast<ExistingD3D12ResourceBackend*>(GetParam().mBackend)
+            ->CreateD3D12Device(device, false);
+    D3D12_HEAP_PROPERTIES heapProperties =
+        d3d12Device->GetCustomHeapProperties(0, D3D12_HEAP_TYPE_UPLOAD);
+    wgpu::SharedBufferMemoryDescriptor desc;
+    ComPtr<ID3D12Resource> d3d12Resource =
+        static_cast<ExistingD3D12ResourceBackend*>(GetParam().mBackend)
+            ->CreateD3D12Buffer(d3d12Device.Get(), heapProperties);
+    native::d3d12::SharedBufferMemoryD3D12ResourceDescriptor sharedD3d12ResourceDesc;
+    sharedD3d12ResourceDesc.resource = d3d12Resource.Get();
+    desc.nextInChain = &sharedD3d12ResourceDesc;
+
+    wgpu::SharedBufferMemory sharedBufferMemory = device.ImportSharedBufferMemory(&desc);
+    ASSERT_TRUE(sharedBufferMemory.CreateBuffer().Get());
+}
+
+// Validate that importing an ID3D12Resource allocated on a CUSTOM heap that is equivalent to
+// READBACK works correctly.
+TEST_P(SharedBufferMemoryExistingD3D12ResourceTests, CustomReadbackHeapImport) {
+    ComPtr<ID3D12Device> d3d12Device =
+        static_cast<ExistingD3D12ResourceBackend*>(GetParam().mBackend)
+            ->CreateD3D12Device(device, false);
+    D3D12_HEAP_PROPERTIES heapProperties =
+        d3d12Device->GetCustomHeapProperties(0, D3D12_HEAP_TYPE_READBACK);
+    wgpu::SharedBufferMemoryDescriptor desc;
+    ComPtr<ID3D12Resource> d3d12Resource =
+        static_cast<ExistingD3D12ResourceBackend*>(GetParam().mBackend)
+            ->CreateD3D12Buffer(d3d12Device.Get(), heapProperties);
+    native::d3d12::SharedBufferMemoryD3D12ResourceDescriptor sharedD3d12ResourceDesc;
+    sharedD3d12ResourceDesc.resource = d3d12Resource.Get();
+    desc.nextInChain = &sharedD3d12ResourceDesc;
+
+    wgpu::SharedBufferMemory sharedBufferMemory = device.ImportSharedBufferMemory(&desc);
+    ASSERT_TRUE(sharedBufferMemory.CreateBuffer().Get());
+}
+
+class D3D12SharedMemoryFileHandleBackend : public SharedBufferMemoryTestBackend {
+  public:
+    static Backend GetInstance() {
+        static D3D12SharedMemoryFileHandleBackend b;
+        return &b;
+    }
+
+    void TearDown() override {
+        if (mSharedMemoryHandle != nullptr) {
+            CloseHandle(mSharedMemoryHandle);
+            mSharedMemoryHandle = nullptr;
+        }
+    }
+
+    std::vector<wgpu::FeatureName> RequiredFeatures(const wgpu::Adapter& adapter) const override {
+        return {wgpu::FeatureName::SharedBufferMemoryD3D12SharedMemoryFileMappingHandle,
+                wgpu::FeatureName::SharedFenceDXGISharedHandle,
+                wgpu::FeatureName::BufferMapExtendedUsages, wgpu::FeatureName::HostMappedPointer};
+    }
+
+    wgpu::SharedBufferMemory CreateSharedBufferMemory(const wgpu::Device& device,
+                                                      wgpu::BufferUsage usages,
+                                                      uint32_t bufferSize,
+                                                      uint32_t initializationData = 0) override {
+        uint64_t alignedHeapSize =
+            Align(bufferSize, kD3D12SharedBufferMemoryFileMappingHandleSizeAlignment);
+
+        LARGE_INTEGER largeSize = {};
+        largeSize.QuadPart = alignedHeapSize;
+        // Create a named shared memory object by using INVALID_HANDLE_VALUE as input file handle.
+        // See https://learn.microsoft.com/en-us/windows/win32/memory/creating-named-shared-memory.
+        mSharedMemoryHandle = CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE,
+                                                largeSize.HighPart, largeSize.LowPart, nullptr);
+        EXPECT_NE(mSharedMemoryHandle, nullptr);
+
+        if (initializationData) {
+            // Get mapped pointer to the file mapping object for test
+            void* ptr = MapViewOfFile(mSharedMemoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+            EXPECT_NE(ptr, nullptr);
+
+            memcpy(ptr, &initializationData, sizeof(initializationData));
+
+            UnmapViewOfFile(ptr);
+        }
+
+        wgpu::SharedBufferMemoryDescriptor desc;
+        wgpu::SharedBufferMemoryD3D12SharedMemoryFileMappingHandleDescriptor sharedFileHandleDesc;
+        sharedFileHandleDesc.handle = mSharedMemoryHandle;
+        sharedFileHandleDesc.size = alignedHeapSize;
+        desc.nextInChain = &sharedFileHandleDesc;
+
+        return device.ImportSharedBufferMemory(&desc);
+    }
+
+  private:
+    D3D12SharedMemoryFileHandleBackend() {}
+
+    HANDLE mSharedMemoryHandle = nullptr;
+};
+
+class SharedBufferMemoryD3D12SharedFileHandleTests : public SharedBufferMemoryTests {};
+
+// Ensure that importing a nullptr handle results in error.
+TEST_P(SharedBufferMemoryD3D12SharedFileHandleTests, nullResourceFailure) {
+    wgpu::SharedBufferMemoryD3D12SharedMemoryFileMappingHandleDescriptor sharedFileHandleDesc;
+    sharedFileHandleDesc.handle = nullptr;
+    sharedFileHandleDesc.size = kD3D12SharedBufferMemoryFileMappingHandleSizeAlignment;
+    wgpu::SharedBufferMemoryDescriptor desc;
+    desc.nextInChain = &sharedFileHandleDesc;
+    ASSERT_DEVICE_ERROR(device.ImportSharedBufferMemory(&desc));
+}
+
+// Ensure that heap size not being a multiple of 65536 (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
+// results in error.
+TEST_P(SharedBufferMemoryD3D12SharedFileHandleTests, MemorySizeNotAlignFailure) {
+    constexpr uint32_t kUnAlignedSize = kD3D12SharedBufferMemoryFileMappingHandleSizeAlignment / 2;
+
+    LARGE_INTEGER largeSize = {};
+    largeSize.QuadPart = kUnAlignedSize;
+    // Create a named shared memory object by using INVALID_HANDLE_VALUE as input file handle.
+    // See https://learn.microsoft.com/en-us/windows/win32/memory/creating-named-shared-memory.
+    HANDLE sharedMemoryHandle = CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE,
+                                                  largeSize.HighPart, largeSize.LowPart, nullptr);
+    EXPECT_NE(sharedMemoryHandle, nullptr);
+
+    wgpu::SharedBufferMemoryD3D12SharedMemoryFileMappingHandleDescriptor sharedFileHandleDesc;
+    sharedFileHandleDesc.handle = nullptr;
+    sharedFileHandleDesc.size = kUnAlignedSize;
+    wgpu::SharedBufferMemoryDescriptor desc;
+    desc.nextInChain = &sharedFileHandleDesc;
+    ASSERT_DEVICE_ERROR(device.ImportSharedBufferMemory(&desc));
+}
+
 DAWN_INSTANTIATE_PREFIXED_TEST_P(D3D12,
                                  SharedBufferMemoryTests,
                                  {D3D12Backend()},
-                                 {Backend::GetInstance()});
+                                 {ExistingD3D12ResourceBackend::GetInstance(),
+                                  D3D12SharedMemoryFileHandleBackend::GetInstance()});
+
+// As D3D12 backend is filtered out on Windows x86, we need below to allow uninstantiated gtests.
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(SharedBufferMemoryExistingD3D12ResourceTests);
+DAWN_INSTANTIATE_PREFIXED_TEST_P(D3D12,
+                                 SharedBufferMemoryExistingD3D12ResourceTests,
+                                 {D3D12Backend()},
+                                 {ExistingD3D12ResourceBackend::GetInstance()});
+
+// As D3D12 backend is filtered out on Windows x86, we need below to allow uninstantiated gtests.
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(SharedBufferMemoryD3D12SharedFileHandleTests);
+DAWN_INSTANTIATE_PREFIXED_TEST_P(D3D12,
+                                 SharedBufferMemoryD3D12SharedFileHandleTests,
+                                 {D3D12Backend()},
+                                 {D3D12SharedMemoryFileHandleBackend::GetInstance()});
 
 }  // anonymous namespace
 }  // namespace dawn

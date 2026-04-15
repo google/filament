@@ -43,7 +43,7 @@ if (tint_build_tintd && tint_build_wgsl_reader) {
     output_name = "tintd"
     sources = [ "main.cc" ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/ice",
       "${tint_src_dir}/utils/macros",

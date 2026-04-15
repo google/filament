@@ -29,7 +29,7 @@
 #define SRC_TINT_LANG_WGSL_WRITER_IR_TO_PROGRAM_IR_TO_PROGRAM_H_
 
 #include "src/tint/lang/wgsl/program/program.h"
-#include "src/tint/lang/wgsl/writer/ir_to_program/program_options.h"
+#include "src/tint/lang/wgsl/writer/common/options.h"
 
 namespace tint::core::ir {
 class Module;
@@ -42,7 +42,7 @@ namespace tint::wgsl::writer {
 /// @param options the configuration options
 /// @return the tint::Program.
 /// @note Check the returned Program::Diagnostics() for any errors.
-Program IRToProgram(const core::ir::Module& module, const ProgramOptions& options = {});
+Program IRToProgram(const core::ir::Module& module, const Options& options = {});
 
 }  // namespace tint::wgsl::writer
 

@@ -94,8 +94,8 @@ struct State {
         auto* unsigned_type = ty.MatchWidth(ty.u32(), signed_type);
         b.InsertBefore(unary, [&] {
             auto* unsigned_value = b.Bitcast(unsigned_type, unary->Val());
-            auto* complement = b.Complement(unsigned_type, unsigned_value);
-            auto* plus_one = b.Add(unsigned_type, complement, b.MatchWidth(u32(1), unsigned_type));
+            auto* complement = b.Complement(unsigned_value);
+            auto* plus_one = b.Add(complement, b.MatchWidth(u32(1), unsigned_type));
             auto* result = b.Bitcast(signed_type, plus_one);
             unary->Result()->ReplaceAllUsesWith(result->Result());
         });
@@ -145,26 +145,23 @@ struct State {
 
 Result<SuccessType> SignedIntegerPolyfill(core::ir::Module& ir,
                                           const SignedIntegerPolyfillConfig& cfg) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "ir.SignedIntegerPolyfill",
-                                core::ir::Capabilities{
-                                    core::ir::Capability::kAllowPointersAndHandlesInStructures,
-                                    core::ir::Capability::kAllowDuplicateBindings,
-                                    core::ir::Capability::kAllow8BitIntegers,
-                                    core::ir::Capability::kAllow64BitIntegers,
-                                    core::ir::Capability::kAllowVectorElementPointer,
-                                    core::ir::Capability::kAllowHandleVarsWithoutBindings,
-                                    core::ir::Capability::kAllowClipDistancesOnF32,
-                                    core::ir::Capability::kAllowPrivateVarsInFunctions,
-                                    core::ir::Capability::kAllowAnyLetType,
-                                    core::ir::Capability::kAllowWorkspacePointerInputToEntryPoint,
-                                    core::ir::Capability::kAllowModuleScopeLets,
-                                    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-                                    core::ir::Capability::kAllowNonCoreTypes,
-                                });
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir,
+                core::ir::Capabilities{
+                    core::ir::Capability::kAllowDuplicateBindings,
+                    core::ir::Capability::kAllow8BitIntegers,
+                    core::ir::Capability::kAllow16BitIntegers,
+                    core::ir::Capability::kAllow64BitIntegers,
+                    core::ir::Capability::kAllowPointSizeBuiltin,
+                    core::ir::Capability::kAllowVectorElementPointer,
+                    core::ir::Capability::kAllowHandleVarsWithoutBindings,
+                    core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
+                    core::ir::Capability::kAllowAnyLetType,
+                    core::ir::Capability::kMslAllowEntryPointInterface,
+                    core::ir::Capability::kAllowModuleScopeLets,
+                    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
+                    core::ir::Capability::kAllowNonCoreTypes,
+                },
+                "before ir.SignedIntegerPolyfill");
 
     State{ir, cfg}.Process();
 

@@ -41,8 +41,6 @@ if(TINT_BUILD_WGSL_READER)
 # Condition: TINT_BUILD_WGSL_READER
 ################################################################################
 tint_add_target(tint_lang_wgsl_reader_parser lib
-  lang/wgsl/reader/parser/classify_template_args.cc
-  lang/wgsl/reader/parser/classify_template_args.h
   lang/wgsl/reader/parser/detail.h
   lang/wgsl/reader/parser/lexer.cc
   lang/wgsl/reader/parser/lexer.h

@@ -1,1 +1,18 @@
-41e4d9a34c1d9dcb2eef3ff39ff9c1f987bfa02a
+# Commits to ignore where possible in git blames, like reformat commits. Used by
+# code search, GitHub, etc. To use this locally, configure globally or locally:
+#   git config [--global] blame.ignoreRevsFile .git-blame-ignore-revs
+# or use:
+#   git blame --ignore-revs-file=.git-blame-ignore-revs
+#
+# Note it shouldn't be necessary to list rename commits here, because those
+# tools try to track renames already.
+#
+# Documentation for the Git option:
+#   https://git-scm.com/docs/git-blame#Documentation/git-blame.txt---ignore-revs-filefile
+# Documentation for the file format:
+#   https://git-scm.com/docs/git-fsck#Documentation/git-fsck.txt-fsckskipList
+#
+# Keep these in chronological order to make it easier to browse.
+
+41e4d9a34c1d9dcb2eef3ff39ff9c1f987bfa02a  # Consistent formatting for Dawn/Tint.
+9c2e123988eb588dbaaaa55eb490f48288b30825  # [dawn][tint] Rerun formatters on all C++-like and Python files

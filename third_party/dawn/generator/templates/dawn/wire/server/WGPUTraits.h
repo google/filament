@@ -33,7 +33,9 @@
 namespace dawn::wire::server {
 
 template <typename T>
-struct WGPUTraits;
+struct WGPUTraits {
+    static constexpr auto Release = nullptr;
+};
 
 {% for type in by_category["object"] %}
     {% set cType = as_cType(type.name) %}

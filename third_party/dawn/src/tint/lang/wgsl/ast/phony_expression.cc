@@ -28,21 +28,13 @@
 #include "src/tint/lang/wgsl/ast/phony_expression.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::PhonyExpression);
 
 namespace tint::ast {
 
-PhonyExpression::PhonyExpression(GenerationID pid, NodeID nid, const Source& src)
-    : Base(pid, nid, src) {}
+PhonyExpression::PhonyExpression(NodeID nid, const Source& src) : Base(nid, src) {}
 
 PhonyExpression::~PhonyExpression() = default;
-
-const PhonyExpression* PhonyExpression::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    return ctx.dst->create<PhonyExpression>(src);
-}
 
 }  // namespace tint::ast

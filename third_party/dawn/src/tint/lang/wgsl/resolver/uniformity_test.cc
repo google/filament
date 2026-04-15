@@ -27,19 +27,21 @@
 
 // GEN_BUILD:CONDITION(tint_build_wgsl_reader)
 
+#include "src/tint/lang/wgsl/resolver/uniformity.h"
+
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
-
-#include "src/tint/lang/wgsl/program/program_builder.h"
-#include "src/tint/lang/wgsl/reader/reader.h"
-#include "src/tint/lang/wgsl/resolver/resolve.h"
-#include "src/tint/lang/wgsl/resolver/uniformity.h"
-#include "src/tint/utils/text/string_stream.h"
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/tint/lang/wgsl/program/program_builder.h"
+#include "src/tint/lang/wgsl/reader/reader.h"
+#include "src/tint/lang/wgsl/resolver/resolve.h"
+#include "src/tint/utils/text/string_stream.h"
 
 namespace tint::resolver {
 namespace {
@@ -52,18 +54,19 @@ class UniformityAnalysisTestBase {
     /// Build and resolve a program from a ProgramBuilder object.
     /// @param program the program
     /// @param should_pass true if `builder` program should pass the analysis, otherwise false
-    void RunTest(Program&& program, bool should_pass) {
+    /// @param src the shader source, if non-empty.
+    void RunTest(Program&& program, bool should_pass, std::string src = "") {
         error_ = program.Diagnostics().Str();
 
         bool valid = program.IsValid();
         if (should_pass) {
-            EXPECT_TRUE(valid) << error_;
+            EXPECT_TRUE(valid) << error_ << "\n" << src;
             EXPECT_FALSE(program.Diagnostics().ContainsErrors());
         } else {
             if (kUniformityFailuresAsError) {
-                EXPECT_FALSE(valid);
+                EXPECT_FALSE(valid) << "\n" << src;
             } else {
-                EXPECT_TRUE(valid) << error_;
+                EXPECT_TRUE(valid) << error_ << "\n" << src;
             }
         }
     }
@@ -76,7 +79,7 @@ class UniformityAnalysisTestBase {
         options.allowed_features = wgsl::AllowedFeatures::Everything();
         auto file = std::make_unique<Source::File>("test", src);
         auto program = wgsl::reader::Parse(file.get(), options);
-        return RunTest(std::move(program), should_pass);
+        return RunTest(std::move(program), should_pass, src);
     }
 
     /// Build and resolve a program from a ProgramBuilder object.
@@ -115,6 +118,8 @@ class BasicTest : public UniformityAnalysisTestBase,
         kFuncVarNonUniform,
         kFuncNonUniformRetVal,
         kRWStorageBuffer,
+        // Scope-dependent conditions:
+        kSubgroupId,
         // End of range marker:
         kEndOfConditionRange,
     };
@@ -132,6 +137,7 @@ class BasicTest : public UniformityAnalysisTestBase,
         kStorageBarrier,
         kTextureBarrier,
         kWorkgroupUniformLoad,
+        kLastNonFragmentFunction = kWorkgroupUniformLoad,
         kTextureSample,
         kTextureSampleBias,
         kTextureSampleCompare,
@@ -144,6 +150,7 @@ class BasicTest : public UniformityAnalysisTestBase,
         kFwidth,
         kFwidthCoarse,
         kFwidthFine,
+        kLastNonSubgroupFunction = kFwidthFine,
         // Subgroup functions:
         kSubgroupBallot,
         kSubgroupElect,
@@ -176,6 +183,9 @@ class BasicTest : public UniformityAnalysisTestBase,
         kSubgroupMatrixStore,
         kSubgroupMatrixMultiply,
         kSubgroupMatrixMultiplyAccumulate,
+        kSubgroupMatrixScalarAdd,
+        kSubgroupMatrixScalarSubtract,
+        kSubgroupMatrixScalarMultiply,
         // End of range marker:
         kEndOfFunctionRange,
     };
@@ -211,6 +221,8 @@ class BasicTest : public UniformityAnalysisTestBase,
                 return "func_nonuniform_retval() == 0";
             case kRWStorageBuffer:
                 return "rw == 0";
+            case kSubgroupId:
+                return "subgroup_id == 0";
             case kEndOfConditionRange:
                 return "<invalid>";
         }
@@ -324,6 +336,12 @@ class BasicTest : public UniformityAnalysisTestBase,
             case kSubgroupMatrixMultiplyAccumulate:
                 return "_ = subgroupMatrixMultiplyAccumulate(subgroup_matrix_left_zero, "
                        "subgroup_matrix_right_zero, subgroup_matrix_result_zero)";
+            case kSubgroupMatrixScalarAdd:
+                return "_ = subgroupMatrixScalarAdd(subgroup_matrix_left_zero, 4.2f)";
+            case kSubgroupMatrixScalarSubtract:
+                return "_ = subgroupMatrixScalarSubtract(subgroup_matrix_left_zero, 4.2f)";
+            case kSubgroupMatrixScalarMultiply:
+                return "_ = subgroupMatrixScalarMultiply(subgroup_matrix_left_zero, 4.2f)";
             case kEndOfFunctionRange:
                 return "<invalid>";
         }
@@ -331,10 +349,20 @@ class BasicTest : public UniformityAnalysisTestBase,
     }
 
     /// @returns true if `c` is a condition that may be non-uniform.
-    static bool MayBeNonUniform(Condition c) { return c > kLastUniformCondition; }
+    static bool MayBeNonUniform(Condition c, Function f) {
+        if (c == kSubgroupId && f > kLastNonSubgroupFunction) {
+            return false;
+        }
+        return c > kLastUniformCondition;
+    }
 
     /// @returns true if `f` is a function call that is required to be uniform.
     static bool RequiredToBeUniform(Function f) { return f > kLastNoRestrictionFunction; }
+
+    /// @returns true if `f` is incompatible to be tested with `c`.
+    static bool ShouldSkip(Function f, Condition c) {
+        return c == kSubgroupId && (f > kLastNonFragmentFunction && f <= kLastNonSubgroupFunction);
+    }
 
     /// Convert a test parameter pair of condition+function to a string that can be used as part of
     /// a test name.
@@ -362,6 +390,7 @@ class BasicTest : public UniformityAnalysisTestBase,
             CASE(kFuncVarNonUniform);
             CASE(kFuncNonUniformRetVal);
             CASE(kRWStorageBuffer);
+            CASE(kSubgroupId);
             case kEndOfConditionRange:
                 break;
         }
@@ -417,6 +446,9 @@ class BasicTest : public UniformityAnalysisTestBase,
             CASE(kSubgroupMatrixStore);
             CASE(kSubgroupMatrixMultiply);
             CASE(kSubgroupMatrixMultiplyAccumulate);
+            CASE(kSubgroupMatrixScalarAdd);
+            CASE(kSubgroupMatrixScalarSubtract);
+            CASE(kSubgroupMatrixScalarMultiply);
             case kEndOfFunctionRange:
                 break;
         }
@@ -430,6 +462,23 @@ class BasicTest : public UniformityAnalysisTestBase,
 TEST_P(BasicTest, ConditionalFunctionCall) {
     auto condition = static_cast<Condition>(std::get<0>(GetParam()));
     auto function = static_cast<Function>(std::get<1>(GetParam()));
+
+    if (ShouldSkip(function, condition)) {
+        return;
+    }
+
+    std::string function_decl;
+    if (condition == kSubgroupId) {
+        function_decl = R"(
+@compute @workgroup_size(16)
+fn foo(@builtin(subgroup_id) subgroup_id : u32) {
+)";
+    } else {
+        function_decl = R"(
+fn foo() {
+)";
+    }
+
     std::string src = R"(
 enable subgroups;
 enable chromium_experimental_subgroup_matrix;
@@ -456,7 +505,7 @@ fn user_required_to_be_uniform() { workgroupBarrier(); }
 fn func_uniform_retval() -> i32 { return u; }
 fn func_nonuniform_retval() -> i32 { return rw; }
 
-fn foo() {
+)" + function_decl + R"(
   let let_uniform_rhs = 7;
   let let_nonuniform_rhs = rw;
 
@@ -476,10 +525,16 @@ fn foo() {
 }
 )";
 
-    bool should_pass = !(MayBeNonUniform(condition) && RequiredToBeUniform(function));
+    bool should_pass = !(MayBeNonUniform(condition, function) && RequiredToBeUniform(function));
     RunTest(src, should_pass);
     if (!should_pass) {
-        EXPECT_THAT(error_, ::testing::HasSubstr("must only be called from uniform control flow"));
+        if (function > kLastNonSubgroupFunction) {
+            EXPECT_THAT(error_, ::testing::HasSubstr(
+                                    "must only be called from subgroup uniform control flow"));
+        } else {
+            EXPECT_THAT(error_,
+                        ::testing::HasSubstr("must only be called from uniform control flow"));
+        }
     }
 }
 
@@ -649,10 +704,9 @@ struct BuiltinEntry {
 class ComputeBuiltin : public UniformityAnalysisTestBase,
                        public ::testing::TestWithParam<BuiltinEntry> {};
 TEST_P(ComputeBuiltin, AsParam) {
-    std::string src = std::string((GetParam().name == "subgroup_size") ? R"(enable subgroups;
-)"
-                                                                       : "") +
-                      R"(
+    std::string src = R"(
+enable subgroups;
+
 @compute @workgroup_size(64)
 fn main(@builtin()" + GetParam().name +
                       R"() b : )" + GetParam().type + R"() {
@@ -667,15 +721,15 @@ fn main(@builtin()" + GetParam().name +
     if (!should_pass) {
         EXPECT_EQ(
             error_,
-            R"(test:5:5 error: 'workgroupBarrier' must only be called from uniform control flow
+            R"(test:7:5 error: 'workgroupBarrier' must only be called from uniform control flow
     workgroupBarrier();
     ^^^^^^^^^^^^^^^^
 
-test:4:3 note: control flow depends on possibly non-uniform value
+test:6:3 note: control flow depends on possibly non-uniform value
   if (all(vec3(b) == vec3(0u))) {
   ^^
 
-test:4:16 note: builtin 'b' of 'main' may be non-uniform
+test:6:16 note: builtin 'b' of 'main' may be non-uniform
   if (all(vec3(b) == vec3(0u))) {
                ^
 )");
@@ -683,10 +737,9 @@ test:4:16 note: builtin 'b' of 'main' may be non-uniform
 }
 
 TEST_P(ComputeBuiltin, InStruct) {
-    std::string src = std::string((GetParam().name == "subgroup_size") ? R"(enable subgroups;
-)"
-                                                                       : "") +
-                      R"(
+    std::string src = R"(
+enable subgroups;
+
 struct S {
   @builtin()" + GetParam().name +
                       R"() b : )" + GetParam().type + R"(
@@ -705,15 +758,15 @@ fn main(s : S) {
     if (!should_pass) {
         EXPECT_EQ(
             error_,
-            R"(test:9:5 error: 'workgroupBarrier' must only be called from uniform control flow
+            R"(test:11:5 error: 'workgroupBarrier' must only be called from uniform control flow
     workgroupBarrier();
     ^^^^^^^^^^^^^^^^
 
-test:8:3 note: control flow depends on possibly non-uniform value
+test:10:3 note: control flow depends on possibly non-uniform value
   if (all(vec3(s.b) == vec3(0u))) {
   ^^
 
-test:8:16 note: parameter 's' of 'main' may be non-uniform
+test:10:16 note: parameter 's' of 'main' may be non-uniform
   if (all(vec3(s.b) == vec3(0u))) {
                ^
 )");
@@ -726,6 +779,7 @@ INSTANTIATE_TEST_SUITE_P(UniformityAnalysisTest,
                                            BuiltinEntry{"local_invocation_index", "u32", false},
                                            BuiltinEntry{"global_invocation_id", "vec3<u32>", false},
                                            BuiltinEntry{"workgroup_id", "vec3<u32>", true},
+                                           BuiltinEntry{"num_subgroups", "u32", true},
                                            BuiltinEntry{"num_workgroups", "vec3<u32>", true},
                                            BuiltinEntry{"subgroup_size", "u32", true}),
                          [](const ::testing::TestParamInfo<ComputeBuiltin::ParamType>& p) {
@@ -772,8 +826,8 @@ TEST_P(FragmentBuiltin, AsParam) {
     std::string src = "";
     if (GetParam().name == "subgroup_size") {
         src += "enable subgroups;\n";
-    } else if (GetParam().name == "primitive_id") {
-        src += "enable chromium_experimental_primitive_id;\n";
+    } else if (GetParam().name == "primitive_index") {
+        src += "enable primitive_index;\n";
     } else if (GetParam().name == "barycentric_coord") {
         src += "enable chromium_experimental_barycentric_coord;\n";
         asScalar = "vec3(b).x";
@@ -818,8 +872,8 @@ TEST_P(FragmentBuiltin, InStruct) {
     std::string src = "";
     if (GetParam().name == "subgroup_size") {
         src += "enable subgroups;\n";
-    } else if (GetParam().name == "primitive_id") {
-        src += "enable chromium_experimental_primitive_id;\n";
+    } else if (GetParam().name == "primitive_index") {
+        src += "enable primitive_index;\n";
     } else if (GetParam().name == "barycentric_coord") {
         src += "enable chromium_experimental_barycentric_coord;\n";
         asScalar = "vec3(s.b).x";
@@ -869,7 +923,7 @@ INSTANTIATE_TEST_SUITE_P(UniformityAnalysisTest,
                                            BuiltinEntry{"front_facing", "bool", false},
                                            BuiltinEntry{"sample_index", "u32", false},
                                            BuiltinEntry{"sample_mask", "u32", false},
-                                           BuiltinEntry{"primitive_id", "u32", false},
+                                           BuiltinEntry{"primitive_index", "u32", false},
                                            BuiltinEntry{"subgroup_size", "u32", false},
                                            BuiltinEntry{"barycentric_coord", "vec3<f32>", false}),
                          [](const ::testing::TestParamInfo<FragmentBuiltin::ParamType>& p) {
@@ -1124,7 +1178,7 @@ INSTANTIATE_TEST_SUITE_P(UniformityAnalysisTest,
                              return ToStr(interrupt) + "_" + ToStr(condition);
                          });
 
-TEST_P(LoopTest, CallInBody_InterruptAfter) {
+TEST_P(LoopTest, Loop_CallInBody_InterruptAfter) {
     // Test control-flow interrupt in a loop after a function call that requires uniform control
     // flow.
     auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
@@ -1163,7 +1217,7 @@ fn foo() {
     }
 }
 
-TEST_P(LoopTest, CallInBody_InterruptBefore) {
+TEST_P(LoopTest, Loop_CallInBody_InterruptBefore) {
     // Test control-flow interrupt in a loop before a function call that requires uniform control
     // flow.
     auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
@@ -1203,7 +1257,7 @@ fn foo() {
     }
 }
 
-TEST_P(LoopTest, CallInContinuing_InterruptInBody) {
+TEST_P(LoopTest, Loop_CallInContinuing_InterruptInBody) {
     // Test control-flow interrupt in a loop with a function call that requires uniform control flow
     // in the continuing statement.
     auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
@@ -1241,6 +1295,243 @@ fn foo() {
                                          "'nonuniform_var' may result in a non-uniform value"));
     } else {
         RunTest(src, true);
+    }
+}
+
+TEST_P(LoopTest, ForUnconditional_CallInBody_InterruptAfter) {
+    auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
+    auto condition = static_cast<Condition>(std::get<1>(GetParam()));
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read> uniform_var : i32;
+@group(0) @binding(0) var<storage, read_write> nonuniform_var : i32;
+
+fn foo() {
+  for ( ; ; ) {
+    workgroupBarrier();
+    )" + MakeInterrupt(interrupt, condition) +
+                      R"(;
+  }
+}
+)";
+    const bool infinite_loop = interrupt == kContinue;
+    const bool uniformity_failure = condition == kNonUniform;
+    const bool expect_pass = !uniformity_failure && !infinite_loop;
+
+    RunTest(src, expect_pass);
+    // Check infinite loop first, because uniformity analysis may trigger later.
+    if (infinite_loop) {
+        EXPECT_FALSE(error_.empty());
+    } else if (uniformity_failure) {
+        EXPECT_THAT(
+            error_,
+            ::testing::StartsWith(
+                R"(test:7:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();)"));
+        EXPECT_THAT(error_,
+                    ::testing::HasSubstr("test:8:9 note: reading from read_write storage buffer "
+                                         "'nonuniform_var' may result in a non-uniform value"));
+    } else {
+        EXPECT_TRUE(error_.empty());
+    }
+}
+
+TEST_P(LoopTest, ForUnconditional_CallInBody_InterruptBefore) {
+    auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
+    auto condition = static_cast<Condition>(std::get<1>(GetParam()));
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read> uniform_var : i32;
+@group(0) @binding(0) var<storage, read_write> nonuniform_var : i32;
+
+fn foo() {
+  for ( ; ; ) {
+    )" + MakeInterrupt(interrupt, condition) +
+                      R"(;
+    workgroupBarrier();
+  }
+}
+)";
+    const bool infinite_loop = interrupt == kContinue;
+    const bool exit_immediately = (interrupt != kContinue) && condition == kNone;
+    const bool uniformity_failure = condition == kNonUniform;
+    const bool expect_pass = exit_immediately || (!uniformity_failure && !infinite_loop);
+
+    RunTest(src, expect_pass);
+    // Check infinite loop first, because uniformity analysis may trigger later.
+    if (infinite_loop) {
+        EXPECT_FALSE(error_.empty());
+    } else if (uniformity_failure) {
+        EXPECT_THAT(
+            error_,
+            ::testing::StartsWith(
+                R"(test:8:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();)"))
+            << src;
+        EXPECT_THAT(error_,
+                    ::testing::HasSubstr("test:7:9 note: reading from read_write storage buffer "
+                                         "'nonuniform_var' may result in a non-uniform value"))
+            << src;
+    } else if (exit_immediately) {
+        EXPECT_FALSE(error_.empty());  // Warns that code is unreachable.
+    } else {
+        EXPECT_TRUE(error_.empty());
+    }
+}
+
+TEST_P(LoopTest, ForConditional_CallInBody_InterruptAfter) {
+    auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
+    auto condition = static_cast<Condition>(std::get<1>(GetParam()));
+    // The for-loop condition desugars to a conditional break, so the infinite
+    // loop check will not trigger.
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read> uniform_var : i32;
+@group(0) @binding(0) var<storage, read_write> nonuniform_var : i32;
+
+fn foo() {
+  for ( ; true ; ) {
+    workgroupBarrier();
+    )" + MakeInterrupt(interrupt, condition) +
+                      R"(;
+  }
+}
+)";
+    const bool uniformity_failure = condition == kNonUniform;
+    const bool expect_pass = !uniformity_failure;
+
+    RunTest(src, expect_pass);
+    if (uniformity_failure) {
+        EXPECT_THAT(
+            error_,
+            ::testing::StartsWith(
+                R"(test:7:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();)"));
+        EXPECT_THAT(error_,
+                    ::testing::HasSubstr("test:8:9 note: reading from read_write storage buffer "
+                                         "'nonuniform_var' may result in a non-uniform value"));
+    } else {
+        EXPECT_TRUE(error_.empty());
+    }
+}
+
+TEST_P(LoopTest, ForConditional_CallInBody_InterruptBefore) {
+    auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
+    auto condition = static_cast<Condition>(std::get<1>(GetParam()));
+    // The for-loop condition desugars to a conditional break, so the infinite
+    // loop check will not trigger.
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read> uniform_var : i32;
+@group(0) @binding(0) var<storage, read_write> nonuniform_var : i32;
+
+fn foo() {
+  for ( ; true ; ) {
+    )" + MakeInterrupt(interrupt, condition) +
+                      R"(;
+    workgroupBarrier();
+  }
+}
+)";
+    // The barrier is unreachable whenever the interruption is unconditional:
+    // - a continue will jump over the barrier to the end of the iteration.
+    // - a break or return will exit the loop entirely.
+    const bool barrier_unreachable = condition == kNone;
+    const bool exit_immediately = (condition == kNone) && (interrupt != kContinue);
+    const bool uniformity_failure = condition == kNonUniform;
+    const bool expect_pass = exit_immediately || !uniformity_failure;
+
+    RunTest(src, expect_pass);
+    if (uniformity_failure) {
+        EXPECT_THAT(
+            error_,
+            ::testing::StartsWith(
+                R"(test:8:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();)"))
+            << src;
+        EXPECT_THAT(error_,
+                    ::testing::HasSubstr("test:7:9 note: reading from read_write storage buffer "
+                                         "'nonuniform_var' may result in a non-uniform value"))
+            << src;
+    } else if (barrier_unreachable) {
+        EXPECT_FALSE(error_.empty());  // Warns that code is unreachable.
+    } else {
+        EXPECT_TRUE(error_.empty()) << error_ << src;
+    }
+}
+
+TEST_P(LoopTest, While_CallInBody_InterruptAfter) {
+    auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
+    auto condition = static_cast<Condition>(std::get<1>(GetParam()));
+    // The while-loop condition desugars to a conditional break, so the infinite
+    // loop check will not trigger.
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read> uniform_var : i32;
+@group(0) @binding(0) var<storage, read_write> nonuniform_var : i32;
+
+fn foo() {
+  while ( true ) {
+    workgroupBarrier();
+    )" + MakeInterrupt(interrupt, condition) +
+                      R"(;
+  }
+}
+)";
+    const bool uniformity_failure = condition == kNonUniform;
+    const bool expect_pass = !uniformity_failure;
+
+    RunTest(src, expect_pass);
+    if (uniformity_failure) {
+        EXPECT_THAT(
+            error_,
+            ::testing::StartsWith(
+                R"(test:7:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();)"));
+        EXPECT_THAT(error_,
+                    ::testing::HasSubstr("test:8:9 note: reading from read_write storage buffer "
+                                         "'nonuniform_var' may result in a non-uniform value"));
+    } else {
+        EXPECT_TRUE(error_.empty());
+    }
+}
+
+TEST_P(LoopTest, While_CallInBody_InterruptBefore) {
+    auto interrupt = static_cast<ControlFlowInterrupt>(std::get<0>(GetParam()));
+    auto condition = static_cast<Condition>(std::get<1>(GetParam()));
+    // The while-loop condition desugars to a conditional break, so the infinite
+    // loop check will not trigger.
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read> uniform_var : i32;
+@group(0) @binding(0) var<storage, read_write> nonuniform_var : i32;
+
+fn foo() {
+  for ( ; true ; ) {
+    )" + MakeInterrupt(interrupt, condition) +
+                      R"(;
+    workgroupBarrier();
+  }
+}
+)";
+    // The barrier is unreachable whenever the interruption is unconditional:
+    // - a continue will jump over the barrier to the end of the iteration.
+    // - a break or return will exit the loop entirely.
+    const bool barrier_unreachable = condition == kNone;
+    const bool exit_immediately = (condition == kNone) && (interrupt != kContinue);
+    const bool uniformity_failure = condition == kNonUniform;
+    const bool expect_pass = exit_immediately || !uniformity_failure;
+
+    RunTest(src, expect_pass);
+    if (uniformity_failure) {
+        EXPECT_THAT(
+            error_,
+            ::testing::StartsWith(
+                R"(test:8:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();)"))
+            << src;
+        EXPECT_THAT(error_,
+                    ::testing::HasSubstr("test:7:9 note: reading from read_write storage buffer "
+                                         "'nonuniform_var' may result in a non-uniform value"))
+            << src;
+    } else if (barrier_unreachable) {
+        EXPECT_FALSE(error_.empty());  // Warns that code is unreachable.
+    } else {
+        EXPECT_TRUE(error_.empty()) << error_ << src;
     }
 }
 
@@ -1355,7 +1646,7 @@ INSTANTIATE_TEST_SUITE_P(UniformityAnalysisTest,
                              return ToStr(static_cast<ControlFlowInterrupt>(p.param));
                          });
 
-TEST_P(LoopDeadCodeTest, AfterInterrupt) {
+TEST_P(LoopDeadCodeTest, Loop_AfterInterrupt) {
     // Dead code after a control-flow interrupt in a loop shouldn't cause uniformity errors.
     std::string src = R"(
 @group(0) @binding(0) var<storage, read_write> n : i32;
@@ -1377,6 +1668,267 @@ fn foo() {
 )";
 
     RunTest(src, true);
+}
+
+TEST_P(LoopDeadCodeTest, ForWithCond_AfterInterrupt) {
+    // Dead code after a control-flow interrupt in a loop shouldn't cause uniformity errors.
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> n : i32;
+
+fn foo() {
+  for ( ; true ; ) {
+    )" + ToStr(static_cast<ControlFlowInterrupt>(GetParam())) +
+                      R"(;
+    if (n == 42) {
+      workgroupBarrier();
+    }
+  }
+}
+)";
+
+    RunTest(src, true);
+}
+
+TEST_P(LoopDeadCodeTest, ForWithoutCond_AfterInterrupt) {
+    // Dead code after a control-flow interrupt in a loop shouldn't cause uniformity errors.
+    const auto interrupt = static_cast<ControlFlowInterrupt>(GetParam());
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> n : i32;
+
+fn foo() {
+  for ( ; ; ) {
+    )" + ToStr(interrupt) +
+                      R"(;
+    if (n == 42) {
+      workgroupBarrier();
+    }
+  }
+}
+)";
+
+    // The loop is infinite if the interrupt is kContinue, and rejected early.
+    if (interrupt != kContinue) {
+        RunTest(src, true);
+    }
+}
+
+TEST_P(LoopDeadCodeTest, While_AfterInterrupt) {
+    // Dead code after a control-flow interrupt in a loop shouldn't cause uniformity errors.
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> n : i32;
+
+fn foo() {
+  while (true) {
+    )" + ToStr(static_cast<ControlFlowInterrupt>(GetParam())) +
+                      R"(;
+    if (n == 42) {
+      workgroupBarrier();
+    }
+  }
+}
+)";
+
+    RunTest(src, true);
+}
+
+TEST_P(LoopDeadCodeTest, Loop_AfterLoop_WithBreakIf) {
+    // Code after a return-only loop body should not cause uniformity errors.
+    const auto interrupt = static_cast<ControlFlowInterrupt>(GetParam());
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> n : i32;
+
+fn foo() {
+  loop {
+    )" + ToStr(interrupt) +
+                      R"(;
+    continuing {
+      // Pretend that this isn't an infinite loop, in case the interrupt is a
+      // continue statement.
+      break if (false);
+    }
+  }
+  if (n == 42) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    const bool should_pass = interrupt == kReturn;
+    RunTest(src, should_pass);
+    if (!should_pass) {
+        EXPECT_EQ(
+            error_,
+            R"(test:14:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:13:3 note: control flow depends on possibly non-uniform value
+  if (n == 42) {
+  ^^
+
+test:13:7 note: reading from read_write storage buffer 'n' may result in a non-uniform value
+  if (n == 42) {
+      ^
+)");
+    }
+}
+
+TEST_P(LoopDeadCodeTest, Loop_AfterLoop_WithoutBreakIf) {
+    // Code after a return-only loop body should not cause uniformity errors.
+    const auto interrupt = static_cast<ControlFlowInterrupt>(GetParam());
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> n : i32;
+
+fn foo() {
+  loop {
+    )" + ToStr(interrupt) +
+                      R"(;
+    continuing { }
+  }
+  if (n == 42) {
+    workgroupBarrier();
+  }
+}
+)";
+    // The loop is infinite if the interrupt is kContinue, and rejected early.
+    if (interrupt != kContinue) {
+        const bool should_pass = interrupt == kReturn;
+        RunTest(src, should_pass);
+        if (!should_pass) {
+            EXPECT_EQ(
+                error_,
+                R"(test:10:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:9:3 note: control flow depends on possibly non-uniform value
+  if (n == 42) {
+  ^^
+
+test:9:7 note: reading from read_write storage buffer 'n' may result in a non-uniform value
+  if (n == 42) {
+      ^
+)");
+        }
+    }
+}
+
+TEST_P(LoopDeadCodeTest, ForWithCond_AfterLoop) {
+    // The for loop with a condition is desguared as:
+    //    loop { if ! cond { break; } ... }
+    // So the for loop behaviour always includes kNext, and code
+    // after the for loop is always considered reachable by uniformity
+    // analysis.
+    const auto interrupt = static_cast<ControlFlowInterrupt>(GetParam());
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> n : i32;
+
+fn foo() {
+  for ( ; true ; ) {
+    )" + ToStr(interrupt) +
+                      R"(;
+  }
+  if (n == 42) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    // The loop is infinite if the interrupt is kContinue, and rejected early.
+    if (interrupt != kContinue) {
+        RunTest(src, false);
+        EXPECT_EQ(
+            error_,
+            R"(test:9:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:8:3 note: control flow depends on possibly non-uniform value
+  if (n == 42) {
+  ^^
+
+test:8:7 note: reading from read_write storage buffer 'n' may result in a non-uniform value
+  if (n == 42) {
+      ^
+)");
+    }
+}
+
+TEST_P(LoopDeadCodeTest, ForWithoutCond_AfterLoop) {
+    // Code after a return-only loop body should not cause uniformity errors.
+    const auto interrupt = static_cast<ControlFlowInterrupt>(GetParam());
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> n : i32;
+
+fn foo() {
+  for ( ; ; ) {
+    )" + ToStr(interrupt) +
+                      R"(;
+  }
+  if (n == 42) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    // The loop is infinite if the interrupt is kContinue, and rejected early.
+    if (interrupt != kContinue) {
+        const bool should_pass = interrupt == kReturn;
+        RunTest(src, should_pass);
+        if (!should_pass) {
+            EXPECT_EQ(
+                error_,
+                R"(test:9:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:8:3 note: control flow depends on possibly non-uniform value
+  if (n == 42) {
+  ^^
+
+test:8:7 note: reading from read_write storage buffer 'n' may result in a non-uniform value
+  if (n == 42) {
+      ^
+)");
+        }
+    }
+}
+
+TEST_P(LoopDeadCodeTest, While_AfterLoop) {
+    // The while loop is desguared as:
+    //    loop { if ! cond { break; } ... }
+    // So the while loop behaviour always includes kNext, and code
+    // after the while loop is always considered reachable by uniformity
+    // analysis.
+    const auto interrupt = static_cast<ControlFlowInterrupt>(GetParam());
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> n : i32;
+
+fn foo() {
+  while ( true ) {
+    )" + ToStr(interrupt) +
+                      R"(;
+  }
+  if (n == 42) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:9:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:8:3 note: control flow depends on possibly non-uniform value
+  if (n == 42) {
+  ^^
+
+test:8:7 note: reading from read_write storage buffer 'n' may result in a non-uniform value
+  if (n == 42) {
+      ^
+)");
 }
 
 TEST_F(UniformityAnalysisTest, Loop_VarBecomesNonUniformInLoopAfterBarrier) {
@@ -3209,6 +3761,1023 @@ fn foo() {
     RunTest(src, true);
 }
 
+// We need to enumerate the potential uniformity graphs, as defined
+// in the WGSL spec. Some edges always exist, and sometimes they exist
+// only if the behaviour of the loop body has certain behaviours.
+//
+// Analyzing loop { }, and loop { continuing { } }
+//
+// To test analysis of loops, we place code fragments in various key spots to:
+//  - attack: generate non-uniform control flow (or not)
+//  - detect: potentially observe non-uniform control flow (or not)
+//  - a uniformity error should result if and only if there is a path
+//    in the uniformity graph from the detector to the attacker.
+//
+// Define labels A, B, C, D for locations of statements:
+//   A: before the loop
+//   B: in the loop body
+//   C: in the continuing statement
+//   D: after the loop
+//
+// Without loss of generality, the attacker must occur dynamically before the
+// detector.  We avoid generating cases that are covered by uniformity tests
+// for straight-line code, and therefore avoid:
+//  - when A is both attacker and detector
+//  - when D is both attacker and detector
+//  - when the attacker appears before the detector in B or C
+//
+//  The scenarios are as enumerated as pairs (attacker,detector) as follows:
+//   loop without continuing block:
+//    (A,B)  (A,D)
+//    (B,B)  (B,D)
+//
+//   loop with continuing block:
+//    (A,B)  (A,C)  (A,D)
+//    (B,B)  (B,C)  (B,D)
+//    (C,B)  (C,C)  (C,D)
+//
+//  Note: The cases (B,B), (C,B), (C,C) transmit non-uniformity via
+//    the loop backedge.
+//
+// The detecting code fragment is always a call to workgroupBarrier().
+// The attacking code fragment changes depending on where it is:
+//  A:   if nonuniform_condition { return; }
+//  B:   if nonuniform_condition { break; }
+//  C:   break if nonuniform-condition;
+//
+//
+// The attacker code fragment
+//
+// Nodes in the uniformity graph are:
+//   CF: node before the loop
+//   CF': node at the top of the loop body
+//   CF1: node after statements in the body
+//   CF2: node after statements in the continuing block
+//   CFResult: resulting control flow node, after the loop.
+//     Not named directly in the spec, but identified with the
+//     node listed as the "resulting node" in the spec.
+//
+// Schematically the loops take these forms:
+//
+//  without continuing block:
+//    // A
+//    // CF
+//    loop {
+//         // CF'
+//      s1 // B
+//         // CF1
+//    }
+//    // D
+//    // CFResult
+//
+//
+//  with continuing block:
+//    // A
+//    // CF
+//    loop {
+//         // CF'
+//      s1 // B
+//         // CF1
+//      continuing {
+//        s2 // C
+//           // CF2
+//    }
+//    // D
+//    // CFResult
+//
+//
+// The potential graphs including conditional edges are:
+//
+//  without continuing block:
+//
+//                   ?
+//               +------------+
+//               |            v
+//    CF  <---  CF' <- s1 <- CF1
+//    ^                       ^
+//    |?                      |
+//    CFResult ---------------+
+//                   ?
+//
+//    CF' -> CF1 if Next or Continue in s1's behaviour.
+//
+//    CFResult -> CF1 if Return in s1's behaviour
+//            else CFResult -> CF
+//
+//
+//  with continuing block:
+//
+//   when behaviour of s1={Break}
+//
+//    CF <- s1 <- CF1
+//    ^
+//    |
+//    CFResult
+//
+//   when behaviour of s1={Return} or {Break,Return}
+//
+//    CF <- s1 <- CF1
+//                 ^
+//                 |
+//    CFResult ----+
+//
+//   else, i.e. behaviour of s1 includes Next or Continue
+//                       ?
+//               +------------------------+
+//               |                        v
+//    CF  <---  CF' <- s1 <- CF1 <- s2 <-CF2
+//    ^          ^
+//    |?         |?
+//    CFResult --+
+//
+//
+//    CF' -> CF2 if Next or Continue in s1's behaviour.
+//
+//    CFResult -> CF' if Return in s1's behaviour
+//            else CFResult -> CF
+//
+// We'll use a concise representation of each tested scenario.
+// A scenario is represented by a positional sequence of strings,
+// representing the roles of A, B, C, D.
+//
+//  Attacker notation:
+//    #   attacker
+//
+//  Detector notation:
+//    _   detector
+//
+//  When a code node both attacks and detects, the detector always comes first.
+//  That's because the non-loop tests already check for the cases where the
+//  detector obviously follows the attacker.
+//
+//  Behaviour notation:
+//    includes 'b!':  has unconditional break
+//    includes 'b=':  has uniform break
+//    includes 'bx':  has non-uniform break
+//    includes 'r!':  has unconditional return
+//    includes 'r=':  has uniform return
+//    includes 'rx':  has non-uniform return
+//    includes 'c!':  has unconditional continue
+//    includes 'c=':  has uniform continue
+//    includes 'cx':  has non-uniform continue
+//    includes ' ':   empty statement; used to force a continuing block.
+//  The Next behaviours are covered by combinations of the above.
+//  For example:
+//    if the full behaviour is "b=" then that implies a uniform Next.
+//    if the full behaviour is "b=r!" then then Next is not in the behaviour.
+//
+//
+// Analyzing for loops and while loops
+//
+// To analyze for loops and while loops, we need to also model the effect
+// of the condition expressions. We'll use a string mapping:
+//    ""    no condition (to be used in for loops without a condition)
+//    "="   uniform condition
+//    "x"   nonuniform condition
+//
+// The significant code locations are the same as for loop-without-continuing,
+// and we reuse the labels for before the loop, the body, and after the loop:
+//
+//    // A
+//    // CF
+//    for ( ; optional-cond ; )
+//         // CF'
+//      s1 // B
+//         // CF1
+//    }
+//    // D
+//    // CFResult
+//
+//    // A
+//    // CF
+//    while ( ; cond ; )
+//         // CF'
+//      s1 // B
+//         // CF1
+//    }
+//    // D
+//    // CFResult
+//
+// A 'for' loop without a condition is structurally identical to a
+// 'loop' without continuing. We will derive those cases automatically.
+//
+// A 'while' loop always has a condition, and is structurally very
+// similar to a 'for' loop with a condition. (The for loop may have
+// an initializer and update clause.)  We will derive the while
+// loop cases automatically.
+
+enum Verdict {
+    // The shader is valid, and always passes uniformity analysis.
+    kAccept,
+    // The shader is valid any time the attacker is present.
+    kAcceptLoopExitFromAttack,
+    // The shader is valid but only when the attacker is present, and
+    // the detector is absent.
+    kAcceptLoopExitFromAttackWithoutDetect,
+    // The shader is rejected by uniformity analysis.
+    kReject,
+    // The shader is rejected for reasons other than uniformity failure,
+    // e.g. because of an infinite loop.
+    kRejectForOtherReasons,
+};
+
+enum class Part {
+    kBefore,
+    kBody,
+    kContinuing,
+    kAfter,
+};
+
+// Encodes the role for a code fragment in the test scenario.
+struct Role {
+    Role(Part part_, std::string r) : part(part_), role(r) {
+        // The following integrity checks are checked during the behave() method.
+        //  -  at most one !
+        //  -  ! occurs after uniform and non-uniform interruptions
+    }
+
+    // Returns a WGSL fragment that behaves according to the specified part
+    // and role, and according to whether to enable the attack (if any) or
+    // the detection mechanism (if any).
+    std::string behave(bool enable_attack, bool enable_detect) const {
+        int num_unconditional = 0;
+        std::string_view remaining = role.data();
+        std::ostringstream ss;
+        while (!remaining.empty()) {
+            switch (part) {
+                case Part::kBody:
+                    ss << "    ";
+                    break;
+                case Part::kContinuing:
+                    ss << "      ";
+                    break;
+                default:
+                    ss << "  ";
+                    break;
+            }
+            if (remaining.starts_with(" ")) {
+                remaining.remove_prefix(1);
+                ss << ";/* empty statement */\n";
+                continue;
+            }
+            if (remaining.starts_with("_")) {
+                remaining.remove_prefix(1);
+                if (enable_detect) {
+                    ss << "workgroupBarrier();\n";
+                } else {
+                    ss << "/*disabled detect*/;\n";
+                }
+                continue;
+            }
+            if (remaining.starts_with("#")) {
+                remaining.remove_prefix(1);
+                if (enable_attack) {
+                    switch (part) {
+                        case Part::kBefore:
+                            ss << "if nonuniform_cond { return; }\n";
+                            break;
+                        case Part::kBody:
+                            ss << "if nonuniform_cond { break; }\n";
+                            break;
+                        case Part::kContinuing:
+                            ss << "break if nonuniform_cond;\n";
+                            break;
+                        case Part::kAfter:
+                            TINT_ICE() << "Don't test an attacker placed after the loop";
+                    }
+                } else {
+                    ss << "/*disabled attack*/\n";
+                }
+                continue;
+            }
+            if (remaining.starts_with("b!")) {
+                remaining.remove_prefix(2);
+                ss << "break;\n";
+                TINT_ASSERT(num_unconditional == 0) << "b! must not follow !";
+                num_unconditional++;
+                continue;
+            }
+            if (remaining.starts_with("r!")) {
+                remaining.remove_prefix(2);
+                ss << "return;\n";
+                TINT_ASSERT(num_unconditional == 0) << "r! must not follow !";
+                num_unconditional++;
+                continue;
+            }
+            if (remaining.starts_with("c!")) {
+                remaining.remove_prefix(2);
+                ss << "continue;\n";
+                TINT_ASSERT(num_unconditional == 0) << "c! must not follow !";
+                num_unconditional++;
+                continue;
+            }
+            if (remaining.starts_with("b=")) {
+                remaining.remove_prefix(2);
+                if (part == Part::kContinuing) {
+                    ss << "break if uniform_cond;\n";
+                } else {
+                    ss << "if uniform_cond { break; }\n";
+                }
+                TINT_ASSERT(num_unconditional == 0) << "b= must not follow !";
+                continue;
+            }
+            if (remaining.starts_with("bx")) {
+                remaining.remove_prefix(2);
+                if (part == Part::kContinuing) {
+                    ss << "break if nonuniform_cond;\n";
+                } else {
+                    ss << "if nonuniform_cond { break; }\n";
+                }
+                TINT_ASSERT(num_unconditional == 0) << "bx must not follow !";
+                continue;
+            }
+            if (remaining.starts_with("r=")) {
+                remaining.remove_prefix(2);
+                ss << "if uniform_cond { return; }\n";
+                TINT_ASSERT(num_unconditional == 0) << "r= must not follow !";
+                continue;
+            }
+            if (remaining.starts_with("rx")) {
+                remaining.remove_prefix(2);
+                ss << "if nonuniform_cond { return; }\n";
+                TINT_ASSERT(num_unconditional == 0) << "rx must not follow !";
+                continue;
+            }
+            if (remaining.starts_with("c=")) {
+                remaining.remove_prefix(2);
+                ss << "if uniform_cond { continue; }\n";
+                TINT_ASSERT(num_unconditional == 0) << "c= must not follow !";
+                continue;
+            }
+            if (remaining.starts_with("cx")) {
+                remaining.remove_prefix(2);
+                ss << "if nonuniform_cond { continue; }\n";
+                TINT_ASSERT(num_unconditional == 0) << "cx must not follow !";
+                continue;
+            }
+            TINT_ICE() << "invalid token " << remaining << "; in role spec " << role;
+        }
+        return ss.str();
+    }
+    const Part part = Part::kBefore;
+    const std::string role = "";
+};
+
+enum LoopKind {
+    kLoop,
+    kFor,
+    kWhile,
+};
+
+struct LoopGraphCase {
+    LoopGraphCase(LoopKind kind_,
+                  std::string before_spec,
+                  std::string condition_spec_,
+                  std::string body_spec,
+                  std::string continuing_spec,
+                  std::string after_spec,
+                  Verdict verdict_)
+        : kind(kind_),
+          before(Part::kBefore, before_spec),
+          condition_spec(condition_spec_),
+          body(Part::kBody, body_spec),
+          continuing(Part::kContinuing, continuing_spec),
+          after(Part::kAfter, after_spec),
+          verdict(verdict_) {
+        TINT_ASSERT(kind == kLoop || kind == kFor || kind == kWhile);
+        TINT_ASSERT(condition_spec == "" || condition_spec == "=" || condition_spec == "x");
+        if (condition_spec.empty()) {
+            TINT_ASSERT(kind == kLoop || kind == kFor);
+        } else {
+            TINT_ASSERT(kind == kFor || kind == kWhile);
+        }
+    }
+
+    std::string condition() const {
+        if (condition_spec == "") {
+            return "";
+        }
+        if (condition_spec == "=") {
+            return "uniform_cond";
+        }
+        if (condition_spec == "x") {
+            return "nonuniform_cond";
+        }
+        TINT_UNREACHABLE();
+    }
+    std::string summary() const {
+        std::ostringstream ss;
+        switch (kind) {
+            case kLoop:
+                ss << "loop ";
+                break;
+            case kFor:
+                ss << "for ";
+                break;
+            case kWhile:
+                ss << "while ";
+                break;
+            default:
+                TINT_UNREACHABLE() << "kind out of range " << static_cast<int>(kind);
+        }
+        ss << "\"" << condition_spec << "\" \"" << before.role << "\", \"" << body.role << "\", \""
+           << continuing.role << "\", \"" << after.role << "\"";
+        return ss.str();
+    }
+
+    std::string Shader(bool enable_attack, bool enable_detect) const {
+        std::ostringstream ss;
+        ss << "// " << summary() << "\n";
+        ss << R"(@compute @workgroup_size(8)
+fn main(@builtin(local_invocation_index) nonuniform_var: u32, @builtin(num_workgroups) nw: vec3u) {
+  let uniform_cond = 42 == nw.x;
+  let nonuniform_cond = 42 == nonuniform_var;
+)";
+        ss << before.behave(enable_attack, enable_detect);
+        switch (kind) {
+            case kLoop:
+                ss << "  loop {\n";
+                break;
+            case kFor:
+                ss << "  for ( ; " << condition() << " ; ) {\n";
+                break;
+            case kWhile:
+                ss << "  while (" << condition() << ") {\n";
+                break;
+        }
+        ss << body.behave(enable_attack, enable_detect);
+        if (kind == kLoop && !continuing.role.empty()) {
+            ss << "    continuing {\n";
+            ss << continuing.behave(enable_attack, enable_detect);
+            ss << "    }\n";
+        }
+        ss << "  }\n";
+        ss << after.behave(enable_attack, enable_detect);
+        ss << "}\n";
+        return ss.str();
+    }
+
+    const LoopKind kind = kLoop;
+    const Role before;
+    const std::string condition_spec;
+    const Role body;
+    const Role continuing;
+    const Role after;
+    const Verdict verdict;
+};
+
+std::vector<LoopGraphCase> LoopGraphCases() {
+    // L is for Loop
+    auto L = [](std::string a, std::string b, std::string c, Verdict v) -> LoopGraphCase {
+        return LoopGraphCase(kLoop, a, "", b, "", c, v);
+    };
+    // LC is for Loop with Continuing
+    auto LC = [](std::string a, std::string b, std::string c, std::string d,
+                 Verdict v) -> LoopGraphCase { return LoopGraphCase(kLoop, a, "", b, c, d, v); };
+    // F is for-loop
+    auto F = [](std::string before, std::string cond, std::string body, std::string after,
+                Verdict v) -> LoopGraphCase {
+        return LoopGraphCase(kFor, before, cond, body, "", after, v);
+    };
+    // F is while-loop
+    auto W = [](std::string before, std::string cond, std::string body, std::string after,
+                Verdict v) -> LoopGraphCase {
+        return LoopGraphCase(kWhile, before, cond, body, "", after, v);
+    };
+
+    auto cases = std::vector<LoopGraphCase>{
+        // clang-format off
+        // Loop without continuing:
+
+        // Scenario (A,B), i.e. A attacks, B detects
+        // Tests CF <- CF'
+        L("#", "_b!", "", kReject),
+        L("#", "_b=", "", kReject),
+        L("#", "_bx", "", kReject),
+        L("#", "_r!", "", kReject),
+        L("#", "_r=", "", kReject),
+        L("#", "_rx", "", kReject),
+        L("#", "_b=c!", "", kReject),  // add some continues
+        L("#", "_b=c=", "", kReject),
+        L("#", "_b=cx", "", kReject),
+        L("#", "_r=c!", "", kReject),
+        L("#", "_r=c=", "", kReject),
+        L("#", "_r=cx", "", kReject),
+
+        // Scenario (A,D)
+        //   Return not in s1 behaviour
+        //   By infinite loop rule, Break must be in s1's behavior.
+        //     Tests CF <- CFResult
+        L("#", "", "_", kRejectForOtherReasons),  // infinite loop
+        L("#", "b=", "_", kReject),
+        L("#", "bx", "_", kReject),
+        L("#", "b!", "_", kReject),
+        L("#", "b=c!", "_", kReject),
+        L("#", "b=c=", "_", kReject),
+        L("#", "b=cx", "_", kReject),
+        L("#", "bxc!", "_", kReject),
+        L("#", "bxc=", "_", kReject),
+        L("#", "bxcx", "_", kReject),
+        //   Return is in s1's behavior
+        //     Break is also in s1's behavior
+        //     The detector is only reached when Break is in s1's behavior.
+        //     Tests CF <- CF1 <- CFResult
+        L("#", "b=r!", "_", kReject),
+        L("#", "b=r=", "_", kReject),
+        L("#", "b=rx", "_", kReject),
+        L("#", "bxr!", "_", kReject),
+        L("#", "bxr=", "_", kReject),
+        L("#", "bxrx", "_", kReject),
+        //   Return is in s1's behavior
+        //     Break is not in s1's behavior.
+        //     Therefore the behaviour of the whole loop is {Return}
+        //     Therefore by the recursive analysis rule for "s1 s2",
+        //     there are no downstream connections in the graph.
+        //     Any code after the loop can't be tainted.
+        L("#", "r!", "_", kAccept),
+        L("#", "r=", "_", kAccept),
+        L("#", "rx", "_", kAccept),
+        L("#", "c=r!", "_", kAccept),
+        L("#", "c=r=", "_", kAccept),
+        L("#", "c=rx", "_", kAccept),
+        L("#", "cxr!", "_", kAccept),
+        L("#", "cxr=", "_", kAccept),
+        L("#", "cxrx", "_", kAccept),
+
+        // Scenario (B,B).  Recall: Only check via the backage.
+        // Backedge exists if and only if Next or Continue in s1's behaviour.
+        // Test s1 <- CF1 <- CF' <- s1
+        L("", "_#", "", kAcceptLoopExitFromAttackWithoutDetect),
+        L("", "_#b=", "", kReject),
+        L("", "_#bx", "", kReject),
+        L("", "_#b!", "", kAccept),  // no backedge
+        L("", "_#c=", "", kAcceptLoopExitFromAttackWithoutDetect),
+        L("", "_#cx", "", kAcceptLoopExitFromAttackWithoutDetect),
+        L("", "_#c!", "", kAcceptLoopExitFromAttackWithoutDetect),
+        L("", "_#r=", "", kReject),
+        L("", "_#rx", "", kReject),
+        L("", "_#r!", "", kAccept),  // no backedge
+        L("", "_#b=c=", "", kReject),
+        L("", "_#b=cx", "", kReject),
+        L("", "_#b=c!", "", kReject),
+        L("", "_#bxc=", "", kReject),
+        L("", "_#bxcx", "", kReject),
+        L("", "_#bxc!", "", kReject),
+        L("", "_#b=r=", "", kReject),
+        L("", "_#b=rx", "", kReject),
+        L("", "_#b=r!", "", kAccept),  // no backedge
+        L("", "_#bxr=", "", kReject),
+        L("", "_#bxrx", "", kReject),
+        L("", "_#bxr!", "", kAccept),  // no backedge
+        L("", "_#c=r=", "", kReject),
+        L("", "_#c=rx", "", kReject),
+        L("", "_#c=r!", "", kReject),  // continue provides backedge
+        L("", "_#cxr=", "", kReject),
+        L("", "_#cxrx", "", kReject),
+        L("", "_#cxr!", "", kReject),  // continue provides backedege
+
+        // Scenario (B,D)
+        // Test CF1 <- CFResult
+        // Edge exists if and only if Return is in s1's behaviour.
+        L("", "#", "_", kAcceptLoopExitFromAttack),
+        L("", "#b=", "_", kAccept),
+        L("", "#bx", "_", kAccept),
+        L("", "#b!", "_", kAccept),
+        L("", "#c=b=", "_", kAccept),  // need a break to avoid infinite loop
+        L("", "#cxb=", "_", kAccept),
+        L("", "#r=", "_", kReject),    // The attacker provides the break
+        L("", "#rx", "_", kReject),  // The attacker provides the break
+        L("", "#r!", "_", kReject),
+        // Move the attacker after the control construct.
+        L("", "b=#", "_", kAccept),
+        L("", "bx#", "_", kAccept),
+        L("", "b!#", "_", kAccept),
+        L("", "c=#b=", "_", kAccept),
+        L("", "cx#b=", "_", kAccept),
+        L("", "r=#", "_", kReject),   // The attacker provides the break
+        L("", "rx#", "_", kReject),  // The attacker provides the break
+        L("", "r!#", "_", kAccept),  // unreachable
+
+        // Loop with continuing:
+        //
+        // Recall the scenarios are:
+        //    (A,B)  (A,C)  (A,D)
+        //    (B,B)  (B,C)  (B,D)
+        //    (C,B)  (C,C)  (C,D)
+        // Cases without C are those where the continuing block is not
+        // involved in uniformity.  For those, cases are already derived
+        // automatically from the corresponding case without the continuing
+        // block. (An empty continuing{} construct is inserted by the
+        // LoopGraphCases() function.)
+        // What remains is:
+        //           (A,C)
+        //           (B,C)
+        //    (C,B)  (C,C)  (C,D)
+        //
+        // Recall that a continuing block behaviour must be a subset of
+        // {Next,Break}
+
+        // Scenario (A,C)
+        LC("#", "", "_", "", kRejectForOtherReasons),  // infinite loop
+        LC("#", "", "_b=", "", kReject),
+        LC("#", "", "_bx", "", kReject),
+        LC("#", "", "_b!", "", kRejectForOtherReasons),  // invalid unconditional break
+        LC("#", "b=", "c=", "", kRejectForOtherReasons),  // invalid behaviour
+        LC("#", "b=", "cx", "", kRejectForOtherReasons),  // invalid behaviour
+        LC("#", "b=", "c!", "", kRejectForOtherReasons),  // invalid behaviour
+        LC("#", "b=", "r=", "", kRejectForOtherReasons),  // invalid behaviour
+        LC("#", "b=", "rx", "", kRejectForOtherReasons),  // invalid behaviour
+        LC("#", "b=", "r!", "", kRejectForOtherReasons),  // invalid behaviour
+
+        // Scenario (B,C)
+        //   Continuing block has behaviour {Next}
+        LC("", "#b=", "_", "", kReject),
+        LC("", "#bx", "_", "", kReject),
+        LC("", "#b!", "_", "", kAccept),  // detector unreachable
+        LC("", "#b=c=", "_", "", kReject),
+        LC("", "#b=cx", "_", "", kReject),
+        LC("", "#b=c!", "_", "", kReject),
+        LC("", "#bxc=", "_", "", kReject),
+        LC("", "#bxcx", "_", "", kReject),
+        LC("", "#bxc!", "_", "", kReject),
+        LC("", "#r=", "_", "", kReject),
+        LC("", "#rx", "_", "", kReject),
+        LC("", "#r!", "_", "", kAccept),  // detector unreachable
+        LC("", "#r=c=", "_", "", kReject),
+        LC("", "#r=cx", "_", "", kReject),
+        LC("", "#r=c!", "_", "", kReject),
+        LC("", "#rxc=", "_", "", kReject),
+        LC("", "#rxcx", "_", "", kReject),
+        LC("", "#rxc!", "_", "", kReject),
+        //   Continuing block behaviour includes Break.
+        //   (Exclude "b!" subcases because that's a naked 'break;',
+        //   which is disallowed.
+        LC("", "#", "_b=", "", kReject),
+        LC("", "#", "_bx", "", kReject),
+        LC("", "#b=", "_b=", "", kReject),
+        LC("", "#bx", "_bx", "", kReject),
+        LC("", "#b!", "_bx", "", kAccept),  // detector unreachable
+        LC("", "#r=", "_b=", "", kReject),
+        LC("", "#rx", "_bx", "", kReject),
+        LC("", "#r!", "_bx", "", kAccept),  // detector unreachable
+
+        // Scenario (C,B)
+        // i.e. attacker in continuing block, detector in body.
+        // This fails when there's an edge from CF' to CF2, which occurs
+        // when the behavior of s1 includes Next or Continue.
+        LC("", "_", "#", "", kAcceptLoopExitFromAttackWithoutDetect),  // not infinite; attacker is a break-if
+        // Try "break" first.
+        LC("", "_b=", "#", "", kReject),
+        LC("", "_bx", "#", "", kReject),
+        LC("", "_b!", "#", "", kAccept),  // attacker unreachable
+        LC("", "_b=c=", "#", "", kReject),
+        LC("", "_b=cx", "#", "", kReject),
+        LC("", "_b=c!", "#", "", kReject),
+        LC("", "_bxc=", "#", "", kReject),
+        LC("", "_bxcx", "#", "", kReject),
+        LC("", "_bxc!", "#", "", kReject),
+        // Try "return" first.
+        LC("", "_r=", "#", "", kReject),
+        LC("", "_rx", "#", "", kReject),
+        LC("", "_r!", "#", "", kAccept),  // attacker unreachable
+        LC("", "_r=c=", "#", "", kReject),
+        LC("", "_r=cx", "#", "", kReject),
+        LC("", "_r=c!", "#", "", kReject),
+        LC("", "_rxc=", "#", "", kReject),
+        LC("", "_rxcx", "#", "", kReject),
+        LC("", "_rxc!", "#", "", kReject),
+        // Try "continue" first.
+        LC("", "_c=", "#", "", kAcceptLoopExitFromAttackWithoutDetect),  // not infinite; attacker is a break-if
+        LC("", "_cx", "#", "", kAcceptLoopExitFromAttackWithoutDetect),  // not infinite; attacker is a break-if
+        LC("", "_c!", "#", "", kAcceptLoopExitFromAttackWithoutDetect),  // not infinite; attacker is a break-if
+        LC("", "_c=b=", "#", "", kReject),
+        LC("", "_c=bx", "#", "", kReject),
+        LC("", "_c=b!", "#", "", kReject),
+        LC("", "_cxb=", "#", "", kReject),
+        LC("", "_cxbx", "#", "", kReject),
+        LC("", "_cxb!", "#", "", kReject),
+        LC("", "_c=r=", "#", "", kReject),
+        LC("", "_c=rx", "#", "", kReject),
+        LC("", "_c=r!", "#", "", kReject),
+        LC("", "_cxr=", "#", "", kReject),
+        LC("", "_cxrx", "#", "", kReject),
+        LC("", "_cxr!", "#", "", kReject),
+
+        // Scenario (C,C)
+        // Continuing block has detector, then attacker.
+        // Fails only when the continuing block is reachable,
+        // and there is a backedge.
+        LC("", "", "_#", "", kAcceptLoopExitFromAttackWithoutDetect),  // not infinite; attacker is a break-if
+        LC("", "b=", "_#", "", kReject),
+        LC("", "bx", "_#", "", kReject),
+        LC("", "b!", "_#", "", kAccept),
+        LC("", "r=", "_#", "", kReject),
+        LC("", "rx", "_#", "", kReject),
+        LC("", "r!", "_#", "", kAccept),
+        LC("", "c=", "_#", "", kAcceptLoopExitFromAttackWithoutDetect),
+        LC("", "cx", "_#", "", kAcceptLoopExitFromAttackWithoutDetect),
+        LC("", "c!", "_#", "", kAcceptLoopExitFromAttackWithoutDetect),
+
+        // Scenario (C,D)
+        //  i.e. attacker in continuing block, detector after the loop.
+        //
+        //  Option 1: s1 behaviour is {Break,Return}, in which case uniformity
+        //  after the loop depends on the body, not the continuing block.
+        //
+        //  Option 2: s1 behaviour intersects {Next,Continue}.
+        //  Rejects when there is a path from CFResult to CF2.
+        //  This occurs when both:
+        //    CFResult -> CF' exists, i.e. Return in s1's behaviour, and
+        //    CF' -> CF2 exists, i.e. Next or Continue in s1's behaviour.
+        //  When Return is not in s1's behaviour, divergence from a break
+        //  within the loop will resolve (reconverge) at the end of the loop.
+        LC("", "", "#", "_", kAcceptLoopExitFromAttack),  // not infinite; attacker is a break-if
+        LC("", "b=", "#", "_", kAccept),
+        LC("", "bx", "#", "_", kAccept),
+        LC("", "b!", "#", "_", kAccept),
+        LC("", "b=c=", "#", "_", kAccept),
+        LC("", "b=cx", "#", "_", kAccept),
+        LC("", "b=c!", "#", "_", kAccept),
+        LC("", "bxc=", "#", "_", kAccept),
+        LC("", "bxcx", "#", "_", kAccept),
+        LC("", "bxc!", "#", "_", kAccept),
+        LC("", "b=r=", "#", "_", kReject),
+        LC("", "b=rx", "#", "_", kReject),
+        LC("", "b=r!", "#", "_", kAccept),  // s1 behavior is {Break,Return}
+                                            // so CFResult -> CF1, uniform
+        LC("", "bxr=", "#", "_", kReject),
+        LC("", "bxrx", "#", "_", kReject),
+        LC("", "bxr!", "#", "_", kReject),  // s1 behavior is {Break,Return}
+                                            // so CFResult -> CF1, nonuniform
+        LC("", "r=", "#", "_", kReject),
+        LC("", "rx", "#", "_", kReject),
+        LC("", "r!", "#", "_", kAccept),  // detector is unreachable
+        LC("", "r=b=", "#", "_", kReject),
+        LC("", "r=bx", "#", "_", kReject),
+        LC("", "r=b!", "#", "_", kAccept),  // s1 behavior is {Break,Return}
+                                            // so CFResult -> CF1, uniform
+        LC("", "r=c=", "#", "_", kReject),
+        LC("", "r=cx", "#", "_", kReject),
+        LC("", "r=c!", "#", "_", kReject),
+        LC("", "rxb=", "#", "_", kReject),
+        LC("", "rxbx", "#", "_", kReject),
+        LC("", "rxb!", "#", "_", kReject),  // s1 behavior is {Break,Return}
+                                            // so CFResult -> CF1, nonuniform
+        LC("", "rxc=", "#", "_", kReject),
+        LC("", "rxcx", "#", "_", kReject),
+        LC("", "rxc!", "#", "_", kReject),
+        // Put "continue" first.
+        LC("", "c=", "#", "_", kAcceptLoopExitFromAttack),
+        LC("", "cx", "#", "_", kAcceptLoopExitFromAttack),
+        LC("", "c!", "#", "_", kAcceptLoopExitFromAttack),
+        LC("", "c=b=", "#", "_", kAccept),
+        LC("", "c=bx", "#", "_", kAccept),
+        LC("", "c=b!", "#", "_", kAccept),
+        LC("", "cxb=", "#", "_", kAccept),
+        LC("", "cxbx", "#", "_", kAccept),
+        LC("", "cxb!", "#", "_", kAccept),
+        LC("", "c=r=", "#", "_", kReject),
+        LC("", "c=rx", "#", "_", kReject),
+        LC("", "c=r!", "#", "_", kReject),
+        LC("", "cxr=", "#", "_", kReject),
+        LC("", "cxrx", "#", "_", kReject),
+        LC("", "cxr!", "#", "_", kReject),
+
+        // For loops
+        // Note that most for-without-condition cases will be automatically
+        // generated from loop-without-continuing, as they should have
+        // isomorphic uniformity graphs.
+        //
+        // Trivial cases
+        F("", "", "", "", kRejectForOtherReasons),  // infinite loop
+        F("", "=", "", "", kAccept),
+        F("", "x", "", "", kAccept),
+
+        // For loops with a condition expression.
+        // Scenario (A,B): attacker before loop, detector in body
+        //   Uniform condition
+        F("#", "=", "_", "", kReject),
+        //     body has detector, then interruption
+        F("#", "=", "_b=", "", kReject),
+        F("#", "=", "_bx", "", kReject),
+        F("#", "=", "_b!", "", kReject),
+        F("#", "=", "_r=", "", kReject),
+        F("#", "=", "_rx", "", kReject),
+        F("#", "=", "_r!", "", kReject),
+        F("#", "=", "_c=", "", kReject),
+        F("#", "=", "_cx", "", kReject),
+        F("#", "=", "_c!", "", kReject),
+        //     body has interruption, then detector
+        F("#", "=", "b=_", "", kReject),
+        F("#", "=", "bx_", "", kReject),
+        F("#", "=", "b!_", "", kAccept),  // detector not reachable
+        F("#", "=", "r=_", "", kReject),
+        F("#", "=", "rx_", "", kReject),
+        F("#", "=", "r!_", "", kAccept),  // detector not reachable
+        F("#", "=", "c=_", "", kReject),
+        F("#", "=", "cx_", "", kReject),
+        F("#", "=", "c!_", "", kAccept),  // detector not reachable
+        //   Nonuniform condition
+        F("#", "x", "_", "", kReject),
+        //     body has detector, then interruption
+        F("#", "x", "_b=", "", kReject),
+        F("#", "x", "_bx", "", kReject),
+        F("#", "x", "_b!", "", kReject),
+        F("#", "x", "_r=", "", kReject),
+        F("#", "x", "_rx", "", kReject),
+        F("#", "x", "_r!", "", kReject),
+        F("#", "x", "_c=", "", kReject),
+        F("#", "x", "_cx", "", kReject),
+        F("#", "x", "_c!", "", kReject),
+        //     body has interruption, then detector
+        F("#", "x", "b=_", "", kReject),
+        F("#", "x", "bx_", "", kReject),
+        F("#", "x", "b!_", "", kAccept),  // detector not reachable
+        F("#", "x", "r=_", "", kReject),
+        F("#", "x", "rx_", "", kReject),
+        F("#", "x", "r!_", "", kAccept),  // detector not reachable
+        F("#", "x", "c=_", "", kReject),
+        F("#", "x", "cx_", "", kReject),
+        F("#", "x", "c!_", "", kAccept),  // detector not reachable
+
+        // Scenario (A,D): attacker before loop, detector after body
+        //   Uniform condition
+        F("#", "=", "", "_", kReject),
+        F("#", "=", "b=", "_", kReject),
+        F("#", "=", "bx", "_", kReject),
+        F("#", "=", "b!", "_", kReject),
+        F("#", "=", "c=", "_", kReject),
+        F("#", "=", "cx", "_", kReject),
+        F("#", "=", "c!", "_", kReject),
+        F("#", "=", "r=", "_", kReject),
+        F("#", "=", "rx", "_", kReject),
+        F("#", "=", "r!", "_", kReject),  // loop condition is an implicit break
+        //   Nonuniform condition
+        F("#", "x", "", "_", kReject),
+        F("#", "x", "b=", "_", kReject),
+        F("#", "x", "bx", "_", kReject),
+        F("#", "x", "b!", "_", kReject),
+        F("#", "x", "c=", "_", kReject),
+        F("#", "x", "cx", "_", kReject),
+        F("#", "x", "c!", "_", kReject),
+        F("#", "x", "r=", "_", kReject),
+        F("#", "x", "rx", "_", kReject),
+        F("#", "x", "r!", "_", kReject),  // loop condition is an implicit break
+
+        // Scenario (B,D): attacker in body, detector after body
+        // When the body behaviour includes Return, the after-loop node
+        // links to the end of the body.
+        //
+        //  Uniform condition
+        F("", "=", "#", "_", kAccept),
+        F("", "=", "#b=", "_", kAccept),
+        F("", "=", "#bx", "_", kAccept),
+        F("", "=", "#b!", "_", kAccept),
+        F("", "=", "#c=", "_", kAccept),
+        F("", "=", "#cx", "_", kAccept),
+        F("", "=", "#c!", "_", kAccept),
+        F("", "=", "#r=", "_", kReject),
+        F("", "=", "#rx", "_", kReject),
+        F("", "=", "#r!", "_", kReject),
+        //    Check return after others
+        F("", "=", "#b=r=", "_", kReject),
+        F("", "=", "#b=rx", "_", kReject),
+        F("", "=", "#b=r!", "_", kReject),
+        F("", "=", "#c=r=", "_", kReject),
+        F("", "=", "#c=rx", "_", kReject),
+        F("", "=", "#b=r!", "_", kReject),
+        //    Check return before others
+        F("", "=", "#r=b=", "_", kReject),
+        F("", "=", "#r=bx", "_", kReject),
+        F("", "=", "#r=b!", "_", kReject),
+        F("", "=", "#r=c=", "_", kReject),
+        F("", "=", "#r=cx", "_", kReject),
+        F("", "=", "#r=c!", "_", kReject),
+        F("", "=", "#rxb=", "_", kReject),
+        F("", "=", "#rxbx", "_", kReject),
+        F("", "=", "#rxb!", "_", kReject),
+        F("", "=", "#rxc=", "_", kReject),
+        F("", "=", "#rxcx", "_", kReject),
+        F("", "=", "#rxc!", "_", kReject),
+        //  Nonunifor condition
+        F("", "x", "#", "_", kAccept),
+        F("", "x", "#b=", "_", kAccept),
+        F("", "x", "#bx", "_", kAccept),
+        F("", "x", "#b!", "_", kAccept),
+        F("", "x", "#c=", "_", kAccept),
+        F("", "x", "#cx", "_", kAccept),
+        F("", "x", "#c!", "_", kAccept),
+        F("", "x", "#r=", "_", kReject),
+        F("", "x", "#rx", "_", kReject),
+        F("", "x", "#r!", "_", kReject),
+        //    Check return after others
+        F("", "x", "#b=r=", "_", kReject),
+        F("", "x", "#b=rx", "_", kReject),
+        F("", "x", "#b=r!", "_", kReject),
+        F("", "x", "#c=r=", "_", kReject),
+        F("", "x", "#c=rx", "_", kReject),
+        F("", "=", "#b=r!", "_", kReject),
+        //    Check return before others
+        F("", "x", "#r=b=", "_", kReject),
+        F("", "x", "#r=bx", "_", kReject),
+        F("", "x", "#r=b!", "_", kReject),
+        F("", "x", "#r=c=", "_", kReject),
+        F("", "x", "#r=cx", "_", kReject),
+        F("", "x", "#r=c!", "_", kReject),
+        F("", "x", "#rxb=", "_", kReject),
+        F("", "x", "#rxbx", "_", kReject),
+        F("", "x", "#rxb!", "_", kReject),
+        F("", "x", "#rxc=", "_", kReject),
+        F("", "x", "#rxcx", "_", kReject),
+        F("", "x", "#rxc!", "_", kReject),
+
+        // While loops
+        // While loops always have an expression.
+        //
+        // Trivial cases
+        W("", "=", "", "", kAccept), W("", "x", "", "", kAccept),
+        // We will automatically derive most while-loop tests from
+        // the for-loop tests.
+        //
+        // The uniformity graph of a while loop nearly isomorphic to a
+        // for-loop with a condition expression.  The only difference is
+        // that for-loops have an initializer statement, and while-loops
+        // do not.
+
+        // clang-format on
+    };
+
+    // Use loop-without-continuing cases to derive:
+    //  - loop-continuing cases, where the continiuing clause is empty
+    //  - for-loop without a condition.
+    for (size_t i = 0; i < cases.size(); i++) {
+        // Take copy instead of a reference because the vector will expand at
+        // some point, invalidating references.
+        const auto case_ = cases[i];
+        if (case_.kind == kLoop && case_.continuing.role.empty()) {
+            // Create a new loop case, with an empty continuing clause.
+            cases.emplace_back(kLoop, case_.before.role, "", case_.body.role, " ", case_.after.role,
+                               case_.verdict);
+            // Create a for-loop case without condition expression.
+            cases.emplace_back(kFor, case_.before.role, "", case_.body.role, "", case_.after.role,
+                               case_.verdict);
+        }
+        if (case_.kind == kFor && !case_.condition_spec.empty()) {
+            // Create a while-loop case without condition expression.
+            cases.emplace_back(kWhile, case_.before.role, case_.condition_spec, case_.body.role, "",
+                               case_.after.role, case_.verdict);
+        }
+    }
+
+    return cases;
+}
+
+class LoopGraphTest : public UniformityAnalysisTestBase,
+                      public ::testing::TestWithParam<LoopGraphCase> {};
+
+TEST_P(LoopGraphTest, BothAttackAndDetect) {
+    const auto src = GetParam().Shader(true, true);
+    const auto verdict = GetParam().verdict;
+    const bool should_accept = verdict == kAccept || verdict == kAcceptLoopExitFromAttack;
+    RunTest(src, should_accept);
+    // The accept case may still generate warnings.
+    // But failure cases always generate an error.
+    if (!should_accept) {
+        EXPECT_FALSE(error_.empty()) << "need an error string for:\n" << src;
+    }
+}
+
+// Don't try the OnlyDetect case because many cases generate their
+// own non-uniformity. For example, L("", "_bx", "") which translates
+// to:
+//    loop {
+//       workgroupBarrier();
+//       if nonuniform_var == 42 { break; }
+//    }
+// Those cases are already tested by using an explicit attacker.
+// For example, the above is covered by L("", "_#c!", "")
+//
+
+TEST_P(LoopGraphTest, OnlyAttack) {
+    const auto src = GetParam().Shader(true, false);
+    const auto verdict = GetParam().verdict;
+    const bool should_accept = verdict == kAccept || verdict == kAcceptLoopExitFromAttack ||
+                               verdict == kAcceptLoopExitFromAttackWithoutDetect ||
+                               verdict == kReject;
+    RunTest(src, should_accept);
+}
+
+TEST_P(LoopGraphTest, NeitherAttackNorDetect) {
+    const auto src = GetParam().Shader(false, false);
+    const auto verdict = GetParam().verdict;
+    // In the kAcceptLoopExitFromAttackWithoutDetect, the loop exit is
+    // provided only by the attacker. Without the attacker, the loop
+    // is statically infinite, and hence rejected.
+    const bool should_accept = verdict == kAccept || verdict == kReject;
+    RunTest(src, should_accept);
+}
+
+INSTANTIATE_TEST_SUITE_P(AllLoops, LoopGraphTest, ::testing::ValuesIn(LoopGraphCases()));
 }  // namespace LoopTest
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -9521,42 +11090,6 @@ fn foo() {
     RunTest(src, true);
 }
 
-// TODO(jrprice): This test requires variable pointers.
-TEST_F(UniformityAnalysisTest, DISABLED_ArrayLength_PtrArgRequiredToBeUniformForRetval_Fail) {
-    std::string src = R"(
-@group(0) @binding(0) var<storage, read_write> non_uniform : i32;
-@group(0) @binding(1) var<storage, read_write> arr1 : array<f32>;
-@group(0) @binding(2) var<storage, read_write> arr2 : array<f32>;
-
-fn length(p : ptr<storage, array<f32>, read_write>) -> u32 {
-  return arrayLength(p);
-}
-
-fn foo() {
-  let non_uniform_ptr = select(&arr1, &arr2, non_uniform == 0);
-  let len = length(non_uniform_ptr);
-  if (len > 10) {
-    workgroupBarrier();
-  }
-}
-)";
-
-    RunTest(src, false);
-    EXPECT_EQ(error_,
-              R"(test:16:5 error: 'workgroupBarrier' must only be called from uniform control flow
-    workgroupBarrier();
-    ^^^^^^^^^^^^^^^^
-
-test:15:3 note: control flow depends on non-uniform value
-  if (len > 10) {
-  ^^
-
-test:14:20 note: passing non-uniform pointer to 'length' may produce a non-uniform output
-  let len = length(non_uniform_ptr, &len);
-                   ^^^^^^^^^^^^^^^
-)");
-}
-
 TEST_F(UniformityAnalysisTest, ArrayLength_PtrArgRequiredToBeUniformForOtherPtrResult_Pass) {
     std::string src = R"(
 @group(0) @binding(0) var<storage, read_write> arr : array<f32>;
@@ -9575,44 +11108,6 @@ fn foo() {
 )";
 
     RunTest(src, true);
-}
-
-// TODO(jrprice): This test requires variable pointers.
-TEST_F(UniformityAnalysisTest,
-       DISABLED_ArrayLength_PtrArgRequiredToBeUniformForOtherPtrResult_Fail) {
-    std::string src = R"(
-@group(0) @binding(0) var<storage, read_write> non_uniform : i32;
-@group(0) @binding(1) var<storage, read_write> arr1 : array<f32>;
-@group(0) @binding(2) var<storage, read_write> arr2 : array<f32>;
-
-fn length(p : ptr<storage, array<f32>, read_write>, out : ptr<function, u32>) {
-  *out = arrayLength(p);
-}
-
-fn foo() {
-  var len : u32;
-  let non_uniform_ptr = select(&arr1, &arr2, non_uniform == 0);
-  length(non_uniform_ptr, &len);
-  if (len > 10) {
-    workgroupBarrier();
-  }
-}
-)";
-
-    RunTest(src, false);
-    EXPECT_EQ(error_,
-              R"(test:17:5 error: 'workgroupBarrier' must only be called from uniform control flow
-    workgroupBarrier();
-    ^^^^^^^^^^^^^^^^
-
-test:16:3 note: control flow depends on non-uniform value
-  if (len > 10) {
-  ^^
-
-test:15:10 note: passing non-uniform pointer to 'length' may produce a non-uniform output
-  length(non_uniform_ptr, &len);
-         ^^^^^^^^^^^^^^^
-)");
 }
 
 TEST_F(UniformityAnalysisTest, ArrayLength_PtrArgRequiresUniformityAndAffectsReturnValue) {
@@ -9964,7 +11459,7 @@ fn foo() {
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:18:9 error: 'S' must only be called from uniform control flow
+              R"(test:18:9 error: 'S' must only be called from subgroup uniform control flow
     _ = S();
         ^^^
 
@@ -9995,7 +11490,7 @@ fn foo() {
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:10:9 error: 'ArrayType' must only be called from uniform control flow
+              R"(test:10:9 error: 'ArrayType' must only be called from subgroup uniform control flow
     _ = ArrayType();
         ^^^^^^^^^^^
 
@@ -11747,6 +13242,210 @@ test:15:11 note: reading from module-scope private variable 'non_uniform' may re
           ^^^^^^^^^^^
 )");
 }
+
+class SubgroupUniformityTest : public UniformityAnalysisTestBase,
+                               public ::testing::TestWithParam<int> {
+  public:
+    /// Enum for the function call statement.
+    enum Function {
+        // Subgroup functions:
+        kSubgroupBallot,
+        kSubgroupElect,
+        kSubgroupBroadcast,
+        kSubgroupBroadcastFirst,
+        kSubgroupShuffle,
+        kSubgroupShuffleXor,
+        kSubgroupShuffleUp,
+        kSubgroupShuffleDown,
+        kSubgroupAdd,
+        kSubgroupInclusiveAdd,
+        kSubgroupExclusiveAdd,
+        kSubgroupMul,
+        kSubgroupInclusiveMul,
+        kSubgroupExclusiveMul,
+        kSubgroupAnd,
+        kSubgroupOr,
+        kSubgroupXor,
+        kSubgroupMin,
+        kSubgroupMax,
+        kSubgroupAll,
+        kSubgroupAny,
+        kQuadBroadcast,
+        kQuadSwapX,
+        kQuadSwapY,
+        kQuadSwapDiagonal,
+        // End of range marker:
+        kEndOfFunctionRange,
+    };
+
+    /// @returns true if `f` is uniform in subgroup scope.
+    static bool UniformSubgroup(Function f) {
+        switch (f) {
+            case kSubgroupAdd:
+            case kSubgroupAll:
+            case kSubgroupAnd:
+            case kSubgroupAny:
+            case kSubgroupBallot:
+            case kSubgroupBroadcast:
+            case kSubgroupBroadcastFirst:
+            case kSubgroupMax:
+            case kSubgroupMin:
+            case kSubgroupMul:
+            case kSubgroupOr:
+            case kSubgroupXor:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// Convert a function call to its string representation.
+    static std::string FunctionToStr(Function f) {
+        switch (f) {
+            case kSubgroupBallot:
+                return "subgroupBallot(true).x == 0";
+            case kSubgroupElect:
+                return "subgroupElect()";
+            case kSubgroupBroadcast:
+                return "subgroupBroadcast(1.0, 0) == 0";
+            case kSubgroupBroadcastFirst:
+                return "subgroupBroadcastFirst(1.0) == 0";
+            case kSubgroupShuffle:
+                return "subgroupShuffle(1.0, 0) == 0";
+            case kSubgroupShuffleXor:
+                return "subgroupShuffleXor(1.0, 0) == 0";
+            case kSubgroupShuffleUp:
+                return "subgroupShuffleUp(1.0, 1) == 0";
+            case kSubgroupShuffleDown:
+                return "subgroupShuffleDown(1.0, 1) == 0";
+            case kSubgroupAdd:
+                return "subgroupAdd(1.0) == 0";
+            case kSubgroupInclusiveAdd:
+                return "subgroupInclusiveAdd(1.0) == 0";
+            case kSubgroupExclusiveAdd:
+                return "subgroupExclusiveAdd(1.0) == 0";
+            case kSubgroupMul:
+                return "subgroupMul(1.0) == 0";
+            case kSubgroupInclusiveMul:
+                return "subgroupInclusiveMul(1.0) == 0";
+            case kSubgroupExclusiveMul:
+                return "subgroupExclusiveMul(1.0) == 0";
+            case kSubgroupAnd:
+                return "subgroupAnd(1) == 0";
+            case kSubgroupOr:
+                return "subgroupOr(1) == 0";
+            case kSubgroupXor:
+                return "subgroupXor(1) == 0";
+            case kSubgroupMin:
+                return "subgroupMin(1.0) == 0";
+            case kSubgroupMax:
+                return "subgroupMax(1.0) == 0";
+            case kSubgroupAll:
+                return "subgroupAll(true)";
+            case kSubgroupAny:
+                return "subgroupAny(true)";
+            case kQuadBroadcast:
+                return "quadBroadcast(1.0, 0) == 0";
+            case kQuadSwapX:
+                return "quadSwapX(1.0) == 0";
+            case kQuadSwapY:
+                return "quadSwapY(1.0) == 0";
+            case kQuadSwapDiagonal:
+                return "quadSwapDiagonal(1.0) == 0";
+            case kEndOfFunctionRange:
+                return "<invalid>";
+        }
+        return "<invalid>";
+    }
+
+    /// Convert a test parameter function to a string that can be used as part of
+    /// a test name.
+    static std::string ParamsToName(::testing::TestParamInfo<ParamType> params) {
+        Function f = static_cast<Function>(params.param);
+        std::string name;
+#define CASE(c)     \
+    case c:         \
+        name += #c; \
+        break
+
+        switch (f) {
+            CASE(kSubgroupBallot);
+            CASE(kSubgroupElect);
+            CASE(kSubgroupBroadcast);
+            CASE(kSubgroupBroadcastFirst);
+            CASE(kSubgroupShuffle);
+            CASE(kSubgroupShuffleXor);
+            CASE(kSubgroupShuffleUp);
+            CASE(kSubgroupShuffleDown);
+            CASE(kSubgroupAdd);
+            CASE(kSubgroupInclusiveAdd);
+            CASE(kSubgroupExclusiveAdd);
+            CASE(kSubgroupMul);
+            CASE(kSubgroupInclusiveMul);
+            CASE(kSubgroupExclusiveMul);
+            CASE(kSubgroupAnd);
+            CASE(kSubgroupOr);
+            CASE(kSubgroupXor);
+            CASE(kSubgroupMin);
+            CASE(kSubgroupMax);
+            CASE(kSubgroupAll);
+            CASE(kSubgroupAny);
+            CASE(kQuadBroadcast);
+            CASE(kQuadSwapX);
+            CASE(kQuadSwapY);
+            CASE(kQuadSwapDiagonal);
+            case kEndOfFunctionRange:
+                break;
+#undef CASE
+        }
+        return name;
+    }
+};
+
+TEST_P(SubgroupUniformityTest, Workgroup) {
+    auto function = static_cast<Function>(GetParam());
+
+    std::string src = R"(
+enable subgroups;
+
+fn foo() {
+  if ()" + FunctionToStr(function) +
+                      R"() {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_THAT(error_, ::testing::HasSubstr("must only be called from uniform control flow"));
+}
+
+TEST_P(SubgroupUniformityTest, Subgroup) {
+    auto function = static_cast<Function>(GetParam());
+
+    std::string src = R"(
+enable subgroups;
+
+fn foo() {
+  if ()" + FunctionToStr(function) +
+                      R"() {
+    _ = subgroupAny(true);
+  }
+}
+)";
+
+    const bool should_pass = UniformSubgroup(function);
+    RunTest(src, should_pass);
+    if (!should_pass) {
+        EXPECT_THAT(error_,
+                    ::testing::HasSubstr("must only be called from subgroup uniform control flow"));
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(UniformityAnalysisTest,
+                         SubgroupUniformityTest,
+                         ::testing::Range<int>(0, SubgroupUniformityTest::kEndOfFunctionRange),
+                         SubgroupUniformityTest::ParamsToName);
 
 }  // namespace
 }  // namespace tint::resolver

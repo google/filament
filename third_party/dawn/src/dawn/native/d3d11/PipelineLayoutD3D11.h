@@ -28,12 +28,11 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_PIPELINELAYOUTD3D11_H_
 #define SRC_DAWN_NATIVE_D3D11_PIPELINELAYOUTD3D11_H_
 
-#include "dawn/native/PipelineLayout.h"
-
 #include "dawn/common/ityp_array.h"
 #include "dawn/common/ityp_vector.h"
 #include "dawn/native/BindingInfo.h"
 #include "dawn/native/PerStage.h"
+#include "dawn/native/PipelineLayout.h"
 #include "dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d11 {

@@ -29,6 +29,7 @@
 #define SRC_TINT_UTILS_CONTAINERS_HASHSET_H_
 
 #include <stddef.h>
+
 #include <algorithm>
 #include <functional>
 #include <optional>

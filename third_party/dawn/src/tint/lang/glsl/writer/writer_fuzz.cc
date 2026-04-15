@@ -30,9 +30,6 @@
 #include "src/tint/cmd/fuzz/ir/fuzz.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/transform/single_entry_point.h"
-#include "src/tint/lang/core/ir/var.h"
-#include "src/tint/lang/core/type/pointer.h"
-#include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/glsl/writer/helpers/generate_bindings.h"
 #include "src/tint/lang/glsl/writer/printer/printer.h"
 #include "src/tint/lang/glsl/writer/writer.h"
@@ -40,13 +37,75 @@
 namespace tint::glsl::writer {
 namespace {
 
-Options GenerateOptions(core::ir::Module& module) {
+// Fuzzed options used to init tint::glsl::writer::Options
+struct FuzzedOptions {
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // NOTE: These options should not be reordered or removed as it will change the operation of //
+    // pre-existing fuzzer cases. Always append new options to the end of the list.              //
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    bool strip_all_names;
+    bool disable_robustness;
+    bool enable_integer_range_analysis;
+    bool disable_workgroup_init;
+    bool disable_polyfill_integer_div_mod;
+    bool use_array_length_from_uniform;
+    std::unordered_set<uint32_t> bgra_swizzle_locations;
+    SubstituteOverridesConfig substitute_overrides_config;
+
+    /// Reflect the fields of this class so that it can be used by tint::ForeachField()
+    TINT_REFLECT(FuzzedOptions,
+                 strip_all_names,
+                 disable_robustness,
+                 enable_integer_range_analysis,
+                 disable_workgroup_init,
+                 disable_polyfill_integer_div_mod,
+                 use_array_length_from_uniform,
+                 bgra_swizzle_locations,
+                 substitute_overrides_config);
+    TINT_REFLECT_HASH_CODE(FuzzedOptions);
+};
+
+Result<SuccessType> IRFuzzer(core::ir::Module& module,
+                             const fuzz::ir::Context& context,
+                             FuzzedOptions fuzzed_options) {
+    // TODO(375388101): We cannot run the backend for every entry point in the module unless we
+    // clone the whole module each time, so for now we just generate the first entry point.
+
+    // Strip the module down to a single entry point.
+    core::ir::Function* entry_point = nullptr;
+    for (auto& func : module.functions) {
+        if (func->IsEntryPoint()) {
+            entry_point = func;
+            break;
+        }
+    }
+    std::string ep_name;
+    if (entry_point) {
+        ep_name = module.NameOf(entry_point).NameView();
+    }
+    if (ep_name.empty()) {
+        // No entry point, just return success
+        return Success;
+    }
+
+    // We fuzz options that Dawn will vary depending on the platform and provided toggles.
+    // Options that are entirely controlled by Dawn (e.g. binding points) are not fuzzed.
     Options options;
+    options.strip_all_names = fuzzed_options.strip_all_names;
+    options.disable_robustness = fuzzed_options.disable_robustness;
+    options.disable_integer_range_analysis = !fuzzed_options.enable_integer_range_analysis;
+    options.disable_workgroup_init = fuzzed_options.disable_workgroup_init;
+    options.disable_polyfill_integer_div_mod = fuzzed_options.disable_polyfill_integer_div_mod;
+    options.use_array_length_from_uniform = fuzzed_options.use_array_length_from_uniform;
+    options.entry_point_name = ep_name;
+    options.bgra_swizzle_locations = fuzzed_options.bgra_swizzle_locations;
+    options.substitute_overrides_config = fuzzed_options.substitute_overrides_config;
+
     options.version = Version(Version::Standard::kES, 3, 1);
-    options.disable_robustness = false;
-    options.disable_workgroup_init = false;
-    options.disable_polyfill_integer_div_mod = false;
-    options.bindings = GenerateBindings(module);
+
+    auto data = GenerateBindings(module, ep_name);
+    options.bindings = std::move(data.bindings);
+    options.texture_builtins_from_uniform = std::move(data.texture_builtins_from_uniform);
 
     // Leave some room for user-declared immediate data.
     uint32_t next_immediate_offset = 0x800;
@@ -101,42 +160,9 @@ Options GenerateOptions(core::ir::Module& module) {
         }
     }
 
-    return options;
-}
-
-Result<SuccessType> IRFuzzer(core::ir::Module& module, const fuzz::ir::Context& context) {
-    // TODO(375388101): We cannot run the backend for every entry point in the module unless we
-    // clone the whole module each time, so for now we just generate the first entry point.
-
-    // Strip the module down to a single entry point.
-    core::ir::Function* entry_point = nullptr;
-    for (auto& func : module.functions) {
-        if (func->IsEntryPoint()) {
-            entry_point = func;
-            break;
-        }
-    }
-    if (entry_point) {
-        auto name = module.NameOf(entry_point).NameView();
-        TINT_ASSERT(core::ir::transform::SingleEntryPoint(module, name) == Success);
-    }
-
-    // TODO(377391551): Enable fuzzing of options.
-    auto options = GenerateOptions(module);
-
-    auto check = CanGenerate(module, options);
-    if (check != Success) {
-        return Failure{check.Failure().reason};
-    }
-
-    auto output = Generate(module, options);
-    if (output != Success) {
-        TINT_ICE() << "Generate() failed after CanGenerate() succeeded: "
-                   << output.Failure().reason;
-    }
-
-    if (output == Success && context.options.dump) {
-        std::cout << "Dumping generated GLSL:\n" << output->glsl << "\n";
+    TINT_CHECK_RESULT_UNWRAP(output, Generate(module, options));
+    if (context.options.dump) {
+        std::cout << "Dumping generated GLSL:\n" << output.glsl << "\n";
     }
 
     return Success;

@@ -82,7 +82,7 @@ using DataView = Napi::TypedArray;
 
 // Datatype used for undefined values.
 struct UndefinedType {};
-static constexpr UndefinedType Undefined;
+inline constexpr UndefinedType Undefined;
 
 template <typename T>
 using FrozenArray = std::vector<T>;
@@ -267,7 +267,7 @@ class PromiseBase {
 
 // A tag used in a Promise constructor to say it won't be used and doesn't need to be initialized.
 struct UnusedPromiseTag {};
-static constexpr UnusedPromiseTag kUnusedPromise;
+inline constexpr UnusedPromiseTag kUnusedPromise;
 
 // Promise<T> is a templated wrapper around a JavaScript promise, which can
 // resolve to the template type T.
@@ -478,7 +478,7 @@ class Converter<uint64_t> {
 // unique type, otherwise we have C++ compilation error for the redefinition of a template.
 namespace detail {
 struct InvalidType;
-static constexpr bool kSizetIsUniqueType =
+inline constexpr bool kSizetIsUniqueType =
     !std::is_same_v<size_t, uint32_t> && !std::is_same_v<size_t, uint64_t>;
 }  // namespace detail
 
@@ -745,11 +745,11 @@ inline Result FromJS(Napi::Env env, Napi::Value value, T& out) {
     return Converter<T>::FromJS(env, value, out);
 }
 
-// FromJSOptional() is similar to FromJS(), but if 'value' is either null
-// or undefined then 'out' is left unassigned.
+// FromJSOptional() is similar to FromJS(), but if 'value' is undefined
+// then 'out' is left unassigned.
 template <typename T>
 inline Result FromJSOptional(Napi::Env env, Napi::Value value, T& out) {
-    if (value.IsNull() || value.IsUndefined()) {
+    if (value.IsUndefined()) {
         return Success;
     }
     return Converter<T>::FromJS(env, value, out);
@@ -799,7 +799,9 @@ inline Result FromJS(const Napi::CallbackInfo& info, PARAM_TYPES& args) {
         if constexpr (IsDefaultedParameter<T>::value) {
             // Parameter has a default value.
             // Check whether the argument was provided.
-            if (value.IsNull() || value.IsUndefined()) {
+            if (value.IsNull()) {
+                return Success;
+            } else if (value.IsUndefined()) {
                 // Use default value for this parameter
                 out.value = out.default_value;
             } else {

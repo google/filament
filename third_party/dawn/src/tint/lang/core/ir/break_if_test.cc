@@ -88,7 +88,7 @@ TEST_F(IR_BreakIfTest, Clone) {
     EXPECT_EQ(new_loop, new_brk->Loop());
 
     auto args = new_brk->Args();
-    EXPECT_EQ(2u, args.Length());
+    EXPECT_EQ(2u, args.size());
 
     auto new_cond = new_brk->Condition()->As<Constant>()->Value();
     ASSERT_TRUE(new_cond->Is<core::constant::Scalar<bool>>());
@@ -111,7 +111,7 @@ TEST_F(IR_BreakIfTest, CloneNoArgs) {
     auto* new_brk = clone_ctx.Clone(brk);
 
     auto args = new_brk->Args();
-    EXPECT_EQ(0u, args.Length());
+    EXPECT_EQ(0u, args.size());
 }
 
 TEST_F(IR_BreakIfTest, SetLoop) {

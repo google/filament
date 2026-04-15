@@ -29,9 +29,9 @@
 #define SRC_TINT_LANG_SPIRV_READER_PARSER_PARSER_H_
 
 #include <cstdint>
+#include <span>
 
 #include "src/tint/lang/spirv/reader/common/options.h"
-#include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations
@@ -45,7 +45,7 @@ namespace tint::spirv::reader {
 /// @param spirv the SPIR-V binary data
 /// @param options the parser options
 /// @returns the SPIR-V IR module on success, or failure
-Result<core::ir::Module> Parse(Slice<const uint32_t> spirv, const Options& options = {});
+Result<core::ir::Module> Parse(std::span<const uint32_t> spirv, const Options& options = {});
 
 }  // namespace tint::spirv::reader
 

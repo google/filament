@@ -343,6 +343,12 @@ void Disassembler::EmitFunction(const Function* func) {
         EmitValue(arr[2]);
         out_ << ")";
     }
+    if (func->SubgroupSize()) {
+        auto subgroup_size = func->SubgroupSize().value();
+        out_ << " " << StyleAttribute("@subgroup_size") << "(";
+        EmitValue(subgroup_size);
+        out_ << ")";
+    }
 
     out_ << " " << StyleKeyword("func") << "(";
 
@@ -442,6 +448,9 @@ StyledText Disassembler::ValueToStyledText(const Value* val) {
                         },
                         [&](const core::constant::Scalar<u8>* scalar) {
                             text << StyleLiteral(u32(scalar->ValueAs<u8>().value), "u8");
+                        },
+                        [&](const core::constant::Scalar<u16>* scalar) {
+                            text << StyleLiteral(u32(scalar->ValueAs<u16>().value), "u16");
                         },
                         [&](const core::constant::Scalar<f32>* scalar) {
                             text << StyleLiteral(scalar->ValueAs<f32>().value, "f");
@@ -885,14 +894,14 @@ void Disassembler::EmitTerminator(const Terminator* term) {
             EmitValue(bi->Condition());
             auto next_iter_values = bi->NextIterValues();
             auto exit_values = bi->ExitValues();
-            if (!next_iter_values.IsEmpty()) {
+            if (!next_iter_values.empty()) {
                 out_ << " " << StyleLabel("next_iteration") << ": [";
-                EmitOperandList(bi, ir::BreakIf::kArgsOperandOffset, next_iter_values.Length());
+                EmitOperandList(bi, ir::BreakIf::kArgsOperandOffset, next_iter_values.size());
                 out_ << " ]";
             }
-            if (!exit_values.IsEmpty()) {
+            if (!exit_values.empty()) {
                 out_ << " " << StyleLabel("exit_loop") << ": [";
-                EmitOperandList(bi, ir::BreakIf::kArgsOperandOffset + next_iter_values.Length());
+                EmitOperandList(bi, ir::BreakIf::kArgsOperandOffset + next_iter_values.size());
                 out_ << " ]";
             }
             return std::nullopt;

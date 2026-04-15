@@ -54,39 +54,46 @@
     X(v1, Maximum,                    maxComputeWorkgroupSizeZ,        64,          64,         64) \
     X(v1, Maximum,            maxComputeWorkgroupsPerDimension,     65535,       65535,      65535)
 
-// Tiers are 128MB, 512MB, 1GB, 2GB-4, 4GB-4.
-//                                                 compat     tier0      tier1
-#define LIMITS_STORAGE_BUFFER_BINDING_SIZE(X)                                                        \
-    X(v1, Maximum, maxStorageBufferBindingSize, 134217728, 134217728, 536870912, 1073741824, 2147483644, 4294967292)
+static constexpr uint64_t MiB = 1'048'576;
+static constexpr uint64_t GiB = 1'073'741'824;
 
-// Tiers are 256MB, 1GB, 2GB, 4GB.
-//                                    compat      tier0       tier1
-#define LIMITS_MAX_BUFFER_SIZE(X)                                                         \
-    X(v1, Maximum, maxBufferSize, 0x10000000, 0x10000000, 0x40000000, 0x80000000, 0x100000000)
+//                                                 compat      tier0      tier1      tier2    tier3        tier4        tier5
+#define LIMITS_STORAGE_BUFFER_BINDING_SIZE(X)                                                                                  \
+    X(v1, Maximum, maxStorageBufferBindingSize, 128 * MiB, 128 * MiB, 256 * MiB, 512 * MiB, 1 * GiB, 2 * GiB - 4, 4 * GiB - 4)
+
+//                                   compat      tier0    tier1    tier2        tier3
+#define LIMITS_MAX_BUFFER_SIZE(X)                                                      \
+    X(v1, Maximum, maxBufferSize, 256 * MiB, 256 * MiB, 1 * GiB, 2 * GiB, 4 * GiB - 4)
 
 // Tiers for limits related to resource bindings.
+// Note that changing these limits may require updating hard-coded constants common/Constants.h.
 // TODO(crbug.com/dawn/685): Define these better. For now, use two tiers where one
 // offers slightly better than default limits.
-//                                                                     compat      tier0       tier1
-#define LIMITS_RESOURCE_BINDINGS(X)                                                                   \
-    X(v1,     Maximum,   maxDynamicUniformBuffersPerPipelineLayout,         8,         8,         10) \
-    X(v1,     Maximum,   maxDynamicStorageBuffersPerPipelineLayout,         4,         4,          8) \
-    X(v1,     Maximum,            maxSampledTexturesPerShaderStage,        16,        16,         16) \
-    X(v1,     Maximum,                   maxSamplersPerShaderStage,        16,        16,         16) \
-    X(v1,     Maximum,            maxStorageTexturesPerShaderStage,         4,         4,          8) \
-    X(compat, Maximum,           maxStorageTexturesInFragmentStage,         4,         4,          8) \
-    X(compat, Maximum,             maxStorageTexturesInVertexStage,         0,         4,          8) \
-    X(v1,     Maximum,             maxUniformBuffersPerShaderStage,        12,        12,         12)
+//                                                                     compat      tier0       tier1       tier2
+#define LIMITS_RESOURCE_BINDINGS(X)                                                                              \
+    X(v1,     Maximum,   maxDynamicUniformBuffersPerPipelineLayout,         8,         8,         10,        10) \
+    X(v1,     Maximum,   maxDynamicStorageBuffersPerPipelineLayout,         4,         4,          8,         8) \
+    X(v1,     Maximum,            maxSampledTexturesPerShaderStage,        16,        16,         16,        48) \
+    X(v1,     Maximum,                   maxSamplersPerShaderStage,        16,        16,         16,        16) \
+    X(v1,     Maximum,            maxStorageTexturesPerShaderStage,         4,         4,          8,         8) \
+    X(compat, Maximum,           maxStorageTexturesInFragmentStage,         4,         4,          8,         8) \
+    X(compat, Maximum,             maxStorageTexturesInVertexStage,         0,         4,          8,         8) \
+    X(v1,     Maximum,             maxUniformBuffersPerShaderStage,        12,        12,         12,        12)
 
 // Tiers for limits related to storage buffer bindings. Should probably be merged with
 // LIMITS_RESOURCE_BINDINGS.
+//
+// TODO(crbug.com/363031535): Once the Metal backend uses argument buffers, it might be possible
+// to just merge tier1 and tier2 using 16 as the limit. Currently we can't do that because that
+// would result in all Metal devices dropping down to tier0.
+//
 // TODO(crbug.com/dawn/685): Define these better. For now, use two tiers where one
 // offers slightly better than default limits.
-//
-#define LIMITS_STORAGE_BUFFER_BINDINGS(X)                                                              \
-    X(v1,     Maximum,             maxStorageBuffersPerShaderStage,         8,         8,          10) \
-    X(compat, Maximum,            maxStorageBuffersInFragmentStage,         4,         8,          10) \
-    X(compat, Maximum,              maxStorageBuffersInVertexStage,         0,         8,          10)
+//                                                                     compat      tier0       tier1       tier2
+#define LIMITS_STORAGE_BUFFER_BINDINGS(X)                                                                        \
+    X(v1,     Maximum,             maxStorageBuffersPerShaderStage,         8,         8,         10,        16) \
+    X(compat, Maximum,            maxStorageBuffersInFragmentStage,         4,         8,         10,        16) \
+    X(compat, Maximum,              maxStorageBuffersInVertexStage,         0,         8,         10,        16)
 
 // TODO(crbug.com/dawn/685):
 // These limits aren't really tiered and could probably be grouped better.
@@ -108,25 +115,25 @@
 #define LIMITS_TEXTURE_DIMENSIONS(X) \
     X(v1, Maximum,                       maxTextureDimension1D,      4096,      8192,      16384) \
     X(v1, Maximum,                       maxTextureDimension2D,      4096,      8192,      16384) \
-    X(v1, Maximum,                       maxTextureDimension3D,      1024,      2048,       2048) \
+    X(v1, Maximum,                       maxTextureDimension3D,      2048,      2048,       2048) \
     X(v1, Maximum,                       maxTextureArrayLayers,       256,       256,       2048)
 
-// Tired limits for immediate data sizes.
-//                                 compat  tier0  tier1
+// Tiered limits for immediate data sizes.
+//                                 compat  tier0
 #define LIMITS_IMMEDIATE_SIZE(X) \
-  X(v1, Maximum, maxImmediateSize,       0,    0,    16,  32,  64)
+  X(v1, Maximum, maxImmediateSize,     64,    kMaxImmediateDataBytes)
 
 // TODO(crbug.com/dawn/685):
 // These limits don't have tiers yet. Define two tiers with the same values since the macros
 // in this file expect more than one tier.
-//                                                                                         compat      tier0      tier1
+//                                                                                         compat      tier0      tier1       tier2
 #define LIMITS_OTHER(X)                                                                                                             \
     X(v1,                              Maximum,                                     maxBindGroups,         4,         4,          4) \
     X(v1,                              Maximum,                    maxBindGroupsPlusVertexBuffers,        24,        24,         24) \
     X(v1,                              Maximum,                           maxBindingsPerBindGroup,      1000,      1000,       1000) \
     X(v1,                              Maximum,                       maxUniformBufferBindingSize,     16384,     65536,      65536) \
-    X(v1,                            Alignment,                 minUniformBufferOffsetAlignment,       256,       256,        256) \
-    X(v1,                            Alignment,                 minStorageBufferOffsetAlignment,       256,       256,        256) \
+    X(v1,                            Alignment,                   minUniformBufferOffsetAlignment,       256,       256,        256) \
+    X(v1,                            Alignment,                   minStorageBufferOffsetAlignment,       256,       256,        256) \
     X(v1,                              Maximum,                                  maxVertexBuffers,         8,         8,          8) \
     X(v1,                              Maximum,                               maxVertexAttributes,        16,        16,         30) \
     X(v1,                              Maximum,                        maxVertexBufferArrayStride,      2048,      2048,       2048) \
@@ -173,64 +180,6 @@ constexpr uint32_t ReduceSameValue(std::integer_sequence<uint32_t, I, Is...>) {
     return I;
 }
 
-enum class LimitClass {
-    Alignment,
-    Maximum,
-};
-
-template <LimitClass C>
-struct CheckLimit;
-
-template <>
-struct CheckLimit<LimitClass::Alignment> {
-    template <typename T>
-    static bool IsBetter(T lhs, T rhs) {
-        return lhs < rhs;
-    }
-
-    template <typename T>
-    static MaybeError Validate(T supported, T required) {
-        DAWN_INVALID_IF(IsBetter(required, supported),
-                        "Required limit (%u) is lower than the supported limit (%u).", required,
-                        supported);
-        DAWN_INVALID_IF(!IsPowerOfTwo(required), "Required limit (%u) is not a power of two.",
-                        required);
-        return {};
-    }
-};
-
-template <>
-struct CheckLimit<LimitClass::Maximum> {
-    template <typename T>
-    static bool IsBetter(T lhs, T rhs) {
-        return lhs > rhs;
-    }
-
-    template <typename T>
-    static MaybeError Validate(T supported, T required) {
-        DAWN_INVALID_IF(IsBetter(required, supported),
-                        "Required limit (%u) is greater than the supported limit (%u).", required,
-                        supported);
-        return {};
-    }
-};
-
-template <typename T>
-bool IsLimitUndefined(T value) {
-    static_assert(sizeof(T) != sizeof(T), "IsLimitUndefined not implemented for this type");
-    return false;
-}
-
-template <>
-bool IsLimitUndefined<uint32_t>(uint32_t value) {
-    return value == wgpu::kLimitU32Undefined;
-}
-
-template <>
-bool IsLimitUndefined<uint64_t>(uint64_t value) {
-    return value == wgpu::kLimitU64Undefined;
-}
-
 }  // namespace
 
 void GetDefaultLimits(CombinedLimits* limits, wgpu::FeatureLevel featureLevel) {
@@ -243,17 +192,18 @@ void GetDefaultLimits(CombinedLimits* limits, wgpu::FeatureLevel featureLevel) {
 
 CombinedLimits ReifyDefaultLimits(const CombinedLimits& limits, wgpu::FeatureLevel featureLevel) {
     CombinedLimits out;
-#define X(Scope, Class, limitName, compat, base, ...)                                        \
-    {                                                                                        \
-        const auto defaultLimit = static_cast<decltype(limits.Scope.limitName)>(             \
-            featureLevel == wgpu::FeatureLevel::Compatibility ? compat : base);              \
-        if (IsLimitUndefined(limits.Scope.limitName) ||                                      \
-            CheckLimit<LimitClass::Class>::IsBetter(defaultLimit, limits.Scope.limitName)) { \
-            /* If the limit is undefined or the default is better, use the default */        \
-            out.Scope.limitName = defaultLimit;                                              \
-        } else {                                                                             \
-            out.Scope.limitName = limits.Scope.limitName;                                    \
-        }                                                                                    \
+#define X(Scope, Class, limitName, compat, base, ...)                                          \
+    {                                                                                          \
+        const auto defaultLimit = static_cast<decltype(limits.Scope.limitName)>(               \
+            featureLevel == wgpu::FeatureLevel::Compatibility ? compat : base);                \
+        if (detail::IsLimitUndefined(limits.Scope.limitName) ||                                \
+            detail::CheckLimit<detail::LimitClass::Class>::IsBetter(defaultLimit,              \
+                                                                    limits.Scope.limitName)) { \
+            /* If the limit is undefined or the default is better, use the default */          \
+            out.Scope.limitName = defaultLimit;                                                \
+        } else {                                                                               \
+            out.Scope.limitName = limits.Scope.limitName;                                      \
+        }                                                                                      \
     }
     LIMITS(X)
 #undef X
@@ -282,12 +232,12 @@ MaybeError ValidateAndUnpackLimitsIn(const Limits* chainedLimits,
     // TODO(crbug.com/378361783): Add validation and default values to support requiring limits for
     // DawnTexelCopyBufferRowAlignmentLimits. Test this, see old test removed here:
     // https://dawn-review.googlesource.com/c/dawn/+/240934/11/src/dawn/tests/unittests/native/LimitsTests.cpp#b269
-    if (unpacked.Get<DawnTexelCopyBufferRowAlignmentLimits>()) {
+    if (unpacked.Has<DawnTexelCopyBufferRowAlignmentLimits>()) {
         dawn::WarningLog()
             << "DawnTexelCopyBufferRowAlignmentLimits is not supported in required limits";
     }
 
-    if (unpacked.Get<DawnHostMappedPointerLimits>()) {
+    if (unpacked.Has<DawnHostMappedPointerLimits>()) {
         dawn::WarningLog() << "DawnHostMappedPointerLimits is not supported in required limits";
     }
 
@@ -313,11 +263,11 @@ void UnpackLimitsIn(const Limits* chainedLimits, CombinedLimits* out) {
 
 MaybeError ValidateLimits(const CombinedLimits& supportedLimits,
                           const CombinedLimits& requiredLimits) {
-#define X(Scope, Class, limitName, ...)                                                           \
-    if (!IsLimitUndefined(requiredLimits.Scope.limitName)) {                                      \
-        DAWN_TRY_CONTEXT(CheckLimit<LimitClass::Class>::Validate(supportedLimits.Scope.limitName, \
-                                                                 requiredLimits.Scope.limitName), \
-                         "validating " #limitName);                                               \
+#define X(Scope, Class, limitName, ...)                                                        \
+    if (!detail::IsLimitUndefined(requiredLimits.Scope.limitName)) {                           \
+        DAWN_TRY_CONTEXT(detail::CheckLimit<detail::LimitClass::Class>::Validate(              \
+                             supportedLimits.Scope.limitName, requiredLimits.Scope.limitName), \
+                         "validating " #limitName);                                            \
     }
     LIMITS(X)
 #undef X
@@ -351,7 +301,8 @@ void ApplyLimitTiers(CombinedLimits* limits) {
     {                                                                                           \
         constexpr std::array<decltype(limits->Scope.limitName), kTierCount> tiers{__VA_ARGS__}; \
         auto tierValue = tiers[i - 1];                                                          \
-        if (CheckLimit<LimitClass::Class>::IsBetter(tierValue, limits->Scope.limitName)) {      \
+        if (detail::CheckLimit<detail::LimitClass::Class>::IsBetter(tierValue,                  \
+                                                                    limits->Scope.limitName)) { \
             /* The tier is better. Go to the next tier. */                                      \
             continue;                                                                           \
         } else if (tierValue != limits->Scope.limitName) {                                      \
@@ -379,7 +330,9 @@ void ApplyLimitTiers(CombinedLimits* limits) {
 }
 
 #define DAWN_INTERNAL_LIMITS_MEMBER_ASSIGNMENT(type, name) \
-    { result.name = limits.name; }
+    {                                                      \
+        result.name = limits.name;                         \
+    }
 #define DAWN_INTERNAL_LIMITS_FOREACH_MEMBER_ASSIGNMENT(MEMBERS) \
     MEMBERS(DAWN_INTERNAL_LIMITS_MEMBER_ASSIGNMENT)
 LimitsForCompilationRequest LimitsForCompilationRequest::Create(const Limits& limits) {
@@ -419,8 +372,9 @@ void NormalizeLimits(CombinedLimits* limits) {
         std::min(limits->v1.maxStorageTexturesPerShaderStage, kMaxStorageTexturesPerShaderStage);
     limits->v1.maxUniformBuffersPerShaderStage =
         std::min(limits->v1.maxUniformBuffersPerShaderStage, kMaxUniformBuffersPerShaderStage);
-    limits->v1.maxImmediateSize =
-        std::min(limits->v1.maxImmediateSize, kMaxSupportedImmediateDataBytes);
+    limits->v1.maxImmediateSize = std::min(limits->v1.maxImmediateSize, kMaxImmediateDataBytes);
+    limits->v1.maxBindingsPerBindGroup =
+        std::min(limits->v1.maxBindingsPerBindGroup, kMaxBindingsPerBindGroup);
 
     if (limits->v1.maxDynamicUniformBuffersPerPipelineLayout >
         kMaxDynamicUniformBuffersPerPipelineLayout) {
@@ -449,14 +403,17 @@ void NormalizeLimits(CombinedLimits* limits) {
         std::min(limits->v1.maxDynamicStorageBuffersPerPipelineLayout,
                  kMaxDynamicStorageBuffersPerPipelineLayout);
     // Compat limits.
-    limits->compat.maxStorageBuffersInVertexStage =
-        std::min(limits->compat.maxStorageBuffersInVertexStage, kMaxStorageBuffersPerShaderStage);
+    limits->compat.maxStorageBuffersInVertexStage = std::min(
+        limits->compat.maxStorageBuffersInVertexStage, limits->v1.maxStorageBuffersPerShaderStage);
     limits->compat.maxStorageTexturesInVertexStage =
-        std::min(limits->compat.maxStorageTexturesInVertexStage, kMaxStorageTexturesPerShaderStage);
+        std::min(limits->compat.maxStorageTexturesInVertexStage,
+                 limits->v1.maxStorageTexturesPerShaderStage);
     limits->compat.maxStorageBuffersInFragmentStage =
-        std::min(limits->compat.maxStorageBuffersInFragmentStage, kMaxStorageBuffersPerShaderStage);
-    limits->compat.maxStorageTexturesInFragmentStage = std::min(
-        limits->compat.maxStorageTexturesInFragmentStage, kMaxStorageTexturesPerShaderStage);
+        std::min(limits->compat.maxStorageBuffersInFragmentStage,
+                 limits->v1.maxStorageBuffersPerShaderStage);
+    limits->compat.maxStorageTexturesInFragmentStage =
+        std::min(limits->compat.maxStorageTexturesInFragmentStage,
+                 limits->v1.maxStorageTexturesPerShaderStage);
 
     // Additional enforcement for dependent limits.
     limits->v1.maxStorageBufferBindingSize =
@@ -522,35 +479,30 @@ MaybeError FillLimits(Limits* outputLimits,
         compatibilityModeLimits->nextInChain = originalChain;
     }
 
-    if (auto* texelCopyBufferRowAlignmentLimits =
-            unpacked.Get<DawnTexelCopyBufferRowAlignmentLimits>()) {
-        wgpu::ChainedStructOut* originalChain = texelCopyBufferRowAlignmentLimits->nextInChain;
-        if (!supportedFeatures.IsEnabled(wgpu::FeatureName::DawnTexelCopyBufferRowAlignment)) {
-            // If the feature is not enabled, minTexelCopyBufferRowAlignment is default-initialized
-            // to WGPU_LIMIT_U32_UNDEFINED.
-            *texelCopyBufferRowAlignmentLimits = DawnTexelCopyBufferRowAlignmentLimits{};
+    // Helper to fill a part of the extension chain based on the features enabled.
+    auto FillExtensionLimits = [&](auto chain, auto memberPtr, wgpu::FeatureName requiredFeature) {
+        if (chain == nullptr) {
+            return;
+        }
+
+        wgpu::ChainedStructOut* originalChain = chain->nextInChain;
+        if (!supportedFeatures.IsEnabled(requiredFeature)) {
+            // Default initialize the chain.
+            *chain = {};
         } else {
-            *texelCopyBufferRowAlignmentLimits = combinedLimits.texelCopyBufferRowAlignmentLimits;
+            *chain = combinedLimits.*memberPtr;
         }
 
         // Recover original chain.
-        texelCopyBufferRowAlignmentLimits->nextInChain = originalChain;
-    }
+        chain->nextInChain = originalChain;
+    };
 
-    if (auto* hostMappedPointerLimits = unpacked.Get<DawnHostMappedPointerLimits>()) {
-        wgpu::ChainedStructOut* originalChain = hostMappedPointerLimits->nextInChain;
-        if (!supportedFeatures.IsEnabled(wgpu::FeatureName::HostMappedPointer)) {
-            // If the feature is not enabled, hostMappedPointerAlignment is default-initialized to
-            // WGPU_LIMIT_U32_UNDEFINED.
-            *hostMappedPointerLimits = DawnHostMappedPointerLimits{};
-        } else {
-            hostMappedPointerLimits->hostMappedPointerAlignment =
-                combinedLimits.hostMappedPointerLimits.hostMappedPointerAlignment;
-        }
-
-        // Recover original chain.
-        hostMappedPointerLimits->nextInChain = originalChain;
-    }
+    FillExtensionLimits(unpacked.Get<DawnTexelCopyBufferRowAlignmentLimits>(),
+                        &CombinedLimits::texelCopyBufferRowAlignmentLimits,
+                        wgpu::FeatureName::DawnTexelCopyBufferRowAlignment);
+    FillExtensionLimits(unpacked.Get<DawnHostMappedPointerLimits>(),
+                        &CombinedLimits::hostMappedPointerLimits,
+                        wgpu::FeatureName::HostMappedPointer);
 
     return {};
 }

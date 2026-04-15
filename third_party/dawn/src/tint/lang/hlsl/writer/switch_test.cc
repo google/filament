@@ -34,7 +34,7 @@ namespace tint::hlsl::writer {
 namespace {
 
 TEST_F(HlslWriterTest, Switch) {
-    auto* f = b.ComputeFunction("foo");
+    auto* f = b.ComputeFunction("main");
 
     b.Append(f->Block(), [&] {
         auto* a = b.Var("a", b.Zero<i32>());
@@ -44,10 +44,11 @@ TEST_F(HlslWriterTest, Switch) {
         b.Return(f);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   int a = int(0);
   switch(a) {
     case int(5):
@@ -65,7 +66,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, SwitchMixedDefault) {
-    auto* f = b.ComputeFunction("foo");
+    auto* f = b.ComputeFunction("main");
 
     b.Append(f->Block(), [&] {
         auto* a = b.Var("a", b.Zero<i32>());
@@ -75,10 +76,11 @@ TEST_F(HlslWriterTest, SwitchMixedDefault) {
         b.Return(f);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   int a = int(0);
   switch(a) {
     case int(5):
@@ -103,7 +105,7 @@ TEST_F(HlslWriterTest, SwitchOnlyDefaultCaseNoSideEffectsConditionDXC) {
     //   }
     // }
 
-    auto* f = b.ComputeFunction("foo");
+    auto* f = b.ComputeFunction("main");
 
     b.Append(f->Block(), [&] {
         auto* cond = b.Var("cond", b.Zero<i32>());
@@ -116,10 +118,11 @@ TEST_F(HlslWriterTest, SwitchOnlyDefaultCaseNoSideEffectsConditionDXC) {
         b.Return(f);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   int cond = int(0);
   int a = int(0);
   switch(cond) {
@@ -161,7 +164,7 @@ TEST_F(HlslWriterTest, SwitchOnlyDefaultCaseSideEffectsConditionDXC) {
         b.Return(bar, b.Load(global));
     });
 
-    auto* f = b.ComputeFunction("foo");
+    auto* f = b.ComputeFunction("main");
 
     b.Append(f->Block(), [&] {
         auto* cond = b.Call(bar);
@@ -173,7 +176,8 @@ TEST_F(HlslWriterTest, SwitchOnlyDefaultCaseSideEffectsConditionDXC) {
         b.Return(f);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 static int global = int(0);
 static int a = int(0);
@@ -183,7 +187,7 @@ int bar() {
 }
 
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   switch(bar()) {
     default:
     {
@@ -207,7 +211,7 @@ TEST_F(HlslWriterTest, SwitchOnlyDefaultCaseNoSideEffectsConditionFXC) {
     //   }
     // }
 
-    auto* f = b.ComputeFunction("foo");
+    auto* f = b.ComputeFunction("main");
 
     b.Append(f->Block(), [&] {
         auto* cond = b.Var("cond", b.Zero<i32>());
@@ -223,10 +227,11 @@ TEST_F(HlslWriterTest, SwitchOnlyDefaultCaseNoSideEffectsConditionFXC) {
     Options options;
     options.compiler = Options::Compiler::kFXC;
 
-    ASSERT_TRUE(Generate(options)) << err_ << output_.hlsl;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   int cond = int(0);
   int a = int(0);
   {
@@ -267,7 +272,7 @@ TEST_F(HlslWriterTest, SwitchOnlyDefaultCaseSideEffectsConditionFXC) {
         b.Return(bar, b.Load(global));
     });
 
-    auto* f = b.ComputeFunction("foo");
+    auto* f = b.ComputeFunction("main");
 
     b.Append(f->Block(), [&] {
         auto* cond = b.Call(bar);
@@ -282,7 +287,8 @@ TEST_F(HlslWriterTest, SwitchOnlyDefaultCaseSideEffectsConditionFXC) {
     Options options;
     options.compiler = Options::Compiler::kFXC;
 
-    ASSERT_TRUE(Generate(options)) << err_ << output_.hlsl;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 static int global = int(0);
 static int a = int(0);
@@ -292,7 +298,7 @@ int bar() {
 }
 
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   bar();
   {
     while(true) {

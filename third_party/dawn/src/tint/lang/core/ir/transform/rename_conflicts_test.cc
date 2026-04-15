@@ -170,7 +170,7 @@ TEST_F(IRToProgramRenameConflictsTest, RootBlockVar_ShadowedBy_FnVar) {
             b.ir.SetName(inner, "v");
 
             auto* load_inner = b.Load(inner);
-            b.Return(fn, b.Add(ty.i32(), load_outer, load_inner));
+            b.Return(fn, b.Add(load_outer, load_inner));
         });
     });
 
@@ -269,7 +269,7 @@ TEST_F(IRToProgramRenameConflictsTest, Conflict_FnVar_ShadowedBy_IfVar) {
 
             auto* load_outer = b.Load(outer);
             auto* load_inner = b.Load(inner);
-            b.Return(fn, b.Add(ty.i32(), load_outer, load_inner));
+            b.Return(fn, b.Add(load_outer, load_inner));
         });
 
         b.Unreachable();
@@ -327,7 +327,7 @@ TEST_F(IRToProgramRenameConflictsTest, Conflict_FnLet_ShadowedBy_IfVar) {
         b.Append(if_->True(), [&] {
             auto* inner = b.Let("v", 42_i);
             auto* load_outer = b.Load(outer);
-            b.Return(fn, b.Add(ty.i32(), load_outer, inner));
+            b.Return(fn, b.Add(load_outer, inner));
         });
 
         b.Unreachable();
@@ -389,7 +389,7 @@ TEST_F(IRToProgramRenameConflictsTest, LoopInitVar_ShadowedBy_LoopBodyVar) {
                 b.ir.SetName(inner, "v");
 
                 auto* load_inner = b.Load(inner);
-                b.Return(fn, b.Add(ty.i32(), load_outer, load_inner));
+                b.Return(fn, b.Add(load_outer, load_inner));
             });
         });
 
@@ -461,7 +461,8 @@ TEST_F(IRToProgramRenameConflictsTest, LoopBodyVar_ShadowedBy_LoopContVar) {
                 b.ir.SetName(inner, "v");
 
                 auto* load_inner = b.Load(inner);
-                b.Return(fn, b.Add(ty.i32(), load_outer, load_inner));
+                b.Let("add", b.Add(load_outer, load_inner));
+                b.NextIteration(loop);
             });
         });
 
@@ -484,7 +485,8 @@ TEST_F(IRToProgramRenameConflictsTest, LoopBodyVar_ShadowedBy_LoopContVar) {
         %v_1:ptr<function, i32, read_write> = var undef  # %v_1: 'v'
         %5:i32 = load %v_1
         %6:i32 = add %3, %5
-        ret %6
+        %add:i32 = let %6
+        next_iteration  # -> $B3
       }
     }
     unreachable
@@ -509,7 +511,8 @@ TEST_F(IRToProgramRenameConflictsTest, LoopBodyVar_ShadowedBy_LoopContVar) {
         %v_1:ptr<function, i32, read_write> = var undef
         %5:i32 = load %v_1
         %6:i32 = add %3, %5
-        ret %6
+        %add:i32 = let %6
+        next_iteration  # -> $B3
       }
     }
     unreachable
@@ -816,7 +819,7 @@ TEST_F(IRToProgramRenameConflictsTest, Conflict_BuiltinScalar_ShadowedBy_FnVar) 
 TEST_F(IRToProgramRenameConflictsTest, NoModify_BuiltinScalar_ShadowedBy_NamedInst) {
     auto* fn = b.Function("f", ty.i32());
     b.Append(fn->Block(), [&] {
-        auto* i = b.Add(ty.i32(), 1_i, 2_i);
+        auto* i = b.Add(1_i, 2_i);
         b.ir.SetName(i, "i32");
 
         b.Return(fn, i);
@@ -842,7 +845,7 @@ TEST_F(IRToProgramRenameConflictsTest, NoModify_BuiltinScalar_ShadowedBy_NamedIn
 TEST_F(IRToProgramRenameConflictsTest, Conflict_BuiltinScalar_ShadowedBy_NamedInst) {
     auto* fn = b.Function("f", ty.f32());
     b.Append(fn->Block(), [&] {
-        auto* i = b.Add(ty.i32(), 1_i, 2_i);
+        auto* i = b.Add(1_i, 2_i);
         b.ir.SetName(i, "f32");
 
         b.Return(fn, b.Convert(ty.f32(), i));
@@ -972,7 +975,7 @@ TEST_F(IRToProgramRenameConflictsTest, NoModify_BuiltinFn_ShadowedBy_RootBlockVa
 
     auto* fn = b.Function("f", ty.i32());
     b.Append(fn->Block(), [&] {  //
-        auto* res = b.Call(ty.i32(), core::BuiltinFn::kMax, 1_i, 2_i)->Result();
+        auto* res = b.Max(1_i, 2_i)->Result();
         b.Return(fn, res);
     });
 
@@ -1005,7 +1008,7 @@ TEST_F(IRToProgramRenameConflictsTest, Conflict_BuiltinFn_ShadowedBy_RootBlockVa
 
     auto* fn = b.Function("f", ty.i32());
     b.Append(fn->Block(), [&] {  //
-        auto* res = b.Call(ty.i32(), core::BuiltinFn::kMax, 1_i, 2_i)->Result();
+        auto* res = b.Max(1_i, 2_i)->Result();
         b.Return(fn, res);
     });
 

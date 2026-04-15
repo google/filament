@@ -115,7 +115,7 @@ func createRunSampleQueryResults() resultsdb.PrefixGroupedQueryResults {
 }
 
 func TestRun_GetTrimmedContentFailure(t *testing.T) {
-	wrapper, err := common.CreateMemMapOSWrapperWithFakeDefaultPaths()
+	wrapper, err := common.CreateFSTestOSWrapperWithFakeDefaultPaths()
 	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	client := resultsdb.MockBigQueryClient{}
 
@@ -136,7 +136,7 @@ crbug.com/0000 [ android ] foo
 }
 
 func TestRun_GetResultsFailure(t *testing.T) {
-	wrapper, err := common.CreateMemMapOSWrapperWithFakeDefaultPaths()
+	wrapper, err := common.CreateFSTestOSWrapperWithFakeDefaultPaths()
 	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	client := resultsdb.MockBigQueryClient{}
 
@@ -161,7 +161,7 @@ func TestRun_GetResultsFailure(t *testing.T) {
 }
 
 func TestRun_SuccessCore(t *testing.T) {
-	wrapper, err := common.CreateMemMapOSWrapperWithFakeDefaultPaths()
+	wrapper, err := common.CreateFSTestOSWrapperWithFakeDefaultPaths()
 	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	client := resultsdb.MockBigQueryClient{}
 
@@ -178,7 +178,7 @@ func TestRun_SuccessCore(t *testing.T) {
 }
 
 func TestRun_SuccessCompat(t *testing.T) {
-	wrapper, err := common.CreateMemMapOSWrapperWithFakeDefaultPaths()
+	wrapper, err := common.CreateFSTestOSWrapperWithFakeDefaultPaths()
 	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	client := resultsdb.MockBigQueryClient{}
 
@@ -200,7 +200,7 @@ func TestRun_SuccessCompat(t *testing.T) {
  ******************************************************************************/
 
 func TestGetTrimmedContent_NonExistentFile(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	content, err := getTrimmedContent(
 		"/expectations.txt",
 		/*individualExpectations=*/ false,
@@ -208,12 +208,12 @@ func TestGetTrimmedContent_NonExistentFile(t *testing.T) {
 		/*verbose=*/ false,
 		wrapper)
 
-	require.Equal(t, content, expectations.Content{})
+	require.Equal(t, expectations.Content{}, content)
 	require.ErrorContains(t, err, "open /expectations.txt: file does not exist")
 }
 
 func TestGetTrimmedContent_InvalidFile(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	expectationFileContent := `# BEGIN TAG HEADER
 # OS
 # tags: [ android linux mac win10 ]
@@ -230,7 +230,7 @@ crbug.com/0000 [ android ] foo
 		/*verbose=*/ false,
 		wrapper)
 
-	require.Equal(t, content, expectations.Content{})
+	require.Equal(t, expectations.Content{}, content)
 	require.ErrorContains(t, err, "/expectations.txt:6:31 error: expected status")
 }
 
@@ -276,7 +276,7 @@ crbug.com/0000 [ win10 ] bar [ Failure ]
 }
 
 func TestGetTrimmedContent_GroupedWithSkips(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	expectationFileContent := getExpectationContentForTrimmedContentTest()
 	wrapper.WriteFile("/expectations.txt", []byte(expectationFileContent), 0o700)
 
@@ -352,7 +352,7 @@ func TestGetTrimmedContent_GroupedWithSkips(t *testing.T) {
 }
 
 func TestGetTrimmedContent_GroupedWithoutSkips(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	expectationFileContent := getExpectationContentForTrimmedContentTest()
 	wrapper.WriteFile("/expectations.txt", []byte(expectationFileContent), 0o700)
 
@@ -409,7 +409,7 @@ func TestGetTrimmedContent_GroupedWithoutSkips(t *testing.T) {
 }
 
 func TestGetTrimmedContent_IndividualWithSkips(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	expectationFileContent := getExpectationContentForTrimmedContentTest()
 	wrapper.WriteFile("/expectations.txt", []byte(expectationFileContent), 0o700)
 
@@ -500,7 +500,7 @@ func TestGetTrimmedContent_IndividualWithSkips(t *testing.T) {
 }
 
 func TestGetTrimmedContent_IndividualWithoutSkips(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	expectationFileContent := getExpectationContentForTrimmedContentTest()
 	wrapper.WriteFile("/expectations.txt", []byte(expectationFileContent), 0o700)
 

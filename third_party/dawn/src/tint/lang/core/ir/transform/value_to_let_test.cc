@@ -74,7 +74,7 @@ TEST_F(IR_ValueToLetTest, NoModify_Unsequenced) {
     b.Append(fn->Block(), [&] {
         auto* x = b.Let("x", 1_i);
         auto* y = b.Let("y", 2_i);
-        auto* z = b.Let("z", b.Add<i32>(x, y));
+        auto* z = b.Let("z", b.Add(x, y));
         b.Return(fn, z);
     });
 
@@ -110,7 +110,7 @@ TEST_F(IR_ValueToLetTest, NoModify_Bitcast) {
 %F = func():u32 {
   $B1: {
     %x:i32 = let 1i
-    %3:u32 = bitcast %x
+    %3:u32 = bitcast<u32> %x
     ret %3
   }
 }
@@ -132,7 +132,7 @@ TEST_F(IR_ValueToLetTest, NoModify_SequencedValueUsedWithNonSequenced) {
     auto* rmw = b.Function("rmw", ty.i32());
     rmw->SetParams({p});
     b.Append(rmw->Block(), [&] {
-        auto* v = b.Let("v", b.Add<i32>(b.Load(i), p));
+        auto* v = b.Let("v", b.Add(b.Load(i), p));
         b.Store(i, v);
         b.Return(rmw, v);
     });
@@ -184,7 +184,7 @@ TEST_F(IR_ValueToLetTest, NoModify_Inlinable_NestedCalls) {
     auto* rmw = b.Function("rmw", ty.i32());
     rmw->SetParams({p});
     b.Append(rmw->Block(), [&] {
-        auto* v = b.Let("v", b.Add<i32>(b.Load(i), p));
+        auto* v = b.Let("v", b.Add(b.Load(i), p));
         b.Store(i, v);
         b.Return(rmw, v);
     });
@@ -237,7 +237,7 @@ TEST_F(IR_ValueToLetTest, NoModify_LetUsedTwice) {
     auto* rmw = b.Function("rmw", ty.i32());
     rmw->SetParams({p});
     b.Append(rmw->Block(), [&] {
-        auto* v = b.Let("v", b.Add<i32>(b.Load(i), p));
+        auto* v = b.Let("v", b.Add(b.Load(i), p));
         b.Store(i, v);
         b.Return(rmw, v);
     });
@@ -246,7 +246,7 @@ TEST_F(IR_ValueToLetTest, NoModify_LetUsedTwice) {
     b.Append(fn->Block(), [&] {
         // No need to create more lets, as these are already in lets
         auto* x = b.Let("x", b.Call(rmw, 1_i));
-        auto* y = b.Name("y", b.Add<i32>(x, x));
+        auto* y = b.Name("y", b.Add(x, x));
         b.Return(fn, y);
     });
 
@@ -293,7 +293,7 @@ TEST_F(IR_ValueToLetTest, NoModify_VarUsedTwice) {
         auto* v = b.Var<function, i32>("v");
         auto* x = b.Let("x", b.Call(fn_g, v));
         auto* y = b.Let("y", b.Call(fn_g, v));
-        b.Return(fn, b.Add<i32>(x, y));
+        b.Return(fn, b.Add(x, y));
     });
 
     auto* src = R"(
@@ -329,7 +329,7 @@ TEST_F(IR_ValueToLetTest, VarLoadUsedTwice) {
     b.Append(fn->Block(), [&] {
         auto* v = b.Var<function, i32>("v");
         auto* l = b.Name("l", b.Load(v));
-        b.Return(fn, b.Add<i32>(l, l));
+        b.Return(fn, b.Add(l, l));
     });
 
     auto* src = R"(
@@ -413,7 +413,7 @@ TEST_F(IR_ValueToLetTest, Call_ThenLoad_ThenUseCallBeforeLoad) {
     b.Append(fn->Block(), [&] {
         auto* c = b.Call<i32>(foo);
         auto* l = b.Name("l", b.Load(v));
-        auto* add = b.Name("add", b.Add<i32>(c, l));
+        auto* add = b.Name("add", b.Add(c, l));
         b.Return(fn, add);
     });
 
@@ -480,7 +480,7 @@ TEST_F(IR_ValueToLetTest, Call_ThenLoad_ThenUseLoadBeforeCall) {
     b.Append(fn->Block(), [&] {
         auto* c = b.Call<i32>(foo);
         auto* l = b.Name("l", b.Load(v));
-        auto* add = b.Name("add", b.Add<i32>(l, c));
+        auto* add = b.Name("add", b.Add(l, c));
         b.Return(fn, add);
     });
 
@@ -546,7 +546,7 @@ TEST_F(IR_ValueToLetTest, Call_WithUseThatIsNeverUsed) {
     auto* fn = b.Function("F", ty.void_());
     b.Append(fn->Block(), [&] {
         auto* c = b.Name("call", b.Call<i32>(foo));
-        b.Name("add", b.Add<i32>(c, 1_i));
+        b.Name("add", b.Add(c, 1_i));
         b.Return(fn);
     });
 
@@ -733,7 +733,7 @@ TEST_F(IR_ValueToLetTest, TwoCalls_ThenUseReturnValues) {
     auto* rmw = b.Function("rmw", ty.i32());
     rmw->SetParams({p});
     b.Append(rmw->Block(), [&] {
-        auto* v = b.Let("v", b.Add<i32>(b.Load(i), p));
+        auto* v = b.Let("v", b.Add(b.Load(i), p));
         b.Store(i, v);
         b.Return(rmw, v);
     });
@@ -742,7 +742,7 @@ TEST_F(IR_ValueToLetTest, TwoCalls_ThenUseReturnValues) {
     b.Append(fn->Block(), [&] {
         auto* x = b.Name("x", b.Call(rmw, 1_i));
         auto* y = b.Name("y", b.Call(rmw, 2_i));
-        auto* z = b.Name("z", b.Add<i32>(x, y));
+        auto* z = b.Name("z", b.Add(x, y));
         b.Return(fn, z);
     });
 
@@ -813,7 +813,7 @@ TEST_F(IR_ValueToLetTest, SequencedUsedInDifferentBlock) {
     auto* rmw = b.Function("rmw", ty.i32());
     rmw->SetParams({p});
     b.Append(rmw->Block(), [&] {
-        auto* v = b.Let("v", b.Add<i32>(b.Load(i), p));
+        auto* v = b.Let("v", b.Add(b.Load(i), p));
         b.Store(i, v);
         b.Return(rmw, v);
     });
@@ -898,7 +898,7 @@ TEST_F(IR_ValueToLetTest, NameMe1) {
     b.Append(fn->Block(), [&] {
         auto* v = b.Var<function, i32>("v");
         auto* x = b.Load(v);
-        auto* y = b.Add<i32>(x, 1_i);
+        auto* y = b.Add(x, 1_i);
         b.Store(v, 2_i);
         b.Return(fn, y);
     });
@@ -941,11 +941,11 @@ TEST_F(IR_ValueToLetTest, NameMe1) {
 TEST_F(IR_ValueToLetTest, NameMe2) {
     auto* fn = b.Function("F", ty.void_());
     b.Append(fn->Block(), [&] {
-        auto* i = b.Name("i", b.Call<i32>(core::BuiltinFn::kMax, 1_i, 2_i));
+        auto* i = b.Name("i", b.Max(1_i, 2_i));
         auto* v = b.Var<function>("v", i);
-        auto* x = b.Name("x", b.Call<i32>(core::BuiltinFn::kMax, 3_i, 4_i));
+        auto* x = b.Name("x", b.Max(3_i, 4_i));
         auto* y = b.Name("y", b.Load(v));
-        auto* z = b.Name("z", b.Add<i32>(y, x));
+        auto* z = b.Name("z", b.Add(y, x));
         b.Store(v, z);
         b.Return(fn);
     });
@@ -999,7 +999,7 @@ TEST_F(IR_ValueToLetTest, TextureInline) {
 
     auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
     b.Append(func->Block(), [&] {
-        auto* coords = b.Construct(ty.vec2<f32>(), b.Value(1_f), b.Value(2_f));
+        auto* coords = b.Construct(ty.vec2f(), b.Value(1_f), b.Value(2_f));
 
         auto* t = b.Load(tex);
         auto* s = b.Load(sampler);
@@ -1056,7 +1056,7 @@ TEST_F(IR_ValueToLetTest, AccessToLetWithFunctionParams) {
     b.Append(f->Block(), [&] { b.Return(f, 0_i); });
 
     auto* g = b.Function("g", ty.i32());
-    b.Append(g->Block(), [&] { b.Return(f, 0_i); });
+    b.Append(g->Block(), [&] { b.Return(g, 0_i); });
 
     auto* foo = b.Function("foo", ty.void_());
     b.Append(foo->Block(), [&] {
@@ -1137,13 +1137,13 @@ TEST_F(IR_ValueToLetTest, AccessToLetWithNestedFunctionParams) {
     b.Append(f->Block(), [&] { b.Return(f, 0_i); });
 
     auto* g = b.Function("g", ty.i32());
-    b.Append(g->Block(), [&] { b.Return(f, 0_i); });
+    b.Append(g->Block(), [&] { b.Return(g, 0_i); });
 
     auto* foo = b.Function("foo", ty.void_());
     b.Append(foo->Block(), [&] {
         auto* arr = b.Var("arr", ty.ptr<function, array<i32, 4>, read_write>());
         auto* c = b.Call(ty.i32(), f);
-        auto* d = b.Add(ty.i32(), c, 1_i);
+        auto* d = b.Add(c, 1_i);
         auto* access = b.Access(ty.ptr<function, i32, read_write>(), arr, d);
         auto* p = b.Let("p", access);
         auto* c2 = b.Call(ty.i32(), g);

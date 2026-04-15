@@ -28,11 +28,11 @@
 #ifndef SRC_TINT_LANG_CORE_IR_BREAK_IF_H_
 #define SRC_TINT_LANG_CORE_IR_BREAK_IF_H_
 
+#include <span>
 #include <string>
 
 #include "src/tint/lang/core/ir/exit.h"
 #include "src/tint/lang/core/ir/value.h"
-#include "src/tint/utils/containers/const_propagating_ptr.h"
 #include "src/tint/utils/rtti/castable.h"
 
 // Forward declarations
@@ -100,24 +100,24 @@ class BreakIf final : public Castable<BreakIf, Exit> {
 
     /// @returns the arguments passed to the loop body MultiInBlock, if the break condition
     /// evaluates to `false`.
-    Slice<Value* const> NextIterValues() {
-        return operands_.Slice().Offset(kArgsOperandOffset).Truncate(num_next_iter_values_);
+    std::span<Value* const> NextIterValues() {
+        return operands_.AsSpan().subspan(kArgsOperandOffset, num_next_iter_values_);
     }
 
     /// @returns the arguments passed to the loop body MultiInBlock, if the break condition
     /// evaluates to `false`.
-    Slice<const Value* const> NextIterValues() const {
-        return operands_.Slice().Offset(kArgsOperandOffset).Truncate(num_next_iter_values_);
+    std::span<const Value* const> NextIterValues() const {
+        return operands_.AsSpan().subspan(kArgsOperandOffset, num_next_iter_values_);
     }
 
     /// @returns the values returned by the loop, if the break condition evaluates to `true`.
-    Slice<Value* const> ExitValues() {
-        return operands_.Slice().Offset(kArgsOperandOffset + num_next_iter_values_);
+    std::span<Value* const> ExitValues() {
+        return operands_.AsSpan().subspan(kArgsOperandOffset + num_next_iter_values_);
     }
 
     /// @returns the values returned by the loop, if the break condition evaluates to `true`.
-    Slice<const Value* const> ExitValues() const {
-        return operands_.Slice().Offset(kArgsOperandOffset + num_next_iter_values_);
+    std::span<const Value* const> ExitValues() const {
+        return operands_.AsSpan().subspan(kArgsOperandOffset + num_next_iter_values_);
     }
 
     /// Sets the number of operands used as the next iterator values.
@@ -129,7 +129,7 @@ class BreakIf final : public Castable<BreakIf, Exit> {
     }
 
   private:
-    ConstPropagatingPtr<ir::Loop> loop_;
+    ir::Loop* loop_ = nullptr;
     size_t num_next_iter_values_ = 0;
 };
 

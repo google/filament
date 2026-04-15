@@ -30,6 +30,20 @@
 load("@chromium-luci//gn_args.star", "gn_args")
 
 gn_args.config(
+    name = "arm64",
+    args = {
+        "target_cpu": "arm64",
+    },
+)
+
+gn_args.config(
+    name = "asan",
+    args = {
+        "is_asan": True,
+    },
+)
+
+gn_args.config(
     name = "clang",
     args = {
         "is_clang": True,
@@ -51,9 +65,37 @@ gn_args.config(
 )
 
 gn_args.config(
+    name = "dawn_no_swiftshader",
+    args = {
+        "dawn_use_swiftshader": False,
+    },
+)
+
+gn_args.config(
+    name = "dawn_node_bindings",
+    args = {
+        "dawn_build_node_bindings": True,
+    },
+)
+
+gn_args.config(
     name = "dawn_swiftshader",
     args = {
         "dawn_use_swiftshader": True,
+    },
+)
+
+gn_args.config(
+    name = "debug",
+    args = {
+        "is_debug": True,
+    },
+)
+
+gn_args.config(
+    name = "libfuzzer",
+    args = {
+        "use_libfuzzer": True,
     },
 )
 
@@ -65,10 +107,83 @@ gn_args.config(
 )
 
 gn_args.config(
+    name = "linux_clang",
+    configs = [
+        "clang",
+        "dawn_no_d3d12",
+        "linux",
+        "siso",
+        "tint_hlsl_writer",
+        "tint_msl_writer",
+        "tint_spv_reader_writer",
+        "tint_wgsl_reader_writer",
+    ],
+)
+
+gn_args.config(
+    name = "mac",
+    args = {
+        "target_os": "mac",
+    },
+)
+
+gn_args.config(
+    name = "mac_clang",
+    configs = [
+        "clang",
+        "dawn_no_d3d12",
+        "mac",
+        "siso",
+        "tint_hlsl_writer",
+        "tint_msl_writer",
+        "tint_spv_reader_writer",
+        "tint_wgsl_reader_writer",
+    ],
+)
+
+gn_args.config(
+    name = "minimal_symbols",
+    args = {
+        "symbol_level": 1,
+    },
+)
+
+gn_args.config(
+    name = "msvc",
+    args = {
+        "is_clang": False,
+    },
+)
+
+gn_args.config(
+    name = "no_custom_libcxx",
+    args = {
+        "use_custom_libcxx": False,
+    },
+)
+
+gn_args.config(
+    name = "non_component",
+    args = {
+        "is_component_build": False,
+    },
+)
+
+gn_args.config(
     name = "release",
     args = {
         "is_debug": False,
     },
+)
+
+gn_args.config(
+    name = "release_with_dchecks",
+    args = {
+        "dcheck_always_on": True,
+    },
+    configs = [
+        "release",
+    ],
 )
 
 gn_args.config(
@@ -77,6 +192,13 @@ gn_args.config(
         "use_reclient": False,
         "use_remoteexec": True,
         "use_siso": True,
+    },
+)
+
+gn_args.config(
+    name = "tint_build_ir_binary",
+    args = {
+        "tint_build_ir_binary": True,
     },
 )
 
@@ -139,8 +261,56 @@ gn_args.config(
 )
 
 gn_args.config(
+    name = "tsan",
+    args = {
+        "is_tsan": True,
+    },
+)
+
+gn_args.config(
+    name = "win",
+    args = {
+        "target_os": "win",
+    },
+)
+
+gn_args.config(
+    name = "win_clang",
+    configs = [
+        "clang",
+        "siso",
+        "tint_hlsl_writer",
+        "tint_msl_writer",
+        "tint_spv_reader_writer",
+        "tint_wgsl_reader_writer",
+        "win",
+    ],
+)
+
+gn_args.config(
+    name = "win_msvc",
+    configs = [
+        "msvc",
+        "no_custom_libcxx",
+        "siso",
+        "tint_hlsl_writer",
+        "tint_msl_writer",
+        "tint_spv_reader_writer",
+        "tint_wgsl_reader_writer",
+        "win",
+    ],
+)
+
+gn_args.config(
     name = "x64",
     args = {
         "target_cpu": "x64",
+    },
+)
+
+gn_args.config(
+    name = "x86",
+    args = {
+        "target_cpu": "x86",
     },
 )

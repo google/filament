@@ -72,7 +72,7 @@ current assignee.
 * Run **clang-format** on your changes to maintain consistent formatting
   * There are `.clang-format` files present in the repository to define
     clang-format settings which are found and used automatically by clang-format.
-  * **clang-format** binaries are available from the LLVM orginization, here:
+  * **clang-format** binaries are available from the LLVM organization, here:
     [LLVM](https://clang.llvm.org/).
     Our CI system currently uses clang-format version 16 to
     check that the lines of code you have changed are formatted properly.

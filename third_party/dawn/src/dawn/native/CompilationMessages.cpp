@@ -32,7 +32,6 @@
 #include "dawn/common/Assert.h"
 #include "dawn/common/StringViewUtils.h"
 #include "dawn/native/dawn_platform.h"
-
 #include "tint/tint.h"
 
 namespace dawn::native {
@@ -52,7 +51,7 @@ wgpu::CompilationMessageType TintSeverityToMessageType(tint::diag::Severity seve
 
 }  // anonymous namespace
 
-ResultOrError<uint64_t> CountUTF16CodeUnitsFromUTF8String(const std::string_view& utf8String) {
+uint64_t CountUTF16CodeUnitsFromUTF8String(const std::string_view& utf8String) {
     if (tint::utf8::IsASCII(utf8String)) {
         return utf8String.size();
     }
@@ -61,24 +60,23 @@ ResultOrError<uint64_t> CountUTF16CodeUnitsFromUTF8String(const std::string_view
     std::string_view remaining = utf8String;
     while (!remaining.empty()) {
         auto [codePoint, utf8CharacterByteLength] = tint::utf8::Decode(remaining);
-        // Directly return as something wrong has happened during the UTF-8 decoding.
-        if (utf8CharacterByteLength == 0) {
-            return DAWN_INTERNAL_ERROR("Fail to decode the unicode string");
-        }
+        // WGSL validation will already have prevented invalid UTF-8.
+        DAWN_ASSERT(utf8CharacterByteLength != 0);
         remaining = remaining.substr(utf8CharacterByteLength);
 
         // Count the number of code units in UTF-16. See https://en.wikipedia.org/wiki/UTF-16 for
-        // more details.
-        if (codePoint.value <= 0xD7FF || (codePoint.value >= 0xE000 && codePoint.value <= 0xFFFF)) {
+        // more details. Note that while the code points ranging from U+D800 to U+DFFF are not
+        // encodable in UTF-16 (they are surrogate code points), we still mark them as needing a
+        // single UTF-16 code unit. The computations performed in this function are only useful when
+        // the application uses UTF-16 internally (like JS code), so the source would have been
+        // valid UTF-16 already.
+        if (codePoint.value <= 0xFFFF) {
             // Code points from U+0000 to U+D7FF and U+E000 to U+FFFF are encoded as single 16-bit
-            // code units.
-            ++numberOfUTF16CodeUnits;
-        } else if (codePoint.value >= 0x10000) {
+            // code units. As noted above we also count surrogates as one UTF-16 code unit.
+            numberOfUTF16CodeUnits += 1;
+        } else {
             // Code points from U+010000 to U+10FFFF are encoded as two 16-bit code units.
             numberOfUTF16CodeUnits += 2;
-        } else {
-            // UTF-16 cannot encode the code points from U+D800 to U+DFFF.
-            return DAWN_INTERNAL_ERROR("The unicode string contains illegal unicode code point.");
         }
     }
 
@@ -113,7 +111,7 @@ void ParsedCompilationMessages::AddMessageForTesting(std::string_view message,
     }});
 }
 
-MaybeError ParsedCompilationMessages::AddMessage(const tint::diag::Diagnostic& diagnostic) {
+void ParsedCompilationMessages::AddMessage(const tint::diag::Diagnostic& diagnostic) {
     // Tint line and column values are 1-based.
     uint64_t lineNum = diagnostic.source.range.begin.line;
     uint64_t linePosInBytes = diagnostic.source.range.begin.column;
@@ -136,16 +134,13 @@ MaybeError ParsedCompilationMessages::AddMessage(const tint::diag::Diagnostic& d
         offsetInBytes = static_cast<uint64_t>(lineStart - fileStart) + linePosInBytes - 1;
 
         // The linePosInBytes is 1-based.
-        uint64_t linePosOffsetInUTF16 = 0;
-        DAWN_TRY_ASSIGN(linePosOffsetInUTF16, CountUTF16CodeUnitsFromUTF8String(
-                                                  std::string_view(lineStart, linePosInBytes - 1)));
+        uint64_t linePosOffsetInUTF16 =
+            CountUTF16CodeUnitsFromUTF8String(std::string_view(lineStart, linePosInBytes - 1));
         linePosInUTF16 = linePosOffsetInUTF16 + 1;
 
         // The offset is 0-based.
-        uint64_t lineStartToFileStartOffsetInUTF16 = 0;
-        DAWN_TRY_ASSIGN(lineStartToFileStartOffsetInUTF16,
-                        CountUTF16CodeUnitsFromUTF8String(std::string_view(
-                            fileStart, static_cast<uint64_t>(lineStart - fileStart))));
+        uint64_t lineStartToFileStartOffsetInUTF16 = CountUTF16CodeUnitsFromUTF8String(
+            std::string_view(fileStart, static_cast<uint64_t>(lineStart - fileStart)));
         offsetInUTF16 = lineStartToFileStartOffsetInUTF16 + linePosInUTF16 - 1;
 
         // If the range has a valid start but the end is not specified, clamp it to the start.
@@ -163,8 +158,8 @@ MaybeError ParsedCompilationMessages::AddMessage(const tint::diag::Diagnostic& d
         // ending offset. Negative ranges aren't allowed.
         DAWN_ASSERT(endOffsetInBytes >= offsetInBytes);
         lengthInBytes = endOffsetInBytes - offsetInBytes;
-        DAWN_TRY_ASSIGN(lengthInUTF16, CountUTF16CodeUnitsFromUTF8String(std::string_view(
-                                           fileStart + offsetInBytes, lengthInBytes)));
+        lengthInUTF16 = CountUTF16CodeUnitsFromUTF8String(
+            std::string_view(fileStart + offsetInBytes, lengthInBytes));
     }
 
     std::string plainMessage = diagnostic.message.Plain();
@@ -180,22 +175,18 @@ MaybeError ParsedCompilationMessages::AddMessage(const tint::diag::Diagnostic& d
         .offsetInUTF16 = offsetInUTF16,
         .lengthInUTF16 = lengthInUTF16,
     }});
-
-    return {};
 }
 
 void ParsedCompilationMessages::AddMessage(CompilationMessageContent&& message) {
     messages.push_back(message);
 }
 
-MaybeError ParsedCompilationMessages::AddMessages(const tint::diag::List& diagnostics) {
+void ParsedCompilationMessages::AddMessages(const tint::diag::List& diagnostics) {
     for (const auto& diag : diagnostics) {
-        DAWN_TRY(AddMessage(diag));
+        AddMessage(diag);
     }
 
     AddFormattedTintMessages(diagnostics);
-
-    return {};
 }
 
 void ParsedCompilationMessages::AddFormattedTintMessages(const tint::diag::List& diagnostics) {

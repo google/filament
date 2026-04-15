@@ -19,7 +19,14 @@ endif()
 # ==================================================================================================
 # Project declaration
 # ==================================================================================================
-project(TNT)
+set(EXTRA_LANGS)
+
+# This is only needed for the webgpu on MacOS build.
+if (APPLE AND NOT IOS)
+    set(EXTRA_LANGS OBJC OBJCXX)
+endif()
+
+project(TNT C CXX ${EXTRA_LANGS})
 
 # ==================================================================================================
 # Options
@@ -337,6 +344,14 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
+
+# This is only needed for the webgpu on MacOS build.
+# Don't enable for iOS because we need to support ios min target 11.0
+if (APPLE AND NOT IOS)
+    set(CMAKE_OBJCXX_STANDARD 20)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+endif()
+
 set(CXX_STANDARD "-std=c++20")
 if (WIN32)
     set(CXX_STANDARD "/std:c++20")
@@ -353,6 +368,7 @@ else()
     endif()
     if (APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-extension")
+        set(CMAKE_OBJCXX_FLAGS "${CMAKE_CXX_FLAGS}")
     endif()
 endif()
 

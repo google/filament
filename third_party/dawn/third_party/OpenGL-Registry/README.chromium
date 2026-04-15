@@ -1,0 +1,10 @@
+Name: OpenGL-Registry
+Short Name: OpenGL-Registry
+URL: https://github.com/khronosgroup/OpenGl-Registry
+Update Mechanism: Manual
+Security Critical: no
+Version: N/A
+Revision: DEPS
+License: Apache-2.0, MIT
+License File: LICENSE
+Shipped: yes

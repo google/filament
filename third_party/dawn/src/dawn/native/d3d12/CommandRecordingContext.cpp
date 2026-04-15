@@ -33,6 +33,7 @@
 #include <string>
 #include <utility>
 
+#include "dawn/common/Defer.h"
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d12/DeviceD3D12.h"
 #include "dawn/native/d3d12/HeapD3D12.h"
@@ -61,6 +62,12 @@ MaybeError CommandRecordingContext::ExecuteCommandList(Device* device,
                                                        ID3D12CommandQueue* commandQueue) {
     DAWN_ASSERT(mD3d12CommandList != nullptr);
 
+    // Make sure to always Release when this call completes. This is especially important for
+    // KeyedMutexes to ensure other users of SharedTextureMemory can rely on them being unlocked
+    // after submit.
+    Defer defer;
+    defer.Append([this] { Release(); });
+
     for (Buffer* buffer : mSharedBuffers) {
         DAWN_TRY(buffer->SynchronizeBufferBeforeUseOnGPU());
     }
@@ -72,7 +79,6 @@ MaybeError CommandRecordingContext::ExecuteCommandList(Device* device,
     MaybeError error =
         CheckHRESULT(mD3d12CommandList->Close(), "D3D12 closing pending command list");
     if (error.IsError()) {
-        Release();
         DAWN_TRY(std::move(error));
     }
     DAWN_TRY(device->GetResidencyManager()->EnsureHeapsAreResident(mHeapsPendingUsage.data(),
@@ -116,7 +122,6 @@ MaybeError CommandRecordingContext::ExecuteCommandList(Device* device,
     ID3D12CommandList* d3d12CommandList = GetCommandList();
     commandQueue->ExecuteCommandLists(1, &d3d12CommandList);
 
-    Release();
     return {};
 }
 

@@ -29,14 +29,15 @@
 #define SRC_TINT_LANG_CORE_INTRINSIC_TABLE_DATA_H_
 
 #include <stdint.h>
+
 #include <limits>
+#include <span>
 #include <string>
 
 #include "src/tint/lang/core/constant/eval.h"
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/evaluation_stage.h"
 #include "src/tint/utils/containers/enum_set.h"
-#include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/text/styled_text.h"
 #include "src/tint/utils/text/text_style.h"
 
@@ -116,7 +117,7 @@ struct TableIndex {
 };
 
 /// Index type used to index TableData::template_types
-using TemplateIndex = TableIndex<TableIndexNamespace::kTemplate, uint8_t>;
+using TemplateIndex = TableIndex<TableIndexNamespace::kTemplate, uint16_t>;
 
 /// Index type used to index TableData::type_matchers or TableData::number_matchers
 using MatcherIndex = TableIndex<TableIndexNamespace::kMatcher, uint8_t>;
@@ -160,6 +161,9 @@ using OverloadFlags = tint::EnumSet<OverloadFlag>;
 struct ParameterInfo {
     /// The parameter usage (parameter name in definition file)
     const ParameterUsage usage;
+
+    /// True if the parameter is required to be constant.
+    const bool is_const;
 
     /// Index of the matcher indices that are used to match the parameter types.
     /// These indices are consumed by the matchers themselves.
@@ -212,7 +216,7 @@ struct IntrinsicInfo {
 };
 
 /// A IntrinsicInfo with no overloads
-static constexpr IntrinsicInfo kNoOverloads{0, OverloadIndex(OverloadIndex::kInvalid)};
+inline constexpr IntrinsicInfo kNoOverloads{0, OverloadIndex(OverloadIndex::kInvalid)};
 
 /// Number is an 32 bit unsigned integer, which can be in one of three states:
 /// * Invalid - Number has not been assigned a value
@@ -536,23 +540,23 @@ struct TableData {
     }
 
     /// The list of templates used by the intrinsic overloads
-    const Slice<const TemplateInfo> templates;
+    const std::span<const TemplateInfo> templates;
     /// The list of type matcher indices
-    const Slice<const MatcherIndex> matcher_indices;
+    const std::span<const MatcherIndex> matcher_indices;
     /// The list of type matchers used by the intrinsic overloads
-    const Slice<const TypeMatcher> type_matchers;
+    const std::span<const TypeMatcher> type_matchers;
     /// The list of number matchers used by the intrinsic overloads
-    const Slice<const NumberMatcher> number_matchers;
+    const std::span<const NumberMatcher> number_matchers;
     /// The list of parameters used by the intrinsic overloads
-    const Slice<const ParameterInfo> parameters;
+    const std::span<const ParameterInfo> parameters;
     /// The list of overloads used by the intrinsics
-    const Slice<const OverloadInfo> overloads;
+    const std::span<const OverloadInfo> overloads;
     /// The list of constant evaluation functions used by the intrinsics
-    const Slice<const constant::Eval::Function> const_eval_functions;
+    const std::span<const constant::Eval::Function> const_eval_functions;
     /// The type constructor and convertor intrinsics
-    const Slice<const IntrinsicInfo> ctor_conv;
+    const std::span<const IntrinsicInfo> ctor_conv;
     /// The builtin function intrinsic
-    const Slice<const IntrinsicInfo> builtins;
+    const std::span<const IntrinsicInfo> builtins;
     /// The IntrinsicInfo for the binary operator 'plus'
     const IntrinsicInfo& binary_plus;
     /// The IntrinsicInfo for the binary operator 'minus'
@@ -601,6 +605,7 @@ struct TableData {
     const IntrinsicInfo& unary_and;
 };
 
+// Incrementing matcher_indices_ triggers this warning. This code is performance critical.
 TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 const core::type::Type* MatchState::Type(const core::type::Type* ty) {
     TypeMatcherIndex matcher_index{(*matcher_indices_++).value};

@@ -16,12 +16,15 @@
 #define BENCHMARK_PERF_COUNTERS_H
 
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <memory>
 #include <vector>
 
-#include "benchmark/benchmark.h"
+#include "benchmark/export.h"
+#include "benchmark/macros.h"
+#include "benchmark/utils.h"
 #include "check.h"
 #include "log.h"
 #include "mutex.h"
@@ -152,7 +155,7 @@ class BENCHMARK_EXPORT PerfCountersMeasurement final {
 
   size_t num_counters() const { return counters_.num_counters(); }
 
-  std::vector<std::string> names() const { return counters_.names(); }
+  const std::vector<std::string>& names() const { return counters_.names(); }
 
   BENCHMARK_ALWAYS_INLINE bool Start() {
     if (num_counters() == 0) return true;

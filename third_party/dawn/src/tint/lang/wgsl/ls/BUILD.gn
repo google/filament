@@ -72,7 +72,7 @@ if (tint_build_tintd && tint_build_wgsl_reader) {
       "utils.h",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}:thread",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
@@ -124,7 +124,7 @@ if (tint_build_unittests) {
         "symbols_test.cc",
       ]
       deps = [
-        "${dawn_root}/src/utils:utils",
+        "${dawn_root}/src/utils",
         "${tint_src_dir}:gmock_and_gtest",
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",

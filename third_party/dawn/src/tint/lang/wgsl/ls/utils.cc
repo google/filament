@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/ls/utils.h"
+
 #include "langsvr/lsp/lsp.h"
 
 namespace tint::wgsl::ls {

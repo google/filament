@@ -67,6 +67,7 @@ struct D3D11BackendTraits {
     using QueueType = Queue;
     using RenderPipelineType = RenderPipeline;
     using ResourceHeapType = Heap;
+    using ResourceTableType = void;  // D3D11 cannot support resource tables.
     using SamplerType = Sampler;
     using ShaderModuleType = ShaderModule;
     using SharedFenceType = SharedFence;

@@ -36,14 +36,12 @@ import (
 )
 
 func TestDefaultAuthOptions_NoAdditionalScopes(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
-	wrapper.Environment = map[string]string{
-		"HOME": "/home",
-	}
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	wrapper.Setenv("HOME", "/home")
 
 	authOptions := DefaultAuthOptions(wrapper)
 
-	require.Equal(t, authOptions.SecretsDir, "/home/.config/dawn-cts")
+	require.Equal(t, "/home/.config/dawn-cts", authOptions.SecretsDir)
 	require.GreaterOrEqual(t, len(authOptions.Scopes), 2)
 	require.Equal(
 		t,
@@ -55,14 +53,12 @@ func TestDefaultAuthOptions_NoAdditionalScopes(t *testing.T) {
 }
 
 func TestDefaultAuthOptions_AdditionalScopes(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
-	wrapper.Environment = map[string]string{
-		"HOME": "/home",
-	}
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	wrapper.Setenv("HOME", "/home")
 
 	authOptions := DefaultAuthOptions(wrapper, "scope1", "scope2")
 
-	require.Equal(t, authOptions.SecretsDir, "/home/.config/dawn-cts")
+	require.Equal(t, "/home/.config/dawn-cts", authOptions.SecretsDir)
 	require.GreaterOrEqual(t, len(authOptions.Scopes), 4)
 	require.Equal(
 		t,

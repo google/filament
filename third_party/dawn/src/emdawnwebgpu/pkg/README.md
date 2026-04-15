@@ -75,6 +75,17 @@ If (and only if) using Emscripten before 4.0.7, pass this flag during linking:
 
     --closure-args=--externs=path/to/emdawnwebgpu_pkg/webgpu/src/webgpu-externs.js
 
+#### Without using a port file (**Unsupported!**)
+
+It is possible to integrate the Emdawnwebgpu sources directly into your build
+process, which may be necessary for certain build systems, but this is not
+officially supported. Using a port file instead is strongly recommended.
+
+If you do this, the port files or Dawn's GN or CMake files can serve as a
+reference for the steps needed. Note that in all cases, the sources include both
+C++ and JS code. While it is possible to precompile the C++ code to `.a`, the JS
+code cannot be precompiled and must be provided at the final link step.
+
 ### Cross-targeting Web/Native
 
 #### Using CMake

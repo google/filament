@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/native/d3d12/CPUDescriptorHeapAllocationD3D12.h"
+
 #include "dawn/native/Error.h"
 
 namespace dawn::native::d3d12 {

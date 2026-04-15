@@ -242,7 +242,7 @@
 typedef uint64_t {{API}}Flags;
 typedef uint32_t {{API}}Bool;
 
-{% for type in by_category["object"] %}
+{% for type in by_category["object"] | sort %}
     typedef struct {{as_cType(type.name)}}Impl* {{as_cType(type.name)}} {{API}}_OBJECT_ATTRIBUTE;
 {% endfor %}
 

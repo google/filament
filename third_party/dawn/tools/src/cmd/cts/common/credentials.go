@@ -90,6 +90,9 @@ func CheckAllRequiredCredentials(ctx context.Context, inputs CredCheckInputs) er
 		err = checkResultDBCredentials(ctx, client)
 		if err != nil {
 			fmt.Println(" failed")
+			fmt.Println(
+				"This may be fixed by running 'gcloud auth login' and " +
+					"'gcloud auth application-default login'")
 			return err
 		}
 		fmt.Println(" success")

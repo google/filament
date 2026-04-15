@@ -56,15 +56,5 @@ TEST_F(CallStatementDeathTest, Assert_Null_Call) {
         "internal compiler error");
 }
 
-TEST_F(CallStatementDeathTest, Assert_DifferentGenerationID_Call) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.CallStmt(b2.Call("func"));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

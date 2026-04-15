@@ -2838,7 +2838,7 @@ $B1: {  # root
     %4:u32 = spirv.atomic_i_add %wg, 1u, 0u, 3u
     store %wg, 0u
     %5:u32 = load %wg
-    %6:f32 = bitcast %5
+    %6:f32 = bitcast<f32> %5
     store %b, %6
     ret
   }
@@ -2859,7 +2859,7 @@ $B1: {  # root
     %4:u32 = atomicAdd %wg, 3u
     %5:void = atomicStore %wg, 0u
     %6:u32 = atomicLoad %wg
-    %7:f32 = bitcast %6
+    %7:f32 = bitcast<f32> %6
     store %b, %7
     ret
   }
@@ -2911,7 +2911,7 @@ $B1: {  # root
     store %6, 0u
     %7:ptr<workgroup, u32, read_write> = access %wg, 0u
     %8:u32 = load %7
-    %9:f32 = bitcast %8
+    %9:f32 = bitcast<f32> %8
     store %b, %9
     ret
   }
@@ -2943,7 +2943,7 @@ $B1: {  # root
     %7:void = atomicStore %6, 0u
     %8:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
     %9:u32 = atomicLoad %8
-    %10:f32 = bitcast %9
+    %10:f32 = bitcast<f32> %9
     store %b, %10
     ret
   }
@@ -3083,7 +3083,7 @@ TEST_F(SpirvReader_AtomicsTest, FunctionParam_MixedCalls) {
 
         auto* one = b.Load(p1);
         auto* two = b.Load(p2);
-        b.Return(f_nonatomic, b.Add(ty.u32(), one, two));
+        b.Return(f_nonatomic, b.Add(one, two));
     });
 
     auto* main = b.ComputeFunction("main");
@@ -3248,6 +3248,81 @@ $B1: {  # root
     %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i
     %4:void = atomicStore %3, 1u
     %5:u32 = arrayLength %buffer
+    ret
+  }
+}
+)";
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, RewriteLoad_SameAccessChain) {
+    auto* f = b.ComputeFunction("main");
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block,
+             [&] {  //
+                 buffer = b.Var("buffer", ty.ptr<storage, array<u32>, read_write>());
+                 buffer->SetBindingPoint(0u, 0u);
+             });
+
+    b.Append(f->Block(), [&] {  //
+        auto* a = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_i);
+        b.Let("x", b.Load(a));
+
+        auto* if_ = b.If(true);
+        b.Append(if_->True(), [&] {
+            b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicCompareExchange, a,
+                                           1_u, 0_u, 0_u, 0_u, 0_u);
+            b.ExitIf(if_);
+        });
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %buffer:ptr<storage, array<u32>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1i
+    %4:u32 = load %3
+    %x:u32 = let %4
+    if true [t: $B3] {  # if_1
+      $B3: {  # true
+        %6:u32 = spirv.atomic_compare_exchange %3, 1u, 0u, 0u, 0u, 0u
+        exit_if  # if_1
+      }
+    }
+    ret
+  }
+}
+)";
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+
+    auto* expect = R"(
+__atomic_compare_exchange_result_u32 = struct @align(4) {
+  old_value:u32 @offset(0)
+  exchanged:bool @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, array<atomic<u32>>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i
+    %4:u32 = atomicLoad %3
+    %x:u32 = let %4
+    if true [t: $B3] {  # if_1
+      $B3: {  # true
+        %6:__atomic_compare_exchange_result_u32 = atomicCompareExchangeWeak %3, 0u, 0u
+        %7:u32 = access %6, 0u
+        exit_if  # if_1
+      }
+    }
     ret
   }
 }

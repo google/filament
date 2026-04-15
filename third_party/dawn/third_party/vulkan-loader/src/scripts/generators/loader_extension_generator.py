@@ -242,10 +242,8 @@ class LoaderExtensionGenerator(BaseGenerator):
         out.append('#pragma once\n')
         out.append('\n')
         out.append('#include <vulkan/vulkan.h>\n')
+        out.append('#include <vulkan/vk_layer.h>\n')
         out.append('\n')
-        out.append('#if !defined(PFN_GetPhysicalDeviceProcAddr)\n')
-        out.append('typedef PFN_vkVoidFunction (VKAPI_PTR *PFN_GetPhysicalDeviceProcAddr)(VkInstance instance, const char* pName);\n')
-        out.append('#endif\n\n')
         self.OutputLayerInstanceDispatchTable(out)
         self.OutputLayerDeviceDispatchTable(out)
 

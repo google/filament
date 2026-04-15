@@ -39,11 +39,11 @@
 #include "dawn/common/MutexProtected.h"
 #include "dawn/common/NonMovable.h"
 #include "dawn/common/Ref.h"
+#include "dawn/common/Time.h"
 #include "dawn/common/WeakRef.h"
 #include "dawn/native/Error.h"
 #include "dawn/native/Forward.h"
 #include "dawn/native/IntegerTypes.h"
-#include "dawn/native/SystemEvent.h"
 #include "dawn/native/WaitListEvent.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 
@@ -66,16 +66,16 @@ class EventManager final : NonMovable {
     explicit EventManager(InstanceBase* instance);
     ~EventManager();
 
-    MaybeError Initialize(const UnpackedPtr<InstanceDescriptor>& descriptor);
-    // Called by WillDropLastExternalRef. Once shut down, the EventManager stops tracking anything.
-    // It drops any refs to TrackedEvents, to break reference cycles. If doing so frees the last ref
-    // of any uncompleted TrackedEvents, they'll get completed with EventCompletionType::Shutdown.
-    void ShutDown();
-
     class TrackedEvent;
     // Track a TrackedEvent and give it a FutureID.
     FutureID TrackEvent(Ref<TrackedEvent>&&);
-    void SetFutureReady(TrackedEvent* event);
+
+    // Note that SetFutureReady takes a Ref<TrackedEvent> instead of a TrackedEvent* because TSAN
+    // found that this function uses the event after setting it ready meaning another thread can
+    // race to complete the event as soon as it's ready, i.e. via a WaitAny call, potentially
+    // completing and freeing the event leaving the remainder of this call referencing a freed
+    // event.
+    void SetFutureReady(Ref<TrackedEvent> event);
 
     // Returns true if future ProcessEvents is needed.
     bool ProcessPollEvents();
@@ -84,20 +84,15 @@ class EventManager final : NonMovable {
                                            Nanoseconds timeout);
 
   private:
-    bool IsShutDown() const;
-
     // Raw pointer to the Instance to allow for logging. The Instance owns the EventManager, so a
     // raw pointer here is always safe.
     raw_ptr<const InstanceBase> mInstance;
-
-    bool mTimedWaitAnyEnable = false;
-    size_t mTimedWaitAnyMaxCount = kTimedWaitAnyMaxCountDefault;
     std::atomic<FutureID> mNextFutureID = 1;
 
     // Freed once the user has dropped their last ref to the Instance, so can't call WaitAny or
     // ProcessEvents anymore. This breaks reference cycles.
     using EventMap = absl::flat_hash_map<FutureID, Ref<TrackedEvent>>;
-    MutexProtected<std::optional<EventMap>> mEvents;
+    MutexProtected<EventMap> mEvents;
 
     // Records last process event id in order to properly return whether or not there are still
     // events to process when we have re-entrant callbacks.
@@ -129,6 +124,13 @@ class EventManager::TrackedEvent : public RefCounted {
     // EventCompletionType::Shutdown.
     ~TrackedEvent() override;
 
+    // Create and track a TrackedEvent that is already completed.
+    // Note: if callbackMode is set to other value, the caller need to make sure to wait on it to
+    // avoid leakage.
+    static Ref<TrackedEvent> CreateAlreadyCompletedEvent(
+        EventManager* eventManager,
+        wgpu::CallbackMode callbackMode = wgpu::CallbackMode::AllowSpontaneous);
+
     Future GetFuture() const;
 
     bool IsProgressing() const { return mIsProgressing; }
@@ -140,13 +142,6 @@ class EventManager::TrackedEvent : public RefCounted {
         return std::get_if<QueueAndSerial>(&mCompletionData);
     }
 
-    Ref<SystemEvent> GetIfSystemEvent() const {
-        if (auto* event = std::get_if<Ref<SystemEvent>>(&mCompletionData)) {
-            return *event;
-        }
-        return nullptr;
-    }
-
     Ref<WaitListEvent> GetIfWaitListEvent() const {
         if (auto* event = std::get_if<Ref<WaitListEvent>>(&mCompletionData)) {
             return *event;
@@ -154,12 +149,9 @@ class EventManager::TrackedEvent : public RefCounted {
         return nullptr;
     }
 
-    // Events may be one of three types:
+    // Events may be one of two types:
     // - A queue and the ExecutionSerial after which the event will be completed.
     //   Used for queue completion.
-    // - A SystemEvent which will be signaled usually by the OS / GPU driver. It stores a boolean
-    //   that we can check instead of polling with the OS, or it can be transformed lazily into a
-    //   SystemEventReceiver.
     // - A WaitListEvent which will be signaled from our code, usually on a separate thread. It also
     //   stores an atomic boolean that we can check instead of waiting synchronously, or it can be
     //   transformed into a SystemEventReceiver for asynchronous waits.
@@ -170,16 +162,12 @@ class EventManager::TrackedEvent : public RefCounted {
   protected:
     friend class EventManager;
 
-    using CompletionData = std::variant<QueueAndSerial, Ref<SystemEvent>, Ref<WaitListEvent>>;
+    using CompletionData = std::variant<QueueAndSerial, Ref<WaitListEvent>>;
 
     // Create an event from a WaitListEvent that can be signaled and waited-on in user-space only in
     // the current process. Note that events like RequestAdapter and RequestDevice complete
     // immediately in dawn native, and may use an already-completed event.
     TrackedEvent(wgpu::CallbackMode callbackMode, Ref<WaitListEvent> completionEvent);
-
-    // Create an event from a SystemEvent. Note that events like RequestAdapter and
-    // RequestDevice complete immediately in dawn native, and may use an already-completed event.
-    TrackedEvent(wgpu::CallbackMode callbackMode, Ref<SystemEvent> completionEvent);
 
     // Create a TrackedEvent from a queue completion serial.
     TrackedEvent(wgpu::CallbackMode callbackMode,
@@ -190,7 +178,7 @@ class EventManager::TrackedEvent : public RefCounted {
     struct Completed {};
     TrackedEvent(wgpu::CallbackMode callbackMode, Completed tag);
 
-    // Some SystemEvents may be non-progressing, i.e. DeviceLost. We tag these events so that we can
+    // Some events may be non-progressing, i.e. DeviceLost. We tag these events so that we can
     // correctly return whether there is progressing work when users are polling.
     struct NonProgressing {};
     TrackedEvent(wgpu::CallbackMode callbackMode, NonProgressing tag);
@@ -206,13 +194,9 @@ class EventManager::TrackedEvent : public RefCounted {
   private:
     CompletionData mCompletionData;
     const bool mIsProgressing = true;
-    // Whether the callback has been called. Note that this is a MutexProtected<bool> because for
-    // spontaneous events, multiple threads may call |EnsureComplete| and that function should only
-    // return after the actual callback is completed. Without the lock, previous to this change we
-    // just had an std::atomic<bool>, two threads could race, and the thread that does not run the
-    // callback can make forward progress even though the callback hasn't completed on the other
-    // thread yet.
-    MutexProtected<bool> mCompleted;
+
+    // Flag used to ensure that the callback is only completed once.
+    std::once_flag mFlag;
 };
 
 }  // namespace dawn::native

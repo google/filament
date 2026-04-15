@@ -7,9 +7,6 @@
 
 package com.google.protobuf.util;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.io.BaseEncoding;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -54,6 +51,7 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.ParseException;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -68,11 +66,7 @@ import javax.annotation.Nullable;
 
 /**
  * Utility class to convert protobuf messages to/from the <a href=
- * 'https://developers.google.com/protocol-buffers/docs/proto3#json'>Proto3 JSON format.</a>
- * Only proto3 features are supported. Proto2 only features such as extensions and unknown fields
- * are discarded in the conversion. That is, when converting proto2 messages to JSON format,
- * extensions and unknown fields are treated as if they do not exist. This applies to proto2
- * messages embedded in proto3 messages as well.
+ * 'https://protobuf.dev/programming-guides/json/'>ProtoJSON format.</a>
  */
 public class JsonFormat {
   private static final Logger logger = Logger.getLogger(JsonFormat.class.getName());
@@ -87,12 +81,11 @@ public class JsonFormat {
         com.google.protobuf.TypeRegistry.getEmptyTypeRegistry(),
         TypeRegistry.getEmptyTypeRegistry(),
         ShouldPrintDefaults.ONLY_IF_PRESENT,
-        /* includingDefaultValueFields */ ImmutableSet.of(),
+        /* includingDefaultValueFields */ Collections.emptySet(),
         /* preservingProtoFieldNames */ false,
         /* omittingInsignificantWhitespace */ false,
         /* printingEnumsAsInts */ false,
-        /* sortingMapKeys */ false,
-        /* unsafeDisableCodepointsForHtmlSymbols */ false);
+        /* sortingMapKeys */ false);
   }
 
   private enum ShouldPrintDefaults {
@@ -115,7 +108,6 @@ public class JsonFormat {
     private final boolean omittingInsignificantWhitespace;
     private final boolean printingEnumsAsInts;
     private final boolean sortingMapKeys;
-    private final boolean unsafeDisableCodepointsForHtmlSymbols;
 
     private Printer(
         com.google.protobuf.TypeRegistry registry,
@@ -125,8 +117,7 @@ public class JsonFormat {
         boolean preservingProtoFieldNames,
         boolean omittingInsignificantWhitespace,
         boolean printingEnumsAsInts,
-        boolean sortingMapKeys,
-        boolean unsafeDisableCodepointsForHtmlSymbols) {
+        boolean sortingMapKeys) {
       this.registry = registry;
       this.oldRegistry = oldRegistry;
       this.shouldPrintDefaults = shouldOutputDefaults;
@@ -135,7 +126,6 @@ public class JsonFormat {
       this.omittingInsignificantWhitespace = omittingInsignificantWhitespace;
       this.printingEnumsAsInts = printingEnumsAsInts;
       this.sortingMapKeys = sortingMapKeys;
-      this.unsafeDisableCodepointsForHtmlSymbols = unsafeDisableCodepointsForHtmlSymbols;
     }
 
     /**
@@ -157,8 +147,7 @@ public class JsonFormat {
           preservingProtoFieldNames,
           omittingInsignificantWhitespace,
           printingEnumsAsInts,
-          sortingMapKeys,
-          unsafeDisableCodepointsForHtmlSymbols);
+          sortingMapKeys);
     }
 
     /**
@@ -180,8 +169,7 @@ public class JsonFormat {
           preservingProtoFieldNames,
           omittingInsignificantWhitespace,
           printingEnumsAsInts,
-          sortingMapKeys,
-          unsafeDisableCodepointsForHtmlSymbols);
+          sortingMapKeys);
     }
 
     /**
@@ -206,12 +194,11 @@ public class JsonFormat {
           registry,
           oldRegistry,
           ShouldPrintDefaults.ALWAYS_PRINT_EXCEPT_MESSAGES_AND_ONEOFS,
-          ImmutableSet.of(),
+          Collections.emptySet(),
           preservingProtoFieldNames,
           omittingInsignificantWhitespace,
           printingEnumsAsInts,
-          sortingMapKeys,
-          unsafeDisableCodepointsForHtmlSymbols);
+          sortingMapKeys);
     }
 
     /**
@@ -224,9 +211,10 @@ public class JsonFormat {
      * here.
      */
     public Printer includingDefaultValueFields(Set<FieldDescriptor> fieldsToAlwaysOutput) {
-      Preconditions.checkArgument(
-          null != fieldsToAlwaysOutput && !fieldsToAlwaysOutput.isEmpty(),
-          "Non-empty Set must be supplied for includingDefaultValueFields.");
+      if (fieldsToAlwaysOutput == null || fieldsToAlwaysOutput.isEmpty()) {
+        throw new IllegalArgumentException(
+            "Non-empty Set must be supplied for includingDefaultValueFields.");
+      }
       if (shouldPrintDefaults != ShouldPrintDefaults.ONLY_IF_PRESENT) {
         throw new IllegalStateException(
             "JsonFormat includingDefaultValueFields has already been set.");
@@ -235,12 +223,11 @@ public class JsonFormat {
           registry,
           oldRegistry,
           ShouldPrintDefaults.ALWAYS_PRINT_SPECIFIED_FIELDS,
-          ImmutableSet.copyOf(fieldsToAlwaysOutput),
+          Collections.unmodifiableSet(new HashSet<>(fieldsToAlwaysOutput)),
           preservingProtoFieldNames,
           omittingInsignificantWhitespace,
           printingEnumsAsInts,
-          sortingMapKeys,
-          unsafeDisableCodepointsForHtmlSymbols);
+          sortingMapKeys);
     }
 
     /**
@@ -257,12 +244,11 @@ public class JsonFormat {
           registry,
           oldRegistry,
           ShouldPrintDefaults.ALWAYS_PRINT_WITHOUT_PRESENCE_FIELDS,
-          ImmutableSet.of(),
+          Collections.emptySet(),
           preservingProtoFieldNames,
           omittingInsignificantWhitespace,
           printingEnumsAsInts,
-          sortingMapKeys,
-          unsafeDisableCodepointsForHtmlSymbols);
+          sortingMapKeys);
     }
 
     /**
@@ -279,8 +265,7 @@ public class JsonFormat {
           preservingProtoFieldNames,
           omittingInsignificantWhitespace,
           true,
-          sortingMapKeys,
-          unsafeDisableCodepointsForHtmlSymbols);
+          sortingMapKeys);
     }
 
     private void checkUnsetPrintingEnumsAsInts() {
@@ -304,8 +289,7 @@ public class JsonFormat {
           true,
           omittingInsignificantWhitespace,
           printingEnumsAsInts,
-          sortingMapKeys,
-          unsafeDisableCodepointsForHtmlSymbols);
+          sortingMapKeys);
     }
 
 
@@ -334,8 +318,7 @@ public class JsonFormat {
           preservingProtoFieldNames,
           true,
           printingEnumsAsInts,
-          sortingMapKeys,
-          unsafeDisableCodepointsForHtmlSymbols);
+          sortingMapKeys);
     }
 
     /**
@@ -358,8 +341,7 @@ public class JsonFormat {
           preservingProtoFieldNames,
           omittingInsignificantWhitespace,
           printingEnumsAsInts,
-          true,
-          unsafeDisableCodepointsForHtmlSymbols);
+          true);
     }
 
     /**
@@ -381,8 +363,7 @@ public class JsonFormat {
               output,
               omittingInsignificantWhitespace,
               printingEnumsAsInts,
-              sortingMapKeys,
-              unsafeDisableCodepointsForHtmlSymbols)
+              sortingMapKeys)
           .print(message);
     }
 
@@ -740,8 +721,6 @@ public class JsonFormat {
 
     private static class GsonHolder {
       private static final Gson DEFAULT_GSON = new GsonBuilder().create();
-      private static final Gson GSON_WITHOUT_HTML_ESCAPING =
-          new GsonBuilder().disableHtmlEscaping().create();
     }
 
     PrinterImpl(
@@ -753,8 +732,7 @@ public class JsonFormat {
         Appendable jsonOutput,
         boolean omittingInsignificantWhitespace,
         boolean printingEnumsAsInts,
-        boolean sortingMapKeys,
-        boolean unsafeDisableCodepointsForHtmlSymbols) {
+        boolean sortingMapKeys) {
       this.registry = registry;
       this.oldRegistry = oldRegistry;
       this.shouldPrintDefaults = shouldPrintDefaults;
@@ -762,10 +740,7 @@ public class JsonFormat {
       this.preservingProtoFieldNames = preservingProtoFieldNames;
       this.printingEnumsAsInts = printingEnumsAsInts;
       this.sortingMapKeys = sortingMapKeys;
-      this.gson =
-          unsafeDisableCodepointsForHtmlSymbols
-              ? GsonHolder.GSON_WITHOUT_HTML_ESCAPING
-              : GsonHolder.DEFAULT_GSON;
+      this.gson = GsonHolder.DEFAULT_GSON;
       // json format related properties, determined by printerType
       if (omittingInsignificantWhitespace) {
         this.generator = new CompactTextGenerator(jsonOutput);
@@ -1258,7 +1233,7 @@ public class JsonFormat {
           if (alwaysWithQuotes) {
             generator.print("\"");
           }
-          generator.print(unsignedToString((Integer) value));
+          generator.print(Integer.toUnsignedString((int) value));
           if (alwaysWithQuotes) {
             generator.print("\"");
           }
@@ -1266,7 +1241,7 @@ public class JsonFormat {
 
         case UINT64:
         case FIXED64:
-          generator.print("\"" + unsignedToString((Long) value) + "\"");
+          generator.print("\"" + Long.toUnsignedString((long) value) + "\"");
           break;
 
         case STRING:
@@ -1275,7 +1250,7 @@ public class JsonFormat {
 
         case BYTES:
           generator.print("\"");
-          generator.print(BaseEncoding.base64().encode(((ByteString) value).toByteArray()));
+          generator.print(Base64.getEncoder().encodeToString(((ByteString) value).toByteArray()));
           generator.print("\"");
           break;
 
@@ -1304,26 +1279,6 @@ public class JsonFormat {
           print((Message) value);
           break;
       }
-    }
-  }
-
-  /** Convert an unsigned 32-bit integer to a string. */
-  private static String unsignedToString(final int value) {
-    if (value >= 0) {
-      return Integer.toString(value);
-    } else {
-      return Long.toString(value & 0x00000000FFFFFFFFL);
-    }
-  }
-
-  /** Convert an unsigned 64-bit integer to a string. */
-  private static String unsignedToString(final long value) {
-    if (value >= 0) {
-      return Long.toString(value);
-    } else {
-      // Pull off the most-significant bit so that BigInteger doesn't think
-      // the number is negative, then set it again using setBit().
-      return BigInteger.valueOf(value & Long.MAX_VALUE).setBit(Long.SIZE - 1).toString();
     }
   }
 
@@ -1950,9 +1905,9 @@ public class JsonFormat {
 
     private ByteString parseBytes(JsonElement json) {
       try {
-        return ByteString.copyFrom(BaseEncoding.base64().decode(json.getAsString()));
+        return ByteString.copyFrom(Base64.getDecoder().decode(json.getAsString()));
       } catch (IllegalArgumentException e) {
-        return ByteString.copyFrom(BaseEncoding.base64Url().decode(json.getAsString()));
+        return ByteString.copyFrom(Base64.getUrlDecoder().decode(json.getAsString()));
       }
     }
 
@@ -2008,7 +1963,7 @@ public class JsonFormat {
           // If the field type is primitive, but the json type is JsonObject rather than
           // JsonElement, throw a type mismatch error.
           throw new InvalidProtocolBufferException(
-              String.format("Invalid value: %s for expected type: %s", json, field.getType()));
+              "Invalid value: " + json + " for expected type: " + field.getType());
         }
       }
       switch (field.getType()) {

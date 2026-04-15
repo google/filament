@@ -30,26 +30,18 @@
 #include <limits>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::FloatLiteralExpression);
 
 namespace tint::ast {
 
-FloatLiteralExpression::FloatLiteralExpression(GenerationID pid,
-                                               NodeID nid,
+FloatLiteralExpression::FloatLiteralExpression(NodeID nid,
                                                const Source& src,
                                                double val,
                                                Suffix suf)
-    : Base(pid, nid, src), value(val), suffix(suf) {}
+    : Base(nid, src), value(val), suffix(suf) {}
 
 FloatLiteralExpression::~FloatLiteralExpression() = default;
-
-const FloatLiteralExpression* FloatLiteralExpression::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    return ctx.dst->create<FloatLiteralExpression>(src, value, suffix);
-}
 
 std::string_view ToString(FloatLiteralExpression::Suffix suffix) {
     switch (suffix) {

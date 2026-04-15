@@ -31,7 +31,11 @@
 #include <stddef.h>
 
 #include <cstdint>
+#include <optional>
 #include <vector>
+
+#include "src/tint/api/common/subgroup_matrix.h"
+#include "src/tint/api/common/workgroup_info.h"
 
 namespace tint::spirv::writer {
 
@@ -50,24 +54,14 @@ struct Output {
     /// @returns this
     Output& operator=(const Output&);
 
-    /// Workgroup size information
-    struct WorkgroupInfo {
-        /// The x-component
-        uint32_t x = 0;
-        /// The y-component
-        uint32_t y = 0;
-        /// The z-component
-        uint32_t z = 0;
-
-        /// The needed workgroup storage size
-        size_t storage_size = 0;
-    };
-
     /// The generated SPIR-V.
     std::vector<uint32_t> spirv;
 
     /// The workgroup size information, if the entry point was a compute shader
     WorkgroupInfo workgroup_info{};
+
+    /// The subgroup matrix information
+    SubgroupMatrixInfo subgroup_matrix_info{};
 };
 
 }  // namespace tint::spirv::writer

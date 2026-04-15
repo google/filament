@@ -52,6 +52,10 @@ class WireInjectTextureTests : public WireTest {
     // A placeholder texture format for ReserveTexture. The data in it doesn't matter as long as
     // we don't call texture reflection methods.
     static constexpr wgpu::TextureDescriptor kPlaceholderDesc = {};
+
+    bool IsCompatibilityMode() {
+        return !device.HasFeature(wgpu::FeatureName::CoreFeaturesAndLimits);
+    }
 };
 
 // Test that reserving and injecting a texture makes calls on the client object forward to the
@@ -198,6 +202,12 @@ TEST_F(WireInjectTextureTests, ReservedTextureReflection) {
     ASSERT_EQ(desc.dimension, texture.GetDimension());
     ASSERT_EQ(desc.mipLevelCount, texture.GetMipLevelCount());
     ASSERT_EQ(desc.sampleCount, texture.GetSampleCount());
+
+    wgpu::TextureViewDimension expectedTextureBindingViewDimension =
+        IsCompatibilityMode() ? wgpu::TextureViewDimension::e3D
+                              : wgpu::TextureViewDimension::Undefined;
+
+    ASSERT_EQ(expectedTextureBindingViewDimension, texture.GetTextureBindingViewDimension());
 }
 
 }  // anonymous namespace

@@ -44,8 +44,8 @@ jobs:
                 config: [ Debug, Release ]
                 os: [ ubuntu-22.04, ubuntu-24.04 ]
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
               with:
                 python-version: '3.11'
             - name: Test CMake min
@@ -77,7 +77,7 @@ jobs:
       runs-on: ubuntu-latest
       timeout-minutes: 30
       steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v6.0.2
         - run: scripts/update_deps.py --dir ext --no-build
         - run: scripts/generate_source.py --verify ext/Vulkan-Headers/registry/
 
@@ -86,7 +86,7 @@ jobs:
         runs-on: ubuntu-24.04
         timeout-minutes: 30
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6.0.2
             - run: sudo apt update
             - run: sudo apt install --yes --no-install-recommends libwayland-dev libxrandr-dev
             - run: |
@@ -110,8 +110,8 @@ jobs:
             matrix:
                 config: [ Debug, Release ]
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
               with:
                 python-version: '3.11'
             - uses: lukka/get-cmake@latest
@@ -146,8 +146,8 @@ jobs:
         runs-on: ubuntu-24.04
         timeout-minutes: 30
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
               with:
                 python-version: '3.11'
             - uses: lukka/get-cmake@latest
@@ -176,6 +176,58 @@ jobs:
             - run: cmake --build build
             - run: ctest --parallel --output-on-failure -E UnknownFunction --test-dir build/
 
+    linux-arm:
+        needs: codegen
+        runs-on: ubuntu-24.04-arm
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
+              with:
+                python-version: '3.11'
+            - name: Test CMake min
+              uses: lukka/get-cmake@latest
+              with:
+                  cmakeVersion: 3.22.1
+            - run: sudo apt update
+            - run: sudo apt install --yes --no-install-recommends libwayland-dev libxrandr-dev
+            - run: |
+                  cmake -S. -B build \
+                  -D CMAKE_BUILD_TYPE=Debug \
+                  -D BUILD_TESTS=ON \
+                  -D UPDATE_DEPS=ON \
+                  -D LOADER_ENABLE_ADDRESS_SANITIZER=ON \
+                  -D BUILD_WERROR=ON
+            - run: cmake --build build
+            - run: ctest --parallel --output-on-failure --test-dir build/
+            - run: cmake --install build --prefix /tmp
+
+    linux-threading:
+        needs: codegen
+        runs-on: ubuntu-24.04-arm
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
+              with:
+                python-version: '3.11'
+            - name: Test CMake min
+              uses: lukka/get-cmake@latest
+              with:
+                  cmakeVersion: 3.22.1
+            - run: sudo apt update
+            - run: sudo apt install --yes --no-install-recommends libwayland-dev libxrandr-dev
+            - run: |
+                  cmake -S. -B build \
+                  -D CMAKE_BUILD_TYPE=Debug \
+                  -D BUILD_TESTS=ON \
+                  -D UPDATE_DEPS=ON \
+                  -D LOADER_ENABLE_THREAD_SANITIZER=ON \
+                  -D BUILD_WERROR=ON
+            - run: cmake --build build
+            - run: ctest --parallel --output-on-failure --test-dir build/
+            - run: cmake --install build --prefix /tmp
+
     windows_vs:
         # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
         needs: linux-no-asm
@@ -186,7 +238,7 @@ jobs:
                 arch: [ Win32, x64 ]
                 config: [ Debug, Release ]
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6.0.2
             - run: |
                 cmake -S. -B build `
                 -D BUILD_TESTS=ON `
@@ -207,7 +259,7 @@ jobs:
             matrix:
                 arch: [ Win32, x64 ]
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6.0.2
             - run: |
                 cmake -S. -B build `
                 -D BUILD_TESTS=ON `
@@ -230,7 +282,7 @@ jobs:
                 compiler: [ clang, clang-cl ]
                 config: [ Debug, Release ]
         steps:
-          - uses: actions/checkout@v4
+          - uses: actions/checkout@v6.0.2
           - uses: ilammy/msvc-dev-cmd@v1
           - run: |
               cmake -S. -B build `
@@ -248,15 +300,15 @@ jobs:
     mac:
         # Mac is 10x expensive to run on GitHub machines, so only run if we know something else passed as well
         needs: windows_clang
-        runs-on: macos-13
+        runs-on: macos-14
         timeout-minutes: 30
         strategy:
             matrix:
                 config: [ Debug, Release ]
                 static_build: [ APPLE_STATIC_LOADER=ON, APPLE_STATIC_LOADER=OFF ]
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
               with:
                 python-version: '3.11'
             - run: |
@@ -279,14 +331,14 @@ jobs:
         # Mac is 10x expensive to run on GitHub machines, so only run if we know something else passed as well
         needs: windows_clang
         name: ${{ matrix.CMAKE_SYSTEM_NAME }}
-        runs-on: macos-13
+        runs-on: macos-14
         timeout-minutes: 30
         strategy:
             matrix:
                 CMAKE_SYSTEM_NAME: [ iOS, tvOS ]
         steps:
-          - uses: actions/checkout@v4
-          - uses: actions/setup-python@v5
+          - uses: actions/checkout@v6.0.2
+          - uses: actions/setup-python@v6
             with:
               python-version: '3.11'
           - run: |
@@ -319,8 +371,8 @@ jobs:
                 static: [ 'ON', 'OFF' ]
                 generator: [ Ninja, Xcode ]
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
               with:
                 python-version: '3.11'
             - run: |
@@ -348,21 +400,20 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 30
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6.0.2
             - run: scripts/gn/gn.py
 
     mingw:
         # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
         needs: linux-no-asm
-        if: false # Disabled due to issues with msys2 making CMake unable to find a working compiler
-        runs-on: windows-2022
+        runs-on: windows-latest
         timeout-minutes: 30
         defaults:
             run:
                 shell: bash
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
               with:
                 python-version: '3.11'
             - name: Setup uasm
@@ -389,8 +440,8 @@ jobs:
             run:
                 shell: bash
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
               with:
                 python-version: '3.11'
             - run: |
@@ -412,8 +463,8 @@ jobs:
             run:
                 shell: bash
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
+            - uses: actions/checkout@v6.0.2
+            - uses: actions/setup-python@v6
               with:
                 python-version: '3.11'
             # Make sure this doesn't fail even without explicitly setting '-D USE_MASM=OFF' and without uasm
@@ -435,7 +486,7 @@ jobs:
             run:
                 shell: bash
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6.0.2
             - run: |
                 cmake -S. -B build \
                 -D UPDATE_DEPS=ON \

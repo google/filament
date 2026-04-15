@@ -28,11 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_METAL_QUERYSETMTL_H_
 #define SRC_DAWN_NATIVE_METAL_QUERYSETMTL_H_
 
-#include "dawn/native/QuerySet.h"
+#import <Metal/Metal.h>
 
 #include "dawn/common/NSRef.h"
-
-#import <Metal/Metal.h>
+#include "dawn/native/QuerySet.h"
 
 namespace dawn::native::metal {
 
@@ -55,7 +54,7 @@ class QuerySet final : public QuerySetBase {
     ~QuerySet() override;
 
     // Dawn API
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     NSPRef<id<MTLBuffer>> mVisibilityBuffer;
 

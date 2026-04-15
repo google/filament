@@ -563,7 +563,7 @@ i.e. they do not require any external context to be enabled, will be enabled.
 
 ##### `VK_INSTANCE_LAYERS`
 
-The original `VK_INSTANCE_LAYERS` can be viewed as a special case of the new
+The original `VK_INSTANCE_LAYERS` can be viewed as a special case of
 `VK_LOADER_LAYERS_ENABLE`.
 Because of this, any layers enabled via `VK_INSTANCE_LAYERS` will be treated the
 same as layers enabled with `VK_LOADER_LAYERS_ENABLE` and will therefore

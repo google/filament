@@ -45,13 +45,11 @@ namespace tint::ast {
 class BlockStatement final : public Castable<BlockStatement, Statement> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the block statement source
     /// @param statements the statements
     /// @param attributes the block statement attributes
-    BlockStatement(GenerationID pid,
-                   NodeID nid,
+    BlockStatement(NodeID nid,
                    const Source& source,
                    VectorRef<const Statement*> statements,
                    VectorRef<const Attribute*> attributes);
@@ -64,12 +62,6 @@ class BlockStatement final : public Castable<BlockStatement, Statement> {
 
     /// @returns the last statement in the block or nullptr if block empty
     const Statement* Last() const { return statements.IsEmpty() ? nullptr : statements.Back(); }
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const BlockStatement* Clone(CloneContext& ctx) const override;
 
     /// the statement list
     const tint::Vector<const Statement*, 8> statements;

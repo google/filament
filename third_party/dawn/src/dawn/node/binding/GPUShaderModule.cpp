@@ -54,8 +54,7 @@ GPUShaderModule::getCompilationInfo(Napi::Env env) {
         std::string message;
 
         explicit GPUCompilationMessage(const wgpu::CompilationMessage& m)
-            : lineNum(m.lineNum),
-              message(m.message) {
+            : lineNum(m.lineNum), message(m.message) {
             [[maybe_unused]] bool foundUtf16 = false;
             for (const auto* chain = m.nextInChain; chain != nullptr; chain = chain->nextInChain) {
                 if (chain->sType == wgpu::SType::DawnCompilationMessageUtf16) {

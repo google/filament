@@ -34,6 +34,8 @@
 //                       Do not modify this file directly
 ////////////////////////////////////////////////////////////////////////////////
 
+// clang-format off
+
 #include "src/tint/lang/core/intrinsic/ctor_conv.h"
 
 namespace tint::core::intrinsic {
@@ -87,3 +89,5 @@ const char* str(CtorConv i) {
 }
 
 }  // namespace tint::core::intrinsic
+
+// clang-format on

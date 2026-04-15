@@ -26,12 +26,12 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <sstream>
-#include "src/tint/lang/wgsl/enums.h"
-#include "src/tint/lang/wgsl/ls/server.h"
 
 #include "langsvr/lsp/comparators.h"
 #include "src/tint/lang/core/intrinsic/table.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/intrinsic/dialect.h"
+#include "src/tint/lang/wgsl/ls/server.h"
 #include "src/tint/lang/wgsl/ls/utils.h"
 #include "src/tint/lang/wgsl/sem/call.h"
 #include "src/tint/utils/rtti/switch.h"

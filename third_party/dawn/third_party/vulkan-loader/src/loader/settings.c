@@ -190,6 +190,7 @@ VkResult parse_layer_configurations(const struct loader_instance* inst, cJSON* s
 
     uint32_t layer_configurations_count = loader_cJSON_GetArraySize(layer_configurations);
     if (layer_configurations_count == 0) {
+        loader_settings->layer_configurations_active = true;
         return VK_SUCCESS;
     }
 
@@ -214,6 +215,7 @@ VkResult parse_layer_configurations(const struct loader_instance* inst, cJSON* s
             goto out;
         }
     }
+    loader_settings->layer_configurations_active = true;
 out:
     if (res != VK_SUCCESS) {
         if (loader_settings->layer_configurations) {
@@ -297,39 +299,70 @@ out:
     return res;
 }
 
-VkResult parse_device_configuration(const struct loader_instance* inst, cJSON* device_configuration_json,
-                                    loader_settings_device_configuration* device_configuration) {
-    (void)inst;
-    VkResult res = VK_SUCCESS;
-    cJSON* deviceUUID_array = loader_cJSON_GetObjectItem(device_configuration_json, "deviceUUID");
-    if (NULL == deviceUUID_array) {
-        res = VK_ERROR_INITIALIZATION_FAILED;
-        goto out;
+VkResult parse_uuid_array(cJSON* device_configuration_json, const char* uuid_name, uint8_t uuid[16]) {
+    cJSON* uuid_array = loader_cJSON_GetObjectItem(device_configuration_json, uuid_name);
+    if (NULL == uuid_array) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
-    if (VK_UUID_SIZE != loader_cJSON_GetArraySize(deviceUUID_array)) {
-        res = VK_ERROR_INITIALIZATION_FAILED;
-        goto out;
+
+    if (uuid_array->type != cJSON_Array) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    if (VK_UUID_SIZE != loader_cJSON_GetArraySize(uuid_array)) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
 
     cJSON* uuid_field = NULL;
     size_t i = 0;
-    cJSON_ArrayForEach(uuid_field, deviceUUID_array) {
+    cJSON_ArrayForEach(uuid_field, uuid_array) {
+        if (i >= VK_UUID_SIZE) {
+            break;
+        }
         if (uuid_field->type != cJSON_Number) {
-            res = VK_ERROR_INITIALIZATION_FAILED;
-            goto out;
+            return VK_ERROR_INITIALIZATION_FAILED;
         }
         if (uuid_field->valueint < 0 || uuid_field->valueint > 255) {
-            res = VK_ERROR_INITIALIZATION_FAILED;
-            goto out;
+            return VK_ERROR_INITIALIZATION_FAILED;
         }
-        device_configuration->deviceUUID[i] = (uint8_t)uuid_field->valueint;
+
+        uuid[i] = (uint8_t)uuid_field->valueint;
         i++;
     }
+    return VK_SUCCESS;
+}
+
+VkResult parse_device_configuration(const struct loader_instance* inst, cJSON* device_configuration_json,
+                                    loader_settings_device_configuration* device_configuration) {
+    (void)inst;
+    VkResult res = VK_SUCCESS;
+
+    res = parse_uuid_array(device_configuration_json, "deviceUUID", device_configuration->deviceUUID);
+    if (VK_SUCCESS != res) {
+        goto out;
+    }
+
+    res = parse_uuid_array(device_configuration_json, "driverUUID", device_configuration->driverUUID);
+    if (VK_SUCCESS != res) {
+        goto out;
+    }
+
+    cJSON* driverVersion_json = loader_cJSON_GetObjectItem(device_configuration_json, "driverVersion");
+    if (NULL == driverVersion_json || driverVersion_json->type != cJSON_Number) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    device_configuration->driverVersion = driverVersion_json->valueint;
 
     VkResult deviceNameRes = loader_parse_json_string_to_existing_str(
         device_configuration_json, "deviceName", VK_MAX_PHYSICAL_DEVICE_NAME_SIZE, device_configuration->deviceName);
     if (VK_ERROR_OUT_OF_HOST_MEMORY == deviceNameRes) {
         res = deviceNameRes;
+        goto out;
+    }
+
+    VkResult driverNameRes = loader_parse_json_string_to_existing_str(
+        device_configuration_json, "driverName", VK_MAX_PHYSICAL_DEVICE_NAME_SIZE, device_configuration->driverName);
+    if (VK_ERROR_OUT_OF_HOST_MEMORY == driverNameRes) {
+        res = driverNameRes;
         goto out;
     }
 out:
@@ -349,6 +382,7 @@ VkResult parse_device_configurations(const struct loader_instance* inst, cJSON* 
 
     uint32_t device_configuration_count = loader_cJSON_GetArraySize(device_configurations);
     if (device_configuration_count == 0) {
+        loader_settings->device_configurations_active = true;
         return VK_SUCCESS;
     }
 
@@ -368,11 +402,15 @@ VkResult parse_device_configurations(const struct loader_instance* inst, cJSON* 
             res = VK_ERROR_INITIALIZATION_FAILED;
             goto out;
         }
-        res = parse_device_configuration(inst, device, &(loader_settings->device_configurations[i++]));
-        if (VK_SUCCESS != res) {
+        res = parse_device_configuration(inst, device, &(loader_settings->device_configurations[i]));
+        if (res == VK_ERROR_OUT_OF_HOST_MEMORY) {
             goto out;
+        } else if (res != VK_SUCCESS) {
+            continue;
         }
+        i++;
     }
+    loader_settings->device_configurations_active = true;
 out:
     if (res != VK_SUCCESS) {
         if (loader_settings->device_configurations) {
@@ -387,46 +425,131 @@ out:
     return res;
 }
 
+#if COMMON_UNIX_PLATFORMS
+// Given a base and suffix path, determine if a file at that location exists, and if it is return success.
+// Since base may contain multiple paths separated by PATH_SEPARATOR, we must extract each segment and check segment + suffix
+// individually
 VkResult check_if_settings_path_exists(const struct loader_instance* inst, const char* base, const char* suffix,
                                        char** settings_file_path) {
     if (NULL == base || NULL == suffix) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }
+
     size_t base_len = strlen(base);
     size_t suffix_len = strlen(suffix);
-    size_t path_len = base_len + suffix_len + 1;
-    *settings_file_path = loader_instance_heap_calloc(inst, path_len, VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
-    if (NULL == *settings_file_path) {
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-    loader_strncpy(*settings_file_path, path_len, base, base_len);
-    loader_strncat(*settings_file_path, path_len, suffix, suffix_len);
 
-    if (!loader_platform_file_exists(*settings_file_path)) {
+    uint32_t start = 0;
+    uint32_t stop = 0;
+    while (base[start] != '\0' && start < base_len && stop < base_len) {
+        start = stop;
+        stop = start + 1;
+        while (base[stop] != PATH_SEPARATOR && base[stop] != '\0' && stop < base_len) {
+            stop++;
+        }
+
+        size_t segment_len = (stop - start);
+        if (segment_len <= 1) {
+            // segment is *just* a PATH_SEPARATOR, skip it
+            continue;
+        }
+        size_t path_len = segment_len + suffix_len + 1;
+        *settings_file_path = loader_instance_heap_calloc(inst, path_len, VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
+        if (NULL == *settings_file_path) {
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
+        loader_strncpy(*settings_file_path, path_len, base + start, segment_len);
+        loader_strncat(*settings_file_path, path_len, suffix, suffix_len);
+
+        if (loader_platform_file_exists(*settings_file_path)) {
+            return VK_SUCCESS;
+        }
         loader_instance_heap_free(inst, *settings_file_path);
         *settings_file_path = NULL;
-        return VK_ERROR_INITIALIZATION_FAILED;
     }
-    return VK_SUCCESS;
+
+    return VK_ERROR_INITIALIZATION_FAILED;
 }
+
+// Follow the logic of read_data_files_in_search_paths but only look for "/vulkan/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME
 VkResult get_unix_settings_path(const struct loader_instance* inst, char** settings_file_path) {
-    VkResult res =
-        check_if_settings_path_exists(inst, loader_secure_getenv("HOME", inst),
-                                      "/.local/share/vulkan/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME, settings_file_path);
+    // First, get XDG env-vars we use. Don't need to worry about free'ing because on linux getenv is non-allocating
+    char* xdg_config_home = loader_secure_getenv("XDG_CONFIG_HOME", inst);
+    char* xdg_config_dirs = loader_secure_getenv("XDG_CONFIG_DIRS", inst);
+    char* xdg_data_home = loader_secure_getenv("XDG_DATA_HOME", inst);
+    char* xdg_data_dirs = loader_secure_getenv("XDG_DATA_DIRS", inst);
+
+    // Use fallback directories for xdg_config_dirs and xdg_data_dirs if they are NULL.
+#if !defined(__Fuchsia__) && !defined(__QNX__)
+    if (NULL == xdg_config_dirs || '\0' == xdg_config_dirs[0]) {
+        xdg_config_dirs = FALLBACK_CONFIG_DIRS;
+    }
+#endif
+
+#if !defined(__Fuchsia__) && !defined(__QNX__)
+    if (NULL == xdg_data_dirs || '\0' == xdg_data_dirs[0]) {
+        xdg_data_dirs = FALLBACK_DATA_DIRS;
+    }
+#endif
+
+    VkResult res = check_if_settings_path_exists(
+        inst, xdg_config_home, "/" VULKAN_DIR "/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME, settings_file_path);
     if (res == VK_SUCCESS) {
         return res;
     }
-    // If HOME isn't set, fallback to XDG_DATA_HOME
-    res = check_if_settings_path_exists(inst, loader_secure_getenv("XDG_DATA_HOME", inst),
-                                        "/vulkan/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME, settings_file_path);
+
+    res = check_if_settings_path_exists(inst, xdg_data_home, "/" VULKAN_DIR "/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME,
+                                        settings_file_path);
     if (res == VK_SUCCESS) {
         return res;
     }
-    // if XDG_DATA_HOME isn't set, fallback to /etc.
-    // note that the settings_fil_path_suffix stays the same since its the same layout as for XDG_DATA_HOME
-    return check_if_settings_path_exists(inst, "/etc", "/vulkan/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME,
-                                         settings_file_path);
+
+    // Check home if either xdg_config_home or xdg_data_home wasn't set
+    char* home = loader_secure_getenv("HOME", inst);
+    if (home != NULL) {
+        if (NULL == xdg_config_home || '\0' == xdg_config_home[0]) {
+            res = check_if_settings_path_exists(
+                inst, home, "/.config/" VULKAN_DIR "/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME, settings_file_path);
+            if (res == VK_SUCCESS) {
+                return res;
+            }
+        }
+        if (NULL == xdg_data_home || '\0' == xdg_data_home[0]) {
+            res = check_if_settings_path_exists(
+                inst, home, "/.local/share/" VULKAN_DIR "/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME, settings_file_path);
+            if (res == VK_SUCCESS) {
+                return res;
+            }
+        }
+    }
+
+    res = check_if_settings_path_exists(inst, xdg_config_dirs, "/" VULKAN_DIR "/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME,
+                                        settings_file_path);
+    if (res == VK_SUCCESS) {
+        return res;
+    }
+
+    res = check_if_settings_path_exists(inst, SYSCONFDIR, "/" VULKAN_DIR "/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME,
+                                        settings_file_path);
+    if (res == VK_SUCCESS) {
+        return res;
+    }
+#if defined(EXTRASYSCONFDIR)
+
+    res = check_if_settings_path_exists(inst, EXTRASYSCONFDIR, "/" VULKAN_DIR "/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME,
+                                        settings_file_path);
+    if (res == VK_SUCCESS) {
+        return res;
+    }
+#endif
+    res = check_if_settings_path_exists(inst, xdg_data_dirs, "/" VULKAN_DIR "/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME,
+                                        settings_file_path);
+    if (res == VK_SUCCESS) {
+        return res;
+    }
+
+    return VK_ERROR_INITIALIZATION_FAILED;
 }
+#endif
 
 bool check_if_layer_configurations_are_equal(loader_settings_layer_configuration* a, loader_settings_layer_configuration* b) {
     if (!a->name || !b->name || 0 != strcmp(a->name, b->name)) {
@@ -435,7 +558,7 @@ bool check_if_layer_configurations_are_equal(loader_settings_layer_configuration
     if (!a->path || !b->path || 0 != strcmp(a->path, b->path)) {
         return false;
     }
-    return a->control == b->control;
+    return a->control == b->control && a->treat_as_implicit_manifest == b->treat_as_implicit_manifest;
 }
 
 bool check_if_driver_configurations_are_equal(loader_settings_driver_configuration* a, loader_settings_driver_configuration* b) {
@@ -449,6 +572,12 @@ bool check_if_device_configurations_are_equal(loader_settings_device_configurati
     for (uint32_t i = 0; i < VK_UUID_SIZE; i++) {
         if (a->deviceUUID[i] != b->deviceUUID[i]) return false;
     }
+    for (uint32_t i = 0; i < VK_UUID_SIZE; i++) {
+        if (a->driverUUID[i] != b->driverUUID[i]) return false;
+    }
+    if (a->driverVersion != b->driverVersion) return false;
+    if (0 != strcmp(a->deviceName, b->deviceName)) return false;
+    if (0 != strcmp(a->driverName, b->driverName)) return false;
     return true;
 }
 
@@ -459,8 +588,11 @@ bool check_if_settings_are_equal(loader_settings* a, loader_settings* b) {
     are_equal &= a->settings_active == b->settings_active;
     are_equal &= a->has_unordered_layer_location == b->has_unordered_layer_location;
     are_equal &= a->debug_level == b->debug_level;
+    are_equal &= a->layer_configurations_active == b->layer_configurations_active;
     are_equal &= a->layer_configuration_count == b->layer_configuration_count;
+    are_equal &= a->additional_drivers_use_exclusively == b->additional_drivers_use_exclusively;
     are_equal &= a->additional_driver_count == b->additional_driver_count;
+    are_equal &= a->device_configurations_active == b->device_configurations_active;
     are_equal &= a->device_configuration_count == b->device_configuration_count;
     if (!are_equal) return false;
     for (uint32_t i = 0; i < a->layer_configuration_count && i < b->layer_configuration_count; i++) {
@@ -491,18 +623,19 @@ void log_settings(const struct loader_instance* inst, loader_settings* settings)
     if (strlen(cmd_line_msg)) {
         loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Loader Settings Filters for Logging to Standard Error: %s", cmd_line_msg);
     }
-
-    loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Layer Configurations count = %d", settings->layer_configuration_count);
-    for (uint32_t i = 0; i < settings->layer_configuration_count; i++) {
-        loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "---- Layer Configuration [%d] ----", i);
-        if (settings->layer_configurations[i].control != LOADER_SETTINGS_LAYER_UNORDERED_LAYER_LOCATION) {
-            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Name: %s", settings->layer_configurations[i].name);
-            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Path: %s", settings->layer_configurations[i].path);
-            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Layer Type: %s",
-                       settings->layer_configurations[i].treat_as_implicit_manifest ? "Implicit" : "Explicit");
+    if (settings->layer_configurations_active) {
+        loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Layer Configurations count = %d", settings->layer_configuration_count);
+        for (uint32_t i = 0; i < settings->layer_configuration_count; i++) {
+            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "---- Layer Configuration [%d] ----", i);
+            if (settings->layer_configurations[i].control != LOADER_SETTINGS_LAYER_UNORDERED_LAYER_LOCATION) {
+                loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Name: %s", settings->layer_configurations[i].name);
+                loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Path: %s", settings->layer_configurations[i].path);
+                loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Layer Type: %s",
+                           settings->layer_configurations[i].treat_as_implicit_manifest ? "Implicit" : "Explicit");
+            }
+            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Control: %s",
+                       loader_settings_layer_control_to_string(settings->layer_configurations[i].control));
         }
-        loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Control: %s",
-                   loader_settings_layer_control_to_string(settings->layer_configurations[i].control));
     }
     if (settings->additional_driver_count > 0) {
         loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "----");
@@ -515,14 +648,24 @@ void log_settings(const struct loader_instance* inst, loader_settings* settings)
             loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Path: %s", settings->additional_drivers[i].path);
         }
     }
-    if (settings->device_configuration_count > 0) {
+    if (settings->device_configurations_active) {
         loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "----");
         loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "Device Configurations count = %d", settings->device_configuration_count);
         for (uint32_t i = 0; i < settings->device_configuration_count; i++) {
             loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "---- Device Configuration [%d] ----", i);
-            uint8_t* id = settings->device_configurations[i].deviceUUID;
-            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "deviceUUID: %x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x", id[0], id[1], id[2],
-                       id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+            char device_uuid_str[UUID_STR_LEN] = {0};
+            loader_log_generate_uuid_string(settings->device_configurations[i].deviceUUID, device_uuid_str);
+            char driver_uuid_str[UUID_STR_LEN] = {0};
+            loader_log_generate_uuid_string(settings->device_configurations[i].driverUUID, driver_uuid_str);
+            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "deviceUUID: %s", device_uuid_str);
+            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "driverUUID: %s", driver_uuid_str);
+            loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "driverVersion: %d", settings->device_configurations[i].driverVersion);
+            if ('\0' != settings->device_configurations[i].deviceName[0]) {
+                loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "deviceName: %s", settings->device_configurations[i].deviceName);
+            }
+            if ('\0' != settings->device_configurations[i].driverName[0]) {
+                loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "driverName: %s", settings->device_configurations[i].driverName);
+            }
         }
     }
     loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0, "---------------------------------");
@@ -582,7 +725,7 @@ VkResult get_loader_settings(const struct loader_instance* inst, loader_settings
         memcpy(&settings_iter_parent, settings_array, sizeof(cJSON));
     } else if (NULL != single_settings_object) {
         settings_iter_parent.child = single_settings_object;
-    } else if (settings_array == NULL && single_settings_object) {
+    } else {
         loader_log(inst, VULKAN_LOADER_DEBUG_BIT, 0,
                    "Loader settings file from %s missing required settings objects: Either one of the \"settings\" or "
                    "\"settings_array\" objects must be present - no loader settings will be active",
@@ -651,8 +794,10 @@ VkResult get_loader_settings(const struct loader_instance* inst, loader_settings
     cJSON* stderr_filter = loader_cJSON_GetObjectItem(settings_to_use, "stderr_log");
     if (NULL != stderr_filter) {
         struct loader_string_list stderr_log = {0};
-        res = loader_parse_json_array_of_strings(inst, settings_to_use, "stderr_log", &stderr_log);
-        if (VK_ERROR_OUT_OF_HOST_MEMORY == res) {
+        VkResult stderr_log_result = VK_SUCCESS;
+        stderr_log_result = loader_parse_json_array_of_strings(inst, settings_to_use, "stderr_log", &stderr_log);
+        if (VK_ERROR_OUT_OF_HOST_MEMORY == stderr_log_result) {
+            res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
         }
         loader_settings->debug_level = parse_log_filters_from_strings(&stderr_log);
@@ -666,14 +811,14 @@ VkResult get_loader_settings(const struct loader_instance* inst, loader_settings
         cJSON_ArrayForEach(log_element, logs_to_use) {
             // bool is_valid = true;
             struct loader_string_list log_destinations = {0};
-            res = loader_parse_json_array_of_strings(inst, log_element, "destinations", &log_destinations);
-            if (res != VK_SUCCESS) {
+            VkResult parse_dest_res = loader_parse_json_array_of_strings(inst, log_element, "destinations", &log_destinations);
+            if (parse_dest_res != VK_SUCCESS) {
                 // is_valid = false;
             }
             free_string_list(inst, &log_destinations);
             struct loader_string_list log_filters = {0};
-            res = loader_parse_json_array_of_strings(inst, log_element, "filters", &log_filters);
-            if (res != VK_SUCCESS) {
+            VkResult parse_filters_res = loader_parse_json_array_of_strings(inst, log_element, "filters", &log_filters);
+            if (parse_filters_res != VK_SUCCESS) {
                 // is_valid = false;
             }
             free_string_list(inst, &log_filters);
@@ -709,8 +854,8 @@ VkResult get_loader_settings(const struct loader_instance* inst, loader_settings
 
     // Only consider the settings active if there is at least one "setting" active.
     // Those are either logging, layers, additional_drivers, or device_configurations.
-    if (loader_settings->debug_level != 0 || loader_settings->layer_configuration_count != 0 ||
-        loader_settings->additional_driver_count != 0 || loader_settings->device_configuration_count != 0) {
+    if (loader_settings->debug_level != 0 || loader_settings->layer_configurations_active ||
+        loader_settings->additional_driver_count != 0 || loader_settings->device_configurations_active) {
         loader_settings->settings_file_path = settings_file_path;
         settings_file_path = NULL;
         loader_settings->settings_active = true;
@@ -734,12 +879,11 @@ TEST_FUNCTION_EXPORT VkResult update_global_loader_settings(void) {
     VkResult res = get_loader_settings(NULL, &settings);
     loader_platform_thread_lock_mutex(&global_loader_settings_lock);
 
-    free_loader_settings(NULL, &global_loader_settings);
     if (res == VK_SUCCESS) {
         if (!check_if_settings_are_equal(&settings, &global_loader_settings)) {
             log_settings(NULL, &settings);
         }
-
+        free_loader_settings(NULL, &global_loader_settings);
         memcpy(&global_loader_settings, &settings, sizeof(loader_settings));
         if (global_loader_settings.settings_active && global_loader_settings.debug_level > 0) {
             loader_set_global_debug_level(global_loader_settings.debug_level);
@@ -790,7 +934,7 @@ TEST_FUNCTION_EXPORT VkResult get_settings_layers(const struct loader_instance* 
 
     const loader_settings* settings = get_current_settings_and_lock(inst);
 
-    if (NULL == settings || !settings->settings_active) {
+    if (NULL == settings || !settings->settings_active || !settings->layer_configurations_active) {
         goto out;
     }
 
@@ -847,7 +991,7 @@ TEST_FUNCTION_EXPORT VkResult get_settings_layers(const struct loader_instance* 
         }
 
         // Makes it possible to know if a new layer was added or not, since the only return value is VkResult
-        size_t count_before_adding = settings_layers->count;
+        uint32_t count_before_adding = settings_layers->count;
 
         local_res =
             loader_add_layer_properties(inst, settings_layers, json, layer_config->treat_as_implicit_manifest, layer_config->path);
@@ -862,28 +1006,33 @@ TEST_FUNCTION_EXPORT VkResult get_settings_layers(const struct loader_instance* 
             continue;
         }
 
-        struct loader_layer_properties* newly_added_layer = &settings_layers->list[settings_layers->count - 1];
-        newly_added_layer->settings_control_value = layer_config->control;
-        // If the manifest file found has a name that differs from the one in the settings, remove this layer from
-        // consideration
-        bool should_remove = false;
-        if (strncmp(newly_added_layer->info.layerName, layer_config->name, VK_MAX_EXTENSION_NAME_SIZE) != 0) {
-            should_remove = true;
-            loader_remove_layer_in_list(inst, settings_layers, settings_layers->count - 1);
-        }
-        // Make sure the layer isn't already in the list
-        for (uint32_t j = 0; settings_layers->count > 0 && j < settings_layers->count - 1; j++) {
-            if (0 ==
-                strncmp(settings_layers->list[j].info.layerName, newly_added_layer->info.layerName, VK_MAX_EXTENSION_NAME_SIZE)) {
-                if (0 == (newly_added_layer->type_flags & VK_LAYER_TYPE_FLAG_META_LAYER) &&
-                    strcmp(settings_layers->list[j].lib_name, newly_added_layer->lib_name) == 0) {
-                    should_remove = true;
-                    break;
+        for (uint32_t j = count_before_adding; j < settings_layers->count; j++) {
+            struct loader_layer_properties* newly_added_layer = &settings_layers->list[j];
+            newly_added_layer->settings_control_value = layer_config->control;
+            // If the manifest file found has a name that differs from the one in the settings, remove this layer from
+            // consideration
+            if (strncmp(newly_added_layer->info.layerName, layer_config->name, VK_MAX_EXTENSION_NAME_SIZE) != 0) {
+                loader_remove_layer_in_list(inst, settings_layers, j);
+                j--;
+                continue;
+            }
+            bool should_remove = false;
+            // Make sure the layer isn't already in the list
+            for (uint32_t k = 0; k < j; k++) {
+                if (0 == strncmp(settings_layers->list[k].info.layerName, newly_added_layer->info.layerName,
+                                 VK_MAX_EXTENSION_NAME_SIZE)) {
+                    if (0 == (newly_added_layer->type_flags & VK_LAYER_TYPE_FLAG_META_LAYER) &&
+                        settings_layers->list[k].lib_name != NULL && newly_added_layer->lib_name != NULL &&
+                        strcmp(settings_layers->list[k].lib_name, newly_added_layer->lib_name) == 0) {
+                        should_remove = true;
+                        break;
+                    }
                 }
             }
-        }
-        if (should_remove) {
-            loader_remove_layer_in_list(inst, settings_layers, settings_layers->count - 1);
+            if (should_remove) {
+                loader_remove_layer_in_list(inst, settings_layers, j);
+                j--;
+            }
         }
     }
 
@@ -898,7 +1047,10 @@ out:
 // Skip comparing to UNORDERED_LAYER_LOCATION
 // If layer_property is a regular layer, check if the lib_path is the same.
 // Make sure that the lib_name pointers are non-null before calling strcmp.
-bool check_if_layer_is_in_list(struct loader_layer_list* layer_list, struct loader_layer_properties* layer_property) {
+// consider_lib_path - true if comparison should include the library_path in distinguishing layers. Used to prevent duplicates
+// between settings file provided layers and default found layers
+bool check_if_layer_is_in_list(struct loader_layer_list* layer_list, struct loader_layer_properties* layer_property,
+                               bool consider_lib_path) {
     // If the layer is a meta layer, just check against the name
     for (uint32_t i = 0; i < layer_list->count; i++) {
         if (0 == strncmp(layer_list->list[i].info.layerName, layer_property->info.layerName, VK_MAX_EXTENSION_NAME_SIZE)) {
@@ -906,6 +1058,9 @@ bool check_if_layer_is_in_list(struct loader_layer_list* layer_list, struct load
                 return true;
             }
             if (VK_LAYER_TYPE_FLAG_META_LAYER == (layer_property->type_flags & VK_LAYER_TYPE_FLAG_META_LAYER)) {
+                return true;
+            }
+            if (!consider_lib_path) {
                 return true;
             }
             if (layer_list->list[i].lib_name && layer_property->lib_name) {
@@ -956,7 +1111,7 @@ VkResult combine_settings_layers_with_regular_layers(const struct loader_instanc
 
     // Insert the settings layers into output_layers up to unordered_layer_index
     for (uint32_t i = 0; i < unordered_layer_location_index; i++) {
-        if (!check_if_layer_is_in_list(output_layers, &settings_layers->list[i])) {
+        if (!check_if_layer_is_in_list(output_layers, &settings_layers->list[i], true)) {
             res = loader_append_layer_property(inst, output_layers, &settings_layers->list[i]);
             if (VK_SUCCESS != res) {
                 goto out;
@@ -966,8 +1121,8 @@ VkResult combine_settings_layers_with_regular_layers(const struct loader_instanc
 
     for (uint32_t i = 0; i < regular_layers->count; i++) {
         // Check if its already been put in the output_layers list as well as the remaining settings_layers
-        bool regular_layer_is_ordered = check_if_layer_is_in_list(output_layers, &regular_layers->list[i]) ||
-                                        check_if_layer_is_in_list(settings_layers, &regular_layers->list[i]);
+        bool regular_layer_is_ordered = check_if_layer_is_in_list(output_layers, &regular_layers->list[i], false) ||
+                                        check_if_layer_is_in_list(settings_layers, &regular_layers->list[i], false);
         // If it isn't found, add it
         if (!regular_layer_is_ordered) {
             res = loader_append_layer_property(inst, output_layers, &regular_layers->list[i]);
@@ -983,9 +1138,11 @@ VkResult combine_settings_layers_with_regular_layers(const struct loader_instanc
     // Insert the rest of the settings layers into combined_layers from  unordered_layer_index to the end
     // start at one after the unordered_layer_index
     for (uint32_t i = unordered_layer_location_index + 1; i < settings_layers->count; i++) {
-        res = loader_append_layer_property(inst, output_layers, &settings_layers->list[i]);
-        if (VK_SUCCESS != res) {
-            goto out;
+        if (!check_if_layer_is_in_list(output_layers, &settings_layers->list[i], true)) {
+            res = loader_append_layer_property(inst, output_layers, &settings_layers->list[i]);
+            if (VK_SUCCESS != res) {
+                goto out;
+            }
         }
     }
 
@@ -1139,7 +1296,7 @@ bool loader_settings_should_use_driver_environment_variables(const struct loader
     if (NULL == settings || !settings->settings_active) {
         goto out;
     }
-    if (settings->device_configuration_count > 0) {
+    if (settings->device_configurations_active) {
         should_use = false;
     }
 out:

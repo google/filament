@@ -32,10 +32,88 @@ import (
 
 	"dawn.googlesource.com/dawn/tools/src/cts/query"
 	"dawn.googlesource.com/dawn/tools/src/cts/result"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 )
+
+/*******************************************************************************
+ * Load/Save tests
+ ******************************************************************************/
+
+func TestLoad(t *testing.T) {
+	content := `# comment
+crbug.com/1234 [ linux ] query [ Failure ]
+`
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	path := "expectations.txt"
+	require.NoError(t, wrapper.WriteFile(path, []byte(content), 0666))
+
+	ex, err := Load(path, wrapper)
+	require.NoError(t, err)
+
+	expected := Content{
+		Chunks: []Chunk{
+			{
+				Comments: []string{"# comment"},
+				Expectations: Expectations{
+					{
+						Line:   2,
+						Bug:    "crbug.com/1234",
+						Tags:   result.NewTags("linux"),
+						Query:  "query",
+						Status: []string{"Failure"},
+					},
+				},
+			},
+		},
+	}
+	require.Equal(t, expected, ex)
+}
+
+func TestLoad_BinaryFile(t *testing.T) {
+	// Creating a file with invalid UTF-8 sequence
+	content := []byte{0xff, 0xfe, 0xfd}
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	path := "expectations.txt"
+	require.NoError(t, wrapper.WriteFile(path, content, 0666))
+
+	_, err := Load(path, wrapper)
+	require.Error(t, err)
+}
+
+func TestSave(t *testing.T) {
+	ex := Content{
+		Chunks: []Chunk{
+			{
+				Comments: []string{"# comment"},
+				Expectations: Expectations{
+					{
+						Line:   2,
+						Bug:    "crbug.com/1234",
+						Tags:   result.NewTags("linux"),
+						Query:  "query",
+						Status: []string{"Failure"},
+					},
+				},
+			},
+		},
+	}
+
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	path := "expectations.txt"
+
+	err := ex.Save(path, wrapper)
+	require.NoError(t, err)
+
+	data, err := wrapper.ReadFile(path)
+	require.NoError(t, err)
+
+	expected := `# comment
+crbug.com/1234 [ linux ] query [ Failure ]
+`
+	require.Equal(t, expected, string(data))
+}
 
 /*******************************************************************************
  * Content tests
@@ -127,9 +205,7 @@ crbug.com/3 [ intel ] d [ Failure ]
 	}
 	expectations.Format()
 
-	if diff := cmp.Diff(expectations.String(), expected_content); diff != "" {
-		t.Errorf("Format produced unexpected output: %v", diff)
-	}
+	require.Equal(t, expected_content, expectations.String())
 }
 
 // Tests that expectations for unknown tests are properly removed, even if they
@@ -208,7 +284,7 @@ func TestExpectationAsExpectationFileString(t *testing.T) {
 		Status:  []string{"Failure", "Slow"},
 		Comment: "# comment",
 	}
-	require.Equal(t, e.AsExpectationFileString(), "crbug.com/1234 [ linux nvidia ] query [ Failure Slow ] # comment")
+	require.Equal(t, "crbug.com/1234 [ linux nvidia ] query [ Failure Slow ] # comment", e.AsExpectationFileString())
 
 	// No bug.
 	e = Expectation{
@@ -217,7 +293,7 @@ func TestExpectationAsExpectationFileString(t *testing.T) {
 		Status:  []string{"Failure", "Slow"},
 		Comment: "# comment",
 	}
-	require.Equal(t, e.AsExpectationFileString(), "[ linux nvidia ] query [ Failure Slow ] # comment")
+	require.Equal(t, "[ linux nvidia ] query [ Failure Slow ] # comment", e.AsExpectationFileString())
 
 	// No tags.
 	e = Expectation{
@@ -227,7 +303,7 @@ func TestExpectationAsExpectationFileString(t *testing.T) {
 		Status:  []string{"Failure", "Slow"},
 		Comment: "# comment",
 	}
-	require.Equal(t, e.AsExpectationFileString(), "crbug.com/1234 query [ Failure Slow ] # comment")
+	require.Equal(t, "crbug.com/1234 query [ Failure Slow ] # comment", e.AsExpectationFileString())
 
 	// No comment.
 	e = Expectation{
@@ -236,14 +312,14 @@ func TestExpectationAsExpectationFileString(t *testing.T) {
 		Query:  "query",
 		Status: []string{"Failure", "Slow"},
 	}
-	require.Equal(t, e.AsExpectationFileString(), "crbug.com/1234 [ linux nvidia ] query [ Failure Slow ]")
+	require.Equal(t, "crbug.com/1234 [ linux nvidia ] query [ Failure Slow ]", e.AsExpectationFileString())
 
 	// Minimal expectation.
 	e = Expectation{
 		Query:  "query",
 		Status: []string{"Failure", "Slow"},
 	}
-	require.Equal(t, e.AsExpectationFileString(), "query [ Failure Slow ]")
+	require.Equal(t, "query [ Failure Slow ]", e.AsExpectationFileString())
 }
 
 func TestSort(t *testing.T) {
@@ -327,7 +403,7 @@ func TestSort(t *testing.T) {
 		secondLinuxTwo,
 	}
 
-	require.Equal(t, expectationsList, expectedList)
+	require.Equal(t, expectedList, expectationsList)
 }
 
 func TestSortPrioritizeQuery(t *testing.T) {
@@ -411,7 +487,7 @@ func TestSortPrioritizeQuery(t *testing.T) {
 		secondLinuxTwo,
 	}
 
-	require.Equal(t, expectationsList, expectedList)
+	require.Equal(t, expectedList, expectationsList)
 }
 
 func TestIsGlobExpectation(t *testing.T) {
@@ -469,9 +545,9 @@ func TestIsGlobExpectation(t *testing.T) {
 			if testCase.isGlobExpected {
 				expectedType = GLOB
 			}
-			require.Equal(t, testCase.e.expectationType, UNDETERMINED)
-			require.Equal(t, testCase.e.IsGlobExpectation(), testCase.isGlobExpected)
-			require.Equal(t, testCase.e.expectationType, expectedType)
+			require.Equal(t, UNDETERMINED, testCase.e.expectationType)
+			require.Equal(t, testCase.isGlobExpected, testCase.e.IsGlobExpectation())
+			require.Equal(t, expectedType, testCase.e.expectationType)
 		})
 	}
 }

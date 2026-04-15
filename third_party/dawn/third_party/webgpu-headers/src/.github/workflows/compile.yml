@@ -1,0 +1,20 @@
+name: compile
+on:
+  pull_request:
+jobs:
+  compile-gcc-clang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          cd "${{ github.workspace }}/tests/compile"
+          make
+  compile-msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Build something requiring CL.EXE
+        run: |
+          cd "${{ github.workspace }}/tests/compile/windows"
+          nmake

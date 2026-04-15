@@ -72,7 +72,7 @@ struct State {
         for (auto* mem : pixel_local_struct->Members()) {
             auto iter = options.attachments.find(mem->Index());
             if (iter == options.attachments.end()) {
-                TINT_ICE() << "missing options for member at index " << mem->Index();
+                TINT_IR_ICE(ir) << "missing options for member at index " << mem->Index();
             }
             core::TexelFormat texel_format;
             switch (iter->second.format) {
@@ -86,7 +86,7 @@ struct State {
                     texel_format = core::TexelFormat::kR32Float;
                     break;
                 default:
-                    TINT_ICE() << "missing texel format for pixel local storage attachment";
+                    TINT_IR_ICE(ir) << "missing texel format for pixel local storage attachment";
             }
             auto* subtype = hlsl::type::RasterizerOrderedTexture2D::SubtypeFor(texel_format, ty);
 
@@ -104,11 +104,11 @@ struct State {
                                    core::ir::Var* pixel_local_var,
                                    const core::type::Struct* pixel_local_struct,
                                    const Vector<ROV, 4>& rovs) {
-        TINT_ASSERT(entry_point->Params().Length() == 1);  // Guaranteed by ShaderIO
+        TINT_IR_ASSERT(ir, entry_point->Params().Length() == 1);  // Guaranteed by ShaderIO
         core::ir::FunctionParam* entry_point_param = entry_point->Params()[0];
 
         auto* param_struct = entry_point_param->Type()->As<core::type::Struct>();
-        TINT_ASSERT(param_struct);  // Guaranteed by ShaderIO
+        TINT_IR_ASSERT(ir, param_struct);  // Guaranteed by ShaderIO
 
         // Find the position builtin in the struct
         const core::type::StructMember* position_member = nullptr;
@@ -118,7 +118,7 @@ struct State {
                 break;
             }
         }
-        TINT_ASSERT(position_member);
+        TINT_IR_ASSERT(ir, position_member);
 
         // Get the entry point's single return instruction. We expect only one as this transform
         // should run after ShaderIO.
@@ -128,7 +128,7 @@ struct State {
                 entry_point->UsagesUnsorted().begin()->instruction->As<core::ir::Return>();
         }
         if (!entry_point_ret) {
-            TINT_ICE() << "expected entry point with a single return";
+            TINT_IR_ICE(ir) << "expected entry point with a single return";
         }
 
         // Change the address space of the var from 'pixel_local' to 'private'
@@ -143,8 +143,8 @@ struct State {
         // Insert coord decl used to index ROVs at the entry point start
         core::ir::Instruction* coord = nullptr;
         b.InsertBefore(entry_point->Block()->Front(), [&] {
-            coord = b.Access(ty.vec4<f32>(), entry_point_param, u32(position_member->Index()));
-            coord = b.Swizzle(ty.vec2<f32>(), coord, {0, 1});
+            coord = b.Access(ty.vec4f(), entry_point_param, u32(position_member->Index()));
+            coord = b.Swizzle(ty.vec2f(), coord, {0, 1});
             coord = b.Convert<vec2<u32>>(coord);  // Input type to .Load
         });
 
@@ -153,7 +153,7 @@ struct State {
             for (auto* mem : pixel_local_struct->Members()) {
                 auto& rov = rovs[mem->Index()];
                 auto* mem_ty = mem->Type();
-                TINT_ASSERT(mem_ty->Is<core::type::Scalar>());
+                TINT_IR_ASSERT(ir, mem_ty->Is<core::type::Scalar>());
                 core::ir::Instruction* from = b.Load(rov.var);
                 // Load returns a vec4, so we need to swizzle the first element
                 from = b.MemberCall<hlsl::ir::MemberBuiltinCall>(
@@ -173,7 +173,7 @@ struct State {
             for (auto* mem : pixel_local_struct->Members()) {
                 auto& rov = rovs[mem->Index()];
                 auto* mem_ty = mem->Type();
-                TINT_ASSERT(mem_ty->Is<core::type::Scalar>());
+                TINT_IR_ASSERT(ir, mem_ty->Is<core::type::Scalar>());
                 core::ir::Instruction* from =
                     b.Access(ty.ptr<private_>(mem_ty), pixel_local_var, u32(mem->Index()));
                 from = b.Load(from);
@@ -223,10 +223,10 @@ struct State {
             return;
         }
         if (!pixel_local_struct) {
-            TINT_ICE() << "pixel_local var must be of struct type";
+            TINT_IR_ICE(ir) << "pixel_local var must be of struct type";
         }
         if (pixel_local_struct->Members().Length() != options.attachments.size()) {
-            TINT_ICE() << "missing options for each member of the pixel_local struct";
+            TINT_IR_ICE(ir) << "missing options for each member of the pixel_local struct";
         }
 
         auto rovs = CreateROVs(pixel_local_struct);
@@ -242,14 +242,14 @@ struct State {
 }  // namespace
 
 Result<SuccessType> PixelLocal(core::ir::Module& ir, const PixelLocalConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "hlsl.PixelLocal",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowClipDistancesOnF32,
-                                              core::ir::Capability::kAllowDuplicateBindings,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    core::ir::AssertValid(ir,
+                          core::ir::Capabilities{
+                              core::ir::Capability::kAllow16BitIntegers,
+                              core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
+                              core::ir::Capability::kAllowDuplicateBindings,
+                              core::ir::Capability::kAllowNonCoreTypes,
+                          },
+                          "before hlsl.PixelLocal");
 
     State{config.options, ir}.Process();
 

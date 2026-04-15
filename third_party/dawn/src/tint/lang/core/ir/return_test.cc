@@ -40,7 +40,7 @@ TEST_F(IR_ReturnTest, ImplicitNoValue) {
     auto* func = b.Function("myfunc", ty.void_());
     auto* ret = b.Return(func);
     ASSERT_EQ(ret->Func(), func);
-    EXPECT_TRUE(ret->Args().IsEmpty());
+    EXPECT_TRUE(ret->Args().empty());
     EXPECT_EQ(ret->Value(), nullptr);
     EXPECT_THAT(func->UsagesUnsorted(), testing::UnorderedElementsAre(Usage{ret, 0u}));
 }
@@ -50,7 +50,7 @@ TEST_F(IR_ReturnTest, WithValue) {
     auto* val = b.Constant(42_i);
     auto* ret = b.Return(func, val);
     ASSERT_EQ(ret->Func(), func);
-    ASSERT_EQ(ret->Args().Length(), 1u);
+    ASSERT_EQ(ret->Args().size(), 1u);
     EXPECT_EQ(ret->Args()[0], val);
     EXPECT_EQ(ret->Value(), val);
     EXPECT_THAT(func->UsagesUnsorted(), testing::UnorderedElementsAre(Usage{ret, 0u}));
@@ -82,7 +82,7 @@ TEST_F(IR_ReturnTest, Clone) {
     EXPECT_NE(ret, new_ret);
     EXPECT_EQ(new_func, new_ret->Func());
 
-    EXPECT_EQ(1u, new_ret->Args().Length());
+    EXPECT_EQ(1u, new_ret->Args().size());
 
     auto new_val = new_ret->Value()->As<Constant>()->Value();
     ASSERT_TRUE(new_val->Is<core::constant::Scalar<i32>>());

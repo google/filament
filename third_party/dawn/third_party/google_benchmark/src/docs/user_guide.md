@@ -252,6 +252,32 @@ iterations is at least one, not more than 1e9, until CPU time is greater than
 the minimum time, or the wallclock time is 5x minimum time. The minimum time is
 set per benchmark by calling `MinTime` on the registered benchmark object.
 
+The minimum time can also be set for all benchmarks with the
+`--benchmark_min_time=<value>` command-line option. This flag supports two
+forms:
+
+* `--benchmark_min_time=<float>s` sets the minimum running time for each
+  benchmark repetition in seconds.
+* `--benchmark_min_time=<integer>x` runs each benchmark repetition for an
+  explicit number of iterations instead of using the dynamic time-based
+  iteration selection. This applies to benchmarks that do not already specify
+  an explicit iteration count in code.
+
+For compatibility, bare numeric values such as `--benchmark_min_time=0.5` are
+also interpreted as seconds, but the explicit `s` suffix is preferred for
+clarity.
+
+For example:
+
+```bash
+$ ./run_benchmarks.x --benchmark_min_time=0.5s
+$ ./run_benchmarks.x --benchmark_min_time=100x
+```
+
+If a benchmark specifies its own `MinTime()` or `Iterations()` in code, those
+per-benchmark settings take precedence over the corresponding
+`--benchmark_min_time` command-line forms.
+
 Furthermore warming up a benchmark might be necessary in order to get
 stable results because of e.g caching effects of the code under benchmark.
 Warming up means running the benchmark a given amount of time, before
@@ -452,7 +478,7 @@ benchmark. The following example enumerates a dense range on one parameter,
 and a sparse range on the second.
 
 ```c++
-static void CustomArguments(benchmark::internal::Benchmark* b) {
+static void CustomArguments(benchmark::Benchmark* b) {
   for (int i = 0; i <= 10; ++i)
     for (int j = 32; j <= 1024*1024; j *= 8)
       b->Args({i, j});
@@ -462,7 +488,7 @@ BENCHMARK(BM_SetInsert)->Apply(CustomArguments);
 
 ### Passing Arbitrary Arguments to a Benchmark
 
-In C++11 it is possible to define a benchmark that takes an arbitrary number
+It is possible to define a benchmark that takes an arbitrary number
 of extra arguments. The `BENCHMARK_CAPTURE(func, test_case_name, ...args)`
 macro creates a benchmark that invokes `func`  with the `benchmark::State` as
 the first argument followed by the specified `args...`.
@@ -490,6 +516,25 @@ BENCHMARK_CAPTURE(BM_takes_args, int_test, 42, 43);
 
 Note that elements of `...args` may refer to global variables. Users should
 avoid modifying global state inside of a benchmark.
+
+### Naming a Benchmark Without Capturing Arguments
+
+If you only need to give a benchmark a custom name (without passing extra
+arguments), use `BENCHMARK_NAMED(func, test_case_name)`. Unlike
+`BENCHMARK_CAPTURE`, this macro does not create a lambda, which avoids
+compiler and linker scalability issues when registering thousands of
+benchmarks.
+
+```c++
+void BM_Foo(benchmark::State& state) {
+  for (auto _ : state) {}
+}
+// Registers a benchmark named "BM_Foo/my_variant"
+BENCHMARK_NAMED(BM_Foo, my_variant);
+```
+
+Use `BENCHMARK_CAPTURE` when you need to pass extra arguments; use
+`BENCHMARK_NAMED` when you only need the name.
 
 <a name="asymptotic-complexity" />
 
@@ -563,22 +608,19 @@ template <class Q> void BM_Sequential(benchmark::State& state) {
   state.SetBytesProcessed(
       static_cast<int64_t>(state.iterations())*state.range(0));
 }
-// C++03
-BENCHMARK_TEMPLATE(BM_Sequential, WaitQueue<int>)->Range(1<<0, 1<<10);
 
-// C++11 or newer, you can use the BENCHMARK macro with template parameters:
+// You can use the BENCHMARK macro with template parameters:
 BENCHMARK(BM_Sequential<WaitQueue<int>>)->Range(1<<0, 1<<10);
+
+// Old, legacy verbose C++03 syntax:
+BENCHMARK_TEMPLATE(BM_Sequential, WaitQueue<int>)->Range(1<<0, 1<<10);
 
 ```
 
 Three macros are provided for adding benchmark templates.
 
 ```c++
-#ifdef BENCHMARK_HAS_CXX11
 #define BENCHMARK(func<...>) // Takes any number of parameters.
-#else // C++ < C++11
-#define BENCHMARK_TEMPLATE(func, arg1)
-#endif
 #define BENCHMARK_TEMPLATE1(func, arg1)
 #define BENCHMARK_TEMPLATE2(func, arg1, arg2)
 ```
@@ -680,6 +722,54 @@ BENCHMARK_REGISTER_F(MyFixture, DoubleTest)->Threads(2);
 // `DoubleTest` is now registered.
 ```
 
+If you want to use a method template for your fixtures,
+which you instantiate afterward, use the following macros:
+
+* `BENCHMARK_TEMPLATE_METHOD_F(ClassName, Method)`
+* `BENCHMARK_TEMPLATE_INSTANTIATE_F(ClassName, Method, ...)`
+
+With these macros you can define one method for several instantiations.
+Example (using `MyFixture` from above):
+
+```c++
+// Defines `Test` using the class template `MyFixture`.
+BENCHMARK_TEMPLATE_METHOD_F(MyFixture, Test)(benchmark::State& st) {
+   for (auto _ : st) {
+     ...
+  }
+}
+
+// Instantiates and registers the benchmark `MyFixture<int>::Test`.
+BENCHMARK_TEMPLATE_INSTANTIATE_F(MyFixture, Test, int)->Threads(2);
+// Instantiates and registers the benchmark `MyFixture<double>::Test`.
+BENCHMARK_TEMPLATE_INSTANTIATE_F(MyFixture, Test, double)->Threads(4);
+```
+
+Inside the method definition of `BENCHMARK_TEMPLATE_METHOD_F` the type `Base` refers
+to the type of the instantiated fixture.
+Accesses to members of the fixture must be prefixed by `this->`.
+
+`BENCHMARK_TEMPLATE_METHOD_F`and `BENCHMARK_TEMPLATE_INSTANTIATE_F` can only be used,
+if the fixture does not use non-type template parameters.
+If you want to pass values as template parameters, use e.g. `std::integral_constant`.
+For example:
+
+```c++
+template<typename Sz>
+class SizedFixture : public benchmark::Fixture {
+  static constexpr auto Size = Sz::value;
+  int myValue;
+};
+
+BENCHMARK_TEMPLATE_METHOD_F(SizedFixture, Test)(benchmark::State& st) {
+   for (auto _ : st) {
+     this->myValue = Base::Size;
+  }
+}
+
+BENCHMARK_TEMPLATE_INSTANTIATE_F(SizedFixture, Test, std::integral_constant<5>)->Threads(2);
+```
+
 <a name="custom-counters" />
 
 ## Custom Counters
@@ -703,10 +793,6 @@ The `state.counters` object is a `std::map` with `std::string` keys
 and `Counter` values. The latter is a `double`-like class, via an implicit
 conversion to `double&`. Thus you can use all of the standard arithmetic
 assignment operators (`=,+=,-=,*=,/=`) to change the value of each counter.
-
-In multithreaded benchmarks, each counter is set on the calling thread only.
-When the benchmark finishes, the counters from each thread will be summed;
-the resulting sum is the value which will be shown for the benchmark.
 
 The `Counter` constructor accepts three parameters: the value as a `double`
 ; a bit flag which allows you to show counters as rates, and/or as per-thread
@@ -740,12 +826,10 @@ is 1k a 1000 (default, `benchmark::Counter::OneK::kIs1000`), or 1024
   state.counters["BytesProcessed"] = Counter(state.range(0), benchmark::Counter::kIsIterationInvariantRate, benchmark::Counter::OneK::kIs1024);
 ```
 
-When you're compiling in C++11 mode or later you can use `insert()` with
-`std::initializer_list`:
+You can use `insert()` with `std::initializer_list`:
 
 <!-- {% raw %} -->
 ```c++
-  // With C++11, this can be done:
   state.counters.insert({{"Foo", numFoos}, {"Bar", numBars}, {"Baz", numBazs}});
   // ... instead of:
   state.counters["Foo"] = numFoos;
@@ -753,6 +837,10 @@ When you're compiling in C++11 mode or later you can use `insert()` with
   state.counters["Baz"] = numBazs;
 ```
 <!-- {% endraw %} -->
+
+In multithreaded benchmarks, each counter is set on the calling thread only.
+When the benchmark finishes, the counters from each thread will be summed.
+Counters that are configured with `kIsRate`, will report the average rate across all threads, while `kAvgThreadsRate` counters will report the average rate per thread.
 
 ### Counter Reporting
 
@@ -868,6 +956,46 @@ BENCHMARK(BM_test)->Range(8, 8<<10)->UseRealTime();
 
 Without `UseRealTime`, CPU time is used by default.
 
+### Manual Multithreaded Benchmarks
+
+Google/benchmark uses `std::thread` as multithreading environment per default.
+If you want to use another multithreading environment (e.g. OpenMP), you can provide
+a factory function to your benchmark using the `ThreadRunner` function.
+The factory function takes the number of threads as argument and creates a custom class
+derived from `benchmark::ThreadRunnerBase`.
+This custom class must override the function
+`void RunThreads(const std::function<void(int)>& fn)`.
+`RunThreads` is called by the main thread and spawns the requested number of threads.
+Each spawned thread must call `fn(thread_index)`, where `thread_index` is its own
+thread index. Before `RunThreads` returns, all spawned threads must be joined.
+```c++
+class OpenMPThreadRunner : public benchmark::ThreadRunnerBase
+{
+  OpenMPThreadRunner(int num_threads)
+  : num_threads_(num_threads)
+  {}
+
+  void RunThreads(const std::function<void(int)>& fn) final
+  {
+#pragma omp parallel num_threads(num_threads_)
+    fn(omp_get_thread_num());
+  }
+
+private:
+  int num_threads_;
+};
+
+BENCHMARK(BM_MultiThreaded)
+  ->ThreadRunner([](int num_threads) {
+    return std::make_unique<OpenMPThreadRunner>(num_threads);
+  })
+  ->Threads(1)->Threads(2)->Threads(4);
+```
+The above example creates a parallel OpenMP region before it enters `BM_MultiThreaded`.
+The actual benchmark code can remain the same and is therefore not tied to a specific
+thread runner. The measurement does not include the time for creating and joining the
+threads.
+
 <a name="cpu-timers" />
 
 ## CPU Timers
@@ -935,6 +1063,29 @@ static void BM_SetInsert_With_Timer_Control(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_SetInsert_With_Timer_Control)->Ranges({{1<<10, 8<<10}, {128, 512}});
+```
+<!-- {% endraw %} -->
+
+For convenience, a `ScopedPauseTiming` class is provided to manage pausing and
+resuming timers within a scope. This is less error-prone than manually calling
+`PauseTiming` and `ResumeTiming`.
+
+<!-- {% raw %} -->
+```c++
+static void BM_SetInsert_With_Scoped_Timer_Control(benchmark::State& state) {
+  std::set<int> data;
+  for (auto _ : state) {
+    {
+      benchmark::ScopedPauseTiming pause(state); // Pauses timing
+      data = ConstructRandomSet(state.range(0));
+    } // Timing resumes automatically when 'pause' goes out of scope
+
+    // The rest will be measured.
+    for (int j = 0; j < state.range(1); ++j)
+      data.insert(RandomNumber());
+  }
+}
+BENCHMARK(BM_SetInsert_With_Scoped_Timer_Control)->Ranges({{1<<10, 8<<10}, {128, 512}});
 ```
 <!-- {% endraw %} -->
 
@@ -1106,6 +1257,7 @@ void BM_spin_empty(benchmark::State& state) {
 }
 
 BENCHMARK(BM_spin_empty)
+  ->Repetitions(3) // or add option --benchmark_repetitions=3
   ->ComputeStatistics("max", [](const std::vector<double>& v) -> double {
     return *(std::max_element(std::begin(v), std::end(v)));
   })
@@ -1125,8 +1277,9 @@ void BM_spin_empty(benchmark::State& state) {
 }
 
 BENCHMARK(BM_spin_empty)
+  ->Repetitions(3) // or add option --benchmark_repetitions=3
   ->ComputeStatistics("ratio", [](const std::vector<double>& v) -> double {
-    return std::begin(v) / std::end(v);
+    return v.front() / v.back();
   }, benchmark::StatisticUnit::kPercentage)
   ->Arg(512);
 ```
@@ -1183,6 +1336,7 @@ For Example:
 auto BM_test = [](benchmark::State& st, auto Inputs) { /* ... */ };
 
 int main(int argc, char** argv) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
   for (auto& test_input : { /* ... */ })
       benchmark::RegisterBenchmark(test_input.name(), BM_test, test_input);
   benchmark::Initialize(&argc, argv);
@@ -1247,7 +1401,7 @@ static void BM_test_ranged_fo(benchmark::State & state) {
 
 ## A Faster KeepRunning Loop
 
-In C++11 mode, a ranged-based for loop should be used in preference to
+A ranged-based for loop should be used in preference to
 the `KeepRunning` loop for running the benchmarks. For example:
 
 ```c++

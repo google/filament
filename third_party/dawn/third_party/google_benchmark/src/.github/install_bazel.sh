@@ -4,7 +4,7 @@ if ! bazel version; then
     arch="arm64"
   fi
   echo "Downloading $arch Bazel binary from GitHub releases."
-  curl -L -o $HOME/bin/bazel --create-dirs "https://github.com/bazelbuild/bazel/releases/download/7.1.1/bazel-7.1.1-linux-$arch"
+  curl -L -o $HOME/bin/bazel --create-dirs "https://github.com/bazelbuild/bazel/releases/download/8.2.0/bazel-8.2.0-linux-$arch"
   chmod +x $HOME/bin/bazel
 else
   # Bazel is installed for the correct architecture

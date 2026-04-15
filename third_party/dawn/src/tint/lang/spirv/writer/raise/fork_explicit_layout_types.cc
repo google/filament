@@ -195,11 +195,8 @@ struct State {
 
         // Create a new struct with the rewritten members.
         auto name = sym.New(original_struct->Name().Name() + "_tint_explicit_layout");
-        auto* new_str = ty.Get<core::type::Struct>(name,                      //
-                                                   std::move(new_members),    //
-                                                   original_struct->Align(),  //
-                                                   original_struct->Size(),   //
-                                                   original_struct->SizeNoPadding());
+        auto* new_str =
+            ty.Get<core::type::Struct>(name, std::move(new_members), original_struct->Size());
         new_str->SetStructFlag(core::type::kExplicitLayout);
         for (auto flag : original_struct->StructFlags()) {
             new_str->SetStructFlag(flag);
@@ -217,11 +214,16 @@ struct State {
             // The element type was not forked, so just use the original element type.
             new_element_type = original_array->ElemType();
         }
+
+        uint32_t stride = original_array->ImplicitStride();
+        if (auto* ex = original_array->As<type::ExplicitLayoutArray>()) {
+            stride = ex->Stride();
+        }
+
         return ty.Get<type::ExplicitLayoutArray>(new_element_type,         //
                                                  original_array->Count(),  //
-                                                 original_array->Align(),  //
                                                  original_array->Size(),   //
-                                                 original_array->Stride());
+                                                 stride);
     }
 
     /// Update the store type of an instruction result to use the forked version if needed.
@@ -259,7 +261,7 @@ struct State {
             [&](ir::BuiltinCall* call) {
                 // The only builtin function that takes an array pointer is arrayLength().
                 // No change is needed, as it will operate on the explicitly laid out array type.
-                TINT_ASSERT(call->Func() == BuiltinFn::kArrayLength);
+                TINT_IR_ASSERT(ir, call->Func() == BuiltinFn::kArrayLength);
             },
             [&](core::ir::Let* let) {
                 // A let usage will propagate the pointer to a type that has been forked, so we need
@@ -318,7 +320,7 @@ struct State {
                     auto* dst_arr = dst_type->As<core::type::Array>();
                     b.Return(func, ConvertArray(src_arr, dst_arr, param));
                 } else {
-                    TINT_UNREACHABLE();
+                    TINT_IR_UNREACHABLE(ir);
                 }
             });
             return func;
@@ -349,12 +351,12 @@ struct State {
         // Runtime-sized arrays will never be converted as you cannot load/store them, and
         // pipeline-overrides will already have been substituted before this transform.
         auto* count = src_array->Count()->As<core::type::ConstantArrayCount>();
-        TINT_ASSERT(count && count == dst_array->Count());
+        TINT_IR_ASSERT(ir, count && count == dst_array->Count());
 
         // Create a local variable to hold the converted result.
         // Convert each element one at a time, writing into the local variable.
         auto* result = b.Var(ty.ptr<function>(dst_array));
-        b.LoopRange(ty, 0_u, u32(count->value), 1_u, [&](core::ir::Value* idx) {
+        b.LoopRange(0_u, u32(count->value), 1_u, [&](core::ir::Value* idx) {
             auto* extracted = b.Access(src_array->ElemType(), input, idx)->Result();
             auto* converted = ConvertIfNeeded(dst_array->ElemType(), extracted);
             auto* dst_ptr = b.Access(ty.ptr(function, dst_array->ElemType()), result, idx);
@@ -368,11 +370,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ForkExplicitLayoutTypes(core::ir::Module& ir, SpvVersion version) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.ForkExplicitLayoutTypes",
-                                          kForkExplicitLayoutTypesCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    AssertValid(ir, kForkExplicitLayoutTypesCapabilities, "before spirv.ForkExplicitLayoutTypes");
 
     State{ir, version}.Process();
 

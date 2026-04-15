@@ -60,7 +60,7 @@ MaybeError QuerySet::Initialize() {
     return {};
 }
 
-void QuerySet::DestroyImpl() {
+void QuerySet::DestroyImpl(DestroyReason reason) {
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the query set is explicitly destroyed with APIDestroy.
     //   This case is NOT thread-safe and needs proper synchronization with other
@@ -68,7 +68,7 @@ void QuerySet::DestroyImpl() {
     // - It may be called when the last ref to the query set is dropped and it
     //   is implicitly destroyed. This case is thread-safe because there are no
     //   other threads using the query set since there are no other live refs.
-    QuerySetBase::DestroyImpl();
+    QuerySetBase::DestroyImpl(reason);
     mPredicates.clear();
 }
 

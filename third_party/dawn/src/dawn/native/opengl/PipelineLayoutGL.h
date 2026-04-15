@@ -28,21 +28,20 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_PIPELINELAYOUTGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_PIPELINELAYOUTGL_H_
 
-#include "dawn/native/PipelineLayout.h"
-
 #include "dawn/common/ityp_array.h"
 #include "dawn/common/ityp_vector.h"
 #include "dawn/native/BindingInfo.h"
+#include "dawn/native/PipelineLayout.h"
 #include "dawn/native/opengl/IntegerTypes.h"
 #include "dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 
 // According to gpuinfo.org, devices report GL_MAX_TEXTURE_IMAGE_UNITS <= 128
-static constexpr size_t kGLMaxTextureImageUnitsReported = 128;
+inline constexpr size_t kGLMaxTextureImageUnitsReported = 128;
 
 // According to gpuinfo.org, devices report GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS <= 96
-static constexpr size_t kGLMaxShaderStorageBufferBindingsReported = 96;
+inline constexpr size_t kGLMaxShaderStorageBufferBindingsReported = 96;
 
 class Device;
 
@@ -62,13 +61,6 @@ class PipelineLayout final : public PipelineLayoutBase {
 
     FlatBindingIndex GetInternalTextureBuiltinsUniformBinding() const;
     FlatBindingIndex GetInternalArrayLengthUniformBinding() const;
-
-    enum ImmediateLocation {
-        FirstVertex = 0,
-        FirstInstance = 1,
-        MinDepth = 2,
-        MaxDepth = 3,
-    };
 
   private:
     ~PipelineLayout() override = default;

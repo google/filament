@@ -36,6 +36,9 @@
 namespace dawn {
 namespace {
 
+// Expect lazy clear count for test in device to increment by N after `statement`.
+// Note: WebGPU backend doesn't maintain the lazy clear count for testing but rely on the inner
+// layer implementation for the initialization.
 #define EXPECT_LAZY_CLEAR(N, statement)                                                  \
     do {                                                                                 \
         if (UsesWire()) {                                                                \
@@ -44,7 +47,9 @@ namespace {
             size_t lazyClearsBefore = native::GetLazyClearCountForTesting(device.Get()); \
             statement;                                                                   \
             size_t lazyClearsAfter = native::GetLazyClearCountForTesting(device.Get());  \
-            EXPECT_EQ(N, lazyClearsAfter - lazyClearsBefore);                            \
+            if (!IsWebGPUOnWebGPU()) {                                                   \
+                EXPECT_EQ(N, lazyClearsAfter - lazyClearsBefore);                        \
+            }                                                                            \
         }                                                                                \
     } while (0)
 
@@ -771,6 +776,9 @@ TEST_P(BufferZeroInitTest, MapAsync_Write) {
 // Test that the code path of creating a buffer with BufferDescriptor.mappedAtCreation == true
 // clears the buffer correctly at the creation of the buffer.
 TEST_P(BufferZeroInitTest, MappedAtCreation) {
+    // TODO(crbug.com/473894293): [Capture] buffer mapping: investigate.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     constexpr uint32_t kBufferSize = 16u;
 
     constexpr std::array<uint32_t, kBufferSize / sizeof(uint32_t)> kExpectedData = {{0, 0, 0, 0}};
@@ -954,6 +962,9 @@ TEST_P(BufferZeroInitTest, Copy2DTextureToBuffer) {
 // Test that the code path of CopyTextureToBuffer clears the destination buffer correctly when it is
 // the first use of the buffer and the texture is a 2D array texture.
 TEST_P(BufferZeroInitTest, Copy2DArrayTextureToBuffer) {
+    // TODO(crbug.com/500445352): Produces incorrect output on Win/AMD RX 5500 XT.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D11());
+
     constexpr wgpu::Extent3D kTextureSize = {64u, 4u, 3u};
 
     // bytesPerRow == texelBlockSizeInBytes * copySize.width && rowsPerImage == copySize.height &&
@@ -1126,10 +1137,16 @@ TEST_P(BufferZeroInitTest, PaddingInitialized) {
     DAWN_SUPPRESS_TEST_IF(IsANGLE());                              // TODO(crbug.com/dawn/1084)
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsVulkan() && IsNvidia());  // TODO(crbug.com/dawn/1214)
 
+    // TODO(crbug.com/40238674): Fails on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
+
     // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
     // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
+
+    // TODO(crbug.com/473593119): [Capture] size not multiple of 4.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
 
     constexpr wgpu::TextureFormat kColorAttachmentFormat = wgpu::TextureFormat::RGBA8Unorm;
     // A small sub-4-byte format means a single vertex can fit entirely within the padded buffer,
@@ -1308,6 +1325,9 @@ TEST_P(BufferZeroInitTest, ResolveQuerySet) {
     // crbug.com/dawn/940: Does not work on Mac 11.0+. Backend validation changed.
     DAWN_TEST_UNSUPPORTED_IF(IsMacOS() && !IsMacOS(10));
 
+    // TODO(crbug.com/451389800): [Capture] implement query set.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     constexpr uint64_t kBufferSize = 16u;
     constexpr wgpu::BufferUsage kBufferUsage =
         wgpu::BufferUsage::QueryResolve | wgpu::BufferUsage::CopyDst;
@@ -1364,13 +1384,16 @@ TEST_P(BufferZeroInitTest, ResolveQuerySet) {
 
 DAWN_INSTANTIATE_TEST(BufferZeroInitTest,
                       D3D11Backend({"nonzero_clear_resources_on_creation_for_testing"}),
+                      D3D11Backend({"auto_map_backend_buffer", "d3d11_disable_cpu_buffers",
+                                    "nonzero_clear_resources_on_creation_for_testing"}),
                       D3D12Backend({"nonzero_clear_resources_on_creation_for_testing"}),
                       D3D12Backend({"nonzero_clear_resources_on_creation_for_testing"},
                                    {"d3d12_create_not_zeroed_heap"}),
                       MetalBackend({"nonzero_clear_resources_on_creation_for_testing"}),
                       OpenGLBackend({"nonzero_clear_resources_on_creation_for_testing"}),
                       OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"}),
-                      VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"}));
+                      VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"}),
+                      WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"}));
 
 }  // anonymous namespace
 }  // namespace dawn

@@ -53,6 +53,11 @@ alias(
 )
 
 alias(
+  name = "tint_build_mesa",
+  actual = "//src/tint:tint_build_mesa_true",
+)
+
+alias(
   name = "tint_build_msl_writer",
   actual = "//src/tint:tint_build_msl_writer_true",
 )

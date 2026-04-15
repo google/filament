@@ -39,6 +39,8 @@
 # Kind:      lib
 ################################################################################
 tint_add_target(tint_lang_wgsl_ir lib
+  lang/wgsl/ir/atomic_vec2u_to_from_u64.cc
+  lang/wgsl/ir/atomic_vec2u_to_from_u64.h
   lang/wgsl/ir/builtin_call.cc
   lang/wgsl/ir/builtin_call.h
   lang/wgsl/ir/unary.cc
@@ -75,6 +77,8 @@ tint_target_add_external_dependencies(tint_lang_wgsl_ir lib
 # Kind:      test
 ################################################################################
 tint_add_target(tint_lang_wgsl_ir_test test
+  lang/wgsl/ir/atomic_vec2u_to_from_u64_test.cc
+  lang/wgsl/ir/builtin_call_test.cc
 )
 
 tint_target_add_dependencies(tint_lang_wgsl_ir_test test
@@ -85,11 +89,15 @@ tint_target_add_dependencies(tint_lang_wgsl_ir_test test
   tint_lang_core_ir
   tint_lang_core_ir_transform
   tint_lang_core_ir_transform_test
+  tint_lang_core_ir_test
   tint_lang_core_type
   tint_lang_wgsl
   tint_lang_wgsl_ast
+  tint_lang_wgsl_intrinsic
+  tint_lang_wgsl_ir
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
+  tint_lang_wgsl_writer_common
   tint_lang_wgsl_writer_ir_to_program
   tint_lang_wgsl_writer_raise
   tint_utils

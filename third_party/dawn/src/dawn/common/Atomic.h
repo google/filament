@@ -30,8 +30,44 @@
 
 #include <atomic>
 #include <concepts>
+#include <type_traits>
 
 namespace dawn {
+
+// A wrapper around std::atomic that allows specifying default memory orders for load and store
+// operations at the type level. The casting operator uses LoadMemoryOrder and the assignment
+// operator uses StoreMemoryOrder.
+template <typename T,
+          std::memory_order LoadMemoryOrder = std::memory_order::seq_cst,
+          std::memory_order StoreMemoryOrder = LoadMemoryOrder>
+class Atomic {
+  public:
+    Atomic() = default;
+    explicit Atomic(T value) : mValue(value) {}
+
+    Atomic(const Atomic&) = delete;
+
+    Atomic& operator=(const Atomic& src) {
+        mValue.store(src.mValue.load(LoadMemoryOrder), StoreMemoryOrder);
+        return *this;
+    }
+
+    operator T() const { return mValue.load(LoadMemoryOrder); }
+
+    T operator=(T value) {
+        mValue.store(value, StoreMemoryOrder);
+        return value;
+    }
+
+    T operator->() const
+        requires std::is_pointer_v<T>
+    {
+        return mValue.load(LoadMemoryOrder);
+    }
+
+  private:
+    std::atomic<T> mValue;
+};
 
 // Equivalent to C++ stdlib's fetch_max that is only available in C++26 and beyond. This returns the
 // value preceding the effects of this function.
@@ -40,7 +76,7 @@ template <typename T>
 T FetchMax(std::atomic<T>& t, T arg) {
     // Atomically set |t| to |arg| if |arg| > |t|.
     T current = t.load(std::memory_order::acquire);
-    while (arg > current && t.compare_exchange_weak(current, arg, std::memory_order::acq_rel)) {
+    while (arg > current && !t.compare_exchange_weak(current, arg, std::memory_order::acq_rel)) {
     }
     return current;
 }

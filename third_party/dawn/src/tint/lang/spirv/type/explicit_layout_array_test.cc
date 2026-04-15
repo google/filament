@@ -41,10 +41,10 @@ using ExplicitLayoutArrayTest = core::type::TestHelper;
 
 TEST_F(ExplicitLayoutArrayTest, Hash) {
     core::type::Manager ty;
-    auto* a = ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u), 4u,
-                                          8u, 32u);
-    auto* b = ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u), 4u,
-                                          8u, 32u);
+    auto* a =
+        ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u), 8u, 32u);
+    auto* b =
+        ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u), 8u, 32u);
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
@@ -52,12 +52,12 @@ TEST_F(ExplicitLayoutArrayTest, Hash) {
 TEST_F(ExplicitLayoutArrayTest, Equals) {
     core::type::Manager ty;
     auto* count = ty.Get<core::type::ConstantArrayCount>(4u);
-    auto* a = ty.Get<ExplicitLayoutArray>(ty.i32(), count, 4u, 16u, 4u);
-    auto* b = ty.Get<ExplicitLayoutArray>(ty.i32(), count, 4u, 16u, 4u);
-    auto* c = ty.Get<ExplicitLayoutArray>(ty.u32(), count, 4u, 16u, 4u);
+    auto* a = ty.Get<ExplicitLayoutArray>(ty.i32(), count, 16u, 4u);
+    auto* b = ty.Get<ExplicitLayoutArray>(ty.i32(), count, 16u, 4u);
+    auto* c = ty.Get<ExplicitLayoutArray>(ty.u32(), count, 16u, 4u);
 
     // Make sure it does not match the equivalent regular array.
-    auto* d = ty.Get<core::type::Array>(ty.i32(), count, 4u, 16u, 4u, 4u);
+    auto* d = ty.Get<core::type::Array>(ty.i32(), count, 16u);
 
     EXPECT_EQ(a, b);
     EXPECT_NE(a, c);
@@ -67,19 +67,19 @@ TEST_F(ExplicitLayoutArrayTest, Equals) {
 TEST_F(ExplicitLayoutArrayTest, FriendlyName) {
     core::type::Manager ty;
     auto* count = ty.Get<core::type::ConstantArrayCount>(4u);
-    auto* a = ty.Get<ExplicitLayoutArray>(ty.u32(), count, 4u, 16u, 4u);
+    auto* a = ty.Get<ExplicitLayoutArray>(ty.u32(), count, 16u, 4u);
     EXPECT_EQ(a->FriendlyName(), "spirv.explicit_layout_array<u32, 4, stride=4>");
 }
 
 TEST_F(ExplicitLayoutArrayTest, CloneArray) {
     core::type::Manager ty;
-    auto* ary = ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u),
-                                            4u, 8u, 32u);
+    auto* ary =
+        ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u), 8u, 32u);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};
 
-    auto* val = ary->Clone(ctx);
+    auto* val = ary->Clone(ctx)->As<type::ExplicitLayoutArray>();
 
     ASSERT_NE(val, nullptr);
     EXPECT_TRUE(val->ElemType()->Is<core::type::U32>());

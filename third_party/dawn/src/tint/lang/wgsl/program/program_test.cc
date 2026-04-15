@@ -49,15 +49,6 @@ TEST_F(ProgramTest, EmptyIsValid) {
     EXPECT_TRUE(program.IsValid());
 }
 
-TEST_F(ProgramTest, IDsAreUnique) {
-    Program program_a(ProgramBuilder{});
-    Program program_b(ProgramBuilder{});
-    Program program_c(ProgramBuilder{});
-    EXPECT_NE(program_a.ID(), program_b.ID());
-    EXPECT_NE(program_b.ID(), program_c.ID());
-    EXPECT_NE(program_c.ID(), program_a.ID());
-}
-
 TEST_F(ProgramTest, Assert_GlobalVariable) {
     GlobalVar("var", ty.f32(), core::AddressSpace::kPrivate);
 

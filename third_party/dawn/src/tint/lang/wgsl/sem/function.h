@@ -28,26 +28,24 @@
 #ifndef SRC_TINT_LANG_WGSL_SEM_FUNCTION_H_
 #define SRC_TINT_LANG_WGSL_SEM_FUNCTION_H_
 
+#include <algorithm>
 #include <array>
 #include <optional>
 #include <utility>
 
 #include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/sem/call.h"
+#include "src/tint/utils/containers/hashmap.h"
 #include "src/tint/utils/containers/unique_vector.h"
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/symbol/symbol.h"
 
 // Forward declarations
 namespace tint::ast {
-class BuiltinAttribute;
 class Function;
-class LocationAttribute;
-class ReturnStatement;
 }  // namespace tint::ast
 namespace tint::sem {
 class BuiltinFn;
-class Variable;
 }  // namespace tint::sem
 
 namespace tint::sem {
@@ -83,6 +81,13 @@ class Function final : public Castable<Function, CallTarget> {
     void SetWorkgroupSize(sem::WorkgroupSize workgroup_size) {
         workgroup_size_ = std::move(workgroup_size);
     }
+
+    /// Sets the subgroup size for the function.
+    /// @param subgroup_size the new subgroup size of the function
+    void SetSubgroupSize(uint32_t subgroup_size) { subgroup_size_ = subgroup_size; }
+
+    /// @returns the subgroup size for the functions.
+    std::optional<uint32_t> SubgroupSize() const { return subgroup_size_; }
 
     /// @returns all directly referenced global variables
     const UniqueVector<const GlobalVariable*, 4>& DirectlyReferencedGlobals() const {
@@ -218,6 +223,29 @@ class Function final : public Castable<Function, CallTarget> {
         return diagnostic_severities_;
     }
 
+    /// Adds `var` as a transitively referenced unsized buffer with required size `size`.
+    /// If `var` is already transitively referenced, the maximum size is kept.
+    /// @param var the unsized buffer
+    /// @param size the required binding size
+    void AddTransitivelyReferencedUnsizedBufferSize(const GlobalVariable* var, uint64_t size) {
+        auto where = transitively_referenced_unsized_buffer_sizes_.Get(var);
+        if (where) {
+            *where = std::max(*where, size);
+        } else {
+            transitively_referenced_unsized_buffer_sizes_.Add(var, size);
+        }
+    }
+
+    /// @return The required size for the unsized buffer `var`. std::nullopt if it is unreferenced.
+    std::optional<uint64_t> TransitivelyReferencedUnsizedBufferSize(
+        const GlobalVariable* var) const {
+        auto where = transitively_referenced_unsized_buffer_sizes_.Get(var);
+        if (where) {
+            return *where;
+        }
+        return std::nullopt;
+    }
+
   private:
     Function(const Function&) = delete;
     Function(Function&&) = delete;
@@ -225,6 +253,7 @@ class Function final : public Castable<Function, CallTarget> {
     const ast::Function* const declaration_;
 
     sem::WorkgroupSize workgroup_size_;
+    std::optional<uint32_t> subgroup_size_;
     UniqueVector<const GlobalVariable*, 4> directly_referenced_globals_;
     UniqueVector<const GlobalVariable*, 8> transitively_referenced_globals_;
     UniqueVector<const Function*, 8> transitively_called_functions_;
@@ -237,6 +266,7 @@ class Function final : public Castable<Function, CallTarget> {
     wgsl::DiagnosticRuleSeverities diagnostic_severities_;
 
     std::optional<const Source*> directly_used_subgroup_matrix_ = std::nullopt;
+    Hashmap<const GlobalVariable*, uint64_t, 8> transitively_referenced_unsized_buffer_sizes_;
 
     std::optional<uint32_t> return_location_;
 };

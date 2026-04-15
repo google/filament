@@ -29,6 +29,8 @@
 
 #include "src/tint/cmd/bench/bench.h"
 #include "src/tint/lang/spirv/writer/writer.h"
+#include "src/tint/lang/wgsl/ast/identifier.h"
+#include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/reader/reader.h"
 
 #if TINT_BUILD_IS_MSVC
@@ -44,21 +46,27 @@ namespace {
 
 void GenerateSPIRV(benchmark::State& state, std::string input_name) {
     auto res = bench::GetWgslProgram(input_name);
-    if (res != Success) {
-        state.SkipWithError(res.Failure().reason);
-        return;
-    }
-    for (auto _ : state) {
-        // Convert the AST program to an IR module.
-        auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
-        if (ir != Success) {
-            state.SkipWithError(ir.Failure().reason);
-            return;
-        }
+    TINT_ASSERT(res == Success) << res.Failure().reason;
 
-        auto gen_res = Generate(ir.Get(), {});
-        if (gen_res != Success) {
-            state.SkipWithError(gen_res.Failure().reason);
+    // Get the list of entry point names.
+    std::vector<std::string> names;
+    for (auto func : res->program.AST().Functions()) {
+        if (func->IsEntryPoint()) {
+            names.push_back(func->name->symbol.Name());
+        }
+    }
+
+    for (auto _ : state) {
+        for (auto& name : names) {
+            // Convert the AST program to an IR module.
+            auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
+            TINT_ASSERT(ir == Success) << ir.Failure().reason;
+
+            spirv::writer::Options options{
+                .entry_point_name = name,
+            };
+            auto gen_res = Generate(ir.Get(), options);
+            TINT_ASSERT(gen_res == Success) << gen_res.Failure().reason;
         }
     }
 }

@@ -41,10 +41,10 @@ namespace {
 using GlslWriter_OffsetFirstIndexTest = core::ir::transform::TransformTest;
 
 TEST_F(GlslWriter_OffsetFirstIndexTest, NoModify_NoBuiltins) {
-    auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(func->Block(), [&] {  //
-        b.Return(func, b.Zero(ty.vec4<f32>()));
+        b.Return(func, b.Zero(ty.vec4f()));
     });
 
     auto* src = R"(
@@ -78,14 +78,14 @@ TEST_F(GlslWriter_OffsetFirstIndexTest, NoModify_BuiltinsWithNoOffsets) {
     instance_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
     mod.root_block->Append(instance_idx);
 
-    auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(func->Block(), [&] {
         auto* vertex = b.Load(vertex_idx);
         auto* instance = b.Load(instance_idx);
-        b.Let("add", b.Add<u32>(vertex, instance));
-        b.Return(func, b.Zero(ty.vec4<f32>()));
+        b.Let("add", b.Add(vertex, instance));
+        b.Return(func, b.Zero(ty.vec4f()));
     });
 
     auto* src = R"(
@@ -126,14 +126,14 @@ TEST_F(GlslWriter_OffsetFirstIndexTest, VertexOffset) {
     instance_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
     mod.root_block->Append(instance_idx);
 
-    auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(func->Block(), [&] {
         auto* vertex = b.Load(vertex_idx);
         auto* instance = b.Load(instance_idx);
-        b.Let("add", b.Add<u32>(vertex, instance));
-        b.Return(func, b.Zero(ty.vec4<f32>()));
+        b.Let("add", b.Add(vertex, instance));
+        b.Return(func, b.Zero(ty.vec4f()));
     });
 
     auto* src = R"(
@@ -180,7 +180,9 @@ $B1: {  # root
 )";
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
-    immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_vertex"), ty.u32());
+    ASSERT_EQ(immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_vertex"),
+                                                             ty.u32()),
+              Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
 
@@ -199,14 +201,14 @@ TEST_F(GlslWriter_OffsetFirstIndexTest, InstanceOffset) {
     instance_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
     mod.root_block->Append(instance_idx);
 
-    auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(func->Block(), [&] {
         auto* vertex = b.Load(vertex_idx);
         auto* instance = b.Load(instance_idx);
-        b.Let("add", b.Add<u32>(vertex, instance));
-        b.Return(func, b.Zero(ty.vec4<f32>()));
+        b.Let("add", b.Add(vertex, instance));
+        b.Return(func, b.Zero(ty.vec4f()));
     });
 
     auto* src = R"(
@@ -253,7 +255,9 @@ $B1: {  # root
 )";
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
-    immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_instance"), ty.u32());
+    ASSERT_EQ(immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_instance"),
+                                                             ty.u32()),
+              Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
 
@@ -272,14 +276,14 @@ TEST_F(GlslWriter_OffsetFirstIndexTest, VertexAndInstanceOffset) {
     instance_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
     mod.root_block->Append(instance_idx);
 
-    auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(func->Block(), [&] {
         auto* vertex = b.Load(vertex_idx);
         auto* instance = b.Load(instance_idx);
-        b.Let("add", b.Add<u32>(vertex, instance));
-        b.Return(func, b.Zero(ty.vec4<f32>()));
+        b.Let("add", b.Add(vertex, instance));
+        b.Return(func, b.Zero(ty.vec4f()));
     });
 
     auto* src = R"(
@@ -330,8 +334,12 @@ $B1: {  # root
 )";
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
-    immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_vertex"), ty.u32());
-    immediate_data_config.AddInternalImmediateData(8, mod.symbols.New("first_instance"), ty.u32());
+    ASSERT_EQ(immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_vertex"),
+                                                             ty.u32()),
+              Success);
+    ASSERT_EQ(immediate_data_config.AddInternalImmediateData(8, mod.symbols.New("first_instance"),
+                                                             ty.u32()),
+              Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
 

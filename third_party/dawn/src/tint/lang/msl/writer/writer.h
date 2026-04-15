@@ -28,6 +28,8 @@
 #ifndef SRC_TINT_LANG_MSL_WRITER_WRITER_H_
 #define SRC_TINT_LANG_MSL_WRITER_WRITER_H_
 
+#include <string>
+
 #include "src/tint/lang/msl/writer/common/options.h"
 #include "src/tint/lang/msl/writer/common/output.h"
 #include "src/tint/utils/result.h"
@@ -38,12 +40,6 @@ class Module;
 }  // namespace tint::core::ir
 
 namespace tint::msl::writer {
-
-/// Check if the module @p ir is supported by the MSL backend with @p options.
-/// @param ir the module
-/// @param options the writer options
-/// @returns Success or a failure message indicating why MSL generation would fail
-Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& options);
 
 /// Generate MSL for a program, according to a set of configuration options.
 /// The result will contain the MSL and supplementary information, or failure.

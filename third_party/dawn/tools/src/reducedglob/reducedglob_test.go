@@ -134,7 +134,7 @@ func TestMatchcase(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			g := NewReducedGlob(testCase.pattern)
-			require.Equal(t, g.Matchcase(testCase.matchedString), testCase.expectedMatch)
+			require.Equal(t, testCase.expectedMatch, g.Matchcase(testCase.matchedString))
 		})
 	}
 }
@@ -161,7 +161,7 @@ func TestFindAllIndices(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, findAllIndices(testCase.s, testCase.substr), testCase.expectedIndices)
+			require.Equal(t, testCase.expectedIndices, findAllIndices(testCase.s, testCase.substr))
 		})
 	}
 }

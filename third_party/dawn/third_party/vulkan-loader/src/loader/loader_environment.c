@@ -448,20 +448,20 @@ bool check_name_matches_filter_environment_var(const char *name, const struct lo
 
 // Get the layer name(s) from the env_name environment variable. If layer is found in
 // search_list then add it to layer_list.  But only add it to layer_list if type_flags matches.
-VkResult loader_add_environment_layers(struct loader_instance *inst, const enum layer_type_flags type_flags,
+VkResult loader_add_environment_layers(struct loader_instance *inst, const char *enabled_layers_env,
                                        const struct loader_envvar_all_filters *filters,
                                        struct loader_pointer_layer_list *target_list,
                                        struct loader_pointer_layer_list *expanded_target_list,
                                        const struct loader_layer_list *source_list) {
     VkResult res = VK_SUCCESS;
-    char *layer_env = loader_getenv(ENABLED_LAYERS_ENV, inst);
+    const enum layer_type_flags type_flags = VK_LAYER_TYPE_FLAG_EXPLICIT_LAYER;
 
     // If the layer environment variable is present (i.e. VK_INSTANCE_LAYERS), we will always add it to the layer list.
-    if (layer_env != NULL) {
-        size_t layer_env_len = strlen(layer_env) + 1;
+    if (enabled_layers_env != NULL) {
+        size_t layer_env_len = strlen(enabled_layers_env) + 1;
         char *name = loader_stack_alloc(layer_env_len);
         if (name != NULL) {
-            loader_strncpy(name, layer_env_len, layer_env, layer_env_len);
+            loader_strncpy(name, layer_env_len, enabled_layers_env, layer_env_len);
 
             loader_log(inst, VULKAN_LOADER_WARN_BIT | VULKAN_LOADER_LAYER_BIT, 0, "env var \'%s\' defined and adding layers \"%s\"",
                        ENABLED_LAYERS_ENV, name);
@@ -560,9 +560,58 @@ VkResult loader_add_environment_layers(struct loader_instance *inst, const enum 
 
 out:
 
-    if (layer_env != NULL) {
-        loader_free_getenv(layer_env, inst);
+    return res;
+}
+
+void parse_id_filter_environment_var(const struct loader_instance *inst, const char *env_var_name,
+                                     struct loader_envvar_id_filter *filter_struct) {
+    memset(filter_struct, 0, sizeof(struct loader_envvar_id_filter));
+    char *parsing_string = NULL;
+    char *env_var_value = loader_secure_getenv(env_var_name, inst);
+    if (NULL == env_var_value) {
+        return;
+    }
+    const size_t env_var_len = strlen(env_var_value);
+    if (env_var_len == 0) {
+        goto out;
+    }
+    // Allocate a separate string since scan_for_next_comma modifies the original string
+    parsing_string = loader_stack_alloc(env_var_len + 1);
+    for (uint32_t iii = 0; iii < env_var_len; ++iii) {
+        parsing_string[iii] = (char)tolower(env_var_value[iii]);
+    }
+    parsing_string[env_var_len] = '\0';
+
+    filter_struct->count = 0;
+    char *context = NULL;
+    char *token = thread_safe_strtok(parsing_string, ",", &context);
+    while (NULL != token) {
+        struct loader_envvar_id_filter_value *filter_value = &filter_struct->filters[filter_struct->count];
+
+        char *pEnd;
+        filter_value->begin = (uint32_t)strtoul(token, &pEnd, 0);
+
+        if (*pEnd != '\0') {
+            pEnd++;
+            filter_value->end = (uint32_t)strtoul(pEnd, NULL, 0);
+        } else {
+            filter_value->end = filter_value->begin;
+        }
+
+        filter_struct->count++;
+        token = thread_safe_strtok(NULL, ",", &context);
     }
 
-    return res;
+out:
+
+    loader_free_getenv(env_var_value, inst);
+}
+
+bool check_id_matches_filter_environment_var(const uint32_t id, const struct loader_envvar_id_filter *filter_struct) {
+    for (uint32_t i = 0; i < filter_struct->count; i++) {
+        if ((filter_struct->filters[i].begin <= id) && (id <= filter_struct->filters[i].end)) {
+            return true;
+        }
+    }
+    return false;
 }

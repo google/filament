@@ -58,8 +58,8 @@ TEST_F(BlockStatementTest, Creation_WithAttributes) {
     auto* d = create<DiscardStatement>();
     auto* ptr = d;
 
-    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "foo");
-    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "bar");
+    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("foo"));
+    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("bar"));
     auto* b = create<BlockStatement>(tint::Vector{d}, tint::Vector{attr1, attr2});
 
     ASSERT_EQ(b->statements.Length(), 1u);
@@ -77,16 +77,6 @@ TEST_F(BlockStatementDeathTest, Assert_Null_Statement) {
         {
             ProgramBuilder b;
             b.create<BlockStatement>(tint::Vector<const Statement*, 1>{nullptr}, tint::Empty);
-        },
-        "internal compiler error");
-}
-
-TEST_F(BlockStatementDeathTest, Assert_DifferentGenerationID_Statement) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<BlockStatement>(tint::Vector{b2.create<DiscardStatement>()}, tint::Empty);
         },
         "internal compiler error");
 }

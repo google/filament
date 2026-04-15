@@ -38,6 +38,7 @@
 import "src/tint/lang/core/address_space.def"
 import "src/tint/lang/core/access.def"
 import "src/tint/lang/core/texel_format.def"
+import "src/tint/lang/core/filtering_parameters.def"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Types                                                                      //
@@ -63,6 +64,12 @@ type texture_2d_array<T>
 type texture_3d<T>
 type texture_cube<T>
 type texture_cube_array<T>
+@display("texture_2d<f32, {F}>") type texture_2d_filtered<T: f32, F: texture_filterable>
+@display("texture_2d_array<f32, {F}>") type texture_2d_array_filtered<T: f32, F: texture_filterable>
+@display("texture_3d<f32, {F}>") type texture_3d_filtered<T: f32, F: texture_filterable>
+@display("texture_cube<f32, {F}>") type texture_cube_filtered<T: f32, F: texture_filterable>
+@display("texture_cube_array<f32, {F}>") type texture_cube_array_filtered<T: f32, F: texture_filterable>
+
 type texture_multisampled_2d<T>
 type texture_depth_2d
 type texture_depth_2d_array
@@ -213,6 +220,13 @@ fn texture(texture: texture_2d_array<f32>, coords: vec3<f32>) -> vec4<f32>
 fn texture(texture: texture_3d<f32>, coords: vec3<f32>) -> vec4<f32>
 fn texture(texture: texture_cube<f32>, coords: vec3<f32>) -> vec4<f32>
 fn texture(texture: texture_cube_array<f32>, coords: vec4<f32>) -> vec4<f32>
+
+implicit(F: texture_filter) fn texture(texture: texture_2d_filtered<f32, F>, coords: vec2<f32>) -> vec4<f32>
+implicit(F: texture_filter) fn texture(texture: texture_2d_array_filtered<f32, F>, coords: vec3<f32>) -> vec4<f32>
+implicit(F: texture_filter) fn texture(texture: texture_3d_filtered<f32, F>, coords: vec3<f32>) -> vec4<f32>
+implicit(F: texture_filter) fn texture(texture: texture_cube_filtered<f32, F>, coords: vec3<f32>) -> vec4<f32>
+implicit(F: texture_filter) fn texture(texture: texture_cube_array_filtered<f32, F>, coords: vec4<f32>) -> vec4<f32>
+
 fn texture(texture: texture_depth_2d, coords: vec3<f32>) -> f32
 fn texture(texture: texture_depth_2d_array, coords: vec4<f32>) -> f32
 fn texture(texture: texture_depth_cube, coords: vec4<f32>) -> f32
@@ -224,9 +238,20 @@ fn texture(texture: texture_3d<f32>, coords: vec3<f32>, bias: f32) -> vec4<f32>
 fn texture(texture: texture_cube<f32>, coords: vec3<f32>, bias: f32) -> vec4<f32>
 fn texture(texture: texture_cube_array<f32>, coords: vec4<f32>, bias: f32) -> vec4<f32>
 
+implicit(F: texture_filter) fn texture(texture: texture_2d_filtered<f32, F>, coords: vec2<f32>, bias: f32) -> vec4<f32>
+implicit(F: texture_filter) fn texture(texture: texture_2d_array_filtered<f32, F>, coords: vec3<f32>, bias: f32) -> vec4<f32>
+implicit(F: texture_filter) fn texture(texture: texture_3d_filtered<f32, F>, coords: vec3<f32>, bias: f32) -> vec4<f32>
+implicit(F: texture_filter) fn texture(texture: texture_cube_filtered<f32, F>, coords: vec3<f32>, bias: f32) -> vec4<f32>
+implicit(F: texture_filter) fn texture(texture: texture_cube_array_filtered<f32, F>, coords: vec4<f32>, bias: f32) -> vec4<f32>
+
 fn textureOffset(texture: texture_2d<f32>, coords: vec2<f32>, offset: vec2<i32>) -> vec4<f32>
 fn textureOffset(texture: texture_2d_array<f32>, coords: vec3<f32>, offset: vec2<i32>) -> vec4<f32>
 fn textureOffset(texture: texture_3d<f32>, coords: vec3<f32>, offset: vec3<i32>) -> vec4<f32>
+
+implicit(F: texture_filter) fn textureOffset(texture: texture_2d_filtered<f32, F>, coords: vec2<f32>, offset: vec2<i32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureOffset(texture: texture_2d_array_filtered<f32, F>, coords: vec3<f32>, offset: vec2<i32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureOffset(texture: texture_3d_filtered<f32, F>, coords: vec3<f32>, offset: vec3<i32>) -> vec4<f32>
+
 fn textureOffset(texture: texture_depth_2d, coords: vec3<f32>, offset: vec2<i32>) -> f32
 fn textureOffset(texture: texture_depth_2d_array, coords: vec4<f32>, offset: vec2<i32>) -> f32
 
@@ -234,11 +259,22 @@ fn textureOffset(texture: texture_2d<f32>, coords: vec2<f32>, offset: vec2<i32>,
 fn textureOffset(texture: texture_2d_array<f32>, coords: vec3<f32>, offset: vec2<i32>, bias: f32) -> vec4<f32>
 fn textureOffset(texture: texture_3d<f32>, coords: vec3<f32>, offset: vec3<i32>, bias: f32) -> vec4<f32>
 
+implicit(F: texture_filter) fn textureOffset(texture: texture_2d_filtered<f32, F>, coords: vec2<f32>, offset: vec2<i32>, bias: f32) -> vec4<f32>
+implicit(F: texture_filter) fn textureOffset(texture: texture_2d_array_filtered<f32, F>, coords: vec3<f32>, offset: vec2<i32>, bias: f32) -> vec4<f32>
+implicit(F: texture_filter) fn textureOffset(texture: texture_3d_filtered<f32, F>, coords: vec3<f32>, offset: vec3<i32>, bias: f32) -> vec4<f32>
+
 fn textureLod(texture: texture_2d<f32>, coords: vec2<f32>, level: f32) -> vec4<f32>
 fn textureLod(texture: texture_2d_array<f32>, coords: vec3<f32>, level: f32) -> vec4<f32>
 fn textureLod(texture: texture_3d<f32>, coords: vec3<f32>, level: f32) -> vec4<f32>
 fn textureLod(texture: texture_cube<f32>, coords: vec3<f32>, level: f32) -> vec4<f32>
 fn textureLod(texture: texture_cube_array<f32>, coords: vec4<f32>, level: f32) -> vec4<f32>
+
+implicit(F: texture_filter) fn textureLod(texture: texture_2d_filtered<f32, F>, coords: vec2<f32>, level: f32) -> vec4<f32>
+implicit(F: texture_filter) fn textureLod(texture: texture_2d_array_filtered<f32, F>, coords: vec3<f32>, level: f32) -> vec4<f32>
+implicit(F: texture_filter) fn textureLod(texture: texture_3d_filtered<f32, F>, coords: vec3<f32>, level: f32) -> vec4<f32>
+implicit(F: texture_filter) fn textureLod(texture: texture_cube_filtered<f32, F>, coords: vec3<f32>, level: f32) -> vec4<f32>
+implicit(F: texture_filter) fn textureLod(texture: texture_cube_array_filtered<f32, F>, coords: vec4<f32>, level: f32) -> vec4<f32>
+
 fn textureLod(texture: texture_depth_2d, coords: vec3<f32>, level: f32) -> f32
 
 fn extTextureLod(texture: texture_depth_2d_array, coords: vec4<f32>, level: f32) -> f32
@@ -248,6 +284,11 @@ fn extTextureLod(texture: texture_depth_cube_array, coords: vec4<f32>, compare_v
 fn textureLodOffset(texture: texture_2d<f32>, coords: vec2<f32>, level: f32, offset: vec2<i32>) -> vec4<f32>
 fn textureLodOffset(texture: texture_2d_array<f32>, coords: vec3<f32>, level: f32, offset: vec2<i32>) -> vec4<f32>
 fn textureLodOffset(texture: texture_3d<f32>, coords: vec3<f32>, level: f32, offset: vec3<i32>) -> vec4<f32>
+
+implicit(F: texture_filter) fn textureLodOffset(texture: texture_2d_filtered<f32, F>, coords: vec2<f32>, level: f32, offset: vec2<i32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureLodOffset(texture: texture_2d_array_filtered<f32, F>, coords: vec3<f32>, level: f32, offset: vec2<i32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureLodOffset(texture: texture_3d_filtered<f32, F>, coords: vec3<f32>, level: f32, offset: vec3<i32>) -> vec4<f32>
+
 fn textureLodOffset(texture: texture_depth_2d, coords: vec3<f32>, level: f32, offset: vec2<i32>) -> f32
 
 fn extTextureLodOffset(texture: texture_depth_2d_array, coords: vec4<f32>, level: f32, offset: vec2<i32>) -> f32
@@ -257,6 +298,15 @@ fn textureGrad(texture: texture_2d_array<f32>, coords: vec3<f32>, ddx: vec2<f32>
 fn textureGrad(texture: texture_3d<f32>, coords: vec3<f32>, ddx: vec3<f32>, ddy: vec3<f32>) -> vec4<f32>
 fn textureGrad(texture: texture_cube<f32>, coords: vec3<f32>, ddx: vec3<f32>, ddy: vec3<f32>) -> vec4<f32>
 fn textureGrad(texture: texture_cube_array<f32>,
+                     coords: vec4<f32>,
+                     ddx: vec3<f32>,
+                     ddy: vec3<f32>) -> vec4<f32>
+
+implicit(F: texture_filter) fn textureGrad(texture: texture_2d_filtered<f32, F>, coords: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureGrad(texture: texture_2d_array_filtered<f32, F>, coords: vec3<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureGrad(texture: texture_3d_filtered<f32, F>, coords: vec3<f32>, ddx: vec3<f32>, ddy: vec3<f32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureGrad(texture: texture_cube_filtered<f32, F>, coords: vec3<f32>, ddx: vec3<f32>, ddy: vec3<f32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureGrad(texture: texture_cube_array_filtered<f32, F>,
                      coords: vec4<f32>,
                      ddx: vec3<f32>,
                      ddy: vec3<f32>) -> vec4<f32>
@@ -276,6 +326,23 @@ fn textureGradOffset(texture: texture_3d<f32>,
                      ddx: vec3<f32>,
                      ddy: vec3<f32>,
                      offset: vec3<i32>) -> vec4<f32>
+
+implicit(F: texture_filter) fn textureGradOffset(texture: texture_2d_filtered<f32, F>,
+                     coords: vec2<f32>,
+                     ddx: vec2<f32>,
+                     ddy: vec2<f32>,
+                     offset: vec2<i32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureGradOffset(texture: texture_2d_array_filtered<f32, F>,
+                     coords: vec3<f32>,
+                     ddx: vec2<f32>,
+                     ddy: vec2<f32>,
+                     offset: vec2<i32>) -> vec4<f32>
+implicit(F: texture_filter) fn textureGradOffset(texture: texture_3d_filtered<f32, F>,
+                     coords: vec3<f32>,
+                     ddx: vec3<f32>,
+                     ddy: vec3<f32>,
+                     offset: vec3<i32>) -> vec4<f32>
+
 fn textureGradOffset(texture: texture_depth_2d,
                      coords: vec3<f32>,
                      ddx: vec2<f32>,
@@ -303,6 +370,24 @@ fn textureGradOffset(texture: texture_depth_2d_array,
         texture: texture_cube_array<T>,
         coords: vec4<f32>,
         component: i32) -> vec4<T>
+
+@must_use implicit(T: f32, F: texture_filter) fn textureGather(
+        texture: texture_2d_filtered<T, F>,
+        coords: vec2<f32>,
+        component: i32) -> vec4<T>
+@must_use implicit(T: f32, F: texture_filter) fn textureGather(
+        texture: texture_2d_array_filtered<T, F>,
+        coords: vec3<f32>,
+        component: i32) -> vec4<T>
+@must_use implicit(T: f32, F: texture_filter) fn textureGather(
+        texture: texture_cube_filtered<T, F>,
+        coords: vec3<f32>,
+        component: i32) -> vec4<T>
+@must_use implicit(T: f32, F: texture_filter) fn textureGather(
+        texture: texture_cube_array_filtered<T, F>,
+        coords: vec4<f32>,
+        component: i32) -> vec4<T>
+
 @must_use fn textureGather(
         texture: texture_depth_2d,
         coords: vec2<f32>,
@@ -330,6 +415,18 @@ fn textureGradOffset(texture: texture_depth_2d_array,
         coords: vec3<f32>,
         offset: vec2<i32>,
         component: i32) -> vec4<T>
+
+@must_use implicit(T: f32, F: texture_filter) fn textureGatherOffset(
+        texture: texture_2d_filtered<T, F>,
+        coords: vec2<f32>,
+        offset: vec2<i32>,
+        component: i32) -> vec4<T>
+@must_use implicit(T: f32, F: texture_filter) fn textureGatherOffset(
+        texture: texture_2d_array_filtered<T, F>,
+        coords: vec3<f32>,
+        offset: vec2<i32>,
+        component: i32) -> vec4<T>
+
 @must_use fn textureGatherOffset(
         texture: texture_depth_2d,
         coords: vec2<f32>,
@@ -351,6 +448,18 @@ fn textureGradOffset(texture: texture_depth_2d_array,
                                             level: i32) -> vec2<i32>
 @must_use implicit(T: fiu32) fn textureSize(texture: texture_cube_array<T>,
                                             level: i32) -> vec3<i32>
+
+@must_use implicit(T: f32, F: texture_filter) fn textureSize(texture: texture_2d_filtered<T, F>,
+                                            level: i32) -> vec2<i32>
+@must_use implicit(T: f32, F: texture_filter) fn textureSize(texture: texture_2d_array_filtered<T, F>,
+                                            level: i32) -> vec3<i32>
+@must_use implicit(T: f32, F: texture_filter) fn textureSize(texture: texture_3d_filtered<T, F>,
+                                            level: i32) -> vec3<i32>
+@must_use implicit(T: f32, F: texture_filter) fn textureSize(texture: texture_cube_filtered<T, F>,
+                                            level: i32) -> vec2<i32>
+@must_use implicit(T: f32, F: texture_filter) fn textureSize(texture: texture_cube_array_filtered<T, F>,
+                                            level: i32) -> vec3<i32>
+
 @must_use fn textureSize(texture: texture_depth_2d,
                          level: i32) -> vec2<i32>
 @must_use fn textureSize(texture: texture_depth_2d_array,
@@ -374,10 +483,17 @@ fn textureGradOffset(texture: texture_depth_2d_array,
 
 implicit(T: fiu32) fn texelFetch(texture: texture_2d<T>, location: vec2<i32>, level: i32) -> vec4<T>
 implicit(T: fiu32) fn texelFetch(texture: texture_2d_array<T>, location: vec3<i32>, level: i32) -> vec4<T>
+
+implicit(T: f32, F: texture_filter) fn texelFetch(texture: texture_2d_filtered<T, F>, location: vec2<i32>, level: i32) -> vec4<T>
+implicit(T: f32, F: texture_filter) fn texelFetch(texture: texture_2d_array_filtered<T, F>, location: vec3<i32>, level: i32) -> vec4<T>
+
+
 implicit(T: fiu32) fn texelFetch(texture: texture_multisampled_2d<T>,
                                  location: vec2<i32>,
                                  sample_index: i32) -> vec4<T>
 implicit(T: fiu32) fn texelFetch(texture: texture_3d<T>, location: vec3<i32>, level: i32) -> vec4<T>
+implicit(T: f32, F: texture_filter) fn texelFetch(texture: texture_3d_filtered<T, F>, location: vec3<i32>, level: i32) -> vec4<T>
+
 // This ends up emitting as a 2DMS
 fn texelFetch(texture: texture_depth_multisampled_2d, location: vec2<i32>, sample_index: i32) -> vec4<f32>
 

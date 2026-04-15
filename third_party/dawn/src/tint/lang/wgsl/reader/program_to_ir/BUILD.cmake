@@ -95,6 +95,7 @@ tint_add_target(tint_lang_wgsl_reader_program_to_ir_test test
   lang/wgsl/reader/program_to_ir/program_to_ir_test.cc
   lang/wgsl/reader/program_to_ir/shadowing_test.cc
   lang/wgsl/reader/program_to_ir/store_test.cc
+  lang/wgsl/reader/program_to_ir/swizzle_assignment_test.cc
   lang/wgsl/reader/program_to_ir/unary_test.cc
   lang/wgsl/reader/program_to_ir/var_test.cc
 )

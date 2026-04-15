@@ -28,20 +28,17 @@
 #include "src/tint/lang/wgsl/ast/member_accessor_expression.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::MemberAccessorExpression);
 
 namespace tint::ast {
 
-MemberAccessorExpression::MemberAccessorExpression(GenerationID pid,
-                                                   NodeID nid,
+MemberAccessorExpression::MemberAccessorExpression(NodeID nid,
                                                    const Source& src,
                                                    const Expression* obj,
                                                    const Identifier* mem)
-    : Base(pid, nid, src, obj), member(mem) {
+    : Base(nid, src, obj), member(mem) {
     TINT_ASSERT(member);
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(member, generation_id);
 
     // It is currently invalid for a structure to hold a templated member
     if (member) {
@@ -50,13 +47,5 @@ MemberAccessorExpression::MemberAccessorExpression(GenerationID pid,
 }
 
 MemberAccessorExpression::~MemberAccessorExpression() = default;
-
-const MemberAccessorExpression* MemberAccessorExpression::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto* obj = ctx.Clone(object);
-    auto* mem = ctx.Clone(member);
-    return ctx.dst->create<MemberAccessorExpression>(src, obj, mem);
-}
 
 }  // namespace tint::ast

@@ -44,6 +44,7 @@ cc_binary(
   deps = [
     "//src/tint/api",
     "//src/tint/api/common",
+    "//src/tint/api/helpers",
     "//src/tint/cmd/common",
     "//src/tint/lang/core",
     "//src/tint/lang/core/constant",
@@ -51,14 +52,12 @@ cc_binary(
     "//src/tint/lang/core/ir/transform",
     "//src/tint/lang/core/type",
     "//src/tint/lang/hlsl/writer/common",
-    "//src/tint/lang/hlsl/writer/helpers",
-    "//src/tint/lang/msl/ir/transform",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
     "//src/tint/lang/wgsl/inspector",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/sem",
-    "//src/tint/lang/wgsl/writer/ir_to_program",
+    "//src/tint/lang/wgsl/writer/common",
     "//src/tint/utils",
     "//src/tint/utils/command",
     "//src/tint/utils/containers",
@@ -95,7 +94,6 @@ cc_binary(
       "//src/tint/lang/msl/validate",
       "//src/tint/lang/msl/writer",
       "//src/tint/lang/msl/writer/common",
-      "//src/tint/lang/msl/writer/helpers",
     ],
     "//conditions:default": [],
   }) + select({
@@ -112,7 +110,6 @@ cc_binary(
     ":tint_build_spv_writer": [
       "//src/tint/lang/spirv/writer",
       "//src/tint/lang/spirv/writer/common",
-      "//src/tint/lang/spirv/writer/helpers",
     ],
     "//conditions:default": [],
   }) + select({

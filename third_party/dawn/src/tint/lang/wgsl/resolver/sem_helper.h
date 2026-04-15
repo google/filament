@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_WGSL_RESOLVER_SEM_HELPER_H_
 #define SRC_TINT_LANG_WGSL_RESOLVER_SEM_HELPER_H_
 
+#include <span>
 #include <string>
 
 #include "src/tint/lang/core/enums.h"
@@ -59,11 +60,10 @@ class SemHelper {
     auto* Get(const AST* ast) const {
         using T = sem::Info::GetResultType<SEM, AST>;
         auto* sem = builder_->Sem().Get(ast);
-        if (DAWN_UNLIKELY(!sem)) {
-            TINT_ICE() << "AST node '" << ast->TypeInfo().name << "' had no semantic info\n"
-                       << "At: " << ast->source << "\n"
-                       << "Pointer: " << ast;
-        }
+        TINT_ASSERT(sem) << "AST node '" << ast->TypeInfo().name << "' had no semantic info\n"
+                         << "At: " << ast->source << "\n"
+                         << "Pointer: " << ast;
+
         return const_cast<T*>(As<T>(sem));
     }
 
@@ -152,6 +152,64 @@ class SemHelper {
 
     /// @param expr the semantic node
     /// @returns nullptr if @p expr is nullptr, or @p expr cast to
+    /// sem::BuiltinEnumExpression<core::TextureFilterable> if the cast is successful, otherwise an
+    /// error diagnostic is raised.
+    sem::BuiltinEnumExpression<core::TextureFilterable>* AsTextureFilterable(
+        sem::Expression* expr) const {
+        if (DAWN_LIKELY(expr)) {
+            auto* enum_expr = expr->As<sem::BuiltinEnumExpression<core::TextureFilterable>>();
+            if (DAWN_LIKELY(enum_expr)) {
+                return enum_expr;
+            }
+            ErrorUnexpectedExprKind(expr, "texture filterable", core::kTextureFilterableStrings);
+        }
+        return nullptr;
+    }
+
+    /// GetTextureFilterable is a helper for obtaining the texture filterability for the given AST
+    /// expression. Raises an error diagnostic and returns core::TextureFilterable::kUndefined if
+    /// the semantic node is not a sem::BuiltinEnumExpression<core::TextureFilterable>
+    /// @param ast the ast node to get the address space
+    /// @returns the sem node for @p ast
+    core::TextureFilterable GetTextureFilterable(const ast::Expression* ast) const {
+        auto* expr = AsTextureFilterable(Get(ast));
+        if (DAWN_LIKELY(expr)) {
+            return expr->Value();
+        }
+        return core::TextureFilterable::kUndefined;
+    }
+
+    /// @param expr the semantic node
+    /// @returns nullptr if @p expr is nullptr, or @p expr cast to
+    /// sem::BuiltinEnumExpression<core::SamplerFiltering> if the cast is successful, otherwise an
+    /// error diagnostic is raised.
+    sem::BuiltinEnumExpression<core::SamplerFiltering>* AsSamplerFiltering(
+        sem::Expression* expr) const {
+        if (DAWN_LIKELY(expr)) {
+            auto* enum_expr = expr->As<sem::BuiltinEnumExpression<core::SamplerFiltering>>();
+            if (DAWN_LIKELY(enum_expr)) {
+                return enum_expr;
+            }
+            ErrorUnexpectedExprKind(expr, "sampler filtering", core::kSamplerFilteringStrings);
+        }
+        return nullptr;
+    }
+
+    /// GetSamplerFiltering is a helper for obtaining the sampler filtering for the given AST
+    /// expression. Raises an error diagnostic and returns core::SamplerFiltering::kUndefined if
+    /// the semantic node is not a sem::BuiltinEnumExpression<core::SamplerFiltering>
+    /// @param ast the ast node to get the address space
+    /// @returns the sem node for @p ast
+    core::SamplerFiltering GetSamplerFiltering(const ast::Expression* ast) const {
+        auto* expr = AsSamplerFiltering(Get(ast));
+        if (DAWN_LIKELY(expr)) {
+            return expr->Value();
+        }
+        return core::SamplerFiltering::kUndefined;
+    }
+
+    /// @param expr the semantic node
+    /// @returns nullptr if @p expr is nullptr, or @p expr cast to
     /// sem::BuiltinEnumExpression<core::type::TexelFormat> if the cast is successful, otherwise an
     /// error diagnostic is raised.
     sem::BuiltinEnumExpression<core::TexelFormat>* AsTexelFormat(sem::Expression* expr) const {
@@ -229,7 +287,7 @@ class SemHelper {
     /// @param suggestions suggested valid identifiers
     void ErrorUnexpectedIdent(const ast::Identifier* ident,
                               std::string_view wanted,
-                              tint::Slice<const std::string_view> suggestions = Empty) const;
+                              std::span<const std::string_view> suggestions = {}) const;
 
     /// Raises an error diagnostic that the expression @p got was not of the kind @p wanted.
     /// @param expr the expression
@@ -237,7 +295,7 @@ class SemHelper {
     /// @param suggestions suggested valid identifiers
     void ErrorUnexpectedExprKind(const sem::Expression* expr,
                                  std::string_view wanted,
-                                 tint::Slice<const std::string_view> suggestions = Empty) const;
+                                 std::span<const std::string_view> suggestions = {}) const;
 
     /// If @p node is a module-scope type, variable or function declaration, then appends a note
     /// diagnostic where this declaration was declared, otherwise the function does nothing.

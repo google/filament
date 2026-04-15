@@ -53,7 +53,7 @@ libtint_source_set("type") {
     "level.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/type",
@@ -76,7 +76,7 @@ if (tint_build_unittests) {
       "level_test.cc",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/msl/type",

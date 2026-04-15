@@ -360,6 +360,22 @@ TEST_F(AdapterEnumerationTests, WebGPUBackend) {
         }
     }
 
+    // Test selecting a force fallback adapter.
+    {
+        adapterOptions.backendType = wgpu::BackendType::Undefined;
+        adapterOptions.forceFallbackAdapter = true;
+        const auto& adapters = instance.EnumerateAdapters(&adapterOptions);
+        for (const auto& nativeAdapter : adapters) {
+            wgpu::Adapter adapter = wgpu::Adapter(nativeAdapter.Get());
+            wgpu::AdapterInfo info;
+            adapter.GetInfo(&info);
+
+            EXPECT_EQ(info.backendType, wgpu::BackendType::WebGPU);
+            EXPECT_NE(std::string_view(info.device.data, info.device.length).find("SwiftShader"),
+                      std::string_view::npos);
+        }
+    }
+
     // Test selecting WebGPUBackend on WebGPUBackend gives nothing.
     {
         adapterOptions.backendType = wgpu::BackendType::WebGPU;
@@ -373,6 +389,60 @@ TEST_F(AdapterEnumerationTests, WebGPUBackend) {
         adapterOptions.nextInChain = nullptr;
         const auto& adapters = instance.EnumerateAdapters(&adapterOptions);
         EXPECT_TRUE(adapters.empty());
+    }
+}
+
+// Test enumerating the WebGPU backend with the RequestAdapterWebGPUBackendOptions and
+// DawnTogglesDescriptor. Also check the toggle state.
+// As for now we only keep DawnTogglesDescriptor and drop all other chained extensions when passing
+// the adapter options to the inner layer. Testing to make sure DawnTogglesDescriptor is correctly
+// kept without other extensions.
+TEST_F(AdapterEnumerationTests, WebGPUBackendToggles) {
+    native::Instance instance;
+
+    constexpr const char* kAllowUnsafeAPIToggle = "allow_unsafe_apis";
+    constexpr const char* toggles[] = {kAllowUnsafeAPIToggle};
+    wgpu::DawnTogglesDescriptor togglesDesc = {};
+    togglesDesc.enabledToggleCount = 1;
+    togglesDesc.enabledToggles = toggles;
+
+    wgpu::RequestAdapterWebGPUBackendOptions webgpuBackendOptions = {};
+    wgpu::RequestAdapterOptions adapterOptions = {};
+
+    auto Validate = [&](const wgpu::RequestAdapterOptions* options) {
+        const auto& adapters = instance.EnumerateAdapters(options);
+        for (const auto& nativeAdapter : adapters) {
+            wgpu::Adapter adapter = wgpu::Adapter(nativeAdapter.Get());
+            wgpu::AdapterInfo info;
+            adapter.GetInfo(&info);
+
+            EXPECT_EQ(info.backendType, wgpu::BackendType::WebGPU);
+
+            // Validate toggles state.
+            auto togglesUsed = native::GetTogglesUsed(adapter);
+            EXPECT_TRUE(std::find_if(togglesUsed.begin(), togglesUsed.end(), [](const char* name) {
+                            return strcmp(kAllowUnsafeAPIToggle, name) == 0;
+                        }) != togglesUsed.end());
+        }
+    };
+
+    // Test adapterOptions -> RequestAdapterWebGPUBackendOptions -> DawnTogglesDescriptor
+    // RequestAdapterWebGPUBackendOptions should be removed.
+    {
+        adapterOptions.nextInChain = &webgpuBackendOptions;
+        webgpuBackendOptions.nextInChain = &togglesDesc;
+        togglesDesc.nextInChain = nullptr;
+        Validate(&adapterOptions);
+    }
+
+    // Test adapterOptions -> DawnTogglesDescriptor -> RequestAdapterWebGPUBackendOptions
+    // RequestAdapterWebGPUBackendOptions should be removed and DawnTogglesDescriptor.nextInChain
+    // should be set to nullptr internally.
+    {
+        adapterOptions.nextInChain = &togglesDesc;
+        togglesDesc.nextInChain = &webgpuBackendOptions;
+        webgpuBackendOptions.nextInChain = nullptr;
+        Validate(&adapterOptions);
     }
 }
 #endif  // defined(DAWN_ENABLE_BACKEND_WEBGPU)

@@ -37,10 +37,6 @@
 #include "src/tint/utils/containers/vector.h"
 
 // Forward declarations
-namespace tint {
-class ProgramBuilder;
-class SymbolTable;
-}  // namespace tint
 namespace tint::core::type {
 class Type;
 }  // namespace tint::core::type

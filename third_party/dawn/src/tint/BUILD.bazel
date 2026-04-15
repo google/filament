@@ -40,6 +40,7 @@ declare_bool_flag(name = "tint_build_spv_writer",     default = True)
 declare_bool_flag(name = "tint_build_tintd",          default = False)
 declare_bool_flag(name = "tint_build_wgsl_reader",    default = True)
 declare_bool_flag(name = "tint_build_wgsl_writer",    default = True)
+declare_bool_flag(name = "tint_build_null_writer",    default = True)
 
 # Declares the 'os' flag that control what OS-specific Tint code gets built
 declare_os_flag()

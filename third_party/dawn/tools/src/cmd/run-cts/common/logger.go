@@ -47,7 +47,7 @@ func NewLogger(writer io.Writer) Logger {
 
 // logResult writes the test results to the log file in sequential order.
 // logResult should be called whenever a new test result becomes available.
-func (l *Logger) logResults(res Result) {
+func (l *Logger) logResults(res Result, failuresOnly bool) {
 	if l.writer == nil {
 		return
 	}
@@ -57,7 +57,9 @@ func (l *Logger) logResults(res Result) {
 		if !ok {
 			break
 		}
-		fmt.Fprintf(l.writer, "%v [%v]\n%v", logRes.TestCase, logRes.Status, logRes.Message)
+		if !failuresOnly || logRes.Status == Fail {
+			fmt.Fprintf(l.writer, "%v [%v]\n%v", logRes.TestCase, logRes.Status, logRes.Message)
+		}
 		l.lastIndex++
 	}
 }

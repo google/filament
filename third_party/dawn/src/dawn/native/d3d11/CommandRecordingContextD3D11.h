@@ -28,12 +28,15 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_COMMANDRECORDINGCONTEXT_D3D11_H_
 #define SRC_DAWN_NATIVE_D3D11_COMMANDRECORDINGCONTEXT_D3D11_H_
 
+#include <utility>
+
 #include "absl/container/flat_hash_set.h"
 #include "absl/container/inlined_vector.h"
 #include "dawn/common/Constants.h"
 #include "dawn/common/MutexProtected.h"
 #include "dawn/common/NonCopyable.h"
 #include "dawn/common/Ref.h"
+#include "dawn/common/StackAllocated.h"
 #include "dawn/native/Error.h"
 #include "dawn/native/d3d/KeyedMutex.h"
 #include "dawn/native/d3d/d3d_platform.h"
@@ -50,33 +53,25 @@ class CommandRecordingContext;
 template <typename Ctx, typename Traits>
 class CommandRecordingContextGuard;
 
-// CommandRecordingContext::Guard is an implementation of Guard that uses two locks.
-// It uses its own lock to synchronize access within Dawn.
-// It also acquires a D3D11 lock if multithread protected mode is enabled.
-// When enabled, it synchronizes access to the D3D11 context external to Dawn.
+// Inherits dawn::detail::Guard and makes constructors public so that ScopedCommandRecordingContext
+// can move it.
 template <typename Ctx, typename Traits>
 class CommandRecordingContextGuard : public ::dawn::detail::Guard<Ctx, Traits> {
   public:
     using Base = ::dawn::detail::Guard<Ctx, Traits>;
 
+    CommandRecordingContextGuard() = default;
     CommandRecordingContextGuard(CommandRecordingContextGuard&& rhs) = default;
+    CommandRecordingContextGuard& operator=(CommandRecordingContextGuard&& other) = default;
     CommandRecordingContextGuard(Ctx* ctx,
                                  typename Traits::MutexType& mutex,
                                  Defer* defer = nullptr)
-        : Base(ctx, mutex, defer) {
-        if (this->Get() && this->Get()->mD3D11Multithread) {
-            this->Get()->mD3D11Multithread->Enter();
-        }
-    }
-    ~CommandRecordingContextGuard() {
-        if (this->Get() && this->Get()->mD3D11Multithread) {
-            this->Get()->mD3D11Multithread->Leave();
-        }
-    }
+        : Base(ctx, mutex, defer) {}
+    CommandRecordingContextGuard(Ctx* ctx, typename Traits::LockType&& lock, Defer* defer = nullptr)
+        : Base(ctx, std::move(lock), defer) {}
 
     CommandRecordingContextGuard(const CommandRecordingContextGuard& other) = delete;
     CommandRecordingContextGuard& operator=(const CommandRecordingContextGuard& other) = delete;
-    CommandRecordingContextGuard& operator=(CommandRecordingContextGuard&& other) = delete;
 };
 
 class CommandRecordingContext {
@@ -128,9 +123,17 @@ class CommandRecordingContext {
 };
 
 // For using ID3D11DeviceContext methods which don't change device context state.
-class ScopedCommandRecordingContext : public CommandRecordingContext::Guard {
+// This class holds two locks.
+// - It uses a Guard lock to synchronize access within Dawn.
+// - It also acquires a D3D11 lock if multithread protected mode is enabled.
+// When enabled, it synchronizes access to the D3D11 context external to Dawn.
+class ScopedCommandRecordingContext : NonCopyable {
   public:
-    explicit ScopedCommandRecordingContext(CommandRecordingContext::Guard&& guard);
+    ScopedCommandRecordingContext() = default;
+    ScopedCommandRecordingContext(CommandRecordingContext::Guard&& guard, bool lockD3D11Scope);
+    ScopedCommandRecordingContext(ScopedCommandRecordingContext&& other);
+    ScopedCommandRecordingContext& operator=(ScopedCommandRecordingContext&& other);
+    ~ScopedCommandRecordingContext();
 
     Device* GetDevice() const;
 
@@ -182,13 +185,31 @@ class ScopedCommandRecordingContext : public CommandRecordingContext::Guard {
     // the end of a command buffer when it is about to be submitted.
     void AddBufferForSyncingWithCPU(GPUUsableBuffer* buffer) const;
     MaybeError FlushBuffersForSyncingWithCPU() const;
+
+    // Allow calling CommandRecordingContext's methods via -> operator.
+    CommandRecordingContext* operator->() const { return Get(); }
+
+  protected:
+    CommandRecordingContext* Get() const {
+        // Guard's Get() is not public, so use its operator* which returns CommandRecordingContext&.
+        return &(*mGuard);
+    }
+
+  private:
+    STACK_ALLOCATED_IGNORE("TODO: avoid heap allocated class containing StackAllocated members")
+    CommandRecordingContext::Guard mGuard;
+    bool mLockD3D11Scope = false;
 };
 
 // For using ID3D11DeviceContext directly. It swaps and resets ID3DDeviceContextState of
 // ID3D11DeviceContext for a scope. It is needed for sharing ID3D11Device between dawn and ANGLE.
 class ScopedSwapStateCommandRecordingContext : public ScopedCommandRecordingContext {
   public:
+    ScopedSwapStateCommandRecordingContext() = default;
     explicit ScopedSwapStateCommandRecordingContext(CommandRecordingContext::Guard&& guard);
+    ScopedSwapStateCommandRecordingContext(ScopedSwapStateCommandRecordingContext&& other);
+    ScopedSwapStateCommandRecordingContext& operator=(
+        ScopedSwapStateCommandRecordingContext&& other);
     ~ScopedSwapStateCommandRecordingContext();
 
     ID3D11Device* GetD3D11Device() const;

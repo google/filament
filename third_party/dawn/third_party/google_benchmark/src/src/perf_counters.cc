@@ -16,17 +16,21 @@
 
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #if defined HAVE_LIBPFM
+#include <dirent.h>
+#include <fcntl.h>
+#include <linux/perf_event.h>
+#include <sys/stat.h>
+
 #include "perfmon/pfmlib.h"
 #include "perfmon/pfmlib_perf_event.h"
 #endif
 
 namespace benchmark {
 namespace internal {
-
-constexpr size_t PerfCounterValues::kMaxCounters;
 
 #if defined HAVE_LIBPFM
 
@@ -70,7 +74,7 @@ bool PerfCounters::Initialize() {
 
 bool PerfCounters::IsCounterSupported(const std::string& name) {
   Initialize();
-  perf_event_attr_t attr;
+  perf_event_attr attr;
   std::memset(&attr, 0, sizeof(attr));
   pfm_perf_encode_arg_t arg;
   std::memset(&arg, 0, sizeof(arg));
@@ -79,6 +83,55 @@ bool PerfCounters::IsCounterSupported(const std::string& name) {
   int ret = pfm_get_os_event_encoding(name.c_str(), mode, PFM_OS_PERF_EVENT_EXT,
                                       &arg);
   return (ret == PFM_SUCCESS);
+}
+
+static std::optional<std::vector<uint64_t>> QueryCPUPMUTypes() {
+  std::vector<uint64_t> types;
+  DIR* dir = opendir("/sys/bus/event_source/devices");
+  if (!dir) {
+    return std::nullopt;
+  }
+  while (dirent* ent = readdir(dir)) {
+    std::string_view name_str = ent->d_name;
+    auto node_path = [&](const char* node) {
+      return std::string("/sys/bus/event_source/devices/") + ent->d_name + "/" +
+             node;
+    };
+    struct stat st;
+    if (name_str == "cpu" || name_str == "cpum_cf" ||
+        stat(node_path("cpus").c_str(), &st) == 0 || errno != ENOENT) {
+      int type_fd = open(node_path("type").c_str(), O_RDONLY);
+      if (type_fd < 0) {
+        closedir(dir);
+        return std::nullopt;
+      }
+      char type_str[32] = {};
+      ssize_t res = read(type_fd, type_str, sizeof(type_str) - 1);
+      close(type_fd);
+      if (res < 0) {
+        closedir(dir);
+        return std::nullopt;
+      }
+      uint64_t type;
+      if (sscanf(type_str, "%" PRIu64, &type) != 1) {
+        closedir(dir);
+        return std::nullopt;
+      }
+      types.push_back(type);
+    }
+  }
+  closedir(dir);
+  return types;
+}
+
+static std::vector<uint64_t> GetPMUTypesForEvent(const perf_event_attr& attr) {
+  // Replicate generic hardware events on all CPU PMUs.
+  if (attr.type == PERF_TYPE_HARDWARE && attr.config < PERF_COUNT_HW_MAX) {
+    if (auto types = QueryCPUPMUTypes()) {
+      return *types;
+    }
+  }
+  return {0};
 }
 
 PerfCounters PerfCounters::Create(
@@ -160,50 +213,54 @@ PerfCounters PerfCounters::Create(
     attr.read_format = PERF_FORMAT_GROUP;  //| PERF_FORMAT_TOTAL_TIME_ENABLED |
                                            // PERF_FORMAT_TOTAL_TIME_RUNNING;
 
-    int id = -1;
-    while (id < 0) {
-      static constexpr size_t kNrOfSyscallRetries = 5;
-      // Retry syscall as it was interrupted often (b/64774091).
-      for (size_t num_retries = 0; num_retries < kNrOfSyscallRetries;
-           ++num_retries) {
-        id = perf_event_open(&attr, 0, -1, group_id, 0);
-        if (id >= 0 || errno != EINTR) {
-          break;
+    uint64_t base_config = attr.config;
+    for (uint64_t pmu : GetPMUTypesForEvent(attr)) {
+      attr.config = (pmu << PERF_PMU_TYPE_SHIFT) | base_config;
+      int id = -1;
+      while (id < 0) {
+        static constexpr size_t kNrOfSyscallRetries = 5;
+        // Retry syscall as it was interrupted often (b/64774091).
+        for (size_t num_retries = 0; num_retries < kNrOfSyscallRetries;
+             ++num_retries) {
+          id = perf_event_open(&attr, 0, -1, group_id, 0);
+          if (id >= 0 || errno != EINTR) {
+            break;
+          }
+        }
+        if (id < 0) {
+          // If the file descriptor is negative we might have reached a limit
+          // in the current group. Set the group_id to -1 and retry
+          if (group_id >= 0) {
+            // Create a new group
+            group_id = -1;
+          } else {
+            // At this point we have already retried to set a new group id and
+            // failed. We then give up.
+            break;
+          }
         }
       }
+
+      // We failed to get a new file descriptor. We might have reached a hard
+      // hardware limit that cannot be resolved even with group multiplexing
       if (id < 0) {
-        // If the file descriptor is negative we might have reached a limit
-        // in the current group. Set the group_id to -1 and retry
-        if (group_id >= 0) {
-          // Create a new group
-          group_id = -1;
-        } else {
-          // At this point we have already retried to set a new group id and
-          // failed. We then give up.
-          break;
-        }
+        GetErrorLogInstance() << "***WARNING** Failed to get a file descriptor "
+                                 "for performance counter "
+                              << name << ". Ignoring\n";
+
+        // We give up on this counter but try to keep going
+        // as the others would be fine
+        continue;
       }
+      if (group_id < 0) {
+        // This is a leader, store and assign it to the current file descriptor
+        leader_ids.push_back(id);
+        group_id = id;
+      }
+      // This is a valid counter, add it to our descriptor's list
+      counter_ids.push_back(id);
+      valid_names.push_back(name);
     }
-
-    // We failed to get a new file descriptor. We might have reached a hard
-    // hardware limit that cannot be resolved even with group multiplexing
-    if (id < 0) {
-      GetErrorLogInstance() << "***WARNING** Failed to get a file descriptor "
-                               "for performance counter "
-                            << name << ". Ignoring\n";
-
-      // We give up on this counter but try to keep going
-      // as the others would be fine
-      continue;
-    }
-    if (group_id < 0) {
-      // This is a leader, store and assign it to the current file descriptor
-      leader_ids.push_back(id);
-      group_id = id;
-    }
-    // This is a valid counter, add it to our descriptor's list
-    counter_ids.push_back(id);
-    valid_names.push_back(name);
   }
 
   // Loop through all group leaders activating them
@@ -216,7 +273,7 @@ PerfCounters PerfCounters::Create(
       // This should never happen but if it does, we give up on the
       // entire batch as recovery would be a mess.
       GetErrorLogInstance() << "***WARNING*** Failed to start counters. "
-                               "Claring out all counters.\n";
+                               "Clearing out all counters.\n";
 
       // Close all performance counters
       for (int id : counter_ids) {

@@ -39,7 +39,6 @@
 #include "dawn/native/IndirectDrawMetadata.h"
 #include "dawn/native/ObjectBase.h"
 #include "dawn/native/PassResourceUsage.h"
-
 #include "dawn/native/dawn_platform.h"
 
 namespace dawn::native {
@@ -47,7 +46,7 @@ namespace dawn::native {
 struct RenderBundleDescriptor;
 class RenderBundleEncoder;
 
-class RenderBundleBase final : public ApiObjectBase {
+class RenderBundleBase : public ApiObjectBase {
   public:
     RenderBundleBase(RenderBundleEncoder* encoder,
                      const RenderBundleDescriptor* descriptor,
@@ -74,10 +73,11 @@ class RenderBundleBase final : public ApiObjectBase {
     const RenderPassResourceUsage& GetResourceUsage() const;
     const IndirectDrawMetadata& GetIndirectDrawMetadata();
 
+  protected:
+    void DestroyImpl(DestroyReason reason) override;
+
   private:
     RenderBundleBase(DeviceBase* device, ErrorTag errorTag, StringView label);
-
-    void DestroyImpl() override;
 
     CommandIterator mCommands;
     IndirectDrawMetadata mIndirectDrawMetadata;

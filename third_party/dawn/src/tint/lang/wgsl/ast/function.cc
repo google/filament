@@ -28,7 +28,6 @@
 #include "src/tint/lang/wgsl/ast/function.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 #include "src/tint/lang/wgsl/ast/stage_attribute.h"
 #include "src/tint/lang/wgsl/ast/type.h"
 #include "src/tint/lang/wgsl/ast/workgroup_attribute.h"
@@ -37,8 +36,7 @@ TINT_INSTANTIATE_TYPEINFO(tint::ast::Function);
 
 namespace tint::ast {
 
-Function::Function(GenerationID pid,
-                   NodeID nid,
+Function::Function(NodeID nid,
                    const Source& src,
                    const Identifier* n,
                    VectorRef<const Parameter*> parameters,
@@ -46,7 +44,7 @@ Function::Function(GenerationID pid,
                    const BlockStatement* b,
                    VectorRef<const Attribute*> attrs,
                    VectorRef<const Attribute*> return_type_attrs)
-    : Base(pid, nid, src),
+    : Base(nid, src),
       name(n),
       params(std::move(parameters)),
       return_type(return_ty),
@@ -57,18 +55,14 @@ Function::Function(GenerationID pid,
     if (name) {
         TINT_ASSERT(!name->Is<TemplatedIdentifier>());
     }
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(name, generation_id);
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(return_ty, generation_id);
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(body, generation_id);
     for (auto* param : params) {
         TINT_ASSERT(tint::Is<Parameter>(param));
-        TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(param, generation_id);
     }
     for (auto* attr : attributes) {
-        TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(attr, generation_id);
+        TINT_ASSERT(attr);
     }
     for (auto* attr : return_type_attributes) {
-        TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(attr, generation_id);
+        TINT_ASSERT(attr);
     }
 }
 
@@ -79,18 +73,6 @@ PipelineStage Function::PipelineStage() const {
         return stage->stage;
     }
     return PipelineStage::kNone;
-}
-
-const Function* Function::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto n = ctx.Clone(name);
-    auto p = ctx.Clone(params);
-    auto ret = ctx.Clone(return_type);
-    auto* b = ctx.Clone(body);
-    auto attrs = ctx.Clone(attributes);
-    auto ret_attrs = ctx.Clone(return_type_attributes);
-    return ctx.dst->create<Function>(src, n, p, ret, b, attrs, ret_attrs);
 }
 
 const Function* FunctionList::Find(Symbol sym) const {

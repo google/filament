@@ -25,6 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <array>
 #include <cstdint>
 #include <numeric>
 #include <string>
@@ -100,9 +101,107 @@ class ShaderAtomicTests : public DawnTestWithParams<SubgroupsShaderTestsParams> 
     }
 };
 
+DAWN_TEST_PARAM_STRUCT(ShaderAtomicVec2TestsParams, WorkgroupSizeParameter, DispatchSizeParameter);
+
+class ShaderAtomicVec2Tests : public DawnTestWithParams<ShaderAtomicVec2TestsParams> {
+  public:
+    using DawnTestWithParams<ShaderAtomicVec2TestsParams>::GetParam;
+    using DawnTestWithParams<ShaderAtomicVec2TestsParams>::SupportsFeatures;
+
+    wgpu::Buffer CreateBuffer(const std::vector<std::array<uint32_t, 2>>& data,
+                              wgpu::BufferUsage usage = wgpu::BufferUsage::Storage |
+                                                        wgpu::BufferUsage::CopySrc) {
+        uint64_t bufferSize = static_cast<uint64_t>(data.size() * sizeof(uint32_t) * 2);
+        return utils::CreateBufferFromData(device, data.data(), bufferSize, usage);
+    }
+
+    wgpu::ComputePipeline CreateComputePipeline(
+        const std::string& shader,
+        const char* entryPoint = nullptr,
+        const std::vector<wgpu::ConstantEntry>* constants = nullptr) {
+        wgpu::ComputePipelineDescriptor csDesc;
+        csDesc.compute.module = utils::CreateShaderModule(device, shader.c_str());
+        csDesc.compute.entryPoint = entryPoint;
+        if (constants) {
+            csDesc.compute.constants = constants->data();
+            csDesc.compute.constantCount = constants->size();
+        }
+        return device.CreateComputePipeline(&csDesc);
+    }
+
+  protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        // Always require related features if available.
+        std::vector<wgpu::FeatureName> requiredFeatures;
+        if (SupportsFeatures({wgpu::FeatureName::AtomicVec2uMinMax})) {
+            requiredFeatures.push_back(wgpu::FeatureName::AtomicVec2uMinMax);
+        } else {
+            // Test will not work.
+        }
+        return requiredFeatures;
+    }
+};
+
+TEST_P(ShaderAtomicVec2Tests, StorageBufferAtomicVec2Max) {
+    DAWN_TEST_UNSUPPORTED_IF(!SupportsFeatures({wgpu::FeatureName::AtomicVec2uMinMax}));
+
+    const unsigned int workgroupSize = GetParam().mWorkgroupSizeParameter;
+    const unsigned int dispatchSize = GetParam().mDispatchSizeParameter;
+    const unsigned int numInvocations = workgroupSize * dispatchSize;
+
+    std::stringstream code;
+    code << R"(
+
+    enable atomic_vec2u_min_max;
+
+struct AtomicVec2U32 {
+    value : atomic<vec2<u32>>
+}
+@binding(0) @group(0) var<storage, read_write> atomic_storage_buffer_max : AtomicVec2U32;
+@binding(1) @group(0) var<storage, read_write> atomic_storage_buffer_min : AtomicVec2U32;
+
+@compute @workgroup_size()"
+         << workgroupSize << R"()
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
+    let i = global_id.x;
+    let num_invocations = )"
+         << numInvocations << R"(u;
+    let val = vec2<u32>(num_invocations - i, i);
+    atomicStoreMax(&atomic_storage_buffer_max.value, val);
+    atomicStoreMin(&atomic_storage_buffer_min.value, val);
+}
+)";
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(code.str());
+
+    wgpu::Buffer atomicBufferMax = CreateBuffer({{0, 0}});
+    wgpu::Buffer atomicBufferMin = CreateBuffer({{0xFFFFFFFF, 0xFFFFFFFF}});
+
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {{0, atomicBufferMax}, {1, atomicBufferMin}});
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(dispatchSize);
+        pass.End();
+        commands = encoder.Finish();
+    }
+
+    queue.Submit(1, &commands);
+
+    std::array<uint32_t, 2> expectedMax = {1, numInvocations - 1};
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedMax.data(), atomicBufferMax, 0, 2);
+    std::array<uint32_t, 2> expectedMin = {numInvocations, 0};
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedMin.data(), atomicBufferMin, 0, 2);
+}
+
 TEST_P(ShaderAtomicTests, WorkgroupAtomicArray) {
     // Suppression for Mali gpus.
-    DAWN_SUPPRESS_TEST_IF(gpu_info::IsARM(GetParam().adapterProperties.vendorID));
+    DAWN_SUPPRESS_TEST_IF(IsARM());
     DAWN_SUPPRESS_TEST_IF(IsWARP());
 
     // Test code only supports up to 256 workgroup size.
@@ -189,7 +288,7 @@ fn main(@builtin(local_invocation_index) local_invocation_index: u32,
 
 DAWN_INSTANTIATE_TEST_P(ShaderAtomicTests,
                         /*Supporting only modern graphics backends for now.*/
-                        {D3D12Backend(), MetalBackend(), VulkanBackend()},
+                        {D3D12Backend(), MetalBackend(), VulkanBackend(), WebGPUBackend()},
                         {true, false}, /*use shader array*/
                         {1,  2,  3,  4,  5,  6,   7,   8,   9,   13, 15,
                          16, 31, 32, 53, 64, 111, 128, 137, 173, 256}, /* workgroup size*/
@@ -197,6 +296,13 @@ DAWN_INSTANTIATE_TEST_P(ShaderAtomicTests,
                             1,
                         }, /*dispatch size */
                         {ShaderAtomicOp::AtomicAdd, ShaderAtomicOp::AtomicCASFakeAdd});
+
+DAWN_INSTANTIATE_TEST_P(ShaderAtomicVec2Tests,
+                        {VulkanBackend(), MetalBackend()},
+                        {1,  2,  3,  4,  5,  6,   7,   8,   9,   13, 15,
+                         16, 31, 32, 53, 64, 111, 128, 137, 173, 256}, /* workgroup size*/
+                        {1, 2, 7, 15}                                  /*dispatch size */
+);
 
 }  // anonymous namespace
 }  // namespace dawn

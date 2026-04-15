@@ -45,12 +45,6 @@ class ValueConversion final : public Castable<ValueConversion, CallTarget> {
 
     /// Destructor
     ~ValueConversion() override;
-
-    /// @returns the cast source type
-    const core::type::Type* Source() const { return Parameters()[0]->Type(); }
-
-    /// @returns the cast target type
-    const core::type::Type* Target() const { return ReturnType(); }
 };
 
 }  // namespace tint::sem

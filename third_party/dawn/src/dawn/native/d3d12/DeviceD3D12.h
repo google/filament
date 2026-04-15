@@ -72,6 +72,8 @@ class Device final : public d3d::Device {
     MaybeError TickImpl() override;
 
     ID3D12Device* GetD3D12Device() const;
+    ComPtr<ID3D11On12Device> GetOrCreateD3D11On12Device();
+    ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue() const;
 
     ComPtr<ID3D12CommandSignature> GetDispatchIndirectSignature() const;
     ComPtr<ID3D12CommandSignature> GetDrawIndirectSignature() const;
@@ -103,7 +105,7 @@ class Device final : public d3d::Device {
                                        uint64_t destinationOffset,
                                        uint64_t size);
 
-    MaybeError CopyFromStagingToTextureImpl(const BufferBase* source,
+    MaybeError CopyFromStagingToTextureImpl(BufferBase* source,
                                             const TexelCopyBufferLayout& src,
                                             const TextureCopy& dst,
                                             const Extent3D& copySizePixels) override;
@@ -117,10 +119,13 @@ class Device final : public d3d::Device {
 
     void DeallocateMemory(ResourceHeapAllocation& allocation);
 
-    MutexProtected<ShaderVisibleDescriptorAllocator>& GetViewShaderVisibleDescriptorAllocator()
-        const;
-    MutexProtected<ShaderVisibleDescriptorAllocator>& GetSamplerShaderVisibleDescriptorAllocator()
-        const;
+    // Returns the shader-visible view (SRV) allocator. Not MutexProtected as it is only accessed by
+    // a single thread, during command recording.
+    ShaderVisibleDescriptorAllocator* GetViewShaderVisibleDescriptorAllocator() const;
+
+    // Returns the shader-visible view (SRV) allocator. Not MutexProtected as it is only accessed by
+    // a single thread, during command recording.
+    ShaderVisibleDescriptorAllocator* GetSamplerShaderVisibleDescriptorAllocator() const;
 
     // Returns nullptr when descriptor count is zero.
     MutexProtected<StagingDescriptorAllocator>* GetViewStagingDescriptorAllocator(
@@ -179,20 +184,21 @@ class Device final : public d3d::Device {
            Ref<DeviceBase::DeviceLostEvent>&& lostEvent);
 
     ResultOrError<Ref<BindGroupBase>> CreateBindGroupImpl(
-        const BindGroupDescriptor* descriptor) override;
+        const UnpackedPtr<BindGroupDescriptor>& descriptor) override;
     ResultOrError<Ref<BindGroupLayoutInternalBase>> CreateBindGroupLayoutImpl(
-        const BindGroupLayoutDescriptor* descriptor) override;
+        const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor) override;
     ResultOrError<Ref<BufferBase>> CreateBufferImpl(
         const UnpackedPtr<BufferDescriptor>& descriptor) override;
     ResultOrError<Ref<PipelineLayoutBase>> CreatePipelineLayoutImpl(
         const UnpackedPtr<PipelineLayoutDescriptor>& descriptor) override;
     ResultOrError<Ref<QuerySetBase>> CreateQuerySetImpl(
         const QuerySetDescriptor* descriptor) override;
+    ResultOrError<Ref<ResourceTableBase>> CreateResourceTableImpl(
+        const ResourceTableDescriptor* descriptor) override;
     ResultOrError<Ref<SamplerBase>> CreateSamplerImpl(const SamplerDescriptor* descriptor) override;
     ResultOrError<Ref<ShaderModuleBase>> CreateShaderModuleImpl(
         const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-        const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult) override;
+        const std::vector<tint::wgsl::Extension>& internalExtensions) override;
     ResultOrError<Ref<SwapChainBase>> CreateSwapChainImpl(
         Surface* surface,
         SwapChainBase* previousSwapChain,
@@ -216,13 +222,13 @@ class Device final : public d3d::Device {
     ResultOrError<Ref<SharedFenceBase>> ImportSharedFenceImpl(
         const SharedFenceDescriptor* descriptor) override;
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     MaybeError CheckDebugLayerAndGenerateErrors();
     void AppendDebugLayerMessages(ErrorData* error) override;
     void AppendDeviceLostMessage(ErrorData* error) override;
 
-    ResultOrError<ComPtr<ID3D11On12Device>> GetOrCreateD3D11on12Device();
+    ResultOrError<ComPtr<ID3D11On12Device>> GetOrCreateD3D11On12DeviceInternal();
     void Flush11On12DeviceToAvoidLeaks();
 
     MaybeError EnsureCompilerLibraries();
@@ -269,11 +275,9 @@ class Device final : public d3d::Device {
 
     std::unique_ptr<MutexProtected<StagingDescriptorAllocator>> mDepthStencilViewAllocator;
 
-    std::unique_ptr<MutexProtected<ShaderVisibleDescriptorAllocator>>
-        mViewShaderVisibleDescriptorAllocator;
+    std::unique_ptr<ShaderVisibleDescriptorAllocator> mViewShaderVisibleDescriptorAllocator;
 
-    std::unique_ptr<MutexProtected<ShaderVisibleDescriptorAllocator>>
-        mSamplerShaderVisibleDescriptorAllocator;
+    std::unique_ptr<ShaderVisibleDescriptorAllocator> mSamplerShaderVisibleDescriptorAllocator;
 
     // Sampler cache needs to be destroyed before the CPU sampler allocator to ensure the final
     // release is called.

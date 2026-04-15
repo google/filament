@@ -27,10 +27,10 @@
 
 // GEN_BUILD:CONDITION(!tint_build_is_win)
 
-#include "src/tint/utils/system/env.h"
-
 #include <cstdlib>
 #include <string_view>
+
+#include "src/tint/utils/system/env.h"
 
 namespace tint {
 

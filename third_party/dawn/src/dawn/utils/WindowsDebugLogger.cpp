@@ -25,14 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
+#include "dawn/common/windows_with_undefs.h"
+
 #include <array>
 #include <cstdio>
 #include <thread>
 
-#include "dawn/utils/PlatformDebugLogger.h"
-
 #include "dawn/common/Assert.h"
-#include "dawn/common/windows_with_undefs.h"
+#include "dawn/utils/PlatformDebugLogger.h"
+#include "dawn/utils/SystemHandle.h"
 
 namespace dawn::utils {
 
@@ -57,26 +63,28 @@ class WindowsDebugLogger : public PlatformDebugLogger {
                     char data[4096 - sizeof(DWORD)];
                 }* dbWinBuffer = nullptr;
 
-                HANDLE file = CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
-                                                 sizeof(*dbWinBuffer), "DBWIN_BUFFER");
-                DAWN_ASSERT(file != nullptr);
-                DAWN_ASSERT(file != INVALID_HANDLE_VALUE);
+                SystemHandle file = SystemHandle::Acquire(
+                    CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
+                                       sizeof(*dbWinBuffer), "DBWIN_BUFFER"));
+                DAWN_ASSERT(file.IsValid());
 
                 dbWinBuffer = static_cast<decltype(dbWinBuffer)>(
-                    MapViewOfFile(file, SECTION_MAP_READ, 0, 0, 0));
+                    MapViewOfFile(file.Get(), SECTION_MAP_READ, 0, 0, 0));
                 DAWN_ASSERT(dbWinBuffer != nullptr);
 
-                HANDLE dbWinBufferReady = CreateEventA(nullptr, FALSE, FALSE, "DBWIN_BUFFER_READY");
-                DAWN_ASSERT(dbWinBufferReady != nullptr);
+                SystemHandle dbWinBufferReady = SystemHandle::Acquire(
+                    CreateEventA(nullptr, FALSE, FALSE, "DBWIN_BUFFER_READY"));
+                DAWN_ASSERT(dbWinBufferReady.IsValid());
 
-                HANDLE dbWinDataReady = CreateEventA(nullptr, FALSE, FALSE, "DBWIN_DATA_READY");
-                DAWN_ASSERT(dbWinDataReady != nullptr);
+                SystemHandle dbWinDataReady =
+                    SystemHandle::Acquire(CreateEventA(nullptr, FALSE, FALSE, "DBWIN_DATA_READY"));
+                DAWN_ASSERT(dbWinDataReady.IsValid());
 
-                std::array<HANDLE, 2> waitHandles = {shouldExit, dbWinDataReady};
+                std::array<HANDLE, 2> waitHandles = {shouldExit, dbWinDataReady.Get()};
                 while (true) {
-                    SetEvent(dbWinBufferReady);
-                    DWORD wait = WaitForMultipleObjects(waitHandles.size(), waitHandles.data(),
-                                                        FALSE, INFINITE);
+                    SetEvent(dbWinBufferReady.Get());
+                    DWORD wait = WaitForMultipleObjects(DWORD(waitHandles.size()),
+                                                        waitHandles.data(), FALSE, INFINITE);
                     if (wait == WAIT_OBJECT_0) {
                         break;
                     }
@@ -86,10 +94,7 @@ class WindowsDebugLogger : public PlatformDebugLogger {
                     fflush(stderr);
                 }
 
-                CloseHandle(dbWinDataReady);
-                CloseHandle(dbWinBufferReady);
                 UnmapViewOfFile(dbWinBuffer);
-                CloseHandle(file);
             },
             mShouldExitHandle);
     }

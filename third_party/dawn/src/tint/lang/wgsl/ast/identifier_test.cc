@@ -35,12 +35,12 @@ using IdentifierDeathTest = IdentifierTest;
 
 TEST_F(IdentifierTest, Creation) {
     auto* i = Ident("ident");
-    EXPECT_EQ(i->symbol, Symbol(1, ID(), "ident"));
+    EXPECT_EQ(i->symbol, Symbols().Get("ident"));
 }
 
 TEST_F(IdentifierTest, Creation_WithSource) {
     auto* i = Ident(Source{{20, 2}}, "ident");
-    EXPECT_EQ(i->symbol, Symbol(1, ID(), "ident"));
+    EXPECT_EQ(i->symbol, Symbols().Get("ident"));
 
     auto src = i->source;
     EXPECT_EQ(src.range.begin.line, 20u);
@@ -57,16 +57,6 @@ TEST_F(IdentifierDeathTest, Assert_InvalidSymbol) {
         {
             ProgramBuilder b;
             b.Ident("");
-        },
-        "internal compiler error");
-}
-
-TEST_F(IdentifierDeathTest, Assert_DifferentGenerationID_Symbol) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Ident(b2.Sym("b2"));
         },
         "internal compiler error");
 }

@@ -17,13 +17,16 @@
 
 #include "complexity.h"
 
-#include <algorithm>
 #include <cmath>
 
-#include "benchmark/benchmark.h"
+#include "benchmark/reporter.h"
+#include "benchmark/statistics.h"
+#include "benchmark/types.h"
 #include "check.h"
 
 namespace benchmark {
+
+namespace {
 
 // Internal function to calculate the different scalability forms
 BigOFunc* FittingCurve(BigO complexity) {
@@ -48,6 +51,8 @@ BigOFunc* FittingCurve(BigO complexity) {
   }
 }
 
+}  // end namespace
+
 // Function to return an string for the calculated complexity
 std::string GetBigOString(BigO complexity) {
   switch (complexity) {
@@ -67,6 +72,8 @@ std::string GetBigOString(BigO complexity) {
       return "f(N)";
   }
 }
+
+namespace {
 
 // Find the coefficient for the high-order term in the running time, by
 // minimizing the sum of squares of relative error, for the fitting curve
@@ -152,12 +159,16 @@ LeastSq MinimalLeastSq(const std::vector<ComplexityN>& n,
   return best_fit;
 }
 
+}  // end namespace
+
 std::vector<BenchmarkReporter::Run> ComputeBigO(
     const std::vector<BenchmarkReporter::Run>& reports) {
   typedef BenchmarkReporter::Run Run;
   std::vector<Run> results;
 
-  if (reports.size() < 2) return results;
+  if (reports.size() < 2) {
+    return results;
+  }
 
   // Accumulators.
   std::vector<ComplexityN> n;

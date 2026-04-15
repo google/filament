@@ -46,15 +46,13 @@ namespace tint::ast {
 class Override final : public Castable<Override, Variable> {
   public:
     /// Create an 'override' pipeline-overridable constant.
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the variable source
     /// @param name the variable name
     /// @param type the declared variable type
     /// @param initializer the initializer expression
     /// @param attributes the variable attributes
-    Override(GenerationID pid,
-             NodeID nid,
+    Override(NodeID nid,
              const Source& source,
              const Identifier* name,
              Type type,
@@ -66,12 +64,6 @@ class Override final : public Castable<Override, Variable> {
 
     /// @returns "override"
     const char* Kind() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const Override* Clone(CloneContext& ctx) const override;
 };
 
 }  // namespace tint::ast

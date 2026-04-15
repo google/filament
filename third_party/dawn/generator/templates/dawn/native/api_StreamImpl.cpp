@@ -122,4 +122,7 @@ void stream::Stream<{{StringViewType}}>::Write(stream::Sink* sink, const {{Strin
 {% call render_streaming_impl("extent 3D", true, true) %}
 {% endcall %}
 
+{% call render_streaming_impl("subgroup matrix config", true, true) %}
+{% endcall %}
+
 } // namespace {{native_namespace}}

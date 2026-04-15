@@ -136,7 +136,7 @@
                       "Record must be at most one of is_cmd, extensible, and chained.");
         {% if is_cmd %}
             //* Start the transfer structure with the command ID, so that casting to WireCmd gives the ID.
-            {{Return}}WireCmd commandId;
+            WireCmd commandId;
         {% elif record.extensible %}
             WGPUBool hasNextInChain;
         {% elif record.chained %}
@@ -199,6 +199,7 @@
             {%- set memberName = as_varName(member.name) -%}
             //* Skip size computation if we are skipping serialization.
             {% if member.skip_serialize %}
+                // [Skipped serialization for {{ memberName }}, it needs to be filled with a CommandExtension by the caller.]
                 {% continue %}
             {% endif %}
             //* Normal handling for pointer members and structs.
@@ -242,7 +243,7 @@
     ) {
         //* Handle special transfer members of methods.
         {% if is_cmd %}
-            transfer->commandId = {{Return}}WireCmd::{{name}};
+            transfer->commandId = WireCmd::{{Return}}{{name}};
         {% endif %}
 
         {% if record.extensible %}
@@ -291,6 +292,7 @@
             {% set memberName = as_varName(member.name) %}
             //* Skip serialization for custom serialized members and callback infos.
             {% if member.skip_serialize or member.type.category == 'callback info' %}
+                // [Skipped serialization for {{ memberName }}, it needs to be filled with a CommandExtension by the caller.]
                 {% continue %}
             {% endif %}
             //* Value types are directly in the transfer record, objects being replaced with their IDs.
@@ -348,7 +350,7 @@
             , const ObjectIdResolver& resolver
         {%- endif -%}) {
         {% if is_cmd %}
-            DAWN_ASSERT(transfer->commandId == {{Return}}WireCmd::{{name}});
+            DAWN_ASSERT(transfer->commandId == WireCmd::{{Return}}{{name}});
         {% endif %}
         {% if record.derived_method %}
             record->selfId = transfer->self;
@@ -611,7 +613,15 @@ WireResult WGPUStringViewSerialize(
     transfer->has_data = has_data;
 
     if (!has_data) {
-        transfer->length = length;
+        // The StringView is either empty or nil. Wire needs to be bitness-independent, so we use
+        // UINT64_MAX as the sentinel (instead of WGPU_STRLEN, which is SIZE_MAX).
+        if (length == 0) {
+            transfer->length = 0;
+        } else if (length == WGPU_STRLEN) {
+            transfer->length = UINT64_MAX;
+        } else {
+            DAWN_ASSERT(false);
+        }
         return WireResult::Success;
     }
     if (length == WGPU_STRLEN) {
@@ -635,17 +645,20 @@ WireResult WGPUStringViewDeserialize(
     bool has_data = transfer->has_data;
     uint64_t length = transfer->length;
 
-    if (length > WGPU_STRLEN) {
-        return WireResult::FatalError;
-    }
     if (!has_data) {
         record->data = nullptr;
-        if (length != 0 && length != WGPU_STRLEN) {
-            // Invalid string.
+        // The StringView is either empty or nil. Wire needs to be bitness-independent, so we use
+        // UINT64_MAX as the sentinel (instead of WGPU_STRLEN, which is SIZE_MAX).
+        if (length == 0) {
+            record->length = 0;
+            return WireResult::Success;
+        } else if (length == UINT64_MAX) {
+            record->length = WGPU_STRLEN;
+            return WireResult::Success;
+        } else {
+            // Invalid - string with size but no data.
             return WireResult::FatalError;
         }
-        record->length = static_cast<size_t>(length);
-        return WireResult::Success;
     }
     if (length == 0) {
         record->data = "";
@@ -653,6 +666,9 @@ WireResult WGPUStringViewDeserialize(
         return WireResult::Success;
     }
 
+    if (length > WGPU_STRLEN) {
+        return WireResult::FatalError;
+    }
     size_t stringLength = static_cast<size_t>(length);
     const volatile char* stringInBuffer;
     WIRE_TRY(deserializeBuffer->ReadN(stringLength, &stringInBuffer));
@@ -688,6 +704,12 @@ WireResult WGPUStringViewDeserialize(
         {% continue %}
     {% endif %}
     {% do sTypes.append(sType) %}
+{% endfor %}
+
+//* Output [de]serialization helpers for special commands
+{% for command in cmd_records["special command"] %}
+    {%- set name = command.name.CamelCase() -%}
+    {{write_record_serialization_helpers(command, name, command.members, is_cmd=True)}}
 {% endfor %}
 
 //* Output [de]serialization helpers for commands
@@ -734,6 +756,10 @@ class ErrorObjectIdProvider final : public ObjectIdProvider {
 };
 
 }  // anonymous namespace
+
+{% for command in cmd_records["special command"] -%}
+    {{write_command_serialization_methods(command, False)}}
+{% endfor %}
 
 {% for command in cmd_records["command"] -%}
     {{write_command_serialization_methods(command, False)}}

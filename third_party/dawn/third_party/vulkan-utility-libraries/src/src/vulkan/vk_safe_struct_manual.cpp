@@ -206,6 +206,7 @@ safe_VkAccelerationStructureGeometryKHR::~safe_VkAccelerationStructureGeometryKH
     if (iter != GetAccelStructGeomHostAllocMap().end()) {
         delete iter->second;
     }
+
     FreePnextChain(pNext);
     if (geometryType == VK_GEOMETRY_TYPE_INSTANCES_KHR) {
         FreePnextChain(geometry.instances.pNext);

@@ -54,7 +54,7 @@ tint_target_add_dependencies(tint_cmd_common lib
   tint_lang_wgsl_inspector
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
-  tint_lang_wgsl_writer_ir_to_program
+  tint_lang_wgsl_writer_common
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic

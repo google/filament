@@ -48,6 +48,7 @@ cc_library(
     "//src/tint/api/common",
     "//src/tint/lang/core",
     "//src/tint/lang/core/constant",
+    "//src/tint/lang/core/intrinsic",
     "//src/tint/lang/core/ir",
     "//src/tint/lang/core/ir/transform",
     "//src/tint/lang/core/type",

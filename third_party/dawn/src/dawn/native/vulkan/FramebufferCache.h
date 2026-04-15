@@ -56,6 +56,7 @@ struct FramebufferCacheTextureView {
 };
 
 // A key to query the FramebufferCache
+static const uint32_t kMaxFramebufferAttachments = kMaxColorAttachments * 2 + 1;
 struct FramebufferCacheQuery {
     // Use these helpers to build the query, they make sure all relevant data is initialized and
     // masks set.
@@ -70,12 +71,12 @@ struct FramebufferCacheQuery {
     uint32_t width;
     uint32_t height;
 
-    std::array<FramebufferCacheTextureView, kMaxColorAttachments * 2 + 1> textureViews;
+    std::array<FramebufferCacheTextureView, kMaxFramebufferAttachments> textureViews;
 
     // Attachments and clearValues are not used as part of the query hash, but are stored here
     // anyway because it's natural to build them up at the same time as the query criteria.
-    std::array<VkImageView, kMaxColorAttachments * 2 + 1> attachments;
-    std::array<VkClearValue, kMaxColorAttachments + 1> clearValues;
+    std::array<VkImageView, kMaxFramebufferAttachments> attachments;
+    std::array<VkClearValue, kMaxFramebufferAttachments> clearValues;
 
     uint32_t attachmentCount = 0;
 };

@@ -45,8 +45,13 @@ if (tint_build_msl_writer) {
       "validate.h",
     ]
     deps = [
+      "${dawn_root}/src/utils",
+      "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/command",
       "${tint_src_dir}/utils/file",
+      "${tint_src_dir}/utils/ice",
+      "${tint_src_dir}/utils/macros",
+      "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/text",
     ]
 

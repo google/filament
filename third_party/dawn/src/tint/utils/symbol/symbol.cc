@@ -29,11 +29,37 @@
 
 #include <utility>
 
+#include "src/tint/utils/ice/ice.h"
+
 namespace tint {
+namespace {
+
+void AssertGenerationIDsEqual(GenerationID a,
+                              GenerationID b,
+                              const char* msg,
+                              const char* file,
+                              size_t line) {
+    if (a == b) {
+        return;  // matched
+    }
+    if (!a || !b) {
+        return;  //  a or b were not valid
+    }
+    tint::InternalCompilerError(file, line) << msg;
+}
+
+}  // namespace
+
+/// TINT_ASSERT_GENERATION_IDS_EQUAL(A, B) is a macro that asserts
+/// that the generation identifiers for A and B are equal, if both A and B have
+/// valid generation identifiers.
+#define TINT_ASSERT_GENERATION_IDS_EQUAL(a, b)                                                   \
+    AssertGenerationIDsEqual(a, b, "TINT_ASSERT_GENERATION_IDS_EQUAL(" #a ", " #b ")", __FILE__, \
+                             __LINE__)
 
 Symbol::Symbol() = default;
 
-Symbol::Symbol(uint32_t val, tint::GenerationID pid, std::string_view name)
+Symbol::Symbol(uint32_t val, GenerationID pid, std::string_view name)
     : val_(val), generation_id_(pid), name_(name) {}
 
 Symbol::Symbol(const Symbol& o) = default;
@@ -47,17 +73,17 @@ Symbol& Symbol::operator=(const Symbol& o) = default;
 Symbol& Symbol::operator=(Symbol&& o) = default;
 
 bool Symbol::operator==(const Symbol& other) const {
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(generation_id_, other.generation_id_);
+    TINT_ASSERT_GENERATION_IDS_EQUAL(generation_id_, other.generation_id_);
     return val_ == other.val_;
 }
 
 bool Symbol::operator!=(const Symbol& other) const {
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(generation_id_, other.generation_id_);
+    TINT_ASSERT_GENERATION_IDS_EQUAL(generation_id_, other.generation_id_);
     return val_ != other.val_;
 }
 
 bool Symbol::operator<(const Symbol& other) const {
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(generation_id_, other.generation_id_);
+    TINT_ASSERT_GENERATION_IDS_EQUAL(generation_id_, other.generation_id_);
     return val_ < other.val_;
 }
 

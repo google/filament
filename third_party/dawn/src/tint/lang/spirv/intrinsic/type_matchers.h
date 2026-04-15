@@ -32,9 +32,22 @@
 #include "src/tint/lang/core/type/array.h"
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/struct.h"
+#include "src/tint/lang/spirv/type/literal.h"
 #include "src/tint/lang/spirv/type/sampled_image.h"
 
 namespace tint::spirv::intrinsic {
+
+inline bool MatchLiteral(core::intrinsic::MatchState&, const core::type::Type* ty) {
+    if (ty->Is<type::Literal>()) {
+        return true;
+    }
+    return false;
+}
+
+inline const core::type::Type* BuildLiteral(core::intrinsic::MatchState& state,
+                                            const core::type::Type*) {
+    return state.types.Get<type::Literal>();
+}
 
 inline bool MatchStructWithRuntimeArray(core::intrinsic::MatchState&, const core::type::Type* ty) {
     if (auto* str = ty->As<core::type::Struct>()) {

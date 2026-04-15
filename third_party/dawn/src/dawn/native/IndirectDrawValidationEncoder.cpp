@@ -37,6 +37,7 @@
 
 #include "dawn/common/Constants.h"
 #include "dawn/common/Math.h"
+#include "dawn/common/Strings.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/BindGroupLayout.h"
 #include "dawn/native/CommandEncoder.h"
@@ -94,241 +95,237 @@ constexpr uint32_t kIndirectDrawByteSize = sizeof(uint32_t) * 4;
 
 // TODO(https://crbug.com/dawn/1108): Propagate validation feedback from this shader in
 // various failure modes.
-static const char sRenderValidationShaderSource[] = R"(
+static const char sRenderValidationShaderSource[] = DAWN_MULTILINE(
+    const kWorkgroupSize = 64u;
 
-            const kWorkgroupSize = 64u;
+    const kNumDrawIndirectParams = 4u;
+    const kNumDrawIndexedIndirectParams = 5u;
 
-            const kNumDrawIndirectParams = 4u;
-            const kNumDrawIndexedIndirectParams = 5u;
+    const kIndexCountEntry = 0u;
+    const kFirstIndexEntry = 2u;
 
-            const kIndexCountEntry = 0u;
-            const kFirstIndexEntry = 2u;
+    // Bitmasks for BatchInfo::flags and MultiDrawConstants::flags
+    const kDuplicateBaseVertexInstance = 1u;
+    const kIndexedDraw = 2u;
+    const kValidationEnabled = 4u;
+    const kIndirectFirstInstanceEnabled = 8u;
+    const kUseFirstIndexToEmulateIndexBufferOffset = 16u;
+    const kIndirectDrawCountBuffer = 32u;  // if set, drawCount is read from a buffer
 
-            // Bitmasks for BatchInfo::flags and MultiDrawConstants::flags
-            const kDuplicateBaseVertexInstance = 1u;
-            const kIndexedDraw = 2u;
-            const kValidationEnabled = 4u;
-            const kIndirectFirstInstanceEnabled = 8u;
-            const kUseFirstIndexToEmulateIndexBufferOffset = 16u;
-            const kIndirectDrawCountBuffer = 32u; // if set, drawCount is read from a buffer
+    struct MultiDrawConstants {
+        maxDrawCount: u32,
+        indirectOffsetInElements: u32,
+        drawCountOffsetInElements: u32,
+        numIndexBufferElementsLow: u32,
+        numIndexBufferElementsHigh: u32,
+        flags : u32,
+    }
 
-            struct MultiDrawConstants {
-                maxDrawCount: u32,
-                indirectOffsetInElements: u32,
-                drawCountOffsetInElements: u32,
-                numIndexBufferElementsLow: u32,
-                numIndexBufferElementsHigh: u32,
-                flags : u32,
+    struct IndirectDraw {
+        indirectOffset: u32,
+        numIndexBufferElementsLow: u32,
+        numIndexBufferElementsHigh: u32,
+        indexOffsetAsNumElements: u32,
+    }
+
+    struct BatchInfo {
+        numDraws: u32,
+        flags: u32,
+        draws: array<IndirectDraw>,
+    }
+
+    struct IndirectParams {
+        data: array<u32>,
+    }
+
+    // We have two entry points, which use different descriptors at binding 0.
+    // Even though they are overlapping, we only use one for each entry point.
+    @group(0) @binding(0) var<storage, read> batch: BatchInfo;
+    @group(0) @binding(0) var<storage, read> drawConstants: MultiDrawConstants;
+    @group(0) @binding(1) var<storage, read_write> inputParams: IndirectParams;
+    @group(0) @binding(2) var<storage, read_write> outputParams: IndirectParams;
+    // Although the drawCountBuffer only has a u32 value, it is stored in a buffer
+    // to allow for offsetting the buffer in the shader.
+    @group(0) @binding(3) var<storage, read_write> indirectDrawCount : IndirectParams;
+
+    fn numIndirectParamsPerDrawCallInput(flags : u32) -> u32 {
+        // Indexed Draw has an extra parameter (firstIndex)
+        if (bool(flags & kIndexedDraw)) {
+            return kNumDrawIndexedIndirectParams;
+        }
+        return kNumDrawIndirectParams;
+    }
+
+    fn numIndirectParamsPerDrawCallOutput(flags : u32) -> u32 {
+        var numParams = numIndirectParamsPerDrawCallInput(flags);
+        // 2 extra parameter for duplicated first/baseVertex and firstInstance
+        if (bool(flags & kDuplicateBaseVertexInstance)) {
+            numParams = numParams + 2u;
+        }
+        return numParams;
+    }
+
+    fn fail(drawIndex: u32, flags : u32) {
+        let numParams = numIndirectParamsPerDrawCallOutput(flags);
+        let index = drawIndex * numParams;
+        for(var i = 0u; i < numParams; i = i + 1u) {
+            outputParams.data[index + i] = 0u;
+        }
+    }
+
+    fn set_pass_single(drawIndex: u32) {
+        let numInputParams = numIndirectParamsPerDrawCallInput(batch.flags);
+        var outIndex = drawIndex * numIndirectParamsPerDrawCallOutput(batch.flags);
+        let inIndex = batch.draws[drawIndex].indirectOffset;
+
+        // The first 2 parameter is reserved for the duplicated first/baseVertex and firstInstance
+
+        if (bool(batch.flags & kDuplicateBaseVertexInstance)) {
+            // first/baseVertex and firstInstance are always last two parameters
+            let dupIndex = inIndex + numInputParams - 2u;
+            outputParams.data[outIndex] = inputParams.data[dupIndex];
+            outputParams.data[outIndex + 1u] = inputParams.data[dupIndex + 1u];
+
+            outIndex = outIndex + 2u;
+        }
+
+        for(var i = 0u; i < numInputParams; i = i + 1u) {
+            outputParams.data[outIndex + i] = inputParams.data[inIndex + i];
+        }
+
+        if (bool(batch.flags & kUseFirstIndexToEmulateIndexBufferOffset)) {
+            outputParams.data[outIndex + kFirstIndexEntry] += batch.draws[drawIndex].indexOffsetAsNumElements;
+        }
+    }
+
+    fn set_pass_multi(drawIndex: u32) {
+        let numInputParams = numIndirectParamsPerDrawCallInput(drawConstants.flags);
+        var outIndex = drawIndex * numIndirectParamsPerDrawCallOutput(drawConstants.flags);
+        let inIndex = drawIndex * numInputParams;
+        let inputOffset = drawConstants.indirectOffsetInElements;
+
+        if (bool(drawConstants.flags & kDuplicateBaseVertexInstance)) {
+            // first/baseVertex and firstInstance are always last two parameters
+            let dupIndex = inputOffset + inIndex + numInputParams - 2u;
+            outputParams.data[outIndex] = inputParams.data[dupIndex];
+            outputParams.data[outIndex + 1u] = inputParams.data[dupIndex + 1u];
+
+            outIndex = outIndex + 2u;
+        }
+
+        for(var i = 0u; i < numInputParams; i = i + 1u) {
+            outputParams.data[outIndex + i] = inputParams.data[inputOffset + inIndex + i];
+        }
+    }
+
+    @compute @workgroup_size(kWorkgroupSize, 1, 1)
+    fn validate_single_draw(@builtin(global_invocation_id) id : vec3u) {
+        if (id.x >= batch.numDraws) {
+            return;
+        }
+
+        if(!bool(batch.flags & kValidationEnabled)) {
+            set_pass_single(id.x);
+            return;
+        }
+
+        let inputIndex = batch.draws[id.x].indirectOffset;
+        if(!bool(batch.flags & kIndirectFirstInstanceEnabled)) {
+            // firstInstance is always the last parameter
+            let firstInstance = inputParams.data[inputIndex + numIndirectParamsPerDrawCallInput(batch.flags) - 1u];
+            if (firstInstance != 0u) {
+                fail(id.x, batch.flags);
+                return;
             }
+        }
 
-            struct IndirectDraw {
-                indirectOffset: u32,
-                numIndexBufferElementsLow: u32,
-                numIndexBufferElementsHigh: u32,
-                indexOffsetAsNumElements: u32,
-            }
+        if (!bool(batch.flags & kIndexedDraw)) {
+            set_pass_single(id.x);
+            return;
+        }
 
-            struct BatchInfo {
-                numDraws: u32,
-                flags: u32,
-                draws: array<IndirectDraw>,
-            }
+        let numIndexBufferElementsHigh = batch.draws[id.x].numIndexBufferElementsHigh;
 
-            struct IndirectParams {
-                data: array<u32>,
-            }
+        if (numIndexBufferElementsHigh >= 2u) {
+            // firstIndex and indexCount are both u32. The maximum possible sum of these
+            // values is 0x1fffffffe, which is less than 0x200000000. Nothing to validate.
+            set_pass_single(id.x);
+            return;
+        }
 
-            // We have two entry points, which use different descriptors at binding 0.
-            // Even though they are overlapping, we only use one for each entry point.
-            @group(0) @binding(0) var<storage, read> batch: BatchInfo;
-            @group(0) @binding(0) var<storage, read> drawConstants: MultiDrawConstants;
-            @group(0) @binding(1) var<storage, read_write> inputParams: IndirectParams;
-            @group(0) @binding(2) var<storage, read_write> outputParams: IndirectParams;
-            // Although the drawCountBuffer only has a u32 value, it is stored in a buffer
-            // to allow for offsetting the buffer in the shader.
-            @group(0) @binding(3) var<storage, read_write> indirectDrawCount : IndirectParams;
+        let numIndexBufferElementsLow = batch.draws[id.x].numIndexBufferElementsLow;
 
-            fn numIndirectParamsPerDrawCallInput(flags : u32) -> u32 {
-                // Indexed Draw has an extra parameter (firstIndex)
-                if (bool(flags & kIndexedDraw)) {
-                    return kNumDrawIndexedIndirectParams;
-                }
-                return kNumDrawIndirectParams;
-            }
+        let firstIndex = inputParams.data[inputIndex + kFirstIndexEntry];
+        if (numIndexBufferElementsHigh == 0u &&
+            numIndexBufferElementsLow < firstIndex) {
+            fail(id.x, batch.flags);
+            return;
+        }
 
-            fn numIndirectParamsPerDrawCallOutput(flags : u32) -> u32 {
-                var numParams = numIndirectParamsPerDrawCallInput(flags);
-                // 2 extra parameter for duplicated first/baseVertex and firstInstance
-                if (bool(flags & kDuplicateBaseVertexInstance)) {
-                    numParams = numParams + 2u;
-                }
-                return numParams;
-            }
+        // Note that this subtraction may underflow, but only when
+        // numIndexBufferElementsHigh is 1u. The result is still correct in that case.
+        let maxIndexCount = numIndexBufferElementsLow - firstIndex;
+        let indexCount = inputParams.data[inputIndex + kIndexCountEntry];
+        if (indexCount > maxIndexCount) {
+            fail(id.x, batch.flags);
+            return;
+        }
+        set_pass_single(id.x);
+    }
 
-            fn fail(drawIndex: u32, flags : u32) {
-                let numParams = numIndirectParamsPerDrawCallOutput(flags);
-                let index = drawIndex * numParams;
-                for(var i = 0u; i < numParams; i = i + 1u) {
-                    outputParams.data[index + i] = 0u;
-                }
-            }
+    @compute @workgroup_size(kWorkgroupSize, 1, 1)
+    fn validate_multi_draw(@builtin(global_invocation_id) id : vec3u) {
+        var drawCount = drawConstants.maxDrawCount;
+        var drawCountOffset = drawConstants.drawCountOffsetInElements;
 
-            fn set_pass_single(drawIndex: u32) {
-                let numInputParams = numIndirectParamsPerDrawCallInput(batch.flags);
-                var outIndex = drawIndex * numIndirectParamsPerDrawCallOutput(batch.flags);
-                let inIndex = batch.draws[drawIndex].indirectOffset;
+        if(bool(drawConstants.flags & kIndirectDrawCountBuffer)) {
+            let drawCountInBuffer = indirectDrawCount.data[drawCountOffset];
+            drawCount = min(drawCountInBuffer, drawCount);
+        }
 
-                // The first 2 parameter is reserved for the duplicated first/baseVertex and firstInstance
+        if (id.x >= drawCount) {
+            return;
+        }
 
-                if (bool(batch.flags & kDuplicateBaseVertexInstance)) {
-                    // first/baseVertex and firstInstance are always last two parameters
-                    let dupIndex = inIndex + numInputParams - 2u;
-                    outputParams.data[outIndex] = inputParams.data[dupIndex];
-                    outputParams.data[outIndex + 1u] = inputParams.data[dupIndex + 1u];
+        if(!bool(drawConstants.flags & kValidationEnabled)) {
+            set_pass_multi(id.x);
+            return;
+        }
 
-                    outIndex = outIndex + 2u;
-                }
+        if (!bool(drawConstants.flags & kIndexedDraw)) {
+            set_pass_multi(id.x);
+            return;
+        }
 
-                for(var i = 0u; i < numInputParams; i = i + 1u) {
-                    outputParams.data[outIndex + i] = inputParams.data[inIndex + i];
-                }
+        let numIndexBufferElementsHigh = drawConstants.numIndexBufferElementsHigh;
 
-                if (bool(batch.flags & kUseFirstIndexToEmulateIndexBufferOffset)) {
-                    outputParams.data[outIndex + kFirstIndexEntry] += batch.draws[drawIndex].indexOffsetAsNumElements;
-                }
-            }
+        if (numIndexBufferElementsHigh >= 2u) {
+            // firstIndex and indexCount are both u32. The maximum possible sum of these
+            // values is 0x1fffffffe, which is less than 0x200000000. Nothing to validate.
+            set_pass_multi(id.x);
+            return;
+        }
 
-            fn set_pass_multi(drawIndex: u32) {
-                let numInputParams = numIndirectParamsPerDrawCallInput(drawConstants.flags);
-                var outIndex = drawIndex * numIndirectParamsPerDrawCallOutput(drawConstants.flags);
-                let inIndex = drawIndex * numInputParams;
-                let inputOffset = drawConstants.indirectOffsetInElements;
+        let numIndexBufferElementsLow = drawConstants.numIndexBufferElementsLow;
+        let inputOffset = drawConstants.indirectOffsetInElements;
+        let firstIndex = inputParams.data[inputOffset + id.x * numIndirectParamsPerDrawCallInput(drawConstants.flags) + kFirstIndexEntry];
+        if (numIndexBufferElementsHigh == 0u &&
+            numIndexBufferElementsLow < firstIndex) {
+            fail(id.x, drawConstants.flags);
+            return;
+        }
 
-                if (bool(drawConstants.flags & kDuplicateBaseVertexInstance)) {
-                    // first/baseVertex and firstInstance are always last two parameters
-                    let dupIndex = inputOffset + inIndex + numInputParams - 2u;
-                    outputParams.data[outIndex] = inputParams.data[dupIndex];
-                    outputParams.data[outIndex + 1u] = inputParams.data[dupIndex + 1u];
-
-                    outIndex = outIndex + 2u;
-                }
-
-                for(var i = 0u; i < numInputParams; i = i + 1u) {
-                    outputParams.data[outIndex + i] = inputParams.data[inputOffset + inIndex + i];
-                }
-            }
-
-            @compute @workgroup_size(kWorkgroupSize, 1, 1)
-            fn validate_single_draw(@builtin(global_invocation_id) id : vec3u) {
-                if (id.x >= batch.numDraws) {
-                    return;
-                }
-
-                if(!bool(batch.flags & kValidationEnabled)) {
-                    set_pass_single(id.x);
-                    return;
-                }
-
-                let inputIndex = batch.draws[id.x].indirectOffset;
-                if(!bool(batch.flags & kIndirectFirstInstanceEnabled)) {
-                    // firstInstance is always the last parameter
-                    let firstInstance = inputParams.data[inputIndex + numIndirectParamsPerDrawCallInput(batch.flags) - 1u];
-                    if (firstInstance != 0u) {
-                        fail(id.x, batch.flags);
-                        return;
-                    }
-                }
-
-                if (!bool(batch.flags & kIndexedDraw)) {
-                    set_pass_single(id.x);
-                    return;
-                }
-
-                let numIndexBufferElementsHigh = batch.draws[id.x].numIndexBufferElementsHigh;
-
-                if (numIndexBufferElementsHigh >= 2u) {
-                    // firstIndex and indexCount are both u32. The maximum possible sum of these
-                    // values is 0x1fffffffe, which is less than 0x200000000. Nothing to validate.
-                    set_pass_single(id.x);
-                    return;
-                }
-
-                let numIndexBufferElementsLow = batch.draws[id.x].numIndexBufferElementsLow;
-
-                let firstIndex = inputParams.data[inputIndex + kFirstIndexEntry];
-                if (numIndexBufferElementsHigh == 0u &&
-                    numIndexBufferElementsLow < firstIndex) {
-                    fail(id.x, batch.flags);
-                    return;
-                }
-
-                // Note that this subtraction may underflow, but only when
-                // numIndexBufferElementsHigh is 1u. The result is still correct in that case.
-                let maxIndexCount = numIndexBufferElementsLow - firstIndex;
-                let indexCount = inputParams.data[inputIndex + kIndexCountEntry];
-                if (indexCount > maxIndexCount) {
-                    fail(id.x, batch.flags);
-                    return;
-                }
-                set_pass_single(id.x);
-            }
-
-           @compute @workgroup_size(kWorkgroupSize, 1, 1)
-            fn validate_multi_draw(@builtin(global_invocation_id) id : vec3u) {
-                var drawCount = drawConstants.maxDrawCount;
-                var drawCountOffset = drawConstants.drawCountOffsetInElements;
-
-                if(bool(drawConstants.flags & kIndirectDrawCountBuffer)) {
-                    let drawCountInBuffer = indirectDrawCount.data[drawCountOffset];
-                    drawCount = min(drawCountInBuffer, drawCount);
-                }
-
-                if (id.x >= drawCount) {
-                    return;
-                }
-
-                if(!bool(drawConstants.flags & kValidationEnabled)) {
-                    set_pass_multi(id.x);
-                    return;
-                }
-
-                if (!bool(drawConstants.flags & kIndexedDraw)) {
-                    set_pass_multi(id.x);
-                    return;
-                }
-
-                let numIndexBufferElementsHigh = drawConstants.numIndexBufferElementsHigh;
-
-                if (numIndexBufferElementsHigh >= 2u) {
-                    // firstIndex and indexCount are both u32. The maximum possible sum of these
-                    // values is 0x1fffffffe, which is less than 0x200000000. Nothing to validate.
-                    set_pass_multi(id.x);
-                    return;
-                }
-
-                let numIndexBufferElementsLow = drawConstants.numIndexBufferElementsLow;
-                let inputOffset = drawConstants.indirectOffsetInElements;
-                let firstIndex = inputParams.data[inputOffset + id.x * numIndirectParamsPerDrawCallInput(drawConstants.flags) + kFirstIndexEntry];
-                if (numIndexBufferElementsHigh == 0u &&
-                    numIndexBufferElementsLow < firstIndex) {
-                    fail(id.x, drawConstants.flags);
-                    return;
-                }
-
-                // Note that this subtraction may underflow, but only when
-                // numIndexBufferElementsHigh is 1u. The result is still correct in that case.
-                let maxIndexCount = numIndexBufferElementsLow - firstIndex;
-                let indexCount = inputParams.data[inputOffset + id.x * numIndirectParamsPerDrawCallInput(drawConstants.flags) + kIndexCountEntry];
-                if (indexCount > maxIndexCount) {
-                    fail(id.x, drawConstants.flags);
-                    return;
-                }
-                set_pass_multi(id.x);
-
-            }
-
-
-        )";
+        // Note that this subtraction may underflow, but only when
+        // numIndexBufferElementsHigh is 1u. The result is still correct in that case.
+        let maxIndexCount = numIndexBufferElementsLow - firstIndex;
+        let indexCount = inputParams.data[inputOffset + id.x * numIndirectParamsPerDrawCallInput(drawConstants.flags) + kIndexCountEntry];
+        if (indexCount > maxIndexCount) {
+            fail(id.x, drawConstants.flags);
+            return;
+        }
+        set_pass_multi(id.x);
+    }
+);
 
 static constexpr uint32_t GetOutputIndirectDrawSize(IndirectDrawMetadata::DrawType drawType,
                                                     bool duplicateBaseVertexInstance) {
@@ -516,7 +513,7 @@ MaybeError EncodeIndirectDrawValidationCommands(DeviceBase* device,
 
             Batch newBatch;
             newBatch.metadata = &batch;
-            newBatch.dataSize = GetBatchDataSize(batch.draws.size());
+            newBatch.dataSize = GetBatchDataSize(uint32_t(batch.draws.size()));
             newBatch.inputIndirectOffset = minOffsetAlignedDown;
             newBatch.inputIndirectSize =
                 batch.maxOffset + indirectDrawCommandSize - minOffsetAlignedDown;
@@ -670,7 +667,7 @@ MaybeError EncodeIndirectDrawValidationCommands(DeviceBase* device,
                     static_cast<uint32_t>((draw.numIndexBufferElements >> 32) & 0xFFFFFFFF);
 
                 // This is only used in the GL backend.
-                indirectDraw->indexOffsetAsNumElements = draw.indexBufferOffsetInElements;
+                indirectDraw->indexOffsetAsNumElements = uint32_t(draw.indexBufferOffsetInElements);
                 indirectDraw++;
 
                 draw.cmd->indirectBuffer = outputParamsBuffer.GetBuffer();

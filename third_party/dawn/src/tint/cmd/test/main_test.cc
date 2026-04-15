@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gmock/gmock.h"
-
 #include "src/tint/api/tint.h"
 #include "src/utils/chromium_test_compat/chromium_test_compat.h"
 

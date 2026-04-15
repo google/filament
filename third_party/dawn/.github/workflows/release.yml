@@ -3,34 +3,59 @@ name: release
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '50 5 * * *'  # 05:50 UTC (21:50 PST, 22:50 PDT)
+    - cron: '50 5 * * 2-6'  # 05:50 UTC, Tue-Sat morning (21:50 PST / 22:50 PDT Mon-Fri night)
 
-# Permission needed to upload a release
 permissions:
   contents: write
 
 jobs:
-  release-emdawnwebgpu:
+  build-wasm:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
+    outputs:
+      PKG_VERSION: ${{ steps.build.outputs.PKG_VERSION }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Build
+      - name: Build Emscripten Package
         id: build
         run: |
           GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" .github/workflows/package-emdawnwebgpu.sh
-
-      - name: Upload release to GitHub
-        uses: softprops/action-gh-release@v2
+      - name: Upload WASM Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          # Create a Git tag with this name
-          tag_name: ${{ steps.build.outputs.PKG_VERSION }}
-          # User-facing release info
-          name: ${{ steps.build.outputs.PKG_VERSION }}
-          body_path: RELEASE_INFO.md
-          # Files to release (one per line)
-          files: |
+          name: emdawnwebgpu
+          path: |
             ${{ steps.build.outputs.REMOTE_PORT_FILE }}
             ${{ steps.build.outputs.PKG_FILE }}
+            RELEASE_INFO.md
+
+  build-native:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  publish:
+    needs: [build-wasm, build-native]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display Downloaded Files
+        run: |
+          mv artifacts/emdawnwebgpu/RELEASE_INFO.md .
+          ls -R artifacts
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build-wasm.outputs.PKG_VERSION }}
+          name: ${{ needs.build-wasm.outputs.PKG_VERSION }}
+          body_path: RELEASE_INFO.md
+          files: |
+            artifacts/**/Dawn-*.tar.gz
+            artifacts/**/dawn-android-*.tar.gz
+            artifacts/**/dawn-apple-*.xcframework.tar.gz
+            artifacts/**/dawn-headers-*.tar.gz
+            artifacts/emdawnwebgpu/*

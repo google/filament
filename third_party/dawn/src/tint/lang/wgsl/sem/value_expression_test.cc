@@ -63,7 +63,7 @@ TEST_F(ValueExpressionTest, UnwrapMaterialize) {
     auto* a = create<ValueExpression>(/* declaration */ nullptr, create<core::type::I32>(),
                                       core::EvaluationStage::kRuntime, /* statement */ nullptr,
                                       /* constant_value */ nullptr,
-                                      /* has_side_effects */ false, /* root_ident */ nullptr);
+                                      /* root_ident */ nullptr);
     auto* b = create<Materialize>(a, /* statement */ nullptr, c.Type(), &c);
 
     EXPECT_EQ(a, a->UnwrapMaterialize());

@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
-
-#include "gmock/gmock.h"
 
 namespace tint::resolver {
 namespace {
@@ -136,14 +135,14 @@ TEST_P(ResolverF16ExtensionBuiltinTypeAliasTest, Vec2hTypeUsedWithExtension) {
     // var<private> v : vec2h;
     Enable(wgsl::Extension::kF16);
 
-    GlobalVar("v", ty(Source{{12, 34}}, GetParam()), core::AddressSpace::kPrivate);
+    GlobalVar("v", ty.AsType(Source{{12, 34}}, GetParam()), core::AddressSpace::kPrivate);
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
 
 TEST_P(ResolverF16ExtensionBuiltinTypeAliasTest, Vec2hTypeUsedWithoutExtension) {
     // var<private> v : vec2h;
-    GlobalVar("v", ty(Source{{12, 34}}, GetParam()), core::AddressSpace::kPrivate);
+    GlobalVar("v", ty.AsType(Source{{12, 34}}, GetParam()), core::AddressSpace::kPrivate);
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), "12:34 error: 'f16' type used without 'f16' extension enabled");

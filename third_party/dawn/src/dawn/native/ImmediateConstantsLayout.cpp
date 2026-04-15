@@ -30,6 +30,6 @@
 namespace dawn::native {
 uint32_t GetImmediateIndexInPipeline(const uint32_t layoutOffset,
                                      const ImmediateConstantMask& pipelineImmediateMask) {
-    return (((1u << layoutOffset) - 1u) & pipelineImmediateMask).count();
+    return uint32_t((((1u << layoutOffset) - 1u) & pipelineImmediateMask).count());
 }
 }  // namespace dawn::native

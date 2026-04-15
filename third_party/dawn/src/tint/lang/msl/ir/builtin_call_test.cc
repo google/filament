@@ -27,6 +27,7 @@
 
 #include "src/tint/lang/msl/ir/builtin_call.h"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
@@ -55,20 +56,32 @@ TEST_F(IR_MslBuiltinCallTest, Clone) {
     EXPECT_EQ(BuiltinFn::kThreadgroupBarrier, new_b->Func());
 
     auto args = new_b->Args();
-    EXPECT_EQ(1u, args.Length());
+    EXPECT_EQ(1u, args.size());
 
     auto* val0 = args[0]->As<core::ir::Constant>()->Value();
     EXPECT_EQ(0_u, val0->As<core::constant::Scalar<core::u32>>()->ValueAs<core::u32>());
 }
 
+TEST_F(IR_MslBuiltinCallTest, CloneWithExplicitParams) {
+    auto* builtin = b.Call<BuiltinCall>(mod.Types().void_(), BuiltinFn::kThreadgroupBarrier, 0_u);
+    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+
+    auto* new_b = clone_ctx.Clone(builtin);
+    EXPECT_NE(builtin->Result(), new_b->Result());
+    EXPECT_EQ(mod.Types().void_(), new_b->Result()->Type());
+
+    EXPECT_EQ(BuiltinFn::kThreadgroupBarrier, new_b->Func());
+    EXPECT_THAT(new_b->ExplicitTemplateParams(), testing::ElementsAre(mod.Types().i32()));
+}
+
 TEST_F(IR_MslBuiltinCallTest, DoesNotMatchMemberFunction) {
     auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
-    auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
-    auto* func = b.Function("foo", ty.vec4<f32>());
+    auto* coords = b.FunctionParam("coords", ty.vec2f());
+    auto* func = b.Function("foo", ty.vec4f());
     func->SetParams({t, s, coords});
     b.Append(func->Block(), [&] {
-        auto* result = b.Call<BuiltinCall>(ty.vec4<f32>(), msl::BuiltinFn::kSample, t, s, coords);
+        auto* result = b.Call<BuiltinCall>(ty.vec4f(), msl::BuiltinFn::kSample, t, s, coords);
         b.Return(func, result);
     });
 

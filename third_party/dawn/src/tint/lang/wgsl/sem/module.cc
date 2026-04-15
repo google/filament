@@ -28,7 +28,6 @@
 #include "src/tint/lang/wgsl/sem/module.h"
 
 #include <utility>
-#include <vector>
 
 TINT_INSTANTIATE_TYPEINFO(tint::sem::Module);
 

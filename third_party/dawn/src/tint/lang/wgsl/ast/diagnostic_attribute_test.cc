@@ -34,7 +34,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 using DiagnosticAttributeTest = TestHelper;
 
 TEST_F(DiagnosticAttributeTest, Name) {
-    auto* d = DiagnosticAttribute(wgsl::DiagnosticSeverity::kWarning, "foo");
+    auto* d = DiagnosticAttribute(wgsl::DiagnosticSeverity::kWarning, DiagnosticRuleName("foo"));
     EXPECT_EQ(d->Name(), "diagnostic");
     EXPECT_EQ(d->control.severity, wgsl::DiagnosticSeverity::kWarning);
     EXPECT_EQ(d->control.rule_name->category, nullptr);
@@ -42,7 +42,8 @@ TEST_F(DiagnosticAttributeTest, Name) {
 }
 
 TEST_F(DiagnosticAttributeTest, CategoryAndName) {
-    auto* d = DiagnosticAttribute(wgsl::DiagnosticSeverity::kWarning, "foo", "bar");
+    auto* d =
+        DiagnosticAttribute(wgsl::DiagnosticSeverity::kWarning, DiagnosticRuleName("foo", "bar"));
     EXPECT_EQ(d->Name(), "diagnostic");
     EXPECT_EQ(d->control.severity, wgsl::DiagnosticSeverity::kWarning);
     CheckIdentifier(d->control.rule_name->category, "foo");

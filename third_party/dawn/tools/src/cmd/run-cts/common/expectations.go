@@ -45,9 +45,16 @@ func (e *Expectations) Load(path string) error {
 	}
 	defer f.Close()
 
+	stat, err := f.Stat() // Handle empty file
+	if err != nil {
+		return fmt.Errorf("failed to stat file: %w", err)
+	}
+
 	statuses := []testcaseStatus{}
-	if err := json.NewDecoder(f).Decode(&statuses); err != nil {
-		return fmt.Errorf("failed to read expectations file: %w", err)
+	if stat.Size() > 0 {
+		if err := json.NewDecoder(f).Decode(&statuses); err != nil {
+			return fmt.Errorf("failed to read expectations file: %w", err)
+		}
 	}
 
 	*e = make(Expectations, len(statuses))

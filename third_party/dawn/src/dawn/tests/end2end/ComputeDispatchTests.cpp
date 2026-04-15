@@ -27,6 +27,8 @@
 
 #include <algorithm>
 #include <initializer_list>
+#include <limits>
+#include <string>
 #include <vector>
 
 #include "dawn/common/Math.h"
@@ -236,6 +238,9 @@ TEST_P(ComputeDispatchTests, IndirectBasicWithoutNumWorkgroups) {
 
 // Test no-op indirect
 TEST_P(ComputeDispatchTests, IndirectNoop) {
+    // TODO(crbug.com/446944886): Flaky with WARP.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsWARP());
+
     // All dimensions are 0s
     IndirectTest({0, 0, 0}, 0);
 
@@ -251,10 +256,6 @@ TEST_P(ComputeDispatchTests, IndirectNoop) {
 
 // Test indirect with buffer offset
 TEST_P(ComputeDispatchTests, IndirectOffset) {
-#if DAWN_PLATFORM_IS(32_BIT)
-    // TODO(crbug.com/dawn/1196): Fails on Chromium's Quadro P400 bots
-    DAWN_SUPPRESS_TEST_IF(IsD3D12() && IsNvidia());
-#endif
     IndirectTest({0, 0, 0, 2, 3, 4}, 3 * sizeof(uint32_t));
 }
 
@@ -284,6 +285,9 @@ TEST_P(ComputeDispatchTests, MaxWorkgroups) {
 // Test indirect dispatches exceeding the max limit are noop-ed.
 TEST_P(ComputeDispatchTests, ExceedsMaxWorkgroupsNoop) {
     DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("skip_validation"));
+
+    // TODO(crbug.com/458102532): Flaky with WARP.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsWARP());
 
     uint32_t max = GetSupportedLimits().maxComputeWorkgroupsPerDimension;
 
@@ -321,7 +325,8 @@ DAWN_INSTANTIATE_TEST(ComputeDispatchTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 namespace {
 using UseNumWorkgoups = bool;
@@ -578,8 +583,164 @@ TEST_P(ComputeMultipleDispatchesTests, ExceedsMaxWorkgroupsWithOffsetNoop) {
 
 DAWN_INSTANTIATE_TEST_P(ComputeMultipleDispatchesTests,
                         {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
-                         OpenGLESBackend(), VulkanBackend()},
+                         OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         {true, false}  // useNumWorkgroups
+);
+
+using LinearBuiltin = std::string;
+DAWN_TEST_PARAM_STRUCT(LinearParams, LinearBuiltin);
+
+class ComputeLinearIndexingDispatchTests : public DawnTestWithParams<LinearParams> {
+  protected:
+    void SetUp() override {
+        DawnTestWithParams<LinearParams>::SetUp();
+        const auto builtin = GetParam().mLinearBuiltin;
+
+        wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+            @group(0) @binding(0) var<storage, read_write> out : u32;
+
+            @compute @workgroup_size(2, 1, 1)
+            fn main(@builtin()" + builtin + R"() input : u32,
+                    @builtin(global_invocation_id) gid : vec3u) {
+              if (gid.x == 0 && gid.y == 0 && gid.z == 0) {
+                out = 0xf0f0f0f0u + input;
+              }
+            })");
+
+        wgpu::ComputePipelineDescriptor csDesc;
+        csDesc.compute.module = module;
+        pipeline = device.CreateComputePipeline(&csDesc);
+    }
+
+    void IndirectTest(std::vector<uint32_t> indirectBufferData) {
+        wgpu::Buffer indirectBuffer = utils::CreateBufferFromData(
+            device, &indirectBufferData[0], indirectBufferData.size() * sizeof(uint32_t),
+            wgpu::BufferUsage::Indirect | wgpu::BufferUsage::CopySrc);
+
+        wgpu::BufferDescriptor outDescriptor;
+        outDescriptor.size = sizeof(uint32_t);
+        outDescriptor.usage =
+            wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+        wgpu::Buffer outBuffer = device.CreateBuffer(&outDescriptor);
+
+        wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                         {
+                                                             {0, outBuffer, 0, sizeof(uint32_t)},
+                                                         });
+
+        wgpu::CommandBuffer commands;
+        {
+            wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+            wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+            pass.SetPipeline(pipeline);
+            pass.SetBindGroup(0, bindGroup);
+            pass.DispatchWorkgroupsIndirect(indirectBuffer, 0);
+            pass.End();
+            commands = encoder.Finish();
+        }
+
+        queue.Submit(1, &commands);
+
+        const bool overflow =
+            OverflowCheck(indirectBufferData[0], indirectBufferData[1], indirectBufferData[2]);
+        uint32_t value = overflow ? 0u : 0xf0f0f0f0u;
+        std::vector<uint32_t> expected = {value};
+        EXPECT_BUFFER_U32_RANGE_EQ(&expected[0], outBuffer, 0, expected.size())
+            << "groupCountX = " << indirectBufferData[0] << "\n"
+            << "groupCountY = " << indirectBufferData[1] << "\n"
+            << "groupCountZ = " << indirectBufferData[2] << "\n"
+            << "wgSize      = " << (GetParam().mLinearBuiltin == "global_invocation_index" ? 2 : 1)
+            << "\n"
+            << "overflow    = " << (overflow ? "yes" : "no") << "\n";
+    }
+
+    void DirectTest(uint32_t wgX, uint32_t wgY, uint32_t wgZ) {
+        wgpu::BufferDescriptor outDescriptor;
+        outDescriptor.size = sizeof(uint32_t);
+        outDescriptor.usage =
+            wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+        wgpu::Buffer outBuffer = device.CreateBuffer(&outDescriptor);
+
+        wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                         {
+                                                             {0, outBuffer, 0, sizeof(uint32_t)},
+                                                         });
+
+        const bool overflow = OverflowCheck(wgX, wgY, wgZ);
+
+        {
+            wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+            wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+            pass.SetPipeline(pipeline);
+            pass.SetBindGroup(0, bindGroup);
+            pass.DispatchWorkgroups(wgX, wgY, wgZ);
+            pass.End();
+            if (overflow) {
+                ASSERT_DEVICE_ERROR(encoder.Finish());
+            } else {
+                encoder.Finish();
+            }
+        }
+    }
+
+    bool OverflowCheck(uint32_t wgX, uint32_t wgY, uint32_t wgZ) {
+        const auto builtin = GetParam().mLinearBuiltin;
+        uint64_t totalInvocations = 1;
+        totalInvocations *= wgX;
+        totalInvocations *= wgY;
+        totalInvocations *= wgZ;
+        if (builtin == "global_invocation_index") {
+            totalInvocations *= 2;
+        }
+        const bool validation = !HasToggleEnabled("skip_validation");
+        const bool overflow = totalInvocations > std::numeric_limits<uint32_t>::max();
+        return overflow && validation;
+    }
+
+  private:
+    wgpu::ComputePipeline pipeline;
+};
+
+TEST_P(ComputeLinearIndexingDispatchTests, Indirect) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
+
+    uint32_t max = GetSupportedLimits().maxComputeWorkgroupsPerDimension;
+
+    const auto builtin = GetParam().mLinearBuiltin;
+    uint32_t min = (builtin == "global_invocation_index") ? 1 : 2;
+
+    // In bounds
+    IndirectTest({max, 1, 1});
+    IndirectTest({1, max, 1});
+
+    if (!HasToggleEnabled("skip_validation")) {
+        // Out of bounds
+        IndirectTest({max, max, min});
+        IndirectTest({max, min, max});
+        IndirectTest({min, max, max});
+    }
+}
+
+TEST_P(ComputeLinearIndexingDispatchTests, Direct) {
+    uint32_t max = GetSupportedLimits().maxComputeWorkgroupsPerDimension;
+
+    const auto builtin = GetParam().mLinearBuiltin;
+    uint32_t min = (builtin == "global_invocation_index") ? 1 : 2;
+
+    // In bounds
+    DirectTest(max, 1, 1);
+    DirectTest(1, max, 1);
+
+    // Out of bounds
+    DirectTest(max, max, min);
+    DirectTest(max, min, max);
+    DirectTest(min, max, max);
+}
+
+DAWN_INSTANTIATE_TEST_P(ComputeLinearIndexingDispatchTests,
+                        {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
+                         OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
+                        {"global_invocation_index", "workgroup_index"}  // LinearBuiltin
 );
 
 }  // anonymous namespace

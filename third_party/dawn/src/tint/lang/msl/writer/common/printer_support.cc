@@ -38,6 +38,7 @@
 #include "src/tint/lang/core/type/matrix.h"
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/u64.h"
 #include "src/tint/lang/core/type/vector.h"
 #include "src/tint/utils/ice/ice.h"
 #include "src/tint/utils/rtti/switch.h"
@@ -45,7 +46,8 @@
 
 namespace tint::msl::writer {
 
-std::string BuiltinToAttribute(core::BuiltinValue builtin) {
+std::string BuiltinToAttribute(core::BuiltinValue builtin,
+                               std::optional<core::BuiltinDepthMode> depth_mode) {
     switch (builtin) {
         case core::BuiltinValue::kPosition:
             return "position";
@@ -56,6 +58,12 @@ std::string BuiltinToAttribute(core::BuiltinValue builtin) {
         case core::BuiltinValue::kFrontFacing:
             return "front_facing";
         case core::BuiltinValue::kFragDepth:
+            if (depth_mode == core::BuiltinDepthMode::kGreater) {
+                return "depth(greater)";
+            }
+            if (depth_mode == core::BuiltinDepthMode::kLess) {
+                return "depth(less)";
+            }
             return "depth(any)";
         case core::BuiltinValue::kLocalInvocationId:
             return "thread_position_in_threadgroup";
@@ -79,9 +87,11 @@ std::string BuiltinToAttribute(core::BuiltinValue builtin) {
             return "thread_index_in_simdgroup";
         case core::BuiltinValue::kSubgroupSize:
             return "threads_per_simdgroup";
+        case core::BuiltinValue::kNumSubgroups:
+            return "simdgroups_per_threadgroup";
         case core::BuiltinValue::kClipDistances:
             return "clip_distance";
-        case core::BuiltinValue::kPrimitiveId:
+        case core::BuiltinValue::kPrimitiveIndex:
             return "primitive_id";
         case core::BuiltinValue::kBarycentricCoord:
             return "barycentric_coord";
@@ -136,6 +146,7 @@ SizeAndAlign MslPackedTypeSizeAndAlign(const core::type::Type* ty) {
         // https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
         // 2.1 Scalar Data Types
         [&](const core::type::U32*) { return SizeAndAlign{4, 4}; },
+        [&](const core::type::U64*) { return SizeAndAlign{8, 8}; },
         [&](const core::type::I32*) { return SizeAndAlign{4, 4}; },
         [&](const core::type::F32*) { return SizeAndAlign{4, 4}; },
         [&](const core::type::F16*) { return SizeAndAlign{2, 2}; },
@@ -204,15 +215,11 @@ SizeAndAlign MslPackedTypeSizeAndAlign(const core::type::Type* ty) {
         },
 
         [&](const core::type::Array* arr) {
-            if (DAWN_UNLIKELY(!arr->IsStrideImplicit())) {
-                TINT_ICE()
-                    << "arrays with explicit strides should not exist past the SPIR-V reader";
-            }
             if (arr->Count()->Is<core::type::RuntimeArrayCount>()) {
-                return SizeAndAlign{arr->Stride(), arr->Align()};
+                return SizeAndAlign{arr->ImplicitStride(), arr->Align()};
             }
             if (auto count = arr->ConstantCount()) {
-                return SizeAndAlign{arr->Stride() * count.value(), arr->Align()};
+                return SizeAndAlign{arr->ImplicitStride() * count.value(), arr->Align()};
             }
             TINT_ICE() << core::type::Array::kErrExpectedConstantCount;
         },

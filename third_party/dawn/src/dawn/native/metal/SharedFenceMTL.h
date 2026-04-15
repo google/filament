@@ -29,6 +29,7 @@
 #define SRC_DAWN_NATIVE_METAL_SHAREDTEXTUREFENCEMTL_H_
 
 #include <os/availability.h>
+
 #include <vector>
 
 #include "dawn/common/NSRef.h"

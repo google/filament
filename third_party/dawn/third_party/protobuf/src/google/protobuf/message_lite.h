@@ -12,6 +12,12 @@
 //
 // Defines MessageLite, the abstract interface implemented by all (lite
 // and non-lite) protocol message objects.
+//
+// This is only intended to be extended by protoc created gencode or types
+// defined in the Protobuf runtime. It is not intended or supported for
+// application code to extend this class, and any protected methods may be
+// removed without being it being considered a breaking change as long as the
+// corresponding gencode does not use it.
 
 #ifndef GOOGLE_PROTOBUF_MESSAGE_LITE_H__
 #define GOOGLE_PROTOBUF_MESSAGE_LITE_H__
@@ -22,19 +28,16 @@
 #include <cstring>
 #include <iosfwd>
 #include <memory>
-#include <new>
 #include <string>
 #include <type_traits>
 #include <utility>
 
 #include "absl/base/attributes.h"
-#include "absl/base/casts.h"
 #include "absl/log/absl_check.h"
 #include "absl/numeric/bits.h"
 #include "absl/strings/cord.h"
 #include "absl/strings/string_view.h"
 #include "google/protobuf/arena.h"
-#include "google/protobuf/explicitly_constructed.h"
 #include "google/protobuf/internal_visibility.h"
 #include "google/protobuf/io/coded_stream.h"
 #include "google/protobuf/metadata_lite.h"
@@ -81,6 +84,8 @@ namespace internal {
 
 namespace v2 {
 class TableDriven;
+class TableDrivenMessage;
+class TableDrivenParse;
 }  // namespace v2
 
 class MessageCreator {
@@ -125,11 +130,11 @@ class MessageCreator {
         func_(func) {}
 
   // Template for testing.
-  template <bool test_call = false, typename MessageLite>
+  template <typename MessageLite>
   MessageLite* New(const MessageLite* prototype_for_func,
                    const MessageLite* prototype_for_copy, Arena* arena) const;
 
-  template <bool test_call = false, typename MessageLite>
+  template <typename MessageLite>
   MessageLite* PlacementNew(const MessageLite* prototype_for_func,
                             const MessageLite* prototype_for_copy, void* mem,
                             Arena* arena) const;
@@ -240,7 +245,15 @@ class PROTOBUF_EXPORT CachedSize {
 #endif
 };
 
-auto GetClassData(const MessageLite& msg);
+struct ClassData;
+
+// Returns the ClassData for the given message.
+//
+// This function is used to get the ClassData for a message without having to
+// know the type of the message. This is useful for when the message is a
+// generated message.
+template <typename Type>
+const ClassData* GetClassData(const Type& msg);
 
 template <const auto* kDefault, const auto* kClassData>
 struct GeneratedMessageTraitsT {
@@ -253,7 +266,8 @@ template <typename T>
 struct FallbackMessageTraits {
   static const void* default_instance() { return &T::default_instance(); }
   static constexpr const auto* class_data() {
-    return GetClassData(T::default_instance());
+    // Force the abstract branch of `GetClassData()` to avoid endless recursion.
+    return GetClassData<MessageLite>(T::default_instance());
   }
   // We can't make a constexpr pointer to the default, so use a function pointer
   // instead.
@@ -294,6 +308,7 @@ class ParseContext;
 struct DescriptorTable;
 class DescriptorPoolExtensionFinder;
 class ExtensionSet;
+class HasBitsTestPeer;
 class LazyField;
 class RepeatedPtrFieldBase;
 class TcParser;
@@ -301,6 +316,7 @@ struct TcParseTableBase;
 class WireFormatLite;
 class WeakFieldMap;
 class RustMapHelper;
+
 
 // We compute sizes as size_t but cache them as int.  This function converts a
 // computed size to a cached size.  Since we don't proceed with serialization
@@ -329,18 +345,10 @@ inline int ToIntSize(size_t size) {
   return static_cast<int>(size);
 }
 
-#if defined(PROTOBUF_FUTURE_STRING_VIEW_RETURN_TYPE)
-using GetTypeNameReturnType = absl::string_view;
-#else
-using GetTypeNameReturnType = std::string;
-#endif
-
 
 PROTOBUF_EXPORT inline const std::string& GetEmptyStringAlreadyInited() {
   return fixed_address_empty_string.get();
 }
-
-PROTOBUF_EXPORT size_t StringSpaceUsedExcludingSelfLong(const std::string& str);
 
 struct ClassDataFull;
 
@@ -406,13 +414,12 @@ struct PROTOBUF_EXPORT ClassData {
       bool (*is_initialized)(const MessageLite&),
       void (*merge_to_from)(MessageLite& to, const MessageLite& from_msg),
       internal::MessageCreator message_creator,
-      void (*destroy_message)(MessageLite& msg),  //
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-      void (MessageLite::*clear)(),
-#endif  // PROTOBUF_CUSTOM_VTABLE
-      size_t (*byte_size_long)(const MessageLite&),
-      uint8_t* (*serialize)(const MessageLite& msg, uint8_t* ptr,
-                            io::EpsCopyOutputStream* stream),
+      [[maybe_unused]] void (*destroy_message)(MessageLite& msg),  //
+      [[maybe_unused]] void (*clear)(MessageLite*),
+      [[maybe_unused]] size_t (*byte_size_long)(const MessageLite&),
+      [[maybe_unused]] uint8_t* (*serialize)(const MessageLite& msg,
+                                             uint8_t* ptr,
+                                             io::EpsCopyOutputStream* stream),
       uint32_t cached_size_offset, bool is_lite
       )
       : prototype(prototype),
@@ -472,27 +479,26 @@ struct PROTOBUF_EXPORT ClassDataFull : ClassData {
                           const internal::DescriptorTable* descriptor_table,
                           void (*get_metadata_tracker)())
       : ClassData(base),
-        descriptor_methods(descriptor_methods),
-        descriptor_table(descriptor_table),
         reflection(),
         descriptor(),
+        descriptor_table(descriptor_table),
+        descriptor_methods(descriptor_methods),
         get_metadata_tracker(get_metadata_tracker) {}
 
   constexpr const ClassData* base() const { return this; }
 
-  const DescriptorMethods* descriptor_methods;
-
-  // Codegen types will provide a DescriptorTable to do lazy
-  // registration/initialization of the reflection objects.
-  // Other types, like DynamicMessage, keep the table as null but eagerly
-  // populate `reflection`/`descriptor` fields.
-  const internal::DescriptorTable* descriptor_table;
   // Accesses are protected by the once_flag in `descriptor_table`. When the
   // table is null these are populated from the beginning and need to
   // protection.
   mutable const Reflection* reflection;
   mutable const Descriptor* descriptor;
 
+  // Codegen types will provide a DescriptorTable to do lazy
+  // registration/initialization of the reflection objects.
+  // Other types, like DynamicMessage, keep the table as null but eagerly
+  // populate `reflection`/`descriptor` fields.
+  const internal::DescriptorTable* descriptor_table;
+  const DescriptorMethods* descriptor_methods;
   // When an access tracker is installed, this function notifies the tracker
   // that GetMetadata was called.
   void (*get_metadata_tracker)();
@@ -540,7 +546,7 @@ class PROTOBUF_EXPORT MessageLite {
   // Basic Operations ------------------------------------------------
 
   // Get the name of this message type, e.g. "foo.bar.BazProto".
-  internal::GetTypeNameReturnType GetTypeName() const;
+  absl::string_view GetTypeName() const;
 
   // Construct a new instance of the same type.  Ownership is passed to the
   // caller.
@@ -705,7 +711,6 @@ class PROTOBUF_EXPORT MessageLite {
   bool MergePartialFromString(absl::string_view data);
   bool MergePartialFromString(const absl::Cord& data);
 
-
   // Serialization ---------------------------------------------------
   // Methods for serializing in protocol buffer format.  Most of these
   // are just simple wrappers around ByteSize() and SerializeWithCachedSizes().
@@ -829,6 +834,7 @@ class PROTOBUF_EXPORT MessageLite {
   virtual size_t ByteSizeLong() const = 0;
 #endif  // PROTOBUF_CUSTOM_VTABLE
 
+
   // Legacy ByteSize() API.
   [[deprecated("Please use ByteSizeLong() instead")]] int ByteSize() const {
     return internal::ToIntSize(ByteSizeLong());
@@ -893,12 +899,7 @@ class PROTOBUF_EXPORT MessageLite {
   }
   template <typename T>
   static constexpr internal::MessageCreator GetNewImpl() {
-#if defined(__cpp_if_constexpr)
     if constexpr (internal::EnableCustomNewFor<T>()) {
-#else
-    // Equally valid code, but might be more work for the compiler
-    if (internal::EnableCustomNewFor<T>()) {
-#endif
       return T::InternalNewImpl_();
     } else {
       return internal::MessageCreator(&T::PlacementNew_, sizeof(T), alignof(T));
@@ -929,6 +930,21 @@ class PROTOBUF_EXPORT MessageLite {
                                                        const Message& from) {
     return reinterpret_cast<Message*>(
         CopyConstruct(arena, reinterpret_cast<const MessageLite&>(from)));
+  }
+
+  // `CheckTypeAndMergeFrom()` and should be preferred by friended internal
+  // callers that have the right `ClassData` handy.
+  // REQUIRES: Both `this` and `other` are the exact same class as represented
+  // by `data`. If there is a mismatch, CHECK-fails in debug builds or causes UB
+  // in release builds (probably a crash).
+  PROTOBUF_ALWAYS_INLINE void MergeFromWithClassData(
+      const MessageLite& other, const internal::ClassData* data) {
+    ABSL_DCHECK(data != nullptr);
+    ABSL_DCHECK(GetClassData() == data && other.GetClassData() == data)
+        << "Invalid call to " << __func__ << ": this=" << GetTypeName()
+        << " other=" << other.GetTypeName()
+        << " data=" << data->prototype->GetTypeName();
+    data->merge_to_from(*this, other);
   }
 
   const internal::TcParseTableBase* GetTcParseTable() const {
@@ -985,6 +1001,48 @@ class PROTOBUF_EXPORT MessageLite {
         reinterpret_cast<const char*>(this) +
         GetClassData()->cached_size_offset);
   }
+
+  // The following methods should be used to access has bits. They enable
+  // measuring the cost of checking/setting has bits with inline frame data.
+  static PROTOBUF_ALWAYS_INLINE constexpr void SetHasBit(
+      uint32_t& cached_has_bits, uint32_t has_bit_mask) {
+    cached_has_bits |= has_bit_mask;
+  }
+
+  static PROTOBUF_ALWAYS_INLINE constexpr void ClearHasBit(
+      uint32_t& cached_has_bits, uint32_t has_bit_mask) {
+    cached_has_bits &= ~has_bit_mask;
+  }
+
+  static PROTOBUF_ALWAYS_INLINE constexpr bool CheckHasBit(
+      uint32_t cached_has_bits, uint32_t has_bit_mask) {
+    return (cached_has_bits & has_bit_mask) != 0;
+  }
+
+  // The following methods should be used to access has bits for repeated
+  // fields.
+  // TODO: Remove these methods once measurement is complete.
+  static PROTOBUF_ALWAYS_INLINE constexpr void SetHasBitForRepeated(
+      uint32_t& cached_has_bits, uint32_t has_bit_mask) {
+    SetHasBit(cached_has_bits, has_bit_mask);
+  }
+
+  static PROTOBUF_ALWAYS_INLINE constexpr void ClearHasBitForRepeated(
+      uint32_t& cached_has_bits, uint32_t has_bit_mask) {
+    ClearHasBit(cached_has_bits, has_bit_mask);
+  }
+
+  static PROTOBUF_ALWAYS_INLINE constexpr bool CheckHasBitForRepeated(
+      uint32_t cached_has_bits, uint32_t has_bit_mask) {
+    return CheckHasBit(cached_has_bits, has_bit_mask);
+  }
+
+  static PROTOBUF_ALWAYS_INLINE constexpr bool BatchCheckHasBit(
+      uint32_t cached_has_bits, uint32_t batch_has_bits_mask) {
+    return (cached_has_bits & batch_has_bits_mask) != 0;
+  }
+
+  void CheckHasBitConsistency() const;
 
  public:
   enum ParseFlags {
@@ -1050,6 +1108,7 @@ class PROTOBUF_EXPORT MessageLite {
   friend class compiler::cpp::MessageTableTester;
   friend class internal::DescriptorPoolExtensionFinder;
   friend class internal::ExtensionSet;
+  friend class internal::HasBitsTestPeer;
   friend class internal::LazyField;
   friend class internal::SwapFieldHelper;
   friend class internal::TcParser;
@@ -1059,15 +1118,27 @@ class PROTOBUF_EXPORT MessageLite {
   friend class internal::WireFormatLite;
   friend class internal::RustMapHelper;
   friend class internal::v2::TableDriven;
-  friend internal::MessageCreator;
-
+  friend class internal::v2::TableDrivenMessage;
+  friend class internal::v2::TableDrivenParse;
+  friend class internal::MessageCreator;
+  friend class internal::RepeatedPtrFieldBase;
+  template <typename Type>
+  friend class internal::GenericTypeHandler;
   template <typename Type>
   friend class Arena::InternalHelper;
+  template <typename Type>
+  friend struct FallbackMessageTraits;
 
-  friend auto internal::GetClassData(const MessageLite& msg);
+  template <typename Type>
+  friend const internal::ClassData* internal::GetClassData(const Type& msg);
+
+  static bool CheckFieldPresence(const internal::ParseContext& ctx,
+                                 const MessageLite& msg,
+                                 MessageLite::ParseFlags parse_flags);
 
   void LogInitializationErrorMessage() const;
 
+ private:
   bool MergeFromImpl(io::CodedInputStream* input, ParseFlags parse_flags);
 
   // Runs the destructor for this instance.
@@ -1148,7 +1219,20 @@ class TypeId {
 
 namespace internal {
 
-inline auto GetClassData(const MessageLite& msg) { return msg.GetClassData(); }
+// The point of this function being a template is that for a concrete message
+// `Type`, the otherwise virtual `GetClassData()` call is resolved and inlined
+// at compile time (via `MessageTraits`).
+template <typename T>
+PROTOBUF_NDEBUG_INLINE const ClassData* GetClassData(const T& msg) {
+  static_assert(std::is_base_of_v<MessageLite, T>);
+  if constexpr (std::is_same_v<T, MessageLite> || std::is_same_v<Message, T>) {
+    PROTOBUF_DEBUG_COUNTER("GetClassData.Virtual").Inc();
+    return msg.GetClassData();
+  } else {
+    PROTOBUF_DEBUG_COUNTER("GetClassData.Constexpr").Inc();
+    return MessageTraits<T>::class_data();
+  }
+}
 
 template <bool alias>
 bool MergeFromImpl(absl::string_view input, MessageLite* msg,
@@ -1248,19 +1332,15 @@ T* OnShutdownDelete(T* p) {
   return p;
 }
 
-template <bool test_call, typename MessageLite>
+template <typename MessageLite>
 PROTOBUF_ALWAYS_INLINE MessageLite* MessageCreator::PlacementNew(
     const MessageLite* prototype_for_func,
     const MessageLite* prototype_for_copy, void* mem, Arena* arena) const {
   ABSL_DCHECK_EQ(reinterpret_cast<uintptr_t>(mem) % alignment_, 0u);
   const Tag as_tag = tag();
-  // When the feature is not enabled we skip the `as_tag` check since it is
-  // unnecessary. Except for testing, where we want to test the copy logic even
-  // when we can't use it for real messages.
-  constexpr bool kMustBeFunc = !test_call && !internal::EnableCustomNew();
   static_assert(kFunc < 0 && !(kZeroInit < 0) && !(kMemcpy < 0),
                 "Only kFunc must be the only negative value");
-  if (ABSL_PREDICT_FALSE(kMustBeFunc || as_tag < 0)) {
+  if (ABSL_PREDICT_FALSE(static_cast<int8_t>(as_tag) < 0)) {
     PROTOBUF_DEBUG_COUNTER("MessageCreator.Func").Inc();
     return static_cast<MessageLite*>(func_(prototype_for_func, mem, arena));
   }
@@ -1349,15 +1429,15 @@ PROTOBUF_ALWAYS_INLINE MessageLite* MessageCreator::PlacementNew(
   return Launder(reinterpret_cast<MessageLite*>(mem));
 }
 
-template <bool test_call, typename MessageLite>
+template <typename MessageLite>
 PROTOBUF_ALWAYS_INLINE MessageLite* MessageCreator::New(
     const MessageLite* prototype_for_func,
     const MessageLite* prototype_for_copy, Arena* arena) const {
-  return PlacementNew<test_call>(prototype_for_func, prototype_for_copy,
-                                 arena != nullptr
-                                     ? arena->AllocateAligned(allocation_size_)
-                                     : ::operator new(allocation_size_),
-                                 arena);
+  return PlacementNew(prototype_for_func, prototype_for_copy,
+                      arena != nullptr
+                          ? arena->AllocateAligned(allocation_size_)
+                          : ::operator new(allocation_size_),
+                      arena);
 }
 
 }  // namespace internal

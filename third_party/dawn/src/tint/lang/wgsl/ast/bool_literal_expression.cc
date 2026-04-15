@@ -28,24 +28,14 @@
 #include "src/tint/lang/wgsl/ast/bool_literal_expression.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::BoolLiteralExpression);
 
 namespace tint::ast {
 
-BoolLiteralExpression::BoolLiteralExpression(GenerationID pid,
-                                             NodeID nid,
-                                             const Source& src,
-                                             bool val)
-    : Base(pid, nid, src), value(val) {}
+BoolLiteralExpression::BoolLiteralExpression(NodeID nid, const Source& src, bool val)
+    : Base(nid, src), value(val) {}
 
 BoolLiteralExpression::~BoolLiteralExpression() = default;
-
-const BoolLiteralExpression* BoolLiteralExpression::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    return ctx.dst->create<BoolLiteralExpression>(src, value);
-}
 
 }  // namespace tint::ast

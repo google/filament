@@ -37,12 +37,6 @@ if (!defined(dawn_standalone)) {
   dawn_standalone = false
 }
 
-if (!defined(dawn_has_build)) {
-  dawn_has_build = true
-}
-
-dawn_has_fuzzers = dawn_has_build
-
 if (!defined(dawn_root)) {
   dawn_root = get_path_info("..", "abspath")
 }
@@ -53,7 +47,7 @@ if (!defined(dawn_jinja2_dir)) {
 }
 
 if (!defined(dawn_glfw_dir)) {
-  dawn_glfw_dir = "//third_party/glfw"
+  dawn_glfw_dir = "//third_party/glfw3/src"
 }
 
 if (!defined(dawn_googletest_dir)) {
@@ -96,11 +90,15 @@ if (!defined(dawn_abseil_dir)) {
 }
 
 if (!defined(dawn_dxc_dir)) {
-  dawn_dxc_dir = "//third_party/dxc"
+  dawn_dxc_dir = "//third_party/directx-shader-compiler/src"
+}
+
+if (!defined(dawn_dxc_gn_dir)) {
+  dawn_dxc_gn_dir = "//third_party/directx-shader-compiler"
 }
 
 if (!defined(dawn_dxheaders_dir)) {
-  dawn_dxheaders_dir = "//third_party/dxheaders"
+  dawn_dxheaders_dir = "//third_party/directx-headers/src"
 }
 
 if (!defined(dawn_version_file)) {
@@ -108,14 +106,15 @@ if (!defined(dawn_version_file)) {
 }
 
 if (!defined(dawn_opengl_registry_dir)) {
-  dawn_opengl_registry_dir = "${dawn_root}/third_party/khronos/OpenGL-Registry"
+  dawn_opengl_registry_dir = "${dawn_root}/third_party/OpenGL-Registry/src"
 }
 
 if (!defined(dawn_egl_registry_dir)) {
-  dawn_egl_registry_dir = "${dawn_root}/third_party/khronos/EGL-Registry"
+  dawn_egl_registry_dir = "${dawn_root}/third_party/EGL-Registry/src"
 }
 
 # Defaults to the value inherited from .gclient.
+# Enable by setting "custom_vars": { "dawn_wasm": True }.
 if (!defined(dawn_wasm)) {
   dawn_wasm = false
 }

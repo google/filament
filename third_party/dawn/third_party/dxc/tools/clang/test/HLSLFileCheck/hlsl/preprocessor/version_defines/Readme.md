@@ -1,1 +1,0 @@
-The shaders in this directory test the builtin definition of version macros covering DXC version, HLSL versions, and target stage and version information.

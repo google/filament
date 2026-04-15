@@ -34,7 +34,7 @@ namespace dawn::wire::client {
     {% for command in cmd_records["return command"] %}
         WireResult Client::Handle{{command.name.CamelCase()}}(DeserializeBuffer* deserializeBuffer) {
             Return{{command.name.CamelCase()}}Cmd cmd;
-            WIRE_TRY(cmd.Deserialize(deserializeBuffer, &mWireCommandAllocator));
+            WIRE_TRY(cmd.Deserialize(deserializeBuffer, &mAllocator));
 
             {% for member in command.members if member.handle_type %}
                 {% set Type = member.handle_type.name.CamelCase() %}
@@ -42,7 +42,7 @@ namespace dawn::wire::client {
 
                 {% if member.type.dict_name == "ObjectHandle" %}
                     {{Type}}* {{name}} = Get<{{Type}}>(cmd.{{name}}.id);
-                    if ({{name}} != nullptr && {{name}}->GetWireGeneration() != cmd.{{name}}.generation) {
+                    if ({{name}} != nullptr && {{name}}->GetWireHandle(this).generation != cmd.{{name}}.generation) {
                         {{name}} = nullptr;
                     }
                 {% endif %}
@@ -61,37 +61,34 @@ namespace dawn::wire::client {
         }
     {% endfor %}
 
-    const volatile char* Client::HandleCommandsImpl(const volatile char* commands, size_t size) {
+    const volatile char* Client::HandleCommands(const volatile char* commands, size_t size) {
         DeserializeBuffer deserializeBuffer(commands, size);
 
-        while (deserializeBuffer.AvailableSize() >= sizeof(CmdHeader) + sizeof(ReturnWireCmd)) {
-            // Start by chunked command handling, if it is done, then it means the whole buffer
-            // was consumed by it, so we return a pointer to the end of the commands.
-            switch (HandleChunkedCommands(deserializeBuffer.Buffer(), deserializeBuffer.AvailableSize())) {
-                case ChunkedCommandsResult::Consumed:
-                    return commands + size;
-                case ChunkedCommandsResult::Error:
-                    return nullptr;
-                case ChunkedCommandsResult::Passthrough:
-                    break;
-            }
-
-            ReturnWireCmd cmdId = *static_cast<const volatile ReturnWireCmd*>(static_cast<const volatile void*>(
+        while (deserializeBuffer.AvailableSize() >= sizeof(CmdHeader) + sizeof(WireCmd)) {
+            WireCmd cmdId = *static_cast<const volatile WireCmd*>(static_cast<const volatile void*>(
                 deserializeBuffer.Buffer() + sizeof(CmdHeader)));
             WireResult result = WireResult::FatalError;
             switch (cmdId) {
-                {% for command in cmd_records["return command"] %}
+                {% for command in cmd_records["special command"] %}
                     {% set Suffix = command.name.CamelCase() %}
-                    case ReturnWireCmd::{{Suffix}}:
+                    case WireCmd::{{Suffix}}:
                         result = Handle{{Suffix}}(&deserializeBuffer);
                         break;
                 {% endfor %}
+                {% for command in cmd_records["return command"] %}
+                    {% set Suffix = command.name.CamelCase() %}
+                    case WireCmd::Return{{Suffix}}:
+                        result = Handle{{Suffix}}(&deserializeBuffer);
+                        break;
+                {% endfor %}
+                default:
+                    result = WireResult::FatalError;
             }
 
             if (result != WireResult::Success) {
                 return nullptr;
             }
-            mWireCommandAllocator.Reset();
+            mAllocator.Reset();
         }
 
         if (deserializeBuffer.AvailableSize() != 0) {

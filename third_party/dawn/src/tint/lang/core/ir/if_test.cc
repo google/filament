@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/ir/if.h"
+
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 

@@ -11,15 +11,16 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
+#include <limits>
+#include <random>
 #include <string>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "absl/container/flat_hash_set.h"
+#include "absl/random/distributions.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "google/protobuf/arena_test_util.h"
 #include "google/protobuf/internal_visibility_for_testing.h"
@@ -37,8 +38,6 @@
 
 // Must include after defining UNITTEST, etc.
 // clang-format off
-#include "google/protobuf/test_util.inc"
-#include "google/protobuf/map_test_util.inc"
 #include "google/protobuf/map_test.inc"
 // clang-format on
 

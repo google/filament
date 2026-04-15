@@ -479,8 +479,7 @@ TEST_F(StorageTextureValidationTests, StorageTextureFormatInBindGroupLayout) {
             wgpu::BindGroupLayoutEntry bindGroupLayoutBinding = defaultBindGroupLayoutEntry;
             bindGroupLayoutBinding.storageTexture.access = bindingType;
             bindGroupLayoutBinding.storageTexture.format = textureFormat;
-            if (utils::TextureFormatSupportsStorageTexture(textureFormat, device,
-                                                           UseCompatibilityMode())) {
+            if (utils::TextureFormatSupportsStorageTexture(device, textureFormat)) {
                 utils::MakeBindGroupLayout(device, {bindGroupLayoutBinding});
             } else {
                 ASSERT_DEVICE_ERROR(utils::MakeBindGroupLayout(device, {bindGroupLayoutBinding}));
@@ -515,8 +514,7 @@ TEST_F(BGRA8UnormStorageBindGroupLayoutTest, BGRA8UnormAsStorage) {
 TEST_F(StorageTextureValidationTests, BindGroupLayoutStorageTextureFormatMatchesShaderDeclaration) {
     for (wgpu::StorageTextureAccess bindingType : kSupportedStorageTextureAccess) {
         for (wgpu::TextureFormat storageTextureFormatInShader : utils::kAllTextureFormats) {
-            if (!utils::TextureFormatSupportsStorageTexture(storageTextureFormatInShader, device,
-                                                            UseCompatibilityMode())) {
+            if (!utils::TextureFormatSupportsStorageTexture(device, storageTextureFormatInShader)) {
                 continue;
             }
 
@@ -537,7 +535,7 @@ TEST_F(StorageTextureValidationTests, BindGroupLayoutStorageTextureFormatMatches
             for (wgpu::TextureFormat storageTextureFormatInBindGroupLayout :
                  utils::kAllTextureFormats) {
                 if (!utils::TextureFormatSupportsStorageTexture(
-                        storageTextureFormatInBindGroupLayout, device, UseCompatibilityMode())) {
+                        device, storageTextureFormatInBindGroupLayout)) {
                     continue;
                 }
 
@@ -699,8 +697,7 @@ TEST_F(StorageTextureValidationTests, StorageTextureFormatInBindGroup) {
         defaultBindGroupLayoutEntry.storageTexture.access = storageBindingType;
 
         for (wgpu::TextureFormat formatInBindGroupLayout : utils::kAllTextureFormats) {
-            if (!utils::TextureFormatSupportsStorageTexture(formatInBindGroupLayout, device,
-                                                            UseCompatibilityMode())) {
+            if (!utils::TextureFormatSupportsStorageTexture(device, formatInBindGroupLayout)) {
                 continue;
             }
 
@@ -711,8 +708,7 @@ TEST_F(StorageTextureValidationTests, StorageTextureFormatInBindGroup) {
                 utils::MakeBindGroupLayout(device, {bindGroupLayoutBinding});
 
             for (wgpu::TextureFormat textureViewFormat : utils::kAllTextureFormats) {
-                if (!utils::TextureFormatSupportsStorageTexture(textureViewFormat, device,
-                                                                UseCompatibilityMode())) {
+                if (!utils::TextureFormatSupportsStorageTexture(device, textureViewFormat)) {
                     continue;
                 }
 
@@ -944,12 +940,12 @@ TEST_F(StorageTextureValidationTests, BindGroupLayoutWithStorageTextureBindingTy
 // formats that support read-write storage texture access.
 TEST_F(ReadWriteStorageTextureValidationTests, ReadWriteStorageTextureFormatInBindGroupLayout) {
     for (wgpu::TextureFormat format : utils::kAllTextureFormats) {
-        if (!utils::TextureFormatSupportsStorageTexture(format, device, UseCompatibilityMode())) {
+        if (!utils::TextureFormatSupportsStorageTexture(device, format)) {
             continue;
         }
 
         bool supportsReadWriteStorageTexture =
-            utils::TextureFormatSupportsReadWriteStorageTexture(format);
+            utils::TextureFormatSupportsReadWriteStorageTexture(device, format);
         const std::vector<BindGroupLayoutTestSpec> kTestSpecs = {
             {{wgpu::ShaderStage::Compute, wgpu::StorageTextureAccess::ReadOnly, true, format},
              {wgpu::ShaderStage::Compute, wgpu::StorageTextureAccess::ReadWrite,
@@ -965,7 +961,7 @@ TEST_F(ReadWriteStorageTextureValidationTests, ReadWriteStorageTextureFormatInSh
     constexpr std::array<wgpu::StorageTextureAccess, 2> kStorageTextureAccesses = {
         {wgpu::StorageTextureAccess::ReadOnly, wgpu::StorageTextureAccess::ReadWrite}};
     for (wgpu::TextureFormat format : utils::kAllTextureFormats) {
-        if (!utils::TextureFormatSupportsStorageTexture(format, device, UseCompatibilityMode())) {
+        if (!utils::TextureFormatSupportsStorageTexture(device, format)) {
             continue;
         }
 
@@ -979,7 +975,7 @@ TEST_F(ReadWriteStorageTextureValidationTests, ReadWriteStorageTextureFormatInSh
                     device.CreateComputePipeline(&computeDesc);
                     break;
                 case wgpu::StorageTextureAccess::ReadWrite:
-                    if (utils::TextureFormatSupportsReadWriteStorageTexture(format)) {
+                    if (utils::TextureFormatSupportsReadWriteStorageTexture(device, format)) {
                         device.CreateComputePipeline(&computeDesc);
                     } else {
                         ASSERT_DEVICE_ERROR(device.CreateComputePipeline(&computeDesc));
@@ -1182,86 +1178,6 @@ TEST_F(ReadWriteStorageTextureResourceUsageTrackingTests, StorageTextureInComput
             }
         }
     }
-}
-
-class R8UnormStorageValidationTests : public StorageTextureValidationTests {
-    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
-        return {wgpu::FeatureName::R8UnormStorage};
-    }
-};
-
-// Check that it is allowed to create an R8Unorm texture with the storage usage.
-TEST_F(R8UnormStorageValidationTests, TextureCreation) {
-    wgpu::TextureDescriptor desc;
-    desc.format = wgpu::TextureFormat::R8Unorm;
-    desc.usage = wgpu::TextureUsage::StorageBinding;
-    desc.size = {1, 1};
-    device.CreateTexture(&desc);
-}
-
-// Check that it is allowed to create a BGL with a read-only or write-only R8unorm storage texture
-// entry.
-TEST_F(R8UnormStorageValidationTests, BGLEntry) {
-    // Control case: read-only or write-only are allowed.
-    utils::MakeBindGroupLayout(
-        device, {{0, wgpu::ShaderStage::Fragment, wgpu::StorageTextureAccess::ReadOnly,
-                  wgpu::TextureFormat::R8Unorm}});
-    utils::MakeBindGroupLayout(
-        device, {{0, wgpu::ShaderStage::Fragment, wgpu::StorageTextureAccess::WriteOnly,
-                  wgpu::TextureFormat::R8Unorm}});
-
-    // Error cases: read-write is disallowed.
-    ASSERT_DEVICE_ERROR(utils::MakeBindGroupLayout(
-        device, {{0, wgpu::ShaderStage::Fragment, wgpu::StorageTextureAccess::ReadWrite,
-                  wgpu::TextureFormat::R8Unorm}}));
-}
-
-// Check that using the `r8unorm` to create a WGSL compute shader is allowed.
-TEST_F(R8UnormStorageValidationTests, ShaderModule) {
-    utils::CreateShaderModule(device, R"(
-        enable chromium_internal_graphite;
-        @group(0) @binding(0) var t : texture_storage_2d<r8unorm, write>;
-    )");
-}
-
-// Check that using an r8unorm storage texture read-only or write-only with implicit layout is
-// valid.
-TEST_F(R8UnormStorageValidationTests, End2endUsage) {
-    wgpu::ComputePipelineDescriptor cDesc;
-    cDesc.compute.module = utils::CreateShaderModule(device, R"(
-        enable chromium_internal_graphite;
-        @group(0) @binding(0) var input : texture_storage_2d<r8unorm, read>;
-        @group(0) @binding(1) var output : texture_storage_2d<r8unorm, write>;
-
-        @workgroup_size(4, 4) @compute fn main(@builtin(local_invocation_id) id : vec3<u32>) {
-            textureStore(output, id.xy, 2 * textureLoad(input, id.xy));
-        }
-    )");
-    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&cDesc);
-
-    wgpu::TextureDescriptor tDesc;
-    tDesc.format = wgpu::TextureFormat::R8Unorm;
-    tDesc.usage = wgpu::TextureUsage::StorageBinding | wgpu::TextureUsage::CopySrc |
-                  wgpu::TextureUsage::CopyDst;
-    tDesc.size = {4, 4};
-    wgpu::Texture input = device.CreateTexture(&tDesc);
-    wgpu::Texture output = device.CreateTexture(&tDesc);
-
-    wgpu::BindGroup bg = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
-                                              {
-                                                  {0, input.CreateView()},
-                                                  {1, output.CreateView()},
-                                              });
-
-    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-    wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
-    pass.SetPipeline(pipeline);
-    pass.SetBindGroup(0, bg);
-    pass.DispatchWorkgroups(1);
-    pass.End();
-
-    wgpu::CommandBuffer commands = encoder.Finish();
-    device.GetQueue().Submit(1, &commands);
 }
 
 // Check that it is not allowed to create a kTier1AdditionalStorageFormats format

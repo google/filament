@@ -33,7 +33,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-
 #include "langsvr/lsp/lsp.h"
 #include "langsvr/result.h"
 #include "src/tint/lang/wgsl/ls/server.h"

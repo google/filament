@@ -28,6 +28,7 @@
 #include "src/tint/lang/spirv/validate/validate.h"
 
 #include <memory>
+#include <span>
 #include <string>
 #include <utility>
 
@@ -36,7 +37,7 @@
 
 namespace tint::spirv::validate {
 
-Result<SuccessType> Validate(Slice<const uint32_t> spirv, spv_target_env target_env) {
+Result<SuccessType> Validate(std::span<const uint32_t> spirv, spv_target_env target_env) {
     Vector<diag::Diagnostic, 4> diags;
     diags.Push(diag::Diagnostic{});  // Filled in on error
 
@@ -70,13 +71,13 @@ Result<SuccessType> Validate(Slice<const uint32_t> spirv, spv_target_env target_
     spvtools::ValidatorOptions val_opts;
     val_opts.SetFriendlyNames(false);
 
-    if (tools.Validate(spirv.data, spirv.len, val_opts)) {
+    if (tools.Validate(spirv.data(), spirv.size(), val_opts)) {
         return Success;
     }
 
     std::string disassembly;
     if (tools.Disassemble(
-            spirv.data, spirv.len, &disassembly,
+            spirv.data(), spirv.size(), &disassembly,
             SPV_BINARY_TO_TEXT_OPTION_INDENT | SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES)) {
         diag::Diagnostic& err = diags.Front();
         err.message = "SPIR-V failed validation.\n\nDisassembly:\n" + std::move(disassembly);

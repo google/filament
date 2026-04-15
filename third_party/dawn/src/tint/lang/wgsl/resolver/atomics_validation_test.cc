@@ -25,13 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/type/atomic.h"
 #include "src/tint/lang/core/type/reference.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
-
-#include "gmock/gmock.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 using namespace tint::core::fluent_types;     // NOLINT
@@ -66,7 +65,14 @@ TEST_F(ResolverAtomicValidationTest, InvalidType) {
     GlobalVar("a", ty.atomic(ty.f32(Source{{12, 34}})), core::AddressSpace::kWorkgroup);
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: 'atomic' only supports 'i32' or 'u32' types");
+    EXPECT_EQ(r()->error(), "12:34 error: 'atomic' only supports 'i32', 'u32' or 'vec2u' types");
+}
+
+TEST_F(ResolverAtomicValidationTest, InvalidTypeVec4u) {
+    GlobalVar("a", ty.atomic(ty.vec4(Source{{12, 34}}, ty.u32())), core::AddressSpace::kWorkgroup);
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(), "12:34 error: 'atomic' only supports 'i32', 'u32' or 'vec2u' types");
 }
 
 TEST_F(ResolverAtomicValidationTest, InvalidAddressSpace_Simple) {

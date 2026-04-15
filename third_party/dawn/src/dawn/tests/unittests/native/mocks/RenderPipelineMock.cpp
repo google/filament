@@ -37,7 +37,9 @@ RenderPipelineMock::RenderPipelineMock(DeviceMock* device,
                                        const UnpackedPtr<RenderPipelineDescriptor>& descriptor)
     : RenderPipelineBase(device, descriptor) {
     ON_CALL(*this, InitializeImpl).WillByDefault([]() -> MaybeError { return {}; });
-    ON_CALL(*this, DestroyImpl).WillByDefault([this] { this->RenderPipelineBase::DestroyImpl(); });
+    ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
+        this->RenderPipelineBase::DestroyImpl(reason);
+    });
 }
 
 RenderPipelineMock::~RenderPipelineMock() = default;

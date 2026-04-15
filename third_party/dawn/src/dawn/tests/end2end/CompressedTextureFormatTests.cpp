@@ -751,8 +751,6 @@ TEST_P(CompressedTextureFormatTest, Basic) {
 // Made for compatibility mode.
 TEST_P(CompressedTextureFormatTest, Cube) {
     DAWN_TEST_UNSUPPORTED_IF(!IsFormatSupported());
-    // TODO(crbug.com/dawn/2131): diagnose this failure on Win Angle D3D11
-    DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
 
     const wgpu::TextureFormat format = GetParam().mTextureFormat;
 
@@ -767,7 +765,7 @@ TEST_P(CompressedTextureFormatTest, Cube) {
         config.copyExtent3D.width / BlockWidthInTexels() * utils::GetTexelBlockSizeInBytes(format),
         kTextureBytesPerRowAlignment);
     config.rowsPerImage = kLayers;
-    wgpu::TextureBindingViewDimensionDescriptor textureBindingViewDimensionDesc;
+    wgpu::TextureBindingViewDimension textureBindingViewDimensionDesc;
     if (IsCompatibilityMode()) {
         textureBindingViewDimensionDesc.textureBindingViewDimension =
             wgpu::TextureViewDimension::Cube;
@@ -1280,7 +1278,8 @@ TEST_P(CompressedTextureFormatTest, CopyMultiple2DArrayLayers) {
 DAWN_INSTANTIATE_TEST_P(CompressedTextureFormatTest,
                         {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
                          OpenGLESBackend(), VulkanBackend(),
-                         VulkanBackend({"use_temporary_buffer_in_texture_to_texture_copy"})},
+                         VulkanBackend({"use_temporary_buffer_in_texture_to_texture_copy"}),
+                         WebGPUBackend()},
                         std::vector<wgpu::TextureFormat>(utils::kCompressedFormats.begin(),
                                                          utils::kCompressedFormats.end()));
 
@@ -1344,7 +1343,8 @@ DAWN_INSTANTIATE_TEST(CompressedTextureFormatSpecificTest,
                       OpenGLBackend(),
                       OpenGLESBackend(),
                       VulkanBackend(),
-                      VulkanBackend({"use_temporary_buffer_in_texture_to_texture_copy"}));
+                      VulkanBackend({"use_temporary_buffer_in_texture_to_texture_copy"}),
+                      WebGPUBackend());
 
 class CompressedTextureWriteTextureTest : public CompressedTextureFormatTest {
   protected:
@@ -1417,6 +1417,9 @@ TEST_P(CompressedTextureWriteTextureTest, WriteMultiple2DArrayLayers) {
     // TODO(crbug.com/dawn/976): Failing on Linux Intel OpenGL drivers.
     DAWN_SUPPRESS_TEST_IF(IsIntel() && IsOpenGL() && IsLinux());
 
+    // TODO(crbug.com/459848484): Fails on Win/Snapdragon X Elite.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D11());
+
     // TODO(b/198674734): Width multiplier set to 7 because 5 results in square size for ASTC6x5.
     constexpr uint32_t kSizeWidthMultiplier = 7;
     constexpr uint32_t kSizeHeightMultiplier = 6;
@@ -1475,7 +1478,7 @@ TEST_P(CompressedTextureWriteTextureTest,
 
 DAWN_INSTANTIATE_TEST_P(CompressedTextureWriteTextureTest,
                         {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
-                         OpenGLESBackend(), VulkanBackend()},
+                         OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         std::vector<wgpu::TextureFormat>(utils::kCompressedFormats.begin(),
                                                          utils::kCompressedFormats.end()));
 

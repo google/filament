@@ -44,14 +44,12 @@ namespace tint::ast {
 class WorkgroupAttribute final : public Castable<WorkgroupAttribute, Attribute> {
   public:
     /// constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param x the workgroup x dimension expression
     /// @param y the optional workgroup y dimension expression
     /// @param z the optional workgroup z dimension expression
-    WorkgroupAttribute(GenerationID pid,
-                       NodeID nid,
+    WorkgroupAttribute(NodeID nid,
                        const Source& src,
                        const Expression* x,
                        const Expression* y = nullptr,
@@ -64,12 +62,6 @@ class WorkgroupAttribute final : public Castable<WorkgroupAttribute, Attribute> 
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const WorkgroupAttribute* Clone(CloneContext& ctx) const override;
 
     /// The workgroup x dimension.
     const Expression* const x;

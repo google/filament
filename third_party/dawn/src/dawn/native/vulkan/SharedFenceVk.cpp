@@ -31,6 +31,7 @@
 
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/vulkan/DeviceVk.h"
+#include "dawn/utils/SystemHandle.h"
 
 namespace dawn::native::vulkan {
 
@@ -41,8 +42,7 @@ ResultOrError<Ref<SharedFence>> SharedFence::Create(
     const SharedFenceVkSemaphoreZirconHandleDescriptor* descriptor) {
     DAWN_INVALID_IF(descriptor->handle == 0, "Zircon handle (%d) was invalid.", descriptor->handle);
 
-    SystemHandle handle;
-    DAWN_TRY_ASSIGN(handle, SystemHandle::Duplicate(descriptor->handle));
+    dawn::utils::SystemHandle handle = dawn::utils::SystemHandle::Duplicate(descriptor->handle);
     auto fence = AcquireRef(new SharedFence(device, label, std::move(handle)));
     fence->mType = wgpu::SharedFenceType::VkSemaphoreZirconHandle;
     return fence;
@@ -54,8 +54,7 @@ ResultOrError<Ref<SharedFence>> SharedFence::Create(Device* device,
                                                     const SharedFenceSyncFDDescriptor* descriptor) {
     DAWN_INVALID_IF(descriptor->handle < 0, "File descriptor (%d) was invalid.",
                     descriptor->handle);
-    SystemHandle handle;
-    DAWN_TRY_ASSIGN(handle, SystemHandle::Duplicate(descriptor->handle));
+    dawn::utils::SystemHandle handle = dawn::utils::SystemHandle::Duplicate(descriptor->handle);
     auto fence = AcquireRef(new SharedFence(device, label, std::move(handle)));
     fence->mType = wgpu::SharedFenceType::SyncFD;
     return fence;
@@ -68,21 +67,20 @@ ResultOrError<Ref<SharedFence>> SharedFence::Create(
     const SharedFenceVkSemaphoreOpaqueFDDescriptor* descriptor) {
     DAWN_INVALID_IF(descriptor->handle < 0, "File descriptor (%d) was invalid.",
                     descriptor->handle);
-    SystemHandle handle;
-    DAWN_TRY_ASSIGN(handle, SystemHandle::Duplicate(descriptor->handle));
+    dawn::utils::SystemHandle handle = dawn::utils::SystemHandle::Duplicate(descriptor->handle);
     auto fence = AcquireRef(new SharedFence(device, label, std::move(handle)));
     fence->mType = wgpu::SharedFenceType::VkSemaphoreOpaqueFD;
     return fence;
 }
 
-SharedFence::SharedFence(Device* device, StringView label, SystemHandle handle)
+SharedFence::SharedFence(Device* device, StringView label, dawn::utils::SystemHandle handle)
     : SharedFenceBase(device, label), mHandle(std::move(handle)) {}
 
-void SharedFence::DestroyImpl() {
+void SharedFence::DestroyImpl(DestroyReason reason) {
     mHandle.Close();
 }
 
-const SystemHandle& SharedFence::GetHandle() const {
+const dawn::utils::SystemHandle& SharedFence::GetHandle() const {
     return mHandle;
 }
 

@@ -308,7 +308,8 @@ DAWN_INSTANTIATE_TEST(SamplerFilterAnisotropicTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

@@ -40,6 +40,7 @@ cc_library(
   name = "raise",
   srcs = [
     "builtin_polyfill.cc",
+    "case_switch_to_if_else.cc",
     "expand_implicit_splats.cc",
     "fork_explicit_layout_types.cc",
     "handle_matrix_arithmetic.cc",
@@ -48,11 +49,14 @@ cc_library(
     "pass_matrix_by_pointer.cc",
     "raise.cc",
     "remove_unreachable_in_loop_continuing.cc",
+    "resource_table_helper.cc",
     "shader_io.cc",
+    "unary_polyfill.cc",
     "var_for_dynamic_index.cc",
   ],
   hdrs = [
     "builtin_polyfill.h",
+    "case_switch_to_if_else.h",
     "expand_implicit_splats.h",
     "fork_explicit_layout_types.h",
     "handle_matrix_arithmetic.h",
@@ -61,7 +65,9 @@ cc_library(
     "pass_matrix_by_pointer.h",
     "raise.h",
     "remove_unreachable_in_loop_continuing.h",
+    "resource_table_helper.h",
     "shader_io.h",
+    "unary_polyfill.h",
     "var_for_dynamic_index.h",
   ],
   deps = [
@@ -106,6 +112,7 @@ cc_library(
   alwayslink = True,
   srcs = [
     "builtin_polyfill_test.cc",
+    "case_switch_to_if_else_test.cc",
     "expand_implicit_splats_test.cc",
     "fork_explicit_layout_types_test.cc",
     "handle_matrix_arithmetic_test.cc",
@@ -114,6 +121,7 @@ cc_library(
     "pass_matrix_by_pointer_test.cc",
     "remove_unreachable_in_loop_continuing_test.cc",
     "shader_io_test.cc",
+    "unary_polyfill_test.cc",
     "var_for_dynamic_index_test.cc",
   ],
   deps = [
@@ -128,6 +136,7 @@ cc_library(
     "//src/tint/lang/spirv",
     "//src/tint/lang/spirv/intrinsic",
     "//src/tint/lang/spirv/ir",
+    "//src/tint/lang/spirv/type",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",

@@ -39,6 +39,7 @@
 #include "dawn/native/Instance.h"
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d/KeyedMutex.h"
+#include "dawn/native/d3d/ShaderUtils.h"
 #include "dawn/native/d3d/UtilsD3D.h"
 #include "dawn/native/d3d11/BackendD3D11.h"
 #include "dawn/native/d3d11/BindGroupD3D11.h"
@@ -64,6 +65,19 @@
 #include "dawn/platform/tracing/TraceEvent.h"
 
 namespace dawn::native::d3d11 {
+
+size_t Sha3CacheFuncs::operator()(const Sha3_256::Output& key) const {
+    // This combines the hash of the first 8 bytes and the last 8 bytes of the SHA3-256 output.
+    // Given that the randomness of SHA3 is very good across all bits (avalanche effect),
+    // sampling from two distant parts of the hash and combining them results in a good hash value
+    // suitable for hash table distribution, while being more performant than hashing all 32 bytes.
+    return absl::HashOf(absl::MakeSpan(key.data(), 8),
+                        absl::MakeSpan(key.data() + Sha3_256::kByteOutputLength - 8, 8));
+}
+bool Sha3CacheFuncs::operator()(const Sha3_256::Output& a, const Sha3_256::Output& b) const {
+    return std::memcmp(a.data(), b.data(), sizeof(Sha3_256::Output)) == 0;
+}
+
 namespace {
 
 static constexpr uint64_t kMaxDebugMessagesToPrint = 5;
@@ -172,6 +186,15 @@ uint64_t AppendDebugLayerMessagesToError(ID3D11InfoQueue* infoQueue,
 
 }  // namespace
 
+Device::Device(AdapterBase* adapter,
+               const UnpackedPtr<DeviceDescriptor>& descriptor,
+               const TogglesState& deviceToggles,
+               Ref<DeviceBase::DeviceLostEvent>&& lostEvent)
+    : Base(adapter, descriptor, deviceToggles, std::move(lostEvent)),
+      mVertexShaderCache(1024),
+      mPixelShaderCache(1024),
+      mComputeShaderCache(1024) {}
+
 // static
 ResultOrError<Ref<Device>> Device::Create(AdapterBase* adapter,
                                           const UnpackedPtr<DeviceDescriptor>& descriptor,
@@ -233,6 +256,7 @@ MaybeError Device::TickImpl() {
     // error during execution and early out as a result.
     DAWN_TRY(CheckDebugLayerAndGenerateErrors());
     DAWN_TRY(ToBackend(GetQueue())->SubmitPendingCommands());
+    UnmapDestroyedBuffers();
     return {};
 }
 
@@ -241,12 +265,12 @@ void Device::ReferenceUntilUnused(ComPtr<IUnknown> object) {
 }
 
 ResultOrError<Ref<BindGroupBase>> Device::CreateBindGroupImpl(
-    const BindGroupDescriptor* descriptor) {
+    const UnpackedPtr<BindGroupDescriptor>& descriptor) {
     return BindGroup::Create(this, descriptor);
 }
 
 ResultOrError<Ref<BindGroupLayoutInternalBase>> Device::CreateBindGroupLayoutImpl(
-    const BindGroupLayoutDescriptor* descriptor) {
+    const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor) {
     return BindGroupLayout::Create(this, descriptor);
 }
 
@@ -279,16 +303,18 @@ Ref<RenderPipelineBase> Device::CreateUninitializedRenderPipelineImpl(
     const UnpackedPtr<RenderPipelineDescriptor>& descriptor) {
     return RenderPipeline::CreateUninitialized(this, descriptor);
 }
-
+ResultOrError<Ref<ResourceTableBase>> Device::CreateResourceTableImpl(
+    const ResourceTableDescriptor* descriptor) {
+    return DAWN_UNIMPLEMENTED_ERROR("ResourceTable is not supported on D3D11");
+}
 ResultOrError<Ref<SamplerBase>> Device::CreateSamplerImpl(const SamplerDescriptor* descriptor) {
     return Sampler::Create(this, descriptor);
 }
 
 ResultOrError<Ref<ShaderModuleBase>> Device::CreateShaderModuleImpl(
     const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-    const std::vector<tint::wgsl::Extension>& internalExtensions,
-    ShaderModuleParseResult* parseResult) {
-    return ShaderModule::Create(this, descriptor, internalExtensions, parseResult);
+    const std::vector<tint::wgsl::Extension>& internalExtensions) {
+    return ShaderModule::Create(this, descriptor, internalExtensions);
 }
 
 ResultOrError<Ref<SwapChainBase>> Device::CreateSwapChainImpl(Surface* surface,
@@ -374,13 +400,15 @@ MaybeError Device::CopyFromStagingToBuffer(BufferBase* source,
     // D3D11 requires that buffers are unmapped before being used in a copy.
     DAWN_TRY(source->Unmap());
 
+    auto scopedUseBuffer = source->UseInternal();
+
     auto commandContext =
         ToBackend(GetQueue())->GetScopedPendingCommandContext(QueueBase::SubmitMode::Normal);
     return Buffer::Copy(&commandContext, ToBackend(source), sourceOffset, size,
                         ToBackend(destination), destinationOffset);
 }
 
-MaybeError Device::CopyFromStagingToTextureImpl(const BufferBase* source,
+MaybeError Device::CopyFromStagingToTextureImpl(BufferBase* source,
                                                 const TexelCopyBufferLayout& src,
                                                 const TextureCopy& dst,
                                                 const Extent3D& copySizePixels) {
@@ -445,7 +473,7 @@ void Device::AppendDeviceLostMessage(ErrorData* error) {
     }
 }
 
-void Device::DestroyImpl() {
+void Device::DestroyImpl(DestroyReason reason) {
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the device is explicitly destroyed with APIDestroy.
     //   This case is NOT thread-safe and needs proper synchronization with other
@@ -458,7 +486,7 @@ void Device::DestroyImpl() {
     mImplicitPixelLocalStorageAttachmentTextureViews = {};
     mStagingBuffers.clear();
 
-    Base::DestroyImpl();
+    Base::DestroyImpl(reason);
 }
 
 uint32_t Device::GetOptimalBytesPerRowAlignment() const {
@@ -479,7 +507,33 @@ void Device::DisposeKeyedMutex(ComPtr<IDXGIKeyedMutex> dxgiKeyedMutex) {
     // Nothing to do, the ComPtr will release the keyed mutex.
 }
 
+void Device::DeferUnmapDestroyedBuffer(ComPtr<ID3D11Buffer> buffer) {
+    if (!buffer) {
+        return;
+    }
+    mPendingDestroyedBufferUnmaps->push_back(std::move(buffer));
+}
+
+void Device::UnmapDestroyedBuffers() {
+    auto commandContext =
+        ToBackend(GetQueue())
+            ->GetScopedPendingCommandContext(ExecutionQueueBase::SubmitMode::Passive);
+
+    mPendingDestroyedBufferUnmaps.Use([&](auto buffers) {
+        for (auto& buffer : *buffers) {
+            commandContext.Unmap(buffer.Get(), 0);
+        }
+        buffers->clear();
+    });
+}
+
 bool Device::ReduceMemoryUsageImpl() {
+    mVertexShaderCache.Clear();
+    mPixelShaderCache.Clear();
+    mComputeShaderCache.Clear();
+
+    UnmapDestroyedBuffers();
+
     // D3D11 defers the deletion of resources until we call Flush().
     // So trigger a Flush() here to force deleting any pending resources.
     auto commandContext =
@@ -494,6 +548,26 @@ bool Device::ReduceMemoryUsageImpl() {
     }
 
     return false;
+}
+
+std::optional<DeviceGuard> Device::UseGuardForCreateBindGroup() {
+    return std::nullopt;
+}
+
+std::optional<DeviceGuard> Device::UseGuardForCreateBindGroupLayout() {
+    return std::nullopt;
+}
+
+std::optional<DeviceGuard> Device::UseGuardForCreateBuffer() {
+    return std::nullopt;
+}
+
+std::optional<DeviceGuard> Device::UseGuardForCreateSampler() {
+    return std::nullopt;
+}
+
+std::optional<DeviceGuard> Device::UseGuardForCreateTexture() {
+    return std::nullopt;
 }
 
 bool Device::MayRequireDuplicationOfIndirectParameters() const {
@@ -607,6 +681,42 @@ void Device::ReturnStagingBuffer(Ref<BufferBase>&& buffer) {
     if (buffer->GetSize() <= kMaxStagingBufferSize) {
         mStagingBuffers.push_back(std::move(buffer));
     }
+}
+
+ResultOrError<ComPtr<ID3D11VertexShader>> Device::GetOrCreateVertexShader(
+    const d3d::CompiledShader& args) {
+    return mVertexShaderCache.GetOrCreate(
+        args.sha3, [&](const Sha3_256::Output&) -> ResultOrError<ComPtr<ID3D11VertexShader>> {
+            ComPtr<ID3D11VertexShader> vs;
+            DAWN_TRY(CheckHRESULT(mD3d11Device->CreateVertexShader(
+                                      args.shaderBlob.Data(), args.shaderBlob.Size(), nullptr, &vs),
+                                  "D3D11 create vertex shader"));
+            return vs;
+        });
+}
+
+ResultOrError<ComPtr<ID3D11PixelShader>> Device::GetOrCreatePixelShader(
+    const d3d::CompiledShader& args) {
+    return mPixelShaderCache.GetOrCreate(
+        args.sha3, [&](const Sha3_256::Output&) -> ResultOrError<ComPtr<ID3D11PixelShader>> {
+            ComPtr<ID3D11PixelShader> ps;
+            DAWN_TRY(CheckHRESULT(mD3d11Device->CreatePixelShader(
+                                      args.shaderBlob.Data(), args.shaderBlob.Size(), nullptr, &ps),
+                                  "D3D11 create pixel shader"));
+            return ps;
+        });
+}
+
+ResultOrError<ComPtr<ID3D11ComputeShader>> Device::GetOrCreateComputeShader(
+    const d3d::CompiledShader& args) {
+    return mComputeShaderCache.GetOrCreate(
+        args.sha3, [&](const Sha3_256::Output&) -> ResultOrError<ComPtr<ID3D11ComputeShader>> {
+            ComPtr<ID3D11ComputeShader> cs;
+            DAWN_TRY(CheckHRESULT(mD3d11Device->CreateComputeShader(
+                                      args.shaderBlob.Data(), args.shaderBlob.Size(), nullptr, &cs),
+                                  "D3D11 create compute shader"));
+            return cs;
+        });
 }
 
 }  // namespace dawn::native::d3d11

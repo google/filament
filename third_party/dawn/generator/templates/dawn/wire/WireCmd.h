@@ -63,17 +63,20 @@ namespace dawn::wire {
             {% endfor %}
     };
 
-    //* Enum used as a prefix to each command on the wire format.
     enum class WireCmd : uint32_t {
+        // Enums used in special wire commands.
+        {% for command in cmd_records["special command"] %}
+            {{command.name.CamelCase()}},
+        {% endfor %}
+
+        // Enums used on the wire format.
         {% for command in cmd_records["command"] %}
             {{command.name.CamelCase()}},
         {% endfor %}
-    };
 
-    //* Enum used as a prefix to each command on the return wire format.
-    enum class ReturnWireCmd : uint32_t {
+        // Enums used on the return wire format.
         {% for command in cmd_records["return command"] %}
-            {{command.name.CamelCase()}},
+            Return{{command.name.CamelCase()}},
         {% endfor %}
     };
 
@@ -116,6 +119,10 @@ namespace dawn::wire {
         {% endfor %}
     };
 {% endmacro %}
+
+    {% for command in cmd_records["special command"] %}
+        {{write_command_struct(command, False)}}
+    {% endfor %}
 
     {% for command in cmd_records["command"] %}
         {{write_command_struct(command, False)}}

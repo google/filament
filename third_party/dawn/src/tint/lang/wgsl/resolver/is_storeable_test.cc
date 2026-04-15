@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/type/atomic.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/array.h"
 
@@ -106,13 +105,13 @@ TEST_F(ResolverIsStorableTest, Atomic) {
 
 TEST_F(ResolverIsStorableTest, ArraySizedOfStorable) {
     auto* arr = create<sem::Array>(create<core::type::I32>(),
-                                   create<core::type::ConstantArrayCount>(5u), 4u, 20u, 4u, 4u);
+                                   create<core::type::ConstantArrayCount>(5u), 20u);
     EXPECT_TRUE(r()->IsStorable(arr));
 }
 
 TEST_F(ResolverIsStorableTest, ArrayUnsizedOfStorable) {
-    auto* arr = create<sem::Array>(create<core::type::I32>(),
-                                   create<core::type::RuntimeArrayCount>(), 4u, 4u, 4u, 4u);
+    auto* arr =
+        create<sem::Array>(create<core::type::I32>(), create<core::type::RuntimeArrayCount>(), 4u);
     EXPECT_TRUE(r()->IsStorable(arr));
 }
 

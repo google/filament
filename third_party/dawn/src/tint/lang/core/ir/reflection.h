@@ -28,22 +28,13 @@
 #ifndef SRC_TINT_LANG_CORE_IR_REFLECTION_H_
 #define SRC_TINT_LANG_CORE_IR_REFLECTION_H_
 
+#include <optional>
+
+#include "src/tint/api/common/workgroup_info.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/utils/result.h"
 
 namespace tint::core::ir {
-/// Workgroup size information
-struct WorkgroupInfo {
-    /// The x-component
-    uint32_t x = 0;
-    /// The y-component
-    uint32_t y = 0;
-    /// The z-component
-    uint32_t z = 0;
-
-    /// The needed workgroup storage size
-    size_t storage_size = 0;
-};
 
 /// Generate WorkgroupInfo for an IR module input.
 /// @param ir the workgroup info for the IR module

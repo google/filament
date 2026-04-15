@@ -44,12 +44,6 @@ namespace dawn::native::vulkan {
 
 namespace {
 
-// On Vulkan the memory type of the mappable buffers with extended usages must have all below memory
-// property flags.
-constexpr VkMemoryPropertyFlags kMapExtendedUsageMemoryPropertyFlags =
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
 VkDeviceSize GetMaxSuballocationSize(VkDeviceSize heapBlockSize) {
     // Have each bucket of the buddy system allocate at least some resource of the maximum
     // size
@@ -58,24 +52,7 @@ VkDeviceSize GetMaxSuballocationSize(VkDeviceSize heapBlockSize) {
     return heapBlockSize / 2;
 }
 
-bool IsMemoryKindMappable(MemoryKind memoryKind) {
-    return memoryKind & (MemoryKind::ReadMappable | MemoryKind::WriteMappable);
-}
-
-bool HasMemoryTypeWithFlags(const VulkanDeviceInfo& deviceInfo, VkMemoryPropertyFlags flags) {
-    for (auto& memoryType : deviceInfo.memoryTypes) {
-        if ((memoryType.propertyFlags & flags) == flags) {
-            return true;
-        }
-    }
-    return false;
-}
-
 }  // anonymous namespace
-
-bool SupportsBufferMapExtendedUsages(const VulkanDeviceInfo& deviceInfo) {
-    return HasMemoryTypeWithFlags(deviceInfo, kMapExtendedUsageMemoryPropertyFlags);
-}
 
 // SingleTypeAllocator is a combination of a BuddyMemoryAllocator and its client and can
 // service suballocation requests, but for a single Vulkan memory type.
@@ -191,12 +168,10 @@ VkDeviceSize ResourceMemoryAllocator::GetHeapBlockSize(const DawnDeviceAllocator
 
 // Implementation of ResourceMemoryAllocator
 ResourceMemoryAllocator::ResourceMemoryAllocator(Device* device, VkDeviceSize heapBlockSize)
-    : mDevice(device), mMaxSizeForSuballocation(GetMaxSuballocationSize(heapBlockSize)) {
+    : mDevice(device),
+      mMaxSizeForSuballocation(GetMaxSuballocationSize(heapBlockSize)),
+      mMemoryTypeSelector(mDevice->GetDeviceInfo()) {
     const VulkanDeviceInfo& info = mDevice->GetDeviceInfo();
-
-    // Check if mappable host coherent and host cached buffers will work.
-    mUseHostCachedForMappable = HasMemoryTypeWithFlags(
-        info, kMapExtendedUsageMemoryPropertyFlags | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 
     mAllocatorsPerType.reserve(info.memoryTypes.size());
     for (size_t i = 0; i < info.memoryTypes.size(); i++) {
@@ -354,7 +329,7 @@ void ResourceMemoryAllocator::RecordHeapAllocation(VkDeviceSize size, bool isLaz
 
 void ResourceMemoryAllocator::DeallocateResourceHeap(ResourceHeap* heap, bool isLazyMemoryType) {
     VkDeviceSize heapSize = heap->GetSize();
-    MutexProtected<FencedDeleter>& fencedDeleter = mDevice->GetFencedDeleter();
+    auto& fencedDeleter = mDevice->GetFencedDeleter();
     auto currentDeletionSerial = fencedDeleter->GetCurrentDeletionSerial();
 
     // Track heap that will be deallocated for allocated memory sizes.
@@ -382,80 +357,7 @@ void ResourceMemoryAllocator::Tick(ExecutionSerial completedSerial) {
 }
 
 int ResourceMemoryAllocator::FindBestTypeIndex(VkMemoryRequirements requirements, MemoryKind kind) {
-    const VulkanDeviceInfo& info = mDevice->GetDeviceInfo();
-    bool mappable = IsMemoryKindMappable(kind);
-    VkMemoryPropertyFlags vkRequiredFlags = GetRequiredMemoryPropertyFlags(kind);
-
-    // Find a suitable memory type for this allocation
-    int bestType = -1;
-    for (size_t i = 0; i < info.memoryTypes.size(); ++i) {
-        // Resource must support this memory type
-        if ((requirements.memoryTypeBits & (1 << i)) == 0) {
-            continue;
-        }
-
-        // Memory type must have all the required memory properties.
-        if ((info.memoryTypes[i].propertyFlags & vkRequiredFlags) != vkRequiredFlags) {
-            continue;
-        }
-
-        // Found the first candidate memory type
-        if (bestType == -1) {
-            bestType = static_cast<int>(i);
-            continue;
-        }
-
-        // For non-mappable resources that can be lazily allocated, favor lazy
-        // allocation (note: this is a more important property than that of
-        // device local memory and hence is checked first).
-        bool currentLazilyAllocated =
-            (info.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) != 0u;
-        bool bestLazilyAllocated = (info.memoryTypes[bestType].propertyFlags &
-                                    VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) != 0u;
-        if ((kind == MemoryKind::LazilyAllocated) &&
-            (currentLazilyAllocated != bestLazilyAllocated)) {
-            if (currentLazilyAllocated) {
-                bestType = static_cast<int>(i);
-            }
-            continue;
-        }
-
-        // For non-mappable, non-lazily-allocated resources, favor device local
-        // memory.
-        bool currentDeviceLocal =
-            (info.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0u;
-        bool bestDeviceLocal =
-            (info.memoryTypes[bestType].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0u;
-        if (!mappable && (currentDeviceLocal != bestDeviceLocal)) {
-            if (currentDeviceLocal) {
-                bestType = static_cast<int>(i);
-            }
-            continue;
-        }
-
-        // Cached memory is optimal for read-only access from CPU as host memory accesses to
-        // uncached memory are slower than to cached memory.
-        bool currentHostCached =
-            (info.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) != 0u;
-        bool bestHostCached =
-            (info.memoryTypes[bestType].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) != 0u;
-        if ((kind & MemoryKind::ReadMappable) && currentHostCached != bestHostCached) {
-            if (currentHostCached) {
-                bestType = static_cast<int>(i);
-            }
-            continue;
-        }
-
-        // All things equal favor the memory in the biggest heap
-        VkDeviceSize bestTypeHeapSize = info.memoryHeaps[info.memoryTypes[bestType].heapIndex].size;
-        VkDeviceSize candidateHeapSize = info.memoryHeaps[info.memoryTypes[i].heapIndex].size;
-        if (candidateHeapSize > bestTypeHeapSize) {
-            bestType = static_cast<int>(i);
-            continue;
-        }
-    }
-
-    return bestType;
+    return mMemoryTypeSelector.FindBestTypeIndex(requirements, kind);
 }
 
 void ResourceMemoryAllocator::FreeRecycledMemory() {
@@ -478,36 +380,6 @@ uint64_t ResourceMemoryAllocator::GetTotalLazyAllocatedMemory() const {
 
 uint64_t ResourceMemoryAllocator::GetTotalLazyUsedMemory() const {
     return mLazyUsedMemory.Size();
-}
-
-VkMemoryPropertyFlags ResourceMemoryAllocator::GetRequiredMemoryPropertyFlags(
-    MemoryKind memoryKind) const {
-    VkMemoryPropertyFlags vkFlags = 0;
-
-    // Mappable resource must be host visible and host coherent.
-    if (IsMemoryKindMappable(memoryKind)) {
-        vkFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        vkFlags |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-        // For device local mappable buffers prefer to use host coherent plus host cached memory
-        // when it's available for better host access performance.
-        DAWN_ASSERT(!(memoryKind & MemoryKind::HostCached));
-        if (memoryKind & MemoryKind::DeviceLocal && mUseHostCachedForMappable) {
-            vkFlags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-        }
-    }
-
-    // DEVICE_LOCAL_BIT must be set when MemoryKind::DeviceLocal is required.
-    if (memoryKind & MemoryKind::DeviceLocal) {
-        vkFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    }
-
-    // HOST_CACHED_BIT must be set when MemoryKind::HostCached is required.
-    if (memoryKind & MemoryKind::HostCached) {
-        vkFlags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-    }
-
-    return vkFlags;
 }
 
 }  // namespace dawn::native::vulkan

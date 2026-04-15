@@ -123,6 +123,9 @@ class QueryInternalShaderTests : public DawnTest {
         DAWN_TEST_UNSUPPORTED_IF(UsesWire());
         DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("disable_timestamp_query_conversion"));
 
+        // The test flakily fails on Mali GPUs (see crbug.com/452388097).
+        DAWN_SUPPRESS_TEST_IF(IsARM());
+
         // If implicit device synchronization is turned on, EncodeConvertTimestampsToNanoseconds
         // will expect the device to be locked. But we are calling it directly without going through
         // wgpu API, hence the device won't be locked on this route. This would lead to assertion

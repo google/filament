@@ -40,6 +40,14 @@ target_link_libraries(foobar PRIVATE
     Vulkan::UtilityHeaders
 )
 
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(foobar PRIVATE -Werror -Wall -Wextra)
+endif()
+
+if(CMAKE_C_COMPILER_ID MATCHES "MSVC")
+    target_compile_options(foobar PRIVATE /W4 /WX)
+endif()
+
 get_filename_component(VUL_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../include/" ABSOLUTE)
 
 # Get all the header files we SHIP

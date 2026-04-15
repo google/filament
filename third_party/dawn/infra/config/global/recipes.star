@@ -88,7 +88,6 @@ def _recipe_for_package(cipd_package):
             cipd_version = cipd_version,
             recipe = recipe,
             use_bbagent = True,
-            use_python3 = True,
         )
 
         register_recipe_bootstrappability(name, bootstrappable)
@@ -105,10 +104,6 @@ build_recipe = _recipe_for_package(
 
 build_recipe(
     name = "recipe:dawn/cmake",
-)
-
-build_recipe(
-    name = "recipe:dawn/gn",
 )
 
 build_recipe(

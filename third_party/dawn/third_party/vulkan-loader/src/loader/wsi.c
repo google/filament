@@ -212,7 +212,7 @@ VkResult wsi_unwrap_icd_surface(struct loader_icd_term *icd_term, VkSurfaceKHR *
 #if defined(VK_USE_PLATFORM_GGP)
                 case VK_ICD_WSI_PLATFORM_GGP:
                     if (NULL != icd_term->dispatch.CreateStreamDescriptorSurfaceGGP &&
-                        icd_term->enabled_instance_extensions.qnx_screen_surface) {
+                        icd_term->enabled_instance_extensions.ggp_stream_descriptor_surface) {
                         result = icd_term->dispatch.CreateStreamDescriptorSurfaceGGP(
                             icd_term->instance, (const VkStreamDescriptorSurfaceCreateInfoGGP *)icd_surface->create_info,
                             pAllocator, &icd_term->surface_list.list[icd_surface->surface_index]);
@@ -323,7 +323,9 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroySurfaceKHR(VkInstance instance, VkS
                 // The real_icd_surface for any ICD not supporting the
                 // proper interface version should be NULL.  If not, then
                 // we have a problem.
-                assert((VkSurfaceKHR)(uintptr_t)NULL == icd_term->surface_list.list[icd_surface->surface_index]);
+                assert(!(icd_term->enabled_instance_extensions.khr_surface &&
+                         icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR) ||
+                       (VkSurfaceKHR)(uintptr_t)NULL == icd_term->surface_list.list[icd_surface->surface_index]);
             }
         }
         if (NULL != icd_surface->create_info) {
@@ -841,8 +843,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(VkInstance insta
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, sizeof(VkWin32SurfaceCreateInfoKHR)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkWin32SurfaceCreateInfoKHR", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkWin32SurfaceCreateInfoKHR", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -940,8 +945,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(VkInstance ins
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR, sizeof(VkWaylandSurfaceCreateInfoKHR)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkWaylandSurfaceCreateInfoKHR", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkWaylandSurfaceCreateInfoKHR", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1043,8 +1051,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(VkInstance instanc
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR, sizeof(VkXcbSurfaceCreateInfoKHR)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkXcbSurfaceCreateInfoKHR", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkXcbSurfaceCreateInfoKHR", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1149,8 +1160,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(VkInstance instan
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR, sizeof(VkXlibSurfaceCreateInfoKHR)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkXlibSurfaceCreateInfoKHR", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkXlibSurfaceCreateInfoKHR", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1254,8 +1268,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDirectFBSurfaceEXT(VkInstance in
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_DIRECTFB_SURFACE_CREATE_INFO_EXT, sizeof(VkDirectFBSurfaceCreateInfoEXT)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkDirectFBSurfaceCreateInfoEXT", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkDirectFBSurfaceCreateInfoEXT", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1402,8 +1419,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateHeadlessSurfaceEXT(VkInstance in
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_HEADLESS_SURFACE_CREATE_INFO_EXT, sizeof(VkHeadlessSurfaceCreateInfoEXT)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkHeadlessSurfaceCreateInfoEXT", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkHeadlessSurfaceCreateInfoEXT", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1488,8 +1508,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMacOSSurfaceMVK(VkInstance insta
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK, sizeof(VkMacOSSurfaceCreateInfoMVK)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkMacOSSurfaceCreateInfoMVK", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkMacOSSurfaceCreateInfoMVK", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1599,8 +1622,11 @@ terminator_CreateStreamDescriptorSurfaceGGP(VkInstance instance, const VkStreamD
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_STREAM_DESCRIPTOR_SURFACE_CREATE_INFO_GGP, sizeof(VkStreamDescriptorSurfaceCreateInfoGGP)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkStreamDescriptorSurfaceCreateInfoGGP", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkStreamDescriptorSurfaceCreateInfoGGP", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1654,8 +1680,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMetalSurfaceEXT(VkInstance insta
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT, sizeof(VkMetalSurfaceCreateInfoEXT)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkMetalSurfaceCreateInfoEXT", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkMetalSurfaceCreateInfoEXT", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1715,8 +1744,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateScreenSurfaceQNX(VkInstance inst
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_SCREEN_SURFACE_CREATE_INFO_QNX, sizeof(VkScreenSurfaceCreateInfoQNX)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkScreenSurfaceCreateInfoQNX", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkScreenSurfaceCreateInfoQNX", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -1815,8 +1847,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateViSurfaceNN(VkInstance instance,
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_VI_SURFACE_CREATE_INFO_NN, sizeof(VkViSurfaceCreateInfoNN)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkViSurfaceCreateInfoNN", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkViSurfaceCreateInfoNN", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -2129,8 +2164,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(VkInstanc
         {VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR, sizeof(VkDisplaySurfaceCreateInfoKHR)},
         {VK_STRUCTURE_TYPE_DISPLAY_SURFACE_STEREO_CREATE_INFO_NV, sizeof(VkDisplaySurfaceStereoCreateInfoNV)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkDisplaySurfaceCreateInfoKHR", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkDisplaySurfaceCreateInfoKHR", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 
@@ -2558,8 +2596,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateImagePipeSurfaceFUCHSIA(VkInstan
     const struct loader_struct_type_info ci_types[] = {
         {VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA, sizeof(VkImagePipeSurfaceCreateInfoFUCHSIA)},
     };
-    copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
-                             "VkImagePipeSurfaceCreateInfoFUCHSIA", pAllocator);
+    result = copy_surface_create_info(loader_inst, icd_surface, pCreateInfo, sizeof(ci_types) / sizeof(ci_types[0]), ci_types,
+                                      "VkImagePipeSurfaceCreateInfoFUCHSIA", pAllocator);
+    if (VK_SUCCESS != result) {
+        goto out;
+    }
 
     *pSurface = (VkSurfaceKHR)(uintptr_t)icd_surface;
 

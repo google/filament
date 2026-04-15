@@ -23,7 +23,7 @@ jobs:
         os: [ ubuntu-latest, macos-latest ]
         cmake-version: [ '3.22.1', 'latest']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
@@ -41,7 +41,7 @@ jobs:
       matrix:
         cmake-version: [ '3.22.1', 'latest']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
@@ -59,7 +59,7 @@ jobs:
       matrix:
           compiler: [ clang, clang-cl ]
     steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v6
         - uses: ilammy/msvc-dev-cmd@v1
         - run: |
             cmake -S . -B build `
@@ -75,14 +75,14 @@ jobs:
 
   cmake-unix-modules:
     runs-on: ${{ matrix.os }}
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    if: false
     strategy:
       matrix:
         os: [ ubuntu-latest ]
         cmake-version: [ 'latest' ]
         compiler: [ clang++-18 ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
@@ -91,8 +91,6 @@ jobs:
           cmake -S . -B build \
           -D VULKAN_HEADERS_ENABLE_TESTS=ON \
           -D VULKAN_HEADERS_ENABLE_INSTALL=ON \
-          -D VULKAN_HEADERS_ENABLE_MODULE=ON \
-          -D VULKAN_HEADERS_ENABLE_MODULE_STD=OFF \
           -D CMAKE_CXX_COMPILER=${{ matrix.compiler }} \
       - run: cmake --build ./build
       - run: cmake --install build/ --prefix build/install
@@ -101,13 +99,13 @@ jobs:
 
   cmake-windows-modules:
     runs-on: ${{ matrix.os }}
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    if: false
     strategy:
       matrix:
         os: [ windows-latest ]
         cmake-version: [ 'latest' ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
@@ -116,8 +114,6 @@ jobs:
           cmake -S . -B build `
           -D VULKAN_HEADERS_ENABLE_TESTS=ON `
           -D VULKAN_HEADERS_ENABLE_INSTALL=ON `
-          -D VULKAN_HEADERS_ENABLE_MODULE=ON `
-          -D VULKAN_HEADERS_ENABLE_MODULE_STD=OFF `
       - run: cmake --build ./build
       - run: cmake --install build/ --prefix build/install
       - run: ctest --output-on-failure
@@ -127,6 +123,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: REUSE Compliance Check
-      uses: fsfe/reuse-action@v5
+      uses: fsfe/reuse-action@v6

@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/ir/transform/array_length_from_uniform.h"
-
 #include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/lang/core/ir/transform/array_length_from_uniform.h"
 #include "src/tint/lang/core/ir/validator.h"
 
 namespace tint::core::ir::transform {
@@ -40,10 +39,7 @@ Result<SuccessType> ArrayLengthFromUniformFuzzer(
     const fuzz::ir::Context&,
     BindingPoint ubo_binding,
     const std::unordered_map<BindingPoint, uint32_t>& bindpoint_to_size_index) {
-    if (auto res = ArrayLengthFromUniform(module, ubo_binding, bindpoint_to_size_index);
-        res != Success) {
-        return res.Failure();
-    }
+    TINT_CHECK_RESULT(ArrayLengthFromUniform(module, ubo_binding, bindpoint_to_size_index));
 
     return Success;
 }

@@ -25,6 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/utils/WireHelper.h"
+
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
@@ -41,7 +43,6 @@
 #include "dawn/dawn_proc.h"
 #include "dawn/native/DawnNative.h"
 #include "dawn/utils/TerribleCommandBuffer.h"
-#include "dawn/utils/WireHelper.h"
 #include "dawn/wire/WireClient.h"
 #include "dawn/wire/WireServer.h"
 #include "partition_alloc/pointers/raw_ptr.h"
@@ -127,6 +128,7 @@ class WireHelperProxy : public WireHelper {
         dawn::wire::WireServerDescriptor serverDesc = {};
         serverDesc.procs = &procs;
         serverDesc.serializer = mS2cBuf.get();
+        serverDesc.useSpontaneousCallbacks = true;
 
         mWireServer.reset(new dawn::wire::WireServer(serverDesc));
         mC2sBuf->SetHandler(mWireServer.get());
@@ -190,6 +192,28 @@ std::pair<wgpu::Instance, std::unique_ptr<dawn::native::Instance>> WireHelper::C
     return {RegisterInstance(nativeInstance->Get(),
                              reinterpret_cast<const WGPUInstanceDescriptor*>(wireDesc)),
             std::move(nativeInstance)};
+}
+
+void WireHelper::WaitUntilIdle(dawn::native::Instance* serverInstance,
+                               wgpu::Instance clientInstance) {
+    while (true) {
+        bool C2SFlushed = FlushClient();
+        DAWN_ASSERT(C2SFlushed);
+
+        if (!dawn::native::InstanceProcessEvents(serverInstance->Get())) {
+            if (clientInstance != nullptr) {
+                clientInstance.ProcessEvents();
+                if (!IsIdle()) {
+                    continue;
+                }
+            }
+            break;
+        }
+
+        if (clientInstance != nullptr) {
+            clientInstance.ProcessEvents();
+        }
+    }
 }
 
 std::unique_ptr<WireHelper> CreateWireHelper(const DawnProcTable& procs,

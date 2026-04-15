@@ -27,10 +27,9 @@
 
 #include <algorithm>
 
-#include "dawn/tests/DawnTest.h"
-
 #include "dawn/common/Math.h"
 #include "dawn/native/DawnNative.h"
+#include "dawn/tests/DawnTest.h"
 
 namespace dawn {
 namespace {
@@ -62,7 +61,9 @@ TEST_P(BufferAllocatedSizeTests, UniformUsage) {
     } else if (IsMetal()) {
         requiredBufferAlignment = 16u;
     } else if (IsVulkan()) {
-        requiredBufferAlignment = 4u;
+        requiredBufferAlignment = 16u;
+    } else if (IsOpenGL() || IsOpenGLES()) {
+        requiredBufferAlignment = 16u;
     }
 
     // Test uniform usage

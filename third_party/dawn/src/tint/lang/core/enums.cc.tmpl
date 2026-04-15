@@ -17,13 +17,18 @@ See:
 {{- $addr_space_enum := ($I.Sem.Enum "address_space") -}}
 {{- $interpolation_sampling_enum := ($I.Sem.Enum "interpolation_sampling") -}}
 {{- $interpolation_type_enum := ($I.Sem.Enum "interpolation_type") -}}
+{{- $sampler_filtering_enum := ($I.Sem.Enum "sampler_filtering") -}}
+{{- $texture_filterable_enum := ($I.Sem.Enum "texture_filterable") -}}
 {{- $subgroup_matrix_kind_enum := ($I.Sem.Enum "subgroup_matrix_kind") -}}
 {{- $texel_format_enum := ($I.Sem.Enum "texel_format") -}}
 {{- $builtin_type_enum := ($I.Sem.Enum "builtin_type") -}}
 {{- $builtin_value_enum := ($I.Sem.Enum "builtin_value") -}}
+{{- $builtin_depth_mode_enum := ($I.Sem.Enum "builtin_depth_mode") -}}
 {{- $attribute_enum := ($I.Sem.Enum "attribute") -}}
 
 {{- Eval "OverrideEnumName" "Enum" $builtin_type_enum "Name" "BuiltinType" -}}
+
+// clang-format off
 
 #include "src/tint/lang/core/enums.h"
 
@@ -41,6 +46,12 @@ namespace tint::core {
 {{ Eval "ParseEnum" $interpolation_type_enum}}
 {{ Eval "EnumOStream" $interpolation_type_enum}}
 
+{{ Eval "ParseEnum" $sampler_filtering_enum}}
+{{ Eval "EnumOStream" $sampler_filtering_enum}}
+
+{{ Eval "ParseEnum" $texture_filterable_enum}}
+{{ Eval "EnumOStream" $texture_filterable_enum}}
+
 {{ Eval "ParseEnum" $subgroup_matrix_kind_enum}}
 {{ Eval "EnumOStream" $subgroup_matrix_kind_enum}}
 
@@ -52,6 +63,9 @@ namespace tint::core {
 
 {{ Eval "ParseEnum" $builtin_value_enum}}
 {{ Eval "EnumOStream" $builtin_value_enum}}
+
+{{ Eval "ParseEnum" $builtin_depth_mode_enum}}
+{{ Eval "EnumOStream" $builtin_depth_mode_enum}}
 
 {{ Eval "ParseEnum" $attribute_enum}}
 {{ Eval "EnumOStream" $attribute_enum}}
@@ -89,22 +103,6 @@ const char* str(BuiltinFn i) {
     return "<unknown>";
 }
 
-bool IsCoarseDerivative(BuiltinFn f) {
-    return f == BuiltinFn::kDpdxCoarse || f == BuiltinFn::kDpdyCoarse ||
-           f == BuiltinFn::kFwidthCoarse;
-}
-
-bool IsFineDerivative(BuiltinFn f) {
-    return f == BuiltinFn::kDpdxFine || f == BuiltinFn::kDpdyFine ||
-           f == BuiltinFn::kFwidthFine;
-}
-
-bool IsDerivative(BuiltinFn f) {
-    return f == BuiltinFn::kDpdx || f == BuiltinFn::kDpdy ||
-           f == BuiltinFn::kFwidth || IsCoarseDerivative(f) ||
-           IsFineDerivative(f);
-}
-
 bool IsTexture(BuiltinFn f) {
     return IsImageQuery(f) ||                                //
            f == BuiltinFn::kTextureGather ||                 //
@@ -126,23 +124,6 @@ bool IsImageQuery(BuiltinFn f) {
            f == BuiltinFn::kTextureNumSamples;
 }
 
-bool IsDataPacking(BuiltinFn f) {
-    return f == BuiltinFn::kPack4X8Snorm || f == BuiltinFn::kPack4X8Unorm ||
-           f == BuiltinFn::kPack2X16Snorm || f == BuiltinFn::kPack2X16Unorm ||
-           f == BuiltinFn::kPack2X16Float;
-}
-
-bool IsDataUnpacking(BuiltinFn f) {
-    return f == BuiltinFn::kUnpack4X8Snorm || f == BuiltinFn::kUnpack4X8Unorm ||
-           f == BuiltinFn::kUnpack2X16Snorm || f == BuiltinFn::kUnpack2X16Unorm ||
-           f == BuiltinFn::kUnpack2X16Float;
-}
-
-bool IsBarrier(BuiltinFn f) {
-    return f == BuiltinFn::kWorkgroupBarrier || f == BuiltinFn::kStorageBarrier ||
-           f == BuiltinFn::kTextureBarrier;
-}
-
 bool IsAtomic(BuiltinFn f) {
     return f == BuiltinFn::kAtomicLoad || f == BuiltinFn::kAtomicStore ||
            f == BuiltinFn::kAtomicAdd || f == BuiltinFn::kAtomicSub ||
@@ -150,13 +131,6 @@ bool IsAtomic(BuiltinFn f) {
            f == BuiltinFn::kAtomicAnd || f == BuiltinFn::kAtomicOr ||
            f == BuiltinFn::kAtomicXor || f == BuiltinFn::kAtomicExchange ||
            f == BuiltinFn::kAtomicCompareExchangeWeak;
-}
-
-bool IsPacked4x8IntegerDotProductBuiltin(BuiltinFn f) {
-    return f == BuiltinFn::kDot4I8Packed || f == BuiltinFn::kDot4U8Packed ||
-           f == BuiltinFn::kPack4XI8 || f == BuiltinFn::kPack4XU8 ||
-           f == BuiltinFn::kPack4XI8Clamp || f == BuiltinFn::kPack4XU8Clamp ||
-           f == BuiltinFn::kUnpack4XI8 || f == BuiltinFn::kUnpack4XU8;
 }
 
 bool IsSubgroup(BuiltinFn f) {
@@ -213,3 +187,5 @@ bool HasSideEffects(BuiltinFn f) {
 }
 
 }  // namespace tint::core
+
+// clang-format on

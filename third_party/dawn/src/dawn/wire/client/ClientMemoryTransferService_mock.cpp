@@ -28,6 +28,7 @@
 #include "dawn/wire/client/ClientMemoryTransferService_mock.h"
 
 #include <cstdio>
+
 #include "dawn/common/Assert.h"
 
 namespace dawn::wire::client {

@@ -26,10 +26,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/type/binding_array.h"
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-#include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 
 #include "gmock/gmock.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
+#include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -42,7 +42,7 @@ using ResolverBindingArrayTest = ResolverTest;
 TEST_F(ResolverBindingArrayTest, ValidGlobalDecl) {
     auto* var = GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 
@@ -59,7 +59,7 @@ TEST_F(ResolverBindingArrayTest, ValidGlobalDecl) {
 TEST_F(ResolverBindingArrayTest, InvalidNoFeature) {
     GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
 
     Resolver resolver{this, wgsl::AllowedFeatures{}};
     EXPECT_FALSE(resolver.Resolve());
@@ -71,7 +71,7 @@ TEST_F(ResolverBindingArrayTest, InvalidNoFeature) {
 TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclNoGroup) {
     GlobalVar(
         "a", Binding(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(),
@@ -81,7 +81,7 @@ TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclNoGroup) {
 TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclNoBinding) {
     GlobalVar(
         "a", Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(),
@@ -91,7 +91,7 @@ TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclNoBinding) {
 TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclPrivate) {
     GlobalVar(
         "a", private_,
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
@@ -102,7 +102,7 @@ TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclPrivate) {
 TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclWorkgroup) {
     GlobalVar(
         "a", workgroup,
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
@@ -113,7 +113,7 @@ TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclWorkgroup) {
 TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclStorageWithHandleType) {
     GlobalVar(
         "a", storage, Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
@@ -125,7 +125,7 @@ note: while instantiating 'var' a)");
 TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclUniformWithHandleType) {
     GlobalVar(
         "a", uniform, Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
@@ -135,8 +135,8 @@ note: while instantiating 'var' a)");
 }
 
 TEST_F(ResolverBindingArrayTest, InvalidGlobalDeclOverride) {
-    Override("a", ty("binding_array",
-                     ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+    Override("a", ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
+                                   4_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
@@ -148,8 +148,8 @@ TEST_F(ResolverBindingArrayTest, InvalidFuncDecl) {
     Func("foo", Empty, ty.void_(),
          Vector{
              Decl(Var("a",
-                      ty("binding_array",
-                         ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u))),
+                      ty.binding_array(
+                          ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u))),
          });
 
     EXPECT_FALSE(r()->Resolve());
@@ -160,8 +160,8 @@ TEST_F(ResolverBindingArrayTest, InvalidStructMember) {
     Structure(
         "S",
         Vector{
-            Member("a", ty("binding_array",
-                           ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u)),
+            Member("a", ty.binding_array(
+                            ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u)),
         });
 
     EXPECT_FALSE(r()->Resolve());
@@ -173,8 +173,8 @@ TEST_F(ResolverBindingArrayTest, InvalidStructMember) {
 TEST_F(ResolverBindingArrayTest, ValidFunctionParameter) {
     Func("foo",
          Vector{
-             Param("a", ty("binding_array",
-                           ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u)),
+             Param("a", ty.binding_array(
+                            ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u)),
          },
          ty.void_(), Empty);
 
@@ -184,7 +184,7 @@ TEST_F(ResolverBindingArrayTest, ValidFunctionParameter) {
 TEST_F(ResolverBindingArrayTest, InvalidFunctionPointerParameterWithHandleType) {
     Func("foo",
          Vector{
-             Param("a", ty.ptr<function>(ty(
+             Param("a", ty.ptr<function>(ty.AsType(
                             "binding_array",
                             ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u))),
          },
@@ -197,14 +197,14 @@ TEST_F(ResolverBindingArrayTest, InvalidFunctionPointerParameterWithHandleType) 
 }
 
 TEST_F(ResolverBindingArrayTest, InvalidNoTemplateArg) {
-    GlobalVar("a", Binding(0_a), Group(0_a), ty("binding_array"));
+    GlobalVar("a", Binding(0_a), Group(0_a), ty.AsType("binding_array"));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: expected '<' for 'binding_array')");
 }
 
 TEST_F(ResolverBindingArrayTest, InvalidNoTemplateType) {
-    GlobalVar("a", Binding(0_a), Group(0_a), ty("binding_array", 4_u));
+    GlobalVar("a", Binding(0_a), Group(0_a), ty.AsType("binding_array", 4_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: 'binding_array' requires 2 template arguments)");
@@ -212,7 +212,8 @@ TEST_F(ResolverBindingArrayTest, InvalidNoTemplateType) {
 
 TEST_F(ResolverBindingArrayTest, InvalidNoTemplateCount) {
     GlobalVar("a", Binding(0_a), Group(0_a),
-              ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32())));
+              ty.AsType("binding_array",
+                        ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32())));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: 'binding_array' requires 2 template arguments)");
@@ -221,7 +222,7 @@ TEST_F(ResolverBindingArrayTest, InvalidNoTemplateCount) {
 TEST_F(ResolverBindingArrayTest, InvalidCountZero) {
     GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 0_a));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 0_a));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: array count (0) must be greater than 0)");
@@ -230,7 +231,7 @@ TEST_F(ResolverBindingArrayTest, InvalidCountZero) {
 TEST_F(ResolverBindingArrayTest, ValidCountOne) {
     GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 1_a));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 1_a));
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
@@ -238,7 +239,7 @@ TEST_F(ResolverBindingArrayTest, ValidCountOne) {
 TEST_F(ResolverBindingArrayTest, InvalidCountNegative) {
     GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), -1_a));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), -1_a));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: array count (-1) must be greater than 0)");
@@ -246,18 +247,18 @@ TEST_F(ResolverBindingArrayTest, InvalidCountNegative) {
 
 TEST_F(ResolverBindingArrayTest, ValidCountConst) {
     GlobalConst("count", ty.u32(), Call("u32", 8_a));
-    GlobalVar("a", Binding(0_a), Group(0_a),
-              ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
-                 "count"));
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), "count"));
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
 
 TEST_F(ResolverBindingArrayTest, InvalidCountOverride) {
     Override("count", ty.u32());
-    GlobalVar("a", Binding(0_a), Group(0_a),
-              ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
-                 "count"));
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), "count"));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: binding_array count must be a constant expression)");
@@ -266,7 +267,7 @@ TEST_F(ResolverBindingArrayTest, InvalidCountOverride) {
 TEST_F(ResolverBindingArrayTest, ValidSampledTexture) {
     GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_a));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_a));
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
@@ -274,43 +275,43 @@ TEST_F(ResolverBindingArrayTest, ValidSampledTexture) {
 // TODO(393558555): Support these types in binding_array as well
 TEST_F(ResolverBindingArrayTest, InvalidSampler) {
     GlobalVar("a", Binding(0_a), Group(0_a),
-              ty("binding_array", ty.sampler(core::type::SamplerKind::kSampler), 4_a));
+              ty.binding_array(ty.sampler(core::type::SamplerKind::kSampler), 4_a));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: binding_array element type must be a sampled texture type)");
 }
 
 TEST_F(ResolverBindingArrayTest, InvalidStorageTexture) {
-    GlobalVar("a", Binding(0_a), Group(0_a),
-              ty("binding_array",
-                 ty.storage_texture(core::type::TextureDimension::k2d, core::TexelFormat::kR32Float,
-                                    core::Access::kReadWrite),
-                 4_a));
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty.binding_array(ty.storage_texture(core::type::TextureDimension::k2d,
+                                            core::TexelFormat::kR32Float, core::Access::kReadWrite),
+                         4_a));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: binding_array element type must be a sampled texture type)");
 }
 
 TEST_F(ResolverBindingArrayTest, InvalidUniformHostShareable) {
-    GlobalVar("a", uniform, Binding(0_a), Group(0_a), ty("binding_array", ty.u32(), 4_a));
+    GlobalVar("a", uniform, Binding(0_a), Group(0_a), ty.binding_array(ty.u32(), 4_a));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: binding_array element type must be a sampled texture type)");
 }
 
 TEST_F(ResolverBindingArrayTest, InvalidStorageHostShareable) {
-    GlobalVar("a", storage, Binding(0_a), Group(0_a), ty("binding_array", ty.u32(), 4_a));
+    GlobalVar("a", storage, Binding(0_a), Group(0_a), ty.binding_array(ty.u32(), 4_a));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: binding_array element type must be a sampled texture type)");
 }
 
 TEST_F(ResolverBindingArrayTest, InvalidBindingArray) {
-    GlobalVar("a", Binding(0_a), Group(0_a),
-              ty("binding_array",
-                 ty("binding_array",
-                    ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_a),
-                 4_a));
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty.binding_array(
+            ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_a),
+            4_a));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: binding_array element type must be a sampled texture type)");

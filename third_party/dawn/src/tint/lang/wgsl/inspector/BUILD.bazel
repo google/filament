@@ -48,6 +48,7 @@ cc_library(
     "entry_point.h",
     "inspector.h",
     "resource_binding.h",
+    "resource_binding_info.h",
     "scalar.h",
   ],
   deps = [

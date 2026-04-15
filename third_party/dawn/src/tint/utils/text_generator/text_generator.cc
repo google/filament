@@ -28,6 +28,7 @@
 #include "src/tint/utils/text_generator/text_generator.h"
 
 #include <algorithm>
+#include <cctype>
 
 #include "src/tint/utils/ice/ice.h"
 
@@ -67,11 +68,11 @@ void TextGenerator::TextBuffer::Append(const std::string& line) {
 }
 
 void TextGenerator::TextBuffer::Insert(const std::string& line, size_t before, uint32_t indent) {
-    if (DAWN_UNLIKELY(before > lines.size())) {
-        TINT_ICE() << "TextBuffer::Insert() called with before > lines.size()\n"
-                   << "  before:" << before << "\n"
-                   << "  lines.size(): " << lines.size();
-    }
+    TINT_ASSERT(before <= lines.size())
+        << "TextBuffer::Insert() called with before > lines.size()\n"
+        << "  before:" << before << "\n"
+        << "  lines.size(): " << lines.size();
+
     using DT = decltype(lines)::difference_type;
     lines.insert(lines.begin() + static_cast<DT>(before), LineInfo{indent, line});
 }
@@ -84,11 +85,11 @@ void TextGenerator::TextBuffer::Append(const TextBuffer& tb) {
 }
 
 void TextGenerator::TextBuffer::Insert(const TextBuffer& tb, size_t before, uint32_t indent) {
-    if (DAWN_UNLIKELY(before > lines.size())) {
-        TINT_ICE() << "TextBuffer::Insert() called with before > lines.size()\n"
-                   << "  before:" << before << "\n"
-                   << "  lines.size(): " << lines.size();
-    }
+    TINT_ASSERT(before <= lines.size())
+        << "TextBuffer::Insert() called with before > lines.size()\n"
+        << "  before:" << before << "\n"
+        << "  lines.size(): " << lines.size();
+
     size_t idx = 0;
     for (auto& line : tb.lines) {
         // TODO(crbug.com/tint/2222): inefficient, consider optimizing
@@ -111,6 +112,54 @@ std::string TextGenerator::TextBuffer::String(uint32_t indent /* = 0 */) const {
         ss << "\n";
     }
     return ss.str();
+}
+
+std::string TextGenerator::TextBuffer::MinifiedString() const {
+    /// Returns `true` if @p c is the start of an identifier codepoint.
+    auto is_ident_char = [](char c) { return std::isalnum(c) || c == '_' || !isascii(c); };
+
+    bool previous_is_ident = false;
+    bool in_whitespace = false;
+    std::string result;
+    for (const auto& line : lines) {
+        for (uint32_t i = 0; i < line.content.length();) {
+            auto c = line.content.at(i);
+            if (std::isspace(c)) {
+                // Track that we are in whitespace but do not emit anything.
+                // We will emit a whitespace character if the next non-whitespace character would
+                // combine with the previous whitespace character to form an incorrect token.
+                in_whitespace = true;
+                i++;
+                continue;
+            }
+            if (in_whitespace) {
+                // If we are coming from whitespace that separates two identifiers, then we need to
+                // emit a space between them. Use a newline in these cases to reduce the maximum
+                // line length of generated shaders.
+                if (previous_is_ident && is_ident_char(c)) {
+                    result += "\n";
+                }
+            }
+
+            in_whitespace = false;
+            previous_is_ident = is_ident_char(c);
+
+            // Emit the next codepoint.
+            auto codepoint_length = utf8::SequenceLength(static_cast<uint8_t>(c));
+            for (uint32_t j = 0; j < codepoint_length; j++) {
+                TINT_ASSERT(i < line.content.length());
+                result += line.content.at(i);
+                i++;
+            }
+        }
+        in_whitespace = true;
+    }
+
+    return result;
+}
+
+std::string TextGenerator::Result() const {
+    return main_buffer_.String();
 }
 
 TextGenerator::ScopedParen::ScopedParen(StringStream& stream) : s(stream) {

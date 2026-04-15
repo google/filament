@@ -45,7 +45,9 @@ namespace tint::glsl::writer {
 // The capabilities that might be needed due to raising.
 const core::ir::Capabilities kPrinterCapabilities{
     core::ir::Capability::kAllowHandleVarsWithoutBindings,
-    core::ir::Capability::kAllowDuplicateBindings};
+    core::ir::Capability::kAllowDuplicateBindings,
+    core::ir::Capability::kLoosenValidationForShaderIO,
+};
 
 /// @returns the generated GLSL shader on success, or failure
 /// @param module the Tint IR module to generate

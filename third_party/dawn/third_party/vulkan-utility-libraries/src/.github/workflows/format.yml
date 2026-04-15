@@ -1,5 +1,5 @@
-# Copyright 2023 Valve Corporation
-# Copyright 2023 LunarG, Inc.
+# Copyright 2026 Valve Corporation
+# Copyright 2026 LunarG, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -17,20 +17,20 @@ permissions:
 jobs:
   clang-format:
     name: clang-format
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        path:
-          - 'include'
-          - 'src'
-          - 'tests'
+    runs-on: ubuntu-latest
+
+    env:
+      CLANG_FORMAT_VERSION: 18
+      CLANG_FORMAT_FILES: "*.c *.h *.cpp *.hpp"
+
     steps:
-    - uses: actions/checkout@v4
-    - name: clang-format version
-      run: clang-format --version
-    - name: Run clang-format
-      uses: jidicula/clang-format-action@v4.15.0
-      with:
-        clang-format-version: '18'
-        check-path: ${{ matrix.path }}
+    - uses: actions/checkout@v6.0.2
+    - name: Check formatting
+      run: |
+        clang-format-${CLANG_FORMAT_VERSION} --version
+        for f in $(git ls-files -- ${CLANG_FORMAT_FILES}); do
+          echo "Checking $f"
+          clang-format-${CLANG_FORMAT_VERSION} -i --Werror "$f"
+        done
+
+        git diff --exit-code

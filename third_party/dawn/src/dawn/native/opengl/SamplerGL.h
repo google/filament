@@ -29,7 +29,6 @@
 #define SRC_DAWN_NATIVE_OPENGL_SAMPLERGL_H_
 
 #include "dawn/native/Sampler.h"
-
 #include "dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
@@ -47,7 +46,7 @@ class Sampler final : public SamplerBase {
     ~Sampler() override;
 
     MaybeError Initialize(const SamplerDescriptor* descriptor);
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     GLuint mHandle = 0;
 };

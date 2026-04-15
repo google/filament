@@ -504,12 +504,7 @@ TEST_F(IR_FromProgramTest, Loop_WithOnlyReturn_ContinuingBreakIf) {
         ret
       }
     }
-    if true [t: $B3] {  # if_1
-      $B3: {  # true
-        ret
-      }
-    }
-    ret
+    unreachable
   }
 }
 )");
@@ -1246,6 +1241,34 @@ TEST_F(IR_FromProgramTest, OverrideWithAddInitializer) {
 )");
 }
 
+TEST_F(IR_FromProgramTest, OverrideWithShortCircuitExpressionInRHS) {
+    auto* o0 = Equal(1_u, 2_u);
+    auto* o1 = Override(Source{{2, 3}}, "b", ty.u32());
+    Override("c", LogicalOr(o0, Equal(Div(1_u, o1), 0_u)));
+
+    auto res = Build();
+    ASSERT_EQ(res, Success);
+
+    auto m = res.Move();
+
+    EXPECT_EQ(Dis(m), R"($B1: {  # root
+  %b:u32 = override undef @id(0)
+  %2:bool = constexpr_if false [t: $B2, f: $B3] {  # constexpr_if_1
+    $B2: {  # true
+      exit_if true  # constexpr_if_1
+    }
+    $B3: {  # false
+      %3:u32 = div 1u, %b
+      %4:bool = eq %3, 0u
+      exit_if %4  # constexpr_if_1
+    }
+  }
+  %c:bool = override %2 @id(1)
+}
+
+)");
+}
+
 TEST_F(IR_FromProgramTest, OverrideWithShortCircuitExpression) {
     auto* o0 = Override(Source{{1, 2}}, "a", ty.u32());
     auto* o1 = Override(Source{{2, 3}}, "b", ty.bool_());
@@ -1489,6 +1512,42 @@ fn main() { }
 
 %main = @compute @workgroup_size(%2, 1u, 1u) func():void {
   $B2: {
+    ret
+  }
+}
+)");
+}
+
+TEST_F(IR_FromProgramTest, OverrideSizedArrayInPointerParameter) {
+    auto* src = R"(
+override x = 1;
+
+var<workgroup> arr : array<u32, x>;
+
+fn a(p: ptr<workgroup, array<u32, x>>) {
+}
+
+fn b() {
+  a(&arr);
+}
+)";
+    auto res = Build(src);
+    ASSERT_EQ(res, Success);
+
+    auto m = res.Move();
+    EXPECT_EQ(Dis(m), R"($B1: {  # root
+  %x:i32 = override 1i @id(0)
+  %arr:ptr<workgroup, array<u32, %x>, read_write> = var undef
+}
+
+%a = func(%p:ptr<workgroup, array<u32, %x>, read_write>):void {
+  $B2: {
+    ret
+  }
+}
+%b = func():void {
+  $B3: {
+    %6:void = call %a, %arr
     ret
   }
 }

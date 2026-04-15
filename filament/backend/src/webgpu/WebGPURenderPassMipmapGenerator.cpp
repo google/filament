@@ -90,7 +90,7 @@ constexpr std::string_view SHADER_SOURCE{ R"(
 }
 
 [[nodiscard]] wgpu::ShaderModule createShaderModule(wgpu::Device const& device) {
-    wgpu::ShaderModuleWGSLDescriptor wgslDescriptor{};
+    wgpu::ShaderSourceWGSL wgslDescriptor{};
     wgslDescriptor.code = SHADER_SOURCE.data();
     const wgpu::ShaderModuleDescriptor shaderModuleDescriptor{
         .nextInChain = &wgslDescriptor,
@@ -226,10 +226,9 @@ WebGPURenderPassMipmapGenerator::getCompatibilityFor(const wgpu::TextureFormat f
                           "generation.",
             };
         case wgpu::TextureFormat::Undefined:
-        case wgpu::TextureFormat::External:
             return {
                 .compatible = false,
-                .reason = "Undefined or External textures are not supported for render pass based "
+                .reason = "Undefined textures are not supported for render pass based "
                           "mipmap generation.",
             };
         default:
@@ -400,6 +399,7 @@ WebGPURenderPassMipmapGenerator::getScalarSampleTypeFrom(const wgpu::TextureForm
         case wgpu::TextureFormat::R8BG8Biplanar444Unorm:
         case wgpu::TextureFormat::R10X6BG10X6Biplanar422Unorm:
         case wgpu::TextureFormat::R10X6BG10X6Biplanar444Unorm:
+        case wgpu::TextureFormat::OpaqueYCbCrAndroid:
             return ScalarSampleType::F32;
         case wgpu::TextureFormat::Depth16Unorm:
         case wgpu::TextureFormat::Depth24Plus:
@@ -412,7 +412,6 @@ WebGPURenderPassMipmapGenerator::getScalarSampleTypeFrom(const wgpu::TextureForm
                     format);
             break;
         case wgpu::TextureFormat::Undefined:
-        case wgpu::TextureFormat::External:
             PANIC_POSTCONDITION("No scalar sample type for texture format %d", format);
             break;
     }

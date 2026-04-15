@@ -43,12 +43,13 @@ class QuerySet final : public QuerySetBase {
                                                const QuerySetDescriptor* descriptor);
 
     GLuint Get(uint32_t index) const;
+    std::vector<GLuint> GetQueries() const;
 
   private:
     QuerySet(Device* device, const QuerySetDescriptor* descriptor);
 
     ~QuerySet() override;
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     std::vector<GLuint> mQueries;
 };
 

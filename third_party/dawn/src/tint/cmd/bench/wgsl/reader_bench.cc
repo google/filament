@@ -35,15 +35,10 @@ namespace {
 
 void ParseWGSL(benchmark::State& state, std::string input_name) {
     auto res = bench::GetWgslFile(input_name);
-    if (res != Success) {
-        state.SkipWithError(res.Failure().reason);
-        return;
-    }
+    TINT_ASSERT(res == Success) << res.Failure().reason;
     for (auto _ : state) {
         auto program = Parse(&res.Get());
-        if (program.Diagnostics().ContainsErrors()) {
-            state.SkipWithError(program.Diagnostics().Str());
-        }
+        TINT_ASSERT(!program.Diagnostics().ContainsErrors()) << program.Diagnostics().Str();
     }
 }
 

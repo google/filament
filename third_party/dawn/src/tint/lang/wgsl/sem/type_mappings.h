@@ -37,9 +37,7 @@ class CastableBase;
 namespace tint::ast {
 class AccessorExpression;
 class BinaryExpression;
-class BitcastExpression;
 class BlockStatement;
-class BuiltinAttribute;
 class CallExpression;
 class Expression;
 class ForLoopStatement;
@@ -59,9 +57,6 @@ class UnaryOpExpression;
 class Variable;
 class WhileStatement;
 }  // namespace tint::ast
-namespace tint::core {
-enum class BuiltinValue : uint8_t;
-}
 namespace tint::sem {
 class BlockStatement;
 class Expression;
@@ -79,7 +74,6 @@ class Variable;
 class WhileStatement;
 }  // namespace tint::sem
 namespace tint::core::type {
-class Array;
 class Type;
 }  // namespace tint::core::type
 

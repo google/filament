@@ -36,6 +36,7 @@ namespace dawn::native::opengl {
 using EGLDisplay = void*;
 using EGLImage = void*;
 using GLuint = unsigned int;
+using EGLint = int32_t;
 
 // Define a GetProc function pointer that mirrors the one in egl.h
 #if defined(_WIN32)
@@ -55,6 +56,12 @@ struct DAWN_NATIVE_EXPORT RequestAdapterOptionsGetGLProc : wgpu::ChainedStruct {
 
     EGLGetProcProc getProc;
     EGLDisplay display;
+};
+
+// Can be chained in WGPURequestAdapterOptions
+struct DAWN_NATIVE_EXPORT RequestAdapterOptionsAngleVirtualizationGroup : wgpu::ChainedStruct {
+    RequestAdapterOptionsAngleVirtualizationGroup();
+    EGLint angleVirtualizationGroup = -1;  // EGL_DONT_CARE
 };
 
 struct DAWN_NATIVE_EXPORT ExternalImageDescriptorEGLImage : ExternalImageDescriptor {

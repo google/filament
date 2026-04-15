@@ -76,6 +76,9 @@ TEST_P(NonzeroBufferCreationTests, BufferCreationWithMappedAtCreation) {
     // BufferZeroInitTests.
     DAWN_TEST_UNSUPPORTED_IF(UsesWire());
 
+    // TODO(crbug.com/473894293): [Capture] validation error: no CopyDst usage.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     constexpr uint32_t kSize = 32u;
 
     wgpu::BufferDescriptor defaultDescriptor;
@@ -140,6 +143,8 @@ DAWN_INSTANTIATE_TEST(NonzeroBufferCreationTests,
                       OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
                                       {"lazy_clear_resource_on_first_use"}),
                       VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                                    {"lazy_clear_resource_on_first_use"}),
+                      WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"},
                                     {"lazy_clear_resource_on_first_use"}));
 
 }  // anonymous namespace

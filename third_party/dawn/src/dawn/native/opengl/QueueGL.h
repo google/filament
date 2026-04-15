@@ -44,7 +44,7 @@ class Queue final : public QueueBase {
   public:
     static ResultOrError<Ref<Queue>> Create(Device* device, const QueueDescriptor* descriptor);
 
-    void OnGLUsed();
+    void SetNeedsFenceSync();
     MaybeError SubmitFenceSync();
 
     // Returns a shared fence which represents work done up to lastUsageSerial. It may be a cached
@@ -73,13 +73,13 @@ class Queue final : public QueueBase {
     MaybeError SubmitPendingCommandsImpl() override;
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override;
     void ForceEventualFlushOfCommands() override;
-    MaybeError WaitForIdleForDestruction() override;
+    MaybeError WaitForIdleForDestructionImpl() override;
 
     uint32_t mEGLSyncType;
     MutexProtected<std::deque<std::pair<Ref<WrappedEGLSync>, ExecutionSerial>>> mFencesInFlight;
 
     // Has pending GL commands which are not associated with a fence.
-    bool mHasPendingCommands = false;
+    bool mHasPendingUnsignaledCommands = false;
 };
 
 }  // namespace dawn::native::opengl

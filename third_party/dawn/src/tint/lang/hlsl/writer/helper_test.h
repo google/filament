@@ -52,20 +52,20 @@ class HlslWriterTestHelperBase : public BASE {
     core::type::Manager& ty{mod.Types()};
 
   protected:
-    /// Validation errors
-    std::string err_;
-
     /// Generated HLSL
     Output output_;
 
     /// Run the writer on the IR module and validate the result.
     /// @returns true if generation and validation succeeded
-    bool Generate(Options options = {}) {
-        auto result = writer::Generate(mod, options);
-        if (result != Success) {
-            err_ = result.Failure().reason;
-            return false;
+    Result<SuccessType> Generate(Options options = {}) {
+        mod.enable_validation_asserts = true;
+
+        if (options.entry_point_name.empty()) {
+            options.entry_point_name = "main";
         }
+
+        auto result = writer::Generate(mod, options);
+        TINT_CHECK_RESULT(result);
         output_ = result.Get();
 
         const char* dxc_path = validate::kDxcDLLName;
@@ -87,12 +87,11 @@ class HlslWriterTestHelperBase : public BASE {
                 }
                 err << "\n\n" << validate_res.output;
 
-                err_ = err.str();
-                return false;
+                return Failure(err.str());
             }
         }
 
-        return true;
+        return Success;
     }
 };
 

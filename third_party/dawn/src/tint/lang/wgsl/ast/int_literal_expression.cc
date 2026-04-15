@@ -28,26 +28,15 @@
 #include "src/tint/lang/wgsl/ast/int_literal_expression.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::IntLiteralExpression);
 
 namespace tint::ast {
 
-IntLiteralExpression::IntLiteralExpression(GenerationID pid,
-                                           NodeID nid,
-                                           const Source& src,
-                                           int64_t val,
-                                           Suffix suf)
-    : Base(pid, nid, src), value(val), suffix(suf) {}
+IntLiteralExpression::IntLiteralExpression(NodeID nid, const Source& src, int64_t val, Suffix suf)
+    : Base(nid, src), value(val), suffix(suf) {}
 
 IntLiteralExpression::~IntLiteralExpression() = default;
-
-const IntLiteralExpression* IntLiteralExpression::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    return ctx.dst->create<IntLiteralExpression>(src, value, suffix);
-}
 
 std::string_view ToString(IntLiteralExpression::Suffix suffix) {
     switch (suffix) {

@@ -1188,16 +1188,15 @@ TEST_F(PixelLocalStorageAndRenderToSingleSampledTest, CombinationIsNotAllowed) {
     RecordRenderPass(&desc.rpDesc);
 
     // Error case: MSAA render to single sampled is added to the color attachment.
-    wgpu::DawnRenderPassColorAttachmentRenderToSingleSampled msaaRenderToSingleSampledDesc;
-    msaaRenderToSingleSampledDesc.implicitSampleCount = 4;
-    desc.colorAttachment.nextInChain = &msaaRenderToSingleSampledDesc;
+    wgpu::DawnRenderPassSampleCount renderPassSampleCount;
+    renderPassSampleCount.sampleCount = 4;
+    desc.rpDesc.nextInChain = &renderPassSampleCount;
     ASSERT_DEVICE_ERROR(RecordRenderPass(&desc.rpDesc));
 }
 
 class PixelLocalStorageAndTransientAttachmentTest : public PixelLocalStorageTest {
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
-        return {wgpu::FeatureName::PixelLocalStorageNonCoherent,
-                wgpu::FeatureName::TransientAttachments};
+        return {wgpu::FeatureName::PixelLocalStorageNonCoherent};
     }
 };
 

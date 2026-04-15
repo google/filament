@@ -29,16 +29,17 @@
 #define SRC_TINT_LANG_WGSL_PROGRAM_PROGRAM_H_
 
 #include <string>
-#include <unordered_set>
 
 #include "src/tint/lang/core/constant/manager.h"
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/wgsl/ast/function.h"
 #include "src/tint/lang/wgsl/sem/info.h"
-#include "src/tint/utils/generation_id.h"
 #include "src/tint/utils/symbol/symbol_table.h"
 
 // Forward Declarations
+namespace tint {
+class ProgramBuilder;
+}
 namespace tint::ast {
 class Module;
 }  // namespace tint::ast
@@ -73,18 +74,6 @@ class Program {
     /// @return this Program
     Program& operator=(Program&& rhs);
 
-    /// @returns the unique identifier for this program
-    GenerationID ID() const { return id_; }
-
-    /// @returns the last allocated (numerically highest) AST node identifier.
-    ast::NodeID HighestASTNodeID() const { return highest_node_id_; }
-
-    /// @returns a reference to the program's constants
-    const core::constant::Manager& Constants() const {
-        AssertNotMoved();
-        return constants_;
-    }
-
     /// @returns a reference to the program's types
     const core::type::Manager& Types() const {
         AssertNotMoved();
@@ -95,12 +84,6 @@ class Program {
     const ASTNodeAllocator& ASTNodes() const {
         AssertNotMoved();
         return ast_nodes_;
-    }
-
-    /// @returns a reference to the program's semantic nodes storage
-    const SemNodeAllocator& SemNodes() const {
-        AssertNotMoved();
-        return sem_nodes_;
     }
 
     /// @returns a reference to the program's AST root Module
@@ -126,20 +109,6 @@ class Program {
         AssertNotMoved();
         return diagnostics_;
     }
-
-    /// Performs a deep clone of this program.
-    /// The returned Program will contain no pointers to objects owned by this
-    /// Program, and so after calling, this Program can be safely destructed.
-    /// @return a new Program copied from this Program
-    Program Clone() const;
-
-    /// Performs a deep clone of this Program's AST nodes, types and symbols into
-    /// a new ProgramBuilder. Semantic nodes are not cloned, as these will be
-    /// rebuilt when the ProgramBuilder builds its Program.
-    /// The returned ProgramBuilder will contain no pointers to objects owned by
-    /// this Program, and so after calling, this Program can be safely destructed.
-    /// @return a new ProgramBuilder copied from this Program
-    ProgramBuilder CloneAsBuilder() const;
 
     /// @returns true if the program has no error diagnostics and is not missing
     /// information
@@ -176,24 +145,16 @@ class Program {
     /// Asserts that the program has not been moved.
     void AssertNotMoved() const;
 
-    GenerationID id_;
-    ast::NodeID highest_node_id_;
     core::constant::Manager constants_;
     ASTNodeAllocator ast_nodes_;
     SemNodeAllocator sem_nodes_;
     ast::Module* ast_ = nullptr;
     sem::Info sem_;
-    SymbolTable symbols_{id_};
+    SymbolTable symbols_{};
     diag::List diagnostics_;
     bool is_valid_ = false;  // Not valid until it is built
     bool moved_ = false;
 };
-
-/// @param program the Program
-/// @returns the GenerationID of the Program
-inline GenerationID GenerationIDOf(const Program& program) {
-    return program.ID();
-}
 
 }  // namespace tint
 

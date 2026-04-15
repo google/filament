@@ -27,9 +27,12 @@
 
 function(bundle_libraries output_target library_type)
   # This function recursively finds all dependencies of a given target.
-  # It populates a list variable named 'all_dependencies' in the parent scope.
+  # It populates two list variables in the parent scope:
+  #   - 'all_dependencies': all CMake target dependencies
+  #   - 'all_non_target_libs': non-target link dependencies (system libraries,
+  #     absolute paths to shared libs, linker flags, etc.)
   # Note: This recursive approach with PARENT_SCOPE works but can be a bit
-  # tricky with variable lifetimes. It assumes 'all_dependencies' is
+  # tricky with variable lifetimes. It assumes both lists are
   # initialized in the calling scope.
   function(get_dependencies input_target)
     # Resolve aliases first
@@ -52,24 +55,25 @@ function(bundle_libraries output_target library_type)
     # Get dependencies from LINK_LIBRARIES (Private and Public linkage)
     get_target_property(link_libraries ${input_target} LINK_LIBRARIES)
     foreach(dependency IN LISTS link_libraries)
-      # Only recurse on actual targets
       if(TARGET ${dependency})
         get_dependencies(${dependency}) # Recursive call
+      elseif(NOT "${dependency}" STREQUAL "" AND NOT "${dependency}" STREQUAL "link_libraries-NOTFOUND")
+        # Collect non-target link dependencies (system/shared libraries, linker flags, etc.)
+        list(APPEND all_non_target_libs ${dependency})
       endif()
     endforeach()
 
     # Get dependencies from INTERFACE_LINK_LIBRARIES (Interface and Public linkage)
     get_target_property(interface_link_libraries ${input_target} INTERFACE_LINK_LIBRARIES)
     foreach(dependency IN LISTS interface_link_libraries)
-      # Only recurse on actual targets
       if(TARGET ${dependency})
         get_dependencies(${dependency}) # Recursive call
       endif()
     endforeach()
 
-    # The final 'all_dependencies' list is available in the parent scope
-    # after the initial call to get_dependencies completes.
-    set(all_dependencies ${all_dependencies} PARENT_SCOPE) # Propagate change up
+    # Propagate both lists up to the parent scope
+    set(all_dependencies ${all_dependencies} PARENT_SCOPE)
+    set(all_non_target_libs ${all_non_target_libs} PARENT_SCOPE)
   endfunction()
 
   # ARGN contains all arguments after the named parameters so it is the list of
@@ -79,9 +83,10 @@ function(bundle_libraries output_target library_type)
      return()
   endif()
 
-  # Initialize the list that the recursive function will populate.
-  # This list will exist in the scope of the bundle_libraries function.
+  # Initialize the lists that the recursive function will populate.
+  # These lists will exist in the scope of the bundle_libraries function.
   set(all_dependencies "")
+  set(all_non_target_libs "")
   foreach(input_target IN LISTS ARGN)
     if(TARGET ${input_target})
       get_dependencies(${input_target})
@@ -116,4 +121,13 @@ function(bundle_libraries output_target library_type)
   # Add dependencies to ensure input targets are built before the bundled library.
   # This handles the build order correctly.
   add_dependencies(${output_target} ${ARGN})
+
+  # Link non-target dependencies (system libraries, shared library paths, linker flags)
+  # that were discovered during the recursive dependency walk. These are dependencies
+  # like liblog.so on Android, framework flags on Apple, or other system libraries
+  # that the bundled static/object libraries depend on but which are not CMake targets.
+  if(all_non_target_libs)
+    list(REMOVE_DUPLICATES all_non_target_libs)
+    target_link_libraries(${output_target} PRIVATE ${all_non_target_libs})
+  endif()
 endfunction()

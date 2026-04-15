@@ -46,9 +46,6 @@ class BlockParam : public Castable<BlockParam, Value> {
     explicit BlockParam(const core::type::Type* type);
     ~BlockParam() override;
 
-    /// @returns the type of the parameter
-    const core::type::Type* Type() const override { return type_; }
-
     /// Sets the block that this parameter belongs to.
     /// @param block the block
     void SetBlock(MultiInBlock* block) { block_ = block; }
@@ -63,8 +60,6 @@ class BlockParam : public Castable<BlockParam, Value> {
     BlockParam* Clone(CloneContext& ctx) override;
 
   private:
-    /// the type of the parameter
-    const core::type::Type* type_ = nullptr;
     /// the block that the parameter belongs to
     MultiInBlock* block_ = nullptr;
 };

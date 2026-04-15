@@ -45,11 +45,13 @@ DawnGenerator(
 set(private_headers
     "${DAWN_VERSION_AUTOGEN_HEADERS}"
     "${DAWN_GPU_INFO_AUTOGEN_HEADERS}"
+    "Algebra.h"
     "AlignedAlloc.h"
     "Alloc.h"
     "Assert.h"
     "Atomic.h"
     "BitSetRangeIterator.h"
+    "ColorSpace.h"
     "Compiler.h"
     "Constants.h"
     "ContentLessObjectCache.h"
@@ -97,6 +99,7 @@ set(private_headers
     "StringViewUtils.h"
     "SystemUtils.h"
     "ThreadLocal.h"
+    "Time.h"
     "TypedInteger.h"
     "TypeTraits.h"
     "UnderlyingType.h"
@@ -130,7 +133,7 @@ set(sources
 set(conditional_private_depends)
 
 if (WIN32)
-    list(APPEND headers
+    list(APPEND private_headers
         "windows_with_undefs.h"
         "WindowsUtils.h"
     )
@@ -138,7 +141,7 @@ if (WIN32)
         "WindowsUtils.cpp"
     )
 elseif(APPLE)
-    list(APPEND headers
+    list(APPEND private_headers
         "IOSurfaceUtils.h"
     )
     list(APPEND sources
@@ -148,6 +151,17 @@ elseif(APPLE)
     list(APPEND conditional_private_depends
         "-framework Foundation"
         "-framework IOSurface"
+    )
+endif()
+
+if (NOT EMSCRIPTEN)
+    list(APPEND private_headers
+        "ExternalTextureParams.h"
+        "WGPUDeviceCallbackInfos.h"
+    )
+    list(APPEND sources
+        "ExternalTextureParams.cpp"
+        "WGPUDeviceCallbackInfos.cpp"
     )
 endif()
 
@@ -177,11 +191,11 @@ dawn_add_library(
     DEPENDS
         webgpu_c
         webgpu_cpp
-    PRIVATE_DEPENDS
         absl::flat_hash_set
         absl::inlined_vector
         absl::no_destructor
         absl::overload
+   PRIVATE_DEPENDS
         dawn::partition_alloc
         dawn_shared_utils
         ${conditional_private_depends}

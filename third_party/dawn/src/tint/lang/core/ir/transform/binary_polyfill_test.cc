@@ -26,10 +26,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/ir/transform/binary_polyfill.h"
-#include "src/tint/lang/core/ir/binary.h"
 
 #include <utility>
 
+#include "src/tint/lang/core/ir/binary.h"
 #include "src/tint/lang/core/ir/transform/helper_test.h"
 
 namespace tint::core::ir::transform {
@@ -159,7 +159,7 @@ TEST_F(IR_BinaryPolyfillTest, ShiftLeft_U32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, ShiftLeft_Vec2I32) {
-    Build(BinaryOp::kShiftLeft, ty.vec2<i32>(), ty.vec2<i32>(), ty.vec2<u32>());
+    Build(BinaryOp::kShiftLeft, ty.vec2i(), ty.vec2i(), ty.vec2u());
     auto* src = R"(
 %foo = func(%lhs:vec2<i32>, %rhs:vec2<u32>):vec2<i32> {
   $B1: {
@@ -187,7 +187,7 @@ TEST_F(IR_BinaryPolyfillTest, ShiftLeft_Vec2I32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, ShiftLeft_Vec3U32) {
-    Build(BinaryOp::kShiftLeft, ty.vec3<u32>(), ty.vec3<u32>(), ty.vec3<u32>());
+    Build(BinaryOp::kShiftLeft, ty.vec3u(), ty.vec3u(), ty.vec3u());
     auto* src = R"(
 %foo = func(%lhs:vec3<u32>, %rhs:vec3<u32>):vec3<u32> {
   $B1: {
@@ -271,7 +271,7 @@ TEST_F(IR_BinaryPolyfillTest, ShiftRight_U32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, ShiftRight_Vec2I32) {
-    Build(BinaryOp::kShiftRight, ty.vec2<i32>(), ty.vec2<i32>(), ty.vec2<u32>());
+    Build(BinaryOp::kShiftRight, ty.vec2i(), ty.vec2i(), ty.vec2u());
     auto* src = R"(
 %foo = func(%lhs:vec2<i32>, %rhs:vec2<u32>):vec2<i32> {
   $B1: {
@@ -299,7 +299,7 @@ TEST_F(IR_BinaryPolyfillTest, ShiftRight_Vec2I32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, ShiftRight_Vec3U32) {
-    Build(BinaryOp::kShiftRight, ty.vec3<u32>(), ty.vec3<u32>(), ty.vec3<u32>());
+    Build(BinaryOp::kShiftRight, ty.vec3u(), ty.vec3u(), ty.vec3u());
     auto* src = R"(
 %foo = func(%lhs:vec3<u32>, %rhs:vec3<u32>):vec3<u32> {
   $B1: {
@@ -441,7 +441,7 @@ TEST_F(IR_BinaryPolyfillTest, Divide_U32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, Divide_Vec2I32) {
-    Build(BinaryOp::kDivide, ty.vec2<i32>(), ty.vec2<i32>(), ty.vec2<i32>());
+    Build(BinaryOp::kDivide, ty.vec2i(), ty.vec2i(), ty.vec2i());
     auto* src = R"(
 %foo = func(%lhs:vec2<i32>, %rhs:vec2<i32>):vec2<i32> {
   $B1: {
@@ -480,7 +480,7 @@ TEST_F(IR_BinaryPolyfillTest, Divide_Vec2I32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, Divide_Vec3U32) {
-    Build(BinaryOp::kDivide, ty.vec3<u32>(), ty.vec3<u32>(), ty.vec3<u32>());
+    Build(BinaryOp::kDivide, ty.vec3u(), ty.vec3u(), ty.vec3u());
     auto* src = R"(
 %foo = func(%lhs:vec3<u32>, %rhs:vec3<u32>):vec3<u32> {
   $B1: {
@@ -593,7 +593,7 @@ TEST_F(IR_BinaryPolyfillTest, Modulo_U32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, Modulo_Vec2I32) {
-    Build(BinaryOp::kModulo, ty.vec2<i32>(), ty.vec2<i32>(), ty.vec2<i32>());
+    Build(BinaryOp::kModulo, ty.vec2i(), ty.vec2i(), ty.vec2i());
     auto* src = R"(
 %foo = func(%lhs:vec2<i32>, %rhs:vec2<i32>):vec2<i32> {
   $B1: {
@@ -634,7 +634,7 @@ TEST_F(IR_BinaryPolyfillTest, Modulo_Vec2I32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, Modulo_Vec3U32) {
-    Build(BinaryOp::kModulo, ty.vec3<u32>(), ty.vec3<u32>(), ty.vec3<u32>());
+    Build(BinaryOp::kModulo, ty.vec3u(), ty.vec3u(), ty.vec3u());
     auto* src = R"(
 %foo = func(%lhs:vec3<u32>, %rhs:vec3<u32>):vec3<u32> {
   $B1: {
@@ -671,7 +671,7 @@ TEST_F(IR_BinaryPolyfillTest, Modulo_Vec3U32) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, Divide_Scalar_Vector) {
-    Build(BinaryOp::kDivide, ty.vec4<i32>(), ty.i32(), ty.vec4<i32>());
+    Build(BinaryOp::kDivide, ty.vec4i(), ty.i32(), ty.vec4i());
     auto* src = R"(
 %foo = func(%lhs:i32, %rhs:vec4<i32>):vec4<i32> {
   $B1: {
@@ -711,7 +711,7 @@ TEST_F(IR_BinaryPolyfillTest, Divide_Scalar_Vector) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, Divide_Vector_Scalar) {
-    Build(BinaryOp::kDivide, ty.vec4<i32>(), ty.vec4<i32>(), ty.i32());
+    Build(BinaryOp::kDivide, ty.vec4i(), ty.vec4i(), ty.i32());
     auto* src = R"(
 %foo = func(%lhs:vec4<i32>, %rhs:i32):vec4<i32> {
   $B1: {
@@ -751,7 +751,7 @@ TEST_F(IR_BinaryPolyfillTest, Divide_Vector_Scalar) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, Modulo_Scalar_Vector) {
-    Build(BinaryOp::kModulo, ty.vec4<i32>(), ty.i32(), ty.vec4<i32>());
+    Build(BinaryOp::kModulo, ty.vec4i(), ty.i32(), ty.vec4i());
     auto* src = R"(
 %foo = func(%lhs:i32, %rhs:vec4<i32>):vec4<i32> {
   $B1: {
@@ -793,7 +793,7 @@ TEST_F(IR_BinaryPolyfillTest, Modulo_Scalar_Vector) {
 }
 
 TEST_F(IR_BinaryPolyfillTest, Modulo_Vector_Scalar) {
-    Build(BinaryOp::kModulo, ty.vec4<i32>(), ty.vec4<i32>(), ty.i32());
+    Build(BinaryOp::kModulo, ty.vec4i(), ty.vec4i(), ty.i32());
     auto* src = R"(
 %foo = func(%lhs:vec4<i32>, %rhs:i32):vec4<i32> {
   $B1: {
@@ -865,29 +865,29 @@ TEST_F(IR_BinaryPolyfillTest, DivMod_MultipleUses) {
     }
     {
         Vector<FunctionParam*, 4> args;
-        args.Push(b.FunctionParam("lhs", ty.vec4<i32>()));
-        args.Push(b.FunctionParam("rhs", ty.vec4<i32>()));
+        args.Push(b.FunctionParam("lhs", ty.vec4i()));
+        args.Push(b.FunctionParam("rhs", ty.vec4i()));
         auto* func = b.Function("foo_vec4i", ty.void_());
         func->SetParams(args);
         b.Append(func->Block(), [&] {
-            b.Binary(BinaryOp::kDivide, ty.vec4<i32>(), args[0], args[1]);
-            b.Binary(BinaryOp::kDivide, ty.vec4<i32>(), args[0], args[1]);
-            b.Binary(BinaryOp::kModulo, ty.vec4<i32>(), args[0], args[1]);
-            b.Binary(BinaryOp::kModulo, ty.vec4<i32>(), args[0], args[1]);
+            b.Binary(BinaryOp::kDivide, ty.vec4i(), args[0], args[1]);
+            b.Binary(BinaryOp::kDivide, ty.vec4i(), args[0], args[1]);
+            b.Binary(BinaryOp::kModulo, ty.vec4i(), args[0], args[1]);
+            b.Binary(BinaryOp::kModulo, ty.vec4i(), args[0], args[1]);
             b.Return(func);
         });
     }
     {
         Vector<FunctionParam*, 4> args;
-        args.Push(b.FunctionParam("lhs", ty.vec4<u32>()));
-        args.Push(b.FunctionParam("rhs", ty.vec4<u32>()));
+        args.Push(b.FunctionParam("lhs", ty.vec4u()));
+        args.Push(b.FunctionParam("rhs", ty.vec4u()));
         auto* func = b.Function("foo_vec4u", ty.void_());
         func->SetParams(args);
         b.Append(func->Block(), [&] {
-            b.Binary(BinaryOp::kDivide, ty.vec4<u32>(), args[0], args[1]);
-            b.Binary(BinaryOp::kDivide, ty.vec4<u32>(), args[0], args[1]);
-            b.Binary(BinaryOp::kModulo, ty.vec4<u32>(), args[0], args[1]);
-            b.Binary(BinaryOp::kModulo, ty.vec4<u32>(), args[0], args[1]);
+            b.Binary(BinaryOp::kDivide, ty.vec4u(), args[0], args[1]);
+            b.Binary(BinaryOp::kDivide, ty.vec4u(), args[0], args[1]);
+            b.Binary(BinaryOp::kModulo, ty.vec4u(), args[0], args[1]);
+            b.Binary(BinaryOp::kModulo, ty.vec4u(), args[0], args[1]);
             b.Return(func);
         });
     }

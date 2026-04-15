@@ -55,6 +55,7 @@
 #include "dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
 #include "dawn/native/d3d12/TextureCopySplitter.h"
 #include "dawn/native/d3d12/UtilsD3D12.h"
+#include "dawn/native/utils/RenderDoc.h"
 
 namespace dawn::native::d3d12 {
 
@@ -131,14 +132,15 @@ D3D12_RESOURCE_FLAGS D3D12ResourceFlags(wgpu::TextureUsage usage, const Format& 
 
 D3D12_RESOURCE_DIMENSION D3D12TextureDimension(wgpu::TextureDimension dimension) {
     switch (dimension) {
-        case wgpu::TextureDimension::Undefined:
-            DAWN_UNREACHABLE();
         case wgpu::TextureDimension::e1D:
             return D3D12_RESOURCE_DIMENSION_TEXTURE1D;
         case wgpu::TextureDimension::e2D:
             return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
         case wgpu::TextureDimension::e3D:
             return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+        case wgpu::TextureDimension::Undefined:
+        default:
+            DAWN_UNREACHABLE();
     }
 }
 
@@ -170,9 +172,11 @@ D3D12_SHADER_COMPONENT_MAPPING D3D12ComponentSwizzle(wgpu::ComponentSwizzle swiz
             return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3;
 
         case wgpu::ComponentSwizzle::Undefined:
+        default:
             DAWN_UNREACHABLE();
     }
 }
+
 }  // namespace
 
 // static
@@ -230,7 +234,7 @@ MaybeError Texture::InitializeAsExternalTexture(ComPtr<IUnknown> d3dTexture,
                            ResourceHeapKind::InvalidEnum};
     mKeyedMutex = std::move(keyedMutex);
     mWaitFences = std::move(waitFences);
-    mSwapChainTexture = isSwapChainTexture;
+    mIsExternalSwapChainTexture = isSwapChainTexture;
 
     SetLabelHelper("Dawn_ExternalTexture");
 
@@ -342,11 +346,37 @@ Texture::Texture(Device* device, const UnpackedPtr<TextureDescriptor>& descripto
 
 Texture::~Texture() = default;
 
-void Texture::DestroyImpl() {
-    TextureBase::DestroyImpl();
+void Texture::DestroyImpl(DestroyReason reason) {
+    TextureBase::DestroyImpl(reason);
     ToBackend(GetDevice())->DeallocateMemory(mResourceAllocation);
-    // Set mSwapChainTexture to false to prevent ever calling ID3D12SharingContract::Present again.
-    mSwapChainTexture = false;
+    // Set mIsExternalSwapChainTexture to false to prevent ever calling
+    // ID3D12SharingContract::Present again.
+    mIsExternalSwapChainTexture = false;
+}
+
+MaybeError Texture::PinImpl(wgpu::TextureUsage usage) {
+    DAWN_ASSERT(!HasPinnedUsage());
+    SubresourceRange pinnedSubresources = GetAllSubresources();
+
+    CommandRecordingContext* commandContext =
+        ToBackend(GetDevice()->GetQueue())->GetPendingCommandContext(Queue::SubmitMode::Passive);
+    DAWN_TRY(EnsureSubresourceContentInitialized(commandContext, pinnedSubresources));
+
+    // TODO(crbug.com/482008255): Handle residency of pinned resources
+    TrackUsageAndTransitionNow(commandContext, usage, pinnedSubresources);
+
+    // TODO(https://issues.chromium.org/473444516): Investigate what to do for imported textures.
+    // Should we consider a pin/unpin pair similar to an access on a queue such that we need to
+    // wait on fences or export them?
+    return {};
+}
+
+void Texture::UnpinImpl() {
+    DAWN_ASSERT(HasPinnedUsage());
+
+    // TODO(https://issues.chromium.org/473444516): Investigate what to do for imported textures.
+    // Should we consider a pin/unpin pair similar to an access on a queue such that we need to
+    // wait on fences or export them?
 }
 
 DXGI_FORMAT Texture::GetD3D12Format() const {
@@ -402,12 +432,20 @@ MaybeError Texture::SynchronizeTextureBeforeUse(CommandRecordingContext* command
     }
 
     ID3D12CommandQueue* commandQueue = queue->GetCommandQueue();
+    const auto& queueFence = ToBackend(device->GetQueue())->GetSharedFence();
+    const ExecutionSerial queueSubmittedSerial = queue->GetLastSubmittedCommandSerial();
     for (const auto& fence : waitFences) {
-        DAWN_TRY(CheckHRESULT(commandQueue->Wait(ToBackend(fence.object)->GetD3DFence(),
-                                                 fence.signaledValue),
+        auto d3dFence = ToBackend(fence.object);
+        if (d3dFence.Get() == queueFence.Get()) {
+            // We don't need to wait on the fence that we signaled (self-wait).
+            DAWN_CHECK(ExecutionSerial(fence.signaledValue) <= queueSubmittedSerial);
+            continue;
+        }
+
+        DAWN_TRY(CheckHRESULT(commandQueue->Wait(d3dFence->GetD3DFence(), fence.signaledValue),
                               "D3D12 fence wait"););
         // Keep D3D12 fence alive until commands complete.
-        device->ReferenceUntilUnused(ToBackend(fence.object)->GetD3DFence());
+        device->ReferenceUntilUnused(d3dFence->GetD3DFence());
     }
     if (mKeyedMutex != nullptr) {
         DAWN_TRY(commandContext->AcquireKeyedMutex(mKeyedMutex));
@@ -416,24 +454,39 @@ MaybeError Texture::SynchronizeTextureBeforeUse(CommandRecordingContext* command
     return {};
 }
 
-void Texture::NotifySwapChainPresentToPIX() {
-    // In PIX's D3D12-only mode, there is no way to determine frame boundaries
-    // for WebGPU since Dawn does not manage DXGI swap chains. Without assistance,
-    // PIX will wait forever for a present that never happens.
-    // If we know we're dealing with a swapbuffer texture, inform PIX we've
-    // "presented" the texture so it can determine frame boundaries and use its
-    // contents for the UI.
-    if (mSwapChainTexture) {
-        ID3D12SharingContract* d3dSharingContract =
-            ToBackend(GetDevice()->GetQueue())->GetSharingContract();
-        if (d3dSharingContract != nullptr) {
-            d3dSharingContract->Present(mResourceAllocation.GetD3D12Resource(), 0, 0);
-        }
+void Texture::NotifySwapChainPresent() {
+    // When using an external swap chain texture, there's no way to determine frame boundaries since
+    // Dawn isn't managing the DXGI swap chains. In this mode, external tools like PIX and RenderDoc
+    // will wait forever for a present that never happens in D3D12. We handle this by using
+    // tool-specific hooks to inform them of the "presented" texture so it can determine frame
+    // boundaries and use its contents for the UI.
+    if (!mIsExternalSwapChainTexture) {
+        return;
     }
+
+    Device* device = ToBackend(GetDevice());
+
+    // For PIX, call ID3D12SharingContract::Present
+    ID3D12SharingContract* d3dSharingContract = ToBackend(device->GetQueue())->GetSharingContract();
+    if (d3dSharingContract != nullptr) {
+        d3dSharingContract->Present(mResourceAllocation.GetD3D12Resource(), 0, 0);
+    }
+
+#if defined(DAWN_ENABLE_RENDERDOC)
+    // For RenderDoc, we expect the user to enable and use process injection to inject RenderDoc
+    // into the GPU process at startup. We start capturing all frames right away. The user has
+    // to kill the process or stop it from rendering (e.g. close or change tabs in Chrome).
+    if (auto renderDocApi = dawn::native::utils::GetRenderDocApi(device)) {
+        // We signal the end of the current frame and the start of the next.
+        // This means we miss capturing the very first frame.
+        renderDocApi->EndFrameCapture(device->GetD3D12Device(), NULL);
+        renderDocApi->StartFrameCapture(device->GetD3D12Device(), NULL);
+    }
+#endif
 }
 
-void Texture::SetIsSwapchainTexture(bool isSwapChainTexture) {
-    mSwapChainTexture = isSwapChainTexture;
+void Texture::SetIsExternalSwapchainTexture(bool isSwapChainTexture) {
+    mIsExternalSwapChainTexture = isSwapChainTexture;
 }
 
 void Texture::TrackUsageAndTransitionNow(CommandRecordingContext* commandContext,
@@ -843,16 +896,17 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* commandContext,
         TrackUsageAndTransitionNow(commandContext, D3D12_RESOURCE_STATE_COPY_DEST, range);
 
         for (Aspect aspect : IterateEnumMask(range.aspects)) {
-            const TexelBlockInfo& blockInfo = GetFormat().GetAspectInfo(aspect).block;
+            const TypedTexelBlockInfo& blockInfo = GetFormat().GetAspectInfo(aspect).block;
 
-            Extent3D largestMipSize =
-                GetMipLevelSingleSubresourcePhysicalSize(range.baseMipLevel, aspect);
+            BlockExtent3D largestMipSize = blockInfo.ToBlock(
+                GetMipLevelSingleSubresourcePhysicalSize(range.baseMipLevel, aspect));
 
-            uint32_t bytesPerRow =
-                Align((largestMipSize.width / blockInfo.width) * blockInfo.byteSize,
-                      kTextureBytesPerRowAlignment);
-            uint64_t uploadSize = bytesPerRow * (largestMipSize.height / blockInfo.height) *
-                                  largestMipSize.depthOrArrayLayers;
+            uint64_t bytesPerRow =
+                Align(blockInfo.ToBytes(largestMipSize.width), kTextureBytesPerRowAlignment);
+            BlockCount blocksPerRow = blockInfo.BytesToBlocks(bytesPerRow);
+            BlockCount uploadBlocks =
+                blocksPerRow * largestMipSize.height * largestMipSize.depthOrArrayLayers;
+            uint64_t uploadSize = blockInfo.ToBytes(uploadBlocks);
 
             DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
                 uploadSize, blockInfo.byteSize, [&](UploadReservation reservation) -> MaybeError {
@@ -861,7 +915,8 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* commandContext,
                     for (uint32_t level = range.baseMipLevel;
                          level < range.baseMipLevel + range.levelCount; ++level) {
                         // compute d3d12 texture copy locations for texture and buffer
-                        Extent3D copySize = GetMipLevelSingleSubresourcePhysicalSize(level, aspect);
+                        BlockExtent3D copySize = blockInfo.ToBlock(
+                            GetMipLevelSingleSubresourcePhysicalSize(level, aspect));
 
                         for (uint32_t layer = range.baseArrayLayer;
                              layer < range.baseArrayLayer + range.layerCount; ++layer) {
@@ -872,16 +927,19 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* commandContext,
                                 continue;
                             }
 
+                            BlockCount blocksPerRow = blockInfo.BytesToBlocks(bytesPerRow);
+                            BlockCount rowsPerImage = largestMipSize.height;
+
                             TextureCopy textureCopy;
                             textureCopy.texture = this;
-                            textureCopy.origin = {0, 0, layer};
+                            textureCopy.origin = {TexelCount{0}, TexelCount{0}, TexelCount{layer}};
                             textureCopy.mipLevel = level;
                             textureCopy.aspect = aspect;
                             RecordBufferTextureCopyWithBufferHandle(
                                 BufferTextureCopyDirection::B2T, commandList,
                                 ToBackend(reservation.buffer)->GetD3D12Resource(),
-                                reservation.offsetInBuffer, bytesPerRow,
-                                largestMipSize.height / blockInfo.height, textureCopy, copySize);
+                                reservation.offsetInBuffer, blocksPerRow, rowsPerImage, textureCopy,
+                                copySize);
                         }
                     }
                     return {};
@@ -931,13 +989,7 @@ TextureView::TextureView(TextureBase* texture, const UnpackedPtr<TextureViewDesc
     mSrvDesc.Format =
         d3d::D3DShaderResourceViewFormat(GetDevice(), textureFormat, GetFormat(), aspects);
     if (mSrvDesc.Format != DXGI_FORMAT_UNKNOWN) {
-        wgpu::TextureComponentSwizzle swizzle = {
-            .r = GetSwizzleRed(),
-            .g = GetSwizzleGreen(),
-            .b = GetSwizzleBlue(),
-            .a = GetSwizzleAlpha(),
-        };
-
+        auto swizzle = GetSwizzle();
         // Stencil is accessed using the .g component in the shader.
         DXGI_FORMAT textureDxgiFormat = d3d::DXGITextureFormat(GetDevice(), textureFormat.format);
         if (d3d::IsDepthStencil(textureDxgiFormat) && aspects == Aspect::Stencil) {
@@ -958,7 +1010,7 @@ TextureView::TextureView(TextureBase* texture, const UnpackedPtr<TextureViewDesc
                     .a = wgpu::ComponentSwizzle::One,
                 };
             }
-            swizzle = ComposeSwizzle(stencilSwizzle);
+            swizzle = ComposeSwizzle(stencilSwizzle, swizzle);
         }
 
         mSrvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(

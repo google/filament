@@ -187,4 +187,21 @@
 #define DAWN_UNLOCK_FUNCTION
 #endif
 
+// DAWN_NO_THREAD_SAFETY_ANALYSIS
+//
+// Used when a function is too complicated for the thread safety static
+// analysis, and the compiler generates spurious warnings. Use this sparingly.
+// For example, Clang does not know how to analyze conditionally-held locks, and
+// may generate spurious warnings.
+//
+// Place this macro just before the opening brace of the function *definition*.
+// Do not put it at the declaration.
+//
+// https://clang.llvm.org/docs/ThreadSafetyAnalysis.html#no-thread-safety-analysis
+#if DAWN_HAS_ATTRIBUTE(no_thread_safety_analysis)
+#define DAWN_NO_THREAD_SAFETY_ANALYSIS __attribute__((no_thread_safety_analysis))
+#else
+#define DAWN_NO_THREAD_SAFETY_ANALYSIS
+#endif
+
 #endif  // SRC_DAWN_COMMON_COMPILER_H_

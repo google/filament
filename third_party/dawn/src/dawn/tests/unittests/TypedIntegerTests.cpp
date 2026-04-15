@@ -378,7 +378,10 @@ TEST_F(TypedIntegerTest, PlusOne) {
 // Tests for bounds assertions on arithmetic overflow and underflow.
 #if defined(DAWN_ENABLE_ASSERTS)
 
-TEST_F(TypedIntegerTest, CastToOtherTruncation) {
+// Name "*DeathTest" per https://google.github.io/googletest/advanced.html#death-test-naming
+using TypedIntegerDeathTest = TypedIntegerTest;
+
+TEST_F(TypedIntegerDeathTest, CastToOtherTruncation) {
     using Unsigned64 = TypedInteger<struct Unsigned64T, uint64_t>;
     using Signed64 = TypedInteger<struct Signed64T, int64_t>;
 
@@ -395,59 +398,59 @@ TEST_F(TypedIntegerTest, CastToOtherTruncation) {
     EXPECT_DEATH({ [[maybe_unused]] auto result = static_cast<uint32_t>(too_large_for_u32); }, "");
 }
 
-TEST_F(TypedIntegerTest, IncrementUnsignedOverflow) {
+TEST_F(TypedIntegerDeathTest, IncrementUnsignedOverflow) {
     Unsigned value(std::numeric_limits<uint32_t>::max() - 1);
 
     value++;                    // Doesn't overflow.
     EXPECT_DEATH(value++, "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, IncrementSignedOverflow) {
+TEST_F(TypedIntegerDeathTest, IncrementSignedOverflow) {
     Signed value(std::numeric_limits<int32_t>::max() - 1);
 
     value++;                    // Doesn't overflow.
     EXPECT_DEATH(value++, "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, DecrementUnsignedUnderflow) {
+TEST_F(TypedIntegerDeathTest, DecrementUnsignedUnderflow) {
     Unsigned value(std::numeric_limits<uint32_t>::min() + 1);
 
     value--;                    // Doesn't underflow.
     EXPECT_DEATH(value--, "");  // Underflows.
 }
 
-TEST_F(TypedIntegerTest, DecrementSignedUnderflow) {
+TEST_F(TypedIntegerDeathTest, DecrementSignedUnderflow) {
     Signed value(std::numeric_limits<int32_t>::min() + 1);
 
     value--;                    // Doesn't underflow.
     EXPECT_DEATH(value--, "");  // Underflows.
 }
 
-TEST_F(TypedIntegerTest, UnsignedAdditionOverflow) {
+TEST_F(TypedIntegerDeathTest, UnsignedAdditionOverflow) {
     Unsigned value(std::numeric_limits<uint32_t>::max() - 1);
 
-    value + Unsigned(1);                    // Doesn't overflow.
-    EXPECT_DEATH(value + Unsigned(2), "");  // Overflows.
+    value + Unsigned(1);                     // Doesn't overflow.
+    EXPECT_DEATH(value + Unsigned(2), "");   // Overflows.
     EXPECT_DEATH(value += Unsigned(2), "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, SignedAdditionOverflow) {
+TEST_F(TypedIntegerDeathTest, SignedAdditionOverflow) {
     Signed value(std::numeric_limits<int32_t>::max() - 1);
 
-    value + Signed(1);                    // Doesn't overflow.
-    EXPECT_DEATH(value + Signed(2), "");  // Overflows.
+    value + Signed(1);                     // Doesn't overflow.
+    EXPECT_DEATH(value + Signed(2), "");   // Overflows.
     EXPECT_DEATH(value += Signed(2), "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, SignedAdditionUnderflow) {
+TEST_F(TypedIntegerDeathTest, SignedAdditionUnderflow) {
     Signed value(std::numeric_limits<int32_t>::min() + 1);
 
-    value + Signed(-1);                    // Doesn't underflow.
-    EXPECT_DEATH(value + Signed(-2), "");  // Underflows.
+    value + Signed(-1);                     // Doesn't underflow.
+    EXPECT_DEATH(value + Signed(-2), "");   // Underflows.
     EXPECT_DEATH(value += Signed(-2), "");  // Underflows.
 }
 
-TEST_F(TypedIntegerTest, UnsignedSubtractionUnderflow) {
+TEST_F(TypedIntegerDeathTest, UnsignedSubtractionUnderflow) {
     Unsigned value(1);
 
     value - Unsigned(1);                     // Doesn't underflow.
@@ -455,23 +458,23 @@ TEST_F(TypedIntegerTest, UnsignedSubtractionUnderflow) {
     EXPECT_DEATH(value -= Unsigned(2), "");  // Underflows.
 }
 
-TEST_F(TypedIntegerTest, SignedSubtractionOverflow) {
+TEST_F(TypedIntegerDeathTest, SignedSubtractionOverflow) {
     Signed value(std::numeric_limits<int32_t>::max() - 1);
 
-    value - Signed(-1);                    // Doesn't overflow.
-    EXPECT_DEATH(value - Signed(-2), "");  // Overflows.
+    value - Signed(-1);                     // Doesn't overflow.
+    EXPECT_DEATH(value - Signed(-2), "");   // Overflows.
     EXPECT_DEATH(value -= Signed(-2), "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, SignedSubtractionUnderflow) {
+TEST_F(TypedIntegerDeathTest, SignedSubtractionUnderflow) {
     Signed value(std::numeric_limits<int32_t>::min() + 1);
 
-    value - Signed(1);                    // Doesn't underflow.
-    EXPECT_DEATH(value - Signed(2), "");  // Underflows.
+    value - Signed(1);                     // Doesn't underflow.
+    EXPECT_DEATH(value - Signed(2), "");   // Underflows.
     EXPECT_DEATH(value -= Signed(2), "");  // Underflows.
 }
 
-TEST_F(TypedIntegerTest, UnsignedMultiplicationOverflow) {
+TEST_F(TypedIntegerDeathTest, UnsignedMultiplicationOverflow) {
     Unsigned value(std::numeric_limits<uint32_t>::max() / 2);
 
     value* Unsigned(2);                      // Doesn't overflow.
@@ -479,7 +482,7 @@ TEST_F(TypedIntegerTest, UnsignedMultiplicationOverflow) {
     EXPECT_DEATH(value *= Unsigned(3), "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, SignedMultiplicationOverflow) {
+TEST_F(TypedIntegerDeathTest, SignedMultiplicationOverflow) {
     Signed value(std::numeric_limits<int32_t>::max() / 2);
 
     value* Signed(2);                      // Doesn't overflow.
@@ -487,7 +490,7 @@ TEST_F(TypedIntegerTest, SignedMultiplicationOverflow) {
     EXPECT_DEATH(value *= Signed(3), "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, SignedMultiplicationUnderflow) {
+TEST_F(TypedIntegerDeathTest, SignedMultiplicationUnderflow) {
     Signed value(std::numeric_limits<int32_t>::min() / 2);
 
     value* Signed(2);                      // Doesn't underflow.
@@ -495,7 +498,7 @@ TEST_F(TypedIntegerTest, SignedMultiplicationUnderflow) {
     EXPECT_DEATH(value *= Signed(3), "");  // Underflows.
 }
 
-TEST_F(TypedIntegerTest, UnsignedDivisionByZero) {
+TEST_F(TypedIntegerDeathTest, UnsignedDivisionByZero) {
     Unsigned value(1);
 
     value / Unsigned(1);                     // Doesn't underflow.
@@ -503,7 +506,7 @@ TEST_F(TypedIntegerTest, UnsignedDivisionByZero) {
     EXPECT_DEATH(value /= Unsigned(0), "");  // DBZ.
 }
 
-TEST_F(TypedIntegerTest, SignedDivisionByZero) {
+TEST_F(TypedIntegerDeathTest, SignedDivisionByZero) {
     Signed value(1);
 
     value / Signed(-1);                    // Doesn't overflow.
@@ -511,7 +514,7 @@ TEST_F(TypedIntegerTest, SignedDivisionByZero) {
     EXPECT_DEATH(value /= Signed(0), "");  // DBZ.
 }
 
-TEST_F(TypedIntegerTest, SignedDivisionOverflow) {
+TEST_F(TypedIntegerDeathTest, SignedDivisionOverflow) {
     // Overflow can also occur during two's complement signed integer division when the dividend is
     // equal to the minimum (most negative) value for the signed integer type and the divisor is
     // equal to −1.
@@ -522,7 +525,7 @@ TEST_F(TypedIntegerTest, SignedDivisionOverflow) {
     EXPECT_DEATH(value /= Signed(-1), "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, UnsignedModuloByZero) {
+TEST_F(TypedIntegerDeathTest, UnsignedModuloByZero) {
     Unsigned value(1);
 
     value % Unsigned(1);                     // Doesn't underflow.
@@ -530,7 +533,7 @@ TEST_F(TypedIntegerTest, UnsignedModuloByZero) {
     EXPECT_DEATH(value %= Unsigned(0), "");  // DBZ.
 }
 
-TEST_F(TypedIntegerTest, SignedModuloByZero) {
+TEST_F(TypedIntegerDeathTest, SignedModuloByZero) {
     Signed value(1);
 
     value % Signed(-1);                    // Doesn't overflow.
@@ -538,7 +541,7 @@ TEST_F(TypedIntegerTest, SignedModuloByZero) {
     EXPECT_DEATH(value %= Signed(0), "");  // DBZ.
 }
 
-TEST_F(TypedIntegerTest, SignedModuloOverflow) {
+TEST_F(TypedIntegerDeathTest, SignedModuloOverflow) {
     // Overflow can also occur during two's complement signed integer modulo when the dividend is
     // equal to the minimum (most negative) value for the signed integer type and the divisor is
     // equal to −1.
@@ -549,7 +552,7 @@ TEST_F(TypedIntegerTest, SignedModuloOverflow) {
     EXPECT_DEATH(value %= Signed(-1), "");  // Overflows.
 }
 
-TEST_F(TypedIntegerTest, NegationOverflow) {
+TEST_F(TypedIntegerDeathTest, NegationOverflow) {
     Signed maxValue(std::numeric_limits<int32_t>::max());
     -maxValue;  // Doesn't underflow.
 

@@ -34,19 +34,21 @@
 #include "dawn/native/metal/DeviceMTL.h"
 #include "dawn/native/metal/SamplerMTL.h"
 #include "dawn/native/metal/TextureMTL.h"
+#include "dawn/native/metal/UtilsMetal.h"
 
 namespace dawn::native::metal {
 
 // static
-ResultOrError<Ref<BindGroup>> BindGroup::Create(Device* device,
-                                                const BindGroupDescriptor* descriptor) {
+ResultOrError<Ref<BindGroup>> BindGroup::Create(
+    Device* device,
+    const UnpackedPtr<BindGroupDescriptor>& descriptor) {
     Ref<BindGroup> bindGroup = ToBackend(descriptor->layout->GetInternalBindGroupLayout())
                                    ->AllocateBindGroup(device, descriptor);
     DAWN_TRY(bindGroup->Initialize(descriptor));
     return bindGroup;
 }
 
-BindGroup::BindGroup(Device* device, const BindGroupDescriptor* descriptor)
+BindGroup::BindGroup(Device* device, const UnpackedPtr<BindGroupDescriptor>& descriptor)
     : BindGroupBase(this, device, descriptor) {}
 
 BindGroup::~BindGroup() = default;
@@ -57,13 +59,17 @@ MaybeError BindGroup::InitializeImpl() {
         return {};
     }
 
-    // TODO(crbug.com/363031535): The argument buffers should probably work in some kind of pool
+    // TODO(crbug.com/477311786): The argument buffers should probably work in some kind of pool
     // instead of being allocated here
 
     auto layout = ToBackend(GetLayout());
 
     auto encoder = layout->GetArgumentEncoder();
     NSUInteger argumentBufferLength = [*encoder encodedLength];
+    // Avoid zero-sized buffers by rounding up the size.
+    if (argumentBufferLength == 0) {
+        argumentBufferLength = 8;
+    }
 
     mArgumentBuffer = AcquireNSPRef([device->GetMTLDevice() newBufferWithLength:argumentBufferLength
                                                                         options:0]);
@@ -71,22 +77,23 @@ MaybeError BindGroup::InitializeImpl() {
 
     for (BindingIndex bindingIndex : Range(layout->GetBindingCount())) {
         const BindingInfo& bindingInfo = layout->GetBindingInfo(bindingIndex);
-        uint32_t dstBinding = uint32_t(bindingIndex - bindingInfo.indexInArray);
+        uint32_t dstBinding = ToMTLArgumentBufferIndex(bindingIndex - bindingInfo.indexInArray);
 
         auto HandleTextureBinding = [&]() {
             auto textureView = ToBackend(GetBindingAsTextureView(bindingIndex));
-            id<MTLTexture> texture = textureView->GetMTLTexture();
+            id<MTLTexture> texture =
+                textureView->GetTexture()->IsDestroyed() ? nil : textureView->GetMTLTexture();
             [*encoder setTexture:texture atIndex:dstBinding];
         };
 
-        // TODO(crbug.com/363031535): The buffers, samplers and textures in the MatchVariant need to
-        // have resource usage tracking added.
+        // Note, if a resource is destroyed, we will write nil to that slot.
+        // Validation should ensure we never actually try to use it.
         MatchVariant(
             bindingInfo.bindingLayout,
             [&](const BufferBindingInfo& layout) {
                 const BufferBinding& binding = GetBindingAsBufferBinding(bindingIndex);
-
-                const id<MTLBuffer> buffer = ToBackend(binding.buffer)->GetMTLBuffer();
+                const id<MTLBuffer> buffer =
+                    binding.buffer->IsDestroyed() ? nil : ToBackend(binding.buffer)->GetMTLBuffer();
                 [*encoder setBuffer:buffer offset:binding.offset atIndex:dstBinding];
             },
             [&](const SamplerBindingInfo&) {
@@ -102,7 +109,13 @@ MaybeError BindGroup::InitializeImpl() {
             },
             [&](const TextureBindingInfo&) { HandleTextureBinding(); },
             [&](const StorageTextureBindingInfo&) { HandleTextureBinding(); },
-            [](const InputAttachmentBindingInfo&) { DAWN_CHECK(false); });
+            [&](const TexelBufferBindingInfo&) {
+                // Metal does not support texel buffers.
+                // TODO(crbug/382544164): Prototype texel buffer feature
+                DAWN_CHECK(false);
+            },
+            [](const InputAttachmentBindingInfo&) { DAWN_CHECK(false); },
+            [](const ExternalTextureBindingInfo&) { DAWN_CHECK(false); });
     }
 
     return {};

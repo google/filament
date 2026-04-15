@@ -30,15 +30,19 @@
 
 #include <webgpu/webgpu.h>
 
+#include <atomic>
 #include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #include "dawn/common/FutureUtils.h"
 #include "dawn/common/MutexProtected.h"
-#include "dawn/common/NonCopyable.h"
+#include "dawn/common/NonMovable.h"
+#include "dawn/common/Ref.h"
+#include "dawn/common/RefCounted.h"
 #include "dawn/wire/WireResult.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 
@@ -64,14 +68,16 @@ enum class EventType {
 // into a local copy that can be readily used by the user callback. Specifically, the wire
 // deserialization data is guaranteed to be alive when the ReadyHook is called, but not when
 // CompleteImpl is called.
-class TrackedEvent : NonMovable {
+class TrackedEvent : public RefCounted {
   public:
     explicit TrackedEvent(WGPUCallbackMode mode);
-    virtual ~TrackedEvent();
+    ~TrackedEvent() override;
 
     virtual EventType GetType() = 0;
 
     WGPUCallbackMode GetCallbackMode() const;
+
+    // Returns true iff the event is not |Pending|.
     bool IsReady() const;
 
     void SetReady();
@@ -84,9 +90,11 @@ class TrackedEvent : NonMovable {
     enum class EventState {
         Pending,
         Ready,
+        Running,
         Complete,
     };
-    EventState mEventState = EventState::Pending;
+    std::atomic<EventState> mEventState = EventState::Pending;
+    std::once_flag mFlag;
 };
 
 // Subcomponent which tracks callback events for the Future-based callback
@@ -96,6 +104,9 @@ class TrackedEvent : NonMovable {
 // TODO(crbug.com/dawn/2060): This should probably be merged together with RequestTracker.
 class EventManager final : NonMovable {
   public:
+    using EventMap = std::map<FutureID, Ref<TrackedEvent>>;
+
+    explicit EventManager(size_t timedWaitAnyMaxCount);
     ~EventManager();
 
     // See mState for breakdown of these states.
@@ -103,7 +114,7 @@ class EventManager final : NonMovable {
 
     // Returns a pair of the FutureID and a bool that is true iff the event was successfuly tracked,
     // false otherwise. Events may not be tracked if the client is already disconnected.
-    std::pair<FutureID, bool> TrackEvent(std::unique_ptr<TrackedEvent> event);
+    std::pair<FutureID, bool> TrackEvent(Ref<TrackedEvent>&& event);
 
     // Transitions the EventManager to the given state. Note that states can only go in one
     // direction, i.e. once the EventManager transitions to InstanceDropped, it cannot transition
@@ -117,7 +128,7 @@ class EventManager final : NonMovable {
             return WireResult::FatalError;
         }
 
-        std::unique_ptr<TrackedEvent> spontaneousEvent;
+        Ref<TrackedEvent> spontaneousEvent;
         WireResult result = mTrackedEvents.Use([&](auto trackedEvents) {
             auto it = trackedEvents->find(futureID);
             if (it == trackedEvents->end()) {
@@ -133,21 +144,22 @@ class EventManager final : NonMovable {
                 return WireResult::FatalError;
             }
 
-            WireResult result = static_cast<Event*>(trackedEvent.get())
+            WireResult result = static_cast<Event*>(trackedEvent.Get())
                                     ->ReadyHook(futureID, std::forward<ReadyArgs>(readyArgs)...);
             trackedEvent->SetReady();
 
             // If the event can be spontaneously completed, prepare to do so now.
             if (trackedEvent->GetCallbackMode() == WGPUCallbackMode_AllowSpontaneous) {
-                spontaneousEvent = std::move(trackedEvent);
-                trackedEvents->erase(futureID);
+                spontaneousEvent = trackedEvent;
             }
+
             return result;
         });
 
         // Handle spontaneous completions.
         if (spontaneousEvent) {
             spontaneousEvent->Complete(futureID, EventCompletionType::Ready);
+            mTrackedEvents.Use([&](auto trackedEvents) { trackedEvents->erase(futureID); });
         }
         return result;
     }
@@ -156,6 +168,8 @@ class EventManager final : NonMovable {
     WGPUWaitStatus WaitAny(size_t count, WGPUFutureWaitInfo* infos, uint64_t timeoutNS);
 
   private:
+    const size_t mTimedWaitAnyMaxCount = 0;
+
     // Different states of the EventManager dictate how new incoming events are handled.
     //   Nominal: Usual state of the manager. All events are tracked and callbacks are fired
     //     depending on the callback modes.
@@ -170,8 +184,10 @@ class EventManager final : NonMovable {
 
     // Tracks all kinds of events (for both WaitAny and ProcessEvents). We use an ordered map so
     // that in most cases, event ordering is already implicit when we iterate the map. (Not true for
-    // WaitAny though because the user could specify the FutureIDs out of order.)
-    MutexProtected<std::map<FutureID, std::unique_ptr<TrackedEvent>>> mTrackedEvents;
+    // WaitAny though because the user could specify the FutureIDs out of order.) The condition
+    // variable is used in order to implement timed WaitAny and should notify anytime that the map
+    // or any event state inside the map has changed.
+    MutexCondVarProtected<EventMap> mTrackedEvents;
     std::atomic<FutureID> mNextFutureID = 1;
 };
 

@@ -66,4 +66,8 @@ Pointer* Pointer::Clone(CloneContext& ctx) const {
     return ctx.dst.mgr->Get<Pointer>(AddressSpace(), ty, Access());
 }
 
+uint32_t Pointer::Align() const {
+    return 1;
+}
+
 }  // namespace tint::core::type

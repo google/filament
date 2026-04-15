@@ -46,7 +46,7 @@ if (tint_build_unittests || tint_build_benchmarks) {
 libtint_source_set("file") {
   sources = [ "tmpfile.h" ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/utils/ice",
     "${tint_src_dir}/utils/macros",
     "${tint_src_dir}/utils/text",

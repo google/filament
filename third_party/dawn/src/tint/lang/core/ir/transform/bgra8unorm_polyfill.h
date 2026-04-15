@@ -39,7 +39,11 @@ class Module;
 namespace tint::core::ir::transform {
 
 /// The capabilities that the transform can support.
-const Capabilities kBgra8UnormPolyfillCapabilities{Capability::kAllowDuplicateBindings};
+const Capabilities kBgra8UnormPolyfillCapabilities{
+    Capability::kAllowDuplicateBindings,
+    Capability::kAllowNonCoreTypes,
+    Capability::kAllow8BitIntegers,
+};
 
 /// Bgra8UnormPolyfill is a transform that changes the texel format of storage textures from
 /// bgra8unorm to rgba8unorm, inserting swizzles before and after texture accesses as necessary.

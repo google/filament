@@ -85,7 +85,7 @@ namespace dawn::wire::client {
                                 , {{as_varName(arg.name)}}
                         {%- endfor -%}
                     );
-                    cmd.result = returnObject->GetWireHandle();
+                    cmd.result = returnObject->GetWireHandle(self->GetClient());
                 {% endif %}
 
                 {% for arg in method.arguments %}

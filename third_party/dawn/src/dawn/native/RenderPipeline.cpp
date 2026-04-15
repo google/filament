@@ -227,7 +227,7 @@ ResultOrError<ShaderModuleEntryPoint> ValidateVertexState(
         DAWN_TRY_CONTEXT(ValidateVertexBufferLayout(device, &descriptor->buffers[i], vertexMetadata,
                                                     &attributesSetMask),
                          "validating buffers[%u].", i);
-        totalAttributesNum += descriptor->buffers[i].attributeCount;
+        totalAttributesNum += uint32_t(descriptor->buffers[i].attributeCount);
     }
 
     if (device->IsCompatibilityMode() &&
@@ -260,7 +260,7 @@ ResultOrError<ShaderModuleEntryPoint> ValidateVertexState(
         return DAWN_VALIDATION_ERROR(
             "Vertex attribute slot %u used in (%s, %s) is not present in the "
             "VertexState.",
-            uint8_t(firstMissing), descriptor->module, &entryPoint);
+            uint8_t(firstMissing), descriptor->module, entryPoint);
     }
 
     return entryPoint;
@@ -332,7 +332,7 @@ MaybeError ValidateDepthStencilState(const DeviceBase* device,
 
     const Format* format;
     DAWN_TRY_ASSIGN(format, device->GetInternalFormat(descriptor->format));
-    DAWN_INVALID_IF(!format->HasDepthOrStencil() || !format->isRenderable,
+    DAWN_INVALID_IF(!format->HasDepthOrStencil() || !format->IsRenderable(),
                     "Depth stencil format (%s) is not depth-stencil renderable.",
                     descriptor->format);
 
@@ -496,7 +496,7 @@ MaybeError ValidateColorTargetState(
     const MultisampleState& multisample) {
     UnpackedPtr<ColorTargetState> unpacked;
     DAWN_TRY_ASSIGN(unpacked, ValidateAndUnpack(&descriptor));
-    if (unpacked.Get<ColorTargetStateExpandResolveTextureDawn>()) {
+    if (unpacked.Has<ColorTargetStateExpandResolveTextureDawn>()) {
         DAWN_INVALID_IF(!device->HasFeature(Feature::DawnLoadResolveTexture),
                         "The ColorTargetStateExpandResolveTextureDawn struct is used while the "
                         "%s feature is not enabled.",
@@ -514,10 +514,10 @@ MaybeError ValidateColorTargetState(
     }
 
     DAWN_TRY(ValidateColorWriteMask(descriptor.writeMask));
-    DAWN_INVALID_IF(!format->IsColor() || !format->isRenderable,
+    DAWN_INVALID_IF(!format->IsColor() || !format->IsRenderable(),
                     "Color format (%s) is not color renderable.", format->format);
 
-    DAWN_INVALID_IF(descriptor.blend && !format->isBlendable,
+    DAWN_INVALID_IF(descriptor.blend && !format->IsBlendable(),
                     "Blending is enabled but color format (%s) is not blendable.", format->format);
 
     if (!fragmentWritten) {
@@ -645,14 +645,14 @@ ResultOrError<ShaderModuleEntryPoint> ValidateFragmentState(DeviceBase* device,
         DAWN_INVALID_IF(depthStencil == nullptr,
                         "Depth stencil state is not present when fragment stage (%s, %s) is "
                         "writing to frag_depth.",
-                        descriptor->module, &entryPoint);
+                        descriptor->module, entryPoint);
         const Format* depthStencilFormat;
         DAWN_TRY_ASSIGN(depthStencilFormat, device->GetInternalFormat(depthStencil->format));
         DAWN_INVALID_IF(!depthStencilFormat->HasDepth(),
                         "Depth stencil state format (%s) has no depth aspect when fragment stage "
                         "(%s, %s) is "
                         "writing to frag_depth.",
-                        depthStencil->format, descriptor->module, &entryPoint);
+                        depthStencil->format, descriptor->module, entryPoint);
     }
 
     uint32_t maxColorAttachments = device->GetLimits().v1.maxColorAttachments;
@@ -743,12 +743,12 @@ ResultOrError<ShaderModuleEntryPoint> ValidateFragmentState(DeviceBase* device,
         DAWN_INVALID_IF(
             fragmentMetadata.usesSampleMaskOutput,
             "sample_mask is not supported in compatibility mode in the fragment stage (%s, %s)",
-            descriptor->module, &entryPoint);
+            descriptor->module, entryPoint);
 
         DAWN_INVALID_IF(
             fragmentMetadata.usesSampleIndex,
             "sample_index is not supported in compatibility mode in the fragment stage (%s, %s)",
-            descriptor->module, &entryPoint);
+            descriptor->module, entryPoint);
 
         // Check that all the color target states match.
         ColorAttachmentIndex firstColorTargetIndex{};
@@ -953,7 +953,7 @@ RenderPipelineBase::RenderPipelineBase(DeviceBase* device,
                    descriptor->label,
                    GetRenderStagesAndSetPlaceholderShader(device, *descriptor)),
       mAttachmentState(device->GetOrCreateAttachmentState(descriptor, GetLayout())) {
-    mVertexBufferCount = descriptor->vertex.bufferCount;
+    mVertexBufferCount = uint32_t(descriptor->vertex.bufferCount);
 
     auto buffers =
         ityp::SpanFromUntyped<VertexBufferSlot>(descriptor->vertex.buffers, mVertexBufferCount);
@@ -1064,6 +1064,14 @@ RenderPipelineBase::RenderPipelineBase(DeviceBase* device,
 
     if (HasStage(SingleShaderStage::Fragment)) {
         mUsesFragDepth = GetStage(SingleShaderStage::Fragment).metadata->usesFragDepth;
+        mUsesFragPosition = GetStage(SingleShaderStage::Fragment).metadata->usesFragPosition;
+        mUsesSampleIndex = GetStage(SingleShaderStage::Fragment).metadata->usesSampleIndex;
+        mUsesFramebufferFetch =
+            GetStage(SingleShaderStage::Fragment).metadata->fragmentInputMask.any();
+        mUseSampleRateShading =
+            GetSampleCount() > 1 &&
+            (GetStage(SingleShaderStage::Fragment).metadata->usesSampleInterpolants ||
+             mUsesSampleIndex || mUsesFramebufferFetch);
     }
 
     if (HasStage(SingleShaderStage::Vertex)) {
@@ -1078,6 +1086,10 @@ RenderPipelineBase::RenderPipelineBase(DeviceBase* device,
     StreamIn(&mCacheKey, CacheKey::Type::RenderPipeline, device->GetCacheKey());
 }
 
+MaybeError RenderPipelineBase::InitializeWithShaders() {
+    return InitializeImpl();
+}
+
 RenderPipelineBase::RenderPipelineBase(DeviceBase* device,
                                        ObjectBase::ErrorTag tag,
                                        StringView label)
@@ -1085,7 +1097,7 @@ RenderPipelineBase::RenderPipelineBase(DeviceBase* device,
 
 RenderPipelineBase::~RenderPipelineBase() = default;
 
-void RenderPipelineBase::DestroyImpl() {
+void RenderPipelineBase::DestroyImpl(DestroyReason reason) {
     Uncache();
 
     // Remove reference to the attachment state so that we don't have lingering references to
@@ -1276,6 +1288,21 @@ bool RenderPipelineBase::UsesFragDepth() const {
     return mUsesFragDepth;
 }
 
+bool RenderPipelineBase::UsesSampleIndex() const {
+    DAWN_ASSERT(!IsError());
+    return mUsesSampleIndex;
+}
+
+bool RenderPipelineBase::UsesFragPosition() const {
+    DAWN_ASSERT(!IsError());
+    return mUsesFragPosition;
+}
+
+bool RenderPipelineBase::UseSampleRateShading() const {
+    DAWN_ASSERT(!IsError());
+    return mUseSampleRateShading;
+}
+
 bool RenderPipelineBase::UsesVertexIndex() const {
     DAWN_ASSERT(!IsError());
     return mUsesVertexIndex;
@@ -1284,6 +1311,11 @@ bool RenderPipelineBase::UsesVertexIndex() const {
 bool RenderPipelineBase::UsesInstanceIndex() const {
     DAWN_ASSERT(!IsError());
     return mUsesInstanceIndex;
+}
+
+bool RenderPipelineBase::UsesFramebufferFetch() const {
+    DAWN_ASSERT(!IsError());
+    return mUsesFramebufferFetch;
 }
 
 size_t RenderPipelineBase::ComputeContentHash() {

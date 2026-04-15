@@ -36,8 +36,12 @@ using ::testing::NiceMock;
 ComputePipelineMock::ComputePipelineMock(DeviceBase* device,
                                          const UnpackedPtr<ComputePipelineDescriptor>& descriptor)
     : ComputePipelineBase(device, descriptor) {
-    ON_CALL(*this, InitializeImpl).WillByDefault([]() -> MaybeError { return {}; });
-    ON_CALL(*this, DestroyImpl).WillByDefault([this] { this->ComputePipelineBase::DestroyImpl(); });
+    ON_CALL(*this, InitializeImpl).WillByDefault([]() -> ResultOrError<Extent3D> {
+        return {{1, 1, 1}};
+    });
+    ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
+        this->ComputePipelineBase::DestroyImpl(reason);
+    });
 }
 
 ComputePipelineMock::~ComputePipelineMock() = default;

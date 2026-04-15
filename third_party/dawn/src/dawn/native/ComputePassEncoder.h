@@ -64,10 +64,14 @@ class ComputePassEncoder final : public ProgrammableEncoder {
     void APIDispatchWorkgroupsIndirect(BufferBase* indirectBuffer, uint64_t indirectOffset);
     void APISetPipeline(ComputePipelineBase* pipeline);
 
+    void APISetResourceTable(ResourceTableBase* table);
+
     void APISetBindGroup(uint32_t groupIndex,
                          BindGroupBase* group,
                          uint32_t dynamicOffsetCount = 0,
                          const uint32_t* dynamicOffsets = nullptr);
+
+    void APISetImmediates(uint32_t offset, const void* data, size_t size);
 
     void APIWriteTimestamp(QuerySetBase* querySet, uint32_t queryIndex);
 
@@ -88,7 +92,7 @@ class ComputePassEncoder final : public ProgrammableEncoder {
                        StringView label);
 
   private:
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     ResultOrError<std::pair<Ref<BufferBase>, uint64_t>> TransformIndirectDispatchBuffer(
         Ref<BufferBase> indirectBuffer,

@@ -28,20 +28,18 @@
 #include "src/tint/lang/wgsl/ast/struct_member.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::StructMember);
 
 namespace tint::ast {
 
-StructMember::StructMember(GenerationID pid,
-                           NodeID nid,
+StructMember::StructMember(NodeID nid,
                            const Source& src,
                            const Identifier* n,
                            Type ty,
                            VectorRef<const Attribute*> attrs)
 
-    : Base(pid, nid, src), name(n), type(ty), attributes(std::move(attrs)) {
+    : Base(nid, src), name(n), type(ty), attributes(std::move(attrs)) {
     TINT_ASSERT(name);
     if (name) {
         TINT_ASSERT(!name->Is<TemplatedIdentifier>());
@@ -49,19 +47,9 @@ StructMember::StructMember(GenerationID pid,
     TINT_ASSERT(type);
     for (auto* attr : attributes) {
         TINT_ASSERT(attr);
-        TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(attr, generation_id);
     }
 }
 
 StructMember::~StructMember() = default;
-
-const StructMember* StructMember::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto n = ctx.Clone(name);
-    auto ty = ctx.Clone(type);
-    auto attrs = ctx.Clone(attributes);
-    return ctx.dst->create<StructMember>(src, n, ty, std::move(attrs));
-}
 
 }  // namespace tint::ast

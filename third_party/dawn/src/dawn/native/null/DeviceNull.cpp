@@ -39,7 +39,6 @@
 #include "dawn/native/Surface.h"
 #include "dawn/native/TintUtils.h"
 #include "partition_alloc/pointers/raw_ptr.h"
-
 #include "tint/tint.h"
 
 namespace dawn::native::null {
@@ -95,7 +94,7 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
 
 MaybeError PhysicalDevice::InitializeSupportedLimitsImpl(CombinedLimits* limits) {
     GetDefaultLimitsForSupportedFeatureLevel(limits);
-    limits->v1.maxImmediateSize = kMaxSupportedImmediateDataBytes;
+    limits->v1.maxImmediateSize = kMaxImmediateDataBytes;
     return {};
 }
 
@@ -113,7 +112,8 @@ ResultOrError<Ref<DeviceBase>> PhysicalDevice::CreateDeviceImpl(
     return Device::Create(adapter, descriptor, deviceToggles, std::move(lostEvent));
 }
 
-void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) const {
+void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
+                                               const TogglesState&) const {
     if (auto* memoryHeapProperties = info.Get<AdapterPropertiesMemoryHeaps>()) {
         auto* heapInfo = new MemoryHeapInfo[1];
         memoryHeapProperties->heapCount = 1;
@@ -125,6 +125,15 @@ void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) c
     }
     if (auto* d3dProperties = info.Get<AdapterPropertiesD3D>()) {
         d3dProperties->shaderModel = 0;
+    }
+    if (auto* explicitComputeSubgroupSizeConfigs =
+            info.Get<AdapterPropertiesExplicitComputeSubgroupSizeConfigs>()) {
+        explicitComputeSubgroupSizeConfigs->minExplicitComputeSubgroupSize =
+            GetMinExplicitComputeSubgroupSize();
+        explicitComputeSubgroupSizeConfigs->maxExplicitComputeSubgroupSize =
+            GetMaxExplicitComputeSubgroupSize();
+        explicitComputeSubgroupSizeConfigs->maxComputeWorkgroupSubgroups =
+            GetMaxComputeWorkgroupSubgroups();
     }
 }
 
@@ -186,7 +195,7 @@ ResultOrError<Ref<Device>> Device::Create(AdapterBase* adapter,
 }
 
 Device::~Device() {
-    Destroy();
+    Destroy(DestroyReason::CppDestructor);
 }
 
 MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
@@ -195,13 +204,13 @@ MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
 }
 
 ResultOrError<Ref<BindGroupBase>> Device::CreateBindGroupImpl(
-    const BindGroupDescriptor* descriptor) {
+    const UnpackedPtr<BindGroupDescriptor>& descriptor) {
     Ref<BindGroup> bindGroup = AcquireRef(new BindGroup(this, descriptor));
     DAWN_TRY(bindGroup->Initialize(descriptor));
     return bindGroup;
 }
 ResultOrError<Ref<BindGroupLayoutInternalBase>> Device::CreateBindGroupLayoutImpl(
-    const BindGroupLayoutDescriptor* descriptor) {
+    const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor) {
     return AcquireRef(new BindGroupLayout(this, descriptor));
 }
 ResultOrError<Ref<BufferBase>> Device::CreateBufferImpl(
@@ -229,15 +238,20 @@ Ref<RenderPipelineBase> Device::CreateUninitializedRenderPipelineImpl(
     const UnpackedPtr<RenderPipelineDescriptor>& descriptor) {
     return AcquireRef(new RenderPipeline(this, descriptor));
 }
+ResultOrError<Ref<ResourceTableBase>> Device::CreateResourceTableImpl(
+    const ResourceTableDescriptor* descriptor) {
+    Ref<ResourceTable> table = AcquireRef(new ResourceTable(this, descriptor));
+    DAWN_TRY(table->Initialize());
+    return table;
+}
 ResultOrError<Ref<SamplerBase>> Device::CreateSamplerImpl(const SamplerDescriptor* descriptor) {
     return AcquireRef(new Sampler(this, descriptor));
 }
 ResultOrError<Ref<ShaderModuleBase>> Device::CreateShaderModuleImpl(
     const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-    const std::vector<tint::wgsl::Extension>& internalExtensions,
-    ShaderModuleParseResult* parseResult) {
+    const std::vector<tint::wgsl::Extension>& internalExtensions) {
     Ref<ShaderModule> module = AcquireRef(new ShaderModule(this, descriptor, internalExtensions));
-    DAWN_TRY(module->Initialize(parseResult));
+    module->Initialize();
     return module;
 }
 ResultOrError<Ref<SwapChainBase>> Device::CreateSwapChainImpl(Surface* surface,
@@ -255,7 +269,7 @@ ResultOrError<Ref<TextureViewBase>> Device::CreateTextureViewImpl(
     return AcquireRef(new TextureView(texture, descriptor));
 }
 
-void Device::DestroyImpl() {
+void Device::DestroyImpl(DestroyReason reason) {
     DAWN_ASSERT(GetState() == State::Disconnected);
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the device is explicitly destroyed with APIDestroy.
@@ -296,7 +310,7 @@ MaybeError Device::CopyFromStagingToBuffer(BufferBase* source,
     return {};
 }
 
-MaybeError Device::CopyFromStagingToTextureImpl(const BufferBase* source,
+MaybeError Device::CopyFromStagingToTextureImpl(BufferBase* source,
                                                 const TexelCopyBufferLayout& src,
                                                 const TextureCopy& dst,
                                                 const Extent3D& copySizePixels) {
@@ -349,7 +363,7 @@ BindGroupDataHolder::~BindGroupDataHolder() {
 
 // BindGroup
 
-BindGroup::BindGroup(DeviceBase* device, const BindGroupDescriptor* descriptor)
+BindGroup::BindGroup(DeviceBase* device, const UnpackedPtr<BindGroupDescriptor>& descriptor)
     : BindGroupDataHolder(descriptor->layout->GetInternalBindGroupLayout()->GetBindingDataSize()),
       BindGroupBase(device, descriptor, mBindingDataAllocation) {}
 
@@ -359,7 +373,8 @@ MaybeError BindGroup::InitializeImpl() {
 
 // BindGroupLayout
 
-BindGroupLayout::BindGroupLayout(DeviceBase* device, const BindGroupLayoutDescriptor* descriptor)
+BindGroupLayout::BindGroupLayout(DeviceBase* device,
+                                 const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor)
     : BindGroupLayoutInternalBase(device, descriptor) {}
 
 // Buffer
@@ -399,13 +414,17 @@ MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) 
     return {};
 }
 
+MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
+    return {};
+}
+
 void* Buffer::GetMappedPointerImpl() {
     return mBackingData.get();
 }
 
-void Buffer::UnmapImpl() {}
+void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {}
 
-void Buffer::DestroyImpl() {
+void Buffer::DestroyImpl(DestroyReason reason) {
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the buffer is explicitly destroyed with APIDestroy.
     //   This case is NOT thread-safe and needs proper synchronization with other
@@ -413,7 +432,7 @@ void Buffer::DestroyImpl() {
     // - It may be called when the last ref to the buffer is dropped and the buffer
     //   is implicitly destroyed. This case is thread-safe because there are no
     //   other threads using the buffer since there are no other live refs.
-    BufferBase::DestroyImpl();
+    BufferBase::DestroyImpl(reason);
     ToBackend(GetDevice())->DecrementMemoryUsage(GetSize());
 }
 
@@ -469,60 +488,71 @@ ResultOrError<ExecutionSerial> Queue::WaitForQueueSerialImpl(ExecutionSerial wai
     return waitSerial;
 }
 
-MaybeError Queue::WaitForIdleForDestruction() {
+MaybeError Queue::WaitForIdleForDestructionImpl() {
     ToBackend(GetDevice())->ForgetPendingOperations();
     return {};
 }
 
 // ComputePipeline
-MaybeError ComputePipeline::InitializeImpl() {
+ResultOrError<Extent3D> ComputePipeline::InitializeImpl() {
     const ProgrammableStage& computeStage = GetStage(SingleShaderStage::Compute);
 
+    tint::null::writer::Options tintOptions;
+    tintOptions.entry_point_name = computeStage.entryPoint;
+    tintOptions.substitute_overrides_config = {
+        .map = BuildSubstituteOverridesTransformConfig(computeStage),
+    };
+
+    auto device = GetDevice();
+    tint::wgsl::reader::IROptions irOptions{
+        .dump_ir_when_validating = device->IsToggleEnabled(Toggle::DumpTintIR),
+        .enable_validation_asserts = device->IsToggleEnabled(Toggle::EnableTintIRValidationAsserts),
+    };
+
     // Convert the AST program to an IR module.
-    auto ir =
-        tint::wgsl::reader::ProgramToLoweredIR(computeStage.module->GetTintProgram()->program);
+    auto ir = tint::wgsl::reader::ProgramToLoweredIR(computeStage.module->GetTintProgram()->program,
+                                                     irOptions);
     DAWN_INVALID_IF(ir != tint::Success, "An error occurred while generating Tint IR\n%s",
                     ir.Failure().reason);
 
-    auto singleEntryPointResult =
-        tint::core::ir::transform::SingleEntryPoint(ir.Get(), computeStage.entryPoint.c_str());
-    DAWN_INVALID_IF(singleEntryPointResult != tint::Success,
-                    "Pipeline single entry point (IR) failed:\n%s",
-                    singleEntryPointResult.Failure().reason);
+    tint::Result<tint::null::writer::Output> tintResult =
+        tint::null::writer::Generate(ir.Get(), tintOptions);
 
-    // this needs to run after SingleEntryPoint transform which removes unused
-    // overrides for the current entry point.
-    tint::core::ir::transform::SubstituteOverridesConfig cfg;
-    cfg.map = BuildSubstituteOverridesTransformConfig(computeStage);
-
-    auto substituteOverridesResult = tint::core::ir::transform::SubstituteOverrides(ir.Get(), cfg);
-    DAWN_INVALID_IF(substituteOverridesResult != tint::Success,
-                    "Pipeline override substitution (IR) failed:\n%s",
-                    substituteOverridesResult.Failure().reason);
+    DAWN_INVALID_IF(tintResult != tint::Success, "An error occurred while running Null writer\n%s",
+                    tintResult.Failure().reason);
 
     auto limits = LimitsForCompilationRequest::Create(GetDevice()->GetLimits().v1);
     auto adapterSupportedLimits =
         LimitsForCompilationRequest::Create(GetDevice()->GetAdapter()->GetLimits().v1);
     auto maxSubgroupSize = GetDevice()->GetAdapter()->GetPhysicalDevice()->GetSubgroupMaxSize();
 
-    //  Workgroup validation has to come after overrides to have been substituted.
-    auto wgInfo = tint::core::ir::GetWorkgroupInfo(ir.Get());
+    Extent3D wgSize;
+    DAWN_TRY_ASSIGN(
+        wgSize, ValidateComputeStageWorkgroupSize(tintResult->workgroup_info,
+                                                  computeStage.metadata->usesSubgroupMatrix,
+                                                  maxSubgroupSize, limits, adapterSupportedLimits));
 
-    DAWN_INVALID_IF(wgInfo != tint::Success, "Getting workgroup info has failed (IR):\n%s",
-                    wgInfo.Failure().reason);
+    DAWN_TRY(ValidateExplicitComputeSubgroupSize(
+        tintResult->workgroup_info,
+        GetDevice()->GetAdapter()->GetPhysicalDevice()->GetMinExplicitComputeSubgroupSize(),
+        GetDevice()->GetAdapter()->GetPhysicalDevice()->GetMaxExplicitComputeSubgroupSize(),
+        GetDevice()->GetAdapter()->GetPhysicalDevice()->GetMaxComputeWorkgroupSubgroups()));
 
-    Extent3D _;
-    DAWN_TRY_ASSIGN(_, ValidateComputeStageWorkgroupSize(
-                           wgInfo.Get().x, wgInfo.Get().y, wgInfo.Get().z,
-                           wgInfo.Get().storage_size, computeStage.metadata->usesSubgroupMatrix,
-                           maxSubgroupSize, limits, adapterSupportedLimits));
-
-    return {};
+    return wgSize;
 }
 
 // RenderPipeline
 MaybeError RenderPipeline::InitializeImpl() {
     return {};
+}
+
+// ResourceTable
+
+ResourceTable::ResourceTable(Device* device, const ResourceTableDescriptor* descriptor)
+    : ResourceTableBase(device, descriptor) {}
+
+MaybeError ResourceTable::Initialize() {
+    return ResourceTableBase::InitializeBase();
 }
 
 // SwapChain
@@ -573,12 +603,6 @@ void SwapChain::DetachFromSurfaceImpl() {
     }
 }
 
-// ShaderModule
-
-MaybeError ShaderModule::Initialize(ShaderModuleParseResult* parseResult) {
-    return InitializeBase(parseResult);
-}
-
 uint32_t Device::GetOptimalBytesPerRowAlignment() const {
     return 1;
 }
@@ -597,5 +621,11 @@ bool Device::CanTextureLoadResolveTargetInTheSameRenderpass() const {
 
 Texture::Texture(DeviceBase* device, const UnpackedPtr<TextureDescriptor>& descriptor)
     : TextureBase(device, descriptor) {}
+
+MaybeError Texture::PinImpl(wgpu::TextureUsage usage) {
+    return {};
+}
+
+void Texture::UnpinImpl() {}
 
 }  // namespace dawn::native::null

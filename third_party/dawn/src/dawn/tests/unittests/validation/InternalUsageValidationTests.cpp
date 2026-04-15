@@ -148,6 +148,22 @@ TEST_F(TextureInternalUsageValidationTest, UsageValidation) {
     }
 }
 
+// Check that it's invalid to create a texture with internal usages but no external usages.
+TEST_F(TextureInternalUsageValidationTest, CreateViewWithNoExternalUsages) {
+    wgpu::DawnTextureInternalUsageDescriptor internalDesc = {};
+    internalDesc.internalUsage = wgpu::TextureUsage::RenderAttachment;
+
+    wgpu::TextureDescriptor textureDesc = {};
+    textureDesc.nextInChain = &internalDesc;
+    textureDesc.size = {1, 1};
+    textureDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+    textureDesc.usage = wgpu::TextureUsage::None;
+
+    wgpu::Texture tex;
+    ASSERT_DEVICE_ERROR(tex = device.CreateTexture(&textureDesc));
+    ASSERT_DEVICE_ERROR(tex.CreateView());
+}
+
 // Test that internal usage does not add to the validated usage
 // for command encoding
 TEST_F(TextureInternalUsageValidationTest, DeprecatedCommandValidation) {
@@ -161,7 +177,7 @@ TEST_F(TextureInternalUsageValidationTest, DeprecatedCommandValidation) {
     textureDesc.usage = wgpu::TextureUsage::CopySrc;
     wgpu::Texture src = device.CreateTexture(&textureDesc);
 
-    textureDesc.usage = wgpu::TextureUsage::None;
+    textureDesc.usage = wgpu::TextureUsage::RenderAttachment;
 
     wgpu::DawnTextureInternalUsageDescriptor internalDesc = {};
     textureDesc.nextInChain = &internalDesc;
@@ -224,7 +240,7 @@ TEST_F(TextureInternalUsageValidationTest, CommandValidation) {
     textureDesc.usage = wgpu::TextureUsage::CopySrc;
     wgpu::Texture src = device.CreateTexture(&textureDesc);
 
-    textureDesc.usage = wgpu::TextureUsage::None;
+    textureDesc.usage = wgpu::TextureUsage::RenderAttachment;
 
     wgpu::DawnTextureInternalUsageDescriptor internalDesc = {};
     textureDesc.nextInChain = &internalDesc;

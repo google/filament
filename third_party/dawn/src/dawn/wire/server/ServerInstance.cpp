@@ -41,17 +41,17 @@ WireResult Server::DoInstanceRequestAdapter(Known<WGPUInstance> instance,
                                             ObjectHandle adapterHandle,
                                             const WGPURequestAdapterOptions* options) {
     Reserved<WGPUAdapter> adapter;
-    WIRE_TRY(Objects<WGPUAdapter>().Allocate(&adapter, adapterHandle, AllocationState::Reserved));
+    WIRE_TRY(Allocate(&adapter, adapterHandle, AllocationState::Reserved));
 
     auto userdata = MakeUserdata<RequestAdapterUserdata>();
     userdata->eventManager = eventManager;
     userdata->future = future;
     userdata->adapterObjectId = adapter.id;
 
-    mProcs.instanceRequestAdapter(
+    mProcs->instanceRequestAdapter(
         instance->handle, options,
-        {nullptr, WGPUCallbackMode_AllowSpontaneous,
-         ForwardToServer<&Server::OnRequestAdapterCallback>, userdata.release(), nullptr});
+        MakeCallbackInfo<WGPURequestAdapterCallbackInfo, &Server::OnRequestAdapterCallback,
+                         WGPUCallbackMode_AllowSpontaneous>(userdata.release()));
     return WireResult::Success;
 }
 
@@ -81,7 +81,7 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
 
     // Query and report the adapter supported features.
     FreeMembers<WGPUSupportedFeatures> supportedFeatures(mProcs);
-    mProcs.adapterGetFeatures(adapter, &supportedFeatures);
+    mProcs->adapterGetFeatures(adapter, &supportedFeatures);
     cmd.featuresCount = supportedFeatures.featureCount;
     cmd.features = supportedFeatures.features;
 
@@ -92,7 +92,7 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
     // Query AdapterPropertiesMemoryHeaps if the feature is supported.
     FreeMembers<WGPUAdapterPropertiesMemoryHeaps> memoryHeapProperties(mProcs);
     memoryHeapProperties.chain.sType = WGPUSType_AdapterPropertiesMemoryHeaps;
-    if (mProcs.adapterHasFeature(adapter, WGPUFeatureName_AdapterPropertiesMemoryHeaps)) {
+    if (mProcs->adapterHasFeature(adapter, WGPUFeatureName_AdapterPropertiesMemoryHeaps)) {
         *propertiesChain = &memoryHeapProperties.chain;
         propertiesChain = &(*propertiesChain)->next;
     }
@@ -100,7 +100,7 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
     // Query AdapterPropertiesD3D if the feature is supported.
     WGPUAdapterPropertiesD3D d3dProperties = {};
     d3dProperties.chain.sType = WGPUSType_AdapterPropertiesD3D;
-    if (mProcs.adapterHasFeature(adapter, WGPUFeatureName_AdapterPropertiesD3D)) {
+    if (mProcs->adapterHasFeature(adapter, WGPUFeatureName_AdapterPropertiesD3D)) {
         *propertiesChain = &d3dProperties.chain;
         propertiesChain = &(*propertiesChain)->next;
     }
@@ -108,7 +108,7 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
     // Query AdapterPropertiesVk if the feature is supported.
     WGPUAdapterPropertiesVk vkProperties = {};
     vkProperties.chain.sType = WGPUSType_AdapterPropertiesVk;
-    if (mProcs.adapterHasFeature(adapter, WGPUFeatureName_AdapterPropertiesVk)) {
+    if (mProcs->adapterHasFeature(adapter, WGPUFeatureName_AdapterPropertiesVk)) {
         *propertiesChain = &vkProperties.chain;
         propertiesChain = &(*propertiesChain)->next;
     }
@@ -117,7 +117,7 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
     FreeMembers<WGPUAdapterPropertiesSubgroupMatrixConfigs> subgroupMatrixConfigs(mProcs);
     // WGPUAdapterPropertiesSubgroupMatrixConfigs subgroupMatrixConfigs{};
     subgroupMatrixConfigs.chain.sType = WGPUSType_AdapterPropertiesSubgroupMatrixConfigs;
-    if (mProcs.adapterHasFeature(adapter, WGPUFeatureName_ChromiumExperimentalSubgroupMatrix)) {
+    if (mProcs->adapterHasFeature(adapter, WGPUFeatureName_ChromiumExperimentalSubgroupMatrix)) {
         *propertiesChain = &subgroupMatrixConfigs.chain;
         propertiesChain = &(*propertiesChain)->next;
     }
@@ -127,7 +127,17 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
     *propertiesChain = &powerProperties.chain;
     propertiesChain = &(*propertiesChain)->next;
 
-    mProcs.adapterGetInfo(adapter, &info);
+    // Query AdapterPropertiesExplicitComputeSubgroupSizeConfigs if the feature is supported.
+    WGPUAdapterPropertiesExplicitComputeSubgroupSizeConfigs explicitComputeSubgroupSizeConfigs = {};
+    explicitComputeSubgroupSizeConfigs.chain.sType =
+        WGPUSType_AdapterPropertiesExplicitComputeSubgroupSizeConfigs;
+    if (mProcs->adapterHasFeature(adapter,
+                                  WGPUFeatureName_ChromiumExperimentalSubgroupSizeControl)) {
+        *propertiesChain = &explicitComputeSubgroupSizeConfigs.chain;
+        propertiesChain = &(*propertiesChain)->next;
+    }
+
+    mProcs->adapterGetInfo(adapter, &info);
     cmd.info = &info;
 
     // Query and report the adapter limits, including all known extension limits.
@@ -142,7 +152,7 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
         WGPU_DAWN_TEXEL_COPY_BUFFER_ROW_ALIGNMENT_LIMITS_INIT;
     compatLimits.chain.next = &texelCopyBufferRowAlignmentLimits.chain;
 
-    mProcs.adapterGetLimits(adapter, &limits);
+    mProcs->adapterGetLimits(adapter, &limits);
     cmd.limits = &limits;
 
     SerializeCommand(cmd);

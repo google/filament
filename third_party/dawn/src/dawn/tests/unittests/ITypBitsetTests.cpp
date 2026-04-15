@@ -27,11 +27,10 @@
 
 #include <set>
 
-#include "gtest/gtest.h"
-
 #include "dawn/common/TypedInteger.h"
 #include "dawn/common/ityp_bitset.h"
 #include "dawn/native/Features_autogen.h"
+#include "gtest/gtest.h"
 
 namespace dawn {
 namespace {
@@ -225,6 +224,33 @@ TEST_F(ITypBitsetTest, GetHighestBitIndexPlusOne) {
     EXPECT_EQ(40u, static_cast<size_t>(GetHighestBitIndexPlusOne(Bitset40(0xFFFFFFFFFF))));
 }
 
+#if defined(DAWN_ENABLE_ASSERTS)
+// Name "*DeathTest" per https://google.github.io/googletest/advanced.html#death-test-naming
+using ITypBitsetDeathTest = ITypBitsetTest;
+
+TEST_F(ITypBitsetDeathTest, OutOfBounds) {
+    auto test = [&](const auto bitsIntConst) {
+        // We use std::integral_constant to pass a constexpr argument to lambda
+        constexpr uint64_t bits = decltype(bitsIntConst)::value;
+
+        constexpr uint64_t one = uint64_t{1};
+        ityp::bitset<Key, bits>{0};                                         // Valid
+        ityp::bitset<Key, bits>{(one << bits) - 1};                         // All valid bits set
+        EXPECT_DEATH((ityp::bitset<Key, bits>{one << bits}), "");           // Invalid lsb
+        EXPECT_DEATH((ityp::bitset<Key, bits>{one << 63}), "");             // Invalid msb
+        EXPECT_DEATH((ityp::bitset<Key, bits>{~((one << bits) - 1)}), "");  // All invalid bits
+    };
+
+    test(std::integral_constant<uint64_t, 1>{});
+    test(std::integral_constant<uint64_t, 2>{});
+    test(std::integral_constant<uint64_t, 9>{});
+    test(std::integral_constant<uint64_t, 31>{});
+    test(std::integral_constant<uint64_t, 32>{});
+    test(std::integral_constant<uint64_t, 62>{});
+    test(std::integral_constant<uint64_t, 63>{});
+}
+#endif
+
 class ITypBitsetIteratorTest : public testing::Test {
   protected:
     using IntegerT = TypedInteger<struct Foo, uint32_t>;
@@ -298,7 +324,7 @@ TEST_F(ITypBitsetIteratorTest, Iterator_Large) {
     std::set<native::Feature> originalValues;
     originalValues.insert(native::Feature::Depth32FloatStencil8);
     originalValues.insert(native::Feature::Subgroups);
-    originalValues.insert(native::Feature::R8UnormStorage);
+    originalValues.insert(native::Feature::TextureFormatsTier1);
     originalValues.insert(native::Feature::MultiDrawIndirect);
 
     for (native::Feature value : originalValues) {
@@ -332,7 +358,7 @@ TEST_F(ITypBitsetIteratorTest, NonLValueBitset_Large) {
 
     mLargeStateBits.set(native::Feature::Depth32FloatStencil8);
     mLargeStateBits.set(native::Feature::Subgroups);
-    mLargeStateBits.set(native::Feature::R8UnormStorage);
+    mLargeStateBits.set(native::Feature::TextureFormatsTier1);
     mLargeStateBits.set(native::Feature::MultiDrawIndirect);
 
     otherBits.set(native::Feature::ShaderF16);
@@ -418,6 +444,5 @@ TEST_F(EnumBitSetIteratorTest, NonLValueBitset) {
 
     EXPECT_EQ((mStateBits & otherBits).count(), seenBits.size());
 }
-
 }  // anonymous namespace
 }  // namespace dawn

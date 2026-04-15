@@ -65,15 +65,5 @@ TEST_F(ReturnStatementTest, WithValue) {
     EXPECT_NE(r->value, nullptr);
 }
 
-TEST_F(ReturnStatementDeathTest, Assert_DifferentGenerationID_Expr) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<ReturnStatement>(b2.Expr(true));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

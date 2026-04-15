@@ -1,0 +1,218 @@
+# Copyright 2026 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Custom templates for wrapping Meson based builds, i.e. mesa, in GN
+# rules so that they can be used as part of the Dawn and Chromium
+# builds. These rules invoke meson for actually running the build
+# process, so behave like opaque external scripts.
+#
+# The external API is 'meson_target' at the bottom of this file
+#
+# Meson builds are split into two stages from the perspective of
+# GN. There is a `meson setup` stage which generates all of the
+# dynamic bits for the builds based on flags/vars and ensures that all
+# of the dependencies are present. This is equivalent to `gn gen` or
+# `cmake ../..`, and thus the `_meson_setup` targets will run during
+# `gn gen` to catch missing dependencies and others misconfigurations.
+#
+# The other stage is `meson install` which builds the targets and
+# copies the results into the appropriate output directory. This is
+# broadly equivalent of `ninja -C out/` or `ninja -C out/ all`. The
+# `_meson_build` target should depend on an appropriate `_meson_setup`
+# target to ensure necessary meson commands are run in order.
+
+# (Technically `meson install` can be separated into compile then
+# install calls, but since GN's behaviour is to build to the output
+# directory, they are being called as one command).
+
+import("meson_overrides_with_defaults.gni")
+
+import("//build/config/clang/clang.gni")
+import("//build/config/coverage/coverage.gni")
+
+# Internal helper that sets up a meson build, i.e. runs `meson setup`
+# with appropriate args based on the environment being used by GN.
+#
+#   src
+#       Specifies the path relative to the current BUILD.gn file where
+#       the source for the meson build is.
+#
+#   options
+#       Additional options to be passed into meson, often used for
+#       controlling what components should be configured for the
+#       build.
+template("_meson_setup") {
+  assert(defined(invoker.source_dir), "source_dir must be defined")
+
+  _meson_args = [
+    "setup",
+    rebase_path("${target_gen_dir}/${target_name}", root_build_dir),
+    rebase_path(invoker.source_dir, root_build_dir),
+    "--prefix=" + rebase_path("${target_gen_dir}/install"),
+  ]
+
+  if (defined(invoker.options)) {
+    _meson_args += invoker.options
+  }
+
+  # Use the hermetic clang toolchain
+  if (is_clang) {
+    _cc_path = rebase_path("$clang_base_path/bin/clang")
+    _cxx_path = rebase_path("$clang_base_path/bin/clang++")
+
+    _c_link_args = "-fuse-ld=lld"
+    _cpp_link_args = "-fuse-ld=lld"
+    if (use_clang_coverage) {
+      _c_args = "-fprofile-instr-generate -fcoverage-mapping"
+      _cpp_args = "-fprofile-instr-generate -fcoverage-mapping"
+      _c_link_args += " -fprofile-instr-generate -fcoverage-mapping"
+      _cpp_link_args += " -fprofile-instr-generate -fcoverage-mapping"
+
+      _meson_args += [
+        "-Dc_args=${_c_args}",
+        "-Dcpp_args=${_cpp_args}",
+      ]
+    }
+
+    _meson_args += [
+      "-Dc_link_args=${_c_link_args}",
+      "-Dcpp_link_args=${_cpp_link_args}",
+    ]
+
+    # Used by meson to allow specifying the toolchain elements to use
+    _native_file_content = [
+      "[binaries]",
+      "c = '${_cc_path}'",
+      "cpp = '${_cxx_path}'",
+      "ar = '" + rebase_path("$clang_base_path/bin/llvm-ar") + "'",
+      "strip = '" + rebase_path("$clang_base_path/bin/llvm-strip") + "'",
+      "pkg-config = 'pkg-config'",
+      "python = ['vpython3', '-vpython-spec', '" + rebase_path("//.vpython3") +
+          "']",
+    ]
+
+    _native_file_path = "${target_gen_dir}/${target_name}_native.ini"
+    write_file(_native_file_path, _native_file_content)
+
+    _meson_args += [
+      "--native-file",
+      rebase_path(_native_file_path, root_build_dir),
+    ]
+  }
+
+  exec_script("${meson_src_dir}/src/meson.py", _meson_args)
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+}
+
+# Internal helper that executes a previously setup meson build and
+# installs the output into a directory under the GN output/gen
+# directory.
+#
+#   meson_setup_target
+#       Specifies the meson_setup target that this target depends
+#       on. This ensures that it is run before this target, and
+#       coordinates the generated output path.
+template("_meson_build") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                             "outputs",
+                           ])
+
+    assert(defined(invoker.meson_setup_target),
+           "meson_setup_target must be defined")
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ invoker.meson_setup_target ]
+
+    script = "${meson_src_dir}/src/meson.py"
+
+    _setup_gen_dir =
+        get_label_info(invoker.meson_setup_target, "target_gen_dir")
+    _setup_name = get_label_info(invoker.meson_setup_target, "name")
+    _build_dir = "${_setup_gen_dir}/${_setup_name}"
+
+    args = [
+      "install",
+      "-C",
+      rebase_path(_build_dir, root_build_dir),
+    ]
+  }
+}
+
+# Setups and builds a Meson based project
+#   src
+#       Specifies the path relative to the current BUILD.gn file where
+#       the source for the meson build is.
+#
+#   options
+#       Additional options to be passed into meson, often used for
+#       controlling what components should be configured for the
+#       build.
+template("meson_target") {
+  _meson_setup_target = "${target_name}_setup"
+
+  _meson_setup(_meson_setup_target) {
+    forward_variables_from(invoker,
+                           [
+                             "source_dir",
+                             "options",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
+  _meson_build(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                             "outputs",
+                           ])
+    meson_setup_target = ":${_meson_setup_target}"
+  }
+}

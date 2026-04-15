@@ -32,7 +32,6 @@
 
 #include "src/tint/lang/core/ir/instruction_result.h"
 #include "src/tint/lang/core/ir/value.h"
-#include "src/tint/utils/containers/const_propagating_ptr.h"
 #include "src/tint/utils/containers/enum_set.h"
 #include "src/tint/utils/rtti/castable.h"
 
@@ -195,9 +194,9 @@ class Instruction : public Castable<Instruction> {
     }
 
     /// Pointer to the next instruction in the list
-    ConstPropagatingPtr<Instruction> next;
+    Instruction* next = nullptr;
     /// Pointer to the previous instruction in the list
-    ConstPropagatingPtr<Instruction> prev;
+    Instruction* prev = nullptr;
 
   protected:
     /// Flags applied to an Instruction
@@ -215,7 +214,7 @@ class Instruction : public Castable<Instruction> {
     Id id_;
 
     /// The block that owns this instruction
-    ConstPropagatingPtr<ir::Block> block_;
+    ir::Block* block_ = nullptr;
 
     /// Bitset of instruction flags
     tint::EnumSet<Flag> flags_;

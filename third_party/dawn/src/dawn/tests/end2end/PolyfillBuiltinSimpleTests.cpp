@@ -229,14 +229,160 @@ TEST_P(PolyfillBuiltinSimpleTests, AbsWithBranch) {
     EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), output, 0, expected.size());
 }
 
+TEST_P(PolyfillBuiltinSimpleTests, CaseSwitchToIf) {
+    // TODO(crbug.com/459848839): Fails on Win/Snapdragon X Elite.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D11());
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12() && !IsDXC());
+
+    std::string kShaderCode = R"(
+    struct Data { values: array<i32> };
+    @group(0) @binding(0) var<storage, read> input_data: Data;
+    @group(0) @binding(1) var<storage, read_write> output_data: Data;
+
+    @compute @workgroup_size(4)
+    fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+        var input_ = input_data.values[global_id.x];
+        var ret = 0i;
+        switch( input_ ) {
+            case 1: {
+                ret = 3;
+            }
+            case 2:{
+                ret = 7;
+            }
+            case -2147483648:{
+                ret = 71;
+            }
+            case 123, 87:{
+                ret = 11;
+            }
+            case -1:{
+                ret = 33;
+            }
+            default {
+                ret = 82;
+            }
+        }
+        output_data.values[global_id.x]  = ret;
+    }
+    )";
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(kShaderCode);
+    uint32_t kDefaultVal = 0;
+    std::vector<uint32_t> init_input = {uint32_t(std::numeric_limits<int32_t>::lowest()),
+                                        uint32_t(-15), 17, 123};
+
+    wgpu::Buffer input = CreateBuffer(init_input);
+    wgpu::Buffer output = CreateBuffer(4, kDefaultVal);
+    wgpu::BindGroup bindGroup =
+        utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, input}, {1, output}});
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(64);
+        pass.End();
+        commands = encoder.Finish();
+    }
+
+    queue.Submit(1, &commands);
+    std::vector<uint32_t> expected = {71, 82, 82, 11};
+
+    EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), output, 0, expected.size());
+}
+
+TEST_P(PolyfillBuiltinSimpleTests, CaseSwitchToIfComplex) {
+    // TODO(crbug.com/459848839): Fails on Win/Snapdragon X Elite.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D11());
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12() && !IsDXC());
+
+    std::string kShaderCode = R"(
+    @group(0) @binding(0) var<storage, read> input_data: array<i32>;
+    @group(0) @binding(1) var<storage, read_write> output_data: array<i32>;
+
+    @compute @workgroup_size(4)
+    fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+        var input_ = input_data[global_id.x];
+        var ret = 0i;
+        switch( input_ ) {
+            case 1: {
+                ret = 3;
+            }
+            case -2:{
+                switch(input_){
+                    case 1: {
+                        ret = 3;
+                    }
+                    case -2:{
+                        ret = 4;
+                    }
+                    default{
+                        ret = 99;
+                    }
+                }
+                break;
+                ret = 7;
+            }
+            case -2147483648:{
+                if(input_ == 17){
+                    ret = 71;
+                    break;
+                }
+                ret = 13;
+            }
+            case 3, 5:{
+                if(input_ == 3){
+                    break;
+                }
+                ret = 11;
+            }
+            default {
+                ret = 82;
+            }
+        }
+        output_data[global_id.x]  = ret;
+    }
+    )";
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(kShaderCode);
+    uint32_t kDefaultVal = 0;
+    std::vector<uint32_t> init_input = {uint32_t(std::numeric_limits<int32_t>::lowest()),
+                                        uint32_t(-2), 3, 5};
+    std::vector<uint32_t> expected = {13, 4, 0, 11};
+    wgpu::Buffer input = CreateBuffer(init_input);
+    wgpu::Buffer output = CreateBuffer(4, kDefaultVal);
+    wgpu::BindGroup bindGroup =
+        utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, input}, {1, output}});
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(64);
+        pass.End();
+        commands = encoder.Finish();
+    }
+
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), output, 0, expected.size());
+}
+
 DAWN_INSTANTIATE_TEST(PolyfillBuiltinSimpleTests,
                       D3D12Backend(),
                       D3D11Backend(),
                       MetalBackend(),
                       VulkanBackend(),
+                      WebGPUBackend(),
                       D3D12Backend({"scalarize_max_min_clamp"}),
                       MetalBackend({"scalarize_max_min_clamp"}),
                       VulkanBackend({"scalarize_max_min_clamp"}),
+                      VulkanBackend({"vulkan_polyfill_switch_with_if"}),
                       D3D11Backend({"scalarize_max_min_clamp"}),
                       OpenGLESBackend());
 

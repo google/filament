@@ -16,6 +16,8 @@ See:
 
 {{- $I := LoadIntrinsics "src/tint/lang/wgsl/wgsl.def" -}}
 
+// clang-format off
+
 #include <limits>
 #include <string>
 
@@ -54,3 +56,5 @@ inline bool MatchIa(intrinsic::MatchState& state, const core::type::Type* ty) {
   "Name"       "Dialect::kData" -}}
 
 }  // namespace tint::wgsl::intrinsic
+
+// clang-format on

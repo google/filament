@@ -34,6 +34,8 @@
 //                       Do not modify this file directly
 ////////////////////////////////////////////////////////////////////////////////
 
+// clang-format off
+
 #include "src/tint/lang/glsl/builtin_fn.h"
 
 namespace tint::glsl {
@@ -133,14 +135,13 @@ const char* str(BuiltinFn i) {
 }
 
 tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
-    switch (fn) {
+       switch (fn) {
         case BuiltinFn::kBarrier:
         case BuiltinFn::kMemoryBarrierBuffer:
         case BuiltinFn::kMemoryBarrierImage:
         case BuiltinFn::kAtomicCompSwap:
         case BuiltinFn::kAtomicSub:
-            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad,
-                                                   core::ir::Instruction::Access::kStore};
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kTexture:
         case BuiltinFn::kTextureOffset:
@@ -191,3 +192,5 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
 }
 
 }  // namespace tint::glsl
+
+// clang-format on

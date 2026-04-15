@@ -28,10 +28,9 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_TEXTUREMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_TEXTUREMOCK_H_
 
-#include "gmock/gmock.h"
-
 #include "dawn/native/Texture.h"
 #include "dawn/tests/unittests/native/mocks/DeviceMock.h"
+#include "gmock/gmock.h"
 
 namespace dawn::native {
 
@@ -43,7 +42,7 @@ class TextureMock : public TextureBase {
 
     using TextureBase::SetSharedResourceMemoryContentsForTesting;
 
-    MOCK_METHOD(void, DestroyImpl, (), (override));
+    MOCK_METHOD(void, DestroyImpl, (DestroyReason), (override));
 };
 
 class TextureViewMock : public TextureViewBase {
@@ -51,7 +50,7 @@ class TextureViewMock : public TextureViewBase {
     TextureViewMock(TextureBase* texture, const UnpackedPtr<TextureViewDescriptor>& descriptor);
     ~TextureViewMock() override;
 
-    MOCK_METHOD(void, DestroyImpl, (), (override));
+    MOCK_METHOD(void, DestroyImpl, (DestroyReason), (override));
 };
 
 }  // namespace dawn::native

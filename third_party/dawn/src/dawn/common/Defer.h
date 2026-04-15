@@ -32,12 +32,11 @@
 #include <vector>
 
 #include "dawn/common/NonCopyable.h"
-#include "dawn/common/StackAllocated.h"
 
 namespace dawn {
 
 // Defer object runs series of cleanup functions when it's destructor is called.
-class Defer : public NonCopyable, StackAllocated {
+class Defer : public NonCopyable {
   public:
     Defer() = default;
     Defer(Defer&&) = default;

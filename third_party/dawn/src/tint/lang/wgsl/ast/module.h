@@ -46,18 +46,16 @@ class TypeDecl;
 class Module final : public Castable<Module, Node> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
-    Module(GenerationID pid, NodeID nid, const Source& src);
+    Module(NodeID nid, const Source& src);
 
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param global_decls the list of global types, functions, and variables, in
     /// the order they were declared in the source program
-    Module(GenerationID pid, NodeID nid, const Source& src, VectorRef<const Node*> global_decls);
+    Module(NodeID nid, const Source& src, VectorRef<const Node*> global_decls);
 
     /// Destructor
     ~Module() override;
@@ -152,17 +150,6 @@ class Module final : public Castable<Module, Node> {
 
     /// @returns true if the module has any 'override' declarations
     bool HasOverrides() const;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const Module* Clone(CloneContext& ctx) const override;
-
-    /// Copy copies the content of the Module src into this module.
-    /// @param ctx the clone context
-    /// @param src the module to copy into this module
-    void Copy(CloneContext& ctx, const Module* src);
 
   private:
     /// Adds `decl` to either:

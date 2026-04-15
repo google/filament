@@ -45,7 +45,6 @@ cc_library(
   hdrs = [
     "buffer_reader.h",
     "decoder.h",
-    "endianness.h",
     "reader.h",
     "swap.h",
   ],

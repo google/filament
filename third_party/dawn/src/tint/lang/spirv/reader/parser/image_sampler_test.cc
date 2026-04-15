@@ -469,7 +469,7 @@ $B1: {  # root
   $B2: {
     %4:spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, rg32float, read_write> = load %2
     %5:sampler = load %1
-    %6:spirv.sampled_image<spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, rg32float, read_write>> = spirv.sampled_image<spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, rg32float, read_write>> %4, %5
+    %6:spirv.sampled_image<spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, rg32float, read_write>> = spirv.op_sampled_image<spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, rg32float, read_write>> %4, %5
     %7:vec4<f32> = spirv.image_gather %6, vec2<f32>(1.0f, 2.0f), 1i, 0u
     ret
   }
@@ -527,8 +527,61 @@ $B1: {  # root
   $B2: {
     %4:sampler = load %2
     %5:spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write> = load %1
-    %6:spirv.sampled_image<spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write>> = spirv.sampled_image<spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write>> %5, %4
+    %6:spirv.sampled_image<spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write>> = spirv.op_sampled_image<spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write>> %5, %4
     %7:vec4<f32> = spirv.image_gather %6, vec2<f32>(1.0f, 2.0f), 1i, 0u
+    ret
+  }
+}
+)");
+}
+
+TEST_F(SpirvParserTest, Bug448679392) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %tex "tex"
+               OpName %sampler "sampler"
+               OpDecorate %tex Binding 0
+               OpDecorate %tex DescriptorSet 1
+               OpDecorate %sampler Binding 0
+               OpDecorate %sampler DescriptorSet 2
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+         %29 = OpTypeSampler
+         %25 = OpTypeImage %float Cube 0 0 0 1 Unknown
+         %33 = OpTypeSampledImage %25
+
+    %ptr_tex = OpTypePointer UniformConstant %25
+%ptr_sampler = OpTypePointer UniformConstant %29
+
+        %tex = OpVariable %ptr_tex UniformConstant
+    %sampler = OpVariable %ptr_sampler UniformConstant
+
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %28 = OpLoad %25 %tex
+         %32 = OpLoad %29 %sampler
+         %34 = OpSampledImage %33 %28 %32
+         %36 = OpImage %25 %34
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+$B1: {  # root
+  %tex:ptr<handle, spirv.image<f32, cube, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write>, read> = var undef @binding_point(1, 0)
+  %sampler:ptr<handle, sampler, read> = var undef @binding_point(2, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %4:spirv.image<f32, cube, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write> = load %tex
+    %5:sampler = load %sampler
+    %6:spirv.sampled_image<spirv.image<f32, cube, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write>> = spirv.op_sampled_image<spirv.image<f32, cube, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write>> %4, %5
+    %7:spirv.image<f32, cube, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write> = spirv.op_image<spirv.image<f32, cube, not_depth, non_arrayed, single_sampled, sampling_compatible, undefined, read_write>> %6
     ret
   }
 }

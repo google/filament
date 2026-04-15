@@ -407,11 +407,15 @@ func validate(fqn sem.FullyQualifiedName, uses *sem.StageUses) bool {
 		elTyName := elTy.Target.GetName()
 		return isStorable(elTy) && elTyName != "bool"
 	}
+	isBuffer := func(elTy sem.FullyQualifiedName) bool {
+		elTyName := elTy.Target.GetName()
+		return elTyName == "buffer"
+	}
 
 	switch fqn.Target.GetName() {
 	case "array":
 	case "runtime_array":
-		if !isHostShareable(fqn.TemplateArguments[0].(sem.FullyQualifiedName)) {
+		if !isHostShareable(fqn.TemplateArguments[0].(sem.FullyQualifiedName)) || !isBuffer(fqn.TemplateArguments[0].(sem.FullyQualifiedName)) {
 			return false
 		}
 	case "ptr":

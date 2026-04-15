@@ -70,6 +70,12 @@
       "do_not_notify": true
     },
     {
+      "email": "sangki@google.com",
+      "github": "jguamie",
+      "name": "John Lee",
+      "do_not_notify": true
+    },
+    {
       "email": "sbenza@google.com",
       "github": "sbenzaquen",
       "name": "Samuel Benzaquen",
@@ -79,12 +85,6 @@
       "email": "shaod@google.com",
       "github": "shaod2",
       "name": "Dennis Shao",
-      "do_not_notify": true
-    },
-    {
-      "email": "theodorerose@google.com",
-      "github": "theodorerose",
-      "name": "Theodore Rose",
       "do_not_notify": true
     },
     {

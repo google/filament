@@ -43,14 +43,14 @@ using namespace tint::core::number_suffixes;  // NOLINT
 using IR_BuiltinScalarizeTest = TransformTest;
 
 TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_Scalarize) {
-    auto* x = b.FunctionParam("x", ty.vec2<f32>());
-    auto* low = b.FunctionParam("low", ty.vec2<f32>());
-    auto* high = b.FunctionParam("high", ty.vec2<f32>());
-    auto* func = b.Function("foo", ty.vec2<f32>());
+    auto* x = b.FunctionParam("x", ty.vec2f());
+    auto* low = b.FunctionParam("low", ty.vec2f());
+    auto* high = b.FunctionParam("high", ty.vec2f());
+    auto* func = b.Function("foo", ty.vec2f());
     func->SetParams({x, low, high});
 
     b.Append(func->Block(), [&] {
-        auto* result = b.Call(ty.vec2<f32>(), core::BuiltinFn::kClamp, x, low, high);
+        auto* result = b.Clamp(x, low, high);
         b.Return(func, result);
     });
 
@@ -95,7 +95,7 @@ TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_AlreadyScalarize) {
     func->SetParams({x, low, high});
 
     b.Append(func->Block(), [&] {
-        auto* result = b.Call(ty.f32(), core::BuiltinFn::kClamp, x, low, high);
+        auto* result = b.Clamp(x, low, high);
         b.Return(func, result);
     });
 
@@ -125,14 +125,14 @@ TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_AlreadyScalarize) {
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_LeaveVectorized) {
-    auto* x = b.FunctionParam("x", ty.vec2<f32>());
-    auto* low = b.FunctionParam("low", ty.vec2<f32>());
-    auto* high = b.FunctionParam("high", ty.vec2<f32>());
-    auto* func = b.Function("foo", ty.vec2<f32>());
+    auto* x = b.FunctionParam("x", ty.vec2f());
+    auto* low = b.FunctionParam("low", ty.vec2f());
+    auto* high = b.FunctionParam("high", ty.vec2f());
+    auto* func = b.Function("foo", ty.vec2f());
     func->SetParams({x, low, high});
 
     b.Append(func->Block(), [&] {
-        auto* result = b.Call(ty.vec2<f32>(), core::BuiltinFn::kClamp, x, low, high);
+        auto* result = b.Clamp(x, low, high);
         b.Return(func, result);
     });
 
@@ -162,13 +162,13 @@ TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_LeaveVectorized) {
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Max_VectorOperands_Scalarize) {
-    auto* x = b.FunctionParam("x", ty.vec3<f32>());
-    auto* y = b.FunctionParam("y", ty.vec3<f32>());
-    auto* func = b.Function("foo", ty.vec3<f32>());
+    auto* x = b.FunctionParam("x", ty.vec3f());
+    auto* y = b.FunctionParam("y", ty.vec3f());
+    auto* func = b.Function("foo", ty.vec3f());
     func->SetParams({x, y});
 
     b.Append(func->Block(), [&] {
-        auto* result = b.Call(ty.vec3<f32>(), core::BuiltinFn::kMax, x, y);
+        auto* result = b.Max(x, y);
         b.Return(func, result);
     });
 
@@ -207,13 +207,13 @@ TEST_F(IR_BuiltinScalarizeTest, Max_VectorOperands_Scalarize) {
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Max_VectorOperands_LeaveVectorized) {
-    auto* x = b.FunctionParam("x", ty.vec3<f32>());
-    auto* y = b.FunctionParam("y", ty.vec3<f32>());
-    auto* func = b.Function("foo", ty.vec3<f32>());
+    auto* x = b.FunctionParam("x", ty.vec3f());
+    auto* y = b.FunctionParam("y", ty.vec3f());
+    auto* func = b.Function("foo", ty.vec3f());
     func->SetParams({x, y});
 
     b.Append(func->Block(), [&] {
-        auto* result = b.Call(ty.vec3<f32>(), core::BuiltinFn::kMax, x, y);
+        auto* result = b.Max(x, y);
         b.Return(func, result);
     });
 
@@ -243,13 +243,13 @@ TEST_F(IR_BuiltinScalarizeTest, Max_VectorOperands_LeaveVectorized) {
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Min_VectorOperands_Scalarize) {
-    auto* x = b.FunctionParam("x", ty.vec4<f16>());
-    auto* y = b.FunctionParam("y", ty.vec4<f16>());
-    auto* func = b.Function("foo", ty.vec4<f16>());
+    auto* x = b.FunctionParam("x", ty.vec4h());
+    auto* y = b.FunctionParam("y", ty.vec4h());
+    auto* func = b.Function("foo", ty.vec4h());
     func->SetParams({x, y});
 
     b.Append(func->Block(), [&] {
-        auto* result = b.Call(ty.vec4<f16>(), core::BuiltinFn::kMin, x, y);
+        auto* result = b.Min(x, y);
         b.Return(func, result);
     });
 
@@ -291,13 +291,13 @@ TEST_F(IR_BuiltinScalarizeTest, Min_VectorOperands_Scalarize) {
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Min_VectorOperands_LeaveVectorized) {
-    auto* x = b.FunctionParam("x", ty.vec4<f16>());
-    auto* y = b.FunctionParam("y", ty.vec4<f16>());
-    auto* func = b.Function("foo", ty.vec4<f16>());
+    auto* x = b.FunctionParam("x", ty.vec4h());
+    auto* y = b.FunctionParam("y", ty.vec4h());
+    auto* func = b.Function("foo", ty.vec4h());
     func->SetParams({x, y});
 
     b.Append(func->Block(), [&] {
-        auto* result = b.Call(ty.vec4<f16>(), core::BuiltinFn::kMin, x, y);
+        auto* result = b.Min(x, y);
         b.Return(func, result);
     });
 

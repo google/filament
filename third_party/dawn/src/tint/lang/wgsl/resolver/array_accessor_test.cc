@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gtest/gtest.h"
 #include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/index_accessor_expression.h"
 
@@ -201,7 +200,7 @@ TEST_F(ResolverIndexAccessorTest, Vector) {
 TEST_F(ResolverIndexAccessorTest, BindingArray_F32) {
     GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
     auto* acc = IndexAccessor("a", Expr(Source{{12, 34}}, 2_f));
     auto* call = Call("textureDimensions", acc);
     WrapInFunction(call);
@@ -213,7 +212,7 @@ TEST_F(ResolverIndexAccessorTest, BindingArray_F32) {
 TEST_F(ResolverIndexAccessorTest, BindingArray_Literal_i32) {
     GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
     auto* acc = IndexAccessor("a", 2_i);
     auto* call = Call("textureDimensions", acc);
     WrapInFunction(call);
@@ -235,7 +234,7 @@ TEST_F(ResolverIndexAccessorTest, BindingArray_Literal_i32) {
 TEST_F(ResolverIndexAccessorTest, BindingArray_Dynamic_i32) {
     GlobalVar(
         "a", Binding(0_a), Group(0_a),
-        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+        ty.binding_array(ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
     auto* idx = Var("idx", ty.i32(), Call<i32>());
     auto* acc = IndexAccessor("a", idx);
     auto* call = Call("textureDimensions", acc);

@@ -38,11 +38,6 @@
 #include "src/tint/utils/text/string_stream.h"
 #include "src/tint/utils/text/text_style.h"
 
-// Forward declarations
-namespace tint {
-class StyledTextPrinter;
-}
-
 namespace tint {
 
 /// StyledText is a string builder with support for styled text spans.

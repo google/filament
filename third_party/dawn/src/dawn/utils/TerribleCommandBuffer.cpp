@@ -25,6 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include "dawn/utils/TerribleCommandBuffer.h"
 
 #include "dawn/common/Assert.h"
@@ -62,8 +67,19 @@ void* TerribleCommandBuffer::GetCmdSpace(size_t size) {
 }
 
 bool TerribleCommandBuffer::Flush() {
-    bool success = mHandler->HandleCommands(mBuffer, mOffset) != nullptr;
-    mOffset = 0;
+    char* start = &mBuffer[mLastFlushedOffset];
+    size_t size = mOffset - mLastFlushedOffset;
+    mLastFlushedOffset = mOffset;
+
+    bool success = mHandler->HandleCommands(start, size) != nullptr;
+
+    // After a flush, we can only reset |mOffset| to 0 if both offsets are equal. Otherwise, there
+    // are unflushed commands, likely queued as a part of the last flush, so defer resetting
+    // |mOffset| until those have been processed as well.
+    if (mLastFlushedOffset == mOffset) {
+        mOffset = 0;
+        mLastFlushedOffset = 0;
+    }
     return success;
 }
 

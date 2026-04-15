@@ -57,7 +57,8 @@ class VulkanZeroInitializeWorkgroupMemoryExtensionTest
 
     ~VulkanZeroInitializeWorkgroupMemoryExtensionTest() override = default;
 
-    void SetUp() override;
+  protected:
+    void SetUpPerfTest() override;
 
   private:
     void Step() override;
@@ -66,9 +67,7 @@ class VulkanZeroInitializeWorkgroupMemoryExtensionTest
     wgpu::ComputePipeline mPipeline;
 };
 
-void VulkanZeroInitializeWorkgroupMemoryExtensionTest::SetUp() {
-    DawnPerfTestWithParams<ZeroInitializeWorkgroupMemoryParams>::SetUp();
-
+void VulkanZeroInitializeWorkgroupMemoryExtensionTest::SetUpPerfTest() {
     std::ostringstream ostream;
     ostream << R"(
         @group(0) @binding(0) var<storage, read_write> dst : array<f32>;

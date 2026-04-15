@@ -96,7 +96,7 @@ struct State {
                     Mul(binary);
                     break;
                 default:
-                    TINT_UNIMPLEMENTED();
+                    TINT_IR_UNIMPLEMENTED(ir);
             }
         }
     }
@@ -118,15 +118,15 @@ struct State {
     void PreciseFloatMod(core::ir::Binary* binary) {
         auto* type = binary->Result()->Type();
         b.InsertBefore(binary, [&] {
-            auto* div = b.Divide(type, binary->LHS(), binary->RHS());
+            auto* div = b.Divide(binary->LHS(), binary->RHS());
 
             // Force to a `let` to get better generated HLSL
             auto* d = b.Let(type);
             d->SetValue(div->Result());
 
             auto* trunc = b.Call(type, core::BuiltinFn::kTrunc, d);
-            auto* mul = b.Multiply(type, trunc, binary->RHS());
-            auto* sub = b.Subtract(type, binary->LHS(), mul);
+            auto* mul = b.Multiply(trunc, binary->RHS());
+            auto* sub = b.Subtract(binary->LHS(), mul);
 
             binary->Result()->ReplaceAllUsesWith(sub->Result());
         });
@@ -137,15 +137,14 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BinaryPolyfill(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "hlsl.BinaryPolyfill",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowClipDistancesOnF32,
-                                              core::ir::Capability::kAllowDuplicateBindings,
-                                              core::ir::Capability::kAllowNonCoreTypes,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir,
+                core::ir::Capabilities{
+                    core::ir::Capability::kAllow16BitIntegers,
+                    core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
+                    core::ir::Capability::kAllowDuplicateBindings,
+                    core::ir::Capability::kAllowNonCoreTypes,
+                },
+                "before hlsl.BinaryPolyfill");
 
     State{ir}.Process();
 

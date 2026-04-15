@@ -66,3 +66,4 @@ CMakeSettings.json
 # Python build stuff
 dist/
 *.egg-info*
+uv.lock

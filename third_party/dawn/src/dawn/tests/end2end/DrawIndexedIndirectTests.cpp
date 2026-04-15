@@ -631,6 +631,9 @@ TEST_P(DrawIndexedIndirectTest, ValidateReusedBundleWithChangingParams) {
     // TODO(crbug.com/dawn/789): Test is failing under SwANGLE on Windows.
     DAWN_SUPPRESS_TEST_IF(IsANGLE() && IsWindows());
 
+    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 4 OpenGLES
+    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
+
     // It doesn't make sense to test invalid inputs when validation is disabled.
     DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("skip_validation"));
 
@@ -715,7 +718,8 @@ DAWN_INSTANTIATE_TEST(DrawIndexedIndirectTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

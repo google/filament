@@ -916,7 +916,7 @@ TEST_F(ResolverVariableTest, LocalConst_ExplicitType_Decls) {
     auto* c_vu32 = Const("e", ty.vec3<u32>(), Call<vec3<u32>>());
     auto* c_vf32 = Const("f", ty.vec3<f32>(), Call<vec3<f32>>());
     auto* c_mf32 = Const("g", ty.mat3x3<f32>(), Call<mat3x3<f32>>());
-    auto* c_s = Const("h", ty("S"), Call("S"));
+    auto* c_s = Const("h", ty.AsType("S"), Call("S"));
 
     WrapInFunction(c_i32, c_u32, c_f32, c_vi32, c_vu32, c_vf32, c_mf32, c_s);
 
@@ -1049,8 +1049,6 @@ TEST_F(ResolverVariableTest, LocalConst_ConstEval) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 TEST_F(ResolverVariableTest, GlobalVar_AddressSpace) {
     // https://gpuweb.github.io/gpuweb/wgsl/#storage-class
-
-    Enable(wgsl::Extension::kChromiumExperimentalImmediate);
 
     auto* buf = Structure("S", Vector{Member("m", ty.i32())});
     auto* private_ = GlobalVar("p", ty.i32(), core::AddressSpace::kPrivate);
@@ -1284,7 +1282,7 @@ TEST_F(ResolverVariableTest, Param_ShadowsAlias) {
     // }
 
     auto* a = Alias("a", ty.i32());
-    auto* p = Param("a", ty("a"));
+    auto* p = Param("a", ty.AsType("a"));
     Func("F", Vector{p}, ty.void_(), tint::Empty);
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();

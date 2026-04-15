@@ -54,24 +54,21 @@ class GlslWriterTestHelperBase : public BASE {
     Version version{};
 
   protected:
-    /// Validation errors
-    std::string err_;
-
     /// Generated GLSL
     Output output_;
 
     /// Run the writer on the IR module and validate the result.
     /// @param options the writer options
     /// @param stage the validation stage
-    /// @returns true if generation and validation succeeded
-    bool Generate(
+    /// @returns the success or failure
+    Result<SuccessType> Generate(
         Options options = {},
         core::ir::Function::PipelineStage stage = core::ir::Function::PipelineStage::kCompute) {
+        mod.enable_validation_asserts = true;
+
+        options.entry_point_name = "main";
         auto result = writer::Generate(mod, options);
-        if (result != Success) {
-            err_ = result.Failure().reason;
-            return false;
-        }
+        TINT_CHECK_RESULT(result);
         output_ = result.Get();
 
         auto validate_res = glsl::validate::Validate(output_.glsl, stage);
@@ -84,11 +81,10 @@ class GlslWriterTestHelperBase : public BASE {
                 err << line_num++ << ": " << line << "\n";
             }
             err << "\n\n" << validate_res.Failure();
-            err_ = err.str();
-            return false;
+            return Failure(err.str());
         }
 
-        return true;
+        return Success;
     }
 
     /// @returns the glsl header string

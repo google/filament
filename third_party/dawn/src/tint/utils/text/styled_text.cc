@@ -26,7 +26,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/utils/text/styled_text.h"
+
 #include <string_view>
+
 #include "src/tint/utils/text/styled_text_printer.h"
 #include "src/tint/utils/text/text_style.h"
 

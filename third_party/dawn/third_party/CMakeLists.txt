@@ -120,6 +120,9 @@ if (EMSCRIPTEN)
     return()
 endif()
 
+# Force ENABLE_RTTI in spirv-tools and glslang.
+set(ENABLE_RTTI ${DAWN_ENABLE_RTTI} CACHE BOOL "" FORCE)
+
 if (NOT TARGET SPIRV-Headers)
     set(SPIRV_HEADERS_SKIP_EXAMPLES ON CACHE BOOL "" FORCE)
     set(SPIRV_HEADERS_SKIP_INSTALL ON CACHE BOOL "" FORCE)
@@ -138,7 +141,6 @@ if (NOT TARGET SPIRV-Tools AND
     set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "" FORCE)
     set(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "" FORCE)
     set(SPIRV_WERROR OFF CACHE BOOL OFF FORCE)
-
     message(STATUS "Dawn: using SPIRV-Tools at ${DAWN_SPIRV_TOOLS_DIR}")
     add_subdirectory(${DAWN_SPIRV_TOOLS_DIR} "${CMAKE_CURRENT_BINARY_DIR}/spirv-tools" EXCLUDE_FROM_ALL)
 endif()
@@ -164,7 +166,7 @@ if (NOT TARGET glfw AND DAWN_USE_GLFW)
     set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
     message(STATUS "Dawn: using GLFW at ${DAWN_GLFW_DIR}")
-    add_subdirectory(${DAWN_GLFW_DIR} "${CMAKE_CURRENT_BINARY_DIR}/glfw")
+    add_subdirectory(${DAWN_GLFW_DIR} "${CMAKE_CURRENT_BINARY_DIR}/glfw3/src")
 endif()
 
 if (DAWN_BUILD_PROTOBUF AND NOT TARGET libprotobuf-mutator)
@@ -172,11 +174,17 @@ if (DAWN_BUILD_PROTOBUF AND NOT TARGET libprotobuf-mutator)
     include("libprotobuf-mutator/BUILD.cmake")
 endif()
 
+if (NOT TARGET renderdoc-api)
+    add_library(RenderDocApi INTERFACE)
+    target_include_directories(RenderDocApi INTERFACE "renderdoc")
+    target_compile_definitions(RenderDocApi INTERFACE "DAWN_ENABLE_RENDERDOC")
+endif()
+
 if (DAWN_ENABLE_DESKTOP_GL OR DAWN_ENABLE_OPENGLES)
     # Header-only library for khrplatform.h
     add_library(dawn_khronos_platform INTERFACE)
-    target_sources(dawn_khronos_platform INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/khronos/EGL-Registry/api/KHR/khrplatform.h")
-    target_include_directories(dawn_khronos_platform INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/khronos/EGL-Registry/api")
+    target_sources(dawn_khronos_platform INTERFACE "${DAWN_EGL_REGISTRY_DIR}/api/KHR/khrplatform.h")
+    target_include_directories(dawn_khronos_platform INTERFACE "${DAWN_EGL_REGISTRY_DIR}/api")
 endif()
 
 if (NOT TARGET Vulkan::Headers AND DAWN_ENABLE_VULKAN)
@@ -184,6 +192,11 @@ if (NOT TARGET Vulkan::Headers AND DAWN_ENABLE_VULKAN)
 
     set(VULKAN_HEADERS_ENABLE_MODULE OFF)
     add_subdirectory(${DAWN_VULKAN_HEADERS_DIR} "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers/src")
+endif()
+
+if (NOT TARGET Vulkan::Loader AND DAWN_ENABLE_VULKAN AND TINT_BUILD_FUZZER_VULKAN_SUPPORT)
+    message(STATUS "Dawn: using Vulkan::Loader at ${DAWN_VULKAN_LOADER_DIR}")
+    add_subdirectory(${DAWN_VULKAN_LOADER_DIR} "${CMAKE_CURRENT_BINARY_DIR}/vulkan-loader/src")
 endif()
 
 if (NOT TARGET Vulkan::UtilityHeaders AND DAWN_ENABLE_VULKAN)
@@ -203,6 +216,9 @@ if (TINT_BUILD_BENCHMARKS OR DAWN_BUILD_BENCHMARKS)
     set(BENCHMARK_ENABLE_TESTING FALSE CACHE BOOL FALSE FORCE)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/google_benchmark/src EXCLUDE_FROM_ALL)
 endif()
+
+# Include Windows SDK DLL copying utilities
+include("${CMAKE_CURRENT_SOURCE_DIR}/CopyWindowsSDKDLL.cmake")
 
 # Populates 'targets' with list of all targets under 'dir'
 # Use 'get_all_targets_recursive' instead of this macro
@@ -288,7 +304,7 @@ function(AddSubdirectoryDXC)
     endif()
 
     message(STATUS "\nAdding DXC to build:\n")
-    add_subdirectory(dxc
+    add_subdirectory(directx-shader-compiler/src
         # Disable all targets by default, and enable only the dxc and dxcompiler targets (below)
         EXCLUDE_FROM_ALL
     )
@@ -305,7 +321,7 @@ function(AddSubdirectoryDXC)
         # removes NDEBUG from CMAKE_CXX_FLAGS_*, but we can live with the warnings.
         # TODO(crbug.com/358169277): Once we move the 'dxc' directory one level deeper,
         # use add_definitions instead of getting all targets and setting properties on them.
-        get_all_targets_recursive(ALL_TARGETS ${CMAKE_CURRENT_SOURCE_DIR}/dxc)
+        get_all_targets_recursive(ALL_TARGETS ${CMAKE_CURRENT_SOURCE_DIR}/directx-shader-compiler/src)
         foreach(t IN LISTS ALL_TARGETS)
             set_property(TARGET ${t} APPEND PROPERTY COMPILE_OPTIONS "-UNDEBUG")
             if (NOT MSVC)
@@ -337,50 +353,7 @@ function(AddSubdirectoryDXC)
 
     # Create a target that copies dxil.dll from the platform SDK
     if (WIN32)
-        message(STATUS "Finding Windows SDK Directory")
-
-        message(STATUS "Display environment variables:")
-        execute_process(COMMAND ${CMAKE_COMMAND} -E environment COMMAND_ECHO STDOUT)
-
-        if(DEFINED ENV{WINDOWSSDKDIR})
-            # If WINDOWSSDKDIR env var is defined, use its value. This is defined, for example, when
-            # using a Visual Studio command prompt.
-            set(WIN10_SDK_PATH "$ENV{WINDOWSSDKDIR}")
-            message(STATUS "Found WINDOWSSDKDIR environment variable: ${WIN10_SDK_PATH}")
-        else()
-            # There's no easy way to get the Windows SDK path in CMake; however, conveniently, DXC
-            # contains a FindD3D12.cmake file that returns WIN10_SDK_PATH and WIN10_SDK_VERSION,
-            # so let's use that.
-            # TODO(crbug.com/tint/2106): Get the Win10 SDK path and version ourselves until
-            # dxc/cmake/modules/FindD3D12.cmake supports non-VS generators.
-            get_filename_component(WIN10_SDK_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]" ABSOLUTE CACHE)
-            message(STATUS "WINDOWSSDKDIR environment variable is not defined, retrieving from registry: ${WIN10_SDK_PATH}")
-        endif()
-
-        message(STATUS "Finding Windows SDK version")
-        if (CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
-            set (WIN10_SDK_VERSION ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION})
-            message(STATUS "Found Windows SDK version from CMake variable 'CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION': ${WIN10_SDK_VERSION}")
-        else()
-            # CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION may not be defined if, for example,
-            # the Ninja generator is used instead of Visual Studio. Attempt to retrieve the
-            # most recent SDK version from the list of paths under "${WIN10_SDK_PATH}/Include/".
-            file(GLOB sdk_dirs RELATIVE "${WIN10_SDK_PATH}/Include/" "${WIN10_SDK_PATH}/Include/10.*")
-            if (sdk_dirs)
-                list(POP_BACK sdk_dirs WIN10_SDK_VERSION)
-            endif()
-            unset(sdk_dirs)
-            message(STATUS "Windows SDK version not found from CMake variable 'CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION', attempted to find from SDK path: ${WIN10_SDK_VERSION}")
-        endif()
-
-        set(DXIL_DLL_PATH "${WIN10_SDK_PATH}/bin/${WIN10_SDK_VERSION}/x64/dxil.dll")
-        add_custom_target(copy_dxil_dll)
-        add_custom_command(
-            TARGET copy_dxil_dll
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DXIL_DLL_PATH} $<TARGET_FILE_DIR:dxcompiler>
-            COMMENT "Copying ${DXIL_DLL_PATH} to $<TARGET_FILE_DIR:dxcompiler>")
-        # Ensure folder "$<TARGET_FILE_DIR:dxcompiler>" exists when copying the dll
-        add_dependencies(copy_dxil_dll dxcompiler)
+        AddCopyWindowsSDKDLLTarget("copy_dxil_dll" "dxil.dll")
         # Make dxc target depend on copy_dxil_dll
         add_dependencies(dxc copy_dxil_dll)
     endif()
@@ -395,3 +368,8 @@ if (TINT_BUILD_TINTD)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/jsoncpp" EXCLUDE_FROM_ALL)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/langsvr" EXCLUDE_FROM_ALL)
 endif()
+
+if (TINT_BUILD_MESA)
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/mesa" "${CMAKE_CURRENT_BINARY_DIR}/mesa")
+endif()
+

@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/tests/DawnTest.h"
-
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 
@@ -91,14 +90,83 @@ TEST_P(RenderAttachmentTest, MoreFragmentOutputsThanAttachments) {
     EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget, 0, 0);
 }
 
-DAWN_INSTANTIATE_TEST(RenderAttachmentTest,
-                      D3D11Backend(),
-                      D3D12Backend(),
-                      D3D12Backend({}, {"use_d3d12_render_pass"}),
-                      MetalBackend(),
-                      OpenGLBackend(),
-                      OpenGLESBackend(),
-                      VulkanBackend());
+// Tests that individual depth slices of a 3D texture can be bound as color attachments.
+TEST_P(RenderAttachmentTest, DepthSlice) {
+    wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
+        @vertex
+        fn main() -> @builtin(position) vec4f {
+            return vec4f(0.0, 0.0, 0.0, 1.0);
+        })");
+
+    wgpu::ShaderModule fsModule = utils::CreateShaderModule(device, R"(
+        struct Output {
+            @location(0) color0 : vec4f,
+            @location(1) color1 : vec4f,
+            @location(2) color2 : vec4f,
+        }
+
+        @fragment
+        fn main() -> Output {
+            var output : Output;
+            output.color0 = vec4f(1.0, 0.0, 0.0, 1.0);
+            output.color1 = vec4f(0.0, 1.0, 0.0, 1.0);
+            output.color2 = vec4f(0.0, 0.0, 1.0, 1.0);
+            return output;
+        })");
+
+    // Unlike the previous test, all three outputs are used by the pipeline here.
+    utils::ComboRenderPipelineDescriptor pipelineDesc;
+    pipelineDesc.vertex.module = vsModule;
+    pipelineDesc.cFragment.module = fsModule;
+    pipelineDesc.primitive.topology = wgpu::PrimitiveTopology::PointList;
+    pipelineDesc.cTargets[0].format = wgpu::TextureFormat::RGBA8Unorm;
+    pipelineDesc.cTargets[1].format = wgpu::TextureFormat::RGBA8Unorm;
+    pipelineDesc.cTargets[2].format = wgpu::TextureFormat::RGBA8Unorm;
+    pipelineDesc.cFragment.targetCount = 3;
+
+    wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&pipelineDesc);
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+
+    wgpu::TextureDescriptor textureDesc;
+    textureDesc.dimension = wgpu::TextureDimension::e3D;
+    textureDesc.size = {1, 1, 3};
+    textureDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+    textureDesc.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+    wgpu::Texture renderTarget0 = device.CreateTexture(&textureDesc);
+    wgpu::Texture renderTarget1 = device.CreateTexture(&textureDesc);
+    wgpu::Texture renderTarget2 = device.CreateTexture(&textureDesc);
+
+    utils::ComboRenderPassDescriptor renderPass(
+        {renderTarget0.CreateView(), renderTarget1.CreateView(), renderTarget2.CreateView()});
+    renderPass.cColorAttachments[0].depthSlice = 0;
+    renderPass.cColorAttachments[1].depthSlice = 1;
+    renderPass.cColorAttachments[2].depthSlice = 2;
+
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+    pass.SetPipeline(pipeline);
+    pass.Draw(1);
+    pass.End();
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_PIXEL_3D_RGBA8_EQ(utils::RGBA8::kRed, renderTarget0, 0, 0, 0);
+    EXPECT_PIXEL_3D_RGBA8_EQ(utils::RGBA8::kGreen, renderTarget1, 0, 0, 1);
+    EXPECT_PIXEL_3D_RGBA8_EQ(utils::RGBA8::kBlue, renderTarget2, 0, 0, 2);
+}
+
+DAWN_INSTANTIATE_TEST(
+    RenderAttachmentTest,
+    D3D11Backend(),
+    D3D12Backend(),
+    D3D12Backend({}, {"use_d3d12_render_pass"}),
+    MetalBackend(),
+    OpenGLBackend(),
+    OpenGLESBackend(),
+    VulkanBackend({"vulkan_use_dynamic_rendering"}, {}),
+    VulkanBackend({"vulkan_use_create_render_pass_2"}, {"vulkan_use_dynamic_rendering"}),
+    VulkanBackend({}, {"vulkan_use_create_render_pass_2", "vulkan_use_dynamic_rendering"}),
+    WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

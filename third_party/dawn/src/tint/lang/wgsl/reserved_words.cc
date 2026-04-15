@@ -27,6 +27,8 @@
 
 #include "src/tint/lang/wgsl/reserved_words.h"
 
+#include "src/tint/lang/core/enums.h"
+
 namespace tint::wgsl {
 
 bool IsReserved(std::string_view s) {
@@ -62,6 +64,32 @@ bool IsReserved(std::string_view s) {
            s == "unorm" || s == "unsafe" || s == "unsized" || s == "use" || s == "using" ||
            s == "varying" || s == "virtual" || s == "volatile" || s == "wgsl" || s == "where" ||
            s == "with" || s == "writeonly" || s == "yield";
+}
+
+bool IsKeyword(std::string_view s) {
+    return s == "alias" || s == "break" || s == "case" || s == "const" || s == "const_assert" ||
+           s == "continue" || s == "continuing" || s == "default" || s == "diagnostic" ||
+           s == "discard" || s == "else" || s == "enable" || s == "false" || s == "fn" ||
+           s == "for" || s == "if" || s == "let" || s == "loop" || s == "override" ||
+           s == "requires" || s == "return" || s == "struct" || s == "switch" || s == "true" ||
+           s == "var" || s == "while";
+}
+
+bool IsEnumName(std::string_view s) {
+    if (core::ParseAccess(s) != core::Access::kUndefined) {
+        return true;
+    }
+    if (core::ParseAddressSpace(s) != core::AddressSpace::kUndefined) {
+        return true;
+    }
+    if (core::ParseTexelFormat(s) != core::TexelFormat::kUndefined) {
+        return true;
+    }
+    return false;
+}
+
+bool IsTypeName(std::string_view s) {
+    return s == "void" || core::ParseBuiltinType(s) != core::BuiltinType::kUndefined;
 }
 
 }  // namespace tint::wgsl

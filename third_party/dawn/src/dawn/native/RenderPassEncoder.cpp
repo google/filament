@@ -28,6 +28,8 @@
 #include "dawn/native/RenderPassEncoder.h"
 
 #include <math.h>
+
+#include <cstdint>
 #include <cstring>
 #include <utility>
 
@@ -71,8 +73,7 @@ RenderPassEncoder::RenderPassEncoder(DeviceBase* device,
                                      EncodingContext* encodingContext,
                                      RenderPassResourceUsageTracker usageTracker,
                                      Ref<AttachmentState> attachmentState,
-                                     uint32_t renderTargetWidth,
-                                     uint32_t renderTargetHeight,
+                                     const RenderAreaRect& renderArea,
                                      bool depthReadOnly,
                                      bool stencilReadOnly,
                                      EndCallback endCallback)
@@ -83,8 +84,7 @@ RenderPassEncoder::RenderPassEncoder(DeviceBase* device,
                         depthReadOnly,
                         stencilReadOnly),
       mCommandEncoder(commandEncoder),
-      mRenderTargetWidth(renderTargetWidth),
-      mRenderTargetHeight(renderTargetHeight),
+      mRenderArea(renderArea),
       mOcclusionQuerySet(descriptor->occlusionQuerySet),
       mEndCallback(std::move(endCallback)) {
     mUsageTracker = std::move(usageTracker);
@@ -102,15 +102,14 @@ Ref<RenderPassEncoder> RenderPassEncoder::Create(
     EncodingContext* encodingContext,
     RenderPassResourceUsageTracker usageTracker,
     Ref<AttachmentState> attachmentState,
-    uint32_t renderTargetWidth,
-    uint32_t renderTargetHeight,
+    const RenderAreaRect& renderArea,
     bool depthReadOnly,
     bool stencilReadOnly,
     EndCallback endCallback) {
     return AcquireRef(new RenderPassEncoder(device, descriptor, commandEncoder, encodingContext,
                                             std::move(usageTracker), std::move(attachmentState),
-                                            renderTargetWidth, renderTargetHeight, depthReadOnly,
-                                            stencilReadOnly, std::move(endCallback)));
+                                            renderArea, depthReadOnly, stencilReadOnly,
+                                            std::move(endCallback)));
 }
 
 RenderPassEncoder::RenderPassEncoder(DeviceBase* device,
@@ -134,11 +133,11 @@ RenderPassEncoder::~RenderPassEncoder() {
     mEncodingContext = nullptr;
 }
 
-void RenderPassEncoder::DestroyImpl() {
+void RenderPassEncoder::DestroyImpl(DestroyReason reason) {
     mIndirectDrawMetadata.ClearIndexedIndirectBufferValidationInfo();
     mCommandBufferState.End();
 
-    RenderEncoderBase::DestroyImpl();
+    RenderEncoderBase::DestroyImpl(reason);
     // Ensure that the pass has exited. This is done for passes only since validation requires
     // they exit before destruction while bundles do not.
     mEncodingContext->EnsurePassExited(this);
@@ -169,7 +168,7 @@ void RenderPassEncoder::End() {
     DAWN_ASSERT(GetDevice()->IsLockedByCurrentThreadIfNeeded());
 
     if (mEnded && IsValidationEnabled()) {
-        GetDevice()->HandleError(DAWN_VALIDATION_ERROR("%s was already ended.", this));
+        GetDevice()->HandleEncoderError(DAWN_VALIDATION_ERROR("%s was already ended.", this));
         return;
     }
 
@@ -196,10 +195,8 @@ void RenderPassEncoder::End() {
             DAWN_TRY(mEncodingContext->ExitRenderPass(this, std::move(mUsageTracker),
                                                       mCommandEncoder.Get(),
                                                       std::move(mIndirectDrawMetadata)));
-            if (mEndCallback) {
-                mEncodingContext->ConsumedError(mEndCallback());
-            }
 
+            DAWN_TRY(mEndCallback());
             return {};
         },
         "encoding %s.End().", this);
@@ -253,7 +250,7 @@ void RenderPassEncoder::APISetViewport(float x,
 
                 const CombinedLimits& limits = GetDevice()->GetLimits();
                 uint32_t maxViewportSize = limits.v1.maxTextureDimension2D;
-                float maxViewportBounds = maxViewportSize * 2.0;
+                float maxViewportBounds = maxViewportSize * 2.0f;
 
                 DAWN_INVALID_IF(
                     width < 0 || height < 0,
@@ -312,11 +309,15 @@ void RenderPassEncoder::APISetScissorRect(uint32_t x, uint32_t y, uint32_t width
         [&](CommandAllocator* allocator) -> MaybeError {
             if (IsValidationEnabled()) {
                 DAWN_INVALID_IF(
-                    width > mRenderTargetWidth || height > mRenderTargetHeight ||
-                        x > mRenderTargetWidth - width || y > mRenderTargetHeight - height,
+                    x < mRenderArea.x ||
+                        static_cast<uint64_t>(x) + static_cast<uint64_t>(width) >
+                            mRenderArea.x + mRenderArea.width ||
+                        y < mRenderArea.y ||
+                        static_cast<uint64_t>(y) + static_cast<uint64_t>(height) >
+                            mRenderArea.y + mRenderArea.height,
                     "Scissor rect (x: %u, y: %u, width: %u, height: %u) is not contained in "
-                    "the render target dimensions (%u x %u).",
-                    x, y, width, height, mRenderTargetWidth, mRenderTargetHeight);
+                    "the render area dimensions %s.",
+                    x, y, width, height, mRenderArea);
             }
 
             SetScissorRectCmd* cmd =
@@ -376,17 +377,7 @@ void RenderPassEncoder::APIExecuteBundles(uint32_t count, RenderBundleBase* cons
             for (uint32_t i = 0; i < count; ++i) {
                 bundles[i] = renderBundles[i];
 
-                const RenderPassResourceUsage& usages = bundles[i]->GetResourceUsage();
-                for (uint32_t j = 0; j < usages.buffers.size(); ++j) {
-                    mUsageTracker.BufferUsedAs(usages.buffers[j], usages.bufferSyncInfos[j].usage,
-                                               usages.bufferSyncInfos[j].shaderStages);
-                }
-
-                for (uint32_t j = 0; j < usages.textures.size(); ++j) {
-                    mUsageTracker.AddRenderBundleTextureUsage(usages.textures[j],
-                                                              usages.textureSyncInfos[j]);
-                }
-
+                mUsageTracker.MergeResourceUsages(bundles[i]->GetResourceUsage());
                 if (IsValidationEnabled()) {
                     mIndirectDrawMetadata.AddBundle(renderBundles[i]);
                 }

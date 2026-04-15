@@ -301,6 +301,8 @@ D3D12_INDEX_BUFFER_STRIP_CUT_VALUE ComputeIndexBufferStripCutValue(
             return D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF;
         case wgpu::IndexFormat::Undefined:
             return D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+        default:
+            DAWN_UNREACHABLE();
     }
 }
 
@@ -323,6 +325,10 @@ MaybeError RenderPipeline::InitializeImpl() {
 
     if (device->IsToggleEnabled(Toggle::EmitHLSLDebugSymbols)) {
         compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+    }
+
+    if (device->IsToggleEnabled(Toggle::D3DSkipShaderOptimizations)) {
+        compileFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
     }
 
     if (device->IsToggleEnabled(Toggle::UseDXC) &&
@@ -481,8 +487,8 @@ MaybeError RenderPipeline::InitializeImpl() {
 
 RenderPipeline::~RenderPipeline() = default;
 
-void RenderPipeline::DestroyImpl() {
-    RenderPipelineBase::DestroyImpl();
+void RenderPipeline::DestroyImpl(DestroyReason reason) {
+    RenderPipelineBase::DestroyImpl(reason);
     ToBackend(GetDevice())->ReferenceUntilUnused(mPipelineState);
 }
 

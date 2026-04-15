@@ -31,7 +31,9 @@
 #include <vector>
 
 #include "dawn/common/Assert.h"
+#include "dawn/common/Strings.h"
 #include "dawn/native/BindGroup.h"
+#include "dawn/native/BlockInfo.h"
 #include "dawn/native/CommandEncoder.h"
 #include "dawn/native/Device.h"
 #include "dawn/native/InternalPipelineStore.h"
@@ -42,26 +44,24 @@ namespace dawn::native {
 
 namespace {
 
-constexpr char kBlitToDepthShaders[] = R"(
+constexpr char kBlitToDepthShaders[] = DAWN_MULTILINE(
+    @vertex fn vert_fullscreen_quad(
+        @builtin(vertex_index) vertex_index : u32,
+    ) -> @builtin(position) vec4f {
+        const pos = array(
+            vec2f(-1.0, -1.0),
+            vec2f( 3.0, -1.0),
+            vec2f(-1.0,  3.0));
+        return vec4f(pos[vertex_index], 0.0, 1.0);
+    }
 
-@vertex fn vert_fullscreen_quad(
-  @builtin(vertex_index) vertex_index : u32,
-) -> @builtin(position) vec4f {
-  const pos = array(
-      vec2f(-1.0, -1.0),
-      vec2f( 3.0, -1.0),
-      vec2f(-1.0,  3.0));
-  return vec4f(pos[vertex_index], 0.0, 1.0);
-}
+    @group(0) @binding(0) var src_tex : texture_depth_2d;
 
-@group(0) @binding(0) var src_tex : texture_depth_2d;
-
-// Load the depth value and return it as the frag_depth.
-@fragment fn blit_to_depth(@builtin(position) position : vec4f) -> @builtin(frag_depth) f32 {
-  return textureLoad(src_tex, vec2u(position.xy), 0);
-}
-
-)";
+    // Load the depth value and return it as the frag_depth.
+    @fragment fn blit_to_depth(@builtin(position) position : vec4f) -> @builtin(frag_depth) f32 {
+        return textureLoad(src_tex, vec2u(position.xy), 0);
+    }
+);
 
 ResultOrError<Ref<RenderPipelineBase>> GetOrCreateDepthBlitPipeline(DeviceBase* device,
                                                                     wgpu::TextureFormat format) {
@@ -109,13 +109,14 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
                             CommandEncoder* commandEncoder,
                             const TextureCopy& src,
                             const TextureCopy& dst,
-                            const Extent3D& copyExtent) {
+                            const TexelExtent3D& copyExtent) {
     DAWN_ASSERT(device->IsLockedByCurrentThreadIfNeeded());
     // DAWN_ASSERT that the texture have depth and are not multisampled.
     DAWN_ASSERT(src.texture->GetFormat().HasDepth());
     DAWN_ASSERT(dst.texture->GetFormat().HasDepth());
     DAWN_ASSERT(src.texture->GetSampleCount() == 1u);
     DAWN_ASSERT(dst.texture->GetSampleCount() == 1u);
+    DAWN_ASSERT(!copyExtent.IsEmpty());
 
     // Note: because depth texture subresources must be copied in full, this blit
     // does not need to handle copy subrects.
@@ -136,12 +137,12 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
     // also don't textureLoad in the shader at a non-zero array index correctly. Workaround this
     // issue by copying the non-zero array slices to a single-layer texture. That texture will be be
     // sampled as the source instead.
-    std::vector<Ref<TextureViewBase>> srcViews;
+    ityp::vector<TexelCount, Ref<TextureViewBase>> srcViews;
     srcViews.reserve(copyExtent.depthOrArrayLayers);
-    for (uint32_t z = 0; z < copyExtent.depthOrArrayLayers; ++z) {
-        uint32_t layer = src.origin.z + z;
+    for (TexelCount z = TexelCount{0}; z < copyExtent.depthOrArrayLayers; ++z) {
+        TexelCount layer = src.origin.z + z;
         Ref<TextureViewBase> srcView;
-        if (layer == 0u) {
+        if (layer == TexelCount{0}) {
             // The zero'th slice. We can use the original texture.
             TextureViewDescriptor viewDesc = {};
             viewDesc.aspect = wgpu::TextureAspect::DepthOnly;
@@ -155,7 +156,8 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
             intermediateTexDesc.format = src.texture->GetFormat().format;
             intermediateTexDesc.usage =
                 wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
-            intermediateTexDesc.size = {copyExtent.width, copyExtent.height};
+            intermediateTexDesc.size = {static_cast<uint32_t>(copyExtent.width),
+                                        static_cast<uint32_t>(copyExtent.height)};
 
             Ref<TextureBase> intermediateTexture;
             DAWN_TRY_ASSIGN(intermediateTexture, device->CreateTexture(&intermediateTexDesc));
@@ -165,7 +167,7 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
                 TexelCopyTextureInfo intermediateSrc;
                 intermediateSrc.texture = src.texture.Get();
                 intermediateSrc.mipLevel = src.mipLevel;
-                intermediateSrc.origin = {0, 0, layer};
+                intermediateSrc.origin = {0, 0, static_cast<uint32_t>(layer)};
                 intermediateSrc.aspect = wgpu::TextureAspect::All;
 
                 TexelCopyTextureInfo intermediateDst;
@@ -190,7 +192,7 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
     }
 
     // For each copied layer, blit from the source into the destination.
-    for (uint32_t z = 0; z < copyExtent.depthOrArrayLayers; ++z) {
+    for (TexelCount z = TexelCount{0}; z < copyExtent.depthOrArrayLayers; ++z) {
         Ref<BindGroupBase> bindGroup;
         {
             BindGroupEntry bgEntry = {};
@@ -209,7 +211,7 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
         {
             TextureViewDescriptor viewDesc = {};
             viewDesc.dimension = wgpu::TextureViewDimension::e2D;
-            viewDesc.baseArrayLayer = dst.origin.z + z;
+            viewDesc.baseArrayLayer = static_cast<uint32_t>(dst.origin.z + z);
             viewDesc.arrayLayerCount = 1;
             viewDesc.baseMipLevel = dst.mipLevel;
             viewDesc.mipLevelCount = 1;

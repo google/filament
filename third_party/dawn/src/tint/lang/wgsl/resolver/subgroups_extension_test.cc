@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
-
-#include "gmock/gmock.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -209,11 +208,26 @@ TEST_F(ResolverSubgroupsExtensionTest, UseSubgroupIdAttribWithoutExtensionError)
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(error: use of '@builtin(subgroup_id)' attribute requires enabling extension 'chromium_experimental_subgroup_matrix')");
+        R"(error: use of '@builtin(subgroup_id)' attribute requires enabling extension 'subgroups')");
+}
+
+TEST_F(ResolverSubgroupsExtensionTest, UseSubgroupIdAttribWithoutLanguageExtension) {
+    Enable(wgsl::Extension::kSubgroups);
+    Structure("Inputs", Vector{
+                            Member("a", ty.u32(), Vector{Builtin(core::BuiltinValue::kSubgroupId)}),
+                        });
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.extensions.insert(wgsl::Extension::kSubgroups);
+    Resolver resolver{this, allowed_features};
+    EXPECT_FALSE(resolver.Resolve());
+    EXPECT_EQ(
+        resolver.error(),
+        R"(error: use of '@builtin(subgroup_id)' attribute requires the 'subgroup_id' language feature)");
 }
 
 TEST_F(ResolverSubgroupsExtensionTest, UseSubgroupIdAttribWithExtension) {
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupMatrix);
+    Enable(wgsl::Extension::kSubgroups);
     Structure("Inputs", Vector{
                             Member("a", ty.u32(), Vector{Builtin(core::BuiltinValue::kSubgroupId)}),
                         });
@@ -222,7 +236,7 @@ TEST_F(ResolverSubgroupsExtensionTest, UseSubgroupIdAttribWithExtension) {
 }
 
 TEST_F(ResolverSubgroupsExtensionTest, SubgroupIdI32Error) {
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupMatrix);
+    Enable(wgsl::Extension::kSubgroups);
     Structure("Inputs", Vector{
                             Member("a", ty.i32(), Vector{Builtin(core::BuiltinValue::kSubgroupId)}),
                         });
@@ -232,7 +246,7 @@ TEST_F(ResolverSubgroupsExtensionTest, SubgroupIdI32Error) {
 }
 
 TEST_F(ResolverSubgroupsExtensionTest, SubgroupIdFragmentShader) {
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupMatrix);
+    Enable(wgsl::Extension::kSubgroups);
     Func("main", Vector{Param("size", ty.u32(), Vector{Builtin(core::BuiltinValue::kSubgroupId)})},
          ty.void_(), Empty, Vector{Stage(ast::PipelineStage::kFragment)});
 
@@ -242,7 +256,7 @@ TEST_F(ResolverSubgroupsExtensionTest, SubgroupIdFragmentShader) {
 }
 
 TEST_F(ResolverSubgroupsExtensionTest, SubgroupIdComputeShaderOutput) {
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupMatrix);
+    Enable(wgsl::Extension::kSubgroups);
 
     Func("main", tint::Empty, ty.u32(),
          Vector{
@@ -259,9 +273,87 @@ TEST_F(ResolverSubgroupsExtensionTest, SubgroupIdComputeShaderOutput) {
               "1:2 error: '@builtin(subgroup_id)' is only valid as a compute shader input");
 }
 
+TEST_F(ResolverSubgroupsExtensionTest, UseNumSubgroupsAttribWithoutExtensionError) {
+    Structure("Inputs",
+              Vector{
+                  Member("a", ty.u32(), Vector{Builtin(core::BuiltinValue::kNumSubgroups)}),
+              });
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(),
+              "error: use of '@builtin(num_subgroups)' attribute requires enabling extension "
+              "'subgroups'");
+}
+
+TEST_F(ResolverSubgroupsExtensionTest, UseNumSubgroupsAttribWithoutLanguageExtension) {
+    Enable(wgsl::Extension::kSubgroups);
+    Structure("Inputs",
+              Vector{
+                  Member("a", ty.u32(), Vector{Builtin(core::BuiltinValue::kNumSubgroups)}),
+              });
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.extensions.insert(wgsl::Extension::kSubgroups);
+    Resolver resolver{this, allowed_features};
+    EXPECT_FALSE(resolver.Resolve());
+    EXPECT_EQ(resolver.error(),
+              "error: use of '@builtin(num_subgroups)' attribute requires the 'subgroup_id' "
+              "language feature");
+}
+
+TEST_F(ResolverSubgroupsExtensionTest, UseNumSubgroupsAttribWithExtension) {
+    Enable(wgsl::Extension::kSubgroups);
+    Structure("Inputs",
+              Vector{
+                  Member("a", ty.u32(), Vector{Builtin(core::BuiltinValue::kNumSubgroups)}),
+              });
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+}
+
+TEST_F(ResolverSubgroupsExtensionTest, NumSubgroupsI32Error) {
+    Enable(wgsl::Extension::kSubgroups);
+    Structure("Inputs",
+              Vector{
+                  Member("a", ty.i32(), Vector{Builtin(core::BuiltinValue::kNumSubgroups)}),
+              });
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(), "error: store type of '@builtin(num_subgroups)' must be 'u32'");
+}
+
+TEST_F(ResolverSubgroupsExtensionTest, NumSubgroupsFragmentShader) {
+    Enable(wgsl::Extension::kSubgroups);
+    Func("main",
+         Vector{Param("size", ty.u32(), Vector{Builtin(core::BuiltinValue::kNumSubgroups)})},
+         ty.void_(), Empty, Vector{Stage(ast::PipelineStage::kFragment)});
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(),
+              "error: '@builtin(num_subgroups)' is only valid as a compute shader input");
+}
+
+TEST_F(ResolverSubgroupsExtensionTest, NumSubgroupsComputeShaderOutput) {
+    Enable(wgsl::Extension::kSubgroups);
+
+    Func("main", tint::Empty, ty.u32(),
+         Vector{
+             Return(Call<u32>()),
+         },
+         Vector{
+             Stage(ast::PipelineStage::kCompute),
+             WorkgroupSize(1_i),
+         },
+         Vector{Builtin(Source{{1, 2}}, core::BuiltinValue::kNumSubgroups)});
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(),
+              "1:2 error: '@builtin(num_subgroups)' is only valid as a compute shader input");
+}
+
 // Using the subgroup_uniformity diagnostic rule without subgroups enabled should succeed.
 TEST_F(ResolverSubgroupsExtensionTest, UseSubgroupUniformityRuleWithoutExtensionError) {
-    DiagnosticDirective(wgsl::DiagnosticSeverity::kOff, "subgroup_uniformity");
+    DiagnosticDirective(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("subgroup_uniformity"));
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
 

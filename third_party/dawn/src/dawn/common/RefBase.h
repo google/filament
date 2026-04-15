@@ -150,6 +150,8 @@ class RefBase {
         mValue = value;
     }
 
+    void Reset() { Set(Traits::kNullValue); }
+
     [[nodiscard]] T* InitializeInto() {
         DAWN_ASSERT(mValue == Traits::kNullValue);
         return &mValue;

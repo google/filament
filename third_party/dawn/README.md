@@ -31,7 +31,6 @@ Helpful links:
  - [Dawn's source code](https://dawn.googlesource.com/dawn)
  - [Dawn's Matrix chatroom](https://matrix.to/#/#webgpu-dawn:matrix.org) for live discussion around contributing or using Dawn.
  - [WebGPU's Matrix chatroom](https://matrix.to/#/#WebGPU:matrix.org)
- - [Tint mirror](https://dawn.googlesource.com/tint) for standalone usage.
 
 ## Documentation table of content
 

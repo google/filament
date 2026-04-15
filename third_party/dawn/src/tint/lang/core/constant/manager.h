@@ -67,21 +67,6 @@ class Manager final {
     /// Destructor
     ~Manager();
 
-    /// Wrap returns a new Manager created with the constants and types of `inner`.
-    /// The Manager returned by Wrap is intended to temporarily extend the constants and types of an
-    /// existing immutable Manager. As the copied constants and types are owned by `inner`, `inner`
-    /// must not be destructed or assigned while using the returned Manager.
-    /// TODO(crbug.com/tint/460) - Evaluate whether there are safer alternatives to this
-    /// function.
-    /// @param inner the immutable Manager to extend
-    /// @return the Manager that wraps `inner`
-    static Manager Wrap(const Manager& inner) {
-        Manager out;
-        out.values_.Wrap(inner.values_);
-        out.types = core::type::Manager::Wrap(inner.types);
-        return out;
-    }
-
     /// @param args the arguments used to construct the type, unique node or node.
     /// @return a pointer to an instance of `T` with the provided arguments.
     ///         If NODE derives from UniqueNode and an existing instance of `T` has been
@@ -132,6 +117,10 @@ class Manager final {
     /// @param value the constant value
     /// @return a Scalar holding the u8 value @p value
     const Scalar<u8>* Get(u8 value);
+
+    /// @param value the constant value
+    /// @return a Scalar holding the u16 value @p value
+    const Scalar<u16>* Get(u16 value);
 
     /// @param value the constant value
     /// @return a Scalar holding the f32 value @p value

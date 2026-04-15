@@ -69,11 +69,11 @@ class RenderPassTest : public DawnTest {
         pipeline = device.CreateRenderPipeline(&descriptor);
     }
 
-    wgpu::Texture CreateDefault2DTexture() {
+    wgpu::Texture CreateDefault2DTexture(uint32_t size = kRTSize) {
         wgpu::TextureDescriptor descriptor;
         descriptor.dimension = wgpu::TextureDimension::e2D;
-        descriptor.size.width = kRTSize;
-        descriptor.size.height = kRTSize;
+        descriptor.size.width = size;
+        descriptor.size.height = size;
         descriptor.size.depthOrArrayLayers = 1;
         descriptor.sampleCount = 1;
         descriptor.format = kFormat;
@@ -184,19 +184,9 @@ TEST_P(RenderPassTest, NoCorrespondingFragmentShaderOutputs) {
     EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget, kRTSize - 1, 1);
 }
 
-DAWN_INSTANTIATE_TEST(RenderPassTest,
-                      D3D11Backend(),
-                      D3D12Backend(),
-                      D3D12Backend({}, {"use_d3d12_render_pass"}),
-                      MetalBackend(),
-                      OpenGLBackend(),
-                      OpenGLESBackend(),
-                      VulkanBackend());
-
 // Test that clearing the lower mips of an R8Unorm texture works. This is a regression test for
 // dawn:1071 where Intel Metal devices fail to do that correctly, requiring a workaround.
-class RenderPassTest_RegressionDawn1071 : public RenderPassTest {};
-TEST_P(RenderPassTest_RegressionDawn1071, ClearLowestMipOfR8Unorm) {
+TEST_P(RenderPassTest, ClearLowestMipOfR8Unorm) {
     const uint32_t kLastMipLevel = 2;
 
     // Create the texture and buffer used for readback.
@@ -244,21 +234,11 @@ TEST_P(RenderPassTest_RegressionDawn1071, ClearLowestMipOfR8Unorm) {
     EXPECT_BUFFER_U8_EQ(255, buf, 0);
 }
 
-DAWN_INSTANTIATE_TEST(RenderPassTest_RegressionDawn1071,
-                      D3D11Backend(),
-                      D3D12Backend(),
-                      MetalBackend(),
-                      MetalBackend({"metal_render_r8_rg8_unorm_small_mip_to_temp_texture"}),
-                      OpenGLBackend(),
-                      OpenGLESBackend(),
-                      VulkanBackend());
-
 // Test that clearing a depth16unorm texture with multiple subresources works. This is a regression
 // test for dawn:1389 where Intel Metal devices fail to do that correctly, requiring a workaround.
-class RenderPassTest_RegressionDawn1389 : public RenderPassTest {};
-TEST_P(RenderPassTest_RegressionDawn1389, ClearMultisubresourceAfterWriteDepth16Unorm) {
+TEST_P(RenderPassTest, ClearMultisubresourceAfterWriteDepth16Unorm) {
     // TODO(dawn:1705): fix this test for Intel D3D11.
-    DAWN_SUPPRESS_TEST_IF((IsD3D11() || IsANGLED3D11()) && IsIntel());
+    DAWN_SUPPRESS_TEST_IF(IsD3D11());
 
     // TODO(crbug.com/dawn/1989): Failed on Intel Gen12 GPUs because of Windows Vulkan driver issue,
     // when copying to a D16_UNORM depth texture and clearing one subresource, other subresources
@@ -384,14 +364,131 @@ TEST_P(RenderPassTest_RegressionDawn1389, ClearMultisubresourceAfterWriteDepth16
     }
 }
 
-DAWN_INSTANTIATE_TEST(RenderPassTest_RegressionDawn1389,
-                      D3D11Backend(),
-                      D3D12Backend(),
-                      MetalBackend(),
-                      MetalBackend({"use_blit_for_buffer_to_depth_texture_copy"}),
-                      OpenGLBackend(),
-                      OpenGLESBackend(),
-                      VulkanBackend());
+DAWN_INSTANTIATE_TEST(
+    RenderPassTest,
+    D3D11Backend(),
+    D3D12Backend(),
+    D3D12Backend({}, {"use_d3d12_render_pass"}),
+    MetalBackend(),
+
+    // for dawn:1071 regression
+    MetalBackend({"metal_render_r8_rg8_unorm_small_mip_to_temp_texture"}),
+
+    // for dawn:1389 regression
+    MetalBackend({"use_blit_for_buffer_to_depth_texture_copy"}),
+
+    OpenGLBackend(),
+    OpenGLESBackend(),
+    VulkanBackend({"vulkan_use_dynamic_rendering"}, {}),
+    VulkanBackend({"vulkan_use_create_render_pass_2"}, {"vulkan_use_dynamic_rendering"}),
+    VulkanBackend({}, {"vulkan_use_create_render_pass_2", "vulkan_use_dynamic_rendering"}),
+    WebGPUBackend());
+
+class RenderPassRenderAreaTest : public RenderPassTest {
+  protected:
+    void SetUp() override {
+        DAWN_TEST_UNSUPPORTED_IF(UsesWire());
+        RenderPassTest::SetUp();
+    }
+
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        return {wgpu::FeatureName::RenderPassRenderArea};
+    }
+};
+
+// Tests that clear and draw operations are clipped to the render area.
+TEST_P(RenderPassRenderAreaTest, ClipsDrawing) {
+    constexpr uint32_t kSize = 64;
+
+    wgpu::Texture renderTarget1 = CreateDefault2DTexture(kSize);
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+
+    // An initial render pass clears all pixels to zero.
+    utils::ComboRenderPassDescriptor clearRenderPass({renderTarget1.CreateView()});
+    clearRenderPass.cColorAttachments[0].clearValue = {0.0f, 0.0f, 0.0f, 0.0f};
+    encoder.BeginRenderPass(&clearRenderPass).End();
+
+    utils::ComboRenderPassDescriptor renderPass({renderTarget1.CreateView()});
+    renderPass.cColorAttachments[0].clearValue = {1.0f, 0.0f, 0.0f, 1.0f};
+
+    // The 64x64 size is chosen so that even if granularity is 32x32 the aligned render area isn't
+    // the full size of the render pass. Note this test relies on the 32x32 being the max
+    // granularity required, if the test runs on hardware with larger max granularity it will fail.
+    wgpu::RenderPassRenderAreaRect renderArea;
+    renderArea.origin.x = 32;
+    renderArea.origin.y = 32;
+    renderArea.size.width = 32;
+    renderArea.size.height = 32;
+    renderPass.nextInChain = &renderArea;
+
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+    pass.SetPipeline(pipeline);
+    pass.Draw(3);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // Pixels inside the render area impacted by clear/draw.
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget1, 32, 32);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget1, 63, 63);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget1, 63, 32);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kBlue, renderTarget1, 32, 63);
+
+    // Pixels outside the render area are not modified.
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kZero, renderTarget1, 16, 16);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kZero, renderTarget1, 16, 48);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kZero, renderTarget1, 48, 16);
+}
+
+// Tests that clear and draw operations are clipped to the render area.
+TEST_P(RenderPassRenderAreaTest, ClipsClearNonAligned) {
+    constexpr uint32_t kSize = 64;
+
+    wgpu::Texture renderTarget1 = CreateDefault2DTexture(kSize);
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+
+    // An initial render pass clears all pixels to zero.
+    utils::ComboRenderPassDescriptor clearRenderPass({renderTarget1.CreateView()});
+    clearRenderPass.cColorAttachments[0].clearValue = {0.0f, 0.0f, 0.0f, 0.0f};
+    encoder.BeginRenderPass(&clearRenderPass).End();
+
+    utils::ComboRenderPassDescriptor renderPass({renderTarget1.CreateView()});
+    renderPass.cColorAttachments[0].clearValue = {1.0f, 0.0f, 0.0f, 1.0f};
+
+    // The 64x64 size is chosen so that even if granularity is 32x32 the aligned render area isn't
+    // the full size of the render pass. Note this test relies on the 32x32 being the max
+    // granularity required, if the test runs on hardware with larger max granularity it will fail.
+    wgpu::RenderPassRenderAreaRect renderArea;
+    renderArea.origin.x = 35;
+    renderArea.origin.y = 35;
+    renderArea.size.width = 26;
+    renderArea.size.height = 26;
+    renderPass.nextInChain = &renderArea;
+
+    encoder.BeginRenderPass(&renderPass).End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // Pixels inside the render area impacted by clear.
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget1, 35, 35);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget1, 57, 57);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget1, 57, 35);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kRed, renderTarget1, 35, 57);
+
+    // Pixels outside the render area expanded to 32x32 are not modified.
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kZero, renderTarget1, 16, 16);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kZero, renderTarget1, 16, 48);
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kZero, renderTarget1, 48, 16);
+
+    // We don't know if pixels outside the render area but inside expanded 32x32 rect will be
+    // cleared. That depends on the GPU granularity.
+}
+
+DAWN_INSTANTIATE_TEST(RenderPassRenderAreaTest,
+                      VulkanBackend({"vulkan_use_dynamic_rendering"}, {}),
+                      VulkanBackend({}, {"vulkan_use_dynamic_rendering"}));
 
 }  // anonymous namespace
 }  // namespace dawn
