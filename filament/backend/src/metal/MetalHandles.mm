@@ -183,9 +183,7 @@ id<MTLTexture> MetalSwapChain::createMultisampledTexture(MetalContext const& con
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
     if (context.supportsMemorylessRenderTargets) {
-        if (@available(macOS 11.0, *)) {
-            descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
-        }
+        descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
     }
 
     return [context.device newTextureWithDescriptor:descriptor];
@@ -1375,9 +1373,7 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(MTLPixelFormat forma
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
     if (context->supportsMemorylessRenderTargets) {
-        if (@available(macOS 11.0, *)) {
-            descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
-        }
+        descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
     }
 
     return [context->device newTextureWithDescriptor:descriptor];

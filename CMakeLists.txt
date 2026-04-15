@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.22.1)
 # On iOS, the deployment target is set inside third_party/clang/ios.cmake
 if (APPLE AND NOT IOS)
     # This must be set before project() is called
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0 CACHE STRING "")
 endif()
 
 # ==================================================================================================
