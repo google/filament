@@ -18,14 +18,19 @@
 
 #include <cstring> // for memset
 #include <memory>
+#include <climits>
+#include <stdexcept>
 
 namespace image  {
 
 struct LinearImage::SharedReference {
     SharedReference(uint32_t width, uint32_t height, uint32_t channels) {
-        const uint32_t nfloats = width * height * channels;
-        float* floats = new float[nfloats];
-        memset(floats, 0, sizeof(float) * nfloats);
+        const uint64_t nfloats = (uint64_t)width * height * channels;
+        if (nfloats > SIZE_MAX / sizeof(float)) {
+            throw std::overflow_error("LinearImage dimensions too large");
+        }
+        float* floats = new float[static_cast<size_t>(nfloats)];
+        memset(floats, 0, sizeof(float) * static_cast<size_t>(nfloats));
         pixels = std::shared_ptr<float>(floats, std::default_delete<float[]>());
     }
     std::shared_ptr<float> pixels;

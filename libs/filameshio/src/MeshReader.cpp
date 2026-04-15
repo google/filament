@@ -36,6 +36,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <climits>
 
 #include <fcntl.h>
 #if !defined(WIN32)
@@ -165,6 +166,10 @@ MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const ut
     Mesh mesh;
 
     int fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0) {
+        utils::slog.e << "Unable to open mesh file." << utils::io::endl;
+        return mesh;
+    }
 
     size_t size = fileSize(fd);
     char* data = (char*) malloc(size);
@@ -208,6 +213,22 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     Header* header = (Header*) p;
     p += sizeof(Header);
 
+    // Validate that parts count does not cause overflow when multiplied by sizeof(Part).
+    if (header->parts > SIZE_MAX / sizeof(Part)) {
+        utils::slog.e << "Mesh part count is too large." << utils::io::endl;
+        return {};
+    }
+
+    // Sanity-check vertex and index sizes to catch obviously corrupt headers.
+    // vertexSize and indexSize are uint32_t, so they individually fit in size_t,
+    // but verify the sum with parts doesn't wrap.
+    uint64_t totalPayload = (uint64_t)header->vertexSize + (uint64_t)header->indexSize
+            + (uint64_t)header->parts * sizeof(Part);
+    if (totalPayload > SIZE_MAX) {
+        utils::slog.e << "Mesh payload sizes overflow." << utils::io::endl;
+        return {};
+    }
+
     uint8_t const* vertexData = p;
     p += header->vertexSize;
 
@@ -220,10 +241,24 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     uint32_t materialCount = (uint32_t) *p;
     p += sizeof(uint32_t);
 
+    // Cap material count to a reasonable limit to prevent excessive allocation.
+    if (materialCount > header->parts + 1) {
+        utils::slog.e << "Material count (" << materialCount
+                << ") exceeds part count." << utils::io::endl;
+        return {};
+    }
+
     std::vector<std::string> partsMaterial(materialCount);
     for (size_t i = 0; i < materialCount; i++) {
         uint32_t nameLength = (uint32_t) *p;
         p += sizeof(uint32_t);
+
+        // Validate nameLength to prevent reading beyond the material name data.
+        if (nameLength > 0xFFFF) {
+            utils::slog.e << "Material name length is unreasonable." << utils::io::endl;
+            return {};
+        }
+
         partsMaterial[i] = (const char*) p;
         p += nameLength + 1; // null terminated
     }
@@ -243,6 +278,10 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     if (header->flags & COMPRESSION) {
         size_t indexSize = header->indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
         size_t indexCount = header->indexCount;
+        if (indexCount > 0 && indexSize > SIZE_MAX / indexCount) {
+            utils::slog.e << "Index buffer size overflow." << utils::io::endl;
+            return {};
+        }
         size_t uncompressedSize = indexSize * indexCount;
         void* uncompressed = malloc(uncompressedSize);
         int err = meshopt_decodeIndexBuffer(uncompressed, indexCount, indexSize, indices,
@@ -302,6 +341,10 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         size_t vertexSize = sizeof(half4) + sizeof(short4) + sizeof(ubyte4) + sizeof(ushort2) +
                 (hasUV1 ? sizeof(ushort2) : 0);
         size_t vertexCount = header->vertexCount;
+        if (vertexCount > 0 && vertexSize > SIZE_MAX / vertexCount) {
+            utils::slog.e << "Vertex buffer size overflow." << utils::io::endl;
+            return {};
+        }
         size_t uncompressedSize = vertexSize * vertexCount;
         void* uncompressed = malloc(uncompressedSize);
         const uint8_t* srcdata = vertexData + sizeof(CompressionHeader);
