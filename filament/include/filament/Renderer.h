@@ -344,6 +344,9 @@ public:
      * It is recommended to use the same swapChain for every call to beginFrame, failing to do
      * so can result is losing all or part of the FrameInfo history.
      *
+     * @throws std::exception (or derived) if the backend thread encountered an unrecoverable error (when exceptions are enabled).
+     * @throws utils::Panic if called again after a backend exception was already thrown.
+     *
      * @see
      * endFrame()
      */
@@ -413,6 +416,9 @@ public:
      *
      * @remark
      * render() is typically called once per frame (but not necessarily).
+     *
+     * @throws std::exception (or derived) if the backend thread encountered an unrecoverable error (when exceptions are enabled).
+     * @throws utils::Panic if called again after a backend exception was already thrown.
      *
      * @see
      * beginFrame(), endFrame(), View
@@ -505,6 +511,9 @@ public:
      * All calls to render() must happen *before* endFrame(). endFrame() must be called if
      * beginFrame() returned true, otherwise, endFrame() must not be called unless the caller
      * ignored beginFrame()'s return value.
+     *
+     * @throws std::exception (or derived) if the backend thread encountered an unrecoverable error (when exceptions are enabled).
+     * @throws utils::Panic if called again after a backend exception was already thrown.
      *
      * @see
      * beginFrame()

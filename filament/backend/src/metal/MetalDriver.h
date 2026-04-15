@@ -78,7 +78,7 @@ private:
             ShaderLanguage preferredLanguage) const noexcept final;
 
     // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.
-    void execute(std::function<void(void)> const& fn) noexcept final;
+    void execute(std::function<void(void)> const& fn) final;
 
     /*
      * Tasks run regularly on the driver thread.

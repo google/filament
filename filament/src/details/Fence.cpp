@@ -37,8 +37,6 @@ namespace filament {
 
 using namespace backend;
 
-utils::Mutex FFence::sLock;
-utils::Condition FFence::sCondition;
 
 static constexpr uint64_t PUMP_INTERVAL_MILLISECONDS = 1;
 
@@ -51,14 +49,15 @@ FFence::FFence(FEngine& engine)
 
     // we have to first wait for the fence to be signaled by the command stream
     auto& fs = mFenceSignal;
-    driverApi.queueCommand([fs]() {
-        fs->signal();
+    FEngine* const pEngine = &engine;
+    driverApi.queueCommand([fs, pEngine]() {
+        pEngine->signalFence(*fs, FenceSignal::SIGNALED);
     });
 }
 
-void FFence::terminate(FEngine&) noexcept {
+void FFence::terminate(FEngine& engine) noexcept {
     FenceSignal * const fs = mFenceSignal.get();
-    fs->signal(FenceSignal::DESTROYED);
+    engine.signalFence(*fs, FenceSignal::DESTROYED);
 }
 
 UTILS_NOINLINE
@@ -85,14 +84,14 @@ FenceStatus FFence::wait(Mode const mode, uint64_t const timeout) {
     FenceStatus status;
 
     if (UTILS_LIKELY(!engine.pumpPlatformEvents())) {
-        status = fs->wait(timeout);
+        status = engine.waitFence(*fs, timeout);
     } else {
         // Unfortunately, some platforms might force us to have sync points between the GL thread
         // and user thread. To prevent deadlock on these platforms, we chop up the waiting time into
         // polling and pumping the platform's event queue.
         const auto startTime = std::chrono::system_clock::now();
         while (true) {
-            status = fs->wait(ns(ms(PUMP_INTERVAL_MILLISECONDS)).count());
+            status = engine.waitFence(*fs, ns(ms(PUMP_INTERVAL_MILLISECONDS)).count());
             if (status != FenceStatus::TIMEOUT_EXPIRED) {
                 break;
             }
@@ -111,30 +110,6 @@ FenceStatus FFence::wait(Mode const mode, uint64_t const timeout) {
     return status;
 }
 
-UTILS_NOINLINE
-void FFence::FenceSignal::signal(State const s) noexcept {
-    std::lock_guard const lock(sLock);
-    mState = s;
-    sCondition.notify_all();
-}
 
-UTILS_NOINLINE
-Fence::FenceStatus FFence::FenceSignal::wait(uint64_t const timeout) noexcept {
-    std::unique_lock lock(sLock);
-    while (mState == UNSIGNALED) {
-        if (timeout == FENCE_WAIT_FOR_EVER) {
-            sCondition.wait(lock);
-        } else {
-            if (timeout == 0 ||
-                    sCondition.wait_for(lock, ns(timeout)) == std::cv_status::timeout) {
-                return FenceStatus::TIMEOUT_EXPIRED;
-            }
-        }
-    }
-    if (mState == DESTROYED) {
-        return FenceStatus::ERROR;
-    }
-    return FenceStatus::CONDITION_SATISFIED;
-}
 
 } // namespace filament

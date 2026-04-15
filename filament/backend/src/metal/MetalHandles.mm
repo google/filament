@@ -1428,11 +1428,17 @@ FenceStatus MetalFence::wait(uint64_t timeoutNs) {
             }
             return false;
         };
+
+        FenceStatus status;
         if (timeoutNs == FENCE_WAIT_FOR_EVER) {
-            context.driver->waitForFence(predicate);
+            status = context.driver->waitForFence(predicate);
         } else {
             auto const until = std::chrono::steady_clock::now() + ns(timeoutNs);
-            context.driver->waitForFence(predicate, until);
+            status = context.driver->waitForFence(predicate, until);
+        }
+        
+        if (status == FenceStatus::ERROR) {
+            return FenceStatus::ERROR;
         }
         return result;
     }

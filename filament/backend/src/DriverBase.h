@@ -29,6 +29,7 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -214,23 +215,69 @@ public:
 
     void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) final;
 
+    /**
+     * Waits for a predicate to become true or until a timeout is reached.
+     * Returns ERROR if the driver encountered an unrecoverable error.
+     */
     template<typename Predicate>
-    bool waitForFence(Predicate predicate, std::chrono::steady_clock::time_point until) {
+    FenceStatus waitForFence(Predicate predicate, std::chrono::steady_clock::time_point until) {
         std::unique_lock lock(mFenceMutex);
-        return mFenceCondition.wait_until(lock, until, predicate);
+        bool errorObserved = false;
+        bool success = mFenceCondition.wait_until(lock, until, [&]() {
+            return predicate() || 
+                    (errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)));
+        });
+        
+        if (UTILS_VERY_UNLIKELY(errorObserved)) {
+            return FenceStatus::ERROR;
+        }
+        
+        return success ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
     }
 
+    /**
+     * Waits for a predicate to become true indefinitely.
+     * Returns ERROR if the driver encountered an unrecoverable error.
+     */
     template<typename Predicate>
-    void waitForFence(Predicate predicate) {
+    FenceStatus waitForFence(Predicate predicate) {
         std::unique_lock lock(mFenceMutex);
-        mFenceCondition.wait(lock, predicate);
+        bool errorObserved = false;
+        mFenceCondition.wait(lock, [&]() {
+            return predicate() || 
+                    (errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)));
+        });
+        
+        if (UTILS_VERY_UNLIKELY(errorObserved)) {
+            return FenceStatus::ERROR;
+        }
+        return FenceStatus::CONDITION_SATISFIED;
     }
 
+    /**
+     * Executes an action that signals a fence and notifies all waiters.
+     */
     template<typename Action>
     void signalFence(Action action) {
         std::lock_guard lock(mFenceMutex);
         action();
         mFenceCondition.notify_all();
+    }
+
+    /**
+     * Flags the driver as having encountered an unrecoverable error.
+     */
+    void setUnrecoverableError() noexcept override {
+        std::lock_guard lock(mFenceMutex);
+        mHasUnrecoverableError.store(true, std::memory_order_relaxed);
+        mFenceCondition.notify_all();
+    }
+
+    /**
+     * Returns true if the driver has encountered an unrecoverable error.
+     */
+    bool hasUnrecoverableError() const noexcept {
+        return mHasUnrecoverableError.load(std::memory_order_relaxed);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -275,6 +322,7 @@ private:
 
     std::condition_variable mFenceCondition;
     std::mutex mFenceMutex;
+    std::atomic<bool> mHasUnrecoverableError{false};
 };
 
 

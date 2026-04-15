@@ -307,7 +307,7 @@ void MetalDriver::setFrameCompletedCallback(
     swapChain->setFrameCompletedCallback(handler, std::move(callback));
 }
 
-void MetalDriver::execute(std::function<void(void)> const& fn) noexcept {
+void MetalDriver::execute(std::function<void(void)> const& fn) {
     @autoreleasepool {
         fn();
     }

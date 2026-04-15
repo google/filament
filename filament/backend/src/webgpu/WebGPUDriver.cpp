@@ -796,12 +796,16 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
     }
 
     std::shared_ptr<WebGPUSubmissionState> state;
-    bool const success = waitForFence([&] {
+    FenceStatus status = waitForFence([&] {
         state = fence->getState();
         return bool(state);
     }, until);
     
-    if (!success) {
+    if (status == FenceStatus::ERROR) {
+        return FenceStatus::ERROR;
+    }
+    
+    if (status == FenceStatus::TIMEOUT_EXPIRED) {
         return FenceStatus::TIMEOUT_EXPIRED;
     }
     

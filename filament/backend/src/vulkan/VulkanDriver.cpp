@@ -1492,15 +1492,19 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
 
     std::shared_ptr<VulkanCmdFence> cmdfence;
     bool canceled = false;
-    waitForFence([&] {
-        auto status = fence->getStatus();
-        if (bool(status.first) || status.second) {
-            cmdfence = status.first;
-            canceled = status.second;
+    FenceStatus status = waitForFence([&] {
+        auto fstatus = fence->getStatus();
+        if (bool(fstatus.first) || fstatus.second) {
+            cmdfence = fstatus.first;
+            canceled = fstatus.second;
             return true;
         }
         return false;
     }, until);
+
+    if (status == FenceStatus::ERROR) {
+        return FenceStatus::ERROR;
+    }
 
     if (!cmdfence || canceled) {
         return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;

@@ -207,8 +207,7 @@ void TPanic<T>::panic(char const* function, char const* file, int const line, ch
 }
 
 template<typename T>
-void TPanic<T>::panic(char const* function, char const* file, int line, char const* literal,
-        CString reason) {
+void TPanic<T>::panic(char const* function, char const* file, int line, char const* literal, CString reason) {
 
     if (reason.empty()) {
         reason = CString(literal);
@@ -216,15 +215,18 @@ void TPanic<T>::panic(char const* function, char const* file, int line, char con
 
     T e(function, formatFile(file), line, literal, std::move(reason));
 
-    // always log the Panic at the point it is detected
+#ifndef __EXCEPTIONS
+    // log the Panic at the point it is detected unless we have exceptions, the exception handler will be
+    // responsible for that.
     e.log();
+#endif
 
     // Call the user provided handler
     UserPanicHandler::get().call(e);
 
     // if exceptions are enabled, throw now.
 #ifdef __EXCEPTIONS
-    throw e;
+    throw std::move(e);
 #endif
 
     // and finally abort if we somehow get here
