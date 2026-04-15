@@ -31,12 +31,6 @@
 #include <string>
 
 #include "src/tint/lang/core/ir/control_instruction.h"
-#include "src/tint/utils/containers/const_propagating_ptr.h"
-
-// Forward declarations
-namespace tint::core::ir {
-class MultiInBlock;
-}  // namespace tint::core::ir
 
 namespace tint::core::ir {
 
@@ -58,6 +52,8 @@ namespace tint::core::ir {
 /// ```
 class If : public Castable<If, ControlInstruction> {
   public:
+    /// The number of supported operands
+    static constexpr size_t kNumOperands = 1;
     /// The index of the condition operand
     static constexpr size_t kConditionOperandOffset = 0;
 
@@ -110,8 +106,8 @@ class If : public Castable<If, ControlInstruction> {
     std::string FriendlyName() const override { return "if"; }
 
   private:
-    ConstPropagatingPtr<ir::Block> true_;
-    ConstPropagatingPtr<ir::Block> false_;
+    ir::Block* true_ = nullptr;
+    ir::Block* false_ = nullptr;
 };
 
 }  // namespace tint::core::ir

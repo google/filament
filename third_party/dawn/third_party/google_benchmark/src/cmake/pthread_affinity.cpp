@@ -1,4 +1,7 @@
 #include <pthread.h>
+#ifdef __FreeBSD__
+#include <pthread_np.h>
+#endif
 int main() {
   cpu_set_t set;
   CPU_ZERO(&set);

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3 -i
 #
-# Copyright 2013-2025 The Khronos Group Inc.
+# Copyright 2013-2026 The Khronos Group Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -10,7 +10,7 @@ import re
 from generator import (GeneratorOptions,
                        MissingGeneratorOptionsConventionsError,
                        MissingGeneratorOptionsError, MissingRegistryError,
-                       OutputGenerator, noneStr, regSortFeatures, write)
+                       OutputGenerator, noneStr, write)
 
 class CGeneratorOptions(GeneratorOptions):
     """CGeneratorOptions - subclass of GeneratorOptions.
@@ -355,6 +355,10 @@ class COutputGenerator(OutputGenerator):
             if alias:
                 # If the type is an alias, just emit a typedef declaration
                 body += f"typedef {alias} {name};\n"
+            elif category == 'funcpointer':
+                # Only include the typedef
+                decls = self.makeCDecls(typeElem)
+                body += decls[1]
             else:
                 # Replace <apientry /> tags with an APIENTRY-style string
                 # (from self.genOpts). Copy other text through unchanged.
@@ -379,20 +383,42 @@ class COutputGenerator(OutputGenerator):
         Protection strings are the strings defining the OS/Platform/Graphics
         requirements for a given API command.  When generating the
         language header files, we need to make sure the items specific to a
-        graphics API or OS platform are properly wrapped in #ifs."""
-        protect_if_str = ''
-        protect_end_str = ''
-        if not protect_str:
-            return (protect_if_str, protect_end_str)
+        graphics API or OS platform are properly wrapped in #ifs.
 
-        if ',' in protect_str:
-            protect_list = protect_str.split(',')
-            protect_defs = (f'defined({d})' for d in protect_list)
-            protect_def_str = ' && '.join(protect_defs)
-            protect_if_str = f'#if {protect_def_str}\n'
-            protect_end_str = f'#endif // {protect_def_str}\n'
+        Supports boolean expressions using the same syntax as 'depends':
+        - '+' for AND
+        - ',' for OR
+        - '()' for grouping
+
+        Examples:
+          'VK_A,VK_B' -> '#if defined(VK_A) || defined(VK_B)'
+          'VK_A+VK_B' -> '#if defined(VK_A) && defined(VK_B)'
+          '(VK_A+VK_B),VK_C' -> '#if (defined(VK_A) && defined(VK_B)) || defined(VK_C)'
+        """
+        if not protect_str:
+            return ('', '')
+
+        # Use the common genProtectDirective function from generator.py
+        from generator import genProtectDirective
+
+        try:
+            (protect_if, protect_end) = genProtectDirective(protect_str)
+        except Exception as e:
+            # Log warning and fall back to simple #ifdef if parsing fails
+            self.logMsg('warn', f'Failed to parse protect expression "{protect_str}": {e}')
+            protect_if = f'#ifdef {protect_str}'
+            protect_end = '#endif'
+
+        # Add newlines and comments for the C generator
+        # Extract the condition from the protect_if for the comment
+        if protect_if.startswith('#if '):
+            # Complex expression - extract condition after '#if '
+            condition = protect_if[4:].strip()
+            protect_if_str = f'{protect_if}\n'
+            protect_end_str = f'#endif // {condition}\n'
         else:
-            protect_if_str = f'#ifdef {protect_str}\n'
+            # Simple #ifdef - use original protect_str in comment
+            protect_if_str = f'{protect_if}\n'
             protect_end_str = f'#endif // {protect_str}\n'
 
         return (protect_if_str, protect_end_str)

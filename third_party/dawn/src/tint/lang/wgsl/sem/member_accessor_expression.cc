@@ -26,31 +26,15 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/ast/member_accessor_expression.h"
-#include "src/tint/lang/wgsl/sem/member_accessor_expression.h"
 
 #include <utility>
 
-TINT_INSTANTIATE_TYPEINFO(tint::sem::MemberAccessorExpression);
+#include "src/tint/lang/wgsl/sem/member_accessor_expression.h"
+
 TINT_INSTANTIATE_TYPEINFO(tint::sem::StructMemberAccess);
 TINT_INSTANTIATE_TYPEINFO(tint::sem::Swizzle);
 
 namespace tint::sem {
-
-MemberAccessorExpression::MemberAccessorExpression(const ast::MemberAccessorExpression* declaration,
-                                                   const core::type::Type* type,
-                                                   core::EvaluationStage stage,
-                                                   const Statement* statement,
-                                                   const core::constant::Value* constant,
-                                                   const ValueExpression* object,
-                                                   bool has_side_effects,
-                                                   const Variable* root_ident /* = nullptr */)
-    : Base(declaration, type, stage, object, statement, constant, has_side_effects, root_ident) {}
-
-MemberAccessorExpression::~MemberAccessorExpression() = default;
-
-const ast::MemberAccessorExpression* MemberAccessorExpression::Declaration() const {
-    return static_cast<const ast::MemberAccessorExpression*>(declaration_);
-}
 
 StructMemberAccess::StructMemberAccess(const ast::MemberAccessorExpression* declaration,
                                        const core::type::Type* type,
@@ -58,16 +42,8 @@ StructMemberAccess::StructMemberAccess(const ast::MemberAccessorExpression* decl
                                        const core::constant::Value* constant,
                                        const ValueExpression* object,
                                        const core::type::StructMember* member,
-                                       bool has_side_effects,
                                        const Variable* root_ident /* = nullptr */)
-    : Base(declaration,
-           type,
-           object->Stage(),
-           statement,
-           constant,
-           object,
-           has_side_effects,
-           root_ident),
+    : Base(declaration, type, object->Stage(), object, statement, constant, root_ident),
       member_(member) {}
 
 StructMemberAccess::~StructMemberAccess() = default;
@@ -78,16 +54,8 @@ Swizzle::Swizzle(const ast::MemberAccessorExpression* declaration,
                  const core::constant::Value* constant,
                  const ValueExpression* object,
                  VectorRef<uint32_t> indices,
-                 bool has_side_effects,
                  const Variable* root_ident /* = nullptr */)
-    : Base(declaration,
-           type,
-           object->Stage(),
-           statement,
-           constant,
-           object,
-           has_side_effects,
-           root_ident),
+    : Base(declaration, type, object->Stage(), object, statement, constant, root_ident),
       indices_(std::move(indices)) {}
 
 Swizzle::~Swizzle() = default;

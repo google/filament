@@ -38,7 +38,6 @@
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/u32.h"
 #include "src/tint/lang/core/type/vector.h"
-#include "src/tint/utils/generation_id.h"
 #include "src/tint/utils/symbol/symbol_table.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -58,7 +57,7 @@ enum ElementType {
 template <typename T>
 class BuiltinStructsTest : public testing::TestWithParam<T> {
   protected:
-    BuiltinStructsTest() : symbols(GenerationID::New()) {}
+    BuiltinStructsTest() : symbols() {}
 
     const Type* Make(ElementType t) {
         switch (t) {
@@ -182,7 +181,7 @@ using BuiltinStructTest = testing::Test;
 
 TEST_F(BuiltinStructTest, FrexpResult_NoClashWithUserDeclaredStruct) {
     Manager ty;
-    SymbolTable symbols(GenerationID::New());
+    SymbolTable symbols;
 
     auto* user_struct = ty.Struct(symbols.New(ToString(BuiltinType::kFrexpResultF32)),
                                   {
@@ -200,15 +199,15 @@ TEST_F(BuiltinStructTest, FrexpResult_NoClashWithUserDeclaredStruct) {
 
 TEST_F(BuiltinStructTest, ModfResult_NoClashWithUserDeclaredStruct) {
     Manager ty;
-    SymbolTable symbols(GenerationID::New());
+    SymbolTable symbols;
 
     auto* user_struct = ty.Struct(symbols.New(ToString(BuiltinType::kModfResultVec4F16)),
                                   {
-                                      {symbols.New("fract"), ty.vec4<f16>()},
-                                      {symbols.New("whole"), ty.vec4<f16>()},
+                                      {symbols.New("fract"), ty.vec4h()},
+                                      {symbols.New("whole"), ty.vec4h()},
                                   });
 
-    auto* internal_struct = CreateModfResult(ty, symbols, ty.vec4<f16>());
+    auto* internal_struct = CreateModfResult(ty, symbols, ty.vec4h());
 
     ASSERT_NE(internal_struct, nullptr);
     EXPECT_NE(internal_struct, user_struct);
@@ -218,7 +217,7 @@ TEST_F(BuiltinStructTest, ModfResult_NoClashWithUserDeclaredStruct) {
 
 TEST_F(BuiltinStructTest, AtomicCompareExchangeResult_NoClashWithUserDeclaredStruct) {
     Manager ty;
-    SymbolTable symbols(GenerationID::New());
+    SymbolTable symbols;
 
     auto* user_struct =
         ty.Struct(symbols.New(ToString(BuiltinType::kAtomicCompareExchangeResultU32)),

@@ -96,6 +96,9 @@ MaybeError Sampler::Initialize(const SamplerDescriptor* descriptor) {
 
     NSRef<NSString> label = MakeDebugName(GetDevice(), "Dawn_Sampler", GetLabel());
     mtlDesc.label = label.Get();
+    if (GetDevice()->IsToggleEnabled(Toggle::MetalUseArgumentBuffers)) {
+        mtlDesc.supportArgumentBuffers = true;
+    }
 
     mtlDesc.minFilter = FilterModeToMinMagFilter(descriptor->minFilter);
     mtlDesc.magFilter = FilterModeToMinMagFilter(descriptor->magFilter);

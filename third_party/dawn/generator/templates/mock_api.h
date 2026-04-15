@@ -140,8 +140,6 @@ class MockProcTable : public ProcTableAsClass {
         MockProcTable();
         ~MockProcTable() override;
 
-        void IgnoreAllReleaseCalls();
-
         {%- for type in by_category["object"] %}
 
             MOCK_METHOD(void, {{as_MethodSuffix(type.name, Name("add ref"))}}, ({{as_cType(type.name)}} self), (override));

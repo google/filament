@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/type/storage_texture.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 
 namespace tint::resolver {
@@ -116,6 +115,18 @@ TEST_F(ResolverCompoundAssignmentValidationTest, VectorScalar_Pass) {
 
     auto* assign = CompoundAssign(Source{{12, 34}}, "a", 1_f, core::BinaryOp::kAdd);
     WrapInFunction(var, assign);
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+}
+
+TEST_F(ResolverCompoundAssignmentValidationTest, RhsSwizzleView_Pass) {
+    // var v : vec4<f32>;
+    // var w : vec2<f32>;
+    // v += w.xxyy;
+    auto* v = Var("v", ty.vec4<f32>());
+    auto* w = Var("w", ty.vec2<f32>());
+    auto* swizzle = MemberAccessor("v", "xxyy");
+    WrapInFunction(v, w, CompoundAssign("v", swizzle, core::BinaryOp::kAdd));
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }

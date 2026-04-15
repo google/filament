@@ -38,20 +38,13 @@ namespace tint::ast {
 class MustUseAttribute final : public Castable<MustUseAttribute, Attribute> {
   public:
     /// constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
-    MustUseAttribute(GenerationID pid, NodeID nid, const Source& src);
+    MustUseAttribute(NodeID nid, const Source& src);
     ~MustUseAttribute() override;
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const MustUseAttribute* Clone(CloneContext& ctx) const override;
 };
 
 }  // namespace tint::ast

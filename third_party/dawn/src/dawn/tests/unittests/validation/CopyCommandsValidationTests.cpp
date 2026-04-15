@@ -217,6 +217,52 @@ class CopyCommandTest : public ValidationTest {
     }
 };
 
+struct CopyCommandTest_UseBlitForDepthTextureToTextureCopyToNonzeroSubresource : CopyCommandTest {
+    std::vector<const char*> GetEnabledToggles() override {
+        return {"use_blit_for_depth_texture_to_texture_copy_to_nonzero_subresource"};
+    }
+};
+// Regression test for crbug.com/489585038. Checks that an effective no-op T2T copies doesn't crash
+// during submit when all texture refs are 0. This was happening with
+// use_blit_for_depth_texture_to_texture_copy_to_nonzero_subresource enabled, and doing a 0-depth
+// (no-op) copy, then making sure that the src and dst texture refs go to 0 so they are deleted, and
+// then submitting. The bug was that the raw texture pointers were being added
+// CommandEncoder::mTopLevelTextures but without the texture refs being also stored in a command
+// object.
+TEST_F(CopyCommandTest_UseBlitForDepthTextureToTextureCopyToNonzeroSubresource,
+       Regression489585038) {
+    wgpu::Texture src, dst;
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::TextureDescriptor texDesc = {};
+        texDesc.size = {8, 8, 1};
+        texDesc.format = wgpu::TextureFormat::Depth32Float;
+        texDesc.mipLevelCount = 4;
+        texDesc.sampleCount = 1;
+        texDesc.usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::CopyDst |
+                        wgpu::TextureUsage::RenderAttachment;
+
+        src = device.CreateTexture(&texDesc);
+        dst = device.CreateTexture(&texDesc);
+
+        wgpu::TexelCopyTextureInfo srcInfo = utils::CreateTexelCopyTextureInfo(src, 1);
+        wgpu::TexelCopyTextureInfo dstInfo = utils::CreateTexelCopyTextureInfo(dst, 1);
+
+        constexpr uint32_t depthToCopy = 0;  // Crucial for reproducing the crash
+        wgpu::Extent3D copySize = {4, 4, depthToCopy};
+
+        wgpu::CommandEncoder commandEncoder = device.CreateCommandEncoder();
+        commandEncoder.CopyTextureToTexture(&srcInfo, &dstInfo, &copySize);
+        commands = commandEncoder.Finish();
+    }
+
+    src = nullptr;
+    dst = nullptr;
+
+    // This used to result in a UAF in QueueBase::ValidateSubmit accessing the deleted textures.
+    device.GetQueue().Submit(1, &commands);
+}
+
 // Test copies between buffer and multiple array layers of an uncompressed texture
 TEST_F(CopyCommandTest, CopyToMultipleArrayLayers) {
     wgpu::Texture destination =

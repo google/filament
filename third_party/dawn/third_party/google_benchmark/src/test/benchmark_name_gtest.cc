@@ -1,4 +1,4 @@
-#include "benchmark/benchmark.h"
+#include "benchmark/reporter.h"
 #include "gtest/gtest.h"
 
 namespace {

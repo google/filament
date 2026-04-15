@@ -35,20 +35,11 @@
 #include "src/tint/utils/result.h"
 
 // Forward declarations
-namespace tint {
-class Program;
-}  // namespace tint
 namespace tint::core::ir {
 class Module;
 }  // namespace tint::core::ir
 
 namespace tint::glsl::writer {
-
-/// Check if the module @p ir is supported by the GLSL backend with @p options.
-/// @param ir the module
-/// @param options the writer options
-/// @returns Success or a failure message indicating why GLSL generation would fail
-Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& options);
 
 /// Generate GLSL for a program, according to a set of configuration options.
 /// The result will contain the GLSL and supplementary information, or failure.

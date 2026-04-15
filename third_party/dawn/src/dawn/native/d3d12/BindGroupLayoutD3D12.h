@@ -48,15 +48,17 @@ class StagingDescriptorAllocator;
 //
 // We use the bind group index as the register space, but don't know the bind group index until
 // pipeline layout creation time. This value should be replaced in PipelineLayoutD3D12.
-static constexpr uint32_t kRegisterSpacePlaceholder =
+inline constexpr uint32_t kRegisterSpacePlaceholder =
     D3D12_DRIVER_RESERVED_REGISTER_SPACE_VALUES_START;
 
 class BindGroupLayout final : public BindGroupLayoutInternalBase {
   public:
-    static Ref<BindGroupLayout> Create(Device* device, const BindGroupLayoutDescriptor* descriptor);
+    static Ref<BindGroupLayout> Create(Device* device,
+                                       const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
 
-    ResultOrError<Ref<BindGroup>> AllocateBindGroup(Device* device,
-                                                    const BindGroupDescriptor* descriptor);
+    ResultOrError<Ref<BindGroup>> AllocateBindGroup(
+        Device* device,
+        const UnpackedPtr<BindGroupDescriptor>& descriptor);
     void DeallocateBindGroup(BindGroup* bindGroup);
     void DeallocateDescriptor(CPUDescriptorHeapAllocation* viewAllocation);
     void ReduceMemoryUsage() override;
@@ -80,7 +82,7 @@ class BindGroupLayout final : public BindGroupLayoutInternalBase {
     const std::vector<D3D12_STATIC_SAMPLER_DESC>& GetStaticSamplers() const;
 
   private:
-    BindGroupLayout(Device* device, const BindGroupLayoutDescriptor* descriptor);
+    BindGroupLayout(Device* device, const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
     ~BindGroupLayout() override = default;
 
     // Contains the offset into the descriptor heap for the given resource view. Samplers and

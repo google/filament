@@ -39,6 +39,7 @@
 #include "VideoViewsTests.h"
 #include "dawn/common/Assert.h"
 #include "dawn/native/D3DBackend.h"
+#include "dawn/utils/SystemHandle.h"
 #include "dawn/utils/TextureUtils.h"
 
 namespace dawn {
@@ -171,13 +172,12 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
         hr = d3d11Texture.As(&dxgiResource);
         DAWN_ASSERT(hr == S_OK);
 
-        HANDLE sharedHandle;
+        utils::SystemHandle sharedHandle;
         hr = dxgiResource->CreateSharedHandle(
             nullptr, DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE, nullptr,
-            &sharedHandle);
+            sharedHandle.GetMut());
         DAWN_ASSERT(hr == S_OK);
 
-        HANDLE fenceSharedHandle = nullptr;
         ComPtr<ID3D11Fence> d3d11Fence;
 
         ComPtr<ID3D11Device5> d3d11Device5;
@@ -187,7 +187,9 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
         hr = d3d11Device5->CreateFence(0, D3D11_FENCE_FLAG_SHARED, IID_PPV_ARGS(&d3d11Fence));
         DAWN_ASSERT(hr == S_OK);
 
-        hr = d3d11Fence->CreateSharedHandle(nullptr, GENERIC_ALL, nullptr, &fenceSharedHandle);
+        utils::SystemHandle fenceSharedHandle;
+        hr = d3d11Fence->CreateSharedHandle(nullptr, GENERIC_ALL, nullptr,
+                                            fenceSharedHandle.GetMut());
         DAWN_ASSERT(hr == S_OK);
 
         ComPtr<ID3D11DeviceContext> d3d11DeviceContext;
@@ -204,17 +206,15 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
 
         // Open the DX11 texture in Dawn from the shared handle and return it as a WebGPU texture.
         wgpu::SharedTextureMemoryDXGISharedHandleDescriptor sharedHandleDesc{};
-        sharedHandleDesc.handle = sharedHandle;
+        sharedHandleDesc.handle = sharedHandle.Get();
 
         wgpu::SharedTextureMemoryDescriptor desc;
         desc.nextInChain = &sharedHandleDesc;
 
         auto sharedTextureMemory = mWGPUDevice.ImportSharedTextureMemory(&desc);
-        // Handle is no longer needed once resources are created.
-        ::CloseHandle(sharedHandle);
 
         wgpu::SharedFenceDXGISharedHandleDescriptor dxgiFenceDesc{};
-        dxgiFenceDesc.handle = fenceSharedHandle;
+        dxgiFenceDesc.handle = fenceSharedHandle.Get();
         wgpu::SharedFenceDescriptor fenceDesc{};
         fenceDesc.nextInChain = &dxgiFenceDesc;
         auto wgpuFence = mWGPUDevice.ImportSharedFence(&fenceDesc);
@@ -229,8 +229,6 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
 
         auto wgpuTexture = sharedTextureMemory.CreateTexture(&textureDesc);
         bool success = sharedTextureMemory.BeginAccess(wgpuTexture, &beginDesc);
-        // Fence handle is no longer needed after begin access.
-        ::CloseHandle(fenceSharedHandle);
 
         return success ? std::make_unique<PlatformTextureWin>(std::move(wgpuTexture)) : nullptr;
     }

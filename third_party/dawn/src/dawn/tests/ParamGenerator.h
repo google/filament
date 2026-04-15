@@ -37,7 +37,6 @@
 #include <vector>
 
 #include "dawn/common/Preprocessor.h"
-
 #include "gtest/gtest.h"
 
 namespace dawn {
@@ -101,11 +100,12 @@ void PrintParamStructField(std::ostream& o, const T& param, const char* type) {
             : BaseStructName(param), DAWN_PP_CONCATENATE(_Dawn_, StructName) {                     \
             std::forward<Args>(args)...                                                            \
         }                                                                                          \
-        {}                                                                                         \
+        {                                                                                          \
+        }                                                                                          \
     };                                                                                             \
     inline std::ostream& operator<<(std::ostream& o, const StructName& param) {                    \
         o << static_cast<const BaseStructName&>(param);                                            \
-        o << static_cast<const DAWN_PP_CONCATENATE(_Dawn_, StructName)&>(param);                   \
+        o << static_cast<const DAWN_PP_CONCATENATE(_Dawn_, StructName) &>(param);                  \
         return o;                                                                                  \
     }                                                                                              \
     static_assert(true, "require semicolon")
@@ -136,10 +136,11 @@ struct Placeholder {};
         StructName(Args&&... args) : DAWN_PP_CONCATENATE(_Dawn_, StructName) {                     \
             std::forward<Args>(args)...                                                            \
         }                                                                                          \
-        {}                                                                                         \
+        {                                                                                          \
+        }                                                                                          \
     };                                                                                             \
     inline std::ostream& operator<<(std::ostream& o, const StructName& param) {                    \
-        o << static_cast<const DAWN_PP_CONCATENATE(_Dawn_, StructName)&>(param);                   \
+        o << static_cast<const DAWN_PP_CONCATENATE(_Dawn_, StructName) &>(param);                  \
         return o;                                                                                  \
     }                                                                                              \
     static_assert(true, "require semicolon")
@@ -194,7 +195,7 @@ class ParamGenerator {
       public:
         using iterator_category = std::forward_iterator_tag;
         using value_type = ParamStruct;
-        using difference_type = size_t;
+        using difference_type = std::ptrdiff_t;
         using pointer = ParamStruct*;
         using reference = ParamStruct&;
 
@@ -213,6 +214,12 @@ class ParamGenerator {
             // Set a marker that the iterator has reached the end.
             mEnd = true;
             return *this;
+        }
+
+        Iterator operator++(int) {
+            Iterator old = *this;
+            ++(*this);
+            return old;
         }
 
         bool operator==(const Iterator& other) const {

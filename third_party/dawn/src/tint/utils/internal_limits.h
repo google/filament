@@ -50,6 +50,9 @@ constexpr int64_t kMaxSubgroupSize = 128;
 // A quad (fragment) is composed of four invocations.
 constexpr int64_t kQuadSize = 4;
 
+// A @size attribute maximum size
+constexpr int64_t kMaxStructMemberPadding = 10 * 1024 * 1024;
+
 }  // namespace tint::internal_limits
 
 #endif  // SRC_TINT_UTILS_INTERNAL_LIMITS_H_

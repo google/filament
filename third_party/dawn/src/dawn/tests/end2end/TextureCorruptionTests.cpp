@@ -399,6 +399,40 @@ DAWN_INSTANTIATE_TEST_P(TextureCorruptionTests_WidthAndHeight,
                         {kDefaultSampleCount},
                         {kDefaultWriteType});
 
+// Test for UINT16 overflow when calling ComputeExtraArraySizeForIntelGen12 as per
+// crbug.com/497565944.
+class TextureCorruptionTests_WidthAndHeight_IntelGen12 : public TextureCorruptionTests {
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
+        required.maxTextureArrayLayers = supported.maxTextureArrayLayers;
+    }
+};
+TEST_P(TextureCorruptionTests_WidthAndHeight_IntelGen12, Tests) {
+    wgpu::Limits limits;
+    device.GetLimits(&limits);
+    DAWN_SUPPRESS_TEST_IF(limits.maxTextureArrayLayers < 2048);
+
+    uint32_t width = GetParam().mTextureWidth;
+    uint32_t height = GetParam().mTextureHeight;
+    uint32_t depthOrArrayLayerCount = GetParam().mArrayLayerCount;
+    uint32_t mipLevelCount = GetParam().mMipLevelCount;
+    uint32_t sampleCount = GetParam().mSampleCount;
+    wgpu::Extent3D textureSize = {width, height, depthOrArrayLayerCount};
+    wgpu::TextureFormat format = GetParam().mTextureFormat;
+    // This should fail due to an OOM error.
+    ASSERT_DEVICE_ERROR(wgpu::Texture texture =
+                            Create2DTexture(textureSize, format, mipLevelCount, sampleCount));
+}
+DAWN_INSTANTIATE_TEST_P(TextureCorruptionTests_WidthAndHeight_IntelGen12,
+                        {D3D12Backend({"d3d12_allocate_extra_memory_for_2d_array_color_texture"})},
+                        {wgpu::TextureFormat::R16Uint},
+                        {1u},
+                        {8192u},
+                        {1793u},
+                        {kDefaultMipLevelCount},
+                        {kDefaultSampleCount},
+                        {WriteType::WriteTexture});
+
 class TextureCorruptionTests_ArrayLayer : public TextureCorruptionTests {};
 
 TEST_P(TextureCorruptionTests_ArrayLayer, Tests) {

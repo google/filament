@@ -1,0 +1,568 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "definitions": {
+        "Name": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9_]*[a-zA-Z0-9])?$"
+        },
+        "Value64": {
+            "oneOf": [
+                {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 18446744073709551615
+                },
+                {
+                    "type": "string",
+                    "enum": [
+                        "usize_max",
+                        "uint32_max",
+                        "uint64_max",
+                        "nan"
+                    ]
+                }
+            ]
+        },
+        "Value16": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+        },
+        "PrimitiveType": {
+            "type": "string",
+            "enum": [
+                "c_void",
+                "bool",
+                "nullable_string",
+                "string_with_default_empty",
+                "out_string",
+                "uint16",
+                "uint32",
+                "uint64",
+                "usize",
+                "int16",
+                "int32",
+                "float32",
+                "nullable_float32",
+                "float64",
+                "float64_supertype",
+                "array<bool>",
+                "array<string>",
+                "array<uint16>",
+                "array<uint32>",
+                "array<uint64>",
+                "array<usize>",
+                "array<int16>",
+                "array<int32>",
+                "array<float32>",
+                "array<float64>"
+            ]
+        },
+        "ComplexType": {
+            "type": "string",
+            "pattern": "^(array<)?(typedef\\.|enum\\.|bitflag\\.|struct\\.|function_type\\.|object\\.)([a-zA-Z0-9]([a-zA-Z0-9_]*[a-zA-Z0-9])?)(>)?$"
+        },
+        "CallbackType": {
+            "type": "string",
+            "pattern": "^(callback\\.)([a-zA-Z0-9]([a-zA-Z0-9_]*[a-zA-Z0-9])?)$"
+        },
+        "Type": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/PrimitiveType"
+                },
+                {
+                    "$ref": "#/definitions/ComplexType"
+                },
+                {
+                    "$ref": "#/definitions/CallbackType"
+                }
+            ]
+        },
+        "Pointer": {
+            "type": "string",
+            "enum": [
+                "immutable",
+                "mutable"
+            ]
+        },
+        "CallbackStyle": {
+            "type": "string",
+            "enum": [
+                "callback_mode",
+                "immediate"
+            ]
+        },
+        "Callback": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/Name",
+                    "description": "Callback name"
+                },
+                "namespace": {
+                    "$ref": "#/definitions/Name",
+                    "description": "Optional property, specifying the namespace where this callback is defined"
+                },
+                "doc": {
+                    "type": "string"
+                },
+                "style": {
+                    "$ref": "#/definitions/CallbackStyle",
+                    "description": "Callback style"
+                },
+                "args": {
+                    "type": "array",
+                    "description": "Optional property, list of callback arguments",
+                    "items": {
+                        "$ref": "#/definitions/FunctionParameterType"
+                    }
+                }
+            },
+            "required": [
+                "name",
+                "doc",
+                "style"
+            ]
+        },
+        "ParameterType": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/Name",
+                    "description": "Parameter name"
+                },
+                "doc": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/Type",
+                    "description": "Parameter type"
+                },
+                "passed_with_ownership": {
+                    "type": "boolean",
+                    "description": "Whether the value is passed with ownership or without ownership"
+                },
+                "pointer": {
+                    "$ref": "#/definitions/Pointer",
+                    "description": "Optional property, specifies if a parameter type is a pointer"
+                },
+                "optional": {
+                    "type": "boolean",
+                    "description": "Optional property, to indicate if a parameter is optional"
+                },
+                "default": {
+                    "type": [
+                        "string",
+                        "number",
+                        "boolean"
+                    ],
+                    "description": "Default value assigned to this parameter when using initializer macro. Special context-dependent values include constant names (`constant.*`), bitflag names (unprefixed), and `zero` for struct-zero-init (where zero-init is known to have the desired result)."
+                }
+            },
+            "required": [
+                "name",
+                "doc",
+                "type"
+            ]
+        },
+        "FunctionParameterType": {
+            "unevaluatedProperties": false,
+            "allOf": [
+                {
+                    "$ref": "#/definitions/ParameterType"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "doc": {
+                            "type": "string",
+                            "$comment": "Doxygen doesn't support multi-paragraph param docs (containing \\n\\n)",
+                            "pattern": "^\n?.+(\n.+)*\n?$"
+                        }
+                    }
+                }
+            ]
+        },
+        "Function": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/Name",
+                    "description": "Name of the function"
+                },
+                "namespace": {
+                    "$ref": "#/definitions/Name",
+                    "description": "Optional property, specifying the namespace where this function is defined"
+                },
+                "doc": {
+                    "type": "string"
+                },
+                "returns": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Optional property, return type of the function",
+                    "properties": {
+                        "doc": {
+                            "type": "string",
+                            "$comment": "Doxygen doesn't support multi-paragraph return docs (containing \\n\\n)",
+                            "pattern": "^$|^\n?.+(\n.+)*\n?$"
+                        },
+                        "type": {
+                            "$ref": "#/definitions/Type",
+                            "description": "Return type of the function"
+                        },
+                        "optional": {
+                            "type": "boolean",
+                            "description": "Indicates if the return type is optional/nullable"
+                        },
+                        "passed_with_ownership": {
+                            "type": "boolean",
+                            "description": "Whether the value is passed with ownership or without ownership"
+                        },
+                        "pointer": {
+                            "$ref": "#/definitions/Pointer",
+                            "description": "Optional property, specifies if a method return type is a pointer"
+                        }
+                    },
+                    "required": [
+                        "doc",
+                        "type"
+                    ]
+                },
+                "callback": {
+                    "$ref": "#/definitions/CallbackType",
+                    "description": "Optional property, callback type for async functon"
+                },
+                "args": {
+                    "type": "array",
+                    "description": "Optional property, list of function arguments",
+                    "items": {
+                        "$ref": "#/definitions/FunctionParameterType"
+                    }
+                }
+            },
+            "required": [
+                "name",
+                "doc"
+            ]
+        }
+    },
+    "properties": {
+        "copyright": {
+            "type": "string",
+            "description": "The license string to include at the top of the generated header"
+        },
+        "name": {
+            "$ref": "#/definitions/Name",
+            "description": "The name/namespace of the specification"
+        },
+        "enum_prefix": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 32767,
+            "description": "The dedicated enum prefix for the implementation specific header to avoid collisions"
+        },
+        "doc": {
+            "type": "string"
+        },
+        "typedefs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "An alias of a primitive type",
+                "properties": {
+                    "name": {
+                        "$ref": "#/definitions/Name"
+                    },
+                    "namespace": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Optional property, specifying the namespace where this typedef is defined"
+                    },
+                    "doc": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "$ref": "#/definitions/PrimitiveType"
+                    }
+                },
+                "required": [
+                    "name",
+                    "doc",
+                    "type"
+                ]
+            }
+        },
+        "constants": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Name of the constant variable/define"
+                    },
+                    "namespace": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Optional property, specifying the namespace where this constant is defined"
+                    },
+                    "value": {
+                        "$ref": "#/definitions/Value64",
+                        "description": "An enum of predefined max constants or a 64-bit unsigned integer, or float NaN value."
+                    },
+                    "doc": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "value",
+                    "doc"
+                ]
+            }
+        },
+        "enums": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Name of the enum"
+                    },
+                    "namespace": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Optional property, specifying the namespace where this enum is defined"
+                    },
+                    "doc": {
+                        "type": "string"
+                    },
+                    "extended": {
+                        "type": "boolean",
+                        "description": "Optional property, an indicator that this enum is an extension of an already present enum"
+                    },
+                    "entries": {
+                        "type": "array",
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "null",
+                                    "description": "Reserves a space in the enum numbering"
+                                },
+                                {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "name": {
+                                            "$ref": "#/definitions/Name",
+                                            "description": "Name of the enum entry"
+                                        },
+                                        "namespace": {
+                                            "$ref": "#/definitions/Name",
+                                            "description": "Optional property, specifying the namespace where this enum entry is defined, applying both its name prefix and its enum block"
+                                        },
+                                        "doc": {
+                                            "type": "string"
+                                        },
+                                        "value": {
+                                            "$ref": "#/definitions/Value16",
+                                            "description": "If specified, overrides the default value for the enum entry (which is its index in the list)"
+                                        }
+                                    },
+                                    "required": [
+                                        "name",
+                                        "doc"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "name",
+                    "doc"
+                ]
+            }
+        },
+        "bitflags": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Name of the bitflag"
+                    },
+                    "namespace": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Optional property, specifying the namespace where this bitflag is defined"
+                    },
+                    "doc": {
+                        "type": "string"
+                    },
+                    "extended": {
+                        "type": "boolean",
+                        "description": "Optional property, an indicator that this bitflag is an extension of an already present bitflag"
+                    },
+                    "entries": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "name": {
+                                    "$ref": "#/definitions/Name",
+                                    "description": "Name of the bitflag entry"
+                                },
+                                "namespace": {
+                                    "$ref": "#/definitions/Name",
+                                    "description": "Optional property, specifying the namespace where this bitmask entry is defined"
+                                },
+                                "doc": {
+                                    "type": "string"
+                                },
+                                "value": {
+                                    "$ref": "#/definitions/Value64",
+                                    "description": "Optional property, a 64-bit unsigned integer"
+                                },
+                                "value_combination": {
+                                    "type": "array",
+                                    "description": "Optional property, an array listing the names of bitflag entries to be OR-ed",
+                                    "items": {
+                                        "$ref": "#/definitions/Name"
+                                    }
+                                }
+                            },
+                            "required": [
+                                "name",
+                                "doc"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "name",
+                    "doc"
+                ]
+            }
+        },
+        "structs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Name of the structure"
+                    },
+                    "namespace": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Optional property, specifying the namespace where this struct is defined"
+                    },
+                    "doc": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Type of the structure",
+                        "enum": [
+                            "extensible",
+                            "extensible_callback_arg",
+                            "extension",
+                            "standalone"
+                        ]
+                    },
+                    "extends": {
+                        "type": "array",
+                        "description": "Optional property, list of names of the structs that this extension structure extends",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "free_members": {
+                        "type": "boolean",
+                        "description": "Optional property, to indicate if a free members function be emitted for the struct"
+                    },
+                    "members": {
+                        "type": "array",
+                        "description": "Optional property, list of struct members",
+                        "items": {
+                            "$ref": "#/definitions/ParameterType"
+                        }
+                    }
+                },
+                "required": [
+                    "name",
+                    "doc",
+                    "type"
+                ]
+            }
+        },
+        "callbacks": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/Callback"
+            }
+        },
+        "functions": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/Function"
+            }
+        },
+        "objects": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Name of the object"
+                    },
+                    "namespace": {
+                        "$ref": "#/definitions/Name",
+                        "description": "Optional property, specifying the namespace where this object is defined"
+                    },
+                    "doc": {
+                        "type": "string"
+                    },
+                    "extended": {
+                        "type": "boolean",
+                        "description": "Optional property, an indicator that this object is an extension of an already present object"
+                    },
+                    "methods": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/Function"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "required": [
+        "copyright",
+        "name",
+        "enum_prefix",
+        "doc",
+        "constants",
+        "typedefs",
+        "enums",
+        "bitflags",
+        "callbacks",
+        "structs",
+        "functions",
+        "objects"
+    ]
+}

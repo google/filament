@@ -28,12 +28,12 @@
 #include "src/tint/lang/wgsl/ls/serve.h"
 
 #include <stdio.h>
+
 #include <string>
 
 #include "langsvr/content_stream.h"
 #include "langsvr/lsp/lsp.h"
 #include "langsvr/session.h"
-
 #include "src/tint/lang/wgsl/ls/server.h"
 #include "src/tint/utils/macros/compiler.h"
 #include "src/tint/utils/macros/defer.h"
@@ -46,6 +46,7 @@
 
 #if WAIT_FOR_DEBUGGER
 #include <unistd.h>
+
 #include <thread>
 #endif
 

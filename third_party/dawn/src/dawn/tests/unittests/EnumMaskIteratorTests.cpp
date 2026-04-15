@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/native/EnumMaskIterator.h"
-
 #include "gtest/gtest.h"
 
 namespace dawn::native {

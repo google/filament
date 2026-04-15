@@ -41,40 +41,10 @@ class StructMember;
 
 namespace tint::sem {
 
-/// MemberAccessorExpression is the base class for all semantic information for a
-/// ast::MemberAccessorExpression node.
-class MemberAccessorExpression : public Castable<MemberAccessorExpression, AccessorExpression> {
-  public:
-    /// Destructor
-    ~MemberAccessorExpression() override;
-
-    /// @returns the AST node
-    const ast::MemberAccessorExpression* Declaration() const;
-
-  protected:
-    /// Constructor
-    /// @param declaration the AST node
-    /// @param type the resolved type of the expression
-    /// @param stage the earliest evaluation stage for the expression
-    /// @param statement the statement that owns this expression
-    /// @param constant the constant value of the expression. May be null.
-    /// @param object the object that holds the member being accessed
-    /// @param has_side_effects whether this expression may have side effects
-    /// @param root_ident the (optional) root identifier for this expression
-    MemberAccessorExpression(const ast::MemberAccessorExpression* declaration,
-                             const core::type::Type* type,
-                             core::EvaluationStage stage,
-                             const Statement* statement,
-                             const core::constant::Value* constant,
-                             const ValueExpression* object,
-                             bool has_side_effects,
-                             const Variable* root_ident = nullptr);
-};
-
 /// StructMemberAccess holds the semantic information for a
 /// ast::MemberAccessorExpression node that represents an access to a structure
 /// member.
-class StructMemberAccess final : public Castable<StructMemberAccess, MemberAccessorExpression> {
+class StructMemberAccess final : public Castable<StructMemberAccess, AccessorExpression> {
   public:
     /// Constructor
     /// @param declaration the AST node
@@ -83,7 +53,6 @@ class StructMemberAccess final : public Castable<StructMemberAccess, MemberAcces
     /// @param constant the constant value of the expression. May be null
     /// @param object the object that holds the member being accessed
     /// @param member the structure member
-    /// @param has_side_effects whether this expression may have side effects
     /// @param root_ident the (optional) root identifier for this expression
     StructMemberAccess(const ast::MemberAccessorExpression* declaration,
                        const core::type::Type* type,
@@ -91,7 +60,6 @@ class StructMemberAccess final : public Castable<StructMemberAccess, MemberAcces
                        const core::constant::Value* constant,
                        const ValueExpression* object,
                        const core::type::StructMember* member,
-                       bool has_side_effects,
                        const Variable* root_ident = nullptr);
 
     /// Destructor
@@ -106,7 +74,7 @@ class StructMemberAccess final : public Castable<StructMemberAccess, MemberAcces
 
 /// Swizzle holds the semantic information for a ast::MemberAccessorExpression
 /// node that represents a vector swizzle.
-class Swizzle final : public Castable<Swizzle, MemberAccessorExpression> {
+class Swizzle final : public Castable<Swizzle, AccessorExpression> {
   public:
     /// Constructor
     /// @param declaration the AST node
@@ -115,7 +83,6 @@ class Swizzle final : public Castable<Swizzle, MemberAccessorExpression> {
     /// @param constant the constant value of the expression. May be null
     /// @param object the object that holds the member being accessed
     /// @param indices the swizzle indices
-    /// @param has_side_effects whether this expression may have side effects
     /// @param root_ident the (optional) root identifier for this expression
     Swizzle(const ast::MemberAccessorExpression* declaration,
             const core::type::Type* type,
@@ -123,7 +90,6 @@ class Swizzle final : public Castable<Swizzle, MemberAccessorExpression> {
             const core::constant::Value* constant,
             const ValueExpression* object,
             VectorRef<uint32_t> indices,
-            bool has_side_effects,
             const Variable* root_ident = nullptr);
 
     /// Destructor

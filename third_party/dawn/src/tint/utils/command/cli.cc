@@ -148,7 +148,7 @@ Result<OptionSet::Unconsumed> OptionSet::Parse(VectorRef<std::string_view> argum
     // Canonicalize arguments by splitting '--foo=x' into '--foo' 'x'.
     std::deque<std::string_view> arguments;
     for (auto arg : arguments_raw) {
-        if (HasPrefix(arg, "-")) {
+        if (arg.starts_with("-")) {
             if (auto eq_idx = arg.find("="); eq_idx != std::string_view::npos) {
                 arguments.push_back(arg.substr(0, eq_idx));
                 arguments.push_back(arg.substr(eq_idx + 1));
@@ -182,7 +182,7 @@ Result<OptionSet::Unconsumed> OptionSet::Parse(VectorRef<std::string_view> argum
             tint::SuggestAlternativeOptions opts;
             opts.prefix = "--";
             opts.list_possible_values = false;
-            SuggestAlternatives(arg, alternatives.Slice(), err, opts);
+            SuggestAlternatives(arg, alternatives.AsSpan(), err, opts);
             return Failure{err.Plain()};
         }
     }

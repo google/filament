@@ -88,6 +88,8 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <vulkan/vulkan_core.h>
+
 #include "vk_loader_platform.h"
 
 /* cJSON Types: */
@@ -103,10 +105,6 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 
 #define cJSON_IsReference 256
 #define cJSON_StringIsConst 512
-
-/* loader type declarations for allocation hooks */
-typedef struct VkAllocationCallbacks VkAllocationCallbacks;
-struct loader_instance;
 
 /* The cJSON structure: */
 typedef struct cJSON {
@@ -129,7 +127,7 @@ typedef struct cJSON {
     /* The item's name string, if this item is the child of, or is in the list of subitems of an object. */
     char *string;
     /* pointer to the allocation callbacks to use */
-    const VkAllocationCallbacks *pAllocator;
+    const struct VkAllocationCallbacks *pAllocator;
 } cJSON;
 
 typedef int cJSON_bool;
@@ -146,22 +144,23 @@ typedef int cJSON_bool;
 #define CJSON_CIRCULAR_LIMIT 10000
 #endif
 
-/* Memory Management: the caller is always responsible to free instthe results from all variants of loader_cJSON_Parse (with
+/* Memory Management: the caller is always responsible to free the results from all variants of loader_cJSON_Parse (with
  * loader_cJSON_Delete) and loader_loader_cJSON_Print (with stdlib free, cJSON_Hooks.free_fn, or cJSON_free as appropriate). The
  * exception is cJSON_PrintPreallocated, where the caller has full responsibility of the buffer. */
 /* Supply a block of JSON, and this returns a cJSON object you can interrogate. */
-CJSON_PUBLIC(cJSON *) loader_cJSON_Parse(const VkAllocationCallbacks *pAllocator, const char *value, bool *out_of_memory);
+CJSON_PUBLIC(cJSON *) loader_cJSON_Parse(const struct VkAllocationCallbacks *pAllocator, const char *value, bool *out_of_memory);
 CJSON_PUBLIC(cJSON *)
-loader_cJSON_ParseWithLength(const VkAllocationCallbacks *pAllocator, const char *value, size_t buffer_length, bool *out_of_memory);
+loader_cJSON_ParseWithLength(const struct VkAllocationCallbacks *pAllocator, const char *value, size_t buffer_length,
+                             bool *out_of_memory);
 /* ParseWithOpts allows you to require (and check) that the JSON is null terminated, and to retrieve the pointer to the final byte
  * parsed. */
 /* If you supply a ptr in return_parse_end and parsing fails, then return_parse_end will contain a pointer to the error so will
  * match cJSON_GetErrorPtr(). */
 CJSON_PUBLIC(cJSON *)
-loader_cJSON_ParseWithOpts(const VkAllocationCallbacks *pAllocator, const char *value, const char **return_parse_end,
+loader_cJSON_ParseWithOpts(const struct VkAllocationCallbacks *pAllocator, const char *value, const char **return_parse_end,
                            cJSON_bool require_null_terminated, bool *out_of_memory);
 CJSON_PUBLIC(cJSON *)
-loader_cJSON_ParseWithLengthOpts(const VkAllocationCallbacks *pAllocator, const char *value, size_t buffer_length,
+loader_cJSON_ParseWithLengthOpts(const struct VkAllocationCallbacks *pAllocator, const char *value, size_t buffer_length,
                                  const char **return_parse_end, cJSON_bool require_null_terminated, bool *out_of_memory);
 
 /* Render a cJSON entity to text for transfer/storage. */

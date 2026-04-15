@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "dawn/tests/DawnTest.h"
-
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 
@@ -140,7 +139,8 @@ DAWN_INSTANTIATE_TEST(DrawIndirectTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class DrawIndirectUsingFirstVertexTest : public DawnTest {
   protected:
@@ -258,9 +258,6 @@ class DrawIndirectUsingFirstVertexTest : public DawnTest {
 };
 
 TEST_P(DrawIndirectUsingFirstVertexTest, IndirectOffset) {
-    // Won't fix for OpenGLES + ANGLE D3D11
-    DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
-
     // Test an offset draw call, with indirect buffer containing 2 calls:
     // 1) only the first 3 indices (bottom left triangle)
     // 2) only the last 3 indices (top right triangle)

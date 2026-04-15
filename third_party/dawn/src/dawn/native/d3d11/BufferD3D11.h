@@ -34,10 +34,12 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
+#include "dawn/common/Atomic.h"
 #include "dawn/common/ityp_array.h"
 #include "dawn/native/Buffer.h"
 #include "dawn/native/d3d/d3d_platform.h"
 #include "dawn/native/d3d11/Forward.h"
+#include "dawn/native/d3d11/QueueD3D11.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native::d3d11 {
@@ -83,13 +85,18 @@ class Buffer : public BufferBase {
                            Buffer* destination,
                            uint64_t destinationOffset);
 
-    // Actually map the buffer when its last usage serial has passed.
-    MaybeError FinalizeMap(ScopedCommandRecordingContext* commandContext,
-                           ExecutionSerial completedSerial,
-                           wgpu::MapMode mode);
+    // Attempt to do a scheduled map.
+    MaybeError TryMapNow(ScopedCommandRecordingContext* commandContext,
+                         ExecutionSerial completedSerial,
+                         wgpu::MapMode mode);
 
     bool IsCPUWritable() const;
     bool IsCPUReadable() const;
+
+    MaybeError UnmapIfNeeded(const ScopedCommandRecordingContext* commandContext);
+
+    MaybeError TrackUsage(const ScopedCommandRecordingContext* commandContext,
+                          ExecutionSerial pendingSerial);
 
     // This performs GPU Clear. Unlike Clear(), this will always be affected by ID3D11Predicate.
     // Whereas Clear() might be unaffected by ID3D11Predicate if it's pure CPU clear.
@@ -103,7 +110,8 @@ class Buffer : public BufferBase {
     virtual MaybeError WriteInternal(const ScopedCommandRecordingContext* commandContext,
                                      uint64_t bufferOffset,
                                      const void* data,
-                                     size_t size) = 0;
+                                     size_t size,
+                                     bool isInitialWrite) = 0;
     // Copy this buffer to the destination without checking if the buffer is initialized.
     virtual MaybeError CopyToInternal(const ScopedCommandRecordingContext* commandContext,
                                       uint64_t sourceOffset,
@@ -149,10 +157,11 @@ class Buffer : public BufferBase {
   protected:
     Buffer(DeviceBase* device,
            const UnpackedPtr<BufferDescriptor>& descriptor,
-           wgpu::BufferUsage internalMappableFlags);
+           wgpu::BufferUsage internalMappableFlags,
+           wgpu::MapMode autoMapMode);
     ~Buffer() override;
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     virtual MaybeError InitializeInternal() = 0;
 
@@ -170,23 +179,35 @@ class Buffer : public BufferBase {
 
     virtual MaybeError ClearPaddingInternal(const ScopedCommandRecordingContext* commandContext);
 
-    raw_ptr<uint8_t, AllowPtrArithmetic> mMappedData = nullptr;
+    virtual ComPtr<ID3D11Buffer> GetD3D11MappedBuffer();
+
+    Atomic<uint8_t*, std::memory_order::relaxed> mMappedData{nullptr};
 
   private:
     MaybeError Initialize(bool mappedAtCreation,
                           const ScopedCommandRecordingContext* commandContext);
-    MaybeError ClearInitialResource(const ScopedCommandRecordingContext* commandContext);
     MaybeError MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) override;
-    void UnmapImpl() override;
+    MaybeError FinalizeMapImpl(BufferState newState) override;
+    void UnmapImpl(BufferState oldState, BufferState newState) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
     void* GetMappedPointerImpl() override;
+    std::optional<DeviceGuard> UseDeviceGuardForDestroy() override;
 
     MaybeError InitializeToZero(const ScopedCommandRecordingContext* commandContext);
+    MaybeError EnsurePaddingInitialized(const ScopedCommandRecordingContext* commandContext);
 
     // Internal usage indicating the native buffer supports mapping for read and/or write or not.
     const wgpu::BufferUsage mInternalMappableFlags;
-    ExecutionSerial mMapReadySerial = kMaxExecutionSerial;
+    const wgpu::MapMode mAutoMapMode;
+    // Track whether padding bytes have been cleared to zero.
+    bool mPaddingCleared = false;
+    // Temporary storage for MapAtCreation when the lock cannot be acquired.
+    std::unique_ptr<uint8_t[]> mMapAtCreationData;
+
+    // A buffer can only have one scheduled map request at a time, so we embed the request object
+    // here to avoid heap allocations.
+    Queue::BufferMapRequest mMapRequest{this, wgpu::MapMode::None};
 };
 
 // Buffer that can be used by GPU. It manages several copies of the buffer, each with its own
@@ -200,9 +221,7 @@ class Buffer : public BufferBase {
 // TODO(349848481): Consider making this the only Buffer class since it could cover all use cases.
 class GPUUsableBuffer final : public Buffer {
   public:
-    GPUUsableBuffer(DeviceBase* device,
-                    const UnpackedPtr<BufferDescriptor>& descriptor,
-                    D3D11_MAP mapWriteMode);
+    GPUUsableBuffer(DeviceBase* device, const UnpackedPtr<BufferDescriptor>& descriptor);
     ~GPUUsableBuffer() override;
 
     ResultOrError<ID3D11Buffer*> GetD3D11ConstantBuffer(
@@ -232,7 +251,7 @@ class GPUUsableBuffer final : public Buffer {
     class Storage;
 
     // Dawn API
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     void SetLabelImpl() override;
 
     MaybeError InitializeInternal() override;
@@ -254,7 +273,10 @@ class GPUUsableBuffer final : public Buffer {
     MaybeError WriteInternal(const ScopedCommandRecordingContext* commandContext,
                              uint64_t bufferOffset,
                              const void* data,
-                             size_t size) override;
+                             size_t size,
+                             bool isInitialWrite) override;
+
+    ComPtr<ID3D11Buffer> GetD3D11MappedBuffer() override;
 
     ResultOrError<ComPtr<ID3D11ShaderResourceView>> CreateD3D11ShaderResourceViewFromD3DBuffer(
         ID3D11Buffer* d3d11Buffer,
@@ -278,8 +300,9 @@ class GPUUsableBuffer final : public Buffer {
     // - Since D3D11 constant buffer cannot be bound for other purposes (e.g. vertex, storage, etc),
     //   we also need a separate storage for constant buffer and one storage for non-constant buffer
     //   purpose. Note: constant buffer's only supported GPU writing operation is CopyDst.
-    // - Lastly, we need a separate storage for MapRead because only D3D11 staging buffer can be
-    //   read by CPU.
+    // - Lastly, we usually need a separate staging storage for CPU reads.
+    // - When MapOnDefaultBuffers is supported and the usage is compatible, mappable and GPU
+    //   writable paths can alias a single D3D11 default-buffer storage.
     //
     // One example of a buffer being created with MapWrite | Uniform | Storage and being used:
     // - Map + CPU write: `CPUWritableConstantBuffer` gets updated.
@@ -305,6 +328,8 @@ class GPUUsableBuffer final : public Buffer {
         GPUWritableNonConstantBuffer,
         // Storage for staging usage,
         Staging,
+        // Storage shared by mappable and GPU writable paths when MapOnDefaultBuffers is used.
+        MappableAndGPUWritable,
 
         Count,
     };
@@ -329,17 +354,17 @@ class GPUUsableBuffer final : public Buffer {
 
     // The storage contains most up-to-date content.
     raw_ptr<Storage> mLastUpdatedStorage;
-    // This points to either CPU writable constant buffer or CPU writable non-constant buffer. We
-    // don't need both to exist.
-    raw_ptr<Storage> mCPUWritableStorage;
-    raw_ptr<Storage> mMappedStorage;
+    // This points to either CPU writable constant buffer, CPU writable non-constant buffer,
+    // staging buffer, or the shared MappableAndGPUWritable storage. We don't need multiple CPU
+    // writable buffers to exist.
+    raw_ptr<Storage> mMappableStorage;
 
     // TODO(dawn:381045722): Use LRU to limit number of cached entries.
     using BufferViewKey = std::tuple<ID3D11Buffer*, uint64_t, uint64_t>;
     absl::flat_hash_map<BufferViewKey, ComPtr<ID3D11ShaderResourceView>> mSRVCache;
     absl::flat_hash_map<BufferViewKey, ComPtr<ID3D11UnorderedAccessView1>> mUAVCache;
 
-    const D3D11_MAP mD3DMapWriteMode = D3D11_MAP_WRITE;
+    D3D11_MAP mD3DMapTypeUsed = D3D11_MAP_WRITE;
 };
 
 static inline GPUUsableBuffer* ToGPUUsableBuffer(BufferBase* buffer) {

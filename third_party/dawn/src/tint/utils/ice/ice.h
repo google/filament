@@ -85,6 +85,10 @@ class InternalCompilerError {
     /// @returns the ICE file, line and message
     std::string Error() const;
 
+    /// This operator overload exists so that we can use an InternalCompilerError object on the
+    /// right-hand side of a short-circuiting operator, which is how the TINT_ASSERT macro works.
+    operator bool() const { return false; }
+
   private:
     InternalCompilerError(const InternalCompilerError&) = delete;
     InternalCompilerError(InternalCompilerError&&) = delete;
@@ -115,13 +119,10 @@ class InternalCompilerError {
 #define TINT_UNIMPLEMENTED(...) TINT_ICE(__VA_ARGS__) << "TINT_UNIMPLEMENTED "
 
 /// TINT_ASSERT() is a macro for checking the expression is true, triggering a TINT_ICE if it is
-/// not. The ICE message contains the callsite's file and line. An optional callback can be provided
-/// so that the user of Tint can capture the ICE before crashing.
-#define TINT_ASSERT(condition, ...)                                 \
-    do {                                                            \
-        if (DAWN_UNLIKELY(!(condition))) {                          \
-            TINT_ICE(__VA_ARGS__) << "TINT_ASSERT(" #condition ")"; \
-        }                                                           \
-    } while (false)
+/// not. The ICE message contains the callsite's file and line. Use the `<<` operator to append an
+/// error message to the ICE. An optional callback can be provided so that the user of Tint can
+/// capture the ICE before crashing.
+#define TINT_ASSERT(condition, ...) \
+    DAWN_LIKELY((condition)) || TINT_ICE(__VA_ARGS__) << "TINT_ASSERT(" #condition ") "
 
 #endif  // SRC_TINT_UTILS_ICE_ICE_H_

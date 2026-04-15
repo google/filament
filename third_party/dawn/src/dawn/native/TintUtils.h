@@ -32,11 +32,12 @@
 #include <unordered_map>
 
 #include "dawn/common/NonCopyable.h"
+#include "dawn/native/BindGroupLayoutInternal.h"
 #include "dawn/native/BindingInfo.h"
 #include "dawn/native/IntegerTypes.h"
+#include "dawn/native/PipelineLayout.h"
 #include "dawn/native/ShaderModule.h"
 #include "dawn/native/stream/Stream.h"
-
 #include "tint/tint.h"
 
 namespace dawn::native {
@@ -78,12 +79,106 @@ class Stream<T> {
 };
 }  // namespace stream
 
-constexpr tint::BindingPoint ToTint(const BindingSlot& slot) {
-    return {static_cast<uint32_t>(slot.group), static_cast<uint32_t>(slot.binding)};
+constexpr tint::BindingPoint ToTint(const WGSLBindPoint& b) {
+    return {static_cast<uint32_t>(b.group), static_cast<uint32_t>(b.binding)};
 }
 
-constexpr BindingSlot FromTint(const tint::BindingPoint& tintBindingPoint) {
-    return {{BindGroupIndex(tintBindingPoint.group), BindingNumber(tintBindingPoint.binding)}};
+constexpr WGSLBindPoint FromTint(const tint::BindingPoint& tintBindingPoint) {
+    return {BindGroupIndex(tintBindingPoint.group), BindingNumber(tintBindingPoint.binding)};
+}
+
+// Helper function to generate the binding remapping information for Tint compilation. Each backend
+// remaps the group + BindingIndex to a BindingPoint differently using the `BindingPointFor`
+// function passed as argument.
+template <typename F>
+concept ConvertsBindingIndexToBindingPoint = requires(F f, BindGroupIndex group, BindingIndex i) {
+    { f(group, i) } -> std::same_as<tint::BindingPoint>;
+};
+template <ConvertsBindingIndexToBindingPoint F>
+tint::Bindings GenerateBindingRemapping(const PipelineLayoutBase* layout,
+                                        SingleShaderStage stage,
+                                        F&& BindingPointFor) {
+    tint::Bindings bindings;
+
+    for (BindGroupIndex group : layout->GetBindGroupLayoutsMask()) {
+        const BindGroupLayoutInternalBase* bgl = layout->GetBindGroupLayout(group);
+
+        for (const auto& [bindingNumber, apiBindingIndex] : bgl->GetBindingMap()) {
+            if (!(bgl->GetAPIBindingInfo(apiBindingIndex).visibility & StageBit(stage))) {
+                continue;
+            }
+
+            tint::BindingPoint srcBindingPoint{
+                .group = uint32_t(group),
+                .binding = uint32_t(bindingNumber),
+            };
+
+            MatchVariant(
+                bgl->GetAPIBindingInfo(apiBindingIndex).bindingLayout,
+                [&](const BufferBindingInfo& bindingInfo) {
+                    tint::BindingPoint dstBindingPoint =
+                        BindingPointFor(group, bgl->AsBindingIndex(apiBindingIndex));
+                    switch (bindingInfo.type) {
+                        case wgpu::BufferBindingType::Uniform:
+                            bindings.uniform.emplace(srcBindingPoint, dstBindingPoint);
+                            break;
+                        case kInternalStorageBufferBinding:
+                        case wgpu::BufferBindingType::Storage:
+                        case wgpu::BufferBindingType::ReadOnlyStorage:
+                        case kInternalReadOnlyStorageBufferBinding:
+                            bindings.storage.emplace(srcBindingPoint, dstBindingPoint);
+                            break;
+                        case wgpu::BufferBindingType::BindingNotUsed:
+                        case wgpu::BufferBindingType::Undefined:
+                            DAWN_UNREACHABLE();
+                            break;
+                    }
+                },
+                [&](const SamplerBindingInfo& bindingInfo) {
+                    bindings.sampler.emplace(
+                        srcBindingPoint,
+                        BindingPointFor(group, bgl->AsBindingIndex(apiBindingIndex)));
+                },
+                [&](const StaticSamplerBindingInfo& bindingInfo) {
+                    bindings.sampler.emplace(
+                        srcBindingPoint,
+                        BindingPointFor(group, bgl->AsBindingIndex(apiBindingIndex)));
+                },
+                [&](const TextureBindingInfo& bindingInfo) {
+                    bindings.texture.emplace(
+                        srcBindingPoint,
+                        BindingPointFor(group, bgl->AsBindingIndex(apiBindingIndex)));
+                },
+                [&](const StorageTextureBindingInfo& bindingInfo) {
+                    bindings.storage_texture.emplace(
+                        srcBindingPoint,
+                        BindingPointFor(group, bgl->AsBindingIndex(apiBindingIndex)));
+                },
+                [&](const InputAttachmentBindingInfo&) {
+                    bindings.input_attachment.emplace(
+                        srcBindingPoint,
+                        BindingPointFor(group, bgl->AsBindingIndex(apiBindingIndex)));
+                },
+                [&](const TexelBufferBindingInfo&) {
+                    bindings.texel_buffer.emplace(
+                        srcBindingPoint,
+                        BindingPointFor(group, bgl->AsBindingIndex(apiBindingIndex)));
+                },
+                [&](const ExternalTextureBindingInfo& bindingInfo) {
+                    // TODO(491363837): Add YCBCR texture information as tint::ExternalYCBCRTexture
+                    // data
+
+                    bindings.external_texture.emplace(
+                        srcBindingPoint,
+                        tint::ExternalMultiplanarTexture{
+                            .metadata = BindingPointFor(group, bindingInfo.metadata),
+                            .plane0 = BindingPointFor(group, bindingInfo.plane0),
+                            .plane1 = BindingPointFor(group, bindingInfo.plane1)});
+                });
+        }
+    }
+
+    return bindings;
 }
 
 }  // namespace dawn::native

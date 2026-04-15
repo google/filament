@@ -79,7 +79,7 @@ class TextureViewTestBase : public DawnTest {
 
         // Only set the textureBindingViewDimension in compat mode. It's not needed
         // nor used in non-compat.
-        wgpu::TextureBindingViewDimensionDescriptor textureBindingViewDimensionDesc;
+        wgpu::TextureBindingViewDimension textureBindingViewDimensionDesc;
         if (!HasFlexibleTextureViews()) {
             textureBindingViewDimensionDesc.textureBindingViewDimension =
                 textureBindingViewDimension;
@@ -899,6 +899,10 @@ TEST_P(TextureViewRenderingTest, SRGBReinterpretationRenderAttachment) {
     // View format reinterpretation is unsupported in Compatibility mode.
     DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode());
 
+    // TODO(crbug.com/473890413): [Capture] validation error: attachment state of pipeline not
+    // compatible with pass.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     // Test will render into an SRGB view
     wgpu::TextureViewDescriptor viewDesc = {};
     viewDesc.format = wgpu::TextureFormat::RGBA8UnormSrgb;
@@ -1004,6 +1008,16 @@ TEST_P(TextureViewRenderingTest, SRGBReinterpretationRenderAttachment) {
 TEST_P(TextureViewRenderingTest, SRGBReinterpretionResolveAttachment) {
     // View format reinterpretation is unsupported in Compatibility mode.
     DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode());
+
+    // TODO(crbug.com/468047552): Fails on Win11/NVIDIA GTX 1660.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsNvidia() && IsD3D12() && IsBackendValidationEnabled());
+
+    // TODO(crbug.com/468047552): Fails on Win11/AMD RX 5500 XT.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
+    // TODO(crbug.com/473890413): [Capture] validation error: attachment state of pipeline not
+    // compatible with pass.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
 
     // Test will resolve into an SRGB view
     wgpu::TextureViewDescriptor viewDesc = {};
@@ -1119,7 +1133,8 @@ DAWN_INSTANTIATE_TEST(TextureViewSamplingTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 DAWN_INSTANTIATE_TEST(TextureViewRenderingTest,
                       D3D11Backend(),
@@ -1129,7 +1144,8 @@ DAWN_INSTANTIATE_TEST(TextureViewRenderingTest,
                       MetalBackend({"emulate_store_and_msaa_resolve"}),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class TextureViewTest : public DawnTest {};
 
@@ -1168,7 +1184,8 @@ DAWN_INSTANTIATE_TEST(TextureViewTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class TextureView3DTest : public TextureViewTestBase {};
 
@@ -1184,7 +1201,8 @@ DAWN_INSTANTIATE_TEST(TextureView3DTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class TextureView1DTest : public DawnTest {};
 
@@ -1256,9 +1274,10 @@ DAWN_INSTANTIATE_TEST(TextureView1DTest,
                       D3D11Backend(),
                       D3D12Backend(),
                       MetalBackend(),
-                      VulkanBackend(),
                       OpenGLBackend(),
-                      OpenGLESBackend());
+                      OpenGLESBackend(),
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

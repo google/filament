@@ -25,6 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/tests/unittests/validation/ValidationTest.h"
+
 #include <webgpu/webgpu.h>
 
 #include <algorithm>
@@ -40,7 +42,6 @@
 #include "dawn/tests/PartitionAllocSupport.h"
 #include "dawn/tests/StringViewMatchers.h"
 #include "dawn/tests/ToggleParser.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
 #include "dawn/utils/WireHelper.h"
 #include "dawn/webgpu_cpp_print.h"
 
@@ -129,7 +130,7 @@ ValidationTest::ValidationTest() {
              new WGPURequestAdapterCallbackInfo(callbackInfo), nullptr});
     };
 
-    // Forward to dawn::native instanceRequestAdapter, but save the returned backend device in
+    // Forward to dawn::native adapterRequestDevice, but save the returned backend device in
     // gCurrentTest->mLastCreatedBackendDevice.
     procs.adapterRequestDevice = [](WGPUAdapter self, const WGPUDeviceDescriptor* descriptor,
                                     WGPURequestDeviceCallbackInfo callbackInfo) -> WGPUFuture {
@@ -191,8 +192,14 @@ void ValidationTest::SetUp() {
         instanceToggles.enabledToggles = &allowUnsafeApisToggle;
     }
 
+    dawn::native::DawnWGSLBlocklist blockList;
+    auto blocklistedFeatures = GetWGSLBlocklistedFeatures();
+    blockList.blocklistedFeatureCount = blocklistedFeatures.size();
+    blockList.blocklistedFeatures = blocklistedFeatures.data();
+    blockList.nextInChain = &instanceToggles;
+
     wgpu::InstanceDescriptor instanceDesc = {};
-    instanceDesc.nextInChain = &instanceToggles;
+    instanceDesc.nextInChain = &blockList;
     static constexpr auto kRequiredFeatures =
         std::array{wgpu::InstanceFeatureName::MultipleDevicesPerAdapter,
                    wgpu::InstanceFeatureName::ShaderSourceSPIRV};
@@ -253,6 +260,23 @@ std::string ValidationTest::GetLastDeviceErrorMessage() const {
     return mDeviceErrorMessage;
 }
 
+void ValidationTest::StartExpectDeviceLog(wgpu::LoggingType type,
+                                          testing::Matcher<std::string> message) {
+    mExpectLog = std::tuple(type, message);
+    mGotLog = false;
+}
+bool ValidationTest::EndExpectDeviceLog() {
+    mExpectLog.reset();
+    return mGotLog;
+}
+
+void ValidationTest::StartExpectNoDeviceLog() {
+    mExpectLog = std::tuple(kExpectNoLog, testing::_);
+}
+void ValidationTest::EndExpectNoDeviceLog() {
+    mExpectLog.reset();
+}
+
 void ValidationTest::ExpectDeviceDestruction() {
     mExpectDestruction = true;
 }
@@ -263,16 +287,10 @@ bool ValidationTest::UsesWire() const {
 
 void ValidationTest::FlushWire() {
     EXPECT_TRUE(mWireHelper->FlushClient());
-    EXPECT_TRUE(mWireHelper->FlushServer());
 }
 
 void ValidationTest::WaitForAllOperations() {
-    do {
-        FlushWire();
-        if (UsesWire()) {
-            instance.ProcessEvents();
-        }
-    } while (dawn::native::InstanceProcessEvents(mDawnInstance->Get()) || !mWireHelper->IsIdle());
+    mWireHelper->WaitUntilIdle(mDawnInstance.get(), instance);
 }
 
 const dawn::native::ToggleInfo* ValidationTest::GetToggleInfo(const char* name) const {
@@ -309,6 +327,10 @@ std::vector<const char*> ValidationTest::GetDisabledToggles() {
     return {};
 }
 
+std::vector<const char*> ValidationTest::GetWGSLBlocklistedFeatures() {
+    return {};
+}
+
 dawn::utils::WireHelper* ValidationTest::GetWireHelper() const {
     return mWireHelper.get();
 }
@@ -317,34 +339,20 @@ uint64_t ValidationTest::GetInstanceDeprecationCountForTesting() {
     return mDawnInstance->GetDeprecationWarningCountForTesting();
 }
 
-uint32_t ValidationTest::GetDeviceCreationDeprecationWarningExpectation(
-    const wgpu::DeviceDescriptor& descriptor) {
-    uint32_t expectedDeprecatedCount = 0;
-
-    std::unordered_set<wgpu::FeatureName> requiredFeatureSet;
-    for (uint32_t i = 0; i < descriptor.requiredFeatureCount; ++i) {
-        requiredFeatureSet.insert(descriptor.requiredFeatures[i]);
-    }
-
-    return expectedDeprecatedCount;
-}
-
 wgpu::Device ValidationTest::RequestDeviceSync(const wgpu::DeviceDescriptor& deviceDesc) {
     DAWN_ASSERT(adapter);
 
     wgpu::Device apiDevice;
-    EXPECT_DEPRECATION_WARNINGS(
-        adapter.RequestDevice(&deviceDesc, wgpu::CallbackMode::AllowSpontaneous,
-                              [&apiDevice](wgpu::RequestDeviceStatus status, wgpu::Device result,
-                                           wgpu::StringView message) {
-                                  if (status != wgpu::RequestDeviceStatus::Success) {
-                                      ADD_FAILURE() << "Unable to create device: " << message;
-                                      DAWN_ASSERT(false);
-                                  }
-                                  apiDevice = std::move(result);
-                              }),
-        GetDeviceCreationDeprecationWarningExpectation(deviceDesc));
-
+    adapter.RequestDevice(&deviceDesc, wgpu::CallbackMode::AllowSpontaneous,
+                          [&apiDevice](wgpu::RequestDeviceStatus status, wgpu::Device result,
+                                       wgpu::StringView message) {
+                              if (status != wgpu::RequestDeviceStatus::Success) {
+                                  ADD_FAILURE() << "Unable to create device: " << message;
+                                  DAWN_ASSERT(false);
+                              }
+                              apiDevice = std::move(result);
+                          });
+    FlushWire();
     DAWN_ASSERT(apiDevice);
     return apiDevice;
 }
@@ -420,6 +428,22 @@ void ValidationTest::SetUp(const wgpu::InstanceDescriptor* nativeDesc,
 
     device = RequestDeviceSync(deviceDescriptor);
     DAWN_ASSERT(device);
+    device.SetLoggingCallback(
+        [](wgpu::LoggingType type, wgpu::StringView message, ValidationTest* self) {
+            // Note we ignore all logs that happen outside of ASSERT_(NO_)DEVICE_LOG.
+            if (self->mExpectLog) {
+                const auto& [expectedType, expectedMessage] = self->mExpectLog.value();
+                if (expectedType == kExpectNoLog) {
+                    FAIL() << "Unexpected log during ASSERT_NO_DEVICE_LOG:\n" << message;
+                } else {
+                    ASSERT_EQ(type, expectedType);
+                    ASSERT_THAT(message, testing::SizedStringMatches(expectedMessage));
+                    self->mGotLog = true;
+                }
+            }
+        },
+        this);
+
     device.GetLimits(deviceLimits.GetLinked());
 
     // We only want to set the backendDevice when the device was created via the test setup.

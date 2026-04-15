@@ -65,8 +65,8 @@ TEST_F(ForLoopStatementTest, Creation_Null_InitCondCont) {
 }
 
 TEST_F(ForLoopStatementTest, Creation_WithAttributes) {
-    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "foo");
-    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "bar");
+    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("foo"));
+    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("bar"));
     auto* body = Block(Return());
     auto* l = For(nullptr, nullptr, nullptr, body, tint::Vector{attr1, attr2});
 
@@ -78,46 +78,6 @@ TEST_F(ForLoopStatementDeathTest, Assert_Null_Body) {
         {
             ProgramBuilder b;
             b.For(nullptr, nullptr, nullptr, nullptr);
-        },
-        "internal compiler error");
-}
-
-TEST_F(ForLoopStatementDeathTest, Assert_DifferentGenerationID_Initializer) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.For(b2.Block(), nullptr, nullptr, b1.Block());
-        },
-        "internal compiler error");
-}
-
-TEST_F(ForLoopStatementDeathTest, Assert_DifferentGenerationID_Condition) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.For(nullptr, b2.Expr(true), nullptr, b1.Block());
-        },
-        "internal compiler error");
-}
-
-TEST_F(ForLoopStatementDeathTest, Assert_DifferentGenerationID_Continuing) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.For(nullptr, nullptr, b2.Block(), b1.Block());
-        },
-        "internal compiler error");
-}
-
-TEST_F(ForLoopStatementDeathTest, Assert_DifferentGenerationID_Body) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.For(nullptr, nullptr, nullptr, b2.Block());
         },
         "internal compiler error");
 }

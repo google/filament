@@ -25,12 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/wire/WireTest.h"
-
 #include "dawn/common/Assert.h"
 #include "dawn/common/StringViewUtils.h"
 #include "dawn/tests/MockCallback.h"
 #include "dawn/tests/StringViewMatchers.h"
+#include "dawn/tests/unittests/wire/WireTest.h"
 #include "dawn/wire/WireClient.h"
 
 namespace dawn::wire {
@@ -148,11 +147,9 @@ TEST_F(WireDisconnectTests, DeleteClientDestroysObjects) {
     EXPECT_CALL(api, DeviceCreateSampler(apiDevice, _)).WillOnce(Return(apiSampler));
 
     FlushClient();
-
     DeleteClient();
 
     // Expect release on all objects created by the client.
-    EXPECT_CALL(api, OnDeviceSetLoggingCallback(apiDevice, _)).Times(1);
     EXPECT_CALL(api, DeviceRelease(apiDevice)).Times(1);
     EXPECT_CALL(api, QueueRelease(apiQueue)).Times(1);
     EXPECT_CALL(api, CommandEncoderRelease(apiCommandEncoder)).Times(1);
@@ -160,10 +157,6 @@ TEST_F(WireDisconnectTests, DeleteClientDestroysObjects) {
     EXPECT_CALL(api, AdapterRelease(apiAdapter)).Times(1);
     EXPECT_CALL(api, InstanceRelease(apiInstance)).Times(1);
     FlushClient();
-
-    // Signal that we already released and cleared callbacks for |apiDevice|
-    DefaultApiDeviceWasReleased();
-    DefaultApiAdapterWasReleased();
 }
 
 }  // anonymous namespace

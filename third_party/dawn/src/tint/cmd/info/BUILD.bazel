@@ -52,6 +52,7 @@ cc_binary(
     "//src/tint/lang/wgsl/inspector",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/sem",
+    "//src/tint/lang/wgsl/writer/common",
     "//src/tint/utils",
     "//src/tint/utils/command",
     "//src/tint/utils/containers",

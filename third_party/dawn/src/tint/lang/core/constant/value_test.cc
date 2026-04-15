@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/constant/splat.h"
-
 #include "gtest/gtest.h"
 #include "src/tint/lang/core/constant/scalar.h"
+#include "src/tint/lang/core/constant/splat.h"
 #include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/vector.h"
 

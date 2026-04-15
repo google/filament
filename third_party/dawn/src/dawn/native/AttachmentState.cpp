@@ -30,6 +30,7 @@
 #include <bit>
 
 #include "dawn/common/Enumerator.h"
+#include "dawn/common/Log.h"
 #include "dawn/common/ityp_span.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/Device.h"
@@ -110,6 +111,16 @@ AttachmentState::AttachmentState(const UnpackedPtr<RenderPipelineDescriptor>& de
 AttachmentState::AttachmentState(const UnpackedPtr<RenderPassDescriptor>& descriptor) {
     auto colorAttachments = ityp::SpanFromUntyped<ColorAttachmentIndex>(
         descriptor->colorAttachments, descriptor->colorAttachmentCount);
+
+    // Override the sample count with an explicit sample count if provided. This is currently only
+    // valid if the MSAARenderToSingleSampled feature is enabled.
+    bool msrtssAllowed = false;
+    auto* renderPassSampleCount = descriptor.Get<DawnRenderPassSampleCount>();
+    if (renderPassSampleCount != nullptr && renderPassSampleCount->sampleCount > 1) {
+        mSampleCount = renderPassSampleCount->sampleCount;
+        msrtssAllowed = true;
+    }
+
     for (auto [i, colorAttachment] : Enumerate(colorAttachments)) {
         TextureViewBase* attachment = colorAttachment.view;
         if (attachment == nullptr) {
@@ -118,21 +129,14 @@ AttachmentState::AttachmentState(const UnpackedPtr<RenderPassDescriptor>& descri
         mColorAttachmentsSet.set(i);
         mColorFormats[i] = attachment->GetFormat().format;
 
-        UnpackedPtr<RenderPassColorAttachment> unpackedColorAttachment = Unpack(&colorAttachment);
-        auto* msaaRenderToSingleSampledDesc =
-            unpackedColorAttachment.Get<DawnRenderPassColorAttachmentRenderToSingleSampled>();
-        uint32_t attachmentSampleCount;
-        if (msaaRenderToSingleSampledDesc != nullptr &&
-            msaaRenderToSingleSampledDesc->implicitSampleCount > 1) {
-            attachmentSampleCount = msaaRenderToSingleSampledDesc->implicitSampleCount;
-        } else {
-            attachmentSampleCount = attachment->GetTexture()->GetSampleCount();
-        }
-
+        uint32_t attachmentSampleCount = attachment->GetTexture()->GetSampleCount();
         if (mSampleCount == 0) {
             mSampleCount = attachmentSampleCount;
         } else {
-            DAWN_ASSERT(mSampleCount == attachmentSampleCount);
+            // Attachment sample counts are allowed to either match the sample count for the pass
+            // or, if MSAARenderToSingleSampled is enabled, be 1.
+            DAWN_ASSERT(mSampleCount == attachmentSampleCount ||
+                        (msrtssAllowed && attachmentSampleCount == 1));
         }
 
         if (colorAttachment.loadOp == wgpu::LoadOp::ExpandResolveTexture) {

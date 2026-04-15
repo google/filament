@@ -27,8 +27,8 @@
 
 #include "src/tint/lang/hlsl/ir/member_builtin_call.h"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -65,8 +65,23 @@ TEST_F(IR_HlslMemberBuiltinCallTest, Clone) {
     EXPECT_TRUE(new_b->Object()->Type()->Is<hlsl::type::ByteAddressBuffer>());
 
     auto args = new_b->Args();
-    ASSERT_EQ(1u, args.Length());
+    ASSERT_EQ(1u, args.size());
     EXPECT_TRUE(args[0]->Type()->Is<core::type::U32>());
+}
+
+TEST_F(IR_HlslMemberBuiltinCallTest, CloneWithExplicitParams) {
+    auto* buf = ty.Get<hlsl::type::ByteAddressBuffer>(core::Access::kReadWrite);
+
+    auto* t = b.FunctionParam("t", buf);
+    auto* builtin = b.MemberCall<MemberBuiltinCall>(mod.Types().u32(), BuiltinFn::kLoad, t, 2_u);
+    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+
+    auto* new_b = clone_ctx.Clone(builtin);
+    EXPECT_NE(builtin->Result(), new_b->Result());
+    EXPECT_EQ(mod.Types().u32(), new_b->Result()->Type());
+
+    EXPECT_EQ(BuiltinFn::kLoad, new_b->Func());
+    EXPECT_THAT(new_b->ExplicitTemplateParams(), testing::ElementsAre(mod.Types().i32()));
 }
 
 TEST_F(IR_HlslMemberBuiltinCallTest, DoesNotMatchNonMemberFunction) {
@@ -156,6 +171,61 @@ $B1: {  # root
 )");
 }
 
+TEST_F(IR_HlslMemberBuiltinCallTest, DoesNotMatchIncorrectType_NotAllOverloadsAreMemberCalls) {
+    auto* buf_ty = ty.Get<hlsl::type::ByteAddressBuffer>(core::Access::kReadWrite);
+    auto* t = b.Var("t", buf_ty);
+    t->SetBindingPoint(0, 0);
+    mod.root_block->Append(t);
+
+    auto* func = b.Function("foo", ty.u32());
+    b.Append(func->Block(), [&] {
+        auto* var = b.Var<function, i32>("var");
+        auto* builtin = b.MemberCall<MemberBuiltinCall>(ty.void_(), BuiltinFn::kInterlockedExchange,
+                                                        t, 4_f, 123_i, var);
+        b.Return(func, builtin);
+    });
+
+    auto res = core::ir::Validate(mod, core::ir::Capabilities{
+                                           core::ir::Capability::kAllowNonCoreTypes,
+                                       });
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(
+        res.Failure().reason,
+        R"(:8:18 error: InterlockedExchange: no matching call to 'InterlockedExchange(hlsl.byte_address_buffer<read_write>, f32, i32, ptr<function, i32, read_write>)'
+
+1 candidate function:
+ • 'InterlockedExchange(byte_address_buffer<read' or 'read_write>  ✓ , offset: u32  ✗ , value: i32' or 'u32  ✓ , original_value: ptr<function, i32' or 'u32, read_write>  ✓ )'
+
+    %4:void = %t.InterlockedExchange 4.0f, 123i, %var
+                 ^^^^^^^^^^^^^^^^^^^
+
+:6:3 note: in block
+  $B2: {
+  ^^^
+
+:9:5 error: return: return value type 'void' does not match function return type 'u32'
+    ret %4
+    ^^^^^^
+
+:6:3 note: in block
+  $B2: {
+  ^^^
+
+note: # Disassembly
+$B1: {  # root
+  %t:hlsl.byte_address_buffer<read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():u32 {
+  $B2: {
+    %var:ptr<function, i32, read_write> = var undef
+    %4:void = %t.InterlockedExchange 4.0f, 123i, %var
+    ret %4
+  }
+}
+)");
+}
+
 TEST_F(IR_HlslMemberBuiltinCallTest, Valid) {
     auto* buf_ty = ty.Get<hlsl::type::ByteAddressBuffer>(core::Access::kRead);
     auto* t = b.Var("t", buf_ty);
@@ -234,7 +304,7 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooFewArgs) {
     EXPECT_EQ(res.Failure().reason,
               R"(:7:17 error: Load: no matching call to 'Load(hlsl.byte_address_buffer<read>)'
 
-24 candidate functions:
+28 candidate functions:
  • 'Load(byte_address_buffer<read' or 'read_write>  ✓ , offset: u32  ✗ ) -> u32'
  • 'Load(texture: texture_depth_2d  ✗ , location: vec3<i32>  ✗ ) -> vec4<f32>'
  • 'Load(texture: texture_depth_2d_array  ✗ , location: vec4<i32>  ✗ ) -> vec4<f32>'
@@ -246,6 +316,18 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooFewArgs) {
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'Load(texture: texture_3d<T>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'Load(texture: texture_1d<f32, F>  ✗ , location: vec2<i32>  ✗ ) -> vec4<T>' where:
+      ✗  'T' is 'f32'
+      ✗  'F' is 'filterable' or 'unfilterable'
+ • 'Load(texture: texture_2d<f32, F>  ✗ , location: vec3<i32>  ✗ ) -> vec4<T>' where:
+      ✗  'T' is 'f32'
+      ✗  'F' is 'filterable' or 'unfilterable'
+ • 'Load(texture: texture_2d_array<f32, F>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
+      ✗  'T' is 'f32'
+      ✗  'F' is 'filterable' or 'unfilterable'
+ • 'Load(texture: texture_3d<f32, F>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
+      ✗  'T' is 'f32'
+      ✗  'F' is 'filterable' or 'unfilterable'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<f32>' where:
       ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'C' is 'i32' or 'u32'
@@ -336,7 +418,7 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooManyArgs) {
         res.Failure().reason,
         R"(:7:17 error: Load: no matching call to 'Load(hlsl.byte_address_buffer<read>, u32, u32, u32)'
 
-24 candidate functions:
+28 candidate functions:
  • 'Load(byte_address_buffer<read' or 'read_write>  ✓ , offset: u32  ✓ ) -> u32' where:
       ✗  overload expects 2 arguments, call passed 4 arguments
  • 'Load(texture: texture_depth_multisampled_2d  ✗ , location: vec2<i32>  ✗ , sample_index: i32  ✗ ) -> vec4<f32>'
@@ -352,6 +434,18 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooManyArgs) {
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'Load(texture: texture_3d<T>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'Load(texture: texture_1d<f32, F>  ✗ , location: vec2<i32>  ✗ ) -> vec4<T>' where:
+      ✗  'T' is 'f32'
+      ✗  'F' is 'filterable' or 'unfilterable'
+ • 'Load(texture: texture_2d<f32, F>  ✗ , location: vec3<i32>  ✗ ) -> vec4<T>' where:
+      ✗  'T' is 'f32'
+      ✗  'F' is 'filterable' or 'unfilterable'
+ • 'Load(texture: texture_2d_array<f32, F>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
+      ✗  'T' is 'f32'
+      ✗  'F' is 'filterable' or 'unfilterable'
+ • 'Load(texture: texture_3d<f32, F>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
+      ✗  'T' is 'f32'
+      ✗  'F' is 'filterable' or 'unfilterable'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<f32>' where:
       ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'C' is 'i32' or 'u32'

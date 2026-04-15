@@ -35,35 +35,23 @@
 
 namespace dawn::native::vulkan {
 
-static constexpr uint32_t VulkanVersion_1_1 = VK_API_VERSION_1_1;
-static constexpr uint32_t VulkanVersion_1_2 = VK_API_VERSION_1_2;
-static constexpr uint32_t VulkanVersion_1_3 = VK_API_VERSION_1_3;
-static constexpr uint32_t NeverPromoted = std::numeric_limits<uint32_t>::max();
-
 // A static array for InstanceExtInfo that can be indexed with InstanceExts.
 // GetInstanceExtInfo checks that "index" matches the index used to access this array so an
 // assert will fire if it isn't in the correct order.
 static constexpr size_t kInstanceExtCount = static_cast<size_t>(InstanceExt::EnumCount);
 static constexpr std::array<InstanceExtInfo, kInstanceExtCount> sInstanceExtInfos{{
-    //
-    {InstanceExt::GetPhysicalDeviceProperties2, "VK_KHR_get_physical_device_properties2",
-     VulkanVersion_1_1},
-    {InstanceExt::ExternalMemoryCapabilities, "VK_KHR_external_memory_capabilities",
-     VulkanVersion_1_1},
-    {InstanceExt::ExternalSemaphoreCapabilities, "VK_KHR_external_semaphore_capabilities",
-     VulkanVersion_1_1},
+    // Not promoted to core in any version
+    {InstanceExt::Surface, "VK_KHR_surface"},
+    {InstanceExt::FuchsiaImagePipeSurface, "VK_FUCHSIA_imagepipe_surface"},
+    {InstanceExt::MetalSurface, "VK_EXT_metal_surface"},
+    {InstanceExt::WaylandSurface, "VK_KHR_wayland_surface"},
+    {InstanceExt::Win32Surface, "VK_KHR_win32_surface"},
+    {InstanceExt::XcbSurface, "VK_KHR_xcb_surface"},
+    {InstanceExt::XlibSurface, "VK_KHR_xlib_surface"},
+    {InstanceExt::AndroidSurface, "VK_KHR_android_surface"},
 
-    {InstanceExt::Surface, "VK_KHR_surface", NeverPromoted},
-    {InstanceExt::FuchsiaImagePipeSurface, "VK_FUCHSIA_imagepipe_surface", NeverPromoted},
-    {InstanceExt::MetalSurface, "VK_EXT_metal_surface", NeverPromoted},
-    {InstanceExt::WaylandSurface, "VK_KHR_wayland_surface", NeverPromoted},
-    {InstanceExt::Win32Surface, "VK_KHR_win32_surface", NeverPromoted},
-    {InstanceExt::XcbSurface, "VK_KHR_xcb_surface", NeverPromoted},
-    {InstanceExt::XlibSurface, "VK_KHR_xlib_surface", NeverPromoted},
-    {InstanceExt::AndroidSurface, "VK_KHR_android_surface", NeverPromoted},
-
-    {InstanceExt::DebugUtils, "VK_EXT_debug_utils", NeverPromoted},
-    {InstanceExt::ValidationFeatures, "VK_EXT_validation_features", NeverPromoted},
+    {InstanceExt::DebugUtils, "VK_EXT_debug_utils"},
+    {InstanceExt::ValidationFeatures, "VK_EXT_validation_features"},
     //
 }};
 
@@ -101,16 +89,10 @@ InstanceExtSet EnsureDependencies(const InstanceExtSet& advertisedExts) {
 
         bool hasDependencies = false;
         switch (ext) {
-            case InstanceExt::GetPhysicalDeviceProperties2:
             case InstanceExt::Surface:
             case InstanceExt::DebugUtils:
             case InstanceExt::ValidationFeatures:
                 hasDependencies = true;
-                break;
-
-            case InstanceExt::ExternalMemoryCapabilities:
-            case InstanceExt::ExternalSemaphoreCapabilities:
-                hasDependencies = HasDep(InstanceExt::GetPhysicalDeviceProperties2);
                 break;
 
             case InstanceExt::AndroidSurface:
@@ -134,70 +116,54 @@ InstanceExtSet EnsureDependencies(const InstanceExtSet& advertisedExts) {
     return trimmedSet;
 }
 
-void MarkPromotedExtensions(InstanceExtSet* extensions, uint32_t version) {
-    for (const InstanceExtInfo& info : sInstanceExtInfos) {
-        if (info.versionPromoted <= version) {
-            extensions->set(info.index, true);
-        }
-    }
-}
-
 static constexpr size_t kDeviceExtCount = static_cast<size_t>(DeviceExt::EnumCount);
 static constexpr std::array<DeviceExtInfo, kDeviceExtCount> sDeviceExtInfos{{
-    //
-    {DeviceExt::BindMemory2, "VK_KHR_bind_memory2", VulkanVersion_1_1},
-    {DeviceExt::Maintenance1, "VK_KHR_maintenance1", VulkanVersion_1_1},
-    {DeviceExt::Maintenance2, "VK_KHR_maintenance2", VulkanVersion_1_1},
-    {DeviceExt::Maintenance3, "VK_KHR_maintenance3", VulkanVersion_1_1},
-    {DeviceExt::StorageBufferStorageClass, "VK_KHR_storage_buffer_storage_class",
-     VulkanVersion_1_1},
-    {DeviceExt::GetPhysicalDeviceProperties2, "VK_KHR_get_physical_device_properties2",
-     VulkanVersion_1_1},
-    {DeviceExt::GetMemoryRequirements2, "VK_KHR_get_memory_requirements2", VulkanVersion_1_1},
-    {DeviceExt::DedicatedAllocation, "VK_KHR_dedicated_allocation", VulkanVersion_1_1},
-    {DeviceExt::ExternalMemoryCapabilities, "VK_KHR_external_memory_capabilities",
-     VulkanVersion_1_1},
-    {DeviceExt::ExternalSemaphoreCapabilities, "VK_KHR_external_semaphore_capabilities",
-     VulkanVersion_1_1},
-    {DeviceExt::ExternalMemory, "VK_KHR_external_memory", VulkanVersion_1_1},
-    {DeviceExt::ExternalSemaphore, "VK_KHR_external_semaphore", VulkanVersion_1_1},
-    {DeviceExt::_16BitStorage, "VK_KHR_16bit_storage", VulkanVersion_1_1},
-    {DeviceExt::SamplerYCbCrConversion, "VK_KHR_sampler_ycbcr_conversion", VulkanVersion_1_1},
+    // Promoted in 1.2
+    {DeviceExt::DriverProperties, "VK_KHR_driver_properties"},
+    {DeviceExt::ImageFormatList, "VK_KHR_image_format_list"},
+    {DeviceExt::ShaderFloat16Int8, "VK_KHR_shader_float16_int8"},
+    {DeviceExt::ShaderSubgroupExtendedTypes, "VK_KHR_shader_subgroup_extended_types"},
+    {DeviceExt::ShaderBufferInt64Atomics, "VK_KHR_shader_atomic_int64"},
+    {DeviceExt::DrawIndirectCount, "VK_KHR_draw_indirect_count"},
+    {DeviceExt::VulkanMemoryModel, "VK_KHR_vulkan_memory_model"},
+    {DeviceExt::ShaderFloatControls, "VK_KHR_shader_float_controls"},
+    {DeviceExt::Spirv14, "VK_KHR_spirv_1_4"},
+    {DeviceExt::DescriptorIndexing, "VK_EXT_descriptor_indexing"},
+    {DeviceExt::CreateRenderPass2, "VK_KHR_create_renderpass2"},
+    {DeviceExt::DepthStencilResolve, "VK_KHR_depth_stencil_resolve"},
 
-    {DeviceExt::DriverProperties, "VK_KHR_driver_properties", VulkanVersion_1_2},
-    {DeviceExt::ImageFormatList, "VK_KHR_image_format_list", VulkanVersion_1_2},
-    {DeviceExt::ShaderFloat16Int8, "VK_KHR_shader_float16_int8", VulkanVersion_1_2},
-    {DeviceExt::ShaderSubgroupExtendedTypes, "VK_KHR_shader_subgroup_extended_types",
-     VulkanVersion_1_2},
-    {DeviceExt::DrawIndirectCount, "VK_KHR_draw_indirect_count", NeverPromoted},
-    {DeviceExt::VulkanMemoryModel, "VK_KHR_vulkan_memory_model", VulkanVersion_1_2},
-    {DeviceExt::ShaderFloatControls, "VK_KHR_shader_float_controls", VulkanVersion_1_2},
-    {DeviceExt::Spirv14, "VK_KHR_spirv_1_4", VulkanVersion_1_2},
+    // Promoted in 1.3
+    {DeviceExt::ShaderIntegerDotProduct, "VK_KHR_shader_integer_dot_product"},
+    {DeviceExt::ZeroInitializeWorkgroupMemory, "VK_KHR_zero_initialize_workgroup_memory"},
+    {DeviceExt::DemoteToHelperInvocation, "VK_EXT_shader_demote_to_helper_invocation"},
+    {DeviceExt::Maintenance4, "VK_KHR_maintenance4"},
+    {DeviceExt::SubgroupSizeControl, "VK_EXT_subgroup_size_control"},
+    {DeviceExt::DynamicRendering, "VK_KHR_dynamic_rendering"},
+    {DeviceExt::ExtendedDynamicState, "VK_EXT_extended_dynamic_state"},
 
-    {DeviceExt::ShaderIntegerDotProduct, "VK_KHR_shader_integer_dot_product", VulkanVersion_1_3},
-    {DeviceExt::ZeroInitializeWorkgroupMemory, "VK_KHR_zero_initialize_workgroup_memory",
-     VulkanVersion_1_3},
-    {DeviceExt::DemoteToHelperInvocation, "VK_EXT_shader_demote_to_helper_invocation",
-     VulkanVersion_1_3},
-    {DeviceExt::Maintenance4, "VK_KHR_maintenance4", VulkanVersion_1_3},
-    {DeviceExt::SubgroupSizeControl, "VK_EXT_subgroup_size_control", VulkanVersion_1_3},
+    // Promoted in 1.4
+    {DeviceExt::PipelineRobustness, "VK_EXT_pipeline_robustness"},
+    {DeviceExt::Maintenance5, "VK_KHR_maintenance5"},
 
-    {DeviceExt::DepthClipEnable, "VK_EXT_depth_clip_enable", NeverPromoted},
-    {DeviceExt::ImageDrmFormatModifier, "VK_EXT_image_drm_format_modifier", NeverPromoted},
-    {DeviceExt::Swapchain, "VK_KHR_swapchain", NeverPromoted},
-    {DeviceExt::QueueFamilyForeign, "VK_EXT_queue_family_foreign", NeverPromoted},
-    {DeviceExt::Robustness2, "VK_EXT_robustness2", NeverPromoted},
-    {DeviceExt::DisplayTiming, "VK_GOOGLE_display_timing", NeverPromoted},
-    {DeviceExt::CooperativeMatrix, "VK_KHR_cooperative_matrix", NeverPromoted},
+    // Not promoted to core in any version
+    {DeviceExt::DepthClipEnable, "VK_EXT_depth_clip_enable"},
+    {DeviceExt::ImageDrmFormatModifier, "VK_EXT_image_drm_format_modifier"},
+    {DeviceExt::Swapchain, "VK_KHR_swapchain"},
+    {DeviceExt::QueueFamilyForeign, "VK_EXT_queue_family_foreign"},
+    {DeviceExt::Robustness2, "VK_EXT_robustness2"},
+    {DeviceExt::DisplayTiming, "VK_GOOGLE_display_timing"},
+    {DeviceExt::CooperativeMatrix, "VK_KHR_cooperative_matrix"},
+    {DeviceExt::MultisampledRenderToSingleSampled, "VK_EXT_multisampled_render_to_single_sampled"},
+    {DeviceExt::PhysicalDeviceDrm, "VK_EXT_physical_device_drm"},
 
     {DeviceExt::ExternalMemoryAndroidHardwareBuffer,
-     "VK_ANDROID_external_memory_android_hardware_buffer", NeverPromoted},
-    {DeviceExt::ExternalMemoryFD, "VK_KHR_external_memory_fd", NeverPromoted},
-    {DeviceExt::ExternalMemoryDmaBuf, "VK_EXT_external_memory_dma_buf", NeverPromoted},
-    {DeviceExt::ExternalMemoryZirconHandle, "VK_FUCHSIA_external_memory", NeverPromoted},
-    {DeviceExt::ExternalMemoryHost, "VK_EXT_external_memory_host", NeverPromoted},
-    {DeviceExt::ExternalSemaphoreFD, "VK_KHR_external_semaphore_fd", NeverPromoted},
-    {DeviceExt::ExternalSemaphoreZirconHandle, "VK_FUCHSIA_external_semaphore", NeverPromoted},
+     "VK_ANDROID_external_memory_android_hardware_buffer"},
+    {DeviceExt::ExternalMemoryFD, "VK_KHR_external_memory_fd"},
+    {DeviceExt::ExternalMemoryDmaBuf, "VK_EXT_external_memory_dma_buf"},
+    {DeviceExt::ExternalMemoryZirconHandle, "VK_FUCHSIA_external_memory"},
+    {DeviceExt::ExternalMemoryHost, "VK_EXT_external_memory_host"},
+    {DeviceExt::ExternalSemaphoreFD, "VK_KHR_external_semaphore_fd"},
+    {DeviceExt::ExternalSemaphoreZirconHandle, "VK_FUCHSIA_external_semaphore"},
     //
 }};
 
@@ -224,6 +190,9 @@ DeviceExtSet EnsureDependencies(const DeviceExtSet& advertisedExts,
     DeviceExtSet visitedSet;
     DeviceExtSet trimmedSet;
 
+    // Dawn requires at least Vulkan 1.1
+    DAWN_ASSERT(version >= VK_API_VERSION_1_1);
+
     auto HasDep = [&](DeviceExt ext) -> bool {
         DAWN_ASSERT(visitedSet[ext]);
         return trimmedSet[ext];
@@ -235,55 +204,9 @@ DeviceExtSet EnsureDependencies(const DeviceExtSet& advertisedExts,
         bool hasDependencies = false;
         switch (ext) {
             // Happy extensions don't need anybody else!
-            case DeviceExt::BindMemory2:
-            case DeviceExt::GetMemoryRequirements2:
-            case DeviceExt::Maintenance1:
-            case DeviceExt::Maintenance2:
             case DeviceExt::ImageFormatList:
-            case DeviceExt::StorageBufferStorageClass:
             case DeviceExt::DrawIndirectCount:
-                hasDependencies = true;
-                break;
-
-            case DeviceExt::DedicatedAllocation:
-                hasDependencies = HasDep(DeviceExt::GetMemoryRequirements2);
-                break;
-
-            // Physical device extensions technically don't require the instance to support
-            // them but VulkanFunctions only loads the function pointers if the instance
-            // advertises the extension. So if we didn't have this check, we'd risk a calling
-            // a nullptr.
-            case DeviceExt::GetPhysicalDeviceProperties2:
-            case DeviceExt::Maintenance3:
-                hasDependencies = instanceExts[InstanceExt::GetPhysicalDeviceProperties2];
-                break;
-            case DeviceExt::ExternalMemoryCapabilities:
-                hasDependencies = instanceExts[InstanceExt::ExternalMemoryCapabilities] &&
-                                  HasDep(DeviceExt::GetPhysicalDeviceProperties2);
-                break;
-            case DeviceExt::ExternalSemaphoreCapabilities:
-                hasDependencies = instanceExts[InstanceExt::ExternalSemaphoreCapabilities] &&
-                                  HasDep(DeviceExt::GetPhysicalDeviceProperties2);
-                break;
-
-            case DeviceExt::ImageDrmFormatModifier:
-                hasDependencies = HasDep(DeviceExt::BindMemory2) &&
-                                  HasDep(DeviceExt::GetPhysicalDeviceProperties2) &&
-                                  HasDep(DeviceExt::ImageFormatList) &&
-                                  HasDep(DeviceExt::SamplerYCbCrConversion);
-                break;
-
-            case DeviceExt::Swapchain:
-                hasDependencies = instanceExts[InstanceExt::Surface];
-                break;
-
-            case DeviceExt::SamplerYCbCrConversion:
-                hasDependencies = HasDep(DeviceExt::Maintenance1) &&
-                                  HasDep(DeviceExt::BindMemory2) &&
-                                  HasDep(DeviceExt::GetMemoryRequirements2) &&
-                                  HasDep(DeviceExt::GetPhysicalDeviceProperties2);
-                break;
-
+            // Extensions which only depend on Vulkan 1.1
             case DeviceExt::DriverProperties:
             case DeviceExt::ShaderFloat16Int8:
             case DeviceExt::DepthClipEnable:
@@ -291,58 +214,70 @@ DeviceExtSet EnsureDependencies(const DeviceExtSet& advertisedExts,
             case DeviceExt::ZeroInitializeWorkgroupMemory:
             case DeviceExt::DemoteToHelperInvocation:
             case DeviceExt::Maintenance4:
+            case DeviceExt::PipelineRobustness:
             case DeviceExt::Robustness2:
             case DeviceExt::SubgroupSizeControl:
             case DeviceExt::ShaderSubgroupExtendedTypes:
+            case DeviceExt::ShaderBufferInt64Atomics:
             case DeviceExt::VulkanMemoryModel:
             case DeviceExt::CooperativeMatrix:
             case DeviceExt::ShaderFloatControls:
-                hasDependencies = HasDep(DeviceExt::GetPhysicalDeviceProperties2);
-                break;
-
-            case DeviceExt::ExternalMemory:
-                hasDependencies = HasDep(DeviceExt::ExternalMemoryCapabilities);
-                break;
-
-            case DeviceExt::ExternalSemaphore:
-                hasDependencies = HasDep(DeviceExt::ExternalSemaphoreCapabilities);
-                break;
-
-            case DeviceExt::ExternalMemoryAndroidHardwareBuffer:
-                hasDependencies = HasDep(DeviceExt::ExternalMemory) &&
-                                  HasDep(DeviceExt::SamplerYCbCrConversion) &&
-                                  HasDep(DeviceExt::DedicatedAllocation) &&
-                                  HasDep(DeviceExt::QueueFamilyForeign);
-                break;
-
+            case DeviceExt::DescriptorIndexing:
+            case DeviceExt::CreateRenderPass2:
             case DeviceExt::ExternalMemoryFD:
             case DeviceExt::ExternalMemoryZirconHandle:
             case DeviceExt::ExternalMemoryHost:
+            case DeviceExt::ExternalSemaphoreFD:
+            case DeviceExt::ExternalSemaphoreZirconHandle:
             case DeviceExt::QueueFamilyForeign:
-                hasDependencies = HasDep(DeviceExt::ExternalMemory);
+            case DeviceExt::PhysicalDeviceDrm:
+            case DeviceExt::ExtendedDynamicState:
+                hasDependencies = true;
+                break;
+
+            // Physical device extensions technically don't require the instance to support
+            // them but VulkanFunctions only loads the function pointers if the instance
+            // advertises the extension. So if we didn't have this check, we'd risk a calling
+            // a nullptr.
+            case DeviceExt::ImageDrmFormatModifier:
+                hasDependencies = HasDep(DeviceExt::ImageFormatList);
+                break;
+
+            case DeviceExt::Swapchain:
+                hasDependencies = instanceExts[InstanceExt::Surface];
+                break;
+
+            case DeviceExt::ExternalMemoryAndroidHardwareBuffer:
+                hasDependencies = HasDep(DeviceExt::QueueFamilyForeign);
                 break;
 
             case DeviceExt::ExternalMemoryDmaBuf:
                 hasDependencies = HasDep(DeviceExt::ExternalMemoryFD);
                 break;
 
-            case DeviceExt::ExternalSemaphoreFD:
-            case DeviceExt::ExternalSemaphoreZirconHandle:
-                hasDependencies = HasDep(DeviceExt::ExternalSemaphore);
-                break;
-
-            case DeviceExt::_16BitStorage:
-                hasDependencies = HasDep(DeviceExt::GetPhysicalDeviceProperties2) &&
-                                  HasDep(DeviceExt::StorageBufferStorageClass);
+            case DeviceExt::DepthStencilResolve:
+                hasDependencies = HasDep(DeviceExt::CreateRenderPass2);
                 break;
 
             case DeviceExt::DisplayTiming:
                 hasDependencies = HasDep(DeviceExt::Swapchain);
                 break;
 
-            case DeviceExt::Spirv14:
+            case DeviceExt::MultisampledRenderToSingleSampled:
                 hasDependencies =
-                    version >= VK_VERSION_1_1 && HasDep(DeviceExt::ShaderFloatControls);
+                    HasDep(DeviceExt::CreateRenderPass2) && HasDep(DeviceExt::DepthStencilResolve);
+                break;
+
+            case DeviceExt::Spirv14:
+                hasDependencies = HasDep(DeviceExt::ShaderFloatControls);
+                break;
+
+            case DeviceExt::DynamicRendering:
+                hasDependencies = HasDep(DeviceExt::DepthStencilResolve);
+                break;
+
+            case DeviceExt::Maintenance5:
+                hasDependencies = HasDep(DeviceExt::DynamicRendering);
                 break;
 
             case DeviceExt::EnumCount:
@@ -354,14 +289,6 @@ DeviceExtSet EnsureDependencies(const DeviceExtSet& advertisedExts,
     }
 
     return trimmedSet;
-}
-
-void MarkPromotedExtensions(DeviceExtSet* extensions, uint32_t version) {
-    for (const DeviceExtInfo& info : sDeviceExtInfos) {
-        if (info.versionPromoted <= version) {
-            extensions->set(info.index, true);
-        }
-    }
 }
 
 // A static array for VulkanLayerInfo that can be indexed with VulkanLayers.

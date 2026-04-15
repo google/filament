@@ -128,7 +128,11 @@ fn main(@builtin(local_invocation_index) g: u32) {
     EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), output, 0, expected.size());
 }
 
-DAWN_INSTANTIATE_TEST(RuntimeTimeoutComputeTest, D3D12Backend(), MetalBackend(), VulkanBackend());
+DAWN_INSTANTIATE_TEST(RuntimeTimeoutComputeTest,
+                      D3D12Backend(),
+                      MetalBackend(),
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

@@ -27,13 +27,13 @@
 
 // GEN_BUILD:CONDITION(tint_build_is_mac)
 
-#include "src/tint/utils/system/executable_path.h"
-
 #include <mach-o/dyld.h>
 #include <sys/syslimits.h>
+
 #include <filesystem>
 
 #include "src/tint/utils/containers/vector.h"
+#include "src/tint/utils/system/executable_path.h"
 
 std::string tint::ExecutablePath() {
     uint32_t bufsize = 0;

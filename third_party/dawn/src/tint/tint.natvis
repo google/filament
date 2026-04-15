@@ -34,14 +34,12 @@
 	<!-- utils -->
 	<!--=================================================================-->
 
-	<Type Name="tint::Slice&lt;*&gt;">
-		<DisplayString>{{ length={len}, capacity={cap} }}</DisplayString>
+	<Type Name="tint::internal::Slice&lt;*&gt;">
+		<DisplayString>{{ length={len}, capacity={buffer._Mysize} }}</DisplayString>
 		<Expand>
-			<!--<Item Name="[length]">len</Item>
-			<Item Name="[capacity]">cap</Item>-->
 			<ArrayItems>
 				<Size>len</Size>
-				<ValuePointer>data</ValuePointer>
+				<ValuePointer>buffer._Myptr</ValuePointer>
 			</ArrayItems>
 		</Expand>
 	</Type>
@@ -49,12 +47,10 @@
 	<Type Name="tint::Vector&lt;*,*&gt;">
 		<Intrinsic Name="Length" Expression="(size_t)(impl_.slice.len)" />
 		<Expand>
-			<Item Name="[heap]">impl_.slice.cap > (int)$T2</Item>
-			<!--<ExpandedItem>impl_.slice</ExpandedItem>-->
-			<!--<Item Name="[slice]">impl_.slice</Item>-->
+			<Item Name="[heap]">impl_.slice.buffer._Mysize > (size_t)$T2</Item>
 			<ArrayItems>
 				<Size>Length()</Size>
-				<ValuePointer>impl_.slice.data</ValuePointer>
+				<ValuePointer>impl_.slice.buffer._Myptr</ValuePointer>
 			</ArrayItems>
 		</Expand>
 	</Type>
@@ -63,7 +59,6 @@
 		<Expand>
 			<Item Name="[can move]">can_move_</Item>
 			<ExpandedItem>slice_</ExpandedItem>
-			<!--<Item Name="[slice]">slice_</Item>-->
 		</Expand>
 	</Type>
 

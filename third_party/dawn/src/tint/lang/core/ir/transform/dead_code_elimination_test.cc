@@ -379,5 +379,60 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(IR_DeadCodeEliminationTest, RemoveMultipleVarPrivate) {
+    auto* buffer1 = b.Var("buffer1", ty.ptr(core::AddressSpace::kPrivate, ty.i32()));
+    mod.root_block->Append(buffer1);
+    auto* buffer2 = b.Var("buffer2", ty.ptr(core::AddressSpace::kPrivate, ty.f32()));
+    mod.root_block->Append(buffer2);
+    auto* buffer3 = b.Var("buffer3", ty.ptr(core::AddressSpace::kPrivate, ty.vec4f()));
+    mod.root_block->Append(buffer3);
+    auto* buffer4 = b.Var("buffer4", ty.ptr(core::AddressSpace::kPrivate, ty.mat2x2<f32>()));
+    mod.root_block->Append(buffer4);
+    auto* buffer5 = b.Var("buffer5", ty.ptr(core::AddressSpace::kPrivate, ty.bool_()));
+    mod.root_block->Append(buffer5);
+
+    auto* ep = b.Function("ep", ty.f32(), Function::PipelineStage::kFragment);
+    ep->SetReturnLocation(0_u);
+    b.Append(ep->Block(), [&] {
+        b.Store(buffer3, b.Zero<vec4<f32>>());
+        b.Return(ep, 0.5_f);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %buffer1:ptr<private, i32, read_write> = var undef
+  %buffer2:ptr<private, f32, read_write> = var undef
+  %buffer3:ptr<private, vec4<f32>, read_write> = var undef
+  %buffer4:ptr<private, mat2x2<f32>, read_write> = var undef
+  %buffer5:ptr<private, bool, read_write> = var undef
+}
+
+%ep = @fragment func():f32 [@location(0)] {
+  $B2: {
+    store %buffer3, vec4<f32>(0.0f)
+    ret 0.5f
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %buffer3:ptr<private, vec4<f32>, read_write> = var undef
+}
+
+%ep = @fragment func():f32 [@location(0)] {
+  $B2: {
+    store %buffer3, vec4<f32>(0.0f)
+    ret 0.5f
+  }
+}
+)";
+
+    Run(DeadCodeElimination);
+
+    EXPECT_EQ(expect, str());
+}
+
 }  // namespace
 }  // namespace tint::core::ir::transform

@@ -32,7 +32,6 @@
 
 // Forward declaration
 namespace tint {
-class StyledTextPrinter;
 class StyledText;
 }  // namespace tint
 namespace tint::diag {

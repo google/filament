@@ -34,6 +34,7 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "dawn/common/Log.h"
@@ -61,26 +62,46 @@
                   UNIMPLEMENTED_MACRO))                                                  \
     (__VA_ARGS__)
 
-#define ASSERT_DEVICE_ERROR_IMPL_1_(statement)                  \
-    StartExpectDeviceError();                                   \
-    statement;                                                  \
-    device.Tick();                                              \
-    FlushWire();                                                \
-    if (!EndExpectDeviceError()) {                              \
-        FAIL() << "Expected device error in:\n " << #statement; \
-    }                                                           \
-    do {                                                        \
+#define ASSERT_DEVICE_ERROR_IMPL_1_(statement)                         \
+    StartExpectDeviceError();                                          \
+    statement;                                                         \
+    device.Tick();                                                     \
+    FlushWire();                                                       \
+    if (!EndExpectDeviceError()) {                                     \
+        ADD_FAILURE() << "Expected device error in:\n " << #statement; \
+    }                                                                  \
+    do {                                                               \
     } while (0)
 
-#define ASSERT_DEVICE_ERROR_IMPL_2_(statement, matcher)         \
-    StartExpectDeviceError(matcher);                            \
-    statement;                                                  \
-    device.Tick();                                              \
-    FlushWire();                                                \
-    if (!EndExpectDeviceError()) {                              \
-        FAIL() << "Expected device error in:\n " << #statement; \
-    }                                                           \
-    do {                                                        \
+#define ASSERT_DEVICE_ERROR_IMPL_2_(statement, matcher)                \
+    StartExpectDeviceError(matcher);                                   \
+    statement;                                                         \
+    device.Tick();                                                     \
+    FlushWire();                                                       \
+    if (!EndExpectDeviceError()) {                                     \
+        ADD_FAILURE() << "Expected device error in:\n " << #statement; \
+    }                                                                  \
+    do {                                                               \
+    } while (0)
+
+#define ASSERT_DEVICE_LOG(statement, type, messageMatcher)                   \
+    StartExpectDeviceLog(type, messageMatcher);                              \
+    statement;                                                               \
+    device.Tick();                                                           \
+    FlushWire();                                                             \
+    if (!EndExpectDeviceLog()) {                                             \
+        ADD_FAILURE() << "Missing expected device log in:\n " << #statement; \
+    }                                                                        \
+    do {                                                                     \
+    } while (0)
+
+#define ASSERT_NO_DEVICE_LOG(statement) \
+    StartExpectNoDeviceLog();           \
+    statement;                          \
+    device.Tick();                      \
+    FlushWire();                        \
+    EndExpectNoDeviceLog();             \
+    do {                                \
     } while (0)
 
 // Skip a test when the given condition is satisfied.
@@ -141,6 +162,11 @@ class ValidationTest : public testing::Test {
     bool EndExpectDeviceError();
     std::string GetLastDeviceErrorMessage() const;
 
+    void StartExpectDeviceLog(wgpu::LoggingType type, testing::Matcher<std::string> messageMatcher);
+    bool EndExpectDeviceLog();
+    void StartExpectNoDeviceLog();
+    void EndExpectNoDeviceLog();
+
     void ExpectDeviceDestruction();
 
     bool UsesWire() const;
@@ -179,15 +205,13 @@ class ValidationTest : public testing::Test {
                                    dawn::utils::ComboLimits& required);
     virtual std::vector<const char*> GetEnabledToggles();
     virtual std::vector<const char*> GetDisabledToggles();
+    virtual std::vector<const char*> GetWGSLBlocklistedFeatures();
 
     // Sets up the internal members by initializing the instances, adapter, and device.
     void SetUp(const wgpu::InstanceDescriptor* nativeDesc,
                const wgpu::InstanceDescriptor* wireDesc = nullptr);
 
     uint64_t GetInstanceDeprecationCountForTesting();
-    // Helps compute expected deprecated warning count for creating device with given descriptor.
-    uint32_t GetDeviceCreationDeprecationWarningExpectation(
-        const wgpu::DeviceDescriptor& descriptor);
     // Request device and handle deprecation warning emitted during creating device.
     wgpu::Device RequestDeviceSync(const wgpu::DeviceDescriptor& deviceDesc);
 
@@ -211,7 +235,15 @@ class ValidationTest : public testing::Test {
     bool mExpectError = false;
     bool mError = false;
     testing::Matcher<std::string> mErrorMatcher;
+
+    static constexpr wgpu::LoggingType kExpectNoLog{0};
+    std::optional<std::tuple<wgpu::LoggingType, testing::Matcher<std::string>>> mExpectLog;
+    bool mGotLog = false;
+
     bool mExpectDestruction = false;
 };
+
+template <typename T, typename Base = ValidationTest>
+class ValidationTestWithParam : public Base, public testing::WithParamInterface<T> {};
 
 #endif  // SRC_DAWN_TESTS_UNITTESTS_VALIDATION_VALIDATIONTEST_H_

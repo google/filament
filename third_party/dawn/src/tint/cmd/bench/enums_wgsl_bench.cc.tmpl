@@ -14,6 +14,8 @@ See:
 {{- $I := LoadIntrinsics "src/tint/lang/wgsl/wgsl.def" -}}
 {{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
 
+// clang-format off
+
 #include <array>
 
 #include "benchmark/benchmark.h"
@@ -28,4 +30,6 @@ namespace {
 {{ Eval "BenchmarkParseEnum" ($I.Sem.Enum "extension") }}
 
 }  // namespace
-}  // namespace tint::core
+}  // namespace tint::wgsl
+
+// clang-format on

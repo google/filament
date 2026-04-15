@@ -51,11 +51,12 @@ libtint_source_set("inspector") {
     "inspector.h",
     "resource_binding.cc",
     "resource_binding.h",
+    "resource_binding_info.h",
     "scalar.cc",
     "scalar.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
@@ -81,7 +82,7 @@ if (tint_build_unittests) {
     tint_unittests_source_set("unittests") {
       sources = [ "inspector_test.cc" ]
       deps = [
-        "${dawn_root}/src/utils:utils",
+        "${dawn_root}/src/utils",
         "${tint_src_dir}:gmock_and_gtest",
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",

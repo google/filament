@@ -39,13 +39,11 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "parser",
   srcs = [
-    "classify_template_args.cc",
     "lexer.cc",
     "parser.cc",
     "token.cc",
   ],
   hdrs = [
-    "classify_template_args.h",
     "detail.h",
     "lexer.h",
     "parser.h",

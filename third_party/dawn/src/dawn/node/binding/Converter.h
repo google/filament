@@ -32,6 +32,7 @@
 
 #include <concepts>
 #include <functional>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -146,10 +147,9 @@ class Converter {
 
     [[nodiscard]] bool Convert(wgpu::TextureUsage& out, const interop::GPUTextureUsageFlags& in);
 
-    [[nodiscard]] bool Convert(wgpu::TextureComponentSwizzle& out,
-                               const interop::GPUTextureComponentSwizzle& in);
+    [[nodiscard]] bool Convert(wgpu::TextureComponentSwizzle& out, const std::string& in);
 
-    [[nodiscard]] bool Convert(wgpu::ComponentSwizzle& out, const interop::GPUComponentSwizzle& in);
+    [[nodiscard]] bool Convert(wgpu::ComponentSwizzle& out, const char& in);
 
     [[nodiscard]] bool Convert(wgpu::ColorWriteMask& out, const interop::GPUColorWriteFlags& in);
 
@@ -286,6 +286,9 @@ class Converter {
 
     // Below are the various overloads of Convert() used to convert the Dawn types -> interop.
     [[nodiscard]] bool Convert(interop::GPUTextureDimension& out, wgpu::TextureDimension in);
+
+    [[nodiscard]] bool Convert(interop::GPUTextureViewDimension& out,
+                               wgpu::TextureViewDimension in);
 
     [[nodiscard]] bool Convert(interop::GPUTextureFormat& out, wgpu::TextureFormat in);
 
@@ -486,6 +489,13 @@ class Converter {
 };
 
 std::string CopyLabel(StringView label);
+
+// Does the conversion from [AllowShared] BufferSource and offset, size? in elements to a span.
+bool ConvertDataElementsToSpan(Napi::Env env,
+                               std::span<const uint8_t>* out,
+                               interop::AllowSharedBufferSource data,
+                               interop::GPUSize64 data_offset_elements,
+                               std::optional<interop::GPUSize64> size_elements);
 
 }  // namespace wgpu::binding
 

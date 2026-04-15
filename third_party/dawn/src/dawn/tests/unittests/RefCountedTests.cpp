@@ -290,6 +290,21 @@ TEST(Ref, InitialPayloadValue) {
     testOne->Release();
 }
 
+// Test that the payload can be modified with the FetchAnd and FetchOr functions
+// Depends on the payload being >= 2 bits.
+TEST(Ref, PayloadModifications) {
+    RCTest* rc = new RCTest(0b10);
+    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t(0b10));
+
+    rc->RefCountPayloadFetchOr(0b01);
+    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t(0b11));
+
+    rc->RefCountPayloadFetchAnd(0b10);
+    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t(0b10));
+
+    rc->Release();
+}
+
 // Test that the payload survives ref and release operations
 TEST(Ref, PayloadUnchangedByRefCounting) {
     RCTest* test = new RCTest(1ull);

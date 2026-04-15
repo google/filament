@@ -57,21 +57,13 @@ class IRProgramTestBase : public BASE, public ProgramBuilder {
             return Failure{program.Diagnostics().Str()};
         }
 
-        auto result = wgsl::reader::ProgramToIR(program);
-        if (result != Success) {
-            return result.Failure();
-        }
+        TINT_CHECK_RESULT_UNWRAP(result, wgsl::reader::ProgramToIR(program));
 
         // WGSL-dialect -> core-dialect
-        if (auto lower = wgsl::reader::Lower(result.Get()); lower != Success) {
-            return lower.Failure();
-        }
+        TINT_CHECK_RESULT(wgsl::reader::Lower(result));
 
-        auto validate = core::ir::Validate(result.Get(), kCapabilities);
-        if (validate != Success) {
-            return validate.Failure();
-        }
-        return result.Move();
+        TINT_CHECK_RESULT(core::ir::Validate(result, kCapabilities));
+        return result;
     }
 
     /// Build the module from the given WGSL.
@@ -79,16 +71,13 @@ class IRProgramTestBase : public BASE, public ProgramBuilder {
     /// @returns the generated module
     Result<core::ir::Module> Build(std::string wgsl) {
         Source::File file("test.wgsl", std::move(wgsl));
-        auto result = wgsl::reader::WgslToIR(&file);
-        if (result != Success) {
-            return result.Failure();
-        }
-        auto validated = core::ir::Validate(result.Get(), kCapabilities);
-        if (validated != Success) {
-            return validated.Failure();
-        }
+        wgsl::reader::Options options{
+            .allowed_features = wgsl::AllowedFeatures::Everything(),
+        };
+        TINT_CHECK_RESULT_UNWRAP(result, wgsl::reader::WgslToIR(&file, options));
+        TINT_CHECK_RESULT(core::ir::Validate(result, kCapabilities));
 
-        return result.Move();
+        return result;
     }
 
     /// Helper to disassemble a module into a string representation

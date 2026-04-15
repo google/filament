@@ -201,12 +201,18 @@ class DAWN_NATIVE_EXPORT Instance {
     // Make mImpl->mPlatform point to an object inside Dawn in case it becomes a dangling pointer
     void DisconnectDawnPlatform();
 
+    // Used by DawnTest, NOT thread-safe.
+    void SetPlatformForTesting(dawn::platform::Platform* platform);
+
   private:
     InstanceBase* mImpl = nullptr;
 };
 
 // Backend-agnostic API for dawn_native
 DAWN_NATIVE_EXPORT const DawnProcTable& GetProcs();
+
+// Query the names of all the toggles that are enabled in adapter
+DAWN_NATIVE_EXPORT std::vector<const char*> GetTogglesUsed(const wgpu::Adapter& adapter);
 
 // Query the names of all the toggles that are enabled in device
 DAWN_NATIVE_EXPORT std::vector<const char*> GetTogglesUsed(WGPUDevice device);
@@ -276,7 +282,7 @@ struct DAWN_NATIVE_EXPORT ExternalImageExportInfo {
 
 DAWN_NATIVE_EXPORT bool CheckIsErrorForTesting(void* objectHandle);
 
-DAWN_NATIVE_EXPORT const char* GetObjectLabelForTesting(void* objectHandle);
+DAWN_NATIVE_EXPORT std::string GetObjectLabelForTesting(void* objectHandle);
 
 DAWN_NATIVE_EXPORT uint64_t GetAllocatedSizeForTesting(WGPUBuffer buffer);
 
@@ -306,6 +312,8 @@ class DAWN_NATIVE_EXPORT MemoryDump {
                            uint64_t value) = 0;
 
     virtual void AddString(const char* name, const char* key, const std::string& value) = 0;
+
+    virtual void AddOwnerGUID(const char* name, uint64_t ownerGUID);
 
     MemoryDump(const MemoryDump&) = delete;
     MemoryDump& operator=(const MemoryDump&) = delete;

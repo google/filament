@@ -33,8 +33,8 @@ import (
 	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 )
 
-func CreateMemMapOSWrapperWithFakeDawnRoot() (oswrapper.MemMapOSWrapper, error) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+func CreateFSTestOSWrapperWithFakeDawnRoot() (oswrapper.FSTestOSWrapper, error) {
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	err := SetUpFakeDawnRoot(wrapper)
 	if err != nil {
 		return wrapper, err
@@ -42,7 +42,7 @@ func CreateMemMapOSWrapperWithFakeDawnRoot() (oswrapper.MemMapOSWrapper, error) 
 	return wrapper, nil
 }
 
-func SetUpFakeDawnRoot(fsWriter oswrapper.MemMapOSWrapper) error {
+func SetUpFakeDawnRoot(fsWriter oswrapper.FSTestOSWrapper) error {
 	thisDir := ThisDir()
 	dawnRoot := filepath.Dir(filepath.Dir(filepath.Dir(thisDir)))
 	err := fsWriter.MkdirAll(dawnRoot, 0o666)

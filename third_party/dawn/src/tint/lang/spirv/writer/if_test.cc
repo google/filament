@@ -47,7 +47,14 @@ TEST_F(SpirvWriterTest, If_TrueEmpty_FalseEmpty) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                OpSelectionMerge %5 None
                OpBranchConditional %true %6 %5
@@ -64,7 +71,7 @@ TEST_F(SpirvWriterTest, If_FalseEmpty) {
     b.Append(func->Block(), [&] {
         auto* i = b.If(true);
         b.Append(i->True(), [&] {
-            b.Add(ty.i32(), 1_i, 1_i);
+            b.Add(1_i, 1_i);
             b.ExitIf(i);
         });
         b.Append(i->False(), [&] {  //
@@ -73,7 +80,14 @@ TEST_F(SpirvWriterTest, If_FalseEmpty) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                OpSelectionMerge %5 None
                OpBranchConditional %true %6 %5
@@ -97,13 +111,20 @@ TEST_F(SpirvWriterTest, If_TrueEmpty) {
             b.ExitIf(i);
         });
         b.Append(i->False(), [&] {
-            b.Add(ty.i32(), 1_i, 1_i);
+            b.Add(1_i, 1_i);
             b.ExitIf(i);
         });
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %5 None
@@ -133,7 +154,14 @@ TEST_F(SpirvWriterTest, If_BothBranchesReturn) {
         b.Unreachable();
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                OpSelectionMerge %5 None
                OpBranchConditional %true %6 %5
@@ -159,7 +187,14 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue) {
         b.Return(func, i);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %5 None
@@ -189,7 +224,14 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue_TrueReturn) {
         b.Return(func, i);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%16 = OpUndef %int");
     EXPECT_INST(R"(
                OpSelectionMerge %12 None
@@ -229,7 +271,14 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue_FalseReturn) {
         b.Return(func, i);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%17 = OpUndef %int");
     EXPECT_INST(R"(
                OpSelectionMerge %12 None
@@ -266,7 +315,14 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue_ImplicitFalse) {
         b.Return(func, i);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%12 = OpUndef %int");
     EXPECT_INST(R"(
           %4 = OpLabel
@@ -297,7 +353,14 @@ TEST_F(SpirvWriterTest, If_Phi_MultipleValue_0) {
         b.Return(func, i->Result(0));
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %5 None
@@ -328,7 +391,14 @@ TEST_F(SpirvWriterTest, If_Phi_MultipleValue_1) {
         b.Return(func, i->Result(1));
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %5 None
@@ -367,7 +437,14 @@ TEST_F(SpirvWriterTest, If_Phi_Nested) {
         b.Return(func, outer);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %5 None

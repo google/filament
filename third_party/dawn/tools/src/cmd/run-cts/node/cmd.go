@@ -54,7 +54,6 @@ type flags struct {
 	dumpShaders          bool
 	dumpShadersPretty    bool
 	fxc                  bool
-	useIR                bool
 	unrollConstEvalLoops bool
 	genCoverage          bool
 	compatibilityMode    bool
@@ -76,13 +75,13 @@ type cmd struct {
 	query    string
 }
 
-func (cmd) IsDefaultCommand() {}
+func (c *cmd) IsDefaultCommand() {}
 
-func (cmd) Name() string {
+func (c *cmd) Name() string {
 	return "node"
 }
 
-func (cmd) Desc() string {
+func (c *cmd) Desc() string {
 	return "runs the CTS with dawn.node"
 }
 
@@ -95,7 +94,7 @@ func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, e
 	}
 
 	c.flags.Flags.Register(cfg.OsWrapper)
-	flag.StringVar(&c.flags.bin, "bin", fileutils.BuildPath(cfg.OsWrapper), "path to the directory holding cts.js and dawn.node")
+	flag.StringVar(&c.flags.bin, "bin", fileutils.BuildPath(cfg.OsWrapper), "path to the directory holding cts.cjs and dawn.node")
 	flag.BoolVar(&c.flags.isolated, "isolate", false, "run each test in an isolated process")
 	flag.BoolVar(&c.flags.build, "build", true, "attempt to build the CTS before running")
 	flag.BoolVar(&c.flags.validate, "validate", false, "enable backend validation")
@@ -143,7 +142,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	}
 	fmt.Printf("Testing %d test cases...\n", len(testCases))
 
-	var runner func(ctx context.Context, testCases []common.TestCase, results chan<- common.Result, fsReader oswrapper.FilesystemReader)
+	var runner func(ctx context.Context, testCases []common.TestCase, results chan<- common.Result, fsReaderWriter oswrapper.FilesystemReaderWriter)
 	if c.flags.isolated {
 		fmt.Println("Running in parallel isolated...")
 		runner = c.runTestCasesWithCmdline
@@ -160,6 +159,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 
 	results, err := common.StreamResults(ctx,
 		c.flags.Colors,
+		c.flags.FailuresOnly,
 		c.state,
 		c.flags.Verbose,
 		c.coverage,
@@ -191,7 +191,7 @@ func (c *cmd) processFlags(fsReaderWriter oswrapper.FilesystemReaderWriter) erro
 	if !fileutils.IsDir(c.flags.bin, fsReaderWriter) {
 		return fmt.Errorf("'%v' is not a directory", c.flags.bin)
 	}
-	for _, file := range []string{"cts.js", "dawn.node"} {
+	for _, file := range []string{"cts.cjs", "dawn.node"} {
 		if !fileutils.IsFile(filepath.Join(c.flags.bin, file), fsReaderWriter) {
 			return fmt.Errorf("'%v' does not contain '%v'", c.flags.bin, file)
 		}
@@ -215,7 +215,6 @@ func (c *cmd) processFlags(fsReaderWriter oswrapper.FilesystemReaderWriter) erro
 	}
 
 	c.flags.dawn.SetOptions(node.Options{
-		BinDir:            c.flags.bin,
 		Backend:           c.flags.backend,
 		Adapter:           c.flags.adapterName,
 		Validate:          c.flags.validate,

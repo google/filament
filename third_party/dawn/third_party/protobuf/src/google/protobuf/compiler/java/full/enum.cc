@@ -18,6 +18,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "google/protobuf/compiler/code_generator_lite.h"
 #include "google/protobuf/compiler/java/context.h"
 #include "google/protobuf/compiler/java/doc_comment.h"
 #include "google/protobuf/compiler/java/helpers.h"
@@ -61,8 +62,21 @@ void EnumNonLiteGenerator::Generate(io::Printer* printer) {
   WriteEnumDocComment(printer, descriptor_, context_->options());
   MaybePrintGeneratedAnnotation(context_, printer, descriptor_, immutable_api_);
 
+  if (CheckLargeEnum(descriptor_)) {
+    std::vector<
+        std::pair<const EnumValueDescriptor*, const EnumValueDescriptor*>>
+        alias_pairs;
+    alias_pairs.reserve(aliases_.size());
+    for (const Alias& alias : aliases_) {
+      alias_pairs.emplace_back(alias.value, alias.canonical_value);
+    }
 
-  if (!context_->options().opensource_runtime) {
+    GenerateLarge(printer, descriptor_, canonical_values_, alias_pairs,
+                  immutable_api_, context_, name_resolver_);
+    return;
+  }
+
+  if (!google::protobuf::internal::IsOss()) {
     printer->Print("@com.google.protobuf.Internal.ProtoNonnullApi\n");
   }
   printer->Print(
@@ -117,7 +131,7 @@ void EnumNonLiteGenerator::Generate(io::Printer* printer) {
 
   printer->Print("static {\n");
   printer->Indent();
-  PrintGencodeVersionValidator(printer, context_->options().opensource_runtime,
+  PrintGencodeVersionValidator(printer, google::protobuf::internal::IsOss(),
                                descriptor_->name());
   printer->Outdent();
   printer->Print("}\n");
@@ -175,7 +189,7 @@ void EnumNonLiteGenerator::Generate(io::Printer* printer) {
       "  return value;\n"
       "}\n"
       "\n");
-  if (context_->options().opensource_runtime) {
+  if (google::protobuf::internal::IsOss()) {
     printer->Print(
         "/**\n"
         " * @param value The numeric wire value of the corresponding enum "
@@ -196,7 +210,7 @@ void EnumNonLiteGenerator::Generate(io::Printer* printer) {
       "entry.\n"
       " * @return The enum associated with the given numeric wire value.\n"
       " */\n");
-  if (!context_->options().opensource_runtime) {
+  if (!google::protobuf::internal::IsOss()) {
     printer->Print("@com.google.protobuf.Internal.ProtoMethodMayReturnNull\n");
   }
   printer->Print(
@@ -263,7 +277,7 @@ void EnumNonLiteGenerator::Generate(io::Printer* printer) {
         "    getDescriptorForType() {\n"
         "  return getDescriptor();\n"
         "}\n"
-        "public static final com.google.protobuf.Descriptors.EnumDescriptor\n"
+        "public static com.google.protobuf.Descriptors.EnumDescriptor\n"
         "    getDescriptor() {\n",
         "index_text", index_text);
 

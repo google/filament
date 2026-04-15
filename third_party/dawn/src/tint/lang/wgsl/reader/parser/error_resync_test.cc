@@ -67,7 +67,7 @@ fn x(.) {}
      ^
 
 test.wgsl:4:2 error: expected attribute
-Possible values: 'align', 'binding', 'blend_src', 'builtin', 'color', 'compute', 'diagnostic', 'fragment', 'group', 'id', 'input_attachment_index', 'interpolate', 'invariant', 'location', 'must_use', 'size', 'vertex', 'workgroup_size'
+Possible values: 'align', 'binding', 'blend_src', 'builtin', 'color', 'compute', 'diagnostic', 'fragment', 'group', 'id', 'input_attachment_index', 'interpolate', 'invariant', 'location', 'must_use', 'size', 'subgroup_size', 'vertex', 'workgroup_size'
 @_ fn -> {}
  ^
 )");
@@ -135,7 +135,7 @@ test.wgsl:5:10 error: expected ':' for struct member
          ^^^^
 
 test.wgsl:7:6 error: expected attribute
-Possible values: 'align', 'binding', 'blend_src', 'builtin', 'color', 'compute', 'diagnostic', 'fragment', 'group', 'id', 'input_attachment_index', 'interpolate', 'invariant', 'location', 'must_use', 'size', 'vertex', 'workgroup_size'
+Possible values: 'align', 'binding', 'blend_src', 'builtin', 'color', 'compute', 'diagnostic', 'fragment', 'group', 'id', 'input_attachment_index', 'interpolate', 'invariant', 'location', 'must_use', 'size', 'subgroup_size', 'vertex', 'workgroup_size'
     @- x : i32,
      ^
 )");

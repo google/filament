@@ -66,6 +66,16 @@ TEST(ICETest_DeathTest, AssertFalse) {
         "ice_test.cc:.* internal compiler error: TINT_ASSERT.false.");
 }
 
+TEST(ICETest_DeathTest, AssertFalse_WithCustomMessage) {
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            if ((true)) {
+                TINT_ASSERT(false) << "custom message " << 123;
+            }
+        },
+        "ice_test.cc:.* internal compiler error: TINT_ASSERT.false. custom message 123");
+}
+
 TEST(ICETest_DeathTest, AssertFalse_WithCallback) {
     uint32_t data = 42;
     InternalCompilerErrorCallbackInfo callback{

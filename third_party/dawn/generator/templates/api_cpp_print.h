@@ -27,10 +27,11 @@
 
 {% set API = metadata.api.upper() %}
 {% set api = API.lower() %}
-#ifndef {{API}}_CPP_PRINT_H_
-#define {{API}}_CPP_PRINT_H_
+{% set PREFIX = "" if not c_namespace else c_namespace.SNAKE_CASE() + "_" %}
+#ifndef {{PREFIX}}{{API}}_CPP_PRINT_H_
+#define {{PREFIX}}{{API}}_CPP_PRINT_H_
 
-#include "{{api}}/{{api}}_cpp.h"
+#include "{{cpp_header}}"
 
 #include <iomanip>
 #include <ios>
@@ -100,12 +101,17 @@ namespace {{metadata.namespace}} {
       }
   {% endfor %}
 
+}  // namespace {{metadata.namespace}}
+
+{% set namespace = metadata.namespace if not c_namespace else metadata.namespace + '::' + c_namespace.namespace_case() %}
+namespace {{namespace}} {
+
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, StringView value) {
       o << std::string_view(value);
       return o;
   }
 
-}  // namespace {{metadata.namespace}}
+}  // namespace {{namespace}}
 
-#endif // {{API}}_CPP_PRINT_H_
+#endif // {{PREFIX}}{{API}}_CPP_PRINT_H_

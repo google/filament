@@ -4,10 +4,6 @@ load("//:bazel/benchmark_deps.bzl", "benchmark_deps")
 
 benchmark_deps()
 
-load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
-
-rules_foreign_cc_dependencies()
-
 load("@rules_python//python:repositories.bzl", "py_repositories")
 
 py_repositories()

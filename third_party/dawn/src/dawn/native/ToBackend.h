@@ -73,6 +73,11 @@ struct ToBackendTraits<DeviceBase, BackendTraits> {
 };
 
 template <typename BackendTraits>
+struct ToBackendTraits<ExternalTextureBase, BackendTraits> {
+    using BackendType = typename BackendTraits::ExternalTextureType;
+};
+
+template <typename BackendTraits>
 struct ToBackendTraits<PipelineCacheBase, BackendTraits> {
     using BackendType = typename BackendTraits::PipelineCacheType;
 };
@@ -93,6 +98,11 @@ struct ToBackendTraits<QueueBase, BackendTraits> {
 };
 
 template <typename BackendTraits>
+struct ToBackendTraits<RenderBundleBase, BackendTraits> {
+    using BackendType = typename BackendTraits::RenderBundleType;
+};
+
+template <typename BackendTraits>
 struct ToBackendTraits<RenderPipelineBase, BackendTraits> {
     using BackendType = typename BackendTraits::RenderPipelineType;
 };
@@ -100,6 +110,11 @@ struct ToBackendTraits<RenderPipelineBase, BackendTraits> {
 template <typename BackendTraits>
 struct ToBackendTraits<ResourceHeapBase, BackendTraits> {
     using BackendType = typename BackendTraits::ResourceHeapType;
+};
+
+template <typename BackendTraits>
+struct ToBackendTraits<ResourceTableBase, BackendTraits> {
+    using BackendType = typename BackendTraits::ResourceTableType;
 };
 
 template <typename BackendTraits>
@@ -135,6 +150,11 @@ struct ToBackendTraits<SwapChainBase, BackendTraits> {
 template <typename BackendTraits>
 struct ToBackendTraits<TextureViewBase, BackendTraits> {
     using BackendType = typename BackendTraits::TextureViewType;
+};
+
+template <typename BackendTraits>
+struct ToBackendTraits<TexelBufferViewBase, BackendTraits> {
+    using BackendType = typename BackendTraits::TexelBufferViewType;
 };
 
 // ToBackendBase implements conversion to the given BackendTraits

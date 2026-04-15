@@ -2014,15 +2014,15 @@ void WebGPUDriver::scissor(Viewport scissor) {
     assert_invariant(mRenderPassEncoder);
     assert_invariant(mCurrentRenderTarget);
 
-    // The WebGPU scissor starts from the top-left corner
-    assert_invariant(scissor.left >= 0 &&
-                     mCurrentRenderTarget->height >= scissor.bottom + scissor.height /*top >= 0*/ &&
-                     scissor.width <= mCurrentRenderTarget->width &&
-                     scissor.height <= mCurrentRenderTarget->height);
+    uint32_t rtHeight = mCurrentRenderTarget->height;
+    uint32_t rtWidth = mCurrentRenderTarget->width;
+    uint32_t left = std::max(0, scissor.left);
+    uint32_t bottom = std::max(0, scissor.bottom);
+    uint32_t top = rtHeight > (bottom + scissor.height) ? rtHeight - bottom - scissor.height : 0;
+    uint32_t width = std::min((uint32_t)scissor.width, rtWidth - left);
+    uint32_t height = std::min((uint32_t)scissor.height, rtHeight - top);
 
-    mRenderPassEncoder.SetScissorRect(scissor.left,
-            mCurrentRenderTarget->height - scissor.bottom - scissor.height /*top*/, scissor.width,
-            scissor.height);
+    mRenderPassEncoder.SetScissorRect(left, top, width, height);
 }
 
 void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

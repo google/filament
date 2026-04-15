@@ -117,7 +117,9 @@ TEST_P(SubgroupsAdapterInfoTests, DeviceAndAdapterAgree) {
 }
 
 DAWN_INSTANTIATE_TEST_P(SubgroupsAdapterInfoTests,
-                        {D3D12Backend(), D3D12Backend({}, {"use_dxc"}), MetalBackend(),
+                        {D3D12Backend(),                 //
+                         D3D12Backend({}, {"use_dxc"}),  //
+                         MetalBackend(),                 //
                          VulkanBackend()},
                         {RequestSubgroups::WhenAvailable, RequestSubgroups::Never});
 
@@ -282,7 +284,8 @@ DAWN_INSTANTIATE_TEST(SubgroupsShaderTests,
                       D3D12Backend(),
                       D3D12Backend({}, {"use_dxc"}),
                       MetalBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class SubgroupsShaderTestsFragment : public SubgroupsTestsBase<AdapterTestParam> {
   protected:
@@ -394,13 +397,17 @@ DAWN_INSTANTIATE_TEST(SubgroupsShaderTestsFragment,
                       D3D12Backend(),
                       D3D12Backend({}, {"use_dxc"}),
                       MetalBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 enum class BroadcastType {
     I32,
     U32,
     F32,
     F16,
+    Vec2F16,
+    Vec3F16,
+    Vec4F16,
 };
 
 std::ostream& operator<<(std::ostream& o, BroadcastType broadcastType) {
@@ -416,6 +423,15 @@ std::ostream& operator<<(std::ostream& o, BroadcastType broadcastType) {
             break;
         case BroadcastType::F16:
             o << "f16";
+            break;
+        case BroadcastType::Vec2F16:
+            o << "vec2<f16>";
+            break;
+        case BroadcastType::Vec3F16:
+            o << "vec3<f16>";
+            break;
+        case BroadcastType::Vec4F16:
+            o << "vec4<f16>";
             break;
     }
     return o;
@@ -497,6 +513,46 @@ class SubgroupsBroadcastTests : public SubgroupsTestsBase<SubgroupsBroadcastTest
     }
 
   private:
+    std::string GetValueConstructor(const std::string& value) {
+        std::stringstream ss;
+        switch (GetParam().mBroadcastType) {
+            case BroadcastType::Vec2F16:
+                ss << "vec2<u32>(" << value << ")";
+                break;
+            case BroadcastType::Vec3F16:
+                ss << "vec3<u32>(" << value << ")";
+                break;
+            case BroadcastType::Vec4F16:
+                ss << "vec4<u32>(" << value << ")";
+                break;
+            default:
+                ss << value;
+                break;
+        }
+        return ss.str();
+    }
+
+    std::string GetResultExpression(const std::string& varName) {
+        std::stringstream ss;
+        switch (GetParam().mBroadcastType) {
+            case BroadcastType::Vec2F16:
+                ss << "i32(" << varName << ".x) & i32(" << varName << ".y)";
+                break;
+            case BroadcastType::Vec3F16:
+                ss << "i32(" << varName << ".x) & i32(" << varName << ".y) & i32(" << varName
+                   << ".z)";
+                break;
+            case BroadcastType::Vec4F16:
+                ss << "i32(" << varName << ".x) & i32(" << varName << ".y) & i32(" << varName
+                   << ".z) & i32(" << varName << ".w)";
+                break;
+            default:
+                ss << "i32(" << varName << ")";
+                break;
+        }
+        return ss.str();
+    }
+
     // Helper function that create shader module for testing broadcasting subgroup_size. The shader
     // declares a workgroup size of [workgroupSize, 1, 1], in which each invocation hold a register
     // initialized to SubgroupRegisterInitializer, then sets the register of invocation 0 to
@@ -531,11 +587,12 @@ fn main(
         reg = BroadcastType()";
         switch (GetParam().mSubgroupBroadcastValueOfInvocation0) {
             case SubgroupBroadcastValueOfInvocation0::Constant: {
-                code << SubgroupBroadcastConstantValueForInvocation0;
+                code << GetValueConstructor(
+                    std::to_string(SubgroupBroadcastConstantValueForInvocation0));
                 break;
             }
             case SubgroupBroadcastValueOfInvocation0::SubgroupSize: {
-                code << "sg_size";
+                code << GetValueConstructor("sg_size");
                 break;
             }
         }
@@ -545,8 +602,11 @@ fn main(
     workgroupBarrier();
     // Broadcast the register value of subgroup_id 0 in each subgroup.
     reg = subgroupBroadcast(reg, 0u);
-    // Write back the register value in i32.
-    output.broadcastOutput[local_id.x] = i32(reg);
+
+    // Write back the register value in i32, if it's a vec type, AND them together.
+    let shfld : i32 = )"
+             << GetResultExpression("reg") << R"(;
+    output.broadcastOutput[local_id.x] = shfld;
 }
 )";
         return utils::CreateShaderModule(device, code.str().c_str());
@@ -640,7 +700,10 @@ fn main(
 // subgroup, we don't assume any other particular subgroups layout property.
 TEST_P(SubgroupsBroadcastTests, SubgroupBroadcast) {
     DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsEnabledInWGSL());
-    if (GetParam().mBroadcastType == BroadcastType::F16) {
+    if (GetParam().mBroadcastType == BroadcastType::F16 ||
+        GetParam().mBroadcastType == BroadcastType::Vec2F16 ||
+        GetParam().mBroadcastType == BroadcastType::Vec3F16 ||
+        GetParam().mBroadcastType == BroadcastType::Vec4F16) {
         DAWN_TEST_UNSUPPORTED_IF(!IsShaderF16EnabledInWGSL());
     }
 
@@ -651,13 +714,18 @@ TEST_P(SubgroupsBroadcastTests, SubgroupBroadcast) {
 
 // DawnTestBase::CreateDeviceImpl always enables allow_unsafe_apis toggle.
 DAWN_INSTANTIATE_TEST_P(SubgroupsBroadcastTests,
-                        {D3D12Backend(), D3D12Backend({}, {"use_dxc"}), MetalBackend(),
+                        {D3D12Backend(),                 //
+                         D3D12Backend({}, {"use_dxc"}),  //
+                         MetalBackend(),                 //
                          VulkanBackend()},
                         {
                             BroadcastType::I32,
                             BroadcastType::U32,
                             BroadcastType::F32,
                             BroadcastType::F16,
+                            BroadcastType::Vec2F16,
+                            BroadcastType::Vec3F16,
+                            BroadcastType::Vec4F16,
                         },  // BroadcastType
                         {SubgroupBroadcastValueOfInvocation0::Constant,
                          SubgroupBroadcastValueOfInvocation0::SubgroupSize}
@@ -850,7 +918,9 @@ TEST_P(SubgroupsShaderInclusiveTest, InclusiveExecution) {
 }
 
 DAWN_INSTANTIATE_TEST_P(SubgroupsShaderInclusiveTest,
-                        {D3D12Backend(), D3D12Backend({}, {"use_dxc"}), MetalBackend(),
+                        {D3D12Backend(),                 //
+                         D3D12Backend({}, {"use_dxc"}),  //
+                         MetalBackend(),                 //
                          VulkanBackend()},
                         {SubgroupIntrinsicOp::Add, SubgroupIntrinsicOp::Mul},
                         {
@@ -859,6 +929,163 @@ DAWN_INSTANTIATE_TEST_P(SubgroupsShaderInclusiveTest,
                             SubgroupOpDataType::U32,
                             SubgroupOpDataType::I32,
                         });
+
+class SubgroupSizeControlTests : public DawnTest {
+  protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        // Always require related features if available.
+        std::vector<wgpu::FeatureName> requiredFeatures;
+        if (SupportsFeatures({wgpu::FeatureName::Subgroups,
+                              wgpu::FeatureName::ChromiumExperimentalSubgroupSizeControl})) {
+            mSupportsSubgroupSizeControl = true;
+            requiredFeatures.push_back(wgpu::FeatureName::Subgroups);
+            requiredFeatures.push_back(wgpu::FeatureName::ChromiumExperimentalSubgroupSizeControl);
+        }
+        return requiredFeatures;
+    }
+
+    bool SupportSubgroupSizeControl() const { return mSupportsSubgroupSizeControl; }
+
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
+        required.maxComputeInvocationsPerWorkgroup = supported.maxComputeInvocationsPerWorkgroup;
+    }
+
+    void DoTest(uint32_t subgroupSize) {
+        DAWN_ASSERT(IsPowerOfTwo(subgroupSize));
+
+        wgpu::ComputePipeline pipeline =
+            CreateComputePipelineWithSubgroupSizeAttribute(subgroupSize, true);
+
+        uint32_t outputBufferSizeInBytes = sizeof(uint32_t);
+        wgpu::BufferDescriptor outputBufferDesc;
+        outputBufferDesc.size = outputBufferSizeInBytes;
+        outputBufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
+        wgpu::Buffer outputBuffer = device.CreateBuffer(&outputBufferDesc);
+
+        wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                         {
+                                                             {0, outputBuffer},
+                                                         });
+
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(1);
+        pass.End();
+        wgpu::CommandBuffer commands = encoder.Finish();
+        queue.Submit(1, &commands);
+
+        EXPECT_BUFFER_U32_EQ(subgroupSize, outputBuffer, 0);
+    }
+
+    wgpu::ComputePipeline CreateComputePipelineWithSubgroupSizeAttribute(
+        uint32_t subgroupSize,
+        bool setSubgroupSizeAsOverride) {
+        std::stringstream code;
+
+        code << R"(
+enable subgroups;
+enable chromium_experimental_subgroup_size_control;)";
+
+        if (setSubgroupSizeAsOverride) {
+            code << "override kSubgroupSize : u32;\n";
+        } else {
+            code << "const kSubgroupSize = " << subgroupSize << ";\n";
+        }
+
+        code << R"(
+@group(0) @binding(0)
+var<storage, read_write> output: u32;
+
+@compute @workgroup_size(kSubgroupSize) @subgroup_size(kSubgroupSize)
+fn main(@builtin(subgroup_size) sg_size : u32) {
+    if (subgroupElect()) {
+        output = sg_size;
+    }
+}
+)";
+
+        wgpu::ComputePipelineDescriptor csDesc;
+        csDesc.compute.module = utils::CreateShaderModule(device, code.str().c_str());
+
+        wgpu::ConstantEntry entry;
+        if (setSubgroupSizeAsOverride) {
+            entry = {nullptr, "kSubgroupSize", static_cast<double>(subgroupSize)};
+            csDesc.compute.constantCount = 1;
+            csDesc.compute.constants = &entry;
+        }
+
+        return device.CreateComputePipeline(&csDesc);
+    }
+
+  private:
+    bool mSupportsSubgroupSizeControl = false;
+};
+
+// Test all the values that are between `minExplicitComputeSubgroupSize` and
+// `maxExplicitComputeSubgroupSize` and are a power of 2 can be used as WGSL attribute
+// `@subgroup_size` and the value of the WGSL builtin `subgroup_size` exactly matches the value of
+// the WGSL attribute `@subgroup_size`.
+TEST_P(SubgroupSizeControlTests, TestAllSubgroupSizes) {
+    DAWN_TEST_UNSUPPORTED_IF(!SupportSubgroupSizeControl());
+
+    wgpu::AdapterInfo info;
+    wgpu::AdapterPropertiesExplicitComputeSubgroupSizeConfigs subgroupSizeConfigs;
+    info.nextInChain = &subgroupSizeConfigs;
+    adapter.GetInfo(&info);
+
+    ASSERT_TRUE(IsPowerOfTwo(subgroupSizeConfigs.minExplicitComputeSubgroupSize));
+    for (uint32_t subgroupSize = subgroupSizeConfigs.minExplicitComputeSubgroupSize;
+         subgroupSize <= subgroupSizeConfigs.maxExplicitComputeSubgroupSize; subgroupSize *= 2) {
+        DoTest(subgroupSize);
+    }
+}
+
+// Test an error occurs when a value that is less than `minExplicitComputeSubgroupSize` is used as
+// the attribute `@subgroup_size`.
+TEST_P(SubgroupSizeControlTests, LessThanMinExplicitComputeSubgroupSize) {
+    DAWN_TEST_UNSUPPORTED_IF(!SupportSubgroupSizeControl());
+
+    wgpu::AdapterInfo info;
+    wgpu::AdapterPropertiesExplicitComputeSubgroupSizeConfigs subgroupSizeConfigs;
+    info.nextInChain = &subgroupSizeConfigs;
+    adapter.GetInfo(&info);
+
+    ASSERT_TRUE(IsPowerOfTwo(subgroupSizeConfigs.minExplicitComputeSubgroupSize));
+
+    uint32_t invalidSubgroupSize = subgroupSizeConfigs.minExplicitComputeSubgroupSize / 2;
+    ASSERT_TRUE(invalidSubgroupSize > 0);
+
+    for (bool setSubgroupSizeAsOverride : {true, false}) {
+        ASSERT_DEVICE_ERROR(CreateComputePipelineWithSubgroupSizeAttribute(
+            invalidSubgroupSize, setSubgroupSizeAsOverride));
+    }
+}
+
+// Test an error occurs when a value that is more than `maxExplicitComputeSubgroupSize` is used as
+// the attribute `@subgroup_size`.
+TEST_P(SubgroupSizeControlTests, MoreThanMaxExplicitComputeSubgroupSize) {
+    DAWN_TEST_UNSUPPORTED_IF(!SupportSubgroupSizeControl());
+
+    wgpu::AdapterInfo info;
+    wgpu::AdapterPropertiesExplicitComputeSubgroupSizeConfigs subgroupSizeConfigs;
+    info.nextInChain = &subgroupSizeConfigs;
+    adapter.GetInfo(&info);
+
+    ASSERT_TRUE(IsPowerOfTwo(subgroupSizeConfigs.maxExplicitComputeSubgroupSize));
+
+    uint32_t invalidSubgroupSize = subgroupSizeConfigs.maxExplicitComputeSubgroupSize * 2;
+    ASSERT_TRUE(invalidSubgroupSize > 0);
+
+    for (bool setSubgroupSizeAsOverride : {true, false}) {
+        ASSERT_DEVICE_ERROR(CreateComputePipelineWithSubgroupSizeAttribute(
+            invalidSubgroupSize, setSubgroupSizeAsOverride));
+    }
+}
+
+DAWN_INSTANTIATE_TEST(SubgroupSizeControlTests, D3D12Backend(), MetalBackend(), VulkanBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

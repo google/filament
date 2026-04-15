@@ -2,7 +2,7 @@
 #define VULKAN_BETA_H_ 1
 
 /*
-** Copyright 2015-2025 The Khronos Group Inc.
+** Copyright 2015-2026 The Khronos Group Inc.
 **
 ** SPDX-License-Identifier: Apache-2.0
 */
@@ -335,6 +335,37 @@ typedef struct VkAccelerationStructureTrianglesDisplacementMicromapNV {
     const VkMicromapUsageEXT* const*    ppUsageCounts;
     VkMicromapEXT                       micromap;
 } VkAccelerationStructureTrianglesDisplacementMicromapNV;
+
+
+
+// VK_AMDX_dense_geometry_format is a preprocessor guard. Do not pass it to API calls.
+#define VK_AMDX_dense_geometry_format 1
+#define VK_AMDX_DENSE_GEOMETRY_FORMAT_SPEC_VERSION 1
+#define VK_AMDX_DENSE_GEOMETRY_FORMAT_EXTENSION_NAME "VK_AMDX_dense_geometry_format"
+#define VK_COMPRESSED_TRIANGLE_FORMAT_DGF1_BYTE_ALIGNMENT_AMDX 128U
+#define VK_COMPRESSED_TRIANGLE_FORMAT_DGF1_BYTE_STRIDE_AMDX 128U
+
+typedef enum VkCompressedTriangleFormatAMDX {
+    VK_COMPRESSED_TRIANGLE_FORMAT_DGF1_AMDX = 0,
+    VK_COMPRESSED_TRIANGLE_FORMAT_MAX_ENUM_AMDX = 0x7FFFFFFF
+} VkCompressedTriangleFormatAMDX;
+typedef struct VkPhysicalDeviceDenseGeometryFormatFeaturesAMDX {
+    VkStructureType    sType;
+    void*              pNext;
+    VkBool32           denseGeometryFormat;
+} VkPhysicalDeviceDenseGeometryFormatFeaturesAMDX;
+
+typedef struct VkAccelerationStructureDenseGeometryFormatTrianglesDataAMDX {
+    VkStructureType                   sType;
+    const void*                       pNext;
+    VkDeviceOrHostAddressConstKHR     compressedData;
+    VkDeviceSize                      dataSize;
+    uint32_t                          numTriangles;
+    uint32_t                          numVertices;
+    uint32_t                          maxPrimitiveIndex;
+    uint32_t                          maxGeometryIndex;
+    VkCompressedTriangleFormatAMDX    format;
+} VkAccelerationStructureDenseGeometryFormatTrianglesDataAMDX;
 
 
 #ifdef __cplusplus

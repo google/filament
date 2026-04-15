@@ -45,13 +45,11 @@ namespace tint::core::ir::transform {
 ///
 /// Note: BindingRemapper is the transform that introduces duplicate
 /// bindings, so in theory shouldn't need the capability to allow
-/// them. Except that in the MSL backend BindingRemapper is invoked multiple
-/// times, (FlattenBindings and Raise specifically), so may encounter IR with
-/// duplicate bindings when called the second time.
-// TODO(crbug.com/363031535): Remove kAllowDuplicateBindings when MSL no
-// longer needs FlattenBindings. binding_remapper_fuzz.cc will need to be
-// updated to have kAllowDuplicateBindings as a post-run capability.
-const Capabilities kBindingRemapperCapabilities{Capability::kAllowDuplicateBindings};
+/// them.
+const Capabilities kBindingRemapperCapabilities{
+    Capability::kAllow8BitIntegers,
+    Capability::kAllow16BitIntegers,
+};
 
 /// BindingRemapper is a transform that remaps binding point indices and access controls.
 /// @param module the module to transform

@@ -60,6 +60,7 @@ tint_add_target(tint_lang_wgsl lib
 )
 
 tint_target_add_dependencies(tint_lang_wgsl lib
+  tint_lang_core
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -95,6 +96,7 @@ tint_target_add_dependencies(tint_lang_wgsl_test test
   tint_lang_wgsl_ast
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
+  tint_lang_wgsl_writer_common
   tint_lang_wgsl_writer_ir_to_program
   tint_lang_wgsl_writer_raise
   tint_utils
@@ -124,6 +126,7 @@ endif(TINT_BUILD_WGSL_READER)
 if(TINT_BUILD_WGSL_READER AND TINT_BUILD_WGSL_WRITER)
   tint_target_add_sources(tint_lang_wgsl_test test
     "lang/wgsl/ir_roundtrip_test.cc"
+    "lang/wgsl/minifier_test.cc"
   )
 endif(TINT_BUILD_WGSL_READER AND TINT_BUILD_WGSL_WRITER)
 

@@ -71,3 +71,45 @@ Samples and tests produce HTML files which can be served and viewed in a compati
 - Build the `emdawnwebgpu` and `samples` GN build targets.
 
 Samples and tests produce HTML files in `out/<dir>/wasm` which can be served and viewed in a compatible browser.
+
+## Appendix: Bits of Emscripten we depend on
+
+(Internal docs for coordination between Emscripten and Emdawnwebgpu.)
+
+Emdawnwebgpu depends on a lot of random bits of Emscripten that aren't usually
+public. We assume they're "mostly stable" for now and will update this (and roll
+into Emscripten) as needed if they change. Most, but not all, incompatible
+changes will be detected on Emscripten's CI, because it tests Emdawnwebgpu. This
+list is a best effort to enumerate them, but definitely isn't complete.
+
+- Remote ports
+- In `emdawnwebgpu.port.py`:
+  - Ports API in general
+  - Modifying various settings in `linker_setup()`
+  - `tools.diagnostics.error`
+- In package build:
+  - `tools/gen_struct_info.py`
+- In `library_webgpu.js`:
+  - Various items from `parseTools` and `jsifier`
+    - `*__i53abi: true`
+    - `makeGetValue`
+    - `runtimeKeepalivePush`/`runtimeKeepalivePop`
+  - Public settings:
+    - `ASSERTIONS`
+    - `ASYNCIFY`
+    - `USE_WEBGPU`
+    - `MEMORY64`, `WASM_BIGINT`
+  - `settings_internal.js` settings:
+    - `CAN_ADDRESS_2GB`
+  - Public preamble:
+    - `assert`, `abort`
+  - Internal library functions:
+    - `stackSave`, `stackRestore`
+    - `stringToUTF8OnStack`, `UTF8ToString`, `stringToNewUTF8`, `lengthBytesUTF8`
+    - `callUserCallback`
+    - `warnOnce`
+    - `readI53FromI64`/`writeI53ToI64`
+    - `findCanvasEventTarget`
+- In `webgpu.cpp`:
+  - Public APIs:
+    - `emscripten_has_asyncify`

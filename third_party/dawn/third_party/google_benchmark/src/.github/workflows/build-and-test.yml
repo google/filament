@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  CMAKE_GENERATOR: Ninja
+
 jobs:
   # TODO: add 32-bit builds (g++ and clang++) for ubuntu
   #   (requires g++-multilib and libc6:i386)
@@ -17,41 +20,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04, macos-latest]
+        os: [ubuntu-24.04, ubuntu-22.04, ubuntu-24.04-arm, macos-latest]
         build_type: ['Release', 'Debug']
         compiler: ['g++', 'clang++']
         lib: ['shared', 'static']
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Install dependencies (macos)
+        if: runner.os == 'macOS'
+        run: brew install ninja
 
-      - uses: lukka/get-cmake@latest
-
-      - name: create build environment
-        run: cmake -E make_directory ${{ runner.workspace }}/_build
-
-      - name: setup cmake initial cache
-        run: touch compiler-cache.cmake
-
-      - name: configure cmake
-        env:
-          CXX: ${{ matrix.compiler }}
-        shell: bash
-        working-directory: ${{ runner.workspace }}/_build
-        run: >
-          cmake -C ${{ github.workspace }}/compiler-cache.cmake
-          $GITHUB_WORKSPACE
-          -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
-          -DBUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DCMAKE_CXX_COMPILER=${{ env.CXX }}
-          -DCMAKE_CXX_VISIBILITY_PRESET=hidden
-          -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: build
-        shell: bash
-        working-directory: ${{ runner.workspace }}/_build
-        run: cmake --build . --config ${{ matrix.build_type }}
+        uses: threeal/cmake-action@725d1314ccf9ea922805d7e3f9d9bcbca892b406 # v2.1.0
+        with:
+          build-dir: ${{ runner.workspace }}/_build
+          cxx-compiler: ${{ matrix.compiler }}
+          options: |
+            BENCHMARK_DOWNLOAD_DEPENDENCIES=ON
+            BUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
+            CMAKE_BUILD_TYPE=${{ matrix.build_type }}
+            CMAKE_CXX_COMPILER=${{ matrix.compiler }}
+            CMAKE_CXX_VISIBILITY_PRESET=hidden
+            CMAKE_VISIBILITY_INLINES_HIDDEN=ON
 
       - name: test
         shell: bash
@@ -68,10 +60,8 @@ jobs:
       fail-fast: false
       matrix:
         msvc:
-          - VS-16-2019
+          - VS-17-2025
           - VS-17-2022
-        arch:
-          - x64
         build_type:
           - Debug
           - Release
@@ -79,31 +69,30 @@ jobs:
           - shared
           - static
         include:
-          - msvc: VS-16-2019
-            os: windows-2019
-            generator: 'Visual Studio 16 2019'
+          - msvc: VS-17-2025
+            os: windows-2025
+            generator: 'Visual Studio 17 2022'
           - msvc: VS-17-2022
             os: windows-2022
             generator: 'Visual Studio 17 2022'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: lukka/get-cmake@latest
+      - uses: lukka/get-cmake@ea83089aa35e08e459464341fe24ad024ee2466f # latest
 
       - name: configure cmake
         run: >
-          cmake -S . -B _build/
-          -A ${{ matrix.arch }}
+          cmake -S . -B ${{ runner.workspace }}/_build/
           -G "${{ matrix.generator }}"
           -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
           -DBUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
 
       - name: build
-        run: cmake --build _build/ --config ${{ matrix.build_type }}
+        run: cmake --build ${{ runner.workspace }}/_build/ --config ${{ matrix.build_type }}
 
       - name: test
-        run: ctest --test-dir _build/ -C ${{ matrix.build_type }} -VV
+        run: ctest --test-dir ${{ runner.workspace }}/_build/ -C ${{ matrix.build_type }} -VV
 
   msys2:
     name: ${{ matrix.os }}.${{ matrix.build_type }}.${{ matrix.lib }}.${{ matrix.msys2.msystem }}
@@ -117,9 +106,7 @@ jobs:
         os: [ windows-latest ]
         msys2:
           - { msystem: MINGW64,    arch: x86_64,  family: GNU,  compiler: g++ }
-          - { msystem: MINGW32,    arch: i686,    family: GNU,  compiler: g++ }
           - { msystem: CLANG64,    arch: x86_64,  family: LLVM, compiler: clang++ }
-          - { msystem: CLANG32,    arch: i686,    family: LLVM, compiler: clang++ }
           - { msystem: UCRT64,     arch: x86_64,  family: GNU,  compiler: g++ }
         build_type:
           - Debug
@@ -129,10 +116,8 @@ jobs:
           - static
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Base Dependencies
-        uses: msys2/setup-msys2@v2
+      - name: setup msys2
+        uses: msys2/setup-msys2@cafece8e6baf9247cf9b1bf95097b0b983cc558d # v2.31.0
         with:
           cache: false
           msystem: ${{ matrix.msys2.msystem }}
@@ -141,10 +126,14 @@ jobs:
             git
             base-devel
           pacboy: >-
-            cc:p
+            gcc:p
+            clang:p
             cmake:p
             ninja:p
 
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # NOTE: we can't use cmake actions here as we need to do everything in msys2 shell.
       - name: configure cmake
         env:
           CXX: ${{ matrix.msys2.compiler }}
@@ -158,4 +147,5 @@ jobs:
         run: cmake --build _build/ --config ${{ matrix.build_type }}
 
       - name: test
-        run: ctest --test-dir _build/ -C ${{ matrix.build_type }} -VV
+        working-directory: _build
+        run: ctest -C ${{ matrix.build_type }} -VV

@@ -25,7 +25,9 @@
  * Author: Charles Giessen <charles@lunarg.com>
  */
 
-#include "test_environment.h"
+#include "framework/test_environment.h"
+
+#include <fstream>
 
 extern "C" {
 #include "loader.h"
@@ -40,19 +42,15 @@ void execute_instance_enumerate_fuzzer(std::filesystem::path const& filename) {
     env.write_file_from_source((std::filesystem::path(CLUSTERFUZZ_TESTCASE_DIRECTORY) / filename).string().c_str(),
                                ManifestCategory::settings, ManifestLocation::settings_location, "vk_loader_settings.json");
 
-    uint32_t pPropertyCount;
+    uint32_t pPropertyCount = 1;
     VkExtensionProperties pProperties = {0};
 
     env.vulkan_functions.vkEnumerateInstanceExtensionProperties("test_auto", &pPropertyCount, &pProperties);
 }
-void execute_instance_create_fuzzer(std::filesystem::path const& filename) {
-    FrameworkEnvironment env{};
-    env.write_file_from_source((std::filesystem::path(CLUSTERFUZZ_TESTCASE_DIRECTORY) / filename).string().c_str(),
-                               ManifestCategory::implicit_layer, ManifestLocation::implicit_layer, "complex_layer.json");
-    env.write_file_from_source((std::filesystem::path(CLUSTERFUZZ_TESTCASE_DIRECTORY) / filename).string().c_str(),
-                               ManifestCategory::settings, ManifestLocation::settings_location, "vk_loader_settings.json");
-    env.write_file_from_source((std::filesystem::path(CLUSTERFUZZ_TESTCASE_DIRECTORY) / filename).string().c_str(),
-                               ManifestCategory::icd, ManifestLocation::driver, "icd_test.json");
+// Common code for execute_instance_create_fuzzer and execute_instance_create_fuzzer_advanced
+void execute_instance_create_fuzzer_logic(FrameworkEnvironment& env) {
+    EnvVarWrapper enable_all_layers("VK_LOADER_LAYERS_ENABLE", "all");
+
     VkInstance inst = {0};
     const char* instance_layers[] = {"VK_LAYER_KHRONOS_validation", "VK_LAYER_test_layer_1", "VK_LAYER_test_layer_2"};
     VkApplicationInfo app{};
@@ -81,6 +79,53 @@ void execute_instance_create_fuzzer(std::filesystem::path const& filename) {
     env.vulkan_functions.vkDestroyInstance(inst, NULL);
 }
 
+void execute_instance_create_fuzzer(std::filesystem::path const& filename) {
+    FrameworkEnvironment env{};
+    env.write_file_from_source((std::filesystem::path(CLUSTERFUZZ_TESTCASE_DIRECTORY) / filename).string().c_str(),
+                               ManifestCategory::implicit_layer, ManifestLocation::unsecured_implicit_layer, "complex_layer.json");
+    env.write_file_from_source((std::filesystem::path(CLUSTERFUZZ_TESTCASE_DIRECTORY) / filename).string().c_str(),
+                               ManifestCategory::settings, ManifestLocation::unsecured_settings, "vk_loader_settings.json");
+    env.write_file_from_source((std::filesystem::path(CLUSTERFUZZ_TESTCASE_DIRECTORY) / filename).string().c_str(),
+                               ManifestCategory::icd, ManifestLocation::unsecured_driver, "icd_test.json");
+
+    execute_instance_create_fuzzer_logic(env);
+}
+
+void execute_instance_create_advanced_fuzzer(std::filesystem::path const& filename) {
+    FrameworkEnvironment env{};
+
+    // The file actually contains three subfiles with their lengths specified in the first 12 bytes of the file.
+    auto source_file = std::filesystem::path(CLUSTERFUZZ_TESTCASE_DIRECTORY) / filename;
+    std::fstream file{source_file.string(), std::ios_base::in | std::ios_base::binary};
+    ASSERT_TRUE(file.is_open());
+    std::stringstream file_stream;
+    file_stream << file.rdbuf();
+
+    auto data_string = file_stream.str();
+    auto data_cstring = data_string.c_str();
+    std::array<uint64_t, 3> sections;
+    memcpy(sections.data(), data_cstring, sizeof(uint64_t) * 3);
+    sections[0] = sections[0] % 40000;
+    sections[1] = sections[1] % 40000;
+    sections[2] = sections[2] % 40000;
+
+    uint64_t data_index = 3 * sizeof(uint64_t);
+    std::string first = data_string.substr(data_index, sections[0]);
+    data_index += sections[0];
+    std::string second = data_string.substr(data_index, sections[1]);
+    data_index += sections[1];
+    std::string third = data_string.substr(data_index, sections[2]);
+    data_index += sections[2];
+
+    env.platform_shim->fuzz_data.resize(data_string.size() - data_index);
+    memcpy(env.platform_shim->fuzz_data.data(), data_cstring + data_index, env.platform_shim->fuzz_data.size());
+
+    env.write_file_from_string(first, ManifestCategory::implicit_layer, ManifestLocation::implicit_layer, "complex_layer.json");
+    env.write_file_from_string(second, ManifestCategory::settings, ManifestLocation::settings_location, "vk_loader_settings.json");
+    env.write_file_from_string(third, ManifestCategory::settings, ManifestLocation::settings_location, "icd_test.json");
+
+    execute_instance_create_fuzzer_logic(env);
+}
 void execute_json_load_fuzzer(std::string const& filename) {
     FrameworkEnvironment env{};
 
@@ -135,7 +180,9 @@ TEST(BadJsonInput, ClusterFuzzTestCase_6583684169269248) {
     // Nullptr dereference in loader_copy_to_new_str
     execute_instance_enumerate_fuzzer("clusterfuzz-testcase-minimized-instance_enumerate_fuzzer-6583684169269248");
 }
-
+TEST(BadJsonInput, ClusterFuzzTestCase_6470575830925312) {
+    execute_instance_enumerate_fuzzer("clusterfuzz-testcase-minimized-instance_enumerate_fuzzer-6470575830925312");
+}
 TEST(BadJsonInput, ClusterFuzzTestCase_5258042868105216) {
     // Doesn't crash with ASAN or UBSAN
     // Doesn't reproducibly crash - json_load_fuzzer: Abrt in loader_cJSON_Delete
@@ -206,11 +253,21 @@ TEST(BadJsonInput, ClusterFuzzTestCase_5817896795701248) {
 TEST(BadJsonInput, ClusterFuzzTestCase_6541440380895232) {
     execute_instance_create_fuzzer("clusterfuzz-testcase-instance_create_fuzzer-6541440380895232");
 }
+TEST(BadJsonInput, ClusterFuzzTestCase_5612556809207808) {
+    execute_instance_create_advanced_fuzzer("clusterfuzz-testcase-minimized-instance_create_advanced_fuzzer-5612556809207808");
+}
+TEST(BadJsonInput, ClusterFuzzTestCase_4788849181261824) {
+    execute_instance_create_advanced_fuzzer("clusterfuzz-testcase-minimized-instance_create_advanced_fuzzer-4788849181261824");
+}
 TEST(BadJsonInput, ClusterFuzzTestCase_6465902356791296) {
     // Does crash with UBSAN
     // Doesn't crash with ASAN
     // Causes an integer overflow - instance_enumerate_fuzzer: Integer-overflow in parse_value
     execute_instance_enumerate_fuzzer("clusterfuzz-testcase-minimized-instance_enumerate_fuzzer-6465902356791296");
+}
+TEST(BadJsonInput, ClusterFuzzTestCase_6740380288876544) {
+    // Does crash with ASAN
+    execute_instance_enumerate_fuzzer("clusterfuzz-testcase-minimized-instance_enumerate_fuzzer-6740380288876544");
 }
 TEST(BadJsonInput, ClusterFuzzTestCase_4512865114259456) {
     // Does crash with UBSAN and ASAN
@@ -280,4 +337,7 @@ TEST(BadJsonInput, ClusterFuzzTestCase_5123849246867456) {
     // No leaks reported in main, 1.3.269, nor 1.3.250
     // Causes a leak - settings_fuzzer: Direct-leak in loader_append_layer_property
     execute_setting_fuzzer("clusterfuzz-testcase-minimized-settings_fuzzer-5123849246867456");
+}
+TEST(BadJsonInput, ClusterFuzzTestCase_4626669072875520) {
+    execute_setting_fuzzer("clusterfuzz-testcase-minimized-settings_fuzzer-4626669072875520");
 }

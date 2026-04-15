@@ -85,26 +85,6 @@ TEST_F(VariableDeathTest, Assert_Null_Name) {
         "internal compiler error");
 }
 
-TEST_F(VariableDeathTest, Assert_DifferentGenerationID_Symbol) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Var(b2.Sym("x"), b1.ty.f32());
-        },
-        "internal compiler error");
-}
-
-TEST_F(VariableDeathTest, Assert_DifferentGenerationID_Initializer) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Var("x", b1.ty.f32(), b2.Expr(1.2_f));
-        },
-        "internal compiler error");
-}
-
 TEST_F(VariableTest, WithAttributes) {
     auto* var = Var("my_var", ty.i32(), core::AddressSpace::kFunction, Location(1_u),
                     Builtin(core::BuiltinValue::kPosition), Id(1200_u));

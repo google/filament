@@ -41,6 +41,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"dawn.googlesource.com/dawn/tools/src/cmd/gen/common"
@@ -658,7 +659,7 @@ func emitBuildFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter)
 	// Load the templates
 	templates := container.NewMap[string, *template.Template]()
 	for _, path := range templatePaths {
-		tmpl, err := template.FromFile(path)
+		tmpl, err := template.FromFile(path, fsReaderWriter)
 		if err != nil {
 			return err
 		}
@@ -705,9 +706,23 @@ func emitBuildFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter)
 			if path.Ext(outputName) == ".gn" {
 				unformatted := w.String()
 
-				gn_path := filepath.Join("third_party", "depot_tools", "gn.py")
+				platform := ""
+				cmd := "gn"
+				switch runtime.GOOS {
+				case "linux":
+					platform = "linux64"
+				case "windows":
+					platform = "win"
+					cmd += ".exe"
+				case "darwin":
+					platform = "mac"
+				default:
+					return nil, fmt.Errorf("unknown platform %v\n", runtime.GOOS)
+				}
 
-				gn := exec.Command("vpython3", gn_path, "format", "--stdin")
+				gn_path := filepath.Join("buildtools", platform, cmd)
+
+				gn := exec.Command(gn_path, "format", "--stdin")
 				gn.Stdin = bytes.NewReader([]byte(unformatted))
 				w.Reset()
 				gn.Stdout = w

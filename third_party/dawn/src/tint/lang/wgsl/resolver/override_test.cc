@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/array.h"
 
@@ -249,7 +248,7 @@ TEST_F(ResolverOverrideTest, TransitiveReferences_ViaArraySize_Alias) {
     auto* a = Override("a", ty.i32());
     auto* b = Override("b", ty.i32(), Mul(2_a, "a"));
     Alias("arr_ty", ty.array(ty.i32(), Mul(2_a, "b")));
-    auto* arr = GlobalVar("arr", core::AddressSpace::kWorkgroup, ty("arr_ty"));
+    auto* arr = GlobalVar("arr", core::AddressSpace::kWorkgroup, ty.AsType("arr_ty"));
     Override("unused", ty.i32(), Expr(1_a));
     auto* func = Func("foo", tint::Empty, ty.void_(),
                       Vector{
@@ -293,8 +292,8 @@ TEST_F(ResolverOverrideTest, TransitiveReferences_MultipleEntryPoints) {
     auto* d = Override("d", ty.i32());
     Alias("arr_ty1", ty.array(ty.i32(), Mul("b1", "c1")));
     Alias("arr_ty2", ty.array(ty.i32(), Mul("b2", "c2")));
-    auto* arr1 = GlobalVar("arr1", core::AddressSpace::kWorkgroup, ty("arr_ty1"));
-    auto* arr2 = GlobalVar("arr2", core::AddressSpace::kWorkgroup, ty("arr_ty2"));
+    auto* arr1 = GlobalVar("arr1", core::AddressSpace::kWorkgroup, ty.AsType("arr_ty1"));
+    auto* arr2 = GlobalVar("arr2", core::AddressSpace::kWorkgroup, ty.AsType("arr_ty2"));
     Override("unused", ty.i32(), Expr(1_a));
     auto* func1 = Func("foo1", tint::Empty, ty.void_(),
                        Vector{

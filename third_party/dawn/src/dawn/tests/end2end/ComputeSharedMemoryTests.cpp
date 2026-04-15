@@ -26,9 +26,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
+#include <string>
+#include <vector>
 
 #include "dawn/tests/DawnTest.h"
-
 #include "dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
@@ -208,6 +209,131 @@ TEST_P(ComputeSharedMemoryTests, AssortedTypes) {
     EXPECT_BUFFER_FLOAT_RANGE_EQ(expectedMatrix.data(), dst, 16, 4);
     EXPECT_BUFFER_U32_RANGE_EQ(expectedArray.data(), dst, 32, 4);
     EXPECT_BUFFER_FLOAT_RANGE_EQ(expectedVector.data(), dst, 48, 4);
+}
+
+/// Test coverage for a workgroup memory zero initialization failure on Qualcomm devices.
+/// See crbug.com/42240969
+TEST_P(ComputeSharedMemoryTests, ComplexZeroInit) {
+    // The bug is present on older Qualcomm devices and has been fixed in more recent drivers.
+    // The driver string contains the date of the driver build, which can be used as way to skip the
+    // test on devices where we expect it to fail.
+    // For example, on a Pixel 5 where this test fails, the string contains "Date: 11/30/20".
+    if (IsAndroid() && IsQualcomm()) {
+        auto driver = GetAdapterProperties().driverDescription;
+        auto date = driver.find("/");
+        if (date != std::string::npos) {
+            auto year = driver.substr(date + 4, 2);
+            DAWN_SUPPRESS_TEST_IF(std::stoi(year) < 23);
+        }
+    }
+    // TODO(459881440): The generated HLSL fails compilation with FXC.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() || (IsD3D12() && !IsDXC()));
+
+    wgpu::ComputePipelineDescriptor fillPipelineDesc;
+    fillPipelineDesc.compute.module = utils::CreateShaderModule(device, R"(
+      const wg_x_dim = 128;
+      const wg_memory_limits = 16384;
+
+      @group(0) @binding(0) var<uniform> fill_values : array<u32, wg_x_dim>;
+      @group(0) @binding(1) var<storage, read_write> outputs : array<u32>;
+      var<workgroup> wg_mem : array<u32, wg_memory_limits / 4>;
+
+      @compute @workgroup_size(wg_x_dim)
+      fn fill(@builtin(local_invocation_index) lid : u32) {
+        const num_u32_per_invocation = wg_memory_limits / (4 * wg_x_dim);
+
+        for (var i = 0u; i < num_u32_per_invocation; i++) {
+          let idx = num_u32_per_invocation * lid + i;
+          wg_mem[idx] = fill_values[lid];
+        }
+
+        workgroupBarrier();
+
+        // Copy out to avoid wg_mem being elided.
+        for (var i = 0u; i < num_u32_per_invocation; i++) {
+          let idx = num_u32_per_invocation * lid + i;
+          outputs[idx] = wg_mem[idx];
+        }
+      }
+    )");
+    wgpu::ComputePipeline fillPipeline = device.CreateComputePipeline(&fillPipelineDesc);
+
+    std::vector<uint32_t> fillValues(128, 0xffffffffu);
+    wgpu::Buffer fillValuesBuffer =
+        utils::CreateBufferFromData(device, fillValues.data(), fillValues.size() * sizeof(uint32_t),
+                                    wgpu::BufferUsage::Uniform);
+
+    // Create an output buffer for both pipelines to use.
+    wgpu::BufferDescriptor outputDesc;
+    outputDesc.size = 16384;
+    outputDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
+    wgpu::Buffer output = device.CreateBuffer(&outputDesc);
+
+    {
+        // Dispatch the fill pipeline.
+        wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, fillPipeline.GetBindGroupLayout(0),
+                                                         {
+                                                             {0, fillValuesBuffer},
+                                                             {1, output},
+                                                         });
+        wgpu::CommandBuffer commands;
+        {
+            wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+            wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+            pass.SetPipeline(fillPipeline);
+            pass.SetBindGroup(0, bindGroup);
+            // Use many workgroups so that we are likely to fill the memory on all compute units.
+            pass.DispatchWorkgroups(256);
+            pass.End();
+
+            commands = encoder.Finish();
+        }
+    }
+
+    wgpu::ComputePipelineDescriptor csDesc;
+    csDesc.compute.module = utils::CreateShaderModule(device, R"(
+      @group(0) @binding(0) var<storage, read_write> failed : atomic<u32>;
+
+      struct TestType {
+          member1 : atomic<u32>,
+          member2 : array<u32, 33>,
+      };
+
+      var<workgroup> testVar: TestType;
+
+      @compute @workgroup_size(32)
+      fn main() {
+        let value = atomicLoad(&testVar.member1);
+        if (value != 0) {
+          atomicStore(&failed, value);
+        }
+      }
+    )");
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&csDesc);
+
+    // Dispatch the pipeline that checks for zero-initialization.
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {
+                                                         {0, output},
+                                                     });
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        // Use many workgroups so that we are more likely to hit workgroup memory that was touched
+        // by the previous pipeline. This was necessary for the test to reliably fail on the
+        // problematic devices.
+        pass.DispatchWorkgroups(64);
+        pass.End();
+
+        commands = encoder.Finish();
+    }
+    queue.Submit(1, &commands);
+
+    // Check that no non-zero values were seen.
+    EXPECT_BUFFER_U32_EQ(0u, output, 0u);
 }
 
 DAWN_INSTANTIATE_TEST(ComputeSharedMemoryTests,

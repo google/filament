@@ -31,6 +31,7 @@ import (
 	"testing"
 
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/tint/intrinsic/ast"
 	"dawn.googlesource.com/dawn/tools/src/tint/intrinsic/parser"
 	"github.com/google/go-cmp/cmp"
@@ -845,21 +846,19 @@ func TestParser(t *testing.T) {
 				}},
 			}},
 	} {
-		got, err := parser.Parse(test.src, "file.txt")
+		ast, err := parser.Parse(test.src, test.location, oswrapper.CreateFSTestOSWrapper())
 		if err != nil {
-			t.Errorf("\n%v\nWhile parsing:\n%s\nParse() returned error: %v",
-				test.location, test.src, err)
+			t.Errorf("%v: Parse(%v) error: %v", test.location, test.src, err)
 			continue
 		}
 
-		if diff := cmp.Diff(got, &test.expect, ignoreSource); diff != "" {
-			t.Errorf("\n%v\nWhile parsing:\n%s\n\n%s",
-				test.location, test.src, diff)
+		if diff := cmp.Diff(test.expect, *ast, ignoreSource); diff != "" {
+			t.Errorf("%v: Parse(%v) diff:\n%v", test.location, test.src, diff)
 		}
 	}
 }
 
-func TestErrors(t *testing.T) {
+func TestParserError(t *testing.T) {
 	type test struct {
 		src    string
 		expect string
@@ -879,7 +878,7 @@ func TestErrors(t *testing.T) {
 			"test.txt:1:2 expected 'ident' for attribute name, got 'integer'",
 		},
 	} {
-		got, err := parser.Parse(test.src, "test.txt")
+		got, err := parser.Parse(test.src, "test.txt", oswrapper.CreateFSTestOSWrapper())
 		gotErr := ""
 		if err != nil {
 			gotErr = err.Error()
@@ -889,6 +888,95 @@ func TestErrors(t *testing.T) {
 		}
 		if got != nil {
 			t.Errorf("Lex() returned non-nil for error")
+		}
+	}
+}
+
+func TestParserWithImports(t *testing.T) {
+	type test struct {
+		location string
+		src      string
+		files    map[string]string
+		expect   ast.AST
+	}
+
+	for _, test := range []test{
+		{
+			fileutils.ThisLine(),
+			`import "foo"`,
+			map[string]string{"foo": "type T"},
+			ast.AST{
+				Types: []ast.TypeDecl{{Name: "T"}},
+			},
+		},
+		{
+			fileutils.ThisLine(),
+			`import "foo"`,
+			map[string]string{
+				"foo": `import "bar"`,
+				"bar": "type T",
+			},
+			ast.AST{
+				Types: []ast.TypeDecl{{Name: "T"}},
+			},
+		},
+	} {
+		fs := oswrapper.CreateFSTestOSWrapper()
+		for path, content := range test.files {
+			if err := fs.WriteFile(path, []byte(content), 0666); err != nil {
+				t.Errorf("%v: WriteFile(%v) error: %v", test.location, path, err)
+				continue
+			}
+		}
+
+		ast, err := parser.Parse(test.src, "root.txt", fs)
+		if err != nil {
+			t.Errorf("%v: Parse(%v) error: %v", test.location, test.src, err)
+			continue
+		}
+
+		if diff := cmp.Diff(test.expect, *ast, ignoreSource); diff != "" {
+			t.Errorf("%v: Parse(%v) diff:\n%v", test.location, test.src, diff)
+		}
+	}
+}
+
+func TestParserImportErrors(t *testing.T) {
+	type test struct {
+		src    string
+		files  map[string]string
+		expect string
+	}
+
+	for _, test := range []test{
+		{
+			`import "missing"`,
+			nil,
+			"root.txt:1:1 failed to load 'missing': open missing: file does not exist",
+		},
+		{
+			`import "broken"`,
+			map[string]string{"broken": "£"},
+			"broken:1:1: unexpected '£'",
+		},
+	} {
+		fs := oswrapper.CreateFSTestOSWrapper()
+		for path, content := range test.files {
+			if err := fs.WriteFile(path, []byte(content), 0666); err != nil {
+				t.Errorf("WriteFile(%v) error: %v", path, err)
+				continue
+			}
+		}
+
+		_, err := parser.Parse(test.src, "root.txt", fs)
+		if err == nil {
+			t.Errorf("Parse(%v) expected error, got nil", test.src)
+			continue
+		}
+
+		gotErr := err.Error()
+		if gotErr != test.expect {
+			t.Errorf("Parse(%v) error mismatch:\nGot:  %v\nWant: %v", test.src, gotErr, test.expect)
 		}
 	}
 }

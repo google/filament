@@ -87,7 +87,7 @@ TEST_F(ImmediateConstantsTrackerTest, OnPipelineChange) {
 }
 
 // Test immediate setting update dirty bits and contents correctly.
-TEST_F(ImmediateConstantsTrackerTest, SetImmediateData) {
+TEST_F(ImmediateConstantsTrackerTest, SetImmediates) {
     static constexpr uint32_t rangeOffset = 1u * kImmediateConstantElementByteSize;
     static constexpr uint32_t dataOffset = 2u;
     static constexpr uint32_t userImmediateDataSize = 2u * kImmediateConstantElementByteSize;
@@ -99,9 +99,9 @@ TEST_F(ImmediateConstantsTrackerTest, SetImmediateData) {
     {
         RenderImmediateConstantsTrackerBase tracker;
         int32_t userImmediateData[] = {2, 4, -6, 8};
-        tracker.SetImmediateData(rangeOffset,
-                                 reinterpret_cast<uint8_t*>(&userImmediateData[dataOffset]),
-                                 userImmediateDataSize);
+        tracker.SetImmediates(rangeOffset,
+                              reinterpret_cast<uint8_t*>(&userImmediateData[dataOffset]),
+                              userImmediateDataSize);
         EXPECT_TRUE(tracker.GetDirtyBits() == expected);
 
         uint32_t userImmediateDataRangeOffset = userImmediateDataStartByteOffset + rangeOffset;
@@ -113,9 +113,9 @@ TEST_F(ImmediateConstantsTrackerTest, SetImmediateData) {
     {
         ComputeImmediateConstantsTrackerBase tracker;
         int32_t userImmediateData[] = {2, 4, -6, 8};
-        tracker.SetImmediateData(rangeOffset,
-                                 reinterpret_cast<uint8_t*>(&userImmediateData[dataOffset]),
-                                 userImmediateDataSize);
+        tracker.SetImmediates(rangeOffset,
+                              reinterpret_cast<uint8_t*>(&userImmediateData[dataOffset]),
+                              userImmediateDataSize);
         EXPECT_TRUE(tracker.GetDirtyBits() == expected);
 
         uint32_t userImmediateDataRangeOffset = userImmediateDataStartByteOffset + rangeOffset;

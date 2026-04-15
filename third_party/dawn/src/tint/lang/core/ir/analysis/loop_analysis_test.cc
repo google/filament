@@ -51,14 +51,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanConstant_IncByOne) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -114,14 +114,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantLessThanIndex_IncByOne) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(10_u, b.Load(idx)));
+            auto* ifelse = b.If(b.LessThan(10_u, b.Load(idx)));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -177,14 +177,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexGreaterThanConstant_IncByOne) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.GreaterThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.GreaterThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -242,14 +242,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanParam_IncByOne) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), end));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), end));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -306,14 +306,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanLet_IncByOne) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), end));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), end));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -370,14 +370,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanConstant_IncByOne_I32) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_i));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_i));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -433,14 +433,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanConstant_OnePlusIndex) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(1_u, b.Load(idx)));
+            b.Store(idx, b.Add(1_u, b.Load(idx)));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -496,14 +496,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanConstant_DecByOne) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Subtract<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -559,14 +559,14 @@ TEST_F(IR_LoopAnalysisTest, Finite_NonZeroInit) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -622,7 +622,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_BreakInFalse) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.GreaterThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.GreaterThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitIf(ifelse);
             });
@@ -632,7 +632,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_BreakInFalse) {
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -690,25 +690,25 @@ TEST_F(IR_LoopAnalysisTest, Finite_MultipleLoads) {
             idx = b.Var("idx", 0_u);
             auto* load1 = b.Load(idx);
             auto* load2 = b.Load(idx);
-            b.Let("x", b.Add<u32>(load1, load2));
+            b.Let("x", b.Add(load1, load2));
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
 
             auto* load1 = b.Load(idx);
             auto* load2 = b.Load(idx);
-            b.Let("x", b.Add<u32>(load1, load2));
+            b.Let("x", b.Add(load1, load2));
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
             auto* load1 = b.Load(idx);
             auto* load2 = b.Load(idx);
-            b.Let("x", b.Add<u32>(load1, load2));
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Let("x", b.Add(load1, load2));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -776,8 +776,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_Bitcasts) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse =
-                b.If(b.LessThan<bool>(b.Bitcast<u32>(b.Bitcast<i32>(b.Load(idx))), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Bitcast<u32>(b.Bitcast<i32>(b.Load(idx))), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
@@ -786,7 +785,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_Bitcasts) {
         b.Append(loop->Continuing(), [&] {  //
             auto* lhs = b.Bitcast<i32>(b.Bitcast<u32>(b.Bitcast<i32>(b.Load(idx))));
             auto* rhs = b.Bitcast<i32>(b.Bitcast<u32>(1_u));
-            b.Store(idx, b.Bitcast<u32>(b.Add<i32>(lhs, rhs)));
+            b.Store(idx, b.Bitcast<u32>(b.Add(lhs, rhs)));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -802,8 +801,8 @@ TEST_F(IR_LoopAnalysisTest, Finite_Bitcasts) {
       }
       $B3: {  # body
         %3:u32 = load %idx
-        %4:i32 = bitcast %3
-        %5:u32 = bitcast %4
+        %4:i32 = bitcast<i32> %3
+        %5:u32 = bitcast<u32> %4
         %6:bool = lt %5, 10u
         if %6 [t: $B5] {  # if_1
           $B5: {  # true
@@ -814,13 +813,13 @@ TEST_F(IR_LoopAnalysisTest, Finite_Bitcasts) {
       }
       $B4: {  # continuing
         %7:u32 = load %idx
-        %8:i32 = bitcast %7
-        %9:u32 = bitcast %8
-        %10:i32 = bitcast %9
-        %11:u32 = bitcast 1u
-        %12:i32 = bitcast %11
+        %8:i32 = bitcast<i32> %7
+        %9:u32 = bitcast<u32> %8
+        %10:i32 = bitcast<i32> %9
+        %11:u32 = bitcast<u32> 1u
+        %12:i32 = bitcast<i32> %11
         %13:i32 = add %10, %12
-        %14:u32 = bitcast %13
+        %14:u32 = bitcast<u32> %13
         store %idx, %14
         next_iteration  # -> $B3
       }
@@ -854,24 +853,24 @@ TEST_F(IR_LoopAnalysisTest, Finite_MultipleVars) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
-            auto* ifelse_v1 = b.If(b.LessThanEqual<bool>(b.Load(v1), u32::Highest()));
+            auto* ifelse_v1 = b.If(b.LessThanEqual(b.Load(v1), u32::Highest()));
             b.Append(ifelse_v1->True(), [&] {  //
                 b.ExitLoop(loop);
             });
-            auto* ifelse_v2 = b.If(b.LessThan<bool>(b.Load(v1), 10_u));
+            auto* ifelse_v2 = b.If(b.LessThan(b.Load(v1), 10_u));
             b.Append(ifelse_v2->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(v1, b.Add<u32>(b.Load(v1), 1_u));
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
-            b.Store(v2, b.Add<u32>(b.Load(v2), 0_u));
+            b.Store(v1, b.Add(b.Load(v1), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
+            b.Store(v2, b.Add(b.Load(v2), 0_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -949,7 +948,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_MissingInc) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
@@ -1011,14 +1010,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IncByZero) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 0_u));
+            b.Store(idx, b.Add(b.Load(idx), 0_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1074,14 +1073,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IncByTwo) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 2_u));
+            b.Store(idx, b.Add(b.Load(idx), 2_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1139,14 +1138,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IncByNonConstant) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), inc));
+            b.Store(idx, b.Add(b.Load(idx), inc));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1203,14 +1202,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_EndBoundIsVar) {
         });
         b.Append(loop->Body(), [&] {
             auto* load = b.Load(idx);
-            auto* ifelse = b.If(b.LessThan<bool>(load, load));
+            auto* ifelse = b.If(b.LessThan(load, load));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1268,14 +1267,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_EndBoundIsLetInBody) {
         b.Append(loop->Body(), [&] {
             auto* load = b.Load(idx);
             auto* let = b.Let("end", load);
-            auto* ifelse = b.If(b.LessThan<bool>(load, let));
+            auto* ifelse = b.If(b.LessThan(load, let));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1332,14 +1331,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_OneMinusIndex) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.GreaterThan<bool>(b.Load(idx), 0_i));
+            auto* ifelse = b.If(b.GreaterThan(b.Load(idx), 0_i));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Subtract<i32>(1_i, b.Load(idx)));
+            b.Store(idx, b.Subtract(1_i, b.Load(idx)));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1395,14 +1394,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_NotAddOrSub) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Multiply<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Multiply(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1458,14 +1457,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_NonInteger) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_f));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_f));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<f32>(b.Load(idx), 1_f));
+            b.Store(idx, b.Add(b.Load(idx), 1_f));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1521,14 +1520,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_MissingStore) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Add<u32>(b.Load(idx), 1_u);
+            b.Add(b.Load(idx), 1_u);
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1583,7 +1582,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ContinueBeforeBreak) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 auto* nested_if = b.If(true);
                 b.Append(nested_if->True(), [&] {  //
@@ -1594,7 +1593,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ContinueBeforeBreak) {
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1655,14 +1654,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IncThenDec) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Subtract<u32>(b.Add<u32>(b.Load(idx), 1_u), 1_u));
+            b.Store(idx, b.Subtract(b.Add(b.Load(idx), 1_u), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1719,7 +1718,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_AnotherStoreInBody) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
@@ -1727,7 +1726,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_AnotherStoreInBody) {
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -1784,14 +1783,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_MultipleStoresInContinuing) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.Store(idx, 0_u);
             b.NextIteration(loop);
         });
@@ -1849,14 +1848,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ConditionalStore) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            auto* inc = b.Add<u32>(b.Load(idx), 1_u);
+            auto* inc = b.Add(b.Load(idx), 1_u);
             auto* cond_store = b.If(false);
             b.Append(cond_store->True(), [&] {  //
                 b.Store(idx, inc);
@@ -1922,7 +1921,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ConditionalAdd) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
@@ -1934,7 +1933,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ConditionalAdd) {
             auto* cond_add = b.If(false);
             cond_add->SetResult(inc);
             b.Append(cond_add->True(), [&] {  //
-                b.ExitIf(cond_add, b.Add<u32>(load, 1_u));
+                b.ExitIf(cond_add, b.Add(load, 1_u));
             });
             b.Append(cond_add->False(), [&] {  //
                 b.ExitIf(cond_add, load);
@@ -2011,7 +2010,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_PassVarPointerToFunction) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
@@ -2019,7 +2018,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_PassVarPointerToFunction) {
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2090,7 +2089,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_PassVarPointerToFunction_ViaLet) {
             b.NextIteration(loop);
         });
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
@@ -2099,7 +2098,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_PassVarPointerToFunction_ViaLet) {
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2161,14 +2160,14 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_VarOutsideInit) {
         idx = b.Var("idx", 0_u);
         loop = b.Loop();
         b.Append(loop->Body(), [&] {
-            auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+            auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
             b.Append(ifelse->True(), [&] {  //
                 b.ExitLoop(loop);
             });
             b.Continue(loop);
         });
         b.Append(loop->Continuing(), [&] {  //
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2237,7 +2236,7 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
             b.NextIteration(loop_outer_1);
         });
         b.Append(loop_outer_1->Body(), [&] {
-            auto* ifelse_outer = b.If(b.LessThan<bool>(b.Load(idx_outer_1), 10_u));
+            auto* ifelse_outer = b.If(b.LessThan(b.Load(idx_outer_1), 10_u));
             b.Append(ifelse_outer->True(), [&] {  //
                 b.ExitLoop(loop_outer_1);
             });
@@ -2248,7 +2247,7 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
                 b.NextIteration(loop_inner_1);
             });
             b.Append(loop_inner_1->Body(), [&] {
-                auto* ifelse_inner = b.If(b.LessThan<bool>(b.Load(idx_inner_1), 10_u));
+                auto* ifelse_inner = b.If(b.LessThan(b.Load(idx_inner_1), 10_u));
                 b.Append(ifelse_inner->True(), [&] {  //
                     b.ExitLoop(loop_inner_1);
                 });
@@ -2261,7 +2260,7 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
             b.Continue(loop_outer_1);
         });
         b.Append(loop_outer_1->Continuing(), [&] {  //
-            b.Store(idx_outer_1, b.Add<u32>(b.Load(idx_outer_1), 1_u));
+            b.Store(idx_outer_1, b.Add(b.Load(idx_outer_1), 1_u));
             b.NextIteration(loop_outer_1);
         });
 
@@ -2271,7 +2270,7 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
             b.NextIteration(loop_outer_2);
         });
         b.Append(loop_outer_2->Body(), [&] {
-            auto* ifelse_outer = b.If(b.LessThan<bool>(b.Load(idx_outer_2), 10_u));
+            auto* ifelse_outer = b.If(b.LessThan(b.Load(idx_outer_2), 10_u));
             b.Append(ifelse_outer->True(), [&] {  //
                 b.ExitLoop(loop_outer_2);
             });
@@ -2282,14 +2281,14 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
                 b.NextIteration(loop_inner_2);
             });
             b.Append(loop_inner_2->Body(), [&] {
-                auto* ifelse_inner = b.If(b.LessThan<bool>(b.Load(idx_inner_2), 10_u));
+                auto* ifelse_inner = b.If(b.LessThan(b.Load(idx_inner_2), 10_u));
                 b.Append(ifelse_inner->True(), [&] {  //
                     b.ExitLoop(loop_inner_2);
                 });
                 b.Continue(loop_inner_2);
             });
             b.Append(loop_inner_2->Continuing(), [&] {  //
-                b.Store(idx_inner_2, b.Add<u32>(b.Load(idx_inner_2), 1_u));
+                b.Store(idx_inner_2, b.Add(b.Load(idx_inner_2), 1_u));
                 b.NextIteration(loop_inner_2);
             });
 
@@ -2431,7 +2430,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanEqualConstant_IncByOne_I32) {
         });
         b.Append(loop->Body(), [&] {
             // idx <= 10
-            binary = b.LessThanEqual<bool>(b.Load(idx), 10_i);
+            binary = b.LessThanEqual(b.Load(idx), 10_i);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -2439,7 +2438,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanEqualConstant_IncByOne_I32) {
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2502,7 +2501,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanEqualConstant_IncByOne_U32) {
         });
         b.Append(loop->Body(), [&] {
             // idx <= 10
-            binary = b.LessThanEqual<bool>(b.Load(idx), 10_u);
+            binary = b.LessThanEqual(b.Load(idx), 10_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -2510,7 +2509,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanEqualConstant_IncByOne_U32) {
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2573,7 +2572,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IndexLessThanEqualHighestValue_IncByOn
         });
         b.Append(loop->Body(), [&] {
             // idx <= i32::kHighestValue
-            binary = b.LessThanEqual<bool>(b.Load(idx), i32::Highest());
+            binary = b.LessThanEqual(b.Load(idx), i32::Highest());
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -2581,7 +2580,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IndexLessThanEqualHighestValue_IncByOn
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2644,7 +2643,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IndexLessThanEqualHighestValue_IncByOn
         });
         b.Append(loop->Body(), [&] {
             // idx <= u32::kHighestValue
-            binary = b.LessThanEqual<bool>(b.Load(idx), u32::Highest());
+            binary = b.LessThanEqual(b.Load(idx), u32::Highest());
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -2652,7 +2651,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IndexLessThanEqualHighestValue_IncByOn
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2715,7 +2714,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantLessThanEqualIndex_DecByOne_I32) {
         });
         b.Append(loop->Body(), [&] {
             // 1 <= idx
-            binary = b.LessThanEqual<bool>(1_i, b.Load(idx));
+            binary = b.LessThanEqual(1_i, b.Load(idx));
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -2723,7 +2722,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantLessThanEqualIndex_DecByOne_I32) {
         });
         b.Append(loop->Continuing(), [&] {
             // idx--
-            b.Store(idx, b.Subtract<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2786,7 +2785,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantLessThanEqualIndex_DecByOne_U32) {
         });
         b.Append(loop->Body(), [&] {
             // 1 <= idx
-            binary = b.LessThanEqual<bool>(1_u, b.Load(idx));
+            binary = b.LessThanEqual(1_u, b.Load(idx));
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -2794,7 +2793,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantLessThanEqualIndex_DecByOne_U32) {
         });
         b.Append(loop->Continuing(), [&] {
             // idx--
-            b.Store(idx, b.Subtract<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2857,7 +2856,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_LowestValueLessThanEqualIndex_DecByOne
         });
         b.Append(loop->Body(), [&] {
             // i32::kLowestValue <= idx
-            binary = b.LessThanEqual<bool>(i32::Lowest(), b.Load(idx));
+            binary = b.LessThanEqual(i32::Lowest(), b.Load(idx));
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -2865,7 +2864,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_LowestValueLessThanEqualIndex_DecByOne
         });
         b.Append(loop->Continuing(), [&] {
             // idx--
-            b.Store(idx, b.Subtract<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2928,7 +2927,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_LowestValueLessThanEqualIndex_DecByOne
         });
         b.Append(loop->Body(), [&] {
             // u32::kLowestValue <= idx
-            binary = b.LessThanEqual<bool>(u32::Lowest(), b.Load(idx));
+            binary = b.LessThanEqual(u32::Lowest(), b.Load(idx));
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -2936,7 +2935,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_LowestValueLessThanEqualIndex_DecByOne
         });
         b.Append(loop->Continuing(), [&] {
             // idx--
-            b.Store(idx, b.Subtract<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -2999,7 +2998,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexGreaterThanEqualConstant_DecByOne_I32) {
         });
         b.Append(loop->Body(), [&] {
             // idx >= 1
-            binary = b.GreaterThanEqual<bool>(b.Load(idx), 1_i);
+            binary = b.GreaterThanEqual(b.Load(idx), 1_i);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -3007,7 +3006,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexGreaterThanEqualConstant_DecByOne_I32) {
         });
         b.Append(loop->Continuing(), [&] {
             // idx--
-            b.Store(idx, b.Subtract<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -3070,7 +3069,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexGreaterThanEqualConstant_DecByOne_U32) {
         });
         b.Append(loop->Body(), [&] {
             // idx <= 1
-            binary = b.GreaterThanEqual<bool>(b.Load(idx), 1_u);
+            binary = b.GreaterThanEqual(b.Load(idx), 1_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -3078,7 +3077,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexGreaterThanEqualConstant_DecByOne_U32) {
         });
         b.Append(loop->Continuing(), [&] {
             // idx--
-            b.Store(idx, b.Subtract<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -3141,7 +3140,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IndexGreaterThanEqualLowestValue_DecBy
         });
         b.Append(loop->Body(), [&] {
             // idx >= i32::kLowestValue
-            binary = b.GreaterThanEqual<bool>(b.Load(idx), i32::Lowest());
+            binary = b.GreaterThanEqual(b.Load(idx), i32::Lowest());
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -3149,7 +3148,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IndexGreaterThanEqualLowestValue_DecBy
         });
         b.Append(loop->Continuing(), [&] {
             // idx--
-            b.Store(idx, b.Subtract<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -3212,7 +3211,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IndexGreaterThanEqualLowestValue_DecBy
         });
         b.Append(loop->Body(), [&] {
             // idx >= u32::kLowestValue
-            binary = b.GreaterThanEqual<bool>(b.Load(idx), u32::Lowest());
+            binary = b.GreaterThanEqual(b.Load(idx), u32::Lowest());
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -3220,7 +3219,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IndexGreaterThanEqualLowestValue_DecBy
         });
         b.Append(loop->Continuing(), [&] {
             // idx--
-            b.Store(idx, b.Subtract<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Subtract(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -3283,7 +3282,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantGreaterThanEqualIndex_IncByOne_I32) {
         });
         b.Append(loop->Body(), [&] {
             // 10 >= idx
-            binary = b.GreaterThanEqual<bool>(10_i, b.Load(idx));
+            binary = b.GreaterThanEqual(10_i, b.Load(idx));
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -3291,7 +3290,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantGreaterThanEqualIndex_IncByOne_I32) {
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -3354,7 +3353,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantGreaterThanEqualIndex_IncByOne_U32) {
         });
         b.Append(loop->Body(), [&] {
             // 10 >= idx
-            binary = b.GreaterThanEqual<bool>(10_u, b.Load(idx));
+            binary = b.GreaterThanEqual(10_u, b.Load(idx));
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -3362,7 +3361,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantGreaterThanEqualIndex_IncByOne_U32) {
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -3425,7 +3424,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_HighestValueGreaterThanEqualIndex_IncB
         });
         b.Append(loop->Body(), [&] {
             // i32::kHighestValue >= idx
-            binary = b.GreaterThanEqual<bool>(i32::Highest(), b.Load(idx));
+            binary = b.GreaterThanEqual(i32::Highest(), b.Load(idx));
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -3433,7 +3432,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_HighestValueGreaterThanEqualIndex_IncB
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -3496,7 +3495,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_HighestValueGreaterThanEqualIndex_IncB
         });
         b.Append(loop->Body(), [&] {
             // u32::kHighestValue >= idx
-            binary = b.GreaterThanEqual<bool>(u32::Highest(), b.Load(idx));
+            binary = b.GreaterThanEqual(u32::Highest(), b.Load(idx));
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -3504,7 +3503,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_HighestValueGreaterThanEqualIndex_IncB
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);

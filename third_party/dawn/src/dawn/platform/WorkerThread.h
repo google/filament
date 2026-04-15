@@ -35,52 +35,83 @@
 #include <thread>
 #include <vector>
 
+#include "dawn/common/MutexProtected.h"
 #include "dawn/common/NonCopyable.h"
+#include "dawn/common/RefCounted.h"
 #include "dawn/platform/DawnPlatform.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::platform {
 
-class AsyncWaitableEventImpl {
+class AsyncTaskHandleImpl : public RefCounted, public NonCopyable {
   public:
-    AsyncWaitableEventImpl();
+    ~AsyncTaskHandleImpl() override;
 
+    // dawn::platform::WaitableEvent API.
     void Wait();
-    bool IsComplete();
-    void MarkAsComplete();
+    bool IsComplete() const;
 
   private:
-    std::mutex mMutex;
-    std::condition_variable mCondition;
-    bool mIsComplete;
+    friend class AsyncWorkerThreadPool;
+
+    explicit AsyncTaskHandleImpl(PostWorkerTaskCallback cb, void* userdata);
+    void Complete();
+
+    PostWorkerTaskCallback mCallback;
+    raw_ptr<void> mUserdata;
+    std::atomic<bool> mCompleted = false;
 };
 
-struct AsyncWorkerThreadPoolTask {
-    dawn::platform::PostWorkerTaskCallback callback;
-    void* userdata;
-    std::shared_ptr<AsyncWaitableEventImpl> waitableEventImpl;
-};
-
-class AsyncWorkerThreadPool : public dawn::platform::WorkerTaskPool, public NonCopyable {
+class AsyncJobHandleImpl : public RefCounted, public NonCopyable {
   public:
-    static constexpr uint32_t kDefaultThreadCount = 2;
+    ~AsyncJobHandleImpl() override;
 
-    explicit AsyncWorkerThreadPool(uint32_t maxThreadCount = kDefaultThreadCount);
+    // dawn::platform::JobHandle API.
+    void Cancel();
+    void Join();
+
+  private:
+    friend class AsyncWorkerThreadPool;
+
+    explicit AsyncJobHandleImpl(PostWorkerJobCallback cb, void* userdata);
+
+    void JobThreadLoop(PostWorkerJobCallback cb, void* userdata);
+
+    std::atomic<bool> mCancelled = false;
+    bool mJoined = false;
+    std::once_flag mJoinFlag;
+    // The thread object uses other member fields so it needs to be the last member constructed.
+    std::thread mThread;
+};
+
+class AsyncWorkerThreadPool : public WorkerTaskPool, public NonCopyable {
+  public:
+    static constexpr uint32_t kDefaultTaskHandlingJobCount = 2;
+
+    explicit AsyncWorkerThreadPool(uint32_t maxThreadCount = kDefaultTaskHandlingJobCount);
     ~AsyncWorkerThreadPool() override;
 
-    std::unique_ptr<dawn::platform::WaitableEvent> PostWorkerTask(
-        dawn::platform::PostWorkerTaskCallback callback,
-        void* userdata) override;
+    std::unique_ptr<WaitableEvent> PostWorkerTask(PostWorkerTaskCallback callback,
+                                                  void* userdata) override;
+    std::unique_ptr<JobHandle> PostWorkerJob(PostWorkerJobCallback cb, void* userdata) override;
 
   private:
-    void EnsureThreads();
-    void ThreadLoop();
+    struct TaskTracking {
+        uint32_t numJobs = 0;
+        std::queue<dawn::Ref<AsyncTaskHandleImpl>> tasks;
+    };
 
-    const uint32_t mMaxThreads;
-    std::vector<std::thread> mThreads;
-    std::queue<AsyncWorkerThreadPoolTask> mPendingTasks;
-    std::mutex mMutex;
-    std::condition_variable mCondition;
-    bool mIsDestroyed = false;
+    // The task handling thread pool is implemented via jobs where each job is synonymous to a
+    // thread.
+    JobStatus TaskHandlingJobLoop();
+
+    const uint32_t mMaxTaskThreads;
+
+    // Threads used to handle potentially long-running worker jobs.
+    MutexProtected<std::vector<dawn::Ref<AsyncJobHandleImpl>>> mJobHandles;
+
+    // Threads used to handle worker tasks, and the pending tasks they are working on.
+    MutexCondVarProtected<TaskTracking> mTaskTracking;
 };
 
 }  // namespace dawn::platform

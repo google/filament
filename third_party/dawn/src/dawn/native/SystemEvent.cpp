@@ -26,8 +26,11 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/native/SystemEvent.h"
+
 #include <limits>
+
 #include "dawn/common/Assert.h"
+#include "dawn/utils/SystemHandle.h"
 
 #if DAWN_PLATFORM_IS(WINDOWS)
 #include "dawn/common/windows_with_undefs.h"
@@ -49,7 +52,7 @@ namespace dawn::native {
 
 // SystemEventReceiver
 
-SystemEventReceiver::SystemEventReceiver(SystemHandle primitive)
+SystemEventReceiver::SystemEventReceiver(utils::SystemHandle primitive)
     : mPrimitive(std::move(primitive)) {}
 
 // static
@@ -61,7 +64,7 @@ SystemEventReceiver SystemEventReceiver::CreateAlreadySignaled() {
     return receiver;
 }
 
-const SystemHandle& SystemEventReceiver::GetPrimitive() const {
+const utils::SystemHandle& SystemEventReceiver::GetPrimitive() const {
     return mPrimitive;
 }
 
@@ -96,19 +99,17 @@ void SystemEventPipeSender::Signal() && {
 
 std::pair<SystemEventPipeSender, SystemEventReceiver> CreateSystemEventPipe() {
 #if DAWN_PLATFORM_IS(WINDOWS)
-    HANDLE eventDup;
-    HANDLE event = CreateEvent(nullptr, /*bManualReset=*/true, /*bInitialState=*/false, nullptr);
+    utils::SystemHandle event = utils::SystemHandle::Acquire(
+        CreateEvent(nullptr, /*bManualReset=*/true, /*bInitialState=*/false, nullptr));
+    DAWN_CHECK(event.IsValid());
 
-    DAWN_CHECK(event != nullptr);
-    DAWN_CHECK(DuplicateHandle(GetCurrentProcess(), event, GetCurrentProcess(), &eventDup, 0, FALSE,
-                               DUPLICATE_SAME_ACCESS));
-    DAWN_CHECK(eventDup != nullptr);
+    utils::SystemHandle eventDup = event.Duplicate();
 
     SystemEventReceiver receiver;
-    receiver.mPrimitive = SystemHandle::Acquire(event);
+    receiver.mPrimitive = std::move(event);
 
     SystemEventPipeSender sender;
-    sender.mPrimitive = SystemHandle::Acquire(eventDup);
+    sender.mPrimitive = std::move(eventDup);
 
     return std::make_pair(std::move(sender), std::move(receiver));
 #elif DAWN_PLATFORM_IS(POSIX)
@@ -117,10 +118,10 @@ std::pair<SystemEventPipeSender, SystemEventReceiver> CreateSystemEventPipe() {
     DAWN_CHECK(status >= 0);
 
     SystemEventReceiver receiver;
-    receiver.mPrimitive = SystemHandle::Acquire(pipeFds[0]);
+    receiver.mPrimitive = utils::SystemHandle::Acquire(pipeFds[0]);
 
     SystemEventPipeSender sender;
-    sender.mPrimitive = SystemHandle::Acquire(pipeFds[1]);
+    sender.mPrimitive = utils::SystemHandle::Acquire(pipeFds[1]);
 
     return std::make_pair(std::move(sender), std::move(receiver));
 #else

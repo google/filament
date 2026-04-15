@@ -42,7 +42,7 @@ class RenderPassEncoder : public ObjectBase {
     ObjectType GetObjectType() const override;
 
     // Dawn API
-    void APISetImmediateData(uint32_t offset, const void* data, size_t size);
+    void APISetImmediates(uint32_t offset, const void* data, size_t size);
 };
 
 }  // namespace dawn::wire::client

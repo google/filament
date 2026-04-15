@@ -58,7 +58,7 @@ class WaitListEventTests : public DawnTest {
 };
 
 // Test basic signaling and state checking
-TEST(WaitListEventTests, SignalAndCheck) {
+TEST_P(WaitListEventTests, SignalAndCheck) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
     EXPECT_FALSE(event->IsSignaled());
     event->Signal();
@@ -66,7 +66,7 @@ TEST(WaitListEventTests, SignalAndCheck) {
 }
 
 // Test waiting on an already signaled event
-TEST(WaitListEventTests, WaitAlreadySignaled) {
+TEST_P(WaitListEventTests, WaitAlreadySignaled) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
     event->Signal();
     EXPECT_TRUE(event->IsSignaled());
@@ -77,7 +77,7 @@ TEST(WaitListEventTests, WaitAlreadySignaled) {
 }
 
 // Test waiting on an event that gets signaled later
-TEST(WaitListEventTests, WaitThenSignal) {
+TEST_P(WaitListEventTests, WaitThenSignal) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
     EXPECT_FALSE(event->IsSignaled());
 
@@ -94,7 +94,7 @@ TEST(WaitListEventTests, WaitThenSignal) {
 }
 
 // Test waiting with a timeout that expires
-TEST(WaitListEventTests, WaitTimeout) {
+TEST_P(WaitListEventTests, WaitTimeout) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
     EXPECT_FALSE(event->IsSignaled());
 
@@ -104,7 +104,7 @@ TEST(WaitListEventTests, WaitTimeout) {
 }
 
 // Test waiting with a zero timeout
-TEST(WaitListEventTests, WaitZeroTimeout) {
+TEST_P(WaitListEventTests, WaitZeroTimeout) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
     EXPECT_FALSE(event->IsSignaled());
     // Wait with zero timeout should return false immediately
@@ -118,7 +118,7 @@ TEST(WaitListEventTests, WaitZeroTimeout) {
 }
 
 // Test WaitAsync on an already signaled event
-TEST(WaitListEventTests, WaitAsyncAlreadySignaled) {
+TEST_P(WaitListEventTests, WaitAsyncAlreadySignaled) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
     event->Signal();
     EXPECT_TRUE(event->IsSignaled());
@@ -129,7 +129,10 @@ TEST(WaitListEventTests, WaitAsyncAlreadySignaled) {
 }
 
 // Test WaitAsync, signaling the event later
-TEST(WaitListEventTests, WaitAsyncThenSignal) {
+TEST_P(WaitListEventTests, WaitAsyncThenSignal) {
+    // TODO(crbug.com/469958428): Flaky w/ WARP.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsWARP());
+
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
     EXPECT_FALSE(event->IsSignaled());
 
@@ -151,14 +154,14 @@ TEST(WaitListEventTests, WaitAsyncThenSignal) {
 }
 
 // Test WaitAny with an empty list
-TEST(WaitListEventTests, WaitAnyEmpty) {
+TEST_P(WaitListEventTests, WaitAnyEmpty) {
     std::array<std::pair<Ref<WaitListEvent>, bool*>, 0> events;
     EXPECT_FALSE(
         WaitListEvent::WaitAny(events.begin(), events.end(), Nanoseconds(kShortDurationNs)));
 }
 
 // Test WaitAny where one event is already signaled
-TEST(WaitListEventTests, WaitAnyOneAlreadySignaled) {
+TEST_P(WaitListEventTests, WaitAnyOneAlreadySignaled) {
     Ref<WaitListEvent> event1 = AcquireRef(new WaitListEvent());
     Ref<WaitListEvent> event2 = AcquireRef(new WaitListEvent());
     event1->Signal();
@@ -175,7 +178,7 @@ TEST(WaitListEventTests, WaitAnyOneAlreadySignaled) {
 }
 
 // Test WaitAny where one event is signaled while waiting
-TEST(WaitListEventTests, WaitAnySignalDuringWait) {
+TEST_P(WaitListEventTests, WaitAnySignalDuringWait) {
     Ref<WaitListEvent> event1 = AcquireRef(new WaitListEvent());
     Ref<WaitListEvent> event2 = AcquireRef(new WaitListEvent());
 
@@ -198,7 +201,7 @@ TEST(WaitListEventTests, WaitAnySignalDuringWait) {
 }
 
 // Test WaitAny with a timeout
-TEST(WaitListEventTests, WaitAnyTimeout) {
+TEST_P(WaitListEventTests, WaitAnyTimeout) {
     Ref<WaitListEvent> event1 = AcquireRef(new WaitListEvent());
     Ref<WaitListEvent> event2 = AcquireRef(new WaitListEvent());
 
@@ -214,7 +217,7 @@ TEST(WaitListEventTests, WaitAnyTimeout) {
 }
 
 // Test WaitAny with zero timeout
-TEST(WaitListEventTests, WaitAnyZeroTimeout) {
+TEST_P(WaitListEventTests, WaitAnyZeroTimeout) {
     Ref<WaitListEvent> event1 = AcquireRef(new WaitListEvent());
     Ref<WaitListEvent> event2 = AcquireRef(new WaitListEvent());
 
@@ -237,7 +240,7 @@ TEST(WaitListEventTests, WaitAnyZeroTimeout) {
 }
 
 // Test WaitAny with the same event multiple times
-TEST(WaitListEventTests, WaitAnyDuplicateEvents) {
+TEST_P(WaitListEventTests, WaitAnyDuplicateEvents) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
 
     bool ready1 = false;
@@ -261,7 +264,7 @@ TEST(WaitListEventTests, WaitAnyDuplicateEvents) {
 }
 
 // Test WaitAny with the same event multiple times, already signaled
-TEST(WaitListEventTests, WaitAnyDuplicateEventsAlreadySignaled) {
+TEST_P(WaitListEventTests, WaitAnyDuplicateEventsAlreadySignaled) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
 
     bool ready1 = false;
@@ -284,7 +287,7 @@ TEST(WaitListEventTests, WaitAnyDuplicateEventsAlreadySignaled) {
 }
 
 // Test multiple threads waiting on the same event
-TEST(WaitListEventTests, WaitMultiThreadedSingleEvent) {
+TEST_P(WaitListEventTests, WaitMultiThreadedSingleEvent) {
     Ref<WaitListEvent> event = AcquireRef(new WaitListEvent());
 
     constexpr size_t kNumWaiters = 5;
@@ -310,7 +313,7 @@ TEST(WaitListEventTests, WaitMultiThreadedSingleEvent) {
 }
 
 // Test multiple threads waiting on different events via WaitAny
-TEST(WaitListEventTests, WaitAnyMultiThreaded) {
+TEST_P(WaitListEventTests, WaitAnyMultiThreaded) {
     Ref<WaitListEvent> event1 = AcquireRef(new WaitListEvent());
     Ref<WaitListEvent> event2 = AcquireRef(new WaitListEvent());
     Ref<WaitListEvent> event3 = AcquireRef(new WaitListEvent());
@@ -346,6 +349,32 @@ TEST(WaitListEventTests, WaitAnyMultiThreaded) {
 
     signaler.join();
 }
+
+// Test events that require multiple signal calls
+TEST_P(WaitListEventTests, MultipleSignals) {
+    constexpr uint64_t kSignalCount = 10;
+    Ref<WaitListEvent> event1 = AcquireRef(new WaitListEvent(kSignalCount));
+    for (uint64_t i = 0; i < kSignalCount; i++) {
+        EXPECT_FALSE(event1->IsSignaled());
+        event1->Signal();
+    }
+    EXPECT_TRUE(event1->IsSignaled());
+}
+
+// Test that events can be created with 0 required signals and they are immediately in the signaled
+// state.
+TEST_P(WaitListEventTests, ZeroRequiredSignals) {
+    Ref<WaitListEvent> event1 = AcquireRef(new WaitListEvent(0));
+    EXPECT_TRUE(event1->IsSignaled());
+}
+
+DAWN_INSTANTIATE_TEST(WaitListEventTests,
+                      D3D11Backend(),
+                      D3D12Backend(),
+                      MetalBackend(),
+                      OpenGLBackend(),
+                      OpenGLESBackend(),
+                      VulkanBackend());
 
 }  // namespace
 }  // namespace dawn::native

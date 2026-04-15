@@ -33,7 +33,6 @@
 #include <vector>
 
 #include "dawn/tests/DawnTest.h"
-
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 
@@ -758,14 +757,18 @@ TEST_P(RenderPassLoadOpTests, MixedUseOfLoadOpLoadAndLoadOpClearWithBigIntegerVa
     EXPECT_BUFFER_U32_RANGE_EQ(kExpectedData.data(), outputBuffer, 0, kExpectedData.size());
 }
 
-DAWN_INSTANTIATE_TEST(RenderPassLoadOpTests,
-                      D3D11Backend(),
-                      D3D11Backend({"clear_color_with_draw"}),
-                      D3D12Backend(),
-                      MetalBackend(),
-                      OpenGLBackend(),
-                      OpenGLESBackend(),
-                      VulkanBackend());
+DAWN_INSTANTIATE_TEST(
+    RenderPassLoadOpTests,
+    D3D11Backend(),
+    D3D11Backend({"clear_color_with_draw"}),
+    D3D12Backend(),
+    MetalBackend(),
+    OpenGLBackend(),
+    OpenGLESBackend(),
+    VulkanBackend({"vulkan_use_dynamic_rendering"}, {}),
+    VulkanBackend({"vulkan_use_create_render_pass_2"}, {"vulkan_use_dynamic_rendering"}),
+    VulkanBackend({}, {"vulkan_use_create_render_pass_2", "vulkan_use_dynamic_rendering"}),
+    WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

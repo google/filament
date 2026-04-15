@@ -3,6 +3,7 @@ Short Name: webgpu-cts
 Version: N/A
 Revision: DEPS
 URL: https://gpuweb.github.io/cts/
+Update Mechanism: Autoroll
 SOURCE CODE: git clone https://github.com/gpuweb/cts.git
 Security Critical: no
 Shipped: no

@@ -37,6 +37,22 @@ namespace dawn::native::vulkan {
 
 class Device;
 
+class SharedTextureMemoryContentsVk final : public SharedTextureMemoryContents {
+  public:
+    SharedTextureMemoryContentsVk(WeakRef<SharedTextureMemoryBase> sharedTextureMemory,
+                                  YCbCrVkDescriptor ycbcrVkDesc);
+
+    // Returns whether a YCbCr texture is filterable. This is necessary because the filterability
+    // doesn't only depend on the format (it's always OpaqueYCbCrAndroid) but on the specific
+    // imported object. The filterability validation is done against the specific static sampler
+    // used with the YCbCr texture insteod of with the SampleType.
+    bool IsYCbCrFilterable() const;
+    const YCbCrVkDescriptor& GetYCbCrVkDesc() const;
+
+  private:
+    YCbCrVkDescriptor mYCbCrVkDesc;
+};
+
 class SharedTextureMemory final : public SharedTextureMemoryBase {
   public:
     static ResultOrError<Ref<SharedTextureMemory>>
@@ -60,13 +76,17 @@ class SharedTextureMemory final : public SharedTextureMemoryBase {
     static Ref<SharedTextureMemory> Create(Device* device,
                                            StringView label,
                                            const SharedTextureMemoryProperties& properties,
-                                           uint32_t queueFamilyIndex);
+                                           uint32_t queueFamilyIndex,
+                                           const YCbCrVkDescriptor& yCbCrVkDesc = {});
 
     SharedTextureMemory(Device* device,
                         StringView label,
                         const SharedTextureMemoryProperties& properties,
-                        uint32_t queueFamilyIndex);
-    void DestroyImpl() override;
+                        uint32_t queueFamilyIndex,
+                        const YCbCrVkDescriptor& yCbCrVkDesc);
+    void DestroyImpl(DestroyReason reason) override;
+
+    Ref<SharedResourceMemoryContents> CreateContents() override;
 
     ResultOrError<Ref<TextureBase>> CreateTextureImpl(
         const UnpackedPtr<TextureDescriptor>& descriptor) override;
@@ -84,7 +104,7 @@ class SharedTextureMemory final : public SharedTextureMemoryBase {
     const uint32_t mQueueFamilyIndex;
 
     // Populated if this instance was created from an AHardwareBuffer.
-    YCbCrVkDescriptor mYCbCrAHBInfo;
+    YCbCrVkDescriptor mYCbCrVkDesc;
 };
 
 }  // namespace dawn::native::vulkan

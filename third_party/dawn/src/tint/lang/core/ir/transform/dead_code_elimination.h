@@ -47,6 +47,9 @@ const core::ir::Capabilities kDeadCodeEliminationCapabilities{
     core::ir::Capability::kAllowUnannotatedModuleIOVariables,
     core::ir::Capability::kAllowNonCoreTypes,
     core::ir::Capability::kAllowStructMatrixDecorations,
+    core::ir::Capability::kAllowLocationForNumericElements,
+    core::ir::Capability::kAllowPointerToHandle,
+    core::ir::Capability::kLoosenValidationForShaderIO,
 };
 
 /// DeadCodeElimination is a transform that removes dead code from the given IR module.

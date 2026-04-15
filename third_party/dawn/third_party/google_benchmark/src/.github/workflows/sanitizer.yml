@@ -5,6 +5,7 @@ on:
   pull_request: {}
 
 env:
+  CMAKE_GENERATOR: Ninja
   UBSAN_OPTIONS: "print_stacktrace=1"
 
 jobs:
@@ -18,7 +19,7 @@ jobs:
         sanitizer: ['asan', 'ubsan', 'tsan', 'msan']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
     - name: configure msan env
       if: matrix.sanitizer == 'msan'
@@ -51,7 +52,7 @@ jobs:
         echo "ASAN_OPTIONS=alloc_dealloc_mismatch=0" >> $GITHUB_ENV
 
     - name: setup clang
-      uses: egor-tensin/setup-clang@v1
+      uses: egor-tensin/setup-clang@471a6f8ef1d449dba8e1a51780e7f943572a3f99 # v2.1
       with:
         version: latest
         platform: x64
@@ -65,7 +66,7 @@ jobs:
       if: matrix.sanitizer != 'asan'
       run: |
         "${GITHUB_WORKSPACE}/.github/libcxx-setup.sh"
-        echo "EXTRA_CXX_FLAGS=-stdlib=libc++ -L ${GITHUB_WORKSPACE}/llvm-build/lib -lc++abi -Isystem${GITHUB_WORKSPACE}/llvm-build/include -Isystem${GITHUB_WORKSPACE}/llvm-build/include/c++/v1 -Wl,-rpath,${GITHUB_WORKSPACE}/llvm-build/lib" >> $GITHUB_ENV
+        echo "EXTRA_CXX_FLAGS=-stdlib=libc++ -L${GITHUB_WORKSPACE}/llvm-build/lib -lc++abi -I${GITHUB_WORKSPACE}/llvm-build/include/c++/v1 -Isystem${GITHUB_WORKSPACE}/llvm-build/include/c++/v1 -Wl,-rpath,${GITHUB_WORKSPACE}/llvm-build/lib" >> $GITHUB_ENV
 
     - name: create build environment
       run: cmake -E make_directory ${{ runner.workspace }}/_build
@@ -75,7 +76,7 @@ jobs:
       working-directory: ${{ runner.workspace }}/_build
       run: >
         VERBOSE=1
-        cmake $GITHUB_WORKSPACE
+        cmake -GNinja $GITHUB_WORKSPACE
         -DBENCHMARK_ENABLE_ASSEMBLY_TESTS=OFF
         -DBENCHMARK_ENABLE_LIBPFM=OFF
         -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <registry>
     <comment>
-Copyright 2021-2025 The Khronos Group Inc.
+Copyright 2021-2026 The Khronos Group Inc.
 SPDX-License-Identifier: Apache-2.0 OR MIT
     </comment>
 
@@ -424,8 +424,8 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint16_t</type>                                   <name>elemental_duration_in_tc_minus1</name>[<enum>STD_VIDEO_H265_SUBLAYERS_LIST_SIZE</enum>]</member>
             <member><type>uint16_t</type>                                   <name>reserved</name>[3]<comment>Reserved for future use and must be initialized with 0.</comment></member>
             <!-- NOTE: These arrays are sized according to parameters coming from their encompassing structures -->
-            <member optional="true" len="sps_max_sub_layers_minus1 + 1,vps_max_sub_layers_minus1 + 1">const <type>StdVideoH265SubLayerHrdParameters</type>* <name>pSubLayerHrdParametersNal</name><comment>if flags.nal_hrd_parameters_present_flag is set, then this must be a ptr to an array of StdVideoH265SubLayerHrdParameters with a size specified by sps_max_sub_layers_minus1 + 1 or vps_max_sub_layers_minus1 + 1, depending on whether the HRD parameters are part of the SPS or VPS, respectively.</comment></member>
-            <member optional="true" len="sps_max_sub_layers_minus1 + 1,vps_max_sub_layers_minus1 + 1">const <type>StdVideoH265SubLayerHrdParameters</type>* <name>pSubLayerHrdParametersVcl</name><comment>if flags.vcl_hrd_parameters_present_flag is set, then this must be a ptr to an array of StdVideoH265SubLayerHrdParameters with a size specified by sps_max_sub_layers_minus1 + 1 or vps_max_sub_layers_minus1 + 1, depending on whether the HRD parameters are part of the SPS or VPS, respectively.</comment></member>
+            <member optional="true" len="*_max_sub_layers_minus1 + 1">const <type>StdVideoH265SubLayerHrdParameters</type>* <name>pSubLayerHrdParametersNal</name><comment>if flags.nal_hrd_parameters_present_flag is set, then this must be a ptr to an array of StdVideoH265SubLayerHrdParameters with a size specified by sps_max_sub_layers_minus1 + 1 or vps_max_sub_layers_minus1 + 1, depending on whether the HRD parameters are part of the SPS or VPS, respectively.</comment></member>
+            <member optional="true" len="*_max_sub_layers_minus1 + 1">const <type>StdVideoH265SubLayerHrdParameters</type>* <name>pSubLayerHrdParametersVcl</name><comment>if flags.vcl_hrd_parameters_present_flag is set, then this must be a ptr to an array of StdVideoH265SubLayerHrdParameters with a size specified by sps_max_sub_layers_minus1 + 1 or vps_max_sub_layers_minus1 + 1, depending on whether the HRD parameters are part of the SPS or VPS, respectively.</comment></member>
         </type>
         <type category="struct" name="StdVideoH265VpsFlags">
             <member><type>uint32_t</type>                             <name>vps_temporal_id_nesting_flag</name> : 1</member>

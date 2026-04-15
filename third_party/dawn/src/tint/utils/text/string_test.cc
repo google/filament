@@ -28,10 +28,9 @@
 #include "src/tint/utils/text/string.h"
 
 #include "gmock/gmock.h"
+#include "src/tint/utils/containers/transform.h"  // Used by ToStringList()
 #include "src/tint/utils/text/string_stream.h"
 #include "src/tint/utils/text/styled_text.h"
-
-#include "src/tint/utils/containers/transform.h"  // Used by ToStringList()
 
 namespace tint {
 namespace {
@@ -43,42 +42,11 @@ Vector<std::string, N> ToStringList(const Vector<std::string_view, N>& views) {
     return Transform(views, [](std::string_view view) { return std::string(view); });
 }
 
-TEST(StringTest, ReplaceAll) {
-    EXPECT_EQ("xybbcc", ReplaceAll("aabbcc", "aa", "xy"));
-    EXPECT_EQ("aaxycc", ReplaceAll("aabbcc", "bb", "xy"));
-    EXPECT_EQ("aabbxy", ReplaceAll("aabbcc", "cc", "xy"));
-    EXPECT_EQ("xyxybbcc", ReplaceAll("aabbcc", "a", "xy"));
-    EXPECT_EQ("aaxyxycc", ReplaceAll("aabbcc", "b", "xy"));
-    EXPECT_EQ("aabbxyxy", ReplaceAll("aabbcc", "c", "xy"));
-    // Replacement string includes the searched-for string.
-    // This proves that the algorithm needs to advance 'pos'
-    // past the replacement.
-    EXPECT_EQ("aabxybbxybcc", ReplaceAll("aabbcc", "b", "bxyb"));
-}
-
 TEST(StringTest, ToString) {
     EXPECT_EQ("true", ToString(true));
     EXPECT_EQ("false", ToString(false));
     EXPECT_EQ("123", ToString(123));
     EXPECT_EQ("hello", ToString("hello"));
-}
-
-TEST(StringTest, HasPrefix) {
-    EXPECT_TRUE(HasPrefix("abc", "a"));
-    EXPECT_TRUE(HasPrefix("abc", "ab"));
-    EXPECT_TRUE(HasPrefix("abc", "abc"));
-    EXPECT_FALSE(HasPrefix("abc", "abc1"));
-    EXPECT_FALSE(HasPrefix("abc", "ac"));
-    EXPECT_FALSE(HasPrefix("abc", "b"));
-}
-
-TEST(StringTest, HasSuffix) {
-    EXPECT_TRUE(HasSuffix("abc", "c"));
-    EXPECT_TRUE(HasSuffix("abc", "bc"));
-    EXPECT_TRUE(HasSuffix("abc", "abc"));
-    EXPECT_FALSE(HasSuffix("abc", "1abc"));
-    EXPECT_FALSE(HasSuffix("abc", "ac"));
-    EXPECT_FALSE(HasSuffix("abc", "b"));
 }
 
 TEST(StringTest, Distance) {
@@ -146,16 +114,6 @@ TEST(StringTest, TrimRight) {
     EXPECT_EQ(TrimRight("", [](char) { return true; }), "");
 }
 
-TEST(StringTest, TrimPrefix) {
-    EXPECT_EQ(TrimPrefix("abc", "a"), "bc");
-    EXPECT_EQ(TrimPrefix("abc", "ab"), "c");
-    EXPECT_EQ(TrimPrefix("abc", "abc"), "");
-    EXPECT_EQ(TrimPrefix("abc", "abc1"), "abc");
-    EXPECT_EQ(TrimPrefix("abc", "ac"), "abc");
-    EXPECT_EQ(TrimPrefix("abc", "b"), "abc");
-    EXPECT_EQ(TrimPrefix("abc", "c"), "abc");
-}
-
 TEST(StringTest, TrimSuffix) {
     EXPECT_EQ(TrimSuffix("abc", "c"), "ab");
     EXPECT_EQ(TrimSuffix("abc", "bc"), "a");
@@ -166,37 +124,11 @@ TEST(StringTest, TrimSuffix) {
     EXPECT_EQ(TrimSuffix("abc", "a"), "abc");
 }
 
-TEST(StringTest, Trim) {
-    EXPECT_EQ(Trim("hello world", [](char) { return false; }), "hello world");
-    EXPECT_EQ(Trim("hello world", [](char c) { return c == 'h'; }), "ello world");
-    EXPECT_EQ(Trim("hello world", [](char c) { return c == 'd'; }), "hello worl");
-    EXPECT_EQ(Trim("hello world", [](char c) { return c == 'h' || c == 'd'; }), "ello worl");
-    EXPECT_EQ(Trim("hello world", [](char) { return true; }), "");
-    EXPECT_EQ(Trim("", [](char) { return false; }), "");
-    EXPECT_EQ(Trim("", [](char) { return true; }), "");
-}
-
-TEST(StringTest, IsSpace) {
-    EXPECT_FALSE(IsSpace('a'));
-    EXPECT_FALSE(IsSpace('z'));
-    EXPECT_FALSE(IsSpace('\0'));
-    EXPECT_TRUE(IsSpace(' '));
-    EXPECT_TRUE(IsSpace('\f'));
-    EXPECT_TRUE(IsSpace('\n'));
-    EXPECT_TRUE(IsSpace('\r'));
-    EXPECT_TRUE(IsSpace('\t'));
-    EXPECT_TRUE(IsSpace('\v'));
-}
-
 TEST(StringTest, TrimSpace) {
     EXPECT_EQ(TrimSpace("hello world"), "hello world");
     EXPECT_EQ(TrimSpace(" \t hello world\v\f"), "hello world");
     EXPECT_EQ(TrimSpace("hello \t world"), "hello \t world");
     EXPECT_EQ(TrimSpace(""), "");
-}
-
-TEST(StringTest, Quote) {
-    EXPECT_EQ("'meow'", Quote("meow"));
 }
 
 TEST(StringTest, Split) {

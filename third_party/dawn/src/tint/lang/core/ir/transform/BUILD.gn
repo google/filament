@@ -45,8 +45,6 @@ if (tint_build_unittests || tint_build_benchmarks) {
 
 libtint_source_set("transform") {
   sources = [
-    "add_empty_entry_point.cc",
-    "add_empty_entry_point.h",
     "array_length_from_immediate.cc",
     "array_length_from_immediate.h",
     "array_length_from_uniform.cc",
@@ -71,6 +69,8 @@ libtint_source_set("transform") {
     "conversion_polyfill.h",
     "dead_code_elimination.cc",
     "dead_code_elimination.h",
+    "decompose_access.cc",
+    "decompose_access.h",
     "demote_to_helper.cc",
     "demote_to_helper.h",
     "direct_variable_access.cc",
@@ -84,12 +84,20 @@ libtint_source_set("transform") {
     "preserve_padding.h",
     "prevent_infinite_loops.cc",
     "prevent_infinite_loops.h",
+    "propagate_buffer_sizes.cc",
+    "propagate_buffer_sizes.h",
     "remove_continue_in_switch.cc",
     "remove_continue_in_switch.h",
     "remove_terminator_args.cc",
     "remove_terminator_args.h",
+    "remove_uniform_vector_component_loads.cc",
+    "remove_uniform_vector_component_loads.h",
     "rename_conflicts.cc",
     "rename_conflicts.h",
+    "resource_table.cc",
+    "resource_table.h",
+    "resource_table_helper.cc",
+    "resource_table_helper.h",
     "robustness.cc",
     "robustness.h",
     "shader_io.cc",
@@ -112,7 +120,7 @@ libtint_source_set("transform") {
     "zero_init_workgroup_memory.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
@@ -136,7 +144,6 @@ libtint_source_set("transform") {
 if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [
-      "add_empty_entry_point_test.cc",
       "array_length_from_immediate_test.cc",
       "array_length_from_uniform_test.cc",
       "bgra8unorm_polyfill_test.cc",
@@ -149,6 +156,7 @@ if (tint_build_unittests) {
       "combine_access_instructions_test.cc",
       "conversion_polyfill_test.cc",
       "dead_code_elimination_test.cc",
+      "decompose_access_test.cc",
       "demote_to_helper_test.cc",
       "direct_variable_access_test.cc",
       "helper_test.h",
@@ -156,9 +164,12 @@ if (tint_build_unittests) {
       "prepare_immediate_data_test.cc",
       "preserve_padding_test.cc",
       "prevent_infinite_loops_test.cc",
+      "propagate_buffer_sizes_test.cc",
       "remove_continue_in_switch_test.cc",
       "remove_terminator_args_test.cc",
+      "remove_uniform_vector_component_loads_test.cc",
       "rename_conflicts_test.cc",
+      "resource_table_test.cc",
       "robustness_test.cc",
       "signed_integer_polyfill_test.cc",
       "single_entry_point_test.cc",
@@ -170,7 +181,7 @@ if (tint_build_unittests) {
       "zero_init_workgroup_memory_test.cc",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
@@ -196,7 +207,6 @@ if (tint_build_unittests) {
 
 tint_fuzz_source_set("fuzz") {
   sources = [
-    "add_empty_entry_point_fuzz.cc",
     "array_length_from_uniform_fuzz.cc",
     "bgra8unorm_polyfill_fuzz.cc",
     "binary_polyfill_fuzz.cc",
@@ -221,7 +231,7 @@ tint_fuzz_source_set("fuzz") {
     "zero_init_workgroup_memory_fuzz.cc",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/cmd/fuzz/ir:fuzz",
     "${tint_src_dir}/lang/core",

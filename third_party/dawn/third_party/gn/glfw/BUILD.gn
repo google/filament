@@ -43,15 +43,14 @@ config("glfw_public") {
 static_library("glfw") {
   public_configs = [ ":glfw_public" ]
 
-  if (dawn_has_build) {
-    configs -= [ "//build/config/compiler:chromium_code" ]
-    configs += [ "//build/config/compiler:no_chromium_code" ]
-  }
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [ "//build/config/compiler:no_chromium_code" ]
 
   if (is_win && !is_clang) {
     # nonstandard extension, function/data pointer conversion in expression
     cflags_c = [ "/wd4152" ]
   } else {
+    cflags = [ "-Wno-deprecated-declarations" ]
     cflags_c = [
       "-Wno-sign-compare",
       "-Wno-missing-field-initializers",
@@ -105,8 +104,8 @@ static_library("glfw") {
 
   if (is_mac) {
     sources += [
-      "${glfw_dir}/src/cocoa_time.c",
-      "${glfw_dir}/src/cocoa_time.h",
+      "${glfw_dir}/src/macos_time.c",
+      "${glfw_dir}/src/macos_time.h",
       "${glfw_dir}/src/posix_module.c",
       "${glfw_dir}/src/posix_thread.c",
       "${glfw_dir}/src/posix_thread.h",
@@ -133,7 +132,6 @@ static_library("glfw") {
       "${glfw_dir}/src/x11_platform.h",
       "${glfw_dir}/src/x11_window.c",
       "${glfw_dir}/src/xkb_unicode.c",
-      "${glfw_dir}/src/xkb_unicode.h",
     ]
     libs += [
       "X11",

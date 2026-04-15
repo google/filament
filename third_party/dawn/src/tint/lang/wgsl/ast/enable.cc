@@ -28,14 +28,13 @@
 #include "src/tint/lang/wgsl/ast/enable.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::Enable);
 
 namespace tint::ast {
 
-Enable::Enable(GenerationID pid, NodeID nid, const Source& src, VectorRef<const Extension*> exts)
-    : Base(pid, nid, src), extensions(std::move(exts)) {}
+Enable::Enable(NodeID nid, const Source& src, VectorRef<const Extension*> exts)
+    : Base(nid, src), extensions(std::move(exts)) {}
 
 Enable::~Enable() = default;
 
@@ -46,12 +45,6 @@ bool Enable::HasExtension(wgsl::Extension ext) const {
         }
     }
     return false;
-}
-
-const Enable* Enable::Clone(CloneContext& ctx) const {
-    auto src = ctx.Clone(source);
-    auto exts = ctx.Clone(extensions);
-    return ctx.dst->create<Enable>(src, std::move(exts));
 }
 
 }  // namespace tint::ast

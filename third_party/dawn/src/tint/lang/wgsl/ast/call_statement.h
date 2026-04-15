@@ -37,20 +37,13 @@ namespace tint::ast {
 class CallStatement final : public Castable<CallStatement, Statement> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node for the statement
     /// @param call the function
-    CallStatement(GenerationID pid, NodeID nid, const Source& src, const CallExpression* call);
+    CallStatement(NodeID nid, const Source& src, const CallExpression* call);
 
     /// Destructor
     ~CallStatement() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const CallStatement* Clone(CloneContext& ctx) const override;
 
     /// The call expression
     const CallExpression* const expr;

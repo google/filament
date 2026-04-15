@@ -29,7 +29,6 @@
 #define SRC_DAWN_NATIVE_D3D12_RENDERPIPELINED3D12_H_
 
 #include "dawn/native/RenderPipeline.h"
-
 #include "dawn/native/d3d12/ShaderModuleD3D12.h"
 #include "dawn/native/d3d12/d3d12_platform.h"
 
@@ -61,7 +60,7 @@ class RenderPipeline final : public RenderPipelineBase {
   private:
     ~RenderPipeline() override;
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     using RenderPipelineBase::RenderPipelineBase;
     D3D12_INPUT_LAYOUT_DESC ComputeInputLayout(

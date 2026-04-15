@@ -31,7 +31,6 @@
 #include <vector>
 
 #include "src/tint/lang/spirv/reader/common/options.h"
-#include "src/tint/lang/wgsl/program/program.h"
 
 // Forward declarations
 namespace tint::core::ir {
@@ -47,15 +46,6 @@ namespace tint::spirv::reader {
 /// @param options the parser options
 /// @returns the Tint IR module
 Result<core::ir::Module> ReadIR(const std::vector<uint32_t>& input, const Options& options = {});
-
-/// Reads the SPIR-V source data, returning the parsed program.
-/// If the source data fails to parse then the returned
-/// `program.Diagnostics.ContainsErrors()` will be true, and the
-/// `program.Diagnostics()` will describe the error.
-/// @param input the source data
-/// @param options the parser options
-/// @returns the parsed program
-Program Read(const std::vector<uint32_t>& input, const Options& options = {});
 
 }  // namespace tint::spirv::reader
 

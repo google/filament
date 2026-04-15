@@ -69,7 +69,7 @@ void SharedFenceBase::APIExportInfo(SharedFenceExportInfo* info) const {
     [[maybe_unused]] bool hadError = GetDevice()->ConsumedError(ExportInfo(info));
 }
 
-void SharedFenceBase::DestroyImpl() {}
+void SharedFenceBase::DestroyImpl(DestroyReason reason) {}
 
 MaybeError SharedFenceBase::ExportInfo(SharedFenceExportInfo* info) const {
     // Set the type to 0. It will be overwritten to the actual type

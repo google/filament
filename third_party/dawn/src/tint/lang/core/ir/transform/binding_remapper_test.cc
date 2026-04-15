@@ -200,6 +200,8 @@ $B1: {  # root
 }
 
 TEST_F(IR_BindingRemapperTest, BindingPointCollisionSameEntryPoint) {
+    capabilities.Add(Capability::kAllowDuplicateBindings);
+
     auto* buffer_a = b.Var("buffer_a", ty.ptr<uniform, i32>());
     buffer_a->SetBindingPoint(1, 2);
     mod.root_block->Append(buffer_a);

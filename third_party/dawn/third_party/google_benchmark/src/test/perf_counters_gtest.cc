@@ -27,12 +27,22 @@ TEST(PerfCountersTest, Init) {
   EXPECT_EQ(PerfCounters::Initialize(), PerfCounters::kSupported);
 }
 
+// Generic events will have as many counters as there are CPU PMUs, and each
+// will have the same name. In order to make these tests independent of the
+// number of CPU PMUs in the system, we uniquify the counter names before
+// testing them.
+static std::set<std::string> UniqueCounterNames(const PerfCounters& pc) {
+  std::set<std::string> names{pc.names().begin(), pc.names().end()};
+  return names;
+}
+
 TEST(PerfCountersTest, OneCounter) {
   if (!PerfCounters::kSupported) {
     GTEST_SKIP() << "Performance counters not supported.\n";
   }
   EXPECT_TRUE(PerfCounters::Initialize());
-  EXPECT_EQ(PerfCounters::Create({kGenericPerfEvent1}).num_counters(), 1);
+  EXPECT_EQ(
+      UniqueCounterNames(PerfCounters::Create({kGenericPerfEvent1})).size(), 1);
 }
 
 TEST(PerfCountersTest, NegativeTest) {
@@ -53,32 +63,49 @@ TEST(PerfCountersTest, NegativeTest) {
     // number of counters has to be two, not zero
     auto counter =
         PerfCounters::Create({kGenericPerfEvent2, "", kGenericPerfEvent1});
-    EXPECT_EQ(counter.num_counters(), 2);
-    EXPECT_EQ(counter.names(), std::vector<std::string>(
-                                   {kGenericPerfEvent2, kGenericPerfEvent1}));
+    auto names = UniqueCounterNames(counter);
+    EXPECT_EQ(names.size(), 2);
+    EXPECT_EQ(names,
+              std::set<std::string>({kGenericPerfEvent2, kGenericPerfEvent1}));
   }
   {
     // Try sneaking in an outrageous counter, like a fat finger mistake
     auto counter = PerfCounters::Create(
         {kGenericPerfEvent2, "not a counter name", kGenericPerfEvent1});
-    EXPECT_EQ(counter.num_counters(), 2);
-    EXPECT_EQ(counter.names(), std::vector<std::string>(
-                                   {kGenericPerfEvent2, kGenericPerfEvent1}));
+    auto names = UniqueCounterNames(counter);
+    EXPECT_EQ(names.size(), 2);
+    EXPECT_EQ(names,
+              std::set<std::string>({kGenericPerfEvent2, kGenericPerfEvent1}));
   }
   {
     // Finally try a golden input - it should like both of them
-    EXPECT_EQ(PerfCounters::Create({kGenericPerfEvent1, kGenericPerfEvent2})
-                  .num_counters(),
+    EXPECT_EQ(UniqueCounterNames(PerfCounters::Create(
+                                     {kGenericPerfEvent1, kGenericPerfEvent2}))
+                  .size(),
               2);
   }
   {
     // Add a bad apple in the end of the chain to check the edges
     auto counter = PerfCounters::Create(
         {kGenericPerfEvent1, kGenericPerfEvent2, "bad event name"});
-    EXPECT_EQ(counter.num_counters(), 2);
-    EXPECT_EQ(counter.names(), std::vector<std::string>(
-                                   {kGenericPerfEvent1, kGenericPerfEvent2}));
+    auto names = UniqueCounterNames(counter);
+    EXPECT_EQ(names.size(), 2);
+    EXPECT_EQ(names,
+              std::set<std::string>({kGenericPerfEvent1, kGenericPerfEvent2}));
   }
+}
+
+static std::map<std::string, uint64_t> SnapshotAndCombine(
+    PerfCounters& counters) {
+  PerfCounterValues values(counters.num_counters());
+  std::map<std::string, uint64_t> value_map;
+
+  if (counters.Snapshot(&values)) {
+    for (size_t i = 0; i != counters.num_counters(); ++i) {
+      value_map[counters.names()[i]] += values[i];
+    }
+  }
+  return value_map;
 }
 
 TEST(PerfCountersTest, Read1Counter) {
@@ -87,14 +114,50 @@ TEST(PerfCountersTest, Read1Counter) {
   }
   EXPECT_TRUE(PerfCounters::Initialize());
   auto counters = PerfCounters::Create({kGenericPerfEvent1});
-  EXPECT_EQ(counters.num_counters(), 1);
-  PerfCounterValues values1(1);
-  EXPECT_TRUE(counters.Snapshot(&values1));
-  EXPECT_GT(values1[0], 0);
-  PerfCounterValues values2(1);
-  EXPECT_TRUE(counters.Snapshot(&values2));
-  EXPECT_GT(values2[0], 0);
-  EXPECT_GT(values2[0], values1[0]);
+  auto values1 = SnapshotAndCombine(counters);
+  EXPECT_EQ(values1.size(), 1);
+  EXPECT_GT(values1.begin()->second, 0);
+  auto values2 = SnapshotAndCombine(counters);
+  EXPECT_EQ(values2.size(), 1);
+  EXPECT_GT(values2.begin()->second, 0);
+  EXPECT_GT(values2.begin()->second, values1.begin()->second);
+}
+
+TEST(PerfCountersTest, Read1CounterEachCPU) {
+  if (!PerfCounters::kSupported) {
+    GTEST_SKIP() << "Test skipped because libpfm is not supported.\n";
+  }
+#ifdef __linux__
+  EXPECT_TRUE(PerfCounters::Initialize());
+
+  cpu_set_t saved_set;
+  if (sched_getaffinity(0, sizeof(saved_set), &saved_set) != 0) {
+    // This can happen e.g. if there are more than CPU_SETSIZE CPUs.
+    GTEST_SKIP() << "Could not save CPU affinity mask.\n";
+  }
+
+  for (size_t cpu = 0; cpu != CPU_SETSIZE; ++cpu) {
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    CPU_SET(cpu, &set);
+    if (sched_setaffinity(0, sizeof(set), &set) != 0) {
+      break;
+    }
+
+    auto counters = PerfCounters::Create({kGenericPerfEvent1});
+    auto values1 = SnapshotAndCombine(counters);
+    EXPECT_EQ(values1.size(), 1);
+    EXPECT_GT(values1.begin()->second, 0);
+    auto values2 = SnapshotAndCombine(counters);
+    EXPECT_EQ(values2.size(), 1);
+    EXPECT_GT(values2.begin()->second, 0);
+    EXPECT_GT(values2.begin()->second, values1.begin()->second);
+  }
+
+  EXPECT_EQ(sched_setaffinity(0, sizeof(saved_set), &saved_set), 0);
+#else
+  GTEST_SKIP() << "Test skipped on non-Linux.\n";
+#endif
 }
 
 TEST(PerfCountersTest, Read2Counters) {
@@ -104,15 +167,17 @@ TEST(PerfCountersTest, Read2Counters) {
   EXPECT_TRUE(PerfCounters::Initialize());
   auto counters =
       PerfCounters::Create({kGenericPerfEvent1, kGenericPerfEvent2});
-  EXPECT_EQ(counters.num_counters(), 2);
-  PerfCounterValues values1(2);
-  EXPECT_TRUE(counters.Snapshot(&values1));
-  EXPECT_GT(values1[0], 0);
-  EXPECT_GT(values1[1], 0);
-  PerfCounterValues values2(2);
-  EXPECT_TRUE(counters.Snapshot(&values2));
-  EXPECT_GT(values2[0], 0);
-  EXPECT_GT(values2[1], 0);
+  auto values1 = SnapshotAndCombine(counters);
+  EXPECT_EQ(values1.size(), 2);
+  for (auto& kv : values1) {
+    EXPECT_GT(kv.second, 0);
+  }
+  auto values2 = SnapshotAndCombine(counters);
+  EXPECT_EQ(values1.size(), 2);
+  for (auto& kv : values2) {
+    EXPECT_GT(kv.second, 0);
+    EXPECT_GT(kv.second, values1[kv.first]);
+  }
 }
 
 TEST(PerfCountersTest, ReopenExistingCounters) {
@@ -127,7 +192,7 @@ TEST(PerfCountersTest, ReopenExistingCounters) {
   for (auto& counter : counters) {
     counter = PerfCounters::Create(kMetrics);
   }
-  PerfCounterValues values(1);
+  PerfCounterValues values(counters[0].num_counters());
   EXPECT_TRUE(counters[0].Snapshot(&values));
   EXPECT_TRUE(counters[1].Snapshot(&values));
 }
@@ -171,7 +236,8 @@ TEST(PerfCountersTest, CreateExistingMeasurements) {
   size_t max_counters = kMaxCounters;
   for (size_t i = 0; i < kMaxCounters; ++i) {
     auto& counter(*perf_counter_measurements[i]);
-    EXPECT_EQ(counter.num_counters(), 1);
+    std::set<std::string> names{counter.names().begin(), counter.names().end()};
+    EXPECT_EQ(names.size(), 1);
     if (!counter.Start()) {
       max_counters = i;
       break;
@@ -212,8 +278,8 @@ BENCHMARK_DONT_OPTIMIZE size_t do_work() {
   return sum;
 }
 
-void measure(size_t threadcount, PerfCounterValues* before,
-             PerfCounterValues* after) {
+void measure(size_t threadcount, std::map<std::string, uint64_t>* before,
+             std::map<std::string, uint64_t>* after) {
   BM_CHECK_NE(before, nullptr);
   BM_CHECK_NE(after, nullptr);
   std::vector<std::thread> threads(threadcount);
@@ -226,10 +292,14 @@ void measure(size_t threadcount, PerfCounterValues* before,
   // threadpool.
   auto counters =
       PerfCounters::Create({kGenericPerfEvent1, kGenericPerfEvent2});
-  for (auto& t : threads) t = std::thread(work);
-  counters.Snapshot(before);
-  for (auto& t : threads) t.join();
-  counters.Snapshot(after);
+  for (auto& t : threads) {
+    t = std::thread(work);
+  }
+  *before = SnapshotAndCombine(counters);
+  for (auto& t : threads) {
+    t.join();
+  }
+  *after = SnapshotAndCombine(counters);
 }
 
 TEST(PerfCountersTest, MultiThreaded) {
@@ -237,8 +307,7 @@ TEST(PerfCountersTest, MultiThreaded) {
     GTEST_SKIP() << "Test skipped because libpfm is not supported.";
   }
   EXPECT_TRUE(PerfCounters::Initialize());
-  PerfCounterValues before(2);
-  PerfCounterValues after(2);
+  std::map<std::string, uint64_t> before, after;
 
   // Notice that this test will work even if we taskset it to a single CPU
   // In this case the threads will run sequentially
@@ -246,15 +315,19 @@ TEST(PerfCountersTest, MultiThreaded) {
   // instructions
   measure(2, &before, &after);
   std::vector<double> Elapsed2Threads{
-      static_cast<double>(after[0] - before[0]),
-      static_cast<double>(after[1] - before[1])};
+      static_cast<double>(after[kGenericPerfEvent1] -
+                          before[kGenericPerfEvent1]),
+      static_cast<double>(after[kGenericPerfEvent2] -
+                          before[kGenericPerfEvent2])};
 
   // Start four threads and measure the number of combined cycles and
   // instructions
   measure(4, &before, &after);
   std::vector<double> Elapsed4Threads{
-      static_cast<double>(after[0] - before[0]),
-      static_cast<double>(after[1] - before[1])};
+      static_cast<double>(after[kGenericPerfEvent1] -
+                          before[kGenericPerfEvent1]),
+      static_cast<double>(after[kGenericPerfEvent2] -
+                          before[kGenericPerfEvent2])};
 
   // The following expectations fail (at least on a beefy workstation with lots
   // of cpus) - it seems that in some circumstances the runtime of 4 threads

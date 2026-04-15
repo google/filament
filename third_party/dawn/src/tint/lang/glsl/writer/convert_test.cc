@@ -40,7 +40,14 @@ TEST_F(GlslWriterTest, ConvertU32) {
         b.Return(f, b.Convert(ty.u32(), v));
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(f));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 uint a() {
   int v = 2;
@@ -48,6 +55,7 @@ uint a() {
 }
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
+  uint x = a();
 }
 )");
 }

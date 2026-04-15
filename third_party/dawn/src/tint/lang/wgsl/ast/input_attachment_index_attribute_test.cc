@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/ast/input_attachment_index_attribute.h"
+
 #include "src/tint/lang/wgsl/ast/helper_test.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT

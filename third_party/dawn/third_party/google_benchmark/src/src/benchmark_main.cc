@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "benchmark/benchmark.h"
+#include "benchmark/export.h"
+#include "benchmark/registration.h"
 
-BENCHMARK_EXPORT int main(int, char**);
+BENCHMARK_EXPORT int main(int /*argc*/, char** /*argv*/);
 BENCHMARK_MAIN();

@@ -25,16 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.h"
+
 #include <unistd.h>
+
 #include <utility>
 
-#include "dawn/native/SystemHandle.h"
 #include "dawn/native/vulkan/BackendVk.h"
 #include "dawn/native/vulkan/DeviceVk.h"
 #include "dawn/native/vulkan/PhysicalDeviceVk.h"
 #include "dawn/native/vulkan/VulkanError.h"
 #include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.h"
-#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.h"
+#include "dawn/utils/SystemHandle.h"
 
 static constexpr VkExternalSemaphoreHandleTypeFlagBits kDefaultHandleType =
 #if DAWN_PLATFORM_IS(ANDROID) || DAWN_PLATFORM_IS(CHROMEOS)
@@ -117,8 +119,7 @@ class ServiceImplementationFD : public ServiceImplementation {
         importSemaphoreFdInfo.flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT;
         importSemaphoreFdInfo.handleType = mHandleType;
         // vkImportSemaphoreFdKHR takes ownership, so make a dup of the handle.
-        SystemHandle handleCopy;
-        DAWN_TRY_ASSIGN(handleCopy, SystemHandle::Duplicate(handle));
+        utils::SystemHandle handleCopy = utils::SystemHandle::Duplicate(handle);
         importSemaphoreFdInfo.fd = handleCopy.Get();
 
         MaybeError status = CheckVkSuccess(

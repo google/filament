@@ -30,9 +30,8 @@
 
 #include <vector>
 
-#include "dawn/native/SwapChain.h"
-
 #include "dawn/native/IntegerTypes.h"
+#include "dawn/native/SwapChain.h"
 #include "dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d {

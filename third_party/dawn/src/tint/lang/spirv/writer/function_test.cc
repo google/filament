@@ -39,7 +39,14 @@ TEST_F(SpirvWriterTest, Function_Empty) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
         %foo = OpFunction %void None %3
           %4 = OpLabel
@@ -67,7 +74,16 @@ TEST_F(SpirvWriterTest, Function_DeduplicateType) {
         b.Return(func_c);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func_a);
+        b.Call(func_b);
+        b.Call(func_c);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                ; Types, variables and constants
        %void = OpTypeVoid
@@ -99,7 +115,8 @@ TEST_F(SpirvWriterTest, Function_EntryPoint_Compute) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                OpEntryPoint GLCompute %main "main"
                OpExecutionMode %main LocalSize 32 4 1
@@ -128,7 +145,8 @@ TEST_F(SpirvWriterTest, Function_EntryPoint_Fragment) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                OpEntryPoint Fragment %main "main"
                OpExecutionMode %main OriginUpperLeft
@@ -152,13 +170,14 @@ TEST_F(SpirvWriterTest, Function_EntryPoint_Fragment) {
 }
 
 TEST_F(SpirvWriterTest, Function_EntryPoint_Vertex) {
-    auto* func = b.Function("main", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("main", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(func->Block(), [&] {  //
         b.Return(func, b.Zero<vec4<f32>>());
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                OpEntryPoint Vertex %main "main" %main_position_Output %main___point_size_Output
 
@@ -211,7 +230,14 @@ TEST_F(SpirvWriterTest, Function_ReturnValue) {
         b.Return(func, 42_i);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %3 = OpTypeFunction %int
      %int_42 = OpConstant %int 42
@@ -234,16 +260,24 @@ TEST_F(SpirvWriterTest, Function_Parameters) {
     func->SetParams({x, y});
 
     b.Append(func->Block(), [&] {
-        auto* result = b.Add(i32, x, y);
+        auto* result = b.Add(x, y);
         b.Return(func, result);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func, b.Zero(ty.i32()), b.Zero(ty.i32())));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %5 = OpTypeFunction %int %int %int
        %uint = OpTypeInt 32 0
        %void = OpTypeVoid
          %14 = OpTypeFunction %void
+      %int_0 = OpConstant %int 0
 
                ; Function foo
         %foo = OpFunction %int None %5
@@ -257,9 +291,10 @@ TEST_F(SpirvWriterTest, Function_Parameters) {
                OpReturnValue %11
                OpFunctionEnd
 
-               ; Function unused_entry_point
-%unused_entry_point = OpFunction %void None %14
+               ; Function main
+       %main = OpFunction %void None %14
          %15 = OpLabel
+        %x_0 = OpFunctionCall %int %foo %int_0 %int_0
                OpReturn
                OpFunctionEnd
 )");
@@ -273,18 +308,19 @@ TEST_F(SpirvWriterTest, Function_Call) {
     foo->SetParams({x, y});
 
     b.Append(foo->Block(), [&] {
-        auto* result = b.Add(i32, x, y);
+        auto* result = b.Add(x, y);
         b.Return(foo, result);
     });
 
-    auto* bar = b.Function("bar", ty.void_());
+    auto* bar = b.ComputeFunction("main");
     b.Append(bar->Block(), [&] {
         auto* result = b.Call(i32, foo, 2_i, 3_i);
         b.Return(bar);
         mod.SetName(result, "result");
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%result = OpFunctionCall %int %foo %int_2 %int_3");
 }
 
@@ -294,27 +330,28 @@ TEST_F(SpirvWriterTest, Function_Call_Void) {
         b.Return(foo);
     });
 
-    auto* bar = b.Function("bar", ty.void_());
+    auto* bar = b.ComputeFunction("main");
     b.Append(bar->Block(), [&] {
-        auto* result = b.Call(ty.void_(), foo);
+        b.Call(ty.void_(), foo);
         b.Return(bar);
-        mod.SetName(result, "result");
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
-    EXPECT_INST("%result = OpFunctionCall %void %foo");
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("%7 = OpFunctionCall %void %foo");
 }
 
 TEST_F(SpirvWriterTest, Function_ShaderIO_VertexPointSize) {
-    auto* func = b.Function("main", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("main", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(func->Block(), [&] {  //
-        b.Return(func, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Return(func, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     Options options;
     options.emit_vertex_point_size = true;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(
         R"(OpEntryPoint Vertex %main "main" %main_position_Output %main___point_size_Output)");
     EXPECT_INST(R"(
@@ -339,18 +376,19 @@ TEST_F(SpirvWriterTest, Function_ShaderIO_VertexPointSize) {
 }
 
 TEST_F(SpirvWriterTest, Function_ShaderIO_F16_Input_WithCapability) {
-    auto* input = b.FunctionParam("input", ty.vec4<f16>());
+    auto* input = b.FunctionParam("input", ty.vec4h());
     input->SetLocation(1);
-    auto* func = b.Function("main", ty.vec4<f32>(), core::ir::Function::PipelineStage::kFragment);
+    auto* func = b.Function("main", ty.vec4f(), core::ir::Function::PipelineStage::kFragment);
     func->SetReturnLocation(2);
     func->SetParams({input});
     b.Append(func->Block(), [&] {  //
-        b.Return(func, b.Convert(ty.vec4<f32>(), input));
+        b.Return(func, b.Convert(ty.vec4f(), input));
     });
 
     Options options;
-    options.use_storage_input_output_16 = true;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    options.extensions.use_storage_input_output_16 = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpCapability StorageInputOutput16");
     EXPECT_INST(R"(OpEntryPoint Fragment %main "main" %main_loc1_Input %main_loc2_Output)");
     EXPECT_INST("%main_loc1_Input = OpVariable %_ptr_Input_v4half Input");
@@ -367,18 +405,19 @@ TEST_F(SpirvWriterTest, Function_ShaderIO_F16_Input_WithCapability) {
 }
 
 TEST_F(SpirvWriterTest, Function_ShaderIO_F16_Input_WithoutCapability) {
-    auto* input = b.FunctionParam("input", ty.vec4<f16>());
+    auto* input = b.FunctionParam("input", ty.vec4h());
     input->SetLocation(1);
-    auto* func = b.Function("main", ty.vec4<f32>(), core::ir::Function::PipelineStage::kFragment);
+    auto* func = b.Function("main", ty.vec4f(), core::ir::Function::PipelineStage::kFragment);
     func->SetReturnLocation(2);
     func->SetParams({input});
     b.Append(func->Block(), [&] {  //
-        b.Return(func, b.Convert(ty.vec4<f32>(), input));
+        b.Return(func, b.Convert(ty.vec4f(), input));
     });
 
     Options options;
-    options.use_storage_input_output_16 = false;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    options.extensions.use_storage_input_output_16 = false;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(OpEntryPoint Fragment %main "main" %main_loc1_Input %main_loc2_Output)");
     EXPECT_INST("%main_loc1_Input = OpVariable %_ptr_Input_v4float Input");
     EXPECT_INST("%main_loc2_Output = OpVariable %_ptr_Output_v4float Output");
@@ -395,18 +434,19 @@ TEST_F(SpirvWriterTest, Function_ShaderIO_F16_Input_WithoutCapability) {
 }
 
 TEST_F(SpirvWriterTest, Function_ShaderIO_F16_Output_WithCapability) {
-    auto* input = b.FunctionParam("input", ty.vec4<f32>());
+    auto* input = b.FunctionParam("input", ty.vec4f());
     input->SetLocation(1);
-    auto* func = b.Function("main", ty.vec4<f16>(), core::ir::Function::PipelineStage::kFragment);
+    auto* func = b.Function("main", ty.vec4h(), core::ir::Function::PipelineStage::kFragment);
     func->SetReturnLocation(2);
     func->SetParams({input});
     b.Append(func->Block(), [&] {  //
-        b.Return(func, b.Convert(ty.vec4<f16>(), input));
+        b.Return(func, b.Convert(ty.vec4h(), input));
     });
 
     Options options;
-    options.use_storage_input_output_16 = true;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    options.extensions.use_storage_input_output_16 = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpCapability StorageInputOutput16");
     EXPECT_INST(R"(OpEntryPoint Fragment %main "main" %main_loc1_Input %main_loc2_Output)");
     EXPECT_INST("%main_loc1_Input = OpVariable %_ptr_Input_v4float Input");
@@ -423,18 +463,19 @@ TEST_F(SpirvWriterTest, Function_ShaderIO_F16_Output_WithCapability) {
 }
 
 TEST_F(SpirvWriterTest, Function_ShaderIO_F16_Output_WithoutCapability) {
-    auto* input = b.FunctionParam("input", ty.vec4<f32>());
+    auto* input = b.FunctionParam("input", ty.vec4f());
     input->SetLocation(1);
-    auto* func = b.Function("main", ty.vec4<f16>(), core::ir::Function::PipelineStage::kFragment);
+    auto* func = b.Function("main", ty.vec4h(), core::ir::Function::PipelineStage::kFragment);
     func->SetReturnLocation(2);
     func->SetParams({input});
     b.Append(func->Block(), [&] {  //
-        b.Return(func, b.Convert(ty.vec4<f16>(), input));
+        b.Return(func, b.Convert(ty.vec4h(), input));
     });
 
     Options options;
-    options.use_storage_input_output_16 = false;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    options.extensions.use_storage_input_output_16 = false;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(OpEntryPoint Fragment %main "main" %main_loc1_Input %main_loc2_Output)");
     EXPECT_INST("%main_loc1_Input = OpVariable %_ptr_Input_v4float Input");
     EXPECT_INST("%main_loc2_Output = OpVariable %_ptr_Output_v4float Output");
@@ -475,7 +516,8 @@ TEST_F(SpirvWriterTest, Function_ShaderIO_DualSourceBlend) {
         b.Return(func, b.Construct(outputs, 0.5_f, 0.6_f));
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(
         R"(OpEntryPoint Fragment %main "main" %main_loc0_idx0_Output %main_loc0_idx1_Output)");
     EXPECT_INST(R"(
@@ -511,8 +553,8 @@ TEST_F(SpirvWriterTest, Function_PassMatrixByPointer) {
     auto* value_b = b.FunctionParam("value_b", mat_ty);
     target->SetParams({value_a, scalar, value_b});
     b.Append(target->Block(), [&] {
-        auto* scale = b.Multiply(mat_ty, value_a, scalar);
-        auto* sum = b.Add(mat_ty, scale, value_b);
+        auto* scale = b.Multiply(value_a, scalar);
+        auto* sum = b.Add(scale, value_b);
         b.Return(target, sum);
     });
 
@@ -525,9 +567,16 @@ TEST_F(SpirvWriterTest, Function_PassMatrixByPointer) {
         b.Return(caller, result);
     });
 
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(caller));
+        b.Return(eb);
+    });
+
     Options options;
-    options.pass_matrix_by_pointer = true;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    options.workarounds.pass_matrix_by_pointer = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
 
     EXPECT_INST(R"(
                ; Function target
@@ -575,7 +624,8 @@ TEST_F(SpirvWriterTest, WorkgroupStorageSizeEmpty) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_EQ(0u, workgroup_info.storage_size);
 }
 
@@ -590,7 +640,8 @@ TEST_F(SpirvWriterTest, WorkgroupStorageSizeSimple) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_EQ(32u, workgroup_info.storage_size);
 }
 
@@ -617,14 +668,15 @@ TEST_F(SpirvWriterTest, WorkgroupStorageSizeCompoundTypes) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_EQ(96u, workgroup_info.storage_size);
 }
 
 TEST_F(SpirvWriterTest, WorkgroupStorageSizeAlignmentPadding) {
     // vec3<f32> has an alignment of 16 but a size of 12. We leverage this to test
     // that our padded size calculation for workgroup storage is accurate.
-    auto* var = mod.root_block->Append(b.Var("var_f32", ty.ptr(workgroup, ty.vec3<f32>())));
+    auto* var = mod.root_block->Append(b.Var("var_f32", ty.ptr(workgroup, ty.vec3f())));
 
     auto* func = b.ComputeFunction("main", 32_u, 4_u, 1_u);
     b.Append(func->Block(), [&] {  //
@@ -632,7 +684,8 @@ TEST_F(SpirvWriterTest, WorkgroupStorageSizeAlignmentPadding) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_EQ(16u, workgroup_info.storage_size);
 }
 
@@ -654,7 +707,8 @@ TEST_F(SpirvWriterTest, WorkgroupStorageSizeStructAlignment) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_EQ(1024u, workgroup_info.storage_size);
 }
 

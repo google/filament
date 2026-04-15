@@ -35,18 +35,19 @@ namespace dawn::native {
 struct Format;
 struct TextureCopy;
 struct TexelCopyBufferLayout;
+struct TexelExtent3D;
 
 bool IsFormatSupportedByBufferToTextureBlit(wgpu::TextureFormat format);
 bool IsBufferToTextureBlitSupported(BufferBase* buffer,
                                     const TextureCopy& dst,
-                                    const Extent3D& copyExtent);
+                                    const TexelExtent3D& copyExtent);
 
 MaybeError BlitBufferToTexture(DeviceBase* device,
                                CommandEncoder* commandEncoder,
                                BufferBase* buffer,
                                const TexelCopyBufferLayout& src,
                                const TextureCopy& dst,
-                               const Extent3D& copyExtent);
+                               const TexelExtent3D& copyExtent);
 
 }  // namespace dawn::native
 

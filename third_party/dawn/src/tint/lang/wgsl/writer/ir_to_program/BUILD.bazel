@@ -43,7 +43,6 @@ cc_library(
   ],
   hdrs = [
     "ir_to_program.h",
-    "program_options.h",
   ],
   deps = [
     "//src/tint/api/common",
@@ -59,6 +58,7 @@ cc_library(
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/resolver",
     "//src/tint/lang/wgsl/sem",
+    "//src/tint/lang/wgsl/writer/common",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
@@ -99,6 +99,7 @@ cc_library(
     "//src/tint/lang/wgsl/ir",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/sem",
+    "//src/tint/lang/wgsl/writer/common",
     "//src/tint/lang/wgsl/writer/ir_to_program",
     "//src/tint/utils",
     "//src/tint/utils/containers",

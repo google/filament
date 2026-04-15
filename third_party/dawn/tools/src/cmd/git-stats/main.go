@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -43,6 +44,7 @@ import (
 
 	"dawn.googlesource.com/dawn/tools/src/container"
 	"dawn.googlesource.com/dawn/tools/src/git"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 )
 
 // Flags
@@ -56,7 +58,7 @@ var (
 // main entry point
 func main() {
 	flag.Parse()
-	if err := run(); err != nil {
+	if err := run(oswrapper.GetRealOSWrapper()); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -79,11 +81,16 @@ func shouldConsiderLinesOfFile(path string) bool {
 		"src/tint/lang/core/*.h",
 		"test/tint/",
 		"third_party/gn/webgpu-cts/test_list.txt",
-		"third_party/khronos/",
+		"third_party/OpenGL-Registry/",
+		"third_party/EGL-Registry/",
 		"webgpu-cts/",
 		"src/external/petamoriken",
 	} {
-		if strings.HasPrefix(path, ignore) {
+		if strings.Contains(ignore, "*") {
+			if matched, _ := filepath.Match(ignore, path); matched {
+				return false
+			}
+		} else if strings.HasPrefix(path, ignore) {
 			return false
 		}
 	}
@@ -109,7 +116,9 @@ func shouldConsiderLinesOfCommit(hash string) bool {
 // ____________^^^^^^^^^^^^^^^_
 var reEmail = regexp.MustCompile(`<([^>]+)>`)
 
-func run() error {
+// TODO(crbug.com/416755658): Add unittest coverage once exec calls are handled
+// via dependency injection.
+func run(osW oswrapper.OSWrapper) error {
 	// Parse the --after and --before flags
 	var after, before time.Time
 	var err error
@@ -137,7 +146,7 @@ func run() error {
 	}
 
 	// Create the git.Git wrapper
-	g, err := git.New(gitExe)
+	g, err := git.New(gitExe, osW)
 	if err != nil {
 		return err
 	}
@@ -399,12 +408,4 @@ func combine(a, b AuthorStats) AuthorStats {
 		out.commitsByMonth[month] = out.commitsByMonth[month] + commits
 	}
 	return out
-}
-
-func today() time.Time {
-	return time.Now()
-}
-
-func date(t time.Time) string {
-	return t.Format(yyyymmdd)
 }

@@ -37,14 +37,12 @@ namespace tint::ast {
 class BinaryExpression final : public Castable<BinaryExpression, Expression> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the binary expression source
     /// @param op the operation type
     /// @param lhs the left side of the expression
     /// @param rhs the right side of the expression
-    BinaryExpression(GenerationID pid,
-                     NodeID nid,
+    BinaryExpression(NodeID nid,
                      const Source& source,
                      core::BinaryOp op,
                      const Expression* lhs,
@@ -99,12 +97,6 @@ class BinaryExpression final : public Castable<BinaryExpression, Expression> {
     bool IsBitshift() const;
     /// @returns true if the op is a logical expression
     bool IsLogical() const;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const BinaryExpression* Clone(CloneContext& ctx) const override;
 
     /// the binary op type
     const core::BinaryOp op;

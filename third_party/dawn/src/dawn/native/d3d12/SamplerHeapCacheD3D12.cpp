@@ -48,9 +48,7 @@ SamplerHeapCacheEntry::SamplerHeapCacheEntry(std::vector<Sampler*> samplers)
 SamplerHeapCacheEntry::SamplerHeapCacheEntry(SamplerHeapCache* cache,
                                              std::vector<Sampler*> samplers,
                                              CPUDescriptorHeapAllocation allocation)
-    : mCPUAllocation(std::move(allocation)),
-      mSamplers(std::move(samplers)),
-      mCache(cache) {
+    : mCPUAllocation(std::move(allocation)), mSamplers(std::move(samplers)), mCache(cache) {
     DAWN_ASSERT(mCache != nullptr);
     DAWN_ASSERT(mCPUAllocation.IsValid());
     DAWN_ASSERT(!mSamplers.empty());
@@ -76,7 +74,7 @@ SamplerHeapCacheEntry::~SamplerHeapCacheEntry() {
     DAWN_ASSERT(!mCPUAllocation.IsValid());
 }
 
-bool SamplerHeapCacheEntry::Populate(MutexProtected<ShaderVisibleDescriptorAllocator>& allocator) {
+bool SamplerHeapCacheEntry::Populate(ShaderVisibleDescriptorAllocator* allocator) {
     if (allocator->IsAllocationStillValid(mGPUAllocation)) {
         return true;
     }
@@ -120,13 +118,15 @@ ResultOrError<Ref<SamplerHeapCacheEntry>> SamplerHeapCache::GetOrCreate(const Bi
     std::vector<Sampler*> samplers;
     samplers.reserve(samplerCount);
 
-    for (BindingIndex bindingIndex = bgl->GetDynamicBufferCount();
-         bindingIndex < bgl->GetBindingCount(); ++bindingIndex) {
-        const BindingInfo& bindingInfo = bgl->GetBindingInfo(bindingIndex);
-        if (std::holds_alternative<SamplerBindingInfo>(bindingInfo.bindingLayout)) {
+    for (BindingIndex bindingIndex : bgl->GetSamplerIndices()) {
+        // GetSamplerIndices() returns indices for all samplers, including non-visible ones,
+        // so we must skip them.
+        if (bgl->GetBindingInfo(bindingIndex).visibility != wgpu::ShaderStage::None) {
             samplers.push_back(ToBackend(group->GetBindingAsSampler(bindingIndex)));
         }
     }
+    // All visible samplers should have been added
+    DAWN_ASSERT(samplers.size() == samplerCount);
 
     // Check the cache if there exists a sampler heap allocation that corresponds to the
     // samplers.

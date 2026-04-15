@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://developers.google.com/open-source/licenses/bsd
 
-#include "google/protobuf/compiler/hpb/gen_utils.h"
+#include "hpb_generator/gen_utils.h"
 
 #include <algorithm>
 #include <string>
@@ -13,16 +13,24 @@
 
 #include "absl/log/absl_log.h"
 #include "absl/strings/ascii.h"
+#include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
 #include "google/protobuf/descriptor.h"
 
-namespace google::protobuf::hpb_generator {
+namespace {
+std::string EscapeTrigraphs(absl::string_view to_escape) {
+  return absl::StrReplaceAll(to_escape, {{"?", "\\?"}});
+}
+}  // namespace
 
-namespace protobuf = ::proto2;
+namespace google {
+namespace protobuf {
+namespace hpb_generator {
 
-void AddEnums(const protobuf::Descriptor* message,
-              std::vector<const protobuf::EnumDescriptor*>* enums) {
+void AddEnums(const google::protobuf::Descriptor* message,
+              std::vector<const google::protobuf::EnumDescriptor*>* enums) {
   enums->reserve(enums->size() + message->enum_type_count());
   for (int i = 0; i < message->enum_type_count(); i++) {
     enums->push_back(message->enum_type(i));
@@ -32,9 +40,9 @@ void AddEnums(const protobuf::Descriptor* message,
   }
 }
 
-std::vector<const protobuf::EnumDescriptor*> SortedEnums(
-    const protobuf::FileDescriptor* file) {
-  std::vector<const protobuf::EnumDescriptor*> enums;
+std::vector<const google::protobuf::EnumDescriptor*> SortedEnums(
+    const google::protobuf::FileDescriptor* file) {
+  std::vector<const google::protobuf::EnumDescriptor*> enums;
   enums.reserve(file->enum_type_count());
   for (int i = 0; i < file->enum_type_count(); i++) {
     enums.push_back(file->enum_type(i));
@@ -45,17 +53,17 @@ std::vector<const protobuf::EnumDescriptor*> SortedEnums(
   return enums;
 }
 
-void AddMessages(const protobuf::Descriptor* message,
-                 std::vector<const protobuf::Descriptor*>* messages) {
+void AddMessages(const google::protobuf::Descriptor* message,
+                 std::vector<const google::protobuf::Descriptor*>* messages) {
   messages->push_back(message);
   for (int i = 0; i < message->nested_type_count(); i++) {
     AddMessages(message->nested_type(i), messages);
   }
 }
 
-std::vector<const protobuf::Descriptor*> SortedMessages(
-    const protobuf::FileDescriptor* file) {
-  std::vector<const protobuf::Descriptor*> messages;
+std::vector<const google::protobuf::Descriptor*> SortedMessages(
+    const google::protobuf::FileDescriptor* file) {
+  std::vector<const google::protobuf::Descriptor*> messages;
   for (int i = 0; i < file->message_type_count(); i++) {
     AddMessages(file->message_type(i), &messages);
   }
@@ -63,8 +71,8 @@ std::vector<const protobuf::Descriptor*> SortedMessages(
 }
 
 void AddExtensionsFromMessage(
-    const protobuf::Descriptor* message,
-    std::vector<const protobuf::FieldDescriptor*>* exts) {
+    const google::protobuf::Descriptor* message,
+    std::vector<const google::protobuf::FieldDescriptor*>* exts) {
   for (int i = 0; i < message->extension_count(); i++) {
     exts->push_back(message->extension(i));
   }
@@ -73,12 +81,12 @@ void AddExtensionsFromMessage(
   }
 }
 
-std::vector<const protobuf::FieldDescriptor*> SortedExtensions(
-    const protobuf::FileDescriptor* file) {
+std::vector<const google::protobuf::FieldDescriptor*> SortedExtensions(
+    const google::protobuf::FileDescriptor* file) {
   const int extension_count = file->extension_count();
   const int message_type_count = file->message_type_count();
 
-  std::vector<const protobuf::FieldDescriptor*> ret;
+  std::vector<const google::protobuf::FieldDescriptor*> ret;
   ret.reserve(extension_count + message_type_count);
 
   for (int i = 0; i < extension_count; i++) {
@@ -91,18 +99,18 @@ std::vector<const protobuf::FieldDescriptor*> SortedExtensions(
   return ret;
 }
 
-std::vector<const protobuf::FieldDescriptor*> FieldNumberOrder(
-    const protobuf::Descriptor* message) {
-  std::vector<const protobuf::FieldDescriptor*> fields;
+std::vector<const google::protobuf::FieldDescriptor*> FieldNumberOrder(
+    const google::protobuf::Descriptor* message) {
+  std::vector<const google::protobuf::FieldDescriptor*> fields;
   fields.reserve(message->field_count());
   for (int i = 0; i < message->field_count(); i++) {
     fields.push_back(message->field(i));
   }
-  std::sort(fields.begin(), fields.end(),
-            [](const protobuf::FieldDescriptor* a,
-               const protobuf::FieldDescriptor* b) {
-              return a->number() < b->number();
-            });
+  std::sort(
+      fields.begin(), fields.end(),
+      [](const google::protobuf::FieldDescriptor* a, const google::protobuf::FieldDescriptor* b) {
+        return a->number() < b->number();
+      });
   return fields;
 }
 
@@ -151,6 +159,10 @@ std::string DefaultValue(const FieldDescriptor* field) {
       return field->default_value_bool() ? "true" : "false";
     case FieldDescriptor::CPPTYPE_MESSAGE:
       return "::std::false_type()";
+    case FieldDescriptor::CPPTYPE_STRING:
+      return absl::StrCat(
+          "\"", EscapeTrigraphs(absl::CEscape(field->default_value_string())),
+          "\"");
     default:
       // TODO: b/375460289 - implement rest of scalars
       ABSL_LOG(WARNING) << "Unsupported default value type (in-progress): <"
@@ -159,6 +171,6 @@ std::string DefaultValue(const FieldDescriptor* field) {
       return "::std::false_type()";
   }
 }
-
+}  // namespace hpb_generator
 }  // namespace protobuf
-}  // namespace google::hpb_generator
+}  // namespace google

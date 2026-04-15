@@ -34,7 +34,7 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::ir::Unused);
 
 namespace tint::core::ir {
 
-Unused::Unused() = default;
+Unused::Unused() : Base(nullptr) {}
 
 Unused::~Unused() = default;
 

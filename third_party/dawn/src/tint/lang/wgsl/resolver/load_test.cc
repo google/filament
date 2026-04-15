@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/sem/load.h"
+
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/type/reference.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
@@ -149,6 +150,21 @@ TEST_F(ResolverLoadTest, BinaryOp) {
     EXPECT_TRUE(load->Source()->Type()->UnwrapRef()->Is<core::type::I32>());
 }
 
+TEST_F(ResolverLoadTest, BinaryOp_Swizzle) {
+    // var ref = vec4(1);
+    // var v = ref.xy * 1i;
+    auto* swizzle = MemberAccessor("ref", "xy");
+    WrapInFunction(Var("ref", Call<vec4<i32>>(1_i)),  //
+                   Var("v", Mul(swizzle, 1_i)));
+
+    ASSERT_TRUE(r()->Resolve()) << r()->error();
+    auto* load = Sem().Get<sem::Load>(swizzle);
+    ASSERT_NE(load, nullptr);
+    EXPECT_TRUE(load->Type()->Is<core::type::Vector>());
+    EXPECT_TRUE(load->Type()->DeepestElement()->Is<core::type::I32>());
+    EXPECT_EQ(load->Type()->As<core::type::Vector>()->Width(), 2u);
+}
+
 TEST_F(ResolverLoadTest, Index) {
     // var ref = 1i;
     // var v = array<i32, 3>(1i, 2i, 3i)[ref];
@@ -173,10 +189,7 @@ TEST_F(ResolverLoadTest, MultiComponentSwizzle) {
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
     auto* load = Sem().Get<sem::Load>(ident);
-    ASSERT_NE(load, nullptr);
-    EXPECT_TRUE(load->Type()->Is<core::type::Vector>());
-    EXPECT_TRUE(load->Source()->Type()->Is<core::type::Reference>());
-    EXPECT_TRUE(load->Source()->Type()->UnwrapRef()->Is<core::type::Vector>());
+    ASSERT_EQ(load, nullptr);  // Load added in IR lowering
 }
 
 TEST_F(ResolverLoadTest, MultiComponentSwizzle_FromPointer) {
@@ -190,10 +203,7 @@ TEST_F(ResolverLoadTest, MultiComponentSwizzle_FromPointer) {
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
     auto* load = Sem().Get<sem::Load>(ident);
-    ASSERT_NE(load, nullptr);
-    EXPECT_TRUE(load->Type()->Is<core::type::Vector>());
-    EXPECT_TRUE(load->Source()->Type()->Is<core::type::Pointer>());
-    EXPECT_TRUE(load->Source()->Type()->UnwrapPtr()->Is<core::type::Vector>());
+    ASSERT_EQ(load, nullptr);  // Load added in IR lowering
 }
 
 TEST_F(ResolverLoadTest, Bitcast) {

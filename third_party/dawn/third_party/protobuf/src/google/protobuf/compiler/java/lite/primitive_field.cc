@@ -17,6 +17,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
+#include "google/protobuf/compiler/code_generator_lite.h"
 #include "google/protobuf/compiler/java/context.h"
 #include "google/protobuf/compiler/java/doc_comment.h"
 #include "google/protobuf/compiler/java/field_common.h"
@@ -31,7 +32,6 @@ namespace compiler {
 namespace java {
 
 using internal::WireFormat;
-using internal::WireFormatLite;
 using Semantic = ::google::protobuf::io::AnnotationCollector::Semantic;
 
 namespace {
@@ -179,7 +179,8 @@ ImmutablePrimitiveFieldLiteGenerator::ImmutablePrimitiveFieldLiteGenerator(
                         name_resolver_, &variables_, context);
 }
 
-ImmutablePrimitiveFieldLiteGenerator::~ImmutablePrimitiveFieldLiteGenerator() {}
+ImmutablePrimitiveFieldLiteGenerator::~ImmutablePrimitiveFieldLiteGenerator() =
+    default;
 
 int ImmutablePrimitiveFieldLiteGenerator::GetNumBitsForMessage() const {
   return HasHasbit(descriptor_) ? 1 : 0;
@@ -209,7 +210,7 @@ void ImmutablePrimitiveFieldLiteGenerator::GenerateMembers(
         variables_,
         "private static final $field_type$ $bytes_default$ = $default$;\n");
   }
-  if (!context_->options().opensource_runtime) {
+  if (!google::protobuf::internal::IsOss()) {
     printer->Print(variables_,
                    "@com.google.protobuf.ProtoField(\n"
                    "  isRequired=$required$)\n");
@@ -244,7 +245,8 @@ void ImmutablePrimitiveFieldLiteGenerator::GenerateMembers(
   printer->Annotate("{", "}", descriptor_);
 
   WriteFieldAccessorDocComment(printer, descriptor_, SETTER,
-                               context_->options());
+                               context_->options(), /* builder */ false,
+                               /* kdoc */ false, /* is_private */ true);
   printer->Print(variables_,
                  "private void set$capitalized_name$($type$ value) {\n"
                  "$null_check$"
@@ -253,7 +255,8 @@ void ImmutablePrimitiveFieldLiteGenerator::GenerateMembers(
                  "}\n");
 
   WriteFieldAccessorDocComment(printer, descriptor_, CLEARER,
-                               context_->options());
+                               context_->options(), /* builder */ false,
+                               /* kdoc */ false, /* is_private */ true);
   printer->Print(variables_,
                  "private void clear$capitalized_name$() {\n"
                  "  $clear_has_field_bit_message$\n");
@@ -356,7 +359,7 @@ ImmutablePrimitiveOneofFieldLiteGenerator::
 }
 
 ImmutablePrimitiveOneofFieldLiteGenerator::
-    ~ImmutablePrimitiveOneofFieldLiteGenerator() {}
+    ~ImmutablePrimitiveOneofFieldLiteGenerator() = default;
 
 void ImmutablePrimitiveOneofFieldLiteGenerator::GenerateMembers(
     io::Printer* printer) const {
@@ -384,7 +387,8 @@ void ImmutablePrimitiveOneofFieldLiteGenerator::GenerateMembers(
   printer->Annotate("{", "}", descriptor_);
 
   WriteFieldAccessorDocComment(printer, descriptor_, SETTER,
-                               context_->options());
+                               context_->options(), /* builder */ false,
+                               /* kdoc */ false, /* is_private */ true);
   printer->Print(variables_,
                  "private void set$capitalized_name$($type$ value) {\n"
                  "$null_check$"
@@ -393,7 +397,8 @@ void ImmutablePrimitiveOneofFieldLiteGenerator::GenerateMembers(
                  "}\n");
 
   WriteFieldAccessorDocComment(printer, descriptor_, CLEARER,
-                               context_->options());
+                               context_->options(), /* builder */ false,
+                               /* kdoc */ false, /* is_private */ true);
   printer->Print(variables_,
                  "private void clear$capitalized_name$() {\n"
                  "  if ($has_oneof_case_message$) {\n"
@@ -472,7 +477,7 @@ RepeatedImmutablePrimitiveFieldLiteGenerator::
 }
 
 RepeatedImmutablePrimitiveFieldLiteGenerator::
-    ~RepeatedImmutablePrimitiveFieldLiteGenerator() {}
+    ~RepeatedImmutablePrimitiveFieldLiteGenerator() = default;
 
 int RepeatedImmutablePrimitiveFieldLiteGenerator::GetNumBitsForMessage() const {
   return 0;
@@ -549,7 +554,8 @@ void RepeatedImmutablePrimitiveFieldLiteGenerator::GenerateMembers(
       "}\n");
 
   WriteFieldAccessorDocComment(printer, descriptor_, LIST_INDEXED_SETTER,
-                               context_->options());
+                               context_->options(), /* builder */ false,
+                               /* kdoc */ false, /* is_private */ true);
   printer->Print(variables_,
                  "private void set$capitalized_name$(\n"
                  "    int index, $type$ value) {\n"
@@ -558,7 +564,8 @@ void RepeatedImmutablePrimitiveFieldLiteGenerator::GenerateMembers(
                  "  $repeated_set$(index, value);\n"
                  "}\n");
   WriteFieldAccessorDocComment(printer, descriptor_, LIST_ADDER,
-                               context_->options());
+                               context_->options(), /* builder */ false,
+                               /* kdoc */ false, /* is_private */ true);
   printer->Print(variables_,
                  "private void add$capitalized_name$($type$ value) {\n"
                  "$null_check$"
@@ -566,7 +573,8 @@ void RepeatedImmutablePrimitiveFieldLiteGenerator::GenerateMembers(
                  "  $repeated_add$(value);\n"
                  "}\n");
   WriteFieldAccessorDocComment(printer, descriptor_, LIST_MULTI_ADDER,
-                               context_->options());
+                               context_->options(), /* builder */ false,
+                               /* kdoc */ false, /* is_private */ true);
   printer->Print(variables_,
                  "private void addAll$capitalized_name$(\n"
                  "    java.lang.Iterable<? extends $boxed_type$> values) {\n"
@@ -575,7 +583,8 @@ void RepeatedImmutablePrimitiveFieldLiteGenerator::GenerateMembers(
                  "      values, $name$_);\n"
                  "}\n");
   WriteFieldAccessorDocComment(printer, descriptor_, CLEARER,
-                               context_->options());
+                               context_->options(), /* builder */ false,
+                               /* kdoc */ false, /* is_private */ true);
   printer->Print(variables_,
                  "private void clear$capitalized_name$() {\n"
                  "  $name$_ = $empty_list$;\n"

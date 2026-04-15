@@ -44,6 +44,7 @@ class PipelineLayout;
 class QuerySet;
 class Queue;
 class RenderPipeline;
+class ResourceTable;
 class Sampler;
 class ShaderModule;
 class SharedFence;
@@ -64,6 +65,7 @@ struct OpenGLBackendTraits {
     using QuerySetType = QuerySet;
     using QueueType = Queue;
     using RenderPipelineType = RenderPipeline;
+    using ResourceTableType = void;  // OpenGL ES cannot support resource tables.
     using SamplerType = Sampler;
     using ShaderModuleType = ShaderModule;
     using SharedFenceType = SharedFence;

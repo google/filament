@@ -55,6 +55,7 @@ cc_library(
     "//src/tint/lang/spirv/intrinsic",
     "//src/tint/lang/spirv/ir",
     "//src/tint/lang/spirv/type",
+    "//src/tint/lang/spirv/writer/analysis",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",

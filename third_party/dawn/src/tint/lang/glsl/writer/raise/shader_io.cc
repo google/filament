@@ -51,15 +51,27 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
     /// The output variables.
     Vector<core::ir::Var*, 4> output_vars;
 
+    Vector<uint32_t, 4> input_indices;
+
     /// The original type of vertex input variables that we are bgra-swizzling. Keyed by location.
     Hashmap<uint32_t, const core::type::Type*, 1> bgra_swizzle_original_types;
 
     /// The configuration options.
     const ShaderIOConfig& config;
 
+    std::optional<uint32_t> global_invocation_index_index;
+    std::optional<uint32_t> global_invocation_id_index;
+    std::optional<uint32_t> workgroup_index_index;
+    std::optional<uint32_t> workgroup_id_index;
+    std::optional<uint32_t> num_workgroups_index;
+
     /// Constructor
     StateImpl(core::ir::Module& mod, core::ir::Function* f, const ShaderIOConfig& cfg)
-        : ShaderIOBackendState(mod, f), config(cfg) {}
+        : ShaderIOBackendState(mod, f), config(cfg) {
+        if (auto wgsize = func->WorkgroupSizeAsConst()) {
+            workgroup_size = wgsize;
+        }
+    }
 
     /// Destructor
     ~StateImpl() override {}
@@ -79,6 +91,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             StringStream name;
             name << ir.NameOf(func).Name();
 
+            uint32_t index = static_cast<uint32_t>(input_indices.Length());
             const core::type::MemoryView* ptr = nullptr;
             if (io.attributes.builtin) {
                 switch (io.attributes.builtin.value()) {
@@ -87,9 +100,31 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                         break;
                     case core::BuiltinValue::kVertexIndex:
                     case core::BuiltinValue::kInstanceIndex:
-                    case core::BuiltinValue::kPrimitiveId:
+                    case core::BuiltinValue::kPrimitiveIndex:
                     case core::BuiltinValue::kSampleIndex:
                         ptr = ty.ptr(addrspace, ty.i32(), access);
+                        break;
+                    // Record an index for polyfilled inputs.
+                    case core::BuiltinValue::kGlobalInvocationIndex:
+                        global_invocation_index_index = index;
+                        input_indices.Push(index);
+                        continue;
+                    case core::BuiltinValue::kWorkgroupIndex:
+                        workgroup_index_index = index;
+                        input_indices.Push(index);
+                        continue;
+                    // Save the indices of the builtins below for use in polyfills.
+                    case core::BuiltinValue::kGlobalInvocationId:
+                        global_invocation_id_index = index;
+                        ptr = ty.ptr(addrspace, io.type, access);
+                        break;
+                    case core::BuiltinValue::kWorkgroupId:
+                        workgroup_id_index = index;
+                        ptr = ty.ptr(addrspace, io.type, access);
+                        break;
+                    case core::BuiltinValue::kNumWorkgroups:
+                        num_workgroups_index = index;
+                        ptr = ty.ptr(addrspace, io.type, access);
                         break;
                     default:
                         ptr = ty.ptr(addrspace, io.type, access);
@@ -112,7 +147,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                     if (addrspace == core::AddressSpace::kIn &&
                         config.bgra_swizzle_locations.count(*io.attributes.location) != 0) {
                         bgra_swizzle_original_types.Add(*io.attributes.location, io.type);
-                        type = ty.vec4<f32>();
+                        type = ty.vec4f();
                     }
                 }
                 name << name_suffix;
@@ -123,12 +158,33 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             auto* var = b.Var(name.str(), ptr);
             var->SetAttributes(io.attributes);
             ir.root_block->Append(var);
+            input_indices.Push(static_cast<uint32_t>(vars.Length()));
             vars.Push(var);
         }
     }
 
     /// @copydoc ShaderIO::BackendState::FinalizeInputs
     Vector<core::ir::FunctionParam*, 4> FinalizeInputs() override {
+        // The following builtin values are polyfilled using other builtin values:
+        // * workgroup_index - workgroup_id and num_workgroups
+        // * global_invocation_index - global_invocation_id, num_workgroups (and workgroup size)
+        const bool has_global_invocation_index =
+            HasBuiltinInput(core::BuiltinValue::kGlobalInvocationIndex);
+        const bool has_workgroup_index = HasBuiltinInput(core::BuiltinValue::kWorkgroupIndex);
+        const bool needs_workgroup_id = has_workgroup_index;
+        if (needs_workgroup_id) {
+            RequireBuiltinInput(core::BuiltinValue::kWorkgroupId, ty.vec3u(), "workgroup_id");
+        }
+        const bool needs_num_workgroups = has_workgroup_index || has_global_invocation_index;
+        if (needs_num_workgroups) {
+            RequireBuiltinInput(core::BuiltinValue::kNumWorkgroups, ty.vec3u(), "num_workgroups");
+        }
+        const bool needs_global_invocation_id = has_global_invocation_index;
+        if (needs_global_invocation_id) {
+            RequireBuiltinInput(core::BuiltinValue::kGlobalInvocationId, ty.vec3u(),
+                                "global_invocation_id");
+        }
+
         MakeVars(input_vars, inputs, core::AddressSpace::kIn, core::Access::kRead, "_Input");
         return tint::Empty;
     }
@@ -141,7 +197,16 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 
     /// @copydoc ShaderIO::BackendState::GetInput
     core::ir::Value* GetInput(core::ir::Builder& builder, uint32_t idx) override {
-        auto* from = input_vars[idx]->Result();
+        if (idx == global_invocation_index_index) {
+            return PolyfillGlobalInvocationIndex(builder, global_invocation_id_index.value(),
+                                                 num_workgroups_index.value());
+        }
+        if (idx == workgroup_index_index) {
+            return PolyfillWorkgroupIndex(builder, workgroup_id_index.value(),
+                                          num_workgroups_index.value());
+        }
+        auto input_index = input_indices[idx];
+        auto* from = input_vars[input_index]->Result();
         auto* value = builder.Load(from)->Result();
 
         auto& builtin = inputs[idx].attributes.builtin;
@@ -149,7 +214,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             switch (builtin.value()) {
                 case core::BuiltinValue::kVertexIndex:
                 case core::BuiltinValue::kInstanceIndex:
-                case core::BuiltinValue::kPrimitiveId:
+                case core::BuiltinValue::kPrimitiveIndex:
                 case core::BuiltinValue::kSampleIndex: {
                     // GLSL uses i32 for these, so convert to u32.
                     value = builder.Convert(ty.u32(), value)->Result();
@@ -201,14 +266,14 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 
             // Negate the gl_Position.y value
             auto* y = builder.Swizzle(ty.f32(), value, {1});
-            auto* new_y = builder.Negation(ty.f32(), y);
+            auto* new_y = builder.Negation(y);
 
             // Recalculate gl_Position.z = ((2.0f * gl_Position.z) - gl_Position.w);
             auto* z = builder.Swizzle(ty.f32(), value, {2});
             auto* w = builder.Swizzle(ty.f32(), value, {3});
-            auto* mul = builder.Multiply(ty.f32(), 2_f, z);
-            auto* new_z = builder.Subtract(ty.f32(), mul, w);
-            value = builder.Construct(ty.vec4<f32>(), x, new_y, new_z, w)->Result();
+            auto* mul = builder.Multiply(2_f, z);
+            auto* new_z = builder.Subtract(mul, w);
+            value = builder.Construct(ty.vec4f(), x, new_y, new_z, w)->Result();
         }
 
         builder.Store(to, value);
@@ -229,7 +294,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
         auto max_idx = u32(config.immediate_data_layout.IndexOf(config.depth_range_offsets->max));
         auto* min = builder.Load(builder.Access<ptr<immediate, f32>>(immediate_data, min_idx));
         auto* max = builder.Load(builder.Access<ptr<immediate, f32>>(immediate_data, max_idx));
-        return builder.Call<f32>(core::BuiltinFn::kClamp, frag_depth, min, max)->Result();
+        return builder.Clamp(frag_depth, min, max)->Result();
     }
 
     /// @copydoc ShaderIO::BackendState::NeedsVertexPointSize
@@ -239,13 +304,10 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 }  // namespace
 
 Result<SuccessType> ShaderIO(core::ir::Module& ir, const ShaderIOConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(
-        ir, "glsl.ShaderIO",
-        core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings,
-                               core::ir::Capability::kAllowDuplicateBindings});
-    if (result != Success) {
-        return result;
-    }
+    AssertValid(ir,
+                core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings,
+                                       core::ir::Capability::kAllowDuplicateBindings},
+                "before glsl.ShaderIO");
 
     core::ir::transform::RunShaderIOBase(ir, [&](core::ir::Module& mod, core::ir::Function* func) {
         return std::make_unique<StateImpl>(mod, func, config);

@@ -185,7 +185,7 @@ TEST_F(IR_ConversionPolyfillTest, F32_to_U32) {
 }
 
 TEST_F(IR_ConversionPolyfillTest, F32_to_I32_Vec2) {
-    Build(ty.vec2<f32>(), ty.vec2<i32>());
+    Build(ty.vec2f(), ty.vec2i());
     auto* src = R"(
 %foo = func(%src:vec2<f32>):vec2<i32> {
   $B1: {
@@ -219,7 +219,7 @@ TEST_F(IR_ConversionPolyfillTest, F32_to_I32_Vec2) {
 }
 
 TEST_F(IR_ConversionPolyfillTest, F32_to_U32_Vec3) {
-    Build(ty.vec2<f32>(), ty.vec2<u32>());
+    Build(ty.vec2f(), ty.vec2u());
     auto* src = R"(
 %foo = func(%src:vec2<f32>):vec2<u32> {
   $B1: {
@@ -321,7 +321,7 @@ TEST_F(IR_ConversionPolyfillTest, F16_to_U32) {
 }
 
 TEST_F(IR_ConversionPolyfillTest, F16_to_I32_Vec2) {
-    Build(ty.vec2<f16>(), ty.vec2<i32>());
+    Build(ty.vec2h(), ty.vec2i());
     auto* src = R"(
 %foo = func(%src:vec2<f16>):vec2<i32> {
   $B1: {
@@ -355,7 +355,7 @@ TEST_F(IR_ConversionPolyfillTest, F16_to_I32_Vec2) {
 }
 
 TEST_F(IR_ConversionPolyfillTest, F16_to_U32_Vec3) {
-    Build(ty.vec2<f16>(), ty.vec2<u32>());
+    Build(ty.vec2h(), ty.vec2u());
     auto* src = R"(
 %foo = func(%src:vec2<f16>):vec2<u32> {
   $B1: {

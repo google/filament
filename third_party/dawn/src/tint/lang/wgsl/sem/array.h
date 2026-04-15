@@ -44,20 +44,9 @@ class Array final : public Castable<Array, core::type::Array> {
     /// Constructor
     /// @param element the array element type
     /// @param count the number of elements in the array.
-    /// @param align the byte alignment of the array
     /// @param size the byte size of the array. The size will be 0 if the array element count is
     ///        pipeline overridable.
-    /// @param stride the number of bytes from the start of one element of the
-    ///        array to the start of the next element
-    /// @param implicit_stride the number of bytes from the start of one element
-    /// of the array to the start of the next element, if there was no `@stride`
-    /// attribute applied.
-    Array(core::type::Type const* element,
-          const core::type::ArrayCount* count,
-          uint32_t align,
-          uint32_t size,
-          uint32_t stride,
-          uint32_t implicit_stride);
+    Array(core::type::Type const* element, const core::type::ArrayCount* count, uint32_t size);
 
     /// Destructor
     ~Array() override;

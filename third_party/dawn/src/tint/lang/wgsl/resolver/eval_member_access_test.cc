@@ -42,8 +42,8 @@ TEST_F(ConstEvalTest, StructMemberAccess) {
                        });
 
     Structure("Outer", Vector{
-                           Member("o1", ty("Inner")),
-                           Member("o2", ty("Inner")),
+                           Member("o1", ty.AsType("Inner")),
+                           Member("o2", ty.AsType("Inner")),
                        });
     auto* outer_expr = Call("Outer",  //
                             Call("Inner", 1_i, 2_u, 3_f, true), Call("Inner"));

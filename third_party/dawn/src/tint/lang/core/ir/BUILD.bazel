@@ -41,7 +41,6 @@ cc_library(
   srcs = [
     "access.cc",
     "binary.cc",
-    "bitcast.cc",
     "block.cc",
     "block_param.cc",
     "break_if.cc",
@@ -101,7 +100,6 @@ cc_library(
   hdrs = [
     "access.h",
     "binary.h",
-    "bitcast.h",
     "block.h",
     "block_param.h",
     "break_if.h",
@@ -189,7 +187,6 @@ cc_library(
   alwayslink = True,
   srcs = [
     "access_test.cc",
-    "bitcast_test.cc",
     "block_param_test.cc",
     "block_test.cc",
     "break_if_test.cc",

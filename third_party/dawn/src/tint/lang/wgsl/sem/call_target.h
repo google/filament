@@ -28,9 +28,6 @@
 #ifndef SRC_TINT_LANG_WGSL_SEM_CALL_TARGET_H_
 #define SRC_TINT_LANG_WGSL_SEM_CALL_TARGET_H_
 
-#include <vector>
-
-#include "src/tint/lang/core/type/sampler.h"
 #include "src/tint/lang/wgsl/sem/node.h"
 #include "src/tint/lang/wgsl/sem/variable.h"
 #include "src/tint/utils/containers/vector.h"

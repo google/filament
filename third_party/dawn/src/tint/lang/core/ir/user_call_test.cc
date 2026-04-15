@@ -82,7 +82,7 @@ TEST_F(IR_UserCallTest, Clone) {
     EXPECT_EQ(new_func, new_e->Target());
 
     auto args = new_e->Args();
-    EXPECT_EQ(2u, args.Length());
+    EXPECT_EQ(2u, args.size());
 
     auto new_arg1 = args[0]->As<Constant>()->Value();
     ASSERT_TRUE(new_arg1->Is<core::constant::Scalar<u32>>());
@@ -99,7 +99,7 @@ TEST_F(IR_UserCallTest, CloneWithoutArgs) {
 
     auto* new_e = clone_ctx.Clone(e);
 
-    EXPECT_EQ(0u, new_e->Args().Length());
+    EXPECT_EQ(0u, new_e->Args().size());
 }
 
 }  // namespace

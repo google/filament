@@ -34,6 +34,7 @@
 #include "absl/container/inlined_vector.h"
 #include "dawn/common/Assert.h"
 #include "dawn/common/Enumerator.h"
+#include "dawn/common/Strings.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/Commands.h"
 #include "dawn/native/Device.h"
@@ -53,18 +54,17 @@ namespace dawn::native::vulkan {
 
 namespace {
 
-constexpr char kBlitToColorVS[] = R"(
-
-@vertex fn vert_fullscreen_quad(
-  @builtin(vertex_index) vertex_index : u32,
-) -> @builtin(position) vec4f {
-  const pos = array(
-      vec2f(-1.0, -1.0),
-      vec2f( 3.0, -1.0),
-      vec2f(-1.0,  3.0));
-  return vec4f(pos[vertex_index], 0.0, 1.0);
-}
-)";
+constexpr char kBlitToColorVS[] = DAWN_MULTILINE(
+    @vertex fn vert_fullscreen_quad(
+        @builtin(vertex_index) vertex_index : u32,
+    ) -> @builtin(position) vec4f {
+        const pos = array(
+            vec2f(-1.0, -1.0),
+            vec2f( 3.0, -1.0),
+            vec2f(-1.0,  3.0));
+        return vec4f(pos[vertex_index], 0.0, 1.0);
+    }
+);
 
 std::string GenerateFS(const BlitColorToColorWithDrawPipelineKey& pipelineKey) {
     std::ostringstream outputStructStream;
@@ -76,23 +76,25 @@ std::string GenerateFS(const BlitColorToColorWithDrawPipelineKey& pipelineKey) {
     for (auto i : pipelineKey.attachmentsToExpandResolve) {
         finalStream << absl::StrFormat(
             "@group(0) @binding(%u) @input_attachment_index(%u) var srcTex%u : "
-            "input_attachment<f32>;\n",
+            "input_attachment<f32>;",
             i, i, i);
 
-        outputStructStream << absl::StrFormat("@location(%u) output%u : vec4f,\n", i, i);
+        outputStructStream << absl::StrFormat("@location(%u) output%u : vec4f,", i, i);
 
         assignOutputsStream << absl::StrFormat(
-            "\toutputColor.output%u = inputAttachmentLoad(srcTex%u);\n", i, i);
+            "outputColor.output%u = inputAttachmentLoad(srcTex%u);", i, i);
     }
 
-    finalStream << "struct OutputColor {\n" << outputStructStream.str() << "}\n\n";
-    finalStream << R"(
-@fragment fn blit_to_color() -> OutputColor {
-    var outputColor : OutputColor;
-)" << assignOutputsStream.str()
-                << R"(
-    return outputColor;
-})";
+    finalStream << "struct OutputColor {" << outputStructStream.str() << "}";
+    finalStream << DAWN_MULTILINE(
+        @fragment fn blit_to_color() -> OutputColor {
+            var outputColor : OutputColor;
+    );
+    finalStream << assignOutputsStream.str();
+    finalStream << DAWN_MULTILINE(
+            return outputColor;
+        }
+    );
 
     return finalStream.str();
 }
@@ -280,6 +282,7 @@ MaybeError BeginRenderPassAndExpandResolveTextureWithDraw(Device* device,
 
     device->fn.CmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                *pipelineVk->GetHandle());
+    pipelineVk->ApplyDynamicState(commandBuffer, nullptr);
     device->fn.CmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                      *pipelineVk->GetVkLayout(), 0, 1, &*bindGroupVk->GetHandle(),
                                      0, nullptr);

@@ -68,11 +68,11 @@ type ChunkWithCounter struct {
 	Count int
 }
 
-func (cmd) Name() string {
+func (c *cmd) Name() string {
 	return "expectation-coverage"
 }
 
-func (cmd) Desc() string {
+func (c *cmd) Desc() string {
 	return "checks how much test coverage is lost due to expectations"
 }
 
@@ -131,7 +131,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 		return err
 	}
 	if c.flags.verbose {
-		fmt.Printf("Took %s\n", time.Now().Sub(startTime).String())
+		fmt.Printf("Took %s\n", time.Since(startTime).String())
 		fmt.Printf("Got %d chunks/individual expectations\n", len(content.Chunks))
 	}
 
@@ -141,16 +141,16 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	var uniqueResults result.List
 	if c.flags.checkCompatExpectations {
 		uniqueResults, err = common.CacheRecentUniqueSuppressedCompatResults(
-			ctx, cfg, c.flags.cacheDir, cfg.Querier, cfg.OsWrapper)
+			ctx, cfg, c.flags.cacheDir, cfg.OsWrapper)
 	} else {
 		uniqueResults, err = common.CacheRecentUniqueSuppressedCoreResults(
-			ctx, cfg, c.flags.cacheDir, cfg.Querier, cfg.OsWrapper)
+			ctx, cfg, c.flags.cacheDir, cfg.OsWrapper)
 	}
 	if err != nil {
 		return err
 	}
 	if c.flags.verbose {
-		fmt.Printf("Took %s\n", time.Now().Sub(startTime).String())
+		fmt.Printf("Took %s\n", time.Since(startTime).String())
 		fmt.Printf("Got %d unique results\n", len(uniqueResults))
 	}
 
@@ -159,7 +159,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	startTime = time.Now()
 	orderedChunks := getChunksOrderedByCoverageLoss(&content, &uniqueResults)
 	if c.flags.verbose {
-		fmt.Printf("Took %s\n", time.Now().Sub(startTime).String())
+		fmt.Printf("Took %s\n", time.Since(startTime).String())
 	}
 
 	// Output results.
@@ -312,7 +312,7 @@ func getChunksOrderedByCoverageLoss(
 	uniqueResults *result.List) []ChunkWithCounter {
 
 	affectedChunks := make([]ChunkWithCounter, len(content.Chunks))
-	for i, _ := range content.Chunks {
+	for i := range content.Chunks {
 		affectedChunks[i].Chunk = &(content.Chunks[i])
 	}
 
@@ -328,7 +328,7 @@ func getChunksOrderedByCoverageLoss(
 
 	// Each of the ChunkWithCounter will have its Count filled in place by a
 	// worker when picked up.
-	for i, _ := range affectedChunks {
+	for i := range affectedChunks {
 		workQueue <- &(affectedChunks[i])
 	}
 	close(workQueue)
@@ -415,9 +415,9 @@ func processChunkForResultSubset(
 
 		numApplicableResults := 0
 		for i := workerNumber; i < len(*uniqueResults); i += numWorkers {
-			result := (*uniqueResults)[i]
+			r := (*uniqueResults)[i]
 			for _, expectation := range chunkWithCounter.Chunk.Expectations {
-				if expectation.AppliesToResult(result) {
+				if expectation.AppliesToResult(r) {
 					numApplicableResults += 1
 					break
 				}

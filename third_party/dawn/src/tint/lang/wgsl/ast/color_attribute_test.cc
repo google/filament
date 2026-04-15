@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/ast/color_attribute.h"
+
 #include "src/tint/lang/wgsl/ast/helper_test.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -47,16 +48,6 @@ TEST_F(ColorAttributeDeathTest, Assert_Null_Builtin) {
         {
             ProgramBuilder b;
             b.Color(nullptr);
-        },
-        "internal compiler error");
-}
-
-TEST_F(ColorAttributeDeathTest, Assert_DifferentGenerationID_Color) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Color(b2.Expr(1_u));
         },
         "internal compiler error");
 }

@@ -51,6 +51,8 @@ void FramebufferCacheQuery::SetRenderPass(uint64_t passId,
 MaybeError FramebufferCacheQuery::AddAttachment(TextureView* view,
                                                 VkClearValue clearValue,
                                                 uint32_t depthSlice) {
+    DAWN_ASSERT(attachmentCount < kMaxFramebufferAttachments);
+
     textureViews[attachmentCount].textureViewId = view->GetTextureViewId();
     textureViews[attachmentCount].depthSlice = depthSlice;
 

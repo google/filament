@@ -48,6 +48,8 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
+using IR_RobustnessDefaultTest = TransformTest;
+
 // Tests for non-binding variables
 using IR_RobustnessTest = TransformTestWithParam<bool>;
 
@@ -70,46 +72,10 @@ using IR_RobustnessWithIntegerRangeAnalysisTest = TransformTest;
 // Test signed vs unsigned indices.
 ////////////////////////////////////////////////////////////////
 
-TEST_P(IR_RobustnessTest, VectorLoad_ConstIndex) {
+TEST_F(IR_RobustnessDefaultTest, VectorLoad_ConstIndexViaLet) {
     auto* func = b.Function("foo", ty.u32());
     b.Append(func->Block(), [&] {
-        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4<u32>()));
-        auto* load = b.LoadVectorElement(vec, b.Constant(5_u));
-        b.Return(func, load);
-    });
-
-    auto* src = R"(
-%foo = func():u32 {
-  $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var undef
-    %3:u32 = load_vector_element %vec, 5u
-    ret %3
-  }
-}
-)";
-    EXPECT_EQ(src, str());
-
-    auto* expect = R"(
-%foo = func():u32 {
-  $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var undef
-    %3:u32 = load_vector_element %vec, 3u
-    ret %3
-  }
-}
-)";
-
-    RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
-    Run(Robustness, cfg);
-
-    EXPECT_EQ(GetParam() ? expect : src, str());
-}
-
-TEST_P(IR_RobustnessTest, VectorLoad_ConstIndexViaLet) {
-    auto* func = b.Function("foo", ty.u32());
-    b.Append(func->Block(), [&] {
-        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4<u32>()));
+        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4u()));
         auto* idx = b.Let("idx", b.Constant(5_u));
         auto* load = b.LoadVectorElement(vec, idx);
         b.Return(func, load);
@@ -140,18 +106,17 @@ TEST_P(IR_RobustnessTest, VectorLoad_ConstIndexViaLet) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, VectorLoad_DynamicIndex) {
+TEST_F(IR_RobustnessDefaultTest, VectorLoad_DynamicIndex) {
     auto* func = b.Function("foo", ty.u32());
     auto* idx = b.FunctionParam("idx", ty.u32());
     func->SetParams({idx});
     b.Append(func->Block(), [&] {
-        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4<u32>()));
+        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4u()));
         auto* load = b.LoadVectorElement(vec, idx);
         b.Return(func, load);
     });
@@ -179,18 +144,17 @@ TEST_P(IR_RobustnessTest, VectorLoad_DynamicIndex) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, VectorLoad_DynamicIndex_Signed) {
+TEST_F(IR_RobustnessDefaultTest, VectorLoad_DynamicIndex_Signed) {
     auto* func = b.Function("foo", ty.u32());
     auto* idx = b.FunctionParam("idx", ty.i32());
     func->SetParams({idx});
     b.Append(func->Block(), [&] {
-        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4<u32>()));
+        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4u()));
         auto* load = b.LoadVectorElement(vec, idx);
         b.Return(func, load);
     });
@@ -219,52 +183,15 @@ TEST_P(IR_RobustnessTest, VectorLoad_DynamicIndex_Signed) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, VectorStore_ConstIndex) {
+TEST_F(IR_RobustnessDefaultTest, VectorStore_ConstIndexViaLet) {
     auto* func = b.Function("foo", ty.void_());
     b.Append(func->Block(), [&] {
-        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4<u32>()));
-        b.StoreVectorElement(vec, b.Constant(5_u), b.Constant(0_u));
-        b.Return(func);
-    });
-
-    auto* src = R"(
-%foo = func():void {
-  $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var undef
-    store_vector_element %vec, 5u, 0u
-    ret
-  }
-}
-)";
-    EXPECT_EQ(src, str());
-
-    auto* expect = R"(
-%foo = func():void {
-  $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var undef
-    store_vector_element %vec, 3u, 0u
-    ret
-  }
-}
-)";
-
-    RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
-    Run(Robustness, cfg);
-
-    EXPECT_EQ(GetParam() ? expect : src, str());
-}
-
-TEST_P(IR_RobustnessTest, VectorStore_ConstIndexViaLet) {
-    auto* func = b.Function("foo", ty.void_());
-    b.Append(func->Block(), [&] {
-        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4<u32>()));
+        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4u()));
         auto* idx = b.Let("idx", b.Constant(5_u));
         b.StoreVectorElement(vec, idx, b.Constant(0_u));
         b.Return(func);
@@ -295,18 +222,17 @@ TEST_P(IR_RobustnessTest, VectorStore_ConstIndexViaLet) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, VectorStore_DynamicIndex) {
+TEST_F(IR_RobustnessDefaultTest, VectorStore_DynamicIndex) {
     auto* func = b.Function("foo", ty.void_());
     auto* idx = b.FunctionParam("idx", ty.u32());
     func->SetParams({idx});
     b.Append(func->Block(), [&] {
-        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4<u32>()));
+        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4u()));
         b.StoreVectorElement(vec, idx, b.Constant(0_u));
         b.Return(func);
     });
@@ -334,18 +260,17 @@ TEST_P(IR_RobustnessTest, VectorStore_DynamicIndex) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, VectorStore_DynamicIndex_Signed) {
+TEST_F(IR_RobustnessDefaultTest, VectorStore_DynamicIndex_Signed) {
     auto* func = b.Function("foo", ty.void_());
     auto* idx = b.FunctionParam("idx", ty.i32());
     func->SetParams({idx});
     b.Append(func->Block(), [&] {
-        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4<u32>()));
+        auto* vec = b.Var("vec", ty.ptr(function, ty.vec4u()));
         b.StoreVectorElement(vec, idx, b.Constant(0_u));
         b.Return(func);
     });
@@ -374,17 +299,16 @@ TEST_P(IR_RobustnessTest, VectorStore_DynamicIndex_Signed) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Matrix_ConstIndex) {
-    auto* func = b.Function("foo", ty.vec4<f32>());
+TEST_F(IR_RobustnessDefaultTest, Matrix_ConstIndex) {
+    auto* func = b.Function("foo", ty.vec4f());
     b.Append(func->Block(), [&] {
         auto* mat = b.Var("mat", ty.ptr(function, ty.mat4x4<f32>()));
-        auto* access = b.Access(ty.ptr(function, ty.vec4<f32>()), mat, b.Constant(2_u));
+        auto* access = b.Access(ty.ptr(function, ty.vec4f()), mat, b.Constant(2_u));
         auto* load = b.Load(access);
         b.Return(func, load);
     });
@@ -404,18 +328,17 @@ TEST_P(IR_RobustnessTest, Matrix_ConstIndex) {
     auto* expect = src;
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
     EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Matrix_ConstIndexViaLet) {
-    auto* func = b.Function("foo", ty.vec4<f32>());
+TEST_F(IR_RobustnessDefaultTest, Matrix_ConstIndexViaLet) {
+    auto* func = b.Function("foo", ty.vec4f());
     b.Append(func->Block(), [&] {
         auto* mat = b.Var("mat", ty.ptr(function, ty.mat4x4<f32>()));
         auto* idx = b.Let("idx", b.Constant(2_u));
-        auto* access = b.Access(ty.ptr(function, ty.vec4<f32>()), mat, idx);
+        auto* access = b.Access(ty.ptr(function, ty.vec4f()), mat, idx);
         auto* load = b.Load(access);
         b.Return(func, load);
     });
@@ -447,19 +370,18 @@ TEST_P(IR_RobustnessTest, Matrix_ConstIndexViaLet) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Matrix_DynamicIndex) {
-    auto* func = b.Function("foo", ty.vec4<f32>());
+TEST_F(IR_RobustnessDefaultTest, Matrix_DynamicIndex) {
+    auto* func = b.Function("foo", ty.vec4f());
     auto* idx = b.FunctionParam("idx", ty.u32());
     func->SetParams({idx});
     b.Append(func->Block(), [&] {
         auto* mat = b.Var("mat", ty.ptr(function, ty.mat4x4<f32>()));
-        auto* access = b.Access(ty.ptr(function, ty.vec4<f32>()), mat, idx);
+        auto* access = b.Access(ty.ptr(function, ty.vec4f()), mat, idx);
         auto* load = b.Load(access);
         b.Return(func, load);
     });
@@ -489,19 +411,18 @@ TEST_P(IR_RobustnessTest, Matrix_DynamicIndex) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Matrix_DynamicIndex_Signed) {
-    auto* func = b.Function("foo", ty.vec4<f32>());
+TEST_F(IR_RobustnessDefaultTest, Matrix_DynamicIndex_Signed) {
+    auto* func = b.Function("foo", ty.vec4f());
     auto* idx = b.FunctionParam("idx", ty.i32());
     func->SetParams({idx});
     b.Append(func->Block(), [&] {
         auto* mat = b.Var("mat", ty.ptr(function, ty.mat4x4<f32>()));
-        auto* access = b.Access(ty.ptr(function, ty.vec4<f32>()), mat, idx);
+        auto* access = b.Access(ty.ptr(function, ty.vec4f()), mat, idx);
         auto* load = b.Load(access);
         b.Return(func, load);
     });
@@ -532,13 +453,12 @@ TEST_P(IR_RobustnessTest, Matrix_DynamicIndex_Signed) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Array_ConstSize_ConstIndex) {
+TEST_F(IR_RobustnessDefaultTest, Array_ConstSize_ConstIndex) {
     auto* func = b.Function("foo", ty.u32());
     b.Append(func->Block(), [&] {
         auto* arr = b.Var("arr", ty.ptr(function, ty.array<u32, 4>()));
@@ -562,13 +482,12 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_ConstIndex) {
     auto* expect = src;
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
     EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Array_ConstSize_ConstIndexViaLet) {
+TEST_F(IR_RobustnessDefaultTest, Array_ConstSize_ConstIndexViaLet) {
     auto* func = b.Function("foo", ty.u32());
     b.Append(func->Block(), [&] {
         auto* arr = b.Var("arr", ty.ptr(function, ty.array<u32, 4>()));
@@ -605,13 +524,12 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_ConstIndexViaLet) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Array_ConstSize_DynamicIndex) {
+TEST_F(IR_RobustnessDefaultTest, Array_ConstSize_DynamicIndex) {
     auto* func = b.Function("foo", ty.u32());
     auto* idx = b.FunctionParam("idx", ty.u32());
     func->SetParams({idx});
@@ -647,13 +565,12 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_DynamicIndex) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Array_ConstSize_DynamicIndex_Signed) {
+TEST_F(IR_RobustnessDefaultTest, Array_ConstSize_DynamicIndex_Signed) {
     auto* func = b.Function("foo", ty.u32());
     auto* idx = b.FunctionParam("idx", ty.i32());
     func->SetParams({idx});
@@ -690,13 +607,12 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_DynamicIndex_Signed) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, NestedArrays) {
+TEST_F(IR_RobustnessDefaultTest, NestedArrays) {
     auto* func = b.Function("foo", ty.u32());
     auto* idx1 = b.FunctionParam("idx1", ty.u32());
     auto* idx2 = b.FunctionParam("idx2", ty.u32());
@@ -739,18 +655,17 @@ TEST_P(IR_RobustnessTest, NestedArrays) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, NestedMixedTypes) {
+TEST_F(IR_RobustnessDefaultTest, NestedMixedTypes) {
     auto* structure = ty.Struct(mod.symbols.Register("structure"),
                                 {
                                     {mod.symbols.Register("arr"), ty.array(ty.mat3x4<f32>(), 4)},
                                 });
-    auto* func = b.Function("foo", ty.vec4<f32>());
+    auto* func = b.Function("foo", ty.vec4f());
     auto* idx1 = b.FunctionParam("idx1", ty.u32());
     auto* idx2 = b.FunctionParam("idx2", ty.u32());
     auto* idx3 = b.FunctionParam("idx3", ty.u32());
@@ -798,18 +713,17 @@ structure = struct @align(16) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
 ////////////////////////////////////////////////////////////////
 // Test the clamp toggles for every other address space.
 ////////////////////////////////////////////////////////////////
 
-TEST_P(IR_RobustnessTest, Private_LoadVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(private_, ty.vec4<u32>()));
+TEST_F(IR_RobustnessDefaultTest, Private_LoadVectorElement) {
+    auto* vec = b.Var("vec", ty.ptr(private_, ty.vec4u()));
     mod.root_block->Append(vec);
 
     auto* func = b.Function("foo", ty.u32());
@@ -849,14 +763,13 @@ $B1: {  # root
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_private = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Private_StoreVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(private_, ty.vec4<u32>()));
+TEST_F(IR_RobustnessDefaultTest, Private_StoreVectorElement) {
+    auto* vec = b.Var("vec", ty.ptr(private_, ty.vec4u()));
     mod.root_block->Append(vec);
 
     auto* func = b.Function("foo", ty.void_());
@@ -896,13 +809,12 @@ $B1: {  # root
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_private = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Private_Access) {
+TEST_F(IR_RobustnessDefaultTest, Private_Access) {
     auto* arr = b.Var("arr", ty.ptr(private_, ty.array<u32, 4>()));
     mod.root_block->Append(arr);
 
@@ -946,14 +858,13 @@ $B1: {  # root
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_private = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
 TEST_P(IR_RobustnessTest, ImmediateData_LoadVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(immediate, ty.vec4<u32>()));
+    auto* vec = b.Var("vec", ty.ptr(immediate, ty.vec4u()));
     mod.root_block->Append(vec);
 
     auto* func = b.Function("foo", ty.u32());
@@ -988,53 +899,6 @@ $B1: {  # root
     %4:u32 = min %idx, 3u
     %5:u32 = load_vector_element %vec, %4
     ret %5
-  }
-}
-)";
-
-    RobustnessConfig cfg;
-    cfg.clamp_immediate_data = GetParam();
-    Run(Robustness, cfg);
-
-    EXPECT_EQ(GetParam() ? expect : src, str());
-}
-
-TEST_P(IR_RobustnessTest, ImmediateData_StoreVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(immediate, ty.vec4<u32>()));
-    mod.root_block->Append(vec);
-
-    auto* func = b.Function("foo", ty.void_());
-    auto* idx = b.FunctionParam("idx", ty.u32());
-    func->SetParams({idx});
-    b.Append(func->Block(), [&] {
-        b.StoreVectorElement(vec, idx, b.Constant(0_u));
-        b.Return(func);
-    });
-
-    auto* src = R"(
-$B1: {  # root
-  %vec:ptr<immediate, vec4<u32>, read> = var undef
-}
-
-%foo = func(%idx:u32):void {
-  $B2: {
-    store_vector_element %vec, %idx, 0u
-    ret
-  }
-}
-)";
-    EXPECT_EQ(src, str());
-
-    auto* expect = R"(
-$B1: {  # root
-  %vec:ptr<immediate, vec4<u32>, read> = var undef
-}
-
-%foo = func(%idx:u32):void {
-  $B2: {
-    %4:u32 = min %idx, 3u
-    store_vector_element %vec, %4, 0u
-    ret
   }
 }
 )";
@@ -1097,7 +961,7 @@ $B1: {  # root
 }
 
 TEST_P(IR_BindingVariableRobustnessTest, Storage_LoadVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(storage, ty.vec4<u32>()));
+    auto* vec = b.Var("vec", ty.ptr(storage, ty.vec4u()));
     vec->SetBindingPoint(0, 0);
     mod.root_block->Append(vec);
 
@@ -1148,7 +1012,7 @@ $B1: {  # root
 }
 
 TEST_P(IR_BindingVariableRobustnessTest, Storage_StoreVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(storage, ty.vec4<u32>()));
+    auto* vec = b.Var("vec", ty.ptr(storage, ty.vec4u()));
     vec->SetBindingPoint(0, 0);
     mod.root_block->Append(vec);
 
@@ -1253,7 +1117,7 @@ $B1: {  # root
 }
 
 TEST_P(IR_BindingVariableRobustnessTest, Unifom_LoadVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(uniform, ty.vec4<u32>()));
+    auto* vec = b.Var("vec", ty.ptr(uniform, ty.vec4u()));
     vec->SetBindingPoint(0, 0);
     mod.root_block->Append(vec);
 
@@ -1289,57 +1153,6 @@ $B1: {  # root
     %4:u32 = min %idx, 3u
     %5:u32 = load_vector_element %vec, %4
     ret %5
-  }
-}
-)";
-
-    RobustnessConfig cfg;
-    cfg.clamp_uniform = GetParam().enabled;
-    if (GetParam().ignore_bindings) {
-        cfg.bindings_ignored = {{0, 0}};
-    }
-    Run(Robustness, cfg);
-
-    EXPECT_EQ((GetParam().enabled && !GetParam().ignore_bindings) ? expect : src, str());
-}
-
-TEST_P(IR_BindingVariableRobustnessTest, Unifom_StoreVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(uniform, ty.vec4<u32>()));
-    vec->SetBindingPoint(0, 0);
-    mod.root_block->Append(vec);
-
-    auto* func = b.Function("foo", ty.void_());
-    auto* idx = b.FunctionParam("idx", ty.u32());
-    func->SetParams({idx});
-    b.Append(func->Block(), [&] {
-        b.StoreVectorElement(vec, idx, b.Constant(0_u));
-        b.Return(func);
-    });
-
-    auto* src = R"(
-$B1: {  # root
-  %vec:ptr<uniform, vec4<u32>, read> = var undef @binding_point(0, 0)
-}
-
-%foo = func(%idx:u32):void {
-  $B2: {
-    store_vector_element %vec, %idx, 0u
-    ret
-  }
-}
-)";
-    EXPECT_EQ(src, str());
-
-    auto* expect = R"(
-$B1: {  # root
-  %vec:ptr<uniform, vec4<u32>, read> = var undef @binding_point(0, 0)
-}
-
-%foo = func(%idx:u32):void {
-  $B2: {
-    %4:u32 = min %idx, 3u
-    store_vector_element %vec, %4, 0u
-    ret
   }
 }
 )";
@@ -1408,8 +1221,8 @@ $B1: {  # root
     EXPECT_EQ((GetParam().enabled && !GetParam().ignore_bindings) ? expect : src, str());
 }
 
-TEST_P(IR_RobustnessTest, Workgroup_LoadVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(workgroup, ty.vec4<u32>()));
+TEST_F(IR_RobustnessDefaultTest, Workgroup_LoadVectorElement) {
+    auto* vec = b.Var("vec", ty.ptr(workgroup, ty.vec4u()));
     mod.root_block->Append(vec);
 
     auto* func = b.Function("foo", ty.u32());
@@ -1449,14 +1262,13 @@ $B1: {  # root
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_workgroup = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Workgroup_StoreVectorElement) {
-    auto* vec = b.Var("vec", ty.ptr(workgroup, ty.vec4<u32>()));
+TEST_F(IR_RobustnessDefaultTest, Workgroup_StoreVectorElement) {
+    auto* vec = b.Var("vec", ty.ptr(workgroup, ty.vec4u()));
     mod.root_block->Append(vec);
 
     auto* func = b.Function("foo", ty.void_());
@@ -1496,13 +1308,12 @@ $B1: {  # root
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_workgroup = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, Workgroup_Access) {
+TEST_F(IR_RobustnessDefaultTest, Workgroup_Access) {
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<u32, 4>()));
     mod.root_block->Append(arr);
 
@@ -1546,27 +1357,26 @@ $B1: {  # root
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_workgroup = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
 ////////////////////////////////////////////////////////////////
 // Test clamping non-pointer values.
 ////////////////////////////////////////////////////////////////
 
-TEST_P(IR_RobustnessTest, ConstantVector_DynamicIndex) {
+TEST_F(IR_RobustnessDefaultTest, ConstantVector_DynamicIndex) {
     auto* func = b.Function("foo", ty.u32());
     auto* idx = b.FunctionParam("idx", ty.u32());
     func->SetParams({idx});
     b.Append(func->Block(), [&] {
-        auto* vec = mod.constant_values.Composite(ty.vec4<u32>(), Vector{
-                                                                      mod.constant_values.Get(1_u),
-                                                                      mod.constant_values.Get(2_u),
-                                                                      mod.constant_values.Get(3_u),
-                                                                      mod.constant_values.Get(4_u),
-                                                                  });
+        auto* vec = mod.constant_values.Composite(ty.vec4u(), Vector{
+                                                                  mod.constant_values.Get(1_u),
+                                                                  mod.constant_values.Get(2_u),
+                                                                  mod.constant_values.Get(3_u),
+                                                                  mod.constant_values.Get(4_u),
+                                                              });
         auto* element = b.Access(ty.u32(), b.Constant(vec), idx);
         b.Return(func, element);
     });
@@ -1592,13 +1402,12 @@ TEST_P(IR_RobustnessTest, ConstantVector_DynamicIndex) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_value = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, ConstantArray_DynamicIndex) {
+TEST_F(IR_RobustnessDefaultTest, ConstantArray_DynamicIndex) {
     auto* func = b.Function("foo", ty.u32());
     auto* idx = b.FunctionParam("idx", ty.u32());
     func->SetParams({idx});
@@ -1635,13 +1444,12 @@ TEST_P(IR_RobustnessTest, ConstantArray_DynamicIndex) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_value = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
-TEST_P(IR_RobustnessTest, ParamValueArray_DynamicIndex) {
+TEST_F(IR_RobustnessDefaultTest, ParamValueArray_DynamicIndex) {
     auto* func = b.Function("foo", ty.u32());
     auto* arr = b.FunctionParam("arr", ty.array<u32, 4>());
     auto* idx = b.FunctionParam("idx", ty.u32());
@@ -1672,10 +1480,9 @@ TEST_P(IR_RobustnessTest, ParamValueArray_DynamicIndex) {
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_value = GetParam();
     Run(Robustness, cfg);
 
-    EXPECT_EQ(GetParam() ? expect : src, str());
+    EXPECT_EQ(expect, str());
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1995,10 +1802,10 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureDimensions) {
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
-    auto* func = b.Function("foo", ty.vec2<u32>());
+    auto* func = b.Function("foo", ty.vec2u());
     b.Append(func->Block(), [&] {
         auto* handle = b.Load(texture);
-        auto* dims = b.Call(ty.vec2<u32>(), core::BuiltinFn::kTextureDimensions, handle);
+        auto* dims = b.Call(ty.vec2u(), core::BuiltinFn::kTextureDimensions, handle);
         b.Return(func, dims);
     });
 
@@ -2035,12 +1842,12 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureDimensions_WithLevel) {
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
-    auto* func = b.Function("foo", ty.vec2<u32>());
+    auto* func = b.Function("foo", ty.vec2u());
     auto* level = b.FunctionParam("level", ty.u32());
     func->SetParams({level});
     b.Append(func->Block(), [&] {
         auto* handle = b.Load(texture);
-        auto* dims = b.Call(ty.vec2<u32>(), core::BuiltinFn::kTextureDimensions, handle, level);
+        auto* dims = b.Call(ty.vec2u(), core::BuiltinFn::kTextureDimensions, handle, level);
         b.Return(func, dims);
     });
 
@@ -2090,27 +1897,25 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled1D) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
         auto* coords = b.FunctionParam("coords", ty.i32());
         auto* level = b.FunctionParam("level", ty.i32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, level);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, level);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
         auto* coords = b.FunctionParam("coords", ty.u32());
         auto* level = b.FunctionParam("level", ty.u32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, level);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, level);
             b.Return(func, texel);
         });
     }
@@ -2186,27 +1991,25 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled2D) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         auto* level = b.FunctionParam("level", ty.i32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, level);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, level);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         auto* level = b.FunctionParam("level", ty.u32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, level);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, level);
             b.Return(func, texel);
         });
     }
@@ -2283,29 +2086,29 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled2DArray) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         auto* layer = b.FunctionParam("layer", ty.i32());
         auto* level = b.FunctionParam("level", ty.i32());
         func->SetParams({coords, layer, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
             auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, layer, level);
+                b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, layer, level);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         auto* layer = b.FunctionParam("layer", ty.u32());
         auto* level = b.FunctionParam("level", ty.u32());
         func->SetParams({coords, layer, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
             auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, layer, level);
+                b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, layer, level);
             b.Return(func, texel);
         });
     }
@@ -2388,27 +2191,25 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled3D) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec3<i32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec3i());
         auto* level = b.FunctionParam("level", ty.i32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, level);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, level);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec3<u32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec3u());
         auto* level = b.FunctionParam("level", ty.u32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, level);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, level);
             b.Return(func, texel);
         });
     }
@@ -2485,27 +2286,25 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Multisampled2D) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         auto* level = b.FunctionParam("level", ty.i32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, level);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, level);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         auto* level = b.FunctionParam("level", ty.u32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, level);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, level);
             b.Return(func, texel);
         });
     }
@@ -2540,22 +2339,29 @@ $B1: {  # root
 %load_signed = func(%coords:vec2<i32>, %level:i32):vec4<f32> {
   $B2: {
     %5:texture_multisampled_2d<f32> = load %texture
-    %6:vec2<u32> = textureDimensions %5
-    %7:vec2<u32> = sub %6, vec2<u32>(1u)
-    %8:vec2<u32> = convert %coords
-    %9:vec2<u32> = min %8, %7
-    %10:vec4<f32> = textureLoad %5, %9, %level
-    ret %10
+    %6:u32 = textureNumSamples %5
+    %7:u32 = sub %6, 1u
+    %8:u32 = convert %level
+    %9:u32 = min %8, %7
+    %10:vec2<u32> = textureDimensions %5
+    %11:vec2<u32> = sub %10, vec2<u32>(1u)
+    %12:vec2<u32> = convert %coords
+    %13:vec2<u32> = min %12, %11
+    %14:vec4<f32> = textureLoad %5, %13, %9
+    ret %14
   }
 }
 %load_unsigned = func(%coords_1:vec2<u32>, %level_1:u32):vec4<f32> {  # %coords_1: 'coords', %level_1: 'level'
   $B3: {
-    %14:texture_multisampled_2d<f32> = load %texture
-    %15:vec2<u32> = textureDimensions %14
-    %16:vec2<u32> = sub %15, vec2<u32>(1u)
-    %17:vec2<u32> = min %coords_1, %16
-    %18:vec4<f32> = textureLoad %14, %17, %level_1
-    ret %18
+    %18:texture_multisampled_2d<f32> = load %texture
+    %19:u32 = textureNumSamples %18
+    %20:u32 = sub %19, 1u
+    %21:u32 = min %level_1, %20
+    %22:vec2<u32> = textureDimensions %18
+    %23:vec2<u32> = sub %22, vec2<u32>(1u)
+    %24:vec2<u32> = min %coords_1, %23
+    %25:vec4<f32> = textureLoad %18, %24, %21
+    ret %25
   }
 }
 )";
@@ -2575,7 +2381,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Depth2D) {
 
     {
         auto* func = b.Function("load_signed", ty.f32());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         auto* level = b.FunctionParam("level", ty.i32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
@@ -2587,7 +2393,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Depth2D) {
 
     {
         auto* func = b.Function("load_unsigned", ty.f32());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         auto* level = b.FunctionParam("level", ty.u32());
         func->SetParams({coords, level});
         b.Append(func->Block(), [&] {
@@ -2669,7 +2475,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Depth2DArray) {
 
     {
         auto* func = b.Function("load_signed", ty.f32());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         auto* layer = b.FunctionParam("layer", ty.i32());
         auto* level = b.FunctionParam("level", ty.i32());
         func->SetParams({coords, layer, level});
@@ -2683,7 +2489,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Depth2DArray) {
 
     {
         auto* func = b.Function("load_unsigned", ty.f32());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         auto* layer = b.FunctionParam("layer", ty.u32());
         auto* level = b.FunctionParam("level", ty.u32());
         func->SetParams({coords, layer, level});
@@ -2775,7 +2581,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_DepthMultisampled2D) {
 
     {
         auto* func = b.Function("load_signed", ty.f32());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         auto* index = b.FunctionParam("index", ty.i32());
         func->SetParams({coords, index});
         b.Append(func->Block(), [&] {
@@ -2787,7 +2593,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_DepthMultisampled2D) {
 
     {
         auto* func = b.Function("load_unsigned", ty.f32());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         auto* index = b.FunctionParam("index", ty.u32());
         func->SetParams({coords, index});
         b.Append(func->Block(), [&] {
@@ -2827,22 +2633,29 @@ $B1: {  # root
 %load_signed = func(%coords:vec2<i32>, %index:i32):f32 {
   $B2: {
     %5:texture_depth_multisampled_2d = load %texture
-    %6:vec2<u32> = textureDimensions %5
-    %7:vec2<u32> = sub %6, vec2<u32>(1u)
-    %8:vec2<u32> = convert %coords
-    %9:vec2<u32> = min %8, %7
-    %10:f32 = textureLoad %5, %9, %index
-    ret %10
+    %6:u32 = textureNumSamples %5
+    %7:u32 = sub %6, 1u
+    %8:u32 = convert %index
+    %9:u32 = min %8, %7
+    %10:vec2<u32> = textureDimensions %5
+    %11:vec2<u32> = sub %10, vec2<u32>(1u)
+    %12:vec2<u32> = convert %coords
+    %13:vec2<u32> = min %12, %11
+    %14:f32 = textureLoad %5, %13, %9
+    ret %14
   }
 }
 %load_unsigned = func(%coords_1:vec2<u32>, %index_1:u32):f32 {  # %coords_1: 'coords', %index_1: 'index'
   $B3: {
-    %14:texture_depth_multisampled_2d = load %texture
-    %15:vec2<u32> = textureDimensions %14
-    %16:vec2<u32> = sub %15, vec2<u32>(1u)
-    %17:vec2<u32> = min %coords_1, %16
-    %18:f32 = textureLoad %14, %17, %index_1
-    ret %18
+    %18:texture_depth_multisampled_2d = load %texture
+    %19:u32 = textureNumSamples %18
+    %20:u32 = sub %19, 1u
+    %21:u32 = min %index_1, %20
+    %22:vec2<u32> = textureDimensions %18
+    %23:vec2<u32> = sub %22, vec2<u32>(1u)
+    %24:vec2<u32> = min %coords_1, %23
+    %25:f32 = textureLoad %18, %24, %21
+    ret %25
   }
 }
 )";
@@ -2860,23 +2673,23 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_External) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         func->SetParams({coords});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         func->SetParams({coords});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords);
             b.Return(func, texel);
         });
     }
@@ -2947,23 +2760,23 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage1D) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
         auto* coords = b.FunctionParam("coords", ty.i32());
         func->SetParams({coords});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
         auto* coords = b.FunctionParam("coords", ty.u32());
         func->SetParams({coords});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords);
             b.Return(func, texel);
         });
     }
@@ -3034,23 +2847,23 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage2D) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         func->SetParams({coords});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         func->SetParams({coords});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords);
             b.Return(func, texel);
         });
     }
@@ -3122,27 +2935,25 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage2DArray) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2i());
         auto* layer = b.FunctionParam("layer", ty.i32());
         func->SetParams({coords, layer});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, layer);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, layer);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec2u());
         auto* layer = b.FunctionParam("layer", ty.u32());
         func->SetParams({coords, layer});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel =
-                b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords, layer);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords, layer);
             b.Return(func, texel);
         });
     }
@@ -3220,23 +3031,23 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage3D) {
     mod.root_block->Append(texture);
 
     {
-        auto* func = b.Function("load_signed", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec3<i32>());
+        auto* func = b.Function("load_signed", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec3i());
         func->SetParams({coords});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords);
             b.Return(func, texel);
         });
     }
 
     {
-        auto* func = b.Function("load_unsigned", ty.vec4<f32>());
-        auto* coords = b.FunctionParam("coords", ty.vec3<u32>());
+        auto* func = b.Function("load_unsigned", ty.vec4f());
+        auto* coords = b.FunctionParam("coords", ty.vec3u());
         func->SetParams({coords});
         b.Append(func->Block(), [&] {
             auto* handle = b.Load(texture);
-            auto* texel = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, handle, coords);
+            auto* texel = b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, handle, coords);
             b.Return(func, texel);
         });
     }
@@ -3311,8 +3122,8 @@ TEST_P(IR_BindingVariableRobustnessTest, NoModify_TextureStore) {
     mod.root_block->Append(texture);
 
     auto* foo = b.Function("foo", ty.void_());
-    auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
-    auto* value = b.FunctionParam("value", ty.vec4<f32>());
+    auto* coords = b.FunctionParam("coords", ty.vec2i());
+    auto* value = b.FunctionParam("value", ty.vec4f());
     foo->SetParams({coords, value});
     b.Append(foo->Block(), [&] {
         auto* handle = b.Load(texture);
@@ -3349,8 +3160,8 @@ $B1: {  # root
 
 // Test that ignoring a subset of bindings works
 TEST_P(IR_RobustnessTest, BindingsIgnored_Subset) {
-    auto* vec1 = b.Var("vec1", ty.ptr(storage, ty.vec4<u32>()));
-    auto* vec2 = b.Var("vec2", ty.ptr(storage, ty.vec4<u32>()));
+    auto* vec1 = b.Var("vec1", ty.ptr(storage, ty.vec4u()));
+    auto* vec2 = b.Var("vec2", ty.ptr(storage, ty.vec4u()));
     auto* arr1 = b.Var("arr1", ty.ptr(storage, ty.array<u32, 4>()));
     auto* arr2 = b.Var("arr2", ty.ptr(storage, ty.array<u32, 4>()));
     vec1->SetBindingPoint(1, 2);
@@ -3556,6 +3367,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_i8_StorageRuntimeArray_ConstStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<i32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -3632,6 +3445,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_u8_StorageRuntimeArray_ConstStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<u32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -3787,6 +3602,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_i8_StorageRuntimeArray_DynamicStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<i32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -3867,6 +3684,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_u8_StorageRuntimeArray_DynamicStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<u32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -4026,6 +3845,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_i8_StorageRuntimeArray_DynamicStride_RowMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<i32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -4106,6 +3927,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_u8_StorageRuntimeArray_DynamicStride_RowMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<u32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -4263,6 +4086,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_i8_WorkgroupFixedArray_DynamicStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<i32, 1024>()));
     mod.root_block->Append(arr);
 
@@ -4340,6 +4165,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_u8_WorkgroupFixedArray_DynamicStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<u32, 1024>()));
     mod.root_block->Append(arr);
 
@@ -4457,6 +4284,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_i8_WorkgroupFixedArray_ConstStrideAndOffset) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<i32, 1024>()));
     mod.root_block->Append(arr);
 
@@ -4495,6 +4324,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixLoad_u8_WorkgroupFixedArray_ConstStrideAndOffset) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<u32, 1024>()));
     mod.root_block->Append(arr);
 
@@ -4606,6 +4437,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_i8_StorageRuntimeArray_ConstStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<i32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -4680,6 +4513,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_u8_StorageRuntimeArray_ConstStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<u32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -4831,6 +4666,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_i8_StorageRuntimeArray_DynamicStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<i32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -4909,6 +4746,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_u8_StorageRuntimeArray_DynamicStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<u32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -5064,6 +4903,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_i8_StorageRuntimeArray_DynamicStride_RowMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<i32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -5142,6 +4983,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_u8_StorageRuntimeArray_DynamicStride_RowMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(storage, ty.array<u32>()));
     arr->SetBindingPoint(0, 0);
     mod.root_block->Append(arr);
@@ -5295,6 +5138,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_i8_WorkgroupFixedArray_DynamicStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<i32, 1024>()));
     mod.root_block->Append(arr);
 
@@ -5370,6 +5215,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_u8_WorkgroupFixedArray_DynamicStride_ColMajor) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<u32, 1024>()));
     mod.root_block->Append(arr);
 
@@ -5486,6 +5333,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_i8_WorkgroupFixedArray_ConstStrideAndOffset) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<i32, 1024>()));
     mod.root_block->Append(arr);
 
@@ -5525,6 +5374,8 @@ $B1: {  # root
 }
 
 TEST_P(IR_RobustnessTest, SubgroupMatrixStore_u8_WorkgroupFixedArray_ConstStrideAndOffset) {
+    capabilities = core::ir::Capability::kAllow8BitIntegers;
+
     auto* arr = b.Var("arr", ty.ptr(workgroup, ty.array<u32, 1024>()));
     mod.root_block->Append(arr);
 
@@ -5563,6 +5414,670 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
+TEST_P(IR_RobustnessTest, BufferView_u32_ConstOffsetAndLength_InRange) {
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, ty.u32()), BuiltinFn::kBufferView, Vector{ty.u32()}, p, 16_u,
+                       32_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, u32, read_write> = bufferView<u32> %p, 16u, 32u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferView_u32_ConstOffsetAndLength_OutOfRange) {
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, ty.u32()), BuiltinFn::kBufferView, Vector{ty.u32()}, p, 16_u,
+                       12_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, u32, read_write> = bufferView<u32> %p, 16u, 12u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, u32, read_write> = bufferView<u32> %p, 0u, 12u
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferView_RuntimeStruct_ConstOffsetAndLength_InRange) {
+    auto* s = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.vec4(ty.u32())},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.u32())},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(uniform, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(uniform, s), BuiltinFn::kBufferView, Vector{s}, p, 16_u, 64_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<uniform, buffer, read>):void {
+  $B1: {
+    %3:ptr<uniform, S, read> = bufferView<S> %p, 16u, 64u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    RobustnessConfig cfg;
+    cfg.clamp_uniform = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferView_RuntimeStruct_ConstOffsetAndLength_OutOfRange) {
+    auto* s = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.vec4(ty.u32())},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.u32())},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(uniform, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(uniform, s), BuiltinFn::kBufferView, Vector{s}, p, 16_u, 32_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<uniform, buffer, read>):void {
+  $B1: {
+    %3:ptr<uniform, S, read> = bufferView<S> %p, 16u, 32u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<uniform, buffer, read>):void {
+  $B1: {
+    %3:ptr<uniform, S, read> = bufferView<S> %p, 0u, 32u
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_uniform = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferView_RuntimeStruct_NonConst) {
+    auto* s = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.vec4(ty.u32())},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.u32())},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(workgroup, ty.unsized_buffer()));
+    auto* o = b.FunctionParam("o", ty.i32());
+    func->SetParams({p, o});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(workgroup, s), BuiltinFn::kBufferView, Vector{s}, p, o);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<workgroup, buffer, read_write>, %o:i32):void {
+  $B1: {
+    %4:ptr<workgroup, S, read_write> = bufferView<S> %p, %o
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<workgroup, buffer, read_write>, %o:i32):void {
+  $B1: {
+    %4:u32 = bufferLength %p
+    %5:u32 = bitcast<u32> %o
+    %6:u32 = and %5, 4294967280u
+    %7:u32 = add 20u, %6
+    %8:bool = lt %4, %7
+    %9:u32 = select %6, 0u, %8
+    %10:ptr<workgroup, S, read_write> = bufferView<S> %p, %9
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferView_RuntimeStruct_ConstOffset) {
+    auto* s = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.vec4(ty.u32())},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.u32())},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, s), BuiltinFn::kBufferView, Vector{s}, p, 16_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, S, read_write> = bufferView<S> %p, 16u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:u32 = bufferLength %p
+    %4:bool = lt %3, 36u
+    %5:u32 = select 16u, 0u, %4
+    %6:ptr<storage, S, read_write> = bufferView<S> %p, %5
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferView_RuntimeStruct_ConstLength) {
+    auto* s = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.vec4(ty.u32())},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.u32())},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    auto* o = b.FunctionParam("o", ty.i32());
+    func->SetParams({p, o});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, s), BuiltinFn::kBufferView, Vector{s}, p, o, 64_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %o:i32):void {
+  $B1: {
+    %4:ptr<storage, S, read_write> = bufferView<S> %p, %o, 64u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(16) {
+  a:vec4<u32> @offset(0)
+  b:array<u32> @offset(16)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %o:i32):void {
+  $B1: {
+    %4:u32 = bitcast<u32> %o
+    %5:u32 = and %4, 4294967280u
+    %6:u32 = add 20u, %5
+    %7:bool = lt 64u, %6
+    %8:u32 = select %5, 0u, %7
+    %9:ptr<storage, S, read_write> = bufferView<S> %p, %8, 64u
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferArrayView_ArrayU32_ConstOffsetAndSizeAndLength_InRange) {
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, ty.runtime_array(ty.u32())), BuiltinFn::kBufferArrayView,
+                       Vector{ty.runtime_array(ty.u32())}, p, 16_u, 8_u, 32_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, array<u32>, read_write> = bufferArrayView<array<u32>> %p, 16u, 8u, 32u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferArrayView_ArrayU32_ConstOffsetAndSizeAndLength_OutOfRange) {
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, ty.runtime_array(ty.u32())), BuiltinFn::kBufferArrayView,
+                       Vector{ty.runtime_array(ty.u32())}, p, 4_u, 12_u, 12_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, array<u32>, read_write> = bufferArrayView<array<u32>> %p, 4u, 12u, 12u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, array<u32>, read_write> = bufferArrayView<array<u32>> %p, 0u, 4u, 12u
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferArrayView_RuntimeStruct_ConstOffsetAndSizeAndLength_InRange) {
+    auto* s = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.array(ty.u32(), 5)},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.vec2(ty.u32()))},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, s), BuiltinFn::kBufferArrayView, Vector{s}, p, 16_u, 32_u,
+                       64_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, S, read_write> = bufferArrayView<S> %p, 16u, 32u, 64u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferArrayView_RuntimeStruct_ConstOffsetAndSizeAndLength_OutOfRange) {
+    auto* s = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.array(ty.u32(), 5)},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.vec2(ty.u32()))},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    func->SetParams({p});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, s), BuiltinFn::kBufferArrayView, Vector{s}, p, 16_u, 32_u,
+                       32_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, S, read_write> = bufferArrayView<S> %p, 16u, 32u, 32u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B1: {
+    %3:ptr<storage, S, read_write> = bufferArrayView<S> %p, 0u, 32u, 32u
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferArrayView_RuntimeStruct_NonConst) {
+    auto* S = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.array(ty.u32(), 5)},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.vec2(ty.u32()))},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    auto* o = b.FunctionParam("o", ty.i32());
+    auto* s = b.FunctionParam("s", ty.i32());
+    func->SetParams({p, o, s});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, S), BuiltinFn::kBufferArrayView, Vector{S}, p, o, s);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %o:i32, %s:i32):void {
+  $B1: {
+    %5:ptr<storage, S, read_write> = bufferArrayView<S> %p, %o, %s
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %o:i32, %s:i32):void {
+  $B1: {
+    %5:u32 = bufferLength %p
+    %6:u32 = bitcast<u32> %o
+    %7:u32 = and %6, 4294967288u
+    %8:u32 = bitcast<u32> %s
+    %9:u32 = sub %8, 24u
+    %10:u32 = div %9, 8u
+    %11:u32 = mul %10, 8u
+    %12:u32 = add %11, 24u
+    %13:u32 = max %12, 32u
+    %14:u32 = add %7, %13
+    %15:bool = lt %5, %14
+    %16:u32 = select %7, 0u, %15
+    %17:u32 = select %13, 32u, %15
+    %18:ptr<storage, S, read_write> = bufferArrayView<S> %p, %16, %17
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferArrayView_RuntimeStruct_ConstOffset) {
+    auto* S = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.array(ty.u32(), 5)},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.vec2(ty.u32()))},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    auto* s = b.FunctionParam("s", ty.i32());
+    func->SetParams({p, s});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, S), BuiltinFn::kBufferArrayView, Vector{S}, p, 8_u, s);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %s:i32):void {
+  $B1: {
+    %4:ptr<storage, S, read_write> = bufferArrayView<S> %p, 8u, %s
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %s:i32):void {
+  $B1: {
+    %4:u32 = bufferLength %p
+    %5:u32 = bitcast<u32> %s
+    %6:u32 = sub %5, 24u
+    %7:u32 = div %6, 8u
+    %8:u32 = mul %7, 8u
+    %9:u32 = add %8, 24u
+    %10:u32 = max %9, 32u
+    %11:u32 = add 8u, %10
+    %12:bool = lt %4, %11
+    %13:u32 = select 8u, 0u, %12
+    %14:u32 = select %10, 32u, %12
+    %15:ptr<storage, S, read_write> = bufferArrayView<S> %p, %13, %14
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
+TEST_P(IR_RobustnessTest, BufferArrayView_RuntimeStruct_ConstSize) {
+    auto* S = ty.Struct(mod.symbols.Register("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.array(ty.u32(), 5)},
+                            {mod.symbols.Register("b"), ty.runtime_array(ty.vec2(ty.u32()))},
+                        });
+    auto* func = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    auto* o = b.FunctionParam("o", ty.i32());
+    func->SetParams({p, o});
+    b.Append(func->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, S), BuiltinFn::kBufferArrayView, Vector{S}, p, o, 64_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %o:i32):void {
+  $B1: {
+    %4:ptr<storage, S, read_write> = bufferArrayView<S> %p, %o, 64u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(8) {
+  a:array<u32, 5> @offset(0)
+  b:array<vec2<u32>> @offset(24)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %o:i32):void {
+  $B1: {
+    %4:u32 = bufferLength %p
+    %5:u32 = bitcast<u32> %o
+    %6:u32 = and %5, 4294967288u
+    %7:u32 = add 64u, %6
+    %8:bool = lt %4, %7
+    %9:u32 = select %6, 0u, %8
+    %10:u32 = select 64u, 32u, %8
+    %11:ptr<storage, S, read_write> = bufferArrayView<S> %p, %9, %10
+    ret
+  }
+}
+)";
+
+    RobustnessConfig cfg;
+    cfg.clamp_storage = GetParam();
+    Run(Robustness, cfg);
+
+    EXPECT_EQ(GetParam() ? expect : src, str());
+}
+
 TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_Equal_Limit) {
     auto* func = b.Function("func", ty.void_());
     b.Append(func->Block(), [&] {
@@ -5577,7 +6092,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
         });
         b.Append(loop->Body(), [&] {
             // idx < 20u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 20_u);
+            auto* binary = b.LessThan(b.Load(idx), 20_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -5590,7 +6105,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -5634,7 +6149,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -5655,7 +6169,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
         });
         b.Append(loop->Body(), [&] {
             // idx < 19u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 19_u);
+            auto* binary = b.LessThan(b.Load(idx), 19_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -5668,7 +6182,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -5712,7 +6226,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -5733,7 +6246,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
         });
         b.Append(loop->Body(), [&] {
             // idx < 21u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 21_u);
+            auto* binary = b.LessThan(b.Load(idx), 21_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -5746,7 +6259,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -5791,7 +6304,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -5823,7 +6335,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_IndexNoRa
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -5851,7 +6362,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithExpression_MaxB
         });
         b.Append(loop->Body(), [&] {
             // idx < 8
-            auto* binary = b.LessThan<bool>(b.Load(idx), 8_u);
+            auto* binary = b.LessThan(b.Load(idx), 8_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -5859,9 +6370,9 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithExpression_MaxB
             // access_idx = idx * factor + local_id.x
             // access_idx: [0, 31] (idx: [0, 7], factor = 4, local_id.x: [0, 3])
             auto* load_idx = b.Load(idx);
-            auto* multiply = b.Multiply<u32>(load_idx, factor);
+            auto* multiply = b.Multiply(load_idx, factor);
             auto* access_local_id_x = b.Access(ty.u32(), local_invocation_id, 0_u);
-            auto* access_idx = b.Add<u32>(multiply, access_local_id_x);
+            auto* access_idx = b.Add(multiply, access_local_id_x);
 
             // access_arr = arr[access_idx]
             auto* access_arr = b.Access(ty.ptr<function, u32>(), arr, access_idx);
@@ -5871,7 +6382,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithExpression_MaxB
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
 
@@ -5919,7 +6430,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithExpression_MaxB
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -5940,7 +6450,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_I32_Negat
         });
         b.Append(loop->Body(), [&] {
             // idx < 20
-            auto* binary = b.LessThan<bool>(b.Load(idx), 20_i);
+            auto* binary = b.LessThan(b.Load(idx), 20_i);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -5953,7 +6463,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_I32_Negat
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -5999,7 +6509,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_I32_Negat
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6020,7 +6529,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
         });
         b.Append(loop->Body(), [&] {
             // idx < 20
-            auto* binary = b.LessThan<bool>(b.Load(idx), 20_i);
+            auto* binary = b.LessThan(b.Load(idx), 20_i);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6033,7 +6542,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6077,7 +6586,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_MaxBound_
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6099,7 +6607,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest,
         });
         b.Append(loop->Body(), [&] {
             // idx < 19
-            auto* binary = b.LessThan<bool>(b.Load(idx), 19_i);
+            auto* binary = b.LessThan(b.Load(idx), 19_i);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6112,7 +6620,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest,
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6156,7 +6664,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest,
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6178,7 +6685,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest,
         });
         b.Append(loop->Body(), [&] {
             // idx < 21
-            auto* binary = b.LessThan<bool>(b.Load(idx), 21_i);
+            auto* binary = b.LessThan(b.Load(idx), 21_i);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6191,7 +6698,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest,
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6237,7 +6744,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest,
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6270,7 +6776,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_IndexNoRa
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6294,7 +6799,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_DynamicSi
         });
         b.Append(loop->Body(), [&] {
             // idx < 20u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 20_u);
+            auto* binary = b.LessThan(b.Load(idx), 20_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6307,7 +6812,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, AccessArrayWithIndex_DynamicSi
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6357,7 +6862,6 @@ $B1: {  # root
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.clamp_storage = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
@@ -6370,7 +6874,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_E
     b.Append(func->Block(), [&] {
         Var* idx = nullptr;
         // v = vec4u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec4<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec4u()));
         auto* loop = b.Loop();
         b.Append(loop->Initializer(), [&] {
             // idx = 0u
@@ -6379,7 +6883,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_E
         });
         b.Append(loop->Body(), [&] {
             // idx < 4u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 4_u);
+            auto* binary = b.LessThan(b.Load(idx), 4_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6391,7 +6895,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_E
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6434,7 +6938,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_E
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6446,7 +6949,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_L
     b.Append(func->Block(), [&] {
         Var* idx = nullptr;
         // v = vec3u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec3<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec3u()));
         auto* loop = b.Loop();
         b.Append(loop->Initializer(), [&] {
             // idx = 0u
@@ -6455,7 +6958,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_L
         });
         b.Append(loop->Body(), [&] {
             // idx < 2u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 2_u);
+            auto* binary = b.LessThan(b.Load(idx), 2_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6467,7 +6970,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_L
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6510,7 +7013,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_L
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6522,7 +7024,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_G
     b.Append(func->Block(), [&] {
         Var* idx = nullptr;
         // v = vec4u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec4<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec4u()));
         auto* loop = b.Loop();
         b.Append(loop->Initializer(), [&] {
             // idx = 0u
@@ -6531,7 +7033,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_G
         });
         b.Append(loop->Body(), [&] {
             // idx < 5u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 5_u);
+            auto* binary = b.LessThan(b.Load(idx), 5_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6543,7 +7045,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_G
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6587,7 +7089,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_MaxBound_G
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6600,7 +7101,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_IndexNoRan
     func->AppendParam(param);
     b.Append(func->Block(), [&] {
         // v = vec4u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec4<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec4u()));
         b.LoadVectorElement(v, param);
         b.Return(func);
     });
@@ -6617,7 +7118,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_IndexNoRan
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6629,7 +7129,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_I32_Negati
     b.Append(func->Block(), [&] {
         Var* idx = nullptr;
         // v = vec4u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec4<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec4u()));
         auto* loop = b.Loop();
         b.Append(loop->Initializer(), [&] {
             // idx = -1
@@ -6638,7 +7138,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_I32_Negati
         });
         b.Append(loop->Body(), [&] {
             // idx < 4
-            auto* binary = b.LessThan<bool>(b.Load(idx), 4_i);
+            auto* binary = b.LessThan(b.Load(idx), 4_i);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6650,7 +7150,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_I32_Negati
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6695,7 +7195,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, LoadVectorWithIndex_I32_Negati
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6707,7 +7206,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
     b.Append(func->Block(), [&] {
         Var* idx = nullptr;
         // v = vec4u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec4<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec4u()));
         auto* loop = b.Loop();
         b.Append(loop->Initializer(), [&] {
             // idx = 0u
@@ -6716,7 +7215,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
         });
         b.Append(loop->Body(), [&] {
             // idx < 4u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 4_u);
+            auto* binary = b.LessThan(b.Load(idx), 4_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6728,7 +7227,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6771,7 +7270,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6783,7 +7281,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
     b.Append(func->Block(), [&] {
         Var* idx = nullptr;
         // v = vec3u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec3<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec3u()));
         auto* loop = b.Loop();
         b.Append(loop->Initializer(), [&] {
             // idx = 0u
@@ -6792,7 +7290,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
         });
         b.Append(loop->Body(), [&] {
             // idx < 2u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 2_u);
+            auto* binary = b.LessThan(b.Load(idx), 2_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6804,7 +7302,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6847,7 +7345,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6859,7 +7356,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
     b.Append(func->Block(), [&] {
         Var* idx = nullptr;
         // v = vec4u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec4<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec4u()));
         auto* loop = b.Loop();
         b.Append(loop->Initializer(), [&] {
             // idx = 0u
@@ -6868,7 +7365,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
         });
         b.Append(loop->Body(), [&] {
             // idx < 5u
-            auto* binary = b.LessThan<bool>(b.Load(idx), 5_u);
+            auto* binary = b.LessThan(b.Load(idx), 5_u);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6880,7 +7377,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+            b.Store(idx, b.Add(b.Load(idx), 1_u));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -6924,7 +7421,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_MaxBound_
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6937,7 +7433,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_IndexNoRa
     func->AppendParam(param);
     b.Append(func->Block(), [&] {
         // v = vec4u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec4<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec4u()));
         b.StoreVectorElement(v, param, b.Constant(0_u));
         b.Return(func);
     });
@@ -6954,7 +7450,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_IndexNoRa
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 
@@ -6966,7 +7461,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_I32_Negat
     b.Append(func->Block(), [&] {
         Var* idx = nullptr;
         // v = vec4u()
-        auto* v = b.Var("v", ty.ptr(function, ty.vec4<u32>()));
+        auto* v = b.Var("v", ty.ptr(function, ty.vec4u()));
         auto* loop = b.Loop();
         b.Append(loop->Initializer(), [&] {
             // idx = -1
@@ -6975,7 +7470,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_I32_Negat
         });
         b.Append(loop->Body(), [&] {
             // idx < 4
-            auto* binary = b.LessThan<bool>(b.Load(idx), 4_i);
+            auto* binary = b.LessThan(b.Load(idx), 4_i);
             auto* ifelse = b.If(binary);
             b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
             b.Append(ifelse->False(), [&] { b.ExitLoop(loop); });
@@ -6987,7 +7482,7 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_I32_Negat
         });
         b.Append(loop->Continuing(), [&] {
             // idx++
-            b.Store(idx, b.Add<i32>(b.Load(idx), 1_i));
+            b.Store(idx, b.Add(b.Load(idx), 1_i));
             b.NextIteration(loop);
         });
         b.Return(func);
@@ -7032,7 +7527,6 @@ TEST_F(IR_RobustnessWithIntegerRangeAnalysisTest, StoreVectorWithIndex_I32_Negat
 )";
 
     RobustnessConfig cfg;
-    cfg.clamp_function = true;
     cfg.use_integer_range_analysis = true;
     Run(Robustness, cfg);
 

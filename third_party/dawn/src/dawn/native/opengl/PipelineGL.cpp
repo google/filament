@@ -55,10 +55,9 @@ PipelineGL::~PipelineGL() = default;
 MaybeError PipelineGL::InitializeBase(const OpenGLFunctions& gl,
                                       const PipelineLayout* layout,
                                       const PerStage<ProgrammableStage>& stages,
-                                      bool usesVertexIndex,
-                                      bool usesInstanceIndex,
-                                      bool usesFragDepth,
-                                      VertexAttributeMask bgraSwizzleAttributes) {
+                                      ImmediateConstantMask& pipelineImmediateMask,
+                                      VertexAttributeMask bgraSwizzleAttributes,
+                                      Extent3D* workgroupSize) {
     mProgram = DAWN_GL_TRY(gl, CreateProgram());
 
     // Compute the set of active stages.
@@ -78,12 +77,16 @@ MaybeError PipelineGL::InitializeBase(const OpenGLFunctions& gl,
         ShaderModule* module = ToBackend(stages[stage].module.Get());
         bool needsSSBOLengthUniformBuffer = false;
         std::vector<CombinedSampler> stageCombinedSamplers;
+        Extent3D localWorkgroupSize;
         GLuint shader;
         DAWN_TRY_ASSIGN(
-            shader,
-            module->CompileShader(gl, stages[stage], stage, usesVertexIndex, usesInstanceIndex,
-                                  usesFragDepth, bgraSwizzleAttributes, &stageCombinedSamplers,
-                                  layout, &emulatedTextureBuiltins, &needsSSBOLengthUniformBuffer));
+            shader, module->CompileShader(gl, stages[stage], stage, pipelineImmediateMask,
+                                          bgraSwizzleAttributes, &stageCombinedSamplers, layout,
+                                          &emulatedTextureBuiltins, &needsSSBOLengthUniformBuffer,
+                                          &localWorkgroupSize));
+        if (stage == SingleShaderStage::Compute) {
+            *workgroupSize = localWorkgroupSize;
+        }
 
         mNeedsSSBOLengthUniformBuffer |= needsSSBOLengthUniformBuffer;
         combinedSamplers.insert(stageCombinedSamplers.begin(), stageCombinedSamplers.end());
@@ -124,12 +127,8 @@ MaybeError PipelineGL::InitializeBase(const OpenGLFunctions& gl,
         // all in this vector.
         absl::InlinedVector<GLint, 1> uniformsToSet;
 
-        const BindGroupLayoutInternalBase* textureBgl =
-            layout->GetBindGroupLayout(combined.textureLocation.group);
-        BindingIndex textureArrayStart =
-            textureBgl->GetBindingIndex(combined.textureLocation.binding);
-
-        for (auto textureArrayElement : Range(combined.textureLocation.arraySize)) {
+        BindingIndex textureArrayStart = combined.textureLocation.index;
+        for (auto textureArrayElement : Range(combined.textureLocation.shaderArraySize)) {
             FlatBindingIndex textureGLIndex =
                 indices[combined.textureLocation.group][textureArrayStart + textureArrayElement];
             mUnitsForTextures[textureGLIndex].push_back(textureUnit);
@@ -140,11 +139,7 @@ MaybeError PipelineGL::InitializeBase(const OpenGLFunctions& gl,
                 mPlaceholderSamplerUnits.push_back(textureUnit);
             } else {
                 // Record that the sampler used in the shader must be set for this texture unit.
-                const BindGroupLayoutInternalBase* samplerBgl =
-                    layout->GetBindGroupLayout(combined.samplerLocation->group);
-                BindingIndex samplerBindingIndex =
-                    samplerBgl->GetBindingIndex(combined.samplerLocation->binding);
-
+                BindingIndex samplerBindingIndex = combined.samplerLocation->index;
                 FlatBindingIndex samplerGLIndex =
                     indices[combined.samplerLocation->group][samplerBindingIndex];
                 mUnitsForSamplers[samplerGLIndex].push_back(textureUnit);
@@ -170,16 +165,22 @@ MaybeError PipelineGL::InitializeBase(const OpenGLFunctions& gl,
         mPlaceholderSampler = ToBackend(std::move(sampler));
     }
 
+    // If the pipeline declares immediates but the GL driver determines that they are unused and
+    // optimizes out the uniform variable, reset the mask. This prevents a GL_INVALID_VALUE error
+    // when trying to update it via glUniform*().
+    if (pipelineImmediateMask.any()) {
+        auto location = DAWN_GL_TRY(gl, GetUniformLocation(mProgram, "tint_immediates"));
+        if (location == -1) {
+            pipelineImmediateMask.reset();
+        }
+    }
+
     for (GLuint glShader : glShaders) {
         DAWN_GL_TRY(gl, DetachShader(mProgram, glShader));
         DAWN_GL_TRY(gl, DeleteShader(glShader));
     }
 
     return {};
-}
-
-void PipelineGL::DeleteProgram(const OpenGLFunctions& gl) {
-    DAWN_GL_TRY_IGNORE_ERRORS(gl, DeleteProgram(mProgram));
 }
 
 const std::vector<TextureUnit>& PipelineGL::GetTextureUnitsForSampler(
@@ -192,10 +193,6 @@ const std::vector<TextureUnit>& PipelineGL::GetTextureUnitsForTextureView(
     FlatBindingIndex index) const {
     DAWN_ASSERT(index < mUnitsForTextures.size());
     return mUnitsForTextures[index];
-}
-
-GLuint PipelineGL::GetProgramHandle() const {
-    return mProgram;
 }
 
 MaybeError PipelineGL::ApplyNow(const OpenGLFunctions& gl, const PipelineLayout* layout) {

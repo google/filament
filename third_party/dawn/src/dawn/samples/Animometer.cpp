@@ -30,10 +30,10 @@
 #include <vector>
 
 #include "dawn/samples/SampleUtils.h"
-
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/Timer.h"
 #include "dawn/utils/WGPUHelpers.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 constexpr size_t kNumTriangles = 10000;
 
@@ -191,7 +191,7 @@ class AnimometerSample : public SampleBase {
     wgpu::BindGroup bindGroup;
     wgpu::Buffer ubo;
     int frameCount = 0;
-    dawn::utils::Timer* timer = dawn::utils::CreateTimer();
+    raw_ptr<dawn::utils::Timer> timer = dawn::utils::CreateTimer();
 };
 
 int main(int argc, const char* argv[]) {

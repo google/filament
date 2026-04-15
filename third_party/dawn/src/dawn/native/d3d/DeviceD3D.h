@@ -54,7 +54,7 @@ class Device : public DeviceBase {
     void RecordDeviceRemovedReason(HRESULT result);
 
   protected:
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 };
 
 }  // namespace dawn::native::d3d

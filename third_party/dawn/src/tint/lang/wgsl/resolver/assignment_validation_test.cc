@@ -25,11 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 
 namespace tint::resolver {
@@ -84,7 +83,7 @@ TEST_F(ResolverAssignmentValidationTest, AssignArraysWithDifferentSizeExpression
     GlobalConst("len", Expr(4_u));
 
     auto* a = Var("a", ty.array<f32, 4>());
-    auto* b = Var("b", ty.array(ty.f32(), "len"));
+    auto* b = Var("b", ty.array(ty.f32(), Expr("len")));
 
     auto* assign = Assign(Source{{12, 34}}, "a", "b");
     WrapInFunction(a, b, assign);
@@ -103,7 +102,7 @@ TEST_F(ResolverAssignmentValidationTest, AssignArraysWithDifferentSizeExpression
     GlobalConst("len", Expr(5_u));
 
     auto* a = Var("a", ty.array<f32, 4>());
-    auto* b = Var("b", ty.array(ty.f32(), "len"));
+    auto* b = Var("b", ty.array(ty.f32(), Expr("len")));
 
     auto* assign = Assign(Source{{12, 34}}, "a", "b");
     WrapInFunction(a, b, assign);
@@ -287,7 +286,7 @@ TEST_F(ResolverAssignmentValidationTest, AssignToLetMember_Fail) {
     //  a.i = 2i
     // }
     Structure("S", Vector{Member("i", ty.i32())});
-    WrapInFunction(Let(Source{{98, 76}}, "a", ty("S"), Call("S")),  //
+    WrapInFunction(Let(Source{{98, 76}}, "a", ty.AsType("S"), Call("S")),  //
                    Assign(MemberAccessor(Source{{12, 34}}, Expr(Source{{56, 78}}, "a"), "i"), 2_i));
 
     EXPECT_FALSE(r()->Resolve());

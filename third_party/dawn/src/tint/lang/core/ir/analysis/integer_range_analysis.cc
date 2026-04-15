@@ -167,7 +167,7 @@ struct IntegerRangeAnalysisImpl {
         if (!function_param) {
             return {};
         }
-        if (access->Indices().Length() > 1) {
+        if (access->Indices().size() > 1) {
             return {};
         }
         if (!access->Indices()[0]->As<Constant>()) {

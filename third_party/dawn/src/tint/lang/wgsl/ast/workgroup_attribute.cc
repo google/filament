@@ -30,33 +30,22 @@
 #include <string>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::WorkgroupAttribute);
 
 namespace tint::ast {
 
-WorkgroupAttribute::WorkgroupAttribute(GenerationID pid,
-                                       NodeID nid,
+WorkgroupAttribute::WorkgroupAttribute(NodeID nid,
                                        const Source& src,
                                        const Expression* x_,
                                        const Expression* y_,
                                        const Expression* z_)
-    : Base(pid, nid, src), x(x_), y(y_), z(z_) {}
+    : Base(nid, src), x(x_), y(y_), z(z_) {}
 
 WorkgroupAttribute::~WorkgroupAttribute() = default;
 
 std::string WorkgroupAttribute::Name() const {
     return "workgroup_size";
-}
-
-const WorkgroupAttribute* WorkgroupAttribute::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto* x_ = ctx.Clone(x);
-    auto* y_ = ctx.Clone(y);
-    auto* z_ = ctx.Clone(z);
-    return ctx.dst->create<WorkgroupAttribute>(src, x_, y_, z_);
 }
 
 }  // namespace tint::ast

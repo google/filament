@@ -145,7 +145,9 @@ class Texture final : public TextureBase {
 
     // Dawn API
     void SetLabelImpl() override;
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
+
+    std::optional<DeviceGuard> UseDeviceGuardForDestroy() override;
 
     MaybeError Clear(const ScopedCommandRecordingContext* commandContext,
                      const SubresourceRange& range,
@@ -215,7 +217,7 @@ class TextureView final : public TextureViewBase {
     using TextureViewBase::TextureViewBase;
 
     ~TextureView() override;
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     ComPtr<ID3D11ShaderResourceView> mD3d11SharedResourceView;
 

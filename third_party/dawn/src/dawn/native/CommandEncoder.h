@@ -132,11 +132,12 @@ class CommandEncoder final : public ApiObjectBase {
 
     [[nodiscard]] InternalUsageScope MakeInternalUsageScope();
 
+
   private:
     CommandEncoder(DeviceBase* device, const UnpackedPtr<CommandEncoderDescriptor>& descriptor);
     CommandEncoder(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     MaybeError ValidateFinish() const;
 

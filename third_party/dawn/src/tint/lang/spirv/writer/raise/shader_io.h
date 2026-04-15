@@ -28,6 +28,8 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_SHADER_IO_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_SHADER_IO_H_
 
+#include <unordered_map>
+
 #include "src/tint/lang/core/ir/transform/prepare_immediate_data.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/spirv/writer/common/options.h"
@@ -42,8 +44,11 @@ namespace tint::spirv::writer::raise {
 
 /// The capabilities that the transform can support.
 const core::ir::Capabilities kShaderIOCapabilities{
+    core::ir::Capability::kAllowDuplicateBindings,
     core::ir::Capability::kAllowAnyInputAttachmentIndexType,
     core::ir::Capability::kAllowNonCoreTypes,
+    core::ir::Capability::kAllow8BitIntegers,
+    core::ir::Capability::kLoosenValidationForShaderIO,
 };
 
 /// ShaderIOConfig describes the set of configuration options for the ShaderIO transform.
@@ -51,10 +56,17 @@ struct ShaderIOConfig {
     /// immediate data layout information
     const core::ir::transform::ImmediateDataLayout& immediate_data_layout;
 
+    /// Colour index to binding point
+    std::unordered_map<uint32_t, BindingPoint> colour_index_to_binding_point{};
+
     /// true if a vertex point size builtin output should be added
     bool emit_vertex_point_size = false;
     /// true if f16 IO types should be replaced with f32 types and converted
     bool polyfill_f16_io = false;
+    /// true if we should force pixel centers via polyfill when multi-sampling.
+    bool polyfill_pixel_center = false;
+    /// true if the framebuffer fetch should be multisampled
+    bool multisampled_framebuffer_fetch = false;
     /// offsets for clamping frag depth
     std::optional<Options::RangeOffsets> depth_range_offsets{};
 };

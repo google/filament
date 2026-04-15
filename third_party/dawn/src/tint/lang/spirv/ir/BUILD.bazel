@@ -39,14 +39,14 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "ir",
   srcs = [
+    "binary.cc",
     "builtin_call.cc",
     "copy_logical.cc",
-    "literal_operand.cc",
   ],
   hdrs = [
+    "binary.h",
     "builtin_call.h",
     "copy_logical.h",
-    "literal_operand.h",
   ],
   deps = [
     "//src/tint/api/common",
@@ -76,6 +76,7 @@ cc_library(
   name = "test",
   alwayslink = True,
   srcs = [
+    "binary_test.cc",
     "builtin_call_test.cc",
   ],
   deps = [

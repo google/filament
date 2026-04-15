@@ -12,6 +12,15 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
+
+@contextmanager
+def get_folder(path=None):
+    if path:
+        yield path
+    else:
+        with tempfile.TemporaryDirectory() as temp_file:
+            yield temp_file
 
 # Third party dependencies necessary for Dawn to generate its version of the header.
 THIRD_PARTY_DIR = os.path.join('third_party')
@@ -106,7 +115,7 @@ def _gen_header_diff(temp_dir, output_dir):
         diff = difflib.unified_diff(webgpu_header.readlines(),
                                     dawn_header.readlines(),
                                     fromfile='webgpu_header',
-                                    tofile='dawn_header')
+                                    tofile='dawn_header', n=0)
         # Skip writing all the line numbers as these all change every time
         # anything in the file changes.
         for line in diff:
@@ -138,18 +147,19 @@ def _check_deps():
 
 def main(args):
     parser = argparse.ArgumentParser()
+    parser.add_argument('--outdir', default=None)
     parser.add_argument('action', choices=('gen', 'check'))
     options = parser.parse_args()
 
     if options.action == 'gen':
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with get_folder(options.outdir) as temp_dir:
             _gen_header_diff(temp_dir, THIRD_PARTY_DIR)
         return 0
 
     if options.action == 'check':
         if not _check_deps():
             return 0
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with get_folder(options.outdir) as temp_dir:
             _gen_header_diff(temp_dir, temp_dir)
 
             with open(os.path.join(temp_dir, GENERATED_DIFF), 'r') as temp_file, \

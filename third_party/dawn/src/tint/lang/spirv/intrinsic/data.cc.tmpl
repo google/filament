@@ -16,6 +16,8 @@ See:
 
 {{- $I := LoadIntrinsics "src/tint/lang/spirv/spirv.def" -}}
 
+// clang-format off
+
 #include <limits>
 #include <string>
 
@@ -33,3 +35,5 @@ using namespace tint::core::intrinsic;  // NOLINT(build/namespaces)
   "Name"       "Dialect::kData" -}}
 
 }  // namespace tint::spirv::intrinsic
+
+// clang-format on

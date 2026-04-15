@@ -67,4 +67,8 @@ int NumCoordinateAxes(core::type::TextureDimension dim) {
     return 0;
 }
 
+uint32_t Texture::Align() const {
+    return 1;
+}
+
 }  // namespace tint::core::type

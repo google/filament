@@ -25,9 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <cstdint>
 #include <string>
+#include <vector>
 
 #include "dawn/common/Assert.h"
+#include "dawn/common/Math.h"
 #include "dawn/tests/DawnTest.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
@@ -297,7 +300,137 @@ DAWN_INSTANTIATE_TEST(OpArrayLengthTest,
                       OpenGLBackend(),
                       OpenGLESBackend(),
                       OpenGLESBackend({"gl_use_array_length_from_uniform"}),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
+
+enum class TieredLimits {
+    No,
+    Yes,
+};
+
+std::ostream& operator<<(std::ostream& o, TieredLimits tieredLimits) {
+    switch (tieredLimits) {
+        case TieredLimits::No:
+            o << "NoTieredLimits";
+            break;
+        case TieredLimits::Yes:
+            o << "TieredLimits";
+            break;
+    }
+    return o;
+}
+
+DAWN_TEST_PARAM_STRUCT(MaxArrayLengthTestParams, TieredLimits);
+
+class MaxArrayLengthTest : public DawnTestWithParams<MaxArrayLengthTestParams> {
+  protected:
+    bool GetRequireUseTieredLimits() override {
+        return GetParam().mTieredLimits == TieredLimits::Yes;
+    }
+
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
+        supported.UnlinkedCopyTo(&required);
+    }
+
+    void SetUp() override {
+        DawnTestWithParams<MaxArrayLengthTestParams>::SetUp();
+
+        // Will fail with 'VK_ERROR_OUT_OF_DEVICE_MEMORY' due to the maxStorageBufferBindingSize
+        // portion of the test
+        DAWN_SUPPRESS_TEST_IF(IsCompatibilityMode() || IsSwiftshader() || IsANGLESwiftShader() ||
+                              IsOpenGLES());
+
+        // Warp runs into memory issues.
+        DAWN_SUPPRESS_TEST_IF(IsWARP());
+
+        // TODO(crbug.com/473894293): [Capture] buffer mapping: investigate.
+        DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
+        // x86 has issues with OpArrayLength.
+        DAWN_SUPPRESS_TEST_IF(IsX86());
+
+        // TODO(crbug.com/485946556): Dawn native will report the wrong arrayLength for Apple
+        // hardware.
+        DAWN_SUPPRESS_TEST_IF(IsApple() && !GetRequireUseTieredLimits());
+
+        auto maxBindingSizeSize = AlignDown(GetSupportedLimits().maxStorageBufferBindingSize, 4);
+
+        // Create buffers of various sizes to check the length() implementation
+        wgpu::BufferDescriptor bufferDesc;
+        bufferDesc.size = maxBindingSizeSize;
+        bufferDesc.usage = wgpu::BufferUsage::Storage;
+        mStorageBufferMax = device.CreateBuffer(&bufferDesc);
+
+        mExpectedLength = static_cast<uint32_t>(maxBindingSizeSize / 4);
+    }
+
+    wgpu::Buffer mStorageBufferMax;
+    uint32_t mExpectedLength;
+};
+
+// Test OpArrayLength in the compute stage
+TEST_P(MaxArrayLengthTest, Compute) {
+    // Create a buffer to hold the result sizes and create a bindgroup for it.
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
+    bufferDesc.size = sizeof(uint32_t);
+    wgpu::Buffer resultBuffer = device.CreateBuffer(&bufferDesc);
+
+    wgpu::BindGroupLayout resultLayout = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::Storage}});
+
+    wgpu::BindGroup resultBindGroup =
+        utils::MakeBindGroup(device, resultLayout, {{0, resultBuffer, 0, wgpu::kWholeSize}});
+
+    // Create the compute pipeline that stores the length()s in the result buffer.
+    wgpu::BindGroupLayout bindGroupLayout = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::ReadOnlyStorage}});
+
+    wgpu::BindGroupLayout bgls[] = {bindGroupLayout, resultLayout};
+    wgpu::PipelineLayoutDescriptor plDesc;
+    plDesc.bindGroupLayoutCount = 2;
+    plDesc.bindGroupLayouts = bgls;
+    wgpu::PipelineLayout pl = device.CreatePipelineLayout(&plDesc);
+
+    wgpu::ComputePipelineDescriptor pipelineDesc;
+    pipelineDesc.layout = pl;
+    pipelineDesc.compute.module = utils::CreateShaderModule(device, R"(
+        @group(1) @binding(0) var<storage, read_write> result : u32;
+
+        struct Buffer {
+            data : array<u32>,
+        }
+        @group(0) @binding(0) var<storage, read> buffer1 : Buffer;
+
+        @compute @workgroup_size(1) fn main() {
+            result  = arrayLength(&buffer1.data);
+        })");
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&pipelineDesc);
+
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, bindGroupLayout,
+                                                     {{0, mStorageBufferMax, 0, wgpu::kWholeSize}});
+
+    // Run a single instance of the compute shader
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+    pass.SetPipeline(pipeline);
+    pass.SetBindGroup(0, bindGroup);
+    pass.SetBindGroup(1, resultBindGroup);
+    pass.DispatchWorkgroups(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_U32_EQ(mExpectedLength, resultBuffer, 0);
+}
+
+DAWN_INSTANTIATE_TEST_P(MaxArrayLengthTest,
+                        {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
+                         OpenGLESBackend(), OpenGLESBackend({"gl_use_array_length_from_uniform"}),
+                         VulkanBackend(), WebGPUBackend()},
+                        {TieredLimits::No, TieredLimits::Yes});
 
 }  // anonymous namespace
 }  // namespace dawn

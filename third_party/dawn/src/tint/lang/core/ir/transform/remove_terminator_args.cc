@@ -73,6 +73,7 @@ struct State {
             // Remove arguments from all terminators that we found.
             for (auto* terminator : terminators_to_clear) {
                 if (auto* breakif = terminator->As<BreakIf>()) {
+                    breakif->SetNumNextIterValues(0);
                     // We retain the condition operand on break_if instructions.
                     breakif->SetOperands(Vector{breakif->Condition()});
                 } else {
@@ -162,11 +163,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> RemoveTerminatorArgs(Module& ir) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "core.RemoveTerminatorArgs", kRemoveTerminatorArgsCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kRemoveTerminatorArgsCapabilities,
+                          "before core.RemoveTerminatorArgs");
 
     State{ir}.Process();
 

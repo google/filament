@@ -35,6 +35,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
+#include "dawn/common/MutexProtected.h"
 #include "dawn/wire/WireCmd_autogen.h"
 #include "dawn/wire/WireServer.h"
 #include "partition_alloc/pointers/raw_ptr.h"
@@ -62,14 +63,15 @@ struct ObjectDataBase {
 template <typename T>
 struct ObjectData : public ObjectDataBase<T> {};
 
-enum class BufferMapWriteState { Unmapped, Mapped, MapError };
+struct BufferMapState {
+    std::unique_ptr<MemoryTransferService::ReadHandle> readHandle = nullptr;
+    std::unique_ptr<MemoryTransferService::WriteHandle> writeHandle = nullptr;
+};
 
 template <>
 struct ObjectData<WGPUBuffer> : public ObjectDataBase<WGPUBuffer> {
-    // TODO(enga): Use a tagged pointer to save space.
-    std::unique_ptr<MemoryTransferService::ReadHandle> readHandle;
-    std::unique_ptr<MemoryTransferService::WriteHandle> writeHandle;
-    BufferMapWriteState mapWriteState = BufferMapWriteState::Unmapped;
+    MutexRefProtected<BufferMapState> mapState;
+
     WGPUBufferUsage usage = WGPUBufferUsage_None;
     // Indicate if writeHandle needs to be destroyed on unmap
     bool mappedAtCreation = false;

@@ -219,16 +219,6 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "norm16_texture_formats.md",
       FeatureInfo::FeatureState::Stable}},
-    {Feature::Snorm16TextureFormats,
-     {"Supports R/RG/RGBA16 snorm texture formats",
-      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
-      "norm16_texture_formats.md",
-      FeatureInfo::FeatureState::Stable}},
-    {Feature::Norm16TextureFormats,
-     {"DEPRECATED Supports R/RG/RGBA16 norm texture formats.",
-      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
-      "norm16_texture_formats.md",
-      FeatureInfo::FeatureState::Stable}},
     {Feature::SharedTextureMemoryVkDedicatedAllocation,
      {"Support specifying whether a Vulkan allocation for shared texture memory is a dedicated "
       "memory allocation.",
@@ -329,15 +319,15 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "adapter_properties.md",
       FeatureInfo::FeatureState::Stable}},
+    {Feature::AdapterPropertiesDrm,
+     {"Support querying DRM info from the adapter.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "adapter_properties.md",
+      FeatureInfo::FeatureState::Stable}},
     {Feature::SharedBufferMemoryD3D12Resource,
      {"Support importing ID3D12Resource as shared buffer memory.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/shared_buffer.md",
-      FeatureInfo::FeatureState::Experimental}},
-    {Feature::R8UnormStorage,
-     {"Supports using r8unorm texture as storage texture.",
-      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
-      "r8unorm_storage.md",
-      FeatureInfo::FeatureState::Experimental}},
+      FeatureInfo::FeatureState::Stable}},
     {Feature::DawnFormatCapabilities,
      {"Supports querying the capabilities of a texture format.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
@@ -384,17 +374,15 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
      {"Supports some new GPUTextureFormats with the RENDER_ATTACHMENT, blendable, multisampling "
       "capabilities and the STORAGE_BINDING capability with the 'read-only' and 'write-only'"
       "GPUStorageTextureAccesses.",
-      "https://gpuweb.github.io/gpuweb/#texture-formats-tier1",
-      FeatureInfo::FeatureState::Experimental}},
+      "https://gpuweb.github.io/gpuweb/#texture-formats-tier1", FeatureInfo::FeatureState::Stable}},
     {Feature::TextureFormatsTier2,
      {"Supports StorageTextureAccess 'read-write' on several additional formats.",
-      "https://gpuweb.github.io/gpuweb/#texture-formats-tier2",
-      FeatureInfo::FeatureState::Experimental}},
+      "https://gpuweb.github.io/gpuweb/#texture-formats-tier2", FeatureInfo::FeatureState::Stable}},
     {Feature::TextureComponentSwizzle,
-     {"Texture component swizzle lets you to specify how the channels of a texture (red, green, "
-      "blue, and alpha) are mapped to the color components when accessed by a shader.",
-      "https://github.com/gpuweb/gpuweb/blob/main/proposals/texture-component-swizzle.md",
-      FeatureInfo::FeatureState::Experimental}},
+     {"Allows GPUTextureViews to rearrange or replace the color components from texture's "
+      "red/green/blue/alpha channels when used as a TEXTURE_BINDING.",
+      "https://gpuweb.github.io/gpuweb/#texture-component-swizzle",
+      FeatureInfo::FeatureState::Stable}},
     {Feature::CoreFeaturesAndLimits,
      {"Lifts all compatibility mode restrictions (features and limits) to core when enabled on a "
       "device.",
@@ -429,11 +417,69 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "dawn_device_allocator_control.md",
       FeatureInfo::FeatureState::Experimental}},
-    {Feature::ChromiumExperimentalPrimitiveId,
-     {"Supports the \"enable chromium_experimental_primitive_id;\" directive in WGSL",
+    {Feature::PrimitiveIndex,
+     {"Supports the \"enable primitive_index;\" directive in WGSL",
+      "https://gpuweb.github.io/gpuweb/#dom-gpufeaturename-primitive-index",
+      FeatureInfo::FeatureState::Stable}},
+    {Feature::AdapterPropertiesWGPU,
+     {"Support querying WebGPU backend info from the adapter.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "adapter_properties.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::SharedBufferMemoryD3D12SharedMemoryFileMappingHandle,
+     {"Supports importing a shared memory file mapping handle as shared buffer memory.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/shared_buffer.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::SharedTextureMemoryD3D12Resource,
+     {"Support importing ID3D12Resource as shared texture memory.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/shared_texture.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::ChromiumExperimentalSamplingResourceTable,
+     {"Experimental support for the bindless sampling resource table",
+      "https://github.com/Kangz/gpuweb/blob/bindless/proposals/bindless.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::ChromiumExperimentalSubgroupSizeControl,
+     {"Support the \"enable chromium_experimental_subgroup_size_control;\" directive in WGSL.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/tint/extensions/"
-      "chromium_experimental_primitive_id.md",
-      FeatureInfo::FeatureState::Experimental}}};
+      "chromium_experimental_subgroup_size_control.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::AtomicVec2uMinMax,
+     {"Support the \"enable atomic_vec2u_min_max;\" directive for 64-bit atomics via vec2<u32> "
+      "types",
+      "https://github.com/gpuweb/gpuweb/blob/main/proposals/atomic-64-min-max.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::Unorm16FormatsForExternalTexture,
+     {"Supports R/RG/RGBA16Unorm formats for ExternalTexture planes even if not all the required "
+      "feature support has been enabled.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "unorm16_formats_for_external_texture.md",
+      FeatureInfo::FeatureState::Stable}},
+    {Feature::OpaqueYCbCrAndroidForExternalTexture,
+     {"Allows creating an ExternalTexture from an imported AHardwareBuffer with an opaque YCbCr "
+      "format.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "opaque_ycbcr_android_for_external_texture.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::Unorm16Filterable,
+     {"Allows textures with formats \"r16unorm\" \"rg16unorm\" and \"rgba16unorm\" to be "
+      "filtered.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "unorm16_filterable.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::RenderPassRenderArea,
+     {"Supports specifying render area for render pass.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "render_pass_render_area.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::DawnNativeSpontaneousQueueEvents,
+     {"Support spontaneous queue event completion in native. When this feature is supported and "
+      "enabled, queue events may complete spontaneously on any thread.",
+      "https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/"
+      "Asynchronous%20Operations.md",
+      FeatureInfo::FeatureState::Stable}},
+
+    // Comment to separate the } so it is clearer what to copy-paste to add a feature.
+};
 
 }  // anonymous namespace
 

@@ -30,6 +30,7 @@
 
 #include <compare>
 #include <concepts>
+#include <cstdint>
 #include <limits>
 #include <ostream>
 #include <type_traits>
@@ -97,7 +98,14 @@ class alignas(T) TypedIntegerImpl {
     // TODO(425911085): Consider allowing construction from narrowing types, but assert
     // that it doesn't truncate.
     template <typename I>
-        requires std::integral<I>
+        requires std::integral<I> && std::unsigned_integral<T>
+    explicit constexpr TypedIntegerImpl(I rhs) : mValue(static_cast<T>(rhs)) {
+        DAWN_ASSERT(rhs >= 0);
+        static_assert(static_cast<uint64_t>(std::numeric_limits<I>::max()) <=
+                      static_cast<uint64_t>(std::numeric_limits<T>::max()));
+    }
+    template <typename I>
+        requires std::integral<I> && std::signed_integral<T>
     explicit constexpr TypedIntegerImpl(I rhs) : mValue(static_cast<T>(rhs)) {
         static_assert(std::numeric_limits<I>::max() <= std::numeric_limits<T>::max());
         static_assert(std::numeric_limits<I>::min() >= std::numeric_limits<T>::min());

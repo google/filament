@@ -34,10 +34,10 @@ WireResult Server::DoSurfaceGetCurrentTexture(Known<WGPUSurface> surface,
                                               Known<WGPUDevice> configuredDevice,
                                               ObjectHandle textureHandle) {
     Reserved<WGPUTexture> texture;
-    WIRE_TRY(Objects<WGPUTexture>().Allocate(&texture, textureHandle, AllocationState::Reserved));
+    WIRE_TRY(Allocate(&texture, textureHandle, AllocationState::Reserved));
 
     WGPUSurfaceTexture surfaceTexture;
-    mProcs.surfaceGetCurrentTexture(surface->handle, &surfaceTexture);
+    mProcs->surfaceGetCurrentTexture(surface->handle, &surfaceTexture);
 
     if (surfaceTexture.texture != nullptr) {
         return FillReservation(texture.id, surfaceTexture.texture);
@@ -45,19 +45,10 @@ WireResult Server::DoSurfaceGetCurrentTexture(Known<WGPUSurface> surface,
         // The client always assumes that a texture will be associated with the reservation, so
         // create an error texture on the configured device.
         WGPUTextureDescriptor desc = WGPU_TEXTURE_DESCRIPTOR_INIT;
-        WGPUTexture errorTexture = mProcs.deviceCreateErrorTexture(configuredDevice->handle, &desc);
+        WGPUTexture errorTexture =
+            mProcs->deviceCreateErrorTexture(configuredDevice->handle, &desc);
         return FillReservation(texture.id, errorTexture);
     }
-}
-
-WireResult Server::DoSurfacePresent(WGPUSurface self) {
-    WGPUStatus status = mProcs.surfacePresent(self);
-    if (status != WGPUStatus_Success) {
-        // The client already validated that the surface is configured, so this
-        // indicates the client thinks the surface is configured but it isn't.
-        return WireResult::FatalError;
-    }
-    return WireResult::Success;
 }
 
 }  // namespace dawn::wire::server

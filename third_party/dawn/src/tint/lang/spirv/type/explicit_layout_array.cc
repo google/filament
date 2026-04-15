@@ -39,15 +39,10 @@ namespace tint::spirv::type {
 
 ExplicitLayoutArray::ExplicitLayoutArray(const Type* element,
                                          const core::type::ArrayCount* count,
-                                         uint32_t align,
                                          uint32_t size,
                                          uint32_t stride)
-    : Base(Hash(tint::TypeCode::Of<ExplicitLayoutArray>().bits, count),
-           element,
-           count,
-           align,
-           size,
-           stride) {}
+    : Base(Hash(tint::TypeCode::Of<ExplicitLayoutArray>().bits, count), element, count, size),
+      stride_(stride) {}
 
 bool ExplicitLayoutArray::Equals(const UniqueNode& other) const {
     if (other.Is<ExplicitLayoutArray>()) {
@@ -69,7 +64,7 @@ std::string ExplicitLayoutArray::FriendlyName() const {
 ExplicitLayoutArray* ExplicitLayoutArray::Clone(core::type::CloneContext& ctx) const {
     auto* elem_ty = element_->Clone(ctx);
     auto* count = count_->Clone(ctx);
-    return ctx.dst.mgr->Get<ExplicitLayoutArray>(elem_ty, count, align_, size_, stride_);
+    return ctx.dst.mgr->Get<ExplicitLayoutArray>(elem_ty, count, size_, stride_);
 }
 
 }  // namespace tint::spirv::type

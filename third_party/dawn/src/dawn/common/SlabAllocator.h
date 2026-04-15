@@ -28,6 +28,7 @@
 #ifndef SRC_DAWN_COMMON_SLABALLOCATOR_H_
 #define SRC_DAWN_COMMON_SLABALLOCATOR_H_
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -194,7 +195,9 @@ class SlabAllocator : public SlabAllocatorImpl {
     SlabAllocator(size_t totalObjectBytes,
                   uint32_t objectSize = u32_sizeof<T>,
                   uint32_t objectAlignment = u32_alignof<T>)
-        : SlabAllocatorImpl(totalObjectBytes / objectSize, objectSize, objectAlignment) {}
+        : SlabAllocatorImpl(std::max(totalObjectBytes / objectSize, size_t{1}),
+                            objectSize,
+                            objectAlignment) {}
 
     template <typename... Args>
     T* Allocate(Args&&... args) {

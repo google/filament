@@ -28,28 +28,17 @@
 #include "src/tint/lang/wgsl/ast/increment_decrement_statement.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::IncrementDecrementStatement);
 
 namespace tint::ast {
 
-IncrementDecrementStatement::IncrementDecrementStatement(GenerationID pid,
-                                                         NodeID nid,
+IncrementDecrementStatement::IncrementDecrementStatement(NodeID nid,
                                                          const Source& src,
                                                          const Expression* l,
                                                          bool inc)
-    : Base(pid, nid, src), lhs(l), increment(inc) {
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(lhs, generation_id);
-}
+    : Base(nid, src), lhs(l), increment(inc) {}
 
 IncrementDecrementStatement::~IncrementDecrementStatement() = default;
-
-const IncrementDecrementStatement* IncrementDecrementStatement::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto* l = ctx.Clone(lhs);
-    return ctx.dst->create<IncrementDecrementStatement>(src, l, increment);
-}
 
 }  // namespace tint::ast

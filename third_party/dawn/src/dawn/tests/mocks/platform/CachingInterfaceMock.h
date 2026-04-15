@@ -31,6 +31,7 @@
 #include <dawn/platform/DawnPlatform.h>
 #include <gmock/gmock.h>
 
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -90,6 +91,7 @@ class CachingInterfaceMock : public dawn::platform::CachingInterface {
     size_t LoadDataDefault(const void* key, size_t keySize, void* value, size_t valueSize);
     void StoreDataDefault(const void* key, size_t keySize, const void* value, size_t valueSize);
 
+    mutable std::mutex mMutex;
     bool mEnabled = true;
     size_t mHitCount = 0;
     std::unordered_map<std::string, std::vector<uint8_t>> mCache;

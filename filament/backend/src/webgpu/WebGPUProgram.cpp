@@ -169,7 +169,7 @@ namespace {
                     ? reinterpret_cast<const char*>(sourceBytes.data())
                     : replaceSpecConstants(label, reinterpret_cast<const char*>(sourceBytes.data()),
                               specConstants);
-    wgpu::ShaderModuleWGSLDescriptor wgslDescriptor{};
+    wgpu::ShaderSourceWGSL wgslDescriptor{};
     wgslDescriptor.code = wgpu::StringView(processedShaderSource);
     const wgpu::ShaderModuleDescriptor descriptor{
         .nextInChain = &wgslDescriptor,
@@ -181,7 +181,7 @@ namespace {
     // Synchronously compile the shader module.
     const wgpu::WaitStatus waitResult = instance.WaitAny(
             shaderModule.GetCompilationInfo(wgpu::CallbackMode::WaitAnyOnly,
-                    [&descriptor](auto const& status,
+                    [&descriptor](wgpu::CompilationInfoRequestStatus status,
                             wgpu::CompilationInfo const* info) {
                         switch (status) {
                             case wgpu::CompilationInfoRequestStatus::CallbackCancelled:

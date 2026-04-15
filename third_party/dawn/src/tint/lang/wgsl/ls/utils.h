@@ -35,11 +35,6 @@
 #include "src/tint/utils/text/styled_text.h"
 #include "src/tint/utils/text/text_style.h"
 
-// Forward declarations
-namespace tint::sem {
-class Node;
-}
-
 namespace tint::wgsl::ls {
 
 /// @return the StyledText converted to lsp::MarkupContent

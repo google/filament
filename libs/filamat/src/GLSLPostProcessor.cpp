@@ -576,14 +576,15 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     rebindImageSamplerForWGSL(*spirv);
 
     //Allow non-uniform derivatives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
-    const tint::spirv::reader::Options readerOpts{true};
+    const tint::spirv::reader::Options readerOpts{};
 
-    tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
+    auto tintReadResult = tint::spirv::reader::ReadIR(*spirv, readerOpts);
+    tint::SuccessType tintSuccess;
 
-    if (tintRead.Diagnostics().ContainsErrors()) {
+    if (tintReadResult != tintSuccess) {
         //We know errors can potentially crop up, and want the ability to ignore them if needed for sample bringup
 #ifndef FILAMENT_WEBGPU_IGNORE_TNT_READ_ERRORS
-        slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+        slog.e << "Tint Reader Error: " << tintReadResult.Failure().reason << io::endl;
         spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
         spv_text text = nullptr;
         spv_diagnostic diagnostic = nullptr;
@@ -597,14 +598,22 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
         slog.e << "Beginning SpirV-output dump with ret " << result << "\n\n" << text->str << "\n\nEndSPIRV\n" <<
                 io::endl;
         spvTextDestroy(text);
-        slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+        slog.e << "Tint Reader Error: " << tintReadResult.Failure().reason << io::endl;
         return false;
 #endif
     }
 
-    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead);
-    /// An instance of SuccessType that can be used to check a tint Result.
-    tint::SuccessType tintSuccess;
+    tint::wgsl::writer::Options writerOptions;
+    // Allow non-uniform derivatives and disable unreachable code warnings.
+    // Dawn/Tint strictly validates uniform control flow (e.g. calling `textureSampleCompare`
+    // or derivatives). Filament materials often use uniform variables (e.g. from UBOs) in
+    // conditionals that Tint's static analyzer currently perceives as potentially divergent.
+    // We bypass these specific generation-time WGSL strictness errors because Filament guarantees
+    // the underlying UBO conditionals are uniform across the draw call.
+    writerOptions.allow_non_uniform_derivatives = true;
+    writerOptions.disable_unreachable_code_warning = true;
+    writerOptions.allowed_features.extensions.insert(tint::wgsl::Extension::kClipDistances);
+    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::WgslFromIR(tintReadResult.Get(), writerOptions);
 
     if (wgslOut != tintSuccess) {
         slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;

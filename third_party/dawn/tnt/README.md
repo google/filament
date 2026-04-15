@@ -6,13 +6,13 @@ It is not automated at this point. Following are the rough steps on how to do it
 ```
 cd third_party
 mkdir dawn_copy && cd dawn_copy
-git init &&
-git fetch --depth=1 https://dawn.googlesource.com/dawn --tag chromium/7353
+git init
+git fetch --depth=1 https://dawn.googlesource.com/dawn refs/heads/chromium/7792
 git reset --hard FETCH_HEAD
 python3 tools/fetch_dawn_dependencies.py
 find . -name .git -type d -print0 | xargs -0 rm -r
 <update .gitignore to remove third_party/entries from there>
-rm -r test testing webgpu-cts docs
+rm -rf test testing webgpu-cts docs
 cp -r ../dawn/tnt .
 cd ..
 rm -rf dawn

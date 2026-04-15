@@ -42,10 +42,9 @@ class Expression : public Castable<Expression, Node> {
 
   protected:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
-    Expression(GenerationID pid, NodeID nid, const Source& src);
+    Expression(NodeID nid, const Source& src);
 };
 
 }  // namespace tint::ast

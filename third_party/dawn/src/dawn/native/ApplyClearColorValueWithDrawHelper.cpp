@@ -33,6 +33,7 @@
 
 #include "dawn/common/Enumerator.h"
 #include "dawn/common/Range.h"
+#include "dawn/common/Strings.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/BindGroupLayout.h"
 #include "dawn/native/Buffer.h"
@@ -50,15 +51,16 @@ namespace dawn::native {
 namespace {
 
 // General helper functions and data structures for applying clear values with draw
-static const char kVSSource[] = R"(
-@vertex
-fn main(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
-    var pos = array(
-        vec2f(-1.0, -1.0),
-        vec2f( 3.0, -1.0),
-        vec2f(-1.0,  3.0));
-    return vec4f(pos[vertexIndex], 0.0, 1.0);
-})";
+static const char kVSSource[] = DAWN_MULTILINE(
+    @vertex
+    fn main(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
+        var pos = array(
+            vec2f(-1.0, -1.0),
+            vec2f( 3.0, -1.0),
+            vec2f(-1.0,  3.0));
+        return vec4f(pos[vertexIndex], 0.0, 1.0);
+    }
+);
 
 const char* GetTextureComponentTypeString(DeviceBase* device, wgpu::TextureFormat format) {
     DAWN_ASSERT(format != wgpu::TextureFormat::Undefined);
@@ -152,9 +154,7 @@ std::string ConstructFragmentShader(DeviceBase* device,
             }
         }
 
-        fragmentShaderStream << R"(
-enable chromium_experimental_pixel_local;
-)";
+        fragmentShaderStream << "enable chromium_experimental_pixel_local;";
         std::ostringstream plsDeclarationStream;
         plsDeclarationStream << "struct PLS {\n";
         for (size_t i = 0; i < plsSlotCount; ++i) {
@@ -164,27 +164,26 @@ enable chromium_experimental_pixel_local;
         if (plsSlotCount) {
             // Read the PLS with a phony-assignment to mark the PLS as statically used for
             // compatibility with the render pass.
-            assignOutputColorStream << R"(
-    _ = pls.a0;
-)";
+            assignOutputColorStream << "_ = pls.a0;";
         }
 
-        fragmentShaderStream << plsDeclarationStream.str() << R"(
-var<pixel_local> pls : PLS;
-)";
+        fragmentShaderStream << plsDeclarationStream.str() << "var<pixel_local> pls : PLS;";
     }
 
     fragmentShaderStream << outputColorDeclarationStream.str()
-                         << clearValueUniformBufferDeclarationStream.str() << R"(
-@group(0) @binding(0) var<uniform> clearColors : ClearColors;
+                         << clearValueUniformBufferDeclarationStream.str();
+    fragmentShaderStream << DAWN_MULTILINE(
+        @group(0) @binding(0) var<uniform> clearColors : ClearColors;
 
-@fragment
-fn main() -> OutputColor {
-    var outputColor : OutputColor;
-)" << assignOutputColorStream.str()
-                         << R"(
-    return outputColor;
-})";
+        @fragment
+        fn main() -> OutputColor {
+            var outputColor : OutputColor;
+    );
+    fragmentShaderStream << assignOutputColorStream.str();
+    fragmentShaderStream << DAWN_MULTILINE(
+            return outputColor;
+        }
+    );
     return fragmentShaderStream.str();
 }
 
@@ -407,10 +406,10 @@ bool GetKeyOfApplyClearColorValueWithDrawPipelines(
         return false;
     }
 
-    key->colorAttachmentCount = renderPassDescriptor->colorAttachmentCount;
+    key->colorAttachmentCount = static_cast<uint8_t>(renderPassDescriptor->colorAttachmentCount);
 
     auto colorAttachments = ityp::SpanFromUntyped<ColorAttachmentIndex>(
-        renderPassDescriptor->colorAttachments, renderPassDescriptor->colorAttachmentCount);
+        renderPassDescriptor->colorAttachments, key->colorAttachmentCount);
 
     key->colorTargetFormats.fill(wgpu::TextureFormat::Undefined);
     for (auto [i, attachment] : Enumerate(colorAttachments)) {

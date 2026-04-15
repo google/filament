@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "gmock/gmock.h"
-
 #include "src/tint/lang/spirv/validate/validate.h"
+
+#include "gmock/gmock.h"
 
 namespace tint::spirv::validate {
 namespace {

@@ -37,6 +37,8 @@
 #ifndef SRC_TINT_LANG_CORE_INTRINSIC_CTOR_CONV_H_
 #define SRC_TINT_LANG_CORE_INTRINSIC_CTOR_CONV_H_
 
+// clang-format off
+
 #include <cstdint>
 
 #include "src/tint/utils/rtti/traits.h"
@@ -80,7 +82,7 @@ const char* str(CtorConv i);
 template <typename STREAM>
     requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, CtorConv c) {
-    return o << str(c);
+  return o << str(c);
 }
 
 /// @param n the width of the vector
@@ -125,5 +127,7 @@ inline CtorConv MatrixCtorConv(uint32_t c, uint32_t r) {
 }
 
 }  // namespace tint::core::intrinsic
+
+// clang-format on
 
 #endif  // SRC_TINT_LANG_CORE_INTRINSIC_CTOR_CONV_H_

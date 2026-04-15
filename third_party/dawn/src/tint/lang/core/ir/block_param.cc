@@ -35,14 +35,14 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::ir::BlockParam);
 
 namespace tint::core::ir {
 
-BlockParam::BlockParam(const core::type::Type* ty) : type_(ty) {
-    TINT_ASSERT(type_ != nullptr);
+BlockParam::BlockParam(const core::type::Type* ty) : Base(ty) {
+    TINT_ASSERT(ty != nullptr);
 }
 
 BlockParam::~BlockParam() = default;
 
 BlockParam* BlockParam::Clone(CloneContext& ctx) {
-    auto* new_bp = ctx.ir.CreateValue<BlockParam>(type_);
+    auto* new_bp = ctx.ir.CreateValue<BlockParam>(Type());
 
     auto name = ctx.ir.NameOf(this);
     if (name.IsValid()) {

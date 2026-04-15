@@ -28,12 +28,10 @@
 #ifndef SRC_TINT_LANG_WGSL_SEM_SAMPLER_TEXTURE_PAIR_H_
 #define SRC_TINT_LANG_WGSL_SEM_SAMPLER_TEXTURE_PAIR_H_
 
-#include <cstdint>
 #include <functional>
 
 #include "src/tint/api/common/binding_point.h"
 #include "src/tint/utils/reflection.h"
-#include "src/tint/utils/text/string_stream.h"
 
 namespace tint::sem {
 

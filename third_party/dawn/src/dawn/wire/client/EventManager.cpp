@@ -25,14 +25,21 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <map>
-#include <optional>
-#include <utility>
-#include <vector>
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
 
 #include "dawn/wire/client/EventManager.h"
 
+#include <map>
+#include <optional>
+#include <span>
+#include <utility>
+#include <vector>
+
 #include "dawn/common/Log.h"
+#include "dawn/common/Time.h"
 #include "dawn/wire/client/Client.h"
 
 namespace dawn::wire::client {
@@ -59,18 +66,36 @@ void TrackedEvent::SetReady() {
 }
 
 void TrackedEvent::Complete(FutureID futureID, EventCompletionType type) {
-    DAWN_ASSERT(mEventState != EventState::Complete);
-    CompleteImpl(futureID, type);
-    mEventState = EventState::Complete;
+    // If the callback is already in a running state, that means that the std::call_once below is
+    // already running on some thread. Normally |Complete| is not called re-entrantly, however, in
+    // the case when a callback may drop the last reference to the Instance, because we only remove
+    // the Event from the tracking list after the callback is completed, the teardown of the
+    // EventManager will cause us to re-iterate all events and call |Complete| again on this one
+    // with EventCompletionType::Shutdown. In that case, we don't want to call the std::call_once
+    // below because it would cause a self-deadlock. During shutdown, it's not as important that
+    // |Complete| waits until the callback completes, and instead we rely on the destructor's ASSERT
+    // to ensure the invariant.
+    if (type == EventCompletionType::Shutdown && mEventState == EventState::Running) {
+        return;
+    }
+
+    std::call_once(mFlag, [&]() {
+        mEventState = EventState::Running;
+        CompleteImpl(futureID, type);
+        mEventState = EventState::Complete;
+    });
 }
 
 // EventManager
+
+EventManager::EventManager(size_t timedWaitAnyMaxCount)
+    : mTimedWaitAnyMaxCount(timedWaitAnyMaxCount) {}
 
 EventManager::~EventManager() {
     TransitionTo(State::ClientDropped);
 }
 
-std::pair<FutureID, bool> EventManager::TrackEvent(std::unique_ptr<TrackedEvent> event) {
+std::pair<FutureID, bool> EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
     if (!ValidateCallbackMode(event->GetCallbackMode())) {
         dawn::ErrorLog() << "Invalid callback mode: " << event->GetCallbackMode();
         return {kNullFutureID, false};
@@ -113,7 +138,7 @@ void EventManager::TransitionTo(EventManager::State state) {
     mState = state;
 
     while (true) {
-        std::map<FutureID, std::unique_ptr<TrackedEvent>> events;
+        EventMap events;
         switch (state) {
             case State::InstanceDropped: {
                 mTrackedEvents.Use([&](auto trackedEvents) {
@@ -147,38 +172,70 @@ void EventManager::TransitionTo(EventManager::State state) {
 }
 
 void EventManager::ProcessPollEvents() {
-    std::vector<std::pair<FutureID, std::unique_ptr<TrackedEvent>>> eventsToCompleteNow;
-    mTrackedEvents.Use([&](auto trackedEvents) {
-        for (auto it = trackedEvents->begin(); it != trackedEvents->end();) {
-            auto& event = it->second;
+    std::vector<std::pair<FutureID, Ref<TrackedEvent>>> eventsToComplete;
+    mTrackedEvents.ConstUse([&](auto trackedEvents) {
+        for (auto& [futureID, event] : *trackedEvents) {
             WGPUCallbackMode callbackMode = event->GetCallbackMode();
-            bool shouldRemove = (callbackMode == WGPUCallbackMode_AllowProcessEvents ||
-                                 callbackMode == WGPUCallbackMode_AllowSpontaneous) &&
-                                event->IsReady();
-            if (!shouldRemove) {
-                ++it;
-                continue;
+            if ((callbackMode == WGPUCallbackMode_AllowProcessEvents ||
+                 callbackMode == WGPUCallbackMode_AllowSpontaneous) &&
+                event->IsReady()) {
+                eventsToComplete.emplace_back(futureID, event);
             }
-            eventsToCompleteNow.emplace_back(it->first, std::move(event));
-            it = trackedEvents->erase(it);
         }
     });
 
     // Since events were initially stored and iterated from an ordered map, they must be ordered.
-    for (auto& [futureID, event] : eventsToCompleteNow) {
+    for (auto& [futureID, event] : eventsToComplete) {
         event->Complete(futureID, EventCompletionType::Ready);
     }
+
+    mTrackedEvents.Use([&](auto trackedEvents) {
+        for (auto& [futureID, _] : eventsToComplete) {
+            trackedEvents->erase(futureID);
+        }
+    });
 }
 
+namespace {
+bool UpdateAnyCompletedOrReady(std::span<WGPUFutureWaitInfo> waitInfos,
+                               const EventManager::EventMap& allEvents,
+                               EventManager::EventMap* eventsToComplete) {
+    DAWN_ASSERT(eventsToComplete->empty());
+
+    bool anyCompleted = false;
+    for (auto& waitInfo : waitInfos) {
+        auto it = allEvents.find(waitInfo.future.id);
+        if (it == allEvents.end()) {
+            waitInfo.completed = true;
+            anyCompleted = true;
+            continue;
+        }
+
+        auto& event = it->second;
+        if (event->IsReady()) {
+            waitInfo.completed = true;
+            anyCompleted = true;
+            eventsToComplete->emplace(it->first, event);
+        }
+    }
+
+    DAWN_ASSERT(eventsToComplete->empty() || anyCompleted);
+    return anyCompleted;
+}
+}  // anonymous namespace
+
 WGPUWaitStatus EventManager::WaitAny(size_t count, WGPUFutureWaitInfo* infos, uint64_t timeoutNS) {
-    // Validate for feature support.
     if (timeoutNS > 0) {
-        // Wire doesn't support timedWaitEnable (for now). (There's no UnsupportedCount or
-        // UnsupportedMixedSources validation here, because those only apply to timed waits.)
-        //
-        // TODO(crbug.com/dawn/1987): CreateInstance needs to validate timedWaitEnable was false.
-        dawn::ErrorLog() << "Dawn wire does not currently support timed waits.";
-        return WGPUWaitStatus_Error;
+        if (mTimedWaitAnyMaxCount == 0) {
+            dawn::ErrorLog() << "Instance only supports timed wait anys if "
+                                "WGPUInstanceFeatureName_TimedWaitAny is enabled.";
+            return WGPUWaitStatus_Error;
+        }
+        if (count > mTimedWaitAnyMaxCount) {
+            dawn::ErrorLog() << "Instance only supports up to (" << mTimedWaitAnyMaxCount
+                             << ") timed wait anys.";
+            return WGPUWaitStatus_Error;
+        }
     }
 
     if (count == 0) {
@@ -187,36 +244,30 @@ WGPUWaitStatus EventManager::WaitAny(size_t count, WGPUFutureWaitInfo* infos, ui
 
     // Since the user can specify the FutureIDs in any order, we need to use another ordered map
     // here to ensure that the result is ordered for JS event ordering.
-    std::map<FutureID, std::unique_ptr<TrackedEvent>> eventsToCompleteNow;
-    bool anyCompleted = false;
-    const FutureID firstInvalidFutureID = mNextFutureID;
-    mTrackedEvents.Use([&](auto trackedEvents) {
-        for (size_t i = 0; i < count; ++i) {
-            FutureID futureID = infos[i].future.id;
-            DAWN_ASSERT(futureID < firstInvalidFutureID);
-
-            auto it = trackedEvents->find(futureID);
-            if (it == trackedEvents->end()) {
-                infos[i].completed = true;
-                anyCompleted = true;
-                continue;
-            }
-
-            auto& event = it->second;
-            // Early update .completed, in prep to complete the callback if ready.
-            infos[i].completed = event->IsReady();
-            if (event->IsReady()) {
-                anyCompleted = true;
-                eventsToCompleteNow.emplace(it->first, std::move(event));
-                trackedEvents->erase(it);
-            }
+    auto waitInfos = std::span(infos, count);
+    EventMap eventsToComplete;
+    bool anyCompleted = mTrackedEvents.ConstUse([&](auto trackedEvents) {
+        if (UpdateAnyCompletedOrReady(waitInfos, *trackedEvents, &eventsToComplete)) {
+            return true;
         }
+        if (timeoutNS > 0) {
+            return trackedEvents.WaitFor(Nanoseconds(timeoutNS), [&](const EventMap& events) {
+                return UpdateAnyCompletedOrReady(waitInfos, events, &eventsToComplete);
+            });
+        }
+        return false;
     });
 
-    for (auto& [futureID, event] : eventsToCompleteNow) {
+    for (auto& [futureID, event] : eventsToComplete) {
         // .completed has already been set to true (before the callback, per API contract).
         event->Complete(futureID, EventCompletionType::Ready);
     }
+
+    mTrackedEvents.Use([&](auto trackedEvents) {
+        for (auto& [futureID, _] : eventsToComplete) {
+            trackedEvents->erase(futureID);
+        }
+    });
 
     return anyCompleted ? WGPUWaitStatus_Success : WGPUWaitStatus_TimedOut;
 }

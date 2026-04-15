@@ -43,7 +43,6 @@
 // Forward declarations
 namespace tint::ast {
 class Identifier;
-class LocationAttribute;
 }  // namespace tint::ast
 
 namespace tint::ast {
@@ -57,15 +56,13 @@ namespace tint::ast {
 class Variable : public Castable<Variable, Node> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the variable source
     /// @param name The struct member name
     /// @param type the declared variable type
     /// @param initializer the initializer expression
     /// @param attributes the variable attributes
-    Variable(GenerationID pid,
-             NodeID nid,
+    Variable(NodeID nid,
              const Source& src,
              const Identifier* name,
              Type type,

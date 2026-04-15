@@ -3,7 +3,10 @@
 
 #include "../src/commandlineflags.h"
 #include "../src/perf_counters.h"
-#include "benchmark/benchmark.h"
+#include "benchmark/benchmark_api.h"
+#include "benchmark/registration.h"
+#include "benchmark/state.h"
+#include "benchmark/utils.h"
 #include "output_test.h"
 
 namespace benchmark {
@@ -11,8 +14,9 @@ namespace benchmark {
 BM_DECLARE_string(benchmark_perf_counters);
 
 }  // namespace benchmark
+namespace {
 
-static void BM_Simple(benchmark::State& state) {
+void BM_Simple(benchmark::State& state) {
   for (auto _ : state) {
     auto iterations = double(state.iterations()) * double(state.iterations());
     benchmark::DoNotOptimize(iterations);
@@ -66,19 +70,21 @@ static void CheckSimple(Results const& e) {
 double withoutPauseResumeInstrCount = 0.0;
 double withPauseResumeInstrCount = 0.0;
 
-static void SaveInstrCountWithoutResume(Results const& e) {
+void SaveInstrCountWithoutResume(Results const& e) {
   withoutPauseResumeInstrCount = e.GetAs<double>("INSTRUCTIONS");
 }
 
-static void SaveInstrCountWithResume(Results const& e) {
+void SaveInstrCountWithResume(Results const& e) {
   withPauseResumeInstrCount = e.GetAs<double>("INSTRUCTIONS");
 }
 
 CHECK_BENCHMARK_RESULTS("BM_Simple", &CheckSimple);
 CHECK_BENCHMARK_RESULTS("BM_WithoutPauseResume", &SaveInstrCountWithoutResume);
 CHECK_BENCHMARK_RESULTS("BM_WithPauseResume", &SaveInstrCountWithResume);
+}  // end namespace
 
 int main(int argc, char* argv[]) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
   if (!benchmark::internal::PerfCounters::kSupported) {
     return 0;
   }

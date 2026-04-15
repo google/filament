@@ -34,6 +34,8 @@
 //                       Do not modify this file directly
 ////////////////////////////////////////////////////////////////////////////////
 
+// clang-format off
+
 #include "src/tint/lang/wgsl/enums.h"
 
 #include <string>
@@ -46,6 +48,9 @@ namespace tint::wgsl {
 /// @param str the string to parse
 /// @returns the parsed enum, or Extension::kUndefined if the string could not be parsed.
 Extension ParseExtension(std::string_view str) {
+    if (str == "atomic_vec2u_min_max") {
+        return Extension::kAtomicVec2UMinMax;
+    }
     if (str == "chromium_disable_uniformity_analysis") {
         return Extension::kChromiumDisableUniformityAnalysis;
     }
@@ -55,20 +60,17 @@ Extension ParseExtension(std::string_view str) {
     if (str == "chromium_experimental_framebuffer_fetch") {
         return Extension::kChromiumExperimentalFramebufferFetch;
     }
-    if (str == "chromium_experimental_immediate") {
-        return Extension::kChromiumExperimentalImmediate;
-    }
     if (str == "chromium_experimental_pixel_local") {
         return Extension::kChromiumExperimentalPixelLocal;
     }
-    if (str == "chromium_experimental_primitive_id") {
-        return Extension::kChromiumExperimentalPrimitiveId;
+    if (str == "chromium_experimental_resource_table") {
+        return Extension::kChromiumExperimentalResourceTable;
     }
     if (str == "chromium_experimental_subgroup_matrix") {
         return Extension::kChromiumExperimentalSubgroupMatrix;
     }
-    if (str == "chromium_internal_graphite") {
-        return Extension::kChromiumInternalGraphite;
+    if (str == "chromium_experimental_subgroup_size_control") {
+        return Extension::kChromiumExperimentalSubgroupSizeControl;
     }
     if (str == "chromium_internal_input_attachments") {
         return Extension::kChromiumInternalInputAttachments;
@@ -82,6 +84,9 @@ Extension ParseExtension(std::string_view str) {
     if (str == "f16") {
         return Extension::kF16;
     }
+    if (str == "primitive_index") {
+        return Extension::kPrimitiveIndex;
+    }
     if (str == "subgroups") {
         return Extension::kSubgroups;
     }
@@ -91,22 +96,22 @@ std::string_view ToString(Extension value) {
     switch (value) {
         case Extension::kUndefined:
             return "undefined";
+        case Extension::kAtomicVec2UMinMax:
+            return "atomic_vec2u_min_max";
         case Extension::kChromiumDisableUniformityAnalysis:
             return "chromium_disable_uniformity_analysis";
         case Extension::kChromiumExperimentalBarycentricCoord:
             return "chromium_experimental_barycentric_coord";
         case Extension::kChromiumExperimentalFramebufferFetch:
             return "chromium_experimental_framebuffer_fetch";
-        case Extension::kChromiumExperimentalImmediate:
-            return "chromium_experimental_immediate";
         case Extension::kChromiumExperimentalPixelLocal:
             return "chromium_experimental_pixel_local";
-        case Extension::kChromiumExperimentalPrimitiveId:
-            return "chromium_experimental_primitive_id";
+        case Extension::kChromiumExperimentalResourceTable:
+            return "chromium_experimental_resource_table";
         case Extension::kChromiumExperimentalSubgroupMatrix:
             return "chromium_experimental_subgroup_matrix";
-        case Extension::kChromiumInternalGraphite:
-            return "chromium_internal_graphite";
+        case Extension::kChromiumExperimentalSubgroupSizeControl:
+            return "chromium_experimental_subgroup_size_control";
         case Extension::kChromiumInternalInputAttachments:
             return "chromium_internal_input_attachments";
         case Extension::kClipDistances:
@@ -115,6 +120,8 @@ std::string_view ToString(Extension value) {
             return "dual_source_blending";
         case Extension::kF16:
             return "f16";
+        case Extension::kPrimitiveIndex:
+            return "primitive_index";
         case Extension::kSubgroups:
             return "subgroups";
     }
@@ -147,8 +154,7 @@ std::string_view ToString(CoreDiagnosticRule value) {
 
 /// ParseChromiumDiagnosticRule parses a ChromiumDiagnosticRule from a string.
 /// @param str the string to parse
-/// @returns the parsed enum, or ChromiumDiagnosticRule::kUndefined if the string could not be
-/// parsed.
+/// @returns the parsed enum, or ChromiumDiagnosticRule::kUndefined if the string could not be parsed.
 ChromiumDiagnosticRule ParseChromiumDiagnosticRule(std::string_view str) {
     if (str == "subgroup_matrix_uniformity") {
         return ChromiumDiagnosticRule::kSubgroupMatrixUniformity;
@@ -174,6 +180,9 @@ std::string_view ToString(ChromiumDiagnosticRule value) {
 /// @param str the string to parse
 /// @returns the parsed enum, or LanguageFeature::kUndefined if the string could not be parsed.
 LanguageFeature ParseLanguageFeature(std::string_view str) {
+    if (str == "buffer_view") {
+        return LanguageFeature::kBufferView;
+    }
     if (str == "chromium_print") {
         return LanguageFeature::kChromiumPrint;
     }
@@ -192,6 +201,18 @@ LanguageFeature ParseLanguageFeature(std::string_view str) {
     if (str == "chromium_testing_unsafe_experimental") {
         return LanguageFeature::kChromiumTestingUnsafeExperimental;
     }
+    if (str == "filtering_parameters") {
+        return LanguageFeature::kFilteringParameters;
+    }
+    if (str == "fragment_depth") {
+        return LanguageFeature::kFragmentDepth;
+    }
+    if (str == "immediate_address_space") {
+        return LanguageFeature::kImmediateAddressSpace;
+    }
+    if (str == "linear_indexing") {
+        return LanguageFeature::kLinearIndexing;
+    }
     if (str == "packed_4x8_integer_dot_product") {
         return LanguageFeature::kPacked4X8IntegerDotProduct;
     }
@@ -204,8 +225,26 @@ LanguageFeature ParseLanguageFeature(std::string_view str) {
     if (str == "sized_binding_array") {
         return LanguageFeature::kSizedBindingArray;
     }
+    if (str == "subgroup_id") {
+        return LanguageFeature::kSubgroupId;
+    }
+    if (str == "subgroup_uniformity") {
+        return LanguageFeature::kSubgroupUniformity;
+    }
+    if (str == "swizzle_assignment") {
+        return LanguageFeature::kSwizzleAssignment;
+    }
     if (str == "texel_buffers") {
         return LanguageFeature::kTexelBuffers;
+    }
+    if (str == "texture_and_sampler_let") {
+        return LanguageFeature::kTextureAndSamplerLet;
+    }
+    if (str == "texture_formats_tier1") {
+        return LanguageFeature::kTextureFormatsTier1;
+    }
+    if (str == "uniform_buffer_standard_layout") {
+        return LanguageFeature::kUniformBufferStandardLayout;
     }
     if (str == "unrestricted_pointer_parameters") {
         return LanguageFeature::kUnrestrictedPointerParameters;
@@ -216,6 +255,8 @@ std::string_view ToString(LanguageFeature value) {
     switch (value) {
         case LanguageFeature::kUndefined:
             return "undefined";
+        case LanguageFeature::kBufferView:
+            return "buffer_view";
         case LanguageFeature::kChromiumPrint:
             return "chromium_print";
         case LanguageFeature::kChromiumTestingExperimental:
@@ -228,6 +269,14 @@ std::string_view ToString(LanguageFeature value) {
             return "chromium_testing_unimplemented";
         case LanguageFeature::kChromiumTestingUnsafeExperimental:
             return "chromium_testing_unsafe_experimental";
+        case LanguageFeature::kFilteringParameters:
+            return "filtering_parameters";
+        case LanguageFeature::kFragmentDepth:
+            return "fragment_depth";
+        case LanguageFeature::kImmediateAddressSpace:
+            return "immediate_address_space";
+        case LanguageFeature::kLinearIndexing:
+            return "linear_indexing";
         case LanguageFeature::kPacked4X8IntegerDotProduct:
             return "packed_4x8_integer_dot_product";
         case LanguageFeature::kPointerCompositeAccess:
@@ -236,8 +285,20 @@ std::string_view ToString(LanguageFeature value) {
             return "readonly_and_readwrite_storage_textures";
         case LanguageFeature::kSizedBindingArray:
             return "sized_binding_array";
+        case LanguageFeature::kSubgroupId:
+            return "subgroup_id";
+        case LanguageFeature::kSubgroupUniformity:
+            return "subgroup_uniformity";
+        case LanguageFeature::kSwizzleAssignment:
+            return "swizzle_assignment";
         case LanguageFeature::kTexelBuffers:
             return "texel_buffers";
+        case LanguageFeature::kTextureAndSamplerLet:
+            return "texture_and_sampler_let";
+        case LanguageFeature::kTextureFormatsTier1:
+            return "texture_formats_tier1";
+        case LanguageFeature::kUniformBufferStandardLayout:
+            return "uniform_buffer_standard_layout";
         case LanguageFeature::kUnrestrictedPointerParameters:
             return "unrestricted_pointer_parameters";
     }
@@ -290,6 +351,7 @@ std::string_view ToString(DiagnosticSeverity value) {
     }
     return "<unknown>";
 }
+
 
 BuiltinFn ParseBuiltinFn(std::string_view name) {
     if (name == "abs") {
@@ -532,9 +594,6 @@ BuiltinFn ParseBuiltinFn(std::string_view name) {
     if (name == "step") {
         return BuiltinFn::kStep;
     }
-    if (name == "storageBarrier") {
-        return BuiltinFn::kStorageBarrier;
-    }
     if (name == "tan") {
         return BuiltinFn::kTan;
     }
@@ -568,11 +627,14 @@ BuiltinFn ParseBuiltinFn(std::string_view name) {
     if (name == "unpack4xU8") {
         return BuiltinFn::kUnpack4XU8;
     }
-    if (name == "workgroupBarrier") {
-        return BuiltinFn::kWorkgroupBarrier;
-    }
     if (name == "workgroupUniformLoad") {
         return BuiltinFn::kWorkgroupUniformLoad;
+    }
+    if (name == "storageBarrier") {
+        return BuiltinFn::kStorageBarrier;
+    }
+    if (name == "workgroupBarrier") {
+        return BuiltinFn::kWorkgroupBarrier;
     }
     if (name == "textureBarrier") {
         return BuiltinFn::kTextureBarrier;
@@ -657,6 +719,12 @@ BuiltinFn ParseBuiltinFn(std::string_view name) {
     }
     if (name == "atomicCompareExchangeWeak") {
         return BuiltinFn::kAtomicCompareExchangeWeak;
+    }
+    if (name == "atomicStoreMax") {
+        return BuiltinFn::kAtomicStoreMax;
+    }
+    if (name == "atomicStoreMin") {
+        return BuiltinFn::kAtomicStoreMin;
     }
     if (name == "subgroupBallot") {
         return BuiltinFn::kSubgroupBallot;
@@ -745,11 +813,32 @@ BuiltinFn ParseBuiltinFn(std::string_view name) {
     if (name == "subgroupMatrixMultiplyAccumulate") {
         return BuiltinFn::kSubgroupMatrixMultiplyAccumulate;
     }
+    if (name == "subgroupMatrixScalarAdd") {
+        return BuiltinFn::kSubgroupMatrixScalarAdd;
+    }
+    if (name == "subgroupMatrixScalarSubtract") {
+        return BuiltinFn::kSubgroupMatrixScalarSubtract;
+    }
+    if (name == "subgroupMatrixScalarMultiply") {
+        return BuiltinFn::kSubgroupMatrixScalarMultiply;
+    }
+    if (name == "bufferView") {
+        return BuiltinFn::kBufferView;
+    }
+    if (name == "bufferArrayView") {
+        return BuiltinFn::kBufferArrayView;
+    }
+    if (name == "bufferLength") {
+        return BuiltinFn::kBufferLength;
+    }
     if (name == "print") {
         return BuiltinFn::kPrint;
     }
-    if (name == "__tint_materialize") {
-        return BuiltinFn::kTintMaterialize;
+    if (name == "hasResource") {
+        return BuiltinFn::kHasResource;
+    }
+    if (name == "getResource") {
+        return BuiltinFn::kGetResource;
     }
     return BuiltinFn::kNone;
 }
@@ -918,8 +1007,6 @@ const char* str(BuiltinFn i) {
             return "sqrt";
         case BuiltinFn::kStep:
             return "step";
-        case BuiltinFn::kStorageBarrier:
-            return "storageBarrier";
         case BuiltinFn::kTan:
             return "tan";
         case BuiltinFn::kTanh:
@@ -942,10 +1029,12 @@ const char* str(BuiltinFn i) {
             return "unpack4xI8";
         case BuiltinFn::kUnpack4XU8:
             return "unpack4xU8";
-        case BuiltinFn::kWorkgroupBarrier:
-            return "workgroupBarrier";
         case BuiltinFn::kWorkgroupUniformLoad:
             return "workgroupUniformLoad";
+        case BuiltinFn::kStorageBarrier:
+            return "storageBarrier";
+        case BuiltinFn::kWorkgroupBarrier:
+            return "workgroupBarrier";
         case BuiltinFn::kTextureBarrier:
             return "textureBarrier";
         case BuiltinFn::kTextureDimensions:
@@ -1002,6 +1091,10 @@ const char* str(BuiltinFn i) {
             return "atomicExchange";
         case BuiltinFn::kAtomicCompareExchangeWeak:
             return "atomicCompareExchangeWeak";
+        case BuiltinFn::kAtomicStoreMax:
+            return "atomicStoreMax";
+        case BuiltinFn::kAtomicStoreMin:
+            return "atomicStoreMin";
         case BuiltinFn::kSubgroupBallot:
             return "subgroupBallot";
         case BuiltinFn::kSubgroupElect:
@@ -1060,30 +1153,41 @@ const char* str(BuiltinFn i) {
             return "subgroupMatrixMultiply";
         case BuiltinFn::kSubgroupMatrixMultiplyAccumulate:
             return "subgroupMatrixMultiplyAccumulate";
+        case BuiltinFn::kSubgroupMatrixScalarAdd:
+            return "subgroupMatrixScalarAdd";
+        case BuiltinFn::kSubgroupMatrixScalarSubtract:
+            return "subgroupMatrixScalarSubtract";
+        case BuiltinFn::kSubgroupMatrixScalarMultiply:
+            return "subgroupMatrixScalarMultiply";
+        case BuiltinFn::kBufferView:
+            return "bufferView";
+        case BuiltinFn::kBufferArrayView:
+            return "bufferArrayView";
+        case BuiltinFn::kBufferLength:
+            return "bufferLength";
         case BuiltinFn::kPrint:
             return "print";
-        case BuiltinFn::kTintMaterialize:
-            return "__tint_materialize";
+        case BuiltinFn::kHasResource:
+            return "hasResource";
+        case BuiltinFn::kGetResource:
+            return "getResource";
     }
     return "<unknown>";
 }
 
-bool IsCoarseDerivative(BuiltinFn f) {
-    return f == BuiltinFn::kDpdxCoarse || f == BuiltinFn::kDpdyCoarse ||
-           f == BuiltinFn::kFwidthCoarse;
-}
-
-bool IsFineDerivative(BuiltinFn f) {
-    return f == BuiltinFn::kDpdxFine || f == BuiltinFn::kDpdyFine || f == BuiltinFn::kFwidthFine;
-}
-
 bool IsDerivative(BuiltinFn f) {
-    return f == BuiltinFn::kDpdx || f == BuiltinFn::kDpdy || f == BuiltinFn::kFwidth ||
-           IsCoarseDerivative(f) || IsFineDerivative(f);
+    return f == BuiltinFn::kDpdx || f == BuiltinFn::kDpdy ||
+           f == BuiltinFn::kFwidth || f == BuiltinFn::kDpdxCoarse || f == BuiltinFn::kDpdyCoarse ||
+           f == BuiltinFn::kFwidthCoarse ||
+           f == BuiltinFn::kDpdxFine || f == BuiltinFn::kDpdyFine ||
+           f == BuiltinFn::kFwidthFine;
 }
 
 bool IsTexture(BuiltinFn f) {
-    return IsImageQuery(f) ||                                //
+    return f == BuiltinFn::kTextureDimensions ||             //
+           f == BuiltinFn::kTextureNumLayers ||              //
+           f == BuiltinFn::kTextureNumLevels ||              //
+           f == BuiltinFn::kTextureNumSamples ||             //
            f == BuiltinFn::kTextureGather ||                 //
            f == BuiltinFn::kTextureGatherCompare ||          //
            f == BuiltinFn::kTextureLoad ||                   //
@@ -1097,23 +1201,6 @@ bool IsTexture(BuiltinFn f) {
            f == BuiltinFn::kTextureStore || f == BuiltinFn::kInputAttachmentLoad;
 }
 
-bool IsImageQuery(BuiltinFn f) {
-    return f == BuiltinFn::kTextureDimensions || f == BuiltinFn::kTextureNumLayers ||
-           f == BuiltinFn::kTextureNumLevels || f == BuiltinFn::kTextureNumSamples;
-}
-
-bool IsDataPacking(BuiltinFn f) {
-    return f == BuiltinFn::kPack4X8Snorm || f == BuiltinFn::kPack4X8Unorm ||
-           f == BuiltinFn::kPack2X16Snorm || f == BuiltinFn::kPack2X16Unorm ||
-           f == BuiltinFn::kPack2X16Float;
-}
-
-bool IsDataUnpacking(BuiltinFn f) {
-    return f == BuiltinFn::kUnpack4X8Snorm || f == BuiltinFn::kUnpack4X8Unorm ||
-           f == BuiltinFn::kUnpack2X16Snorm || f == BuiltinFn::kUnpack2X16Unorm ||
-           f == BuiltinFn::kUnpack2X16Float;
-}
-
 bool IsBarrier(BuiltinFn f) {
     return f == BuiltinFn::kWorkgroupBarrier || f == BuiltinFn::kStorageBarrier ||
            f == BuiltinFn::kTextureBarrier;
@@ -1121,8 +1208,9 @@ bool IsBarrier(BuiltinFn f) {
 
 bool IsAtomic(BuiltinFn f) {
     return f == BuiltinFn::kAtomicLoad || f == BuiltinFn::kAtomicStore ||
-           f == BuiltinFn::kAtomicAdd || f == BuiltinFn::kAtomicSub || f == BuiltinFn::kAtomicMax ||
-           f == BuiltinFn::kAtomicMin || f == BuiltinFn::kAtomicAnd || f == BuiltinFn::kAtomicOr ||
+           f == BuiltinFn::kAtomicAdd || f == BuiltinFn::kAtomicSub ||
+           f == BuiltinFn::kAtomicMax || f == BuiltinFn::kAtomicMin ||
+           f == BuiltinFn::kAtomicAnd || f == BuiltinFn::kAtomicOr ||
            f == BuiltinFn::kAtomicXor || f == BuiltinFn::kAtomicExchange ||
            f == BuiltinFn::kAtomicCompareExchangeWeak;
 }
@@ -1173,54 +1261,25 @@ bool IsSubgroupMatrix(BuiltinFn f) {
         case BuiltinFn::kSubgroupMatrixStore:
         case BuiltinFn::kSubgroupMatrixMultiply:
         case BuiltinFn::kSubgroupMatrixMultiplyAccumulate:
+        case BuiltinFn::kSubgroupMatrixScalarAdd:
+        case BuiltinFn::kSubgroupMatrixScalarSubtract:
+        case BuiltinFn::kSubgroupMatrixScalarMultiply:
             return true;
         default:
             return false;
     }
 }
 
-bool IsQuadSwap(BuiltinFn f) {
+bool IsResourceTable(BuiltinFn f) {
     switch (f) {
-        case BuiltinFn::kQuadSwapX:
-        case BuiltinFn::kQuadSwapY:
-        case BuiltinFn::kQuadSwapDiagonal:
+        case BuiltinFn::kGetResource:
+        case BuiltinFn::kHasResource:
             return true;
         default:
             return false;
     }
-}
-
-bool HasSideEffects(BuiltinFn f) {
-    switch (f) {
-        case BuiltinFn::kAtomicAdd:
-        case BuiltinFn::kAtomicAnd:
-        case BuiltinFn::kAtomicCompareExchangeWeak:
-        case BuiltinFn::kAtomicExchange:
-        case BuiltinFn::kAtomicMax:
-        case BuiltinFn::kAtomicMin:
-        case BuiltinFn::kAtomicOr:
-        case BuiltinFn::kAtomicStore:
-        case BuiltinFn::kAtomicSub:
-        case BuiltinFn::kAtomicXor:
-        case BuiltinFn::kDpdx:
-        case BuiltinFn::kDpdxCoarse:
-        case BuiltinFn::kDpdxFine:
-        case BuiltinFn::kDpdy:
-        case BuiltinFn::kDpdyCoarse:
-        case BuiltinFn::kDpdyFine:
-        case BuiltinFn::kFwidth:
-        case BuiltinFn::kFwidthCoarse:
-        case BuiltinFn::kFwidthFine:
-        case BuiltinFn::kTextureSample:
-        case BuiltinFn::kTextureSampleBias:
-        case BuiltinFn::kTextureSampleCompare:
-        case BuiltinFn::kTextureStore:
-        case BuiltinFn::kWorkgroupUniformLoad:
-            return true;
-        default:
-            break;
-    }
-    return false;
 }
 
 }  // namespace tint::wgsl
+
+// clang-format on

@@ -46,11 +46,11 @@ tint_add_target(tint_cmd_bench_msl_bench bench
 
 tint_target_add_dependencies(tint_cmd_bench_msl_bench bench
   tint_api_common
+  tint_api_helpers
   tint_lang_core
   tint_lang_core_constant
   tint_lang_core_ir
   tint_lang_core_type
-  tint_lang_msl_ir_transform
   tint_lang_wgsl
   tint_lang_wgsl_ast
   tint_lang_wgsl_program
@@ -76,7 +76,6 @@ if(TINT_BUILD_MSL_WRITER)
   tint_target_add_dependencies(tint_cmd_bench_msl_bench bench
     tint_lang_msl_writer
     tint_lang_msl_writer_common
-    tint_lang_msl_writer_helpers
   )
 endif(TINT_BUILD_MSL_WRITER)
 

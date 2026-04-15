@@ -34,6 +34,8 @@
 //                       Do not modify this file directly
 ////////////////////////////////////////////////////////////////////////////////
 
+// clang-format off
+
 #include <string>
 
 #include "gtest/gtest.h"
@@ -78,12 +80,8 @@ TEST_P(CoreDiagnosticRuleParseTest, Parse) {
     EXPECT_EQ(expect, ParseCoreDiagnosticRule(string));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidCoreDiagnosticRuleCases,
-                         CoreDiagnosticRuleParseTest,
-                         testing::ValuesIn(kValidCoreDiagnosticRuleCases));
-INSTANTIATE_TEST_SUITE_P(InvalidCoreDiagnosticRuleCases,
-                         CoreDiagnosticRuleParseTest,
-                         testing::ValuesIn(kInvalidCoreDiagnosticRuleCases));
+INSTANTIATE_TEST_SUITE_P(ValidCoreDiagnosticRuleCases, CoreDiagnosticRuleParseTest, testing::ValuesIn(kValidCoreDiagnosticRuleCases));
+INSTANTIATE_TEST_SUITE_P(InvalidCoreDiagnosticRuleCases, CoreDiagnosticRuleParseTest, testing::ValuesIn(kInvalidCoreDiagnosticRuleCases));
 
 using CoreDiagnosticRulePrintTest = testing::TestWithParam<CoreDiagnosticRuleCase>;
 
@@ -93,9 +91,7 @@ TEST_P(CoreDiagnosticRulePrintTest, Print) {
     EXPECT_EQ(expect, ToString(value));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidCoreDiagnosticRuleCases,
-                         CoreDiagnosticRulePrintTest,
-                         testing::ValuesIn(kValidCoreDiagnosticRuleCases));
+INSTANTIATE_TEST_SUITE_P(ValidCoreDiagnosticRuleCases, CoreDiagnosticRulePrintTest, testing::ValuesIn(kValidCoreDiagnosticRuleCases));
 
 }  // namespace parse_print_tests
 }  // namespace core_diagnostic_rule_tests
@@ -134,12 +130,8 @@ TEST_P(ChromiumDiagnosticRuleParseTest, Parse) {
     EXPECT_EQ(expect, ParseChromiumDiagnosticRule(string));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidChromiumDiagnosticRuleCases,
-                         ChromiumDiagnosticRuleParseTest,
-                         testing::ValuesIn(kValidChromiumDiagnosticRuleCases));
-INSTANTIATE_TEST_SUITE_P(InvalidChromiumDiagnosticRuleCases,
-                         ChromiumDiagnosticRuleParseTest,
-                         testing::ValuesIn(kInvalidChromiumDiagnosticRuleCases));
+INSTANTIATE_TEST_SUITE_P(ValidChromiumDiagnosticRuleCases, ChromiumDiagnosticRuleParseTest, testing::ValuesIn(kValidChromiumDiagnosticRuleCases));
+INSTANTIATE_TEST_SUITE_P(InvalidChromiumDiagnosticRuleCases, ChromiumDiagnosticRuleParseTest, testing::ValuesIn(kInvalidChromiumDiagnosticRuleCases));
 
 using ChromiumDiagnosticRulePrintTest = testing::TestWithParam<ChromiumDiagnosticRuleCase>;
 
@@ -149,9 +141,7 @@ TEST_P(ChromiumDiagnosticRulePrintTest, Print) {
     EXPECT_EQ(expect, ToString(value));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidChromiumDiagnosticRuleCases,
-                         ChromiumDiagnosticRulePrintTest,
-                         testing::ValuesIn(kValidChromiumDiagnosticRuleCases));
+INSTANTIATE_TEST_SUITE_P(ValidChromiumDiagnosticRuleCases, ChromiumDiagnosticRulePrintTest, testing::ValuesIn(kValidChromiumDiagnosticRuleCases));
 
 }  // namespace parse_print_tests
 }  // namespace chromium_diagnostic_rule_tests
@@ -176,12 +166,18 @@ static constexpr DiagnosticSeverityCase kValidDiagnosticSeverityCases[] = {
 };
 
 static constexpr DiagnosticSeverityCase kInvalidDiagnosticSeverityCases[] = {
-    {"eggor", DiagnosticSeverity::kUndefined},  {"VoX", DiagnosticSeverity::kUndefined},
-    {"erro3", DiagnosticSeverity::kUndefined},  {"infE", DiagnosticSeverity::kUndefined},
-    {"TTPfo", DiagnosticSeverity::kUndefined},  {"xxnfo", DiagnosticSeverity::kUndefined},
-    {"44ff", DiagnosticSeverity::kUndefined},   {"oSVVf", DiagnosticSeverity::kUndefined},
-    {"RR2", DiagnosticSeverity::kUndefined},    {"wFni9g", DiagnosticSeverity::kUndefined},
-    {"waring", DiagnosticSeverity::kUndefined}, {"VOORRHng", DiagnosticSeverity::kUndefined},
+    {"eggor", DiagnosticSeverity::kUndefined},
+    {"VoX", DiagnosticSeverity::kUndefined},
+    {"erro3", DiagnosticSeverity::kUndefined},
+    {"infE", DiagnosticSeverity::kUndefined},
+    {"TTPfo", DiagnosticSeverity::kUndefined},
+    {"xxnfo", DiagnosticSeverity::kUndefined},
+    {"44ff", DiagnosticSeverity::kUndefined},
+    {"oSVVf", DiagnosticSeverity::kUndefined},
+    {"RR2", DiagnosticSeverity::kUndefined},
+    {"wFni9g", DiagnosticSeverity::kUndefined},
+    {"waring", DiagnosticSeverity::kUndefined},
+    {"VOORRHng", DiagnosticSeverity::kUndefined},
 };
 
 using DiagnosticSeverityParseTest = testing::TestWithParam<DiagnosticSeverityCase>;
@@ -192,12 +188,8 @@ TEST_P(DiagnosticSeverityParseTest, Parse) {
     EXPECT_EQ(expect, ParseDiagnosticSeverity(string));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidDiagnosticSeverityCases,
-                         DiagnosticSeverityParseTest,
-                         testing::ValuesIn(kValidDiagnosticSeverityCases));
-INSTANTIATE_TEST_SUITE_P(InvalidDiagnosticSeverityCases,
-                         DiagnosticSeverityParseTest,
-                         testing::ValuesIn(kInvalidDiagnosticSeverityCases));
+INSTANTIATE_TEST_SUITE_P(ValidDiagnosticSeverityCases, DiagnosticSeverityParseTest, testing::ValuesIn(kValidDiagnosticSeverityCases));
+INSTANTIATE_TEST_SUITE_P(InvalidDiagnosticSeverityCases, DiagnosticSeverityParseTest, testing::ValuesIn(kInvalidDiagnosticSeverityCases));
 
 using DiagnosticSeverityPrintTest = testing::TestWithParam<DiagnosticSeverityCase>;
 
@@ -207,9 +199,7 @@ TEST_P(DiagnosticSeverityPrintTest, Print) {
     EXPECT_EQ(expect, ToString(value));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidDiagnosticSeverityCases,
-                         DiagnosticSeverityPrintTest,
-                         testing::ValuesIn(kValidDiagnosticSeverityCases));
+INSTANTIATE_TEST_SUITE_P(ValidDiagnosticSeverityCases, DiagnosticSeverityPrintTest, testing::ValuesIn(kValidDiagnosticSeverityCases));
 
 }  // namespace parse_print_tests
 }  // namespace diagnostic_severity_tests
@@ -226,46 +216,47 @@ inline std::ostream& operator<<(std::ostream& out, ExtensionCase c) {
 }
 
 static constexpr ExtensionCase kValidExtensionCases[] = {
+    {"atomic_vec2u_min_max", Extension::kAtomicVec2UMinMax},
     {"chromium_disable_uniformity_analysis", Extension::kChromiumDisableUniformityAnalysis},
     {"chromium_experimental_barycentric_coord", Extension::kChromiumExperimentalBarycentricCoord},
     {"chromium_experimental_framebuffer_fetch", Extension::kChromiumExperimentalFramebufferFetch},
-    {"chromium_experimental_immediate", Extension::kChromiumExperimentalImmediate},
     {"chromium_experimental_pixel_local", Extension::kChromiumExperimentalPixelLocal},
-    {"chromium_experimental_primitive_id", Extension::kChromiumExperimentalPrimitiveId},
+    {"chromium_experimental_resource_table", Extension::kChromiumExperimentalResourceTable},
     {"chromium_experimental_subgroup_matrix", Extension::kChromiumExperimentalSubgroupMatrix},
-    {"chromium_internal_graphite", Extension::kChromiumInternalGraphite},
+    {"chromium_experimental_subgroup_size_control", Extension::kChromiumExperimentalSubgroupSizeControl},
     {"chromium_internal_input_attachments", Extension::kChromiumInternalInputAttachments},
     {"clip_distances", Extension::kClipDistances},
     {"dual_source_blending", Extension::kDualSourceBlending},
     {"f16", Extension::kF16},
+    {"primitive_index", Extension::kPrimitiveIndex},
     {"subgroups", Extension::kSubgroups},
 };
 
 static constexpr ExtensionCase kInvalidExtensionCases[] = {
-    {"chromium_disable_ynifority_analysis", Extension::kUndefined},
-    {"c77nromium_disable_rrniformity_analysGll", Extension::kUndefined},
-    {"chromium_disable_uniform00ty_4nalysis", Extension::kUndefined},
-    {"chomium_experiooetal_barcentric_coord", Extension::kUndefined},
-    {"chromium_experimentl_barycentzzc_coord", Extension::kUndefined},
-    {"chromium_expperimental1barycentric_coori", Extension::kUndefined},
-    {"chXXomium_experimental_framebuffer_fetch", Extension::kUndefined},
-    {"chr99mi55m_experiIIennnal_framebuffer_fetch", Extension::kUndefined},
-    {"chromiumSSerrperimenaaal_fraHHebuffer_fetYh", Extension::kUndefined},
-    {"chkkomium_eperimntal_immediat", Extension::kUndefined},
-    {"jhromium_experRmental_immeigte", Extension::kUndefined},
-    {"chromiubexperiental_immediate", Extension::kUndefined},
+    {"atomic_vyc2u_mi_max", Extension::kUndefined},
+    {"atomrrlln_vec2u_min_mG77", Extension::kUndefined},
+    {"atom00c_vec2u_mi4_max", Extension::kUndefined},
+    {"chromoou_disable_uniority_analysis", Extension::kUndefined},
+    {"chromium_disableuifzzrmity_analysis", Extension::kUndefined},
+    {"chromim_dippable_uniiform11ty_aalysis", Extension::kUndefined},
+    {"chXXomium_experimental_barycentric_coord", Extension::kUndefined},
+    {"chr99mi55m_experiIIennnal_barycentric_coord", Extension::kUndefined},
+    {"chromiumSSerrperimenaaal_barHHcentric_cooYd", Extension::kUndefined},
+    {"chromum_xperimentalframebuffHrkkfetch", Extension::kUndefined},
+    {"chrojium_xRReimental_frgmebuffer_fetch", Extension::kUndefined},
+    {"hromium_experimental_ramebbffer_fetch", Extension::kUndefined},
     {"chromium_experimentjl_pixel_local", Extension::kUndefined},
     {"chroium_experimental_pixel_local", Extension::kUndefined},
     {"cromium_qxperimental_pixl_local", Extension::kUndefined},
-    {"chromium_experimental_priNNitiv_id", Extension::kUndefined},
-    {"chroim_expvvrimental_primitive_id", Extension::kUndefined},
-    {"chromium_experimental_pQQimitie_id", Extension::kUndefined},
+    {"chromium_experimetal_resource_NNable", Extension::kUndefined},
+    {"chrvvmium_experimentl_resource_tble", Extension::kUndefined},
+    {"chromium_experiental_resource_taQQle", Extension::kUndefined},
     {"hromium_exprimertal_subgroup_ffatrix", Extension::kUndefined},
     {"chromium_ejperimental_subgroup_matrix", Extension::kUndefined},
     {"chromium_expewim8n2al_subgroupNNmatrix", Extension::kUndefined},
-    {"chromium_internl_graphite", Extension::kUndefined},
-    {"chromium_irrternal_graphite", Extension::kUndefined},
-    {"cGromium_internal_graphite", Extension::kUndefined},
+    {"chromium_experimental_sbgroup_size_control", Extension::kUndefined},
+    {"chromium_experimental_subgroup_size_conrrrol", Extension::kUndefined},
+    {"chromium_expGrimental_subgroup_size_control", Extension::kUndefined},
     {"chromium_internal_input_attFFchments", Extension::kUndefined},
     {"chromium_iEteral_input_attahment", Extension::kUndefined},
     {"chrmium_internal_inprrt_attachments", Extension::kUndefined},
@@ -278,9 +269,12 @@ static constexpr ExtensionCase kInvalidExtensionCases[] = {
     {"c16", Extension::kUndefined},
     {"fO6", Extension::kUndefined},
     {"_KKttvv", Extension::kUndefined},
-    {"xubgro5p8", Extension::kUndefined},
-    {"suFq__ups", Extension::kUndefined},
-    {"sqqgroups", Extension::kUndefined},
+    {"pr8mitive_nxxex", Extension::kUndefined},
+    {"primitveFqqd__x", Extension::kUndefined},
+    {"priitive_indeqq", Extension::kUndefined},
+    {"subgr6u33O", Extension::kUndefined},
+    {"s96grQttupoo", Extension::kUndefined},
+    {"sugro66ps", Extension::kUndefined},
 };
 
 using ExtensionParseTest = testing::TestWithParam<ExtensionCase>;
@@ -291,12 +285,8 @@ TEST_P(ExtensionParseTest, Parse) {
     EXPECT_EQ(expect, ParseExtension(string));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidExtensionCases,
-                         ExtensionParseTest,
-                         testing::ValuesIn(kValidExtensionCases));
-INSTANTIATE_TEST_SUITE_P(InvalidExtensionCases,
-                         ExtensionParseTest,
-                         testing::ValuesIn(kInvalidExtensionCases));
+INSTANTIATE_TEST_SUITE_P(ValidExtensionCases, ExtensionParseTest, testing::ValuesIn(kValidExtensionCases));
+INSTANTIATE_TEST_SUITE_P(InvalidExtensionCases, ExtensionParseTest, testing::ValuesIn(kInvalidExtensionCases));
 
 using ExtensionPrintTest = testing::TestWithParam<ExtensionCase>;
 
@@ -306,9 +296,7 @@ TEST_P(ExtensionPrintTest, Print) {
     EXPECT_EQ(expect, ToString(value));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidExtensionCases,
-                         ExtensionPrintTest,
-                         testing::ValuesIn(kValidExtensionCases));
+INSTANTIATE_TEST_SUITE_P(ValidExtensionCases, ExtensionPrintTest, testing::ValuesIn(kValidExtensionCases));
 
 }  // namespace parse_print_tests
 
@@ -324,59 +312,101 @@ inline std::ostream& operator<<(std::ostream& out, LanguageFeatureCase c) {
 }
 
 static constexpr LanguageFeatureCase kValidLanguageFeatureCases[] = {
+    {"buffer_view", LanguageFeature::kBufferView},
     {"chromium_print", LanguageFeature::kChromiumPrint},
     {"chromium_testing_experimental", LanguageFeature::kChromiumTestingExperimental},
     {"chromium_testing_shipped", LanguageFeature::kChromiumTestingShipped},
-    {"chromium_testing_shipped_with_killswitch",
-     LanguageFeature::kChromiumTestingShippedWithKillswitch},
+    {"chromium_testing_shipped_with_killswitch", LanguageFeature::kChromiumTestingShippedWithKillswitch},
     {"chromium_testing_unimplemented", LanguageFeature::kChromiumTestingUnimplemented},
     {"chromium_testing_unsafe_experimental", LanguageFeature::kChromiumTestingUnsafeExperimental},
+    {"filtering_parameters", LanguageFeature::kFilteringParameters},
+    {"fragment_depth", LanguageFeature::kFragmentDepth},
+    {"immediate_address_space", LanguageFeature::kImmediateAddressSpace},
+    {"linear_indexing", LanguageFeature::kLinearIndexing},
     {"packed_4x8_integer_dot_product", LanguageFeature::kPacked4X8IntegerDotProduct},
     {"pointer_composite_access", LanguageFeature::kPointerCompositeAccess},
-    {"readonly_and_readwrite_storage_textures",
-     LanguageFeature::kReadonlyAndReadwriteStorageTextures},
+    {"readonly_and_readwrite_storage_textures", LanguageFeature::kReadonlyAndReadwriteStorageTextures},
     {"sized_binding_array", LanguageFeature::kSizedBindingArray},
+    {"subgroup_id", LanguageFeature::kSubgroupId},
+    {"subgroup_uniformity", LanguageFeature::kSubgroupUniformity},
+    {"swizzle_assignment", LanguageFeature::kSwizzleAssignment},
     {"texel_buffers", LanguageFeature::kTexelBuffers},
+    {"texture_and_sampler_let", LanguageFeature::kTextureAndSamplerLet},
+    {"texture_formats_tier1", LanguageFeature::kTextureFormatsTier1},
+    {"uniform_buffer_standard_layout", LanguageFeature::kUniformBufferStandardLayout},
     {"unrestricted_pointer_parameters", LanguageFeature::kUnrestrictedPointerParameters},
 };
 
 static constexpr LanguageFeatureCase kInvalidLanguageFeatureCases[] = {
-    {"ch336miumOprint", LanguageFeature::kUndefined},
-    {"chrom9oomttQQr6nt", LanguageFeature::kUndefined},
-    {"chom66um_print", LanguageFeature::kUndefined},
-    {"chroOium_testingexperimxnzza66", LanguageFeature::kUndefined},
-    {"chromium_testyyng_experimental", LanguageFeature::kUndefined},
-    {"chromHHm_tesing_expZrimental", LanguageFeature::kUndefined},
-    {"cWWromium_testqg_shippe44", LanguageFeature::kUndefined},
-    {"chOOomium_testng_shipped", LanguageFeature::kUndefined},
-    {"hhromiYm_testng_shipped", LanguageFeature::kUndefined},
-    {"chomium_testing_shipped_with_kilwitch", LanguageFeature::kUndefined},
-    {"chomium_testing_shiFped_with_killswitch", LanguageFeature::kUndefined},
-    {"chromium_testing_shippe_wiwh_killswitch", LanguageFeature::kUndefined},
-    {"chomium_esting_unimpGffmented", LanguageFeature::kUndefined},
-    {"chqomium_testinKK_unimplemented", LanguageFeature::kUndefined},
-    {"cFromiumm_testing_unimplemented", LanguageFeature::kUndefined},
-    {"chromium_testing_unsafe_xperimental", LanguageFeature::kUndefined},
-    {"chromium_testing_unsae_experqmental", LanguageFeature::kUndefined},
-    {"chromium_tbbsing_unsafe_experimental", LanguageFeature::kUndefined},
-    {"packeii4x8_integer_dot_prduct", LanguageFeature::kUndefined},
-    {"packed_4OO8_inqegr_dot_product", LanguageFeature::kUndefined},
-    {"packed_4x8_intvvger_dot_produTTt", LanguageFeature::kUndefined},
-    {"pointer_compositFF_access", LanguageFeature::kUndefined},
-    {"pfintPrc00mposite_acQess", LanguageFeature::kUndefined},
-    {"pointer_composPte_access", LanguageFeature::kUndefined},
-    {"re77donl_and_readwrite_storagss_textures", LanguageFeature::kUndefined},
-    {"reabbonly_aCRd_readwrite_storage_textures", LanguageFeature::kUndefined},
-    {"readonly_and_readwrite_XXtorage_textures", LanguageFeature::kUndefined},
-    {"qiCCedbinding_OOOrray", LanguageFeature::kUndefined},
-    {"sizud_binding_asay", LanguageFeature::kUndefined},
-    {"sizeX_binding_array", LanguageFeature::kUndefined},
-    {"txel_buffers", LanguageFeature::kUndefined},
-    {"exel_bufqqe", LanguageFeature::kUndefined},
-    {"tex22l_buffers", LanguageFeature::kUndefined},
-    {"uyrestriXXte0_pointerparazzeters", LanguageFeature::kUndefined},
-    {"unresticted_pointer_pVVramiterP", LanguageFeature::kUndefined},
-    {"unrestricted_pointeCpnnrameters", LanguageFeature::kUndefined},
+    {"bufxr66vieOz", LanguageFeature::kUndefined},
+    {"yyuffer_view", LanguageFeature::kUndefined},
+    {"uffeZZHiew", LanguageFeature::kUndefined},
+    {"cWW4romiuqprint", LanguageFeature::kUndefined},
+    {"chromium_rOOnt", LanguageFeature::kUndefined},
+    {"oohomYum_phnt", LanguageFeature::kUndefined},
+    {"chromium_testin_experienal", LanguageFeature::kUndefined},
+    {"chromium_tesFig_experimental", LanguageFeature::kUndefined},
+    {"chromium_testing_expewimentl", LanguageFeature::kUndefined},
+    {"chromiumtestinGKhippeff", LanguageFeature::kUndefined},
+    {"chrqKmium_testing_shipped", LanguageFeature::kUndefined},
+    {"cFromium_test3ng_shmmpped", LanguageFeature::kUndefined},
+    {"chromium_testing_shipped_wit_killswitch", LanguageFeature::kUndefined},
+    {"chromum_testing_shipqed_with_killswitch", LanguageFeature::kUndefined},
+    {"chromium_testing_shipped_with_killbbbtch", LanguageFeature::kUndefined},
+    {"chromiim_testing_unimplemnted", LanguageFeature::kUndefined},
+    {"chromiumOOtestqngunimplemented", LanguageFeature::kUndefined},
+    {"chromium_testivvg_unimplementTTd", LanguageFeature::kUndefined},
+    {"chroFFium_testing_unsafe_experimental", LanguageFeature::kUndefined},
+    {"chromiuftesting_uPsaQe_00xperimental", LanguageFeature::kUndefined},
+    {"chPomium_testing_unsafe_experimental", LanguageFeature::kUndefined},
+    {"fil77ering_paraseters", LanguageFeature::kUndefined},
+    {"filterbbng_parameCeRRs", LanguageFeature::kUndefined},
+    {"filXXering_parameters", LanguageFeature::kUndefined},
+    {"fragmqntdepCCOOO", LanguageFeature::kUndefined},
+    {"frasment_eutL", LanguageFeature::kUndefined},
+    {"fXagment_depth", LanguageFeature::kUndefined},
+    {"immediate_address_spac", LanguageFeature::kUndefined},
+    {"immeiaOe_areqqs_space", LanguageFeature::kUndefined},
+    {"immed22ate_address_space", LanguageFeature::kUndefined},
+    {"lynea_izzdex0XXg", LanguageFeature::kUndefined},
+    {"iinearVVndexinP", LanguageFeature::kUndefined},
+    {"linCar_indexing", LanguageFeature::kUndefined},
+    {"qqacked_x_integer_AAot_produHHt", LanguageFeature::kUndefined},
+    {"packed_4x8_iteger_dot_product", LanguageFeature::kUndefined},
+    {"pafKked_4_integer_dot_product", LanguageFeature::kUndefined},
+    {"pointer_ggompost_Pcless", LanguageFeature::kUndefined},
+    {"pointer_comosite_access", LanguageFeature::kUndefined},
+    {"pointeN_composctTT_a4cess", LanguageFeature::kUndefined},
+    {"readppnly_and_re77dwrlte_stoage_textures", LanguageFeature::kUndefined},
+    {"readonly_and_readgzzite_stoag_tNNxtures", LanguageFeature::kUndefined},
+    {"readonly_anbbuurXXdwrite_strage_textures", LanguageFeature::kUndefined},
+    {"ized_binding_array", LanguageFeature::kUndefined},
+    {"szeK_bin88ig_Qrray", LanguageFeature::kUndefined},
+    {"sized_b9nding_aqry", LanguageFeature::kUndefined},
+    {"su11group_id", LanguageFeature::kUndefined},
+    {"siibgr22p_id", LanguageFeature::kUndefined},
+    {"77bgroup_id", LanguageFeature::kUndefined},
+    {"subgroup_unifNNrmiy", LanguageFeature::kUndefined},
+    {"subgroup_uniformiVVy", LanguageFeature::kUndefined},
+    {"su11gWWoup_unFformwty", LanguageFeature::kUndefined},
+    {"swizle_assignmenww", LanguageFeature::kUndefined},
+    {"swizzle_asDignment", LanguageFeature::kUndefined},
+    {"Kwizzle_assignent", LanguageFeature::kUndefined},
+    {"texel_bhf11erPP", LanguageFeature::kUndefined},
+    {"texl_buffers", LanguageFeature::kUndefined},
+    {"texel_bYYffers", LanguageFeature::kUndefined},
+    {"textukke_aVd_satpler_lHH", LanguageFeature::kUndefined},
+    {"texturerrand_sampler_let", LanguageFeature::kUndefined},
+    {"teture_and_sampleWWs_let", LanguageFeature::kUndefined},
+    {"teYture_format_tier1", LanguageFeature::kUndefined},
+    {"tqture_Lormats_tief1", LanguageFeature::kUndefined},
+    {"texture_fvrmatf_tuu22r1", LanguageFeature::kUndefined},
+    {"uiorm_buffer_standard_layout", LanguageFeature::kUndefined},
+    {"unifrm_bufferYYtandard_layout", LanguageFeature::kUndefined},
+    {"uniformYYbufyer77standard_layoEt", LanguageFeature::kUndefined},
+    {"unrestrictood_pointe_paMamdters", LanguageFeature::kUndefined},
+    {"unrestricMMed_pointer_paameters", LanguageFeature::kUndefined},
+    {"unrestricted_poi55ter_parameters", LanguageFeature::kUndefined},
 };
 
 using LanguageFeatureParseTest = testing::TestWithParam<LanguageFeatureCase>;
@@ -387,12 +417,8 @@ TEST_P(LanguageFeatureParseTest, Parse) {
     EXPECT_EQ(expect, ParseLanguageFeature(string));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidLanguageFeatureCases,
-                         LanguageFeatureParseTest,
-                         testing::ValuesIn(kValidLanguageFeatureCases));
-INSTANTIATE_TEST_SUITE_P(InvalidLanguageFeatureCases,
-                         LanguageFeatureParseTest,
-                         testing::ValuesIn(kInvalidLanguageFeatureCases));
+INSTANTIATE_TEST_SUITE_P(ValidLanguageFeatureCases, LanguageFeatureParseTest, testing::ValuesIn(kValidLanguageFeatureCases));
+INSTANTIATE_TEST_SUITE_P(InvalidLanguageFeatureCases, LanguageFeatureParseTest, testing::ValuesIn(kInvalidLanguageFeatureCases));
 
 using LanguageFeaturePrintTest = testing::TestWithParam<LanguageFeatureCase>;
 
@@ -402,11 +428,11 @@ TEST_P(LanguageFeaturePrintTest, Print) {
     EXPECT_EQ(expect, ToString(value));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidLanguageFeatureCases,
-                         LanguageFeaturePrintTest,
-                         testing::ValuesIn(kValidLanguageFeatureCases));
+INSTANTIATE_TEST_SUITE_P(ValidLanguageFeatureCases, LanguageFeaturePrintTest, testing::ValuesIn(kValidLanguageFeatureCases));
 
 }  // namespace parse_print_tests
 
 }  // namespace
 }  // namespace tint::wgsl
+
+// clang-format on

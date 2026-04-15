@@ -23,7 +23,8 @@
 #include <windows.h>
 #else
 #include <fcntl.h>
-#if !defined(BENCHMARK_OS_FUCHSIA) && !defined(BENCHMARK_OS_QURT)
+#if !defined(BENCHMARK_OS_FUCHSIA) && !defined(BENCHMARK_OS_QURT) && \
+    !defined(BENCHMARK_OS_WASI)
 #include <sys/resource.h>
 #endif
 #include <sys/time.h>
@@ -84,7 +85,8 @@ double MakeTime(FILETIME const& kernel_time, FILETIME const& user_time) {
           static_cast<double>(user.QuadPart)) *
          1e-7;
 }
-#elif !defined(BENCHMARK_OS_FUCHSIA) && !defined(BENCHMARK_OS_QURT)
+#elif !defined(BENCHMARK_OS_FUCHSIA) && !defined(BENCHMARK_OS_QURT) && \
+    !defined(BENCHMARK_OS_WASI)
 double MakeTime(struct rusage const& ru) {
   return (static_cast<double>(ru.ru_utime.tv_sec) +
           static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 +
@@ -107,8 +109,9 @@ double MakeTime(struct timespec const& ts) {
 }
 #endif
 
-BENCHMARK_NORETURN static void DiagnoseAndExit(const char* msg) {
-  std::cerr << "ERROR: " << msg << std::endl;
+BENCHMARK_NORETURN void DiagnoseAndExit(const char* msg) {
+  std::cerr << "ERROR: " << msg << '\n';
+  std::flush(std::cerr);
   std::exit(EXIT_FAILURE);
 }
 
@@ -139,12 +142,21 @@ double ProcessCPUUsage() {
   // same as total time, but this is ok because there aren't long-latency
   // synchronous system calls in Emscripten.
   return emscripten_get_now() * 1e-3;
+#elif defined(BENCHMARK_OS_WASI)
+  // WASI lacks CLOCK_PROCESS_CPUTIME_ID and getrusage; use monotonic clock.
+  struct timespec ts {};
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+    return static_cast<double>(ts.tv_sec) +
+           (static_cast<double>(ts.tv_nsec) * 1e-9);
+  }
+  DiagnoseAndExit("clock_gettime(CLOCK_MONOTONIC, ...) failed");
 #elif defined(CLOCK_PROCESS_CPUTIME_ID) && !defined(BENCHMARK_OS_MACOSX)
   // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
   // See https://github.com/google/benchmark/pull/292
-  struct timespec spec;
-  if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &spec) == 0)
+  struct timespec spec {};
+  if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &spec) == 0) {
     return MakeTime(spec);
+  }
   DiagnoseAndExit("clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ...) failed");
 #else
   struct rusage ru;
@@ -193,13 +205,18 @@ double ThreadCPUUsage() {
 #elif defined(BENCHMARK_OS_ZOS)
   // z/OS doesn't support CLOCK_THREAD_CPUTIME_ID.
   return ProcessCPUUsage();
+#elif defined(BENCHMARK_OS_WASI)
+  // WASI doesn't support per-thread CPU timing; fall back to process time.
+  return ProcessCPUUsage();
 #elif defined(BENCHMARK_OS_SOLARIS)
   struct rusage ru;
   if (getrusage(RUSAGE_LWP, &ru) == 0) return MakeTime(ru);
   DiagnoseAndExit("getrusage(RUSAGE_LWP, ...) failed");
 #elif defined(CLOCK_THREAD_CPUTIME_ID)
-  struct timespec ts;
-  if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) return MakeTime(ts);
+  struct timespec ts {};
+  if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) {
+    return MakeTime(ts);
+  }
   DiagnoseAndExit("clock_gettime(CLOCK_THREAD_CPUTIME_ID, ...) failed");
 #else
 #error Per-thread timing is not available on your system.
@@ -213,9 +230,9 @@ std::string LocalDateTimeString() {
   const std::size_t kTzOffsetLen = 6;
   const std::size_t kTimestampLen = 19;
 
-  std::size_t tz_len;
-  std::size_t timestamp_len;
-  long int offset_minutes;
+  std::size_t tz_len = 0;
+  std::size_t timestamp_len = 0;
+  long int offset_minutes = 0;
   char tz_offset_sign = '+';
   // tz_offset is set in one of three ways:
   // * strftime with %z - This either returns empty or the ISO 8601 time.  The
@@ -235,7 +252,7 @@ std::string LocalDateTimeString() {
 #if defined(BENCHMARK_OS_WINDOWS)
   std::tm* timeinfo_p = ::localtime(&now);
 #else
-  std::tm timeinfo;
+  std::tm timeinfo{};
   std::tm* timeinfo_p = &timeinfo;
   ::localtime_r(&now, &timeinfo);
 #endif

@@ -41,6 +41,14 @@ target_link_libraries(vul_tests PRIVATE
     Vulkan::SafeStruct
 )
 
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(vul_tests PRIVATE -Werror -Wall -Wextra)
+endif()
+
+if(CMAKE_C_COMPILER_ID MATCHES "MSVC")
+    target_compile_options(vul_tests PRIVATE /W4 /WX)
+endif()
+
 # Test add_subdirectory suppport
 add_test(NAME integration.add_subdirectory
     COMMAND ${CMAKE_CTEST_COMMAND}

@@ -27,7 +27,15 @@
 
 #pragma once
 
-#include "test_util.h"
+#include <array>
+#include <filesystem>
+#include <mutex>
+#include <ostream>
+#include <unordered_map>
+
+#include "util/dispatchable_handle.h"
+#include "util/platform_wsi.h"
+#include "util/functions.h"
 
 #include "layer/layer_util.h"
 
@@ -70,6 +78,9 @@ inline std::ostream& operator<<(std::ostream& os, const InterfaceVersionCheck& r
     }
     return os << static_cast<uint32_t>(result);
 }
+
+using VulkanUUID = std::array<uint8_t, VK_UUID_SIZE>;
+
 // clang-format on
 
 // Move only type because it holds a DispatchableHandle<VkPhysicalDevice>
@@ -81,9 +92,11 @@ struct PhysicalDevice {
     DispatchableHandle<VkPhysicalDevice> vk_physical_device;
     BUILDER_VALUE(std::string, deviceName)
     BUILDER_VALUE(VulkanUUID, deviceUUID)
+    BUILDER_VALUE(VulkanUUID, driverUUID)
     BUILDER_VALUE(VkPhysicalDeviceProperties, properties)
     BUILDER_VALUE(VkPhysicalDeviceFeatures, features)
     BUILDER_VALUE(VkPhysicalDeviceMemoryProperties, memory_properties)
+    BUILDER_VALUE(VkPhysicalDeviceDriverProperties, driver_properties)
     BUILDER_VALUE(VkImageFormatProperties, image_format_properties)
     BUILDER_VALUE(VkExternalMemoryProperties, external_memory_properties)
     BUILDER_VALUE(VkExternalSemaphoreProperties, external_semaphore_properties)
@@ -121,6 +134,9 @@ struct PhysicalDevice {
 
     PhysicalDevice&& finish() { return std::move(*this); }
 
+    // Defines the order this physical device appears in vkEnumeratePhysicalDevices
+    uint32_t iteration_order = 0;
+
     // Objects created from this physical device
     std::vector<VkDevice> device_handles;
     std::vector<DeviceCreateInfo> device_create_infos;
@@ -140,8 +156,13 @@ struct PhysicalDevice {
 struct PhysicalDeviceGroup {
     PhysicalDeviceGroup() {}
     PhysicalDeviceGroup(PhysicalDevice const& physical_device) { physical_device_handles.push_back(&physical_device); }
+    PhysicalDeviceGroup(PhysicalDevice const* physical_device) { physical_device_handles.push_back(physical_device); }
     PhysicalDeviceGroup(std::vector<PhysicalDevice*> const& physical_devices) {
         physical_device_handles.insert(physical_device_handles.end(), physical_devices.begin(), physical_devices.end());
+    }
+    PhysicalDeviceGroup& use_physical_device(PhysicalDevice const* physical_device) {
+        physical_device_handles.push_back(physical_device);
+        return *this;
     }
     PhysicalDeviceGroup& use_physical_device(PhysicalDevice const& physical_device) {
         physical_device_handles.push_back(&physical_device);
@@ -153,6 +174,7 @@ struct PhysicalDeviceGroup {
 };
 
 struct TestICD {
+    std::recursive_mutex mutex;
     std::filesystem::path manifest_file_path;
 
     BUILDER_VALUE_WITH_DEFAULT(bool, exposes_vk_icdNegotiateLoaderICDInterfaceVersion, true)
@@ -188,7 +210,31 @@ struct TestICD {
     BUILDER_VECTOR(Extension, instance_extensions, instance_extension)
     std::vector<Extension> enabled_instance_extensions;
 
-    BUILDER_VECTOR_MOVE_ONLY(PhysicalDevice, physical_devices, physical_device);
+    std::unordered_map<VkPhysicalDevice, PhysicalDevice> physical_devices;
+    TestICD& add_physical_device(PhysicalDevice&& physical_device) {
+        physical_device.iteration_order = physical_devices.size();
+        physical_devices.emplace(physical_device.vk_physical_device.handle, std::move(physical_device));
+        return *this;
+    }
+
+    PhysicalDevice& add_and_get_physical_device(PhysicalDevice&& physical_device) {
+        VkPhysicalDevice pd = physical_device.vk_physical_device.handle;
+        physical_device.iteration_order = physical_devices.size();
+        physical_devices.emplace(physical_device.vk_physical_device.handle, std::move(physical_device));
+        return physical_devices.at(pd);
+    }
+
+    PhysicalDevice& add_physical_device_at_index(size_t index, PhysicalDevice&& physical_device) {
+        VkPhysicalDevice pd = physical_device.vk_physical_device.handle;
+        physical_device.iteration_order = index;
+        for (auto& [handle, phys_dev] : physical_devices) {
+            if (phys_dev.iteration_order >= index) {
+                phys_dev.iteration_order++;
+            }
+        }
+        physical_devices.emplace(physical_device.vk_physical_device.handle, std::move(physical_device));
+        return physical_devices.at(pd);
+    }
 
     BUILDER_VECTOR(PhysicalDeviceGroup, physical_device_groups, physical_device_group);
 
@@ -227,6 +273,10 @@ struct TestICD {
         for (auto& ext : instance_extensions) info.enabled_extensions.push_back(ext.extensionName.data());
         return info;
     }
+
+    // Speedup looking for physical devices by not having to iterate through the entire physical_device map to find a particular
+    // physical device
+    std::unordered_map<VkDevice, VkPhysicalDevice> device_to_physical_device_map;
 
 #if defined(WIN32)
     BUILDER_VALUE(LUID, adapterLUID)

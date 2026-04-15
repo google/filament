@@ -1,15 +1,18 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 licenses(["notice"])
 
 COPTS = [
     "-pedantic",
     "-pedantic-errors",
-    "-std=c++14",
+    "-std=c++17",
     "-Wall",
     "-Wconversion",
     "-Wextra",
     "-Wshadow",
     #    "-Wshorten-64-to-32",
     "-Wfloat-equal",
+    "-Wformat=2",
     "-fstrict-aliasing",
     ## assert() are used a lot in tests upstream, which may be optimised out leading to
     ## unused-variable warning.
@@ -17,28 +20,14 @@ COPTS = [
     "-Werror=old-style-cast",
 ]
 
-config_setting(
-    name = "qnx",
-    constraint_values = ["@platforms//os:qnx"],
-    values = {
-        "cpu": "x64_qnx",
-    },
-    visibility = [":__subpackages__"],
-)
+MSVC_COPTS = [
+    "/std:c++17",
+]
 
 config_setting(
     name = "windows",
     constraint_values = ["@platforms//os:windows"],
-    values = {
-        "cpu": "x64_windows",
-    },
     visibility = [":__subpackages__"],
-)
-
-config_setting(
-    name = "macos",
-    constraint_values = ["@platforms//os:macos"],
-    visibility = ["//visibility:public"],
 )
 
 config_setting(
@@ -60,10 +49,21 @@ cc_library(
     ),
     hdrs = [
         "include/benchmark/benchmark.h",
+        "include/benchmark/benchmark_api.h",
+        "include/benchmark/counter.h",
         "include/benchmark/export.h",
+        "include/benchmark/macros.h",
+        "include/benchmark/managers.h",
+        "include/benchmark/registration.h",
+        "include/benchmark/reporter.h",
+        "include/benchmark/state.h",
+        "include/benchmark/statistics.h",
+        "include/benchmark/sysinfo.h",
+        "include/benchmark/types.h",
+        "include/benchmark/utils.h",
     ],
     copts = select({
-        ":windows": [],
+        ":windows": MSVC_COPTS,
         "//conditions:default": COPTS,
     }),
     defines = [
@@ -100,7 +100,18 @@ cc_library(
     srcs = ["src/benchmark_main.cc"],
     hdrs = [
         "include/benchmark/benchmark.h",
+        "include/benchmark/benchmark_api.h",
+        "include/benchmark/counter.h",
         "include/benchmark/export.h",
+        "include/benchmark/macros.h",
+        "include/benchmark/managers.h",
+        "include/benchmark/registration.h",
+        "include/benchmark/reporter.h",
+        "include/benchmark/state.h",
+        "include/benchmark/statistics.h",
+        "include/benchmark/sysinfo.h",
+        "include/benchmark/types.h",
+        "include/benchmark/utils.h",
     ],
     includes = ["include"],
     visibility = ["//visibility:public"],

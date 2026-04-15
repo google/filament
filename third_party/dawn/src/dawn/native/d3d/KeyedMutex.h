@@ -31,6 +31,7 @@
 #include "dawn/common/RefCounted.h"
 #include "dawn/native/Error.h"
 #include "dawn/native/d3d/d3d_platform.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native::d3d {
 
@@ -45,7 +46,7 @@ class KeyedMutex : public RefCounted {
     void ReleaseKeyedMutex();
 
   private:
-    Device* const mDevice;
+    raw_ptr<Device> const mDevice;
     ComPtr<IDXGIKeyedMutex> mDXGIKeyedMutex;
 };
 

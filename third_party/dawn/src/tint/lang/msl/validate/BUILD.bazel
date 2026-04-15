@@ -50,9 +50,14 @@ cc_library(
     "validate.h",
   ],
   deps = [
+    "//src/tint/utils",
     "//src/tint/utils/command",
     "//src/tint/utils/file",
+    "//src/tint/utils/ice",
+    "//src/tint/utils/macros",
+    "//src/tint/utils/rtti",
     "//src/tint/utils/text",
+    "//src/utils",
   ] + select({
     ":tint_build_is_mac": [
       

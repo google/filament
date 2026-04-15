@@ -30,21 +30,19 @@
 #include <utility>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::ForLoopStatement);
 
 namespace tint::ast {
 
-ForLoopStatement::ForLoopStatement(GenerationID pid,
-                                   NodeID nid,
+ForLoopStatement::ForLoopStatement(NodeID nid,
                                    const Source& src,
                                    const Statement* init,
                                    const Expression* cond,
                                    const Statement* cont,
                                    const BlockStatement* b,
                                    VectorRef<const ast::Attribute*> attrs)
-    : Base(pid, nid, src),
+    : Base(nid, src),
       initializer(init),
       condition(cond),
       continuing(cont),
@@ -52,28 +50,11 @@ ForLoopStatement::ForLoopStatement(GenerationID pid,
       attributes(std::move(attrs)) {
     TINT_ASSERT(body);
 
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(initializer, generation_id);
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(condition, generation_id);
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(continuing, generation_id);
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(body, generation_id);
     for (auto* attr : attributes) {
         TINT_ASSERT(attr);
-        TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(attr, generation_id);
     }
 }
 
 ForLoopStatement::~ForLoopStatement() = default;
-
-const ForLoopStatement* ForLoopStatement::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-
-    auto* init = ctx.Clone(initializer);
-    auto* cond = ctx.Clone(condition);
-    auto* cont = ctx.Clone(continuing);
-    auto* b = ctx.Clone(body);
-    auto attrs = ctx.Clone(attributes);
-    return ctx.dst->create<ForLoopStatement>(src, init, cond, cont, b, std::move(attrs));
-}
 
 }  // namespace tint::ast

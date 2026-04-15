@@ -28,7 +28,6 @@
 #include <array>
 
 #include "dawn/tests/DawnTest.h"
-
 #include "dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
@@ -165,7 +164,8 @@ DAWN_INSTANTIATE_TEST(ComputeCopyStorageBufferTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

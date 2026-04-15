@@ -27,10 +27,11 @@
 
 // GEN_BUILD:CONDITION(tint_build_is_win)
 
-#include "src/tint/utils/system/env.h"
-
 #include <stdlib.h>
+
 #include <string_view>
+
+#include "src/tint/utils/system/env.h"
 
 namespace tint {
 #ifdef __GNUC__

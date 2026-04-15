@@ -35,6 +35,7 @@ def CheckedJoin(output, path):
 
 
 class FileEntry(object):
+
     def __init__(self, path, mode, fileobj):
         self.path = path
         self.mode = mode
@@ -42,6 +43,7 @@ class FileEntry(object):
 
 
 class SymlinkEntry(object):
+
     def __init__(self, path, mode, target):
         self.path = path
         self.mode = mode

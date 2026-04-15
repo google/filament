@@ -30,29 +30,20 @@
 #include <string>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::InputAttachmentIndexAttribute);
 
 namespace tint::ast {
 
-InputAttachmentIndexAttribute::InputAttachmentIndexAttribute(GenerationID pid,
-                                                             NodeID nid,
+InputAttachmentIndexAttribute::InputAttachmentIndexAttribute(NodeID nid,
                                                              const Source& src,
                                                              const Expression* exp)
-    : Base(pid, nid, src), expr(exp) {}
+    : Base(nid, src), expr(exp) {}
 
 InputAttachmentIndexAttribute::~InputAttachmentIndexAttribute() = default;
 
 std::string InputAttachmentIndexAttribute::Name() const {
     return "input_attachment_index";
-}
-
-const InputAttachmentIndexAttribute* InputAttachmentIndexAttribute::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto* expr_ = ctx.Clone(expr);
-    return ctx.dst->create<InputAttachmentIndexAttribute>(src, expr_);
 }
 
 }  // namespace tint::ast

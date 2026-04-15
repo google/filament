@@ -40,6 +40,7 @@ import (
 	"dawn.googlesource.com/dawn/tools/src/cts/expectations"
 	"dawn.googlesource.com/dawn/tools/src/cts/query"
 	"dawn.googlesource.com/dawn/tools/src/cts/result"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"go.chromium.org/luci/auth/client/authcli"
 )
 
@@ -86,8 +87,8 @@ func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, e
 	return nil, nil
 }
 
-func loadTestList(path string) ([]query.Query, error) {
-	data, err := os.ReadFile(path)
+func loadTestList(path string, fsReader oswrapper.FilesystemReader) ([]query.Query, error) {
+	data, err := fsReader.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test list: %w", err)
 	}
@@ -99,8 +100,6 @@ func loadTestList(path string) ([]query.Query, error) {
 	return out, nil
 }
 
-// TODO(crbug.com/344014313): Add unittests once expectations.Load() and
-// expectations.Save() use dependency injection.
 func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	if len(c.flags.expectations) == 0 {
 		c.flags.expectations = common.DefaultExpectationsPaths(cfg.OsWrapper)
@@ -126,7 +125,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	}
 
 	log.Println("loading test list...")
-	testlist, err := loadTestList(common.DefaultTestListPath(cfg.OsWrapper))
+	testlist, err := loadTestList(common.DefaultTestListPath(cfg.OsWrapper), cfg.OsWrapper)
 	if err != nil {
 		return err
 	}
@@ -134,7 +133,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	for _, expectationsFilename := range c.flags.expectations {
 		// Load the expectations file
 		log.Printf("loading expectations %s...\n", expectationsFilename)
-		ex, err := expectations.Load(expectationsFilename)
+		ex, err := expectations.Load(expectationsFilename, cfg.OsWrapper)
 		if err != nil {
 			return err
 		}
@@ -165,7 +164,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 		diag.Print(os.Stdout, expectationsFilename)
 
 		// Save the updated expectations file
-		err = ex.Save(expectationsFilename)
+		err = ex.Save(expectationsFilename, cfg.OsWrapper)
 		if err != nil {
 			break
 		}

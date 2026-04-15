@@ -54,9 +54,6 @@ class IfStatement final : public Castable<IfStatement, CompoundStatement> {
     /// Destructor
     ~IfStatement() override;
 
-    /// @returns the AST node
-    const ast::IfStatement* Declaration() const;
-
     /// @returns the if-statement condition expression
     const ValueExpression* Condition() const { return condition_; }
 

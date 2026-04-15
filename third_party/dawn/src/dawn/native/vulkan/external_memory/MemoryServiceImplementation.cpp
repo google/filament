@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/native/vulkan/external_memory/MemoryServiceImplementation.h"
+
 #include "dawn/native/vulkan/DeviceVk.h"
 
 namespace dawn::native::vulkan::external_memory {
@@ -43,10 +44,6 @@ bool ServiceImplementation::RequiresDedicatedAllocation(const ExternalImageDescr
             return false;
 
         case NeedsDedicatedAllocation::Detect:
-            if (!mDevice->GetDeviceInfo().HasExt(DeviceExt::DedicatedAllocation)) {
-                return false;
-            }
-
             VkMemoryDedicatedRequirements dedicatedRequirements;
             dedicatedRequirements.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
             dedicatedRequirements.pNext = nullptr;

@@ -60,7 +60,8 @@ class BindGroupLayoutBase final : public ApiObjectBase {
     bool IsEmpty() const;
 
   protected:
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
+    void SetLabelImpl() override;
 
   private:
     BindGroupLayoutBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);

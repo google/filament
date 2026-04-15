@@ -35,6 +35,14 @@
 #include "dawn/common/Assert.h"
 #include "dawn/common/Platform.h"
 
+#if DAWN_PLATFORM_IS(WINDOWS)
+#include "partition_alloc/pointers/raw_ptr.h"
+#elif DAWN_PLATFORM_IS(POSIX)
+#include "partition_alloc/pointers/raw_ptr_exclusion.h"
+#else
+#error "Unsupported platform for DynamicLib"
+#endif
+
 namespace dawn {
 
 class DynamicLib {
@@ -57,6 +65,7 @@ class DynamicLib {
     bool Open(const std::string& filename,
               std::span<const std::string> searchPaths,
               std::string* error = nullptr);
+    bool OpenLoaded(const std::string& filename, std::string* error = nullptr);
     void Close();
 
     void* GetProc(const std::string& procName, std::string* error = nullptr) const;
@@ -71,7 +80,19 @@ class DynamicLib {
     }
 
   private:
-    void* mHandle = nullptr;
+#if DAWN_PLATFORM_IS(WINDOWS)
+    // This is an HMODULE (aka void*). It should point to real memory, so we can use raw_ptr:
+    // > A handle to a module. This is the base address of the module in memory.
+    raw_ptr<void> mHandle = nullptr;
+#elif DAWN_PLATFORM_IS(POSIX)
+    // On POSIX we use `dlopen`, which returns a "handle" which may not be a real pointer:
+    // > The value of this symbol table handle should not be interpreted in any way by the caller.
+    RAW_PTR_EXCLUSION void* mHandle = nullptr;
+#else
+#error "Unsupported platform for DynamicLib"
+#endif
+
+    bool mNeedsClose = false;
 };
 
 }  // namespace dawn

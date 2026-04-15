@@ -70,13 +70,6 @@ class FunctionParam : public Castable<FunctionParam, Value> {
     /// @returns the index of the parameter in the function's parameter list
     uint32_t Index() const { return index_; }
 
-    /// @returns the type of the var
-    const core::type::Type* Type() const override { return type_; }
-
-    /// Sets the type of the parameter to @p type
-    /// @param type the new type of the parameter
-    void SetType(const core::type::Type* type) { type_ = type; }
-
     /// @copydoc Value::Clone()
     FunctionParam* Clone(CloneContext& ctx) override;
 
@@ -148,7 +141,6 @@ class FunctionParam : public Castable<FunctionParam, Value> {
   private:
     ir::Function* func_ = nullptr;
     uint32_t index_ = 0xffffffff;
-    const core::type::Type* type_ = nullptr;
     IOAttributes attributes_;
 };
 

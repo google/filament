@@ -488,6 +488,7 @@ Result<T, E>::Result(std::unique_ptr<E> error) : mPayload(std::move(error)) {}
 
 template <typename T, typename E>
 Result<T, E>::~Result() {
+    // Happens if you ignore a result.
     DAWN_ASSERT(std::holds_alternative<std::monostate>(mPayload));
 }
 

@@ -55,9 +55,6 @@ class FunctionExpression : public Castable<FunctionExpression, Expression> {
     /// Destructor
     ~FunctionExpression() override;
 
-    /// @returns the AST node
-    const ast::IdentifierExpression* Declaration() const;
-
     /// @return the function that the expression resolved to
     const sem::Function* Function() const { return function_; }
 

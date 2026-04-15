@@ -86,13 +86,11 @@ class BlobCache {
     // that the cache key contains the dawn version string in it.
     bool ValidateCacheKey(const CacheKey& key);
 
-    // Protects thread safety of access to mCache.
-    std::mutex mMutex;
-    bool mHashValidation;
+    const bool mHashValidation;
     // TODO(https://crbug.com/dawn/2365): Convert these members to `raw_ptr`.
-    RAW_PTR_EXCLUSION WGPUDawnLoadCacheDataFunction mLoadFunction;
-    RAW_PTR_EXCLUSION WGPUDawnStoreCacheDataFunction mStoreFunction;
-    RAW_PTR_EXCLUSION void* mFunctionUserdata;
+    RAW_PTR_EXCLUSION const WGPUDawnLoadCacheDataFunction mLoadFunction;
+    RAW_PTR_EXCLUSION const WGPUDawnStoreCacheDataFunction mStoreFunction;
+    RAW_PTR_EXCLUSION void* const mFunctionUserdata;
 };
 
 }  // namespace dawn::native

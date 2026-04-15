@@ -77,6 +77,8 @@
   #define BENCHMARK_OS_NACL 1
 #elif defined(__EMSCRIPTEN__)
   #define BENCHMARK_OS_EMSCRIPTEN 1
+#elif defined(__wasi__)
+  #define BENCHMARK_OS_WASI 1
 #elif defined(__rtems__)
   #define BENCHMARK_OS_RTEMS 1
 #elif defined(__Fuchsia__)
@@ -104,6 +106,16 @@
   #define BENCHMARK_MAYBE_UNUSED __attribute__((unused))
 #else
   #define BENCHMARK_MAYBE_UNUSED
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define PRINTF_FORMAT_STRING_FUNC(format_arg, first_idx) \
+  __attribute__((format(printf, format_arg, first_idx)))
+#elif defined(__MINGW32__)
+#define PRINTF_FORMAT_STRING_FUNC(format_arg, first_idx) \
+  __attribute__((format(__MINGW_PRINTF_FORMAT, format_arg, first_idx)))
+#else
+#define PRINTF_FORMAT_STRING_FUNC(format_arg, first_idx)
 #endif
 
 // clang-format on

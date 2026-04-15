@@ -28,10 +28,10 @@
 #ifndef SRC_TINT_UTILS_TEXT_STRING_H_
 #define SRC_TINT_UTILS_TEXT_STRING_H_
 
+#include <span>
 #include <string>
 #include <variant>
 
-#include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/text/string_stream.h"
 #include "src/tint/utils/text/text_style.h"
@@ -42,35 +42,6 @@ class StyledText;
 }
 
 namespace tint {
-
-/// @param str the string to apply replacements to
-/// @param substr the string to search for
-/// @param replacement the replacement string to use instead of `substr`
-/// @returns `str` with all occurrences of `substr` replaced with `replacement`
-[[nodiscard]] inline std::string ReplaceAll(std::string str,
-                                            std::string_view substr,
-                                            std::string_view replacement) {
-    size_t pos = 0;
-    while ((pos = str.find(substr, pos)) != std::string_view::npos) {
-        str.replace(pos, substr.length(), replacement);
-        pos += replacement.length();
-    }
-    return str;
-}
-
-/// @copydoc ReplaceAll(std::string, std::string_view, std::string_view)
-[[nodiscard]] inline std::string ReplaceAll(std::string_view str,
-                                            std::string_view substr,
-                                            std::string_view replacement) {
-    return ReplaceAll(std::string(str), substr, replacement);
-}
-
-/// @copydoc ReplaceAll(std::string, std::string_view, std::string_view)
-[[nodiscard]] inline std::string ReplaceAll(const char* str,
-                                            std::string_view substr,
-                                            std::string_view replacement) {
-    return ReplaceAll(std::string(str), substr, replacement);
-}
 
 /// @param value the boolean value to be printed as a string
 /// @returns value printed as a string via the stream `<<` operator
@@ -96,20 +67,6 @@ std::string ToString(const std::variant<TYs...>& value) {
     return s.str();
 }
 
-/// @param str the input string
-/// @param prefix the prefix string
-/// @returns true iff @p str has the prefix @p prefix
-inline bool HasPrefix(std::string_view str, std::string_view prefix) {
-    return str.length() >= prefix.length() && str.substr(0, prefix.length()) == prefix;
-}
-
-/// @param str the input string
-/// @param suffix the suffix string
-/// @returns true iff @p str has the suffix @p suffix
-inline bool HasSuffix(std::string_view str, std::string_view suffix) {
-    return str.length() >= suffix.length() && str.substr(str.length() - suffix.length()) == suffix;
-}
-
 /// @param a the first string
 /// @param b the second string
 /// @returns the Levenshtein distance between @p a and @p b
@@ -131,7 +88,7 @@ struct SuggestAlternativeOptions {
 /// @param ss the stream to write the suggest and list of possible values to
 /// @param options options for the suggestion
 void SuggestAlternatives(std::string_view got,
-                         Slice<const std::string_view> strings,
+                         std::span<const std::string_view> strings,
                          StyledText& ss,
                          const SuggestAlternativeOptions& options = {});
 
@@ -160,44 +117,19 @@ std::string_view TrimRight(std::string_view str, PREDICATE&& pred) {
 }
 
 /// @param str the input string
-/// @param prefix the prefix to trim from @p str
-/// @return @p str with the prefix removed, if @p str has the prefix.
-inline std::string_view TrimPrefix(std::string_view str, std::string_view prefix) {
-    return HasPrefix(str, prefix) ? str.substr(prefix.length()) : str;
-}
-
-/// @param str the input string
 /// @param suffix the suffix to trim from @p str
 /// @return @p str with the suffix removed, if @p str has the suffix.
 inline std::string_view TrimSuffix(std::string_view str, std::string_view suffix) {
-    return HasSuffix(str, suffix) ? str.substr(0, str.length() - suffix.length()) : str;
-}
-
-/// @param str the input string
-/// @param pred the predicate function
-/// @return @p str with characters passing the predicate function @p pred removed from the start and
-/// end of the string.
-template <typename PREDICATE>
-std::string_view Trim(std::string_view str, PREDICATE&& pred) {
-    return TrimLeft(TrimRight(str, pred), pred);
-}
-
-/// @param c the character to test
-/// @returns true if @p c is one of the following:
-/// * space
-/// * form feed
-/// * line feed
-/// * carriage return
-/// * horizontal tab
-/// * vertical tab
-inline bool IsSpace(char c) {
-    return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
+    return str.ends_with(suffix) ? str.substr(0, str.length() - suffix.length()) : str;
 }
 
 /// @param str the input string
 /// @return @p str with all whitespace (' ') removed from the start and end of the string.
 inline std::string_view TrimSpace(std::string_view str) {
-    return Trim(str, IsSpace);
+    auto IsSpace = [](char c) -> bool {
+        return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
+    };
+    return TrimLeft(TrimRight(str, IsSpace), IsSpace);
 }
 
 /// @param str the input string
@@ -217,17 +149,11 @@ inline Vector<std::string_view, 8> Split(std::string_view str, std::string_view 
     return out;
 }
 
-/// @param str the string to quote
-/// @returns @p str quoted with <code>'</code>
-inline std::string Quote(std::string_view str) {
-    return "'" + std::string(str) + "'";
-}
-
 /// @param parts the input parts
 /// @param delimiter the delimiter
 /// @return @p parts joined as a string, delimited with @p delimiter
-template <typename T>
-inline std::string Join(VectorRef<T> parts, std::string_view delimiter) {
+template <typename T, size_t N>
+inline std::string Join(const Vector<T, N>& parts, std::string_view delimiter) {
     StringStream s;
     for (auto& part : parts) {
         if (part != parts.Front()) {
@@ -236,14 +162,6 @@ inline std::string Join(VectorRef<T> parts, std::string_view delimiter) {
         s << part;
     }
     return s.str();
-}
-
-/// @param parts the input parts
-/// @param delimiter the delimiter
-/// @return @p parts joined as a string, delimited with @p delimiter
-template <typename T, size_t N>
-inline std::string Join(const Vector<T, N>& parts, std::string_view delimiter) {
-    return Join(VectorRef<T>(parts), delimiter);
 }
 
 }  // namespace tint

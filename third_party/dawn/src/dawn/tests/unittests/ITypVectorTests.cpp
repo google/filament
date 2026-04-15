@@ -196,5 +196,25 @@ TEST_F(ITypVectorTest, BeginEndFrontBackData) {
     ASSERT_EQ(constVec.data(), &constVec[Key(0)]);
 }
 
+// Name "*DeathTest" per https://google.github.io/googletest/advanced.html#death-test-naming
+using ITypVectorDeathTest = ITypVectorTest;
+
+// Out of bounds accesses should crash even in release (the underlying container
+// should have asserts enabled).
+TEST_F(ITypVectorDeathTest, OutOfBounds) {
+    // MSVC doesn't have asserts (without _MSVC_STL_HARDENING).
+    if constexpr (DAWN_COMPILER_IS(MSVC)) {
+        GTEST_SKIP();
+    }
+
+    Vector vec(Key(10), Val(7));
+    EXPECT_DEATH(vec[Key(10)], "");
+    EXPECT_DEATH(vec.at(Key(10)), "");
+
+    const Vector& constVec = vec;
+    EXPECT_DEATH(constVec[Key(10)], "");
+    EXPECT_DEATH(constVec.at(Key(10)), "");
+}
+
 }  // anonymous namespace
 }  // namespace dawn

@@ -38,7 +38,18 @@ Backend::Backend(InstanceBase* instance, wgpu::BackendType backendType)
     mDawnProcs = dawn::native::GetProcs();
 
     // Enable all instance features and limits.
-    WGPUInstanceDescriptor instanceDesc = {};
+    WGPUInstanceDescriptor instanceDesc = WGPU_INSTANCE_DESCRIPTOR_INIT;
+
+    WGPUDawnTogglesDescriptor toggleDescriptor = WGPU_DAWN_TOGGLES_DESCRIPTOR_INIT;
+    instanceDesc.nextInChain = &toggleDescriptor.chain;
+
+    auto toggles = instance->GetTogglesState();
+    auto enabledTogglesName = toggles.GetEnabledToggleNames();
+    toggleDescriptor.enabledToggleCount = enabledTogglesName.size();
+    toggleDescriptor.enabledToggles = enabledTogglesName.data();
+    auto disabledTogglesName = toggles.GetDisabledToggleNames();
+    toggleDescriptor.disabledToggleCount = disabledTogglesName.size();
+    toggleDescriptor.disabledToggles = disabledTogglesName.data();
 
     WGPUSupportedInstanceFeatures features{};
     mDawnProcs.getInstanceFeatures(&features);
@@ -69,10 +80,18 @@ std::vector<Ref<PhysicalDeviceBase>> Backend::DiscoverPhysicalDevices(
     // Pass through all of the core options. Note if backendType=WebGPU,
     // RequestAdapter will return null since it's not enabled by default.
     WGPURequestAdapterOptions innerAdapterOption = *ToAPI(*options);
-    // Don't pass through any of the extension options.
-    // TODO(crbug.com/413053623): revisit to see if chaining any other extensions of
-    // RequestAdapterOptions is needed.
+    // Get rid of the request adapter WebGPU backend options extension.
+    // TODO(crbug.com/462137660): Implement for various extensions.
     innerAdapterOption.nextInChain = nullptr;
+
+    // Keep DawnTogglesDescriptor.
+    WGPUDawnTogglesDescriptor innerToggles = WGPU_DAWN_TOGGLES_DESCRIPTOR_INIT;
+    if (auto* toggles = options.Get<DawnTogglesDescriptor>()) {
+        innerToggles = *ToAPI(toggles);
+        // Unchain any other extensions if exist.
+        innerToggles.chain.next = nullptr;
+        innerAdapterOption.nextInChain = &(innerToggles.chain);
+    }
 
     WGPUAdapter innerAdapter = nullptr;
 
