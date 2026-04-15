@@ -33,15 +33,15 @@ public:
     ~WebGPUFence();
 
     // Initialize the fence with a submission state from the queue manager.
-    void setSubmissionState(std::shared_ptr<WebGPUSubmissionState> state);
+    void setSubmissionState(std::shared_ptr<WebGPUSubmissionState> state) {
+        mState = state;
+    }
 
-    // Note that getStatus cannot be const since it's implemented with wait();
-    FenceStatus getStatus();
-    FenceStatus wait(uint64_t timeout);
+    std::shared_ptr<WebGPUSubmissionState> getState() const {
+        return mState;
+    }
 
 private:
-    std::mutex mLock;
-    std::condition_variable mCond;
     std::shared_ptr<WebGPUSubmissionState> mState;
 };
 

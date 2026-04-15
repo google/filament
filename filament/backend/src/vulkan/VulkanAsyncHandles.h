@@ -84,39 +84,21 @@ struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     VulkanFence() {}
 
     void setFence(std::shared_ptr<VulkanCmdFence> fence) {
-        std::lock_guard const l(lock);
         sharedFence = std::move(fence);
-        cond.notify_all();
     }
 
-    std::shared_ptr<VulkanCmdFence>& getSharedFence() {
-        std::lock_guard const l(lock);
-        return sharedFence;
-    }
-
-    std::pair<std::shared_ptr<VulkanCmdFence>, bool>
-            wait(std::chrono::steady_clock::time_point const until) {
-        // hold a reference so that our state doesn't disappear while we wait
-        std::unique_lock l(lock);
-        cond.wait_until(l, until, [this] {
-            return bool(sharedFence) || canceled;
-        });
-        // here mSharedFence will be null if we timed out
+    std::pair<std::shared_ptr<VulkanCmdFence>, bool> getStatus() const {
         return { sharedFence, canceled };
     }
 
     void cancel() const {
-        std::lock_guard const l(lock);
         if (sharedFence) {
             sharedFence->cancel();
         }
         canceled = true;
-        cond.notify_all();
     }
 
 private:
-    mutable std::mutex lock;
-    mutable std::condition_variable cond;
     mutable bool canceled = false;
     std::shared_ptr<VulkanCmdFence> sharedFence;
 };
