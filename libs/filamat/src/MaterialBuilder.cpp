@@ -941,8 +941,28 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
             if (params.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
                 assert_invariant(params.shaderModel == ShaderModel::MOBILE);
                 assert_invariant(params.targetApi == TargetApi::OPENGL);
+                // skip all variants that can't be used with ESSL1
+                if (filament::Variant::isValidStandardVariant(v.variant)) {
+                    if (v.variant.hasDirectionalLighting()) {
+                        continue;
+                    }
+                    if (v.variant.hasDynamicLighting()) {
+                        continue;
+                    }
+                }
+                if (filament::Variant::isShadowReceiverVariant(v.variant)) {
+                    continue;
+                }
                 if (filament::Variant::isStereoVariant(v.variant)) {
-                    // the stereo variant can never be used at feature level 0
+                    continue;
+                }
+                if (filament::Variant::isDepthMomentsVariant(v.variant)) {
+                    continue;
+                }
+                if (filament::Variant::isShadowSampler2DVariant(v.variant)) {
+                    continue;
+                }
+                if (filament::Variant::isSSRVariant(v.variant)) {
                     continue;
                 }
             }
@@ -1338,16 +1358,6 @@ error:
 
     if (!runSemanticAnalysis(&info, semanticCodeGenParams)) {
         goto error;
-    }
-
-    // adjust variant-filter for feature level *before* we start writing into the container
-    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-        // at feature level 0, many variants are not supported
-        mVariantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::VSM);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::SSR);
     }
 
     // Create chunk tree.
