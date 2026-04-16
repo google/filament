@@ -2295,12 +2295,14 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
     // Bind the offset data.
     if (mContext->dynamicOffsets.isDirty()) {
         const auto [size, data] = mContext->dynamicOffsets.getOffsets();
-        [mContext->currentRenderPassEncoder setFragmentBytes:data
-                                                      length:size * sizeof(uint32_t)
-                                                     atIndex:DYNAMIC_OFFSET_BINDING];
-        [mContext->currentRenderPassEncoder setVertexBytes:data
-                                                    length:size * sizeof(uint32_t)
-                                                   atIndex:DYNAMIC_OFFSET_BINDING];
+        if (size > 0) {
+            [mContext->currentRenderPassEncoder setFragmentBytes:data
+                                                          length:size * sizeof(uint32_t)
+                                                         atIndex:DYNAMIC_OFFSET_BINDING];
+            [mContext->currentRenderPassEncoder setVertexBytes:data
+                                                        length:size * sizeof(uint32_t)
+                                                       atIndex:DYNAMIC_OFFSET_BINDING];
+        }
         mContext->dynamicOffsets.setDirty(false);
     }
 
