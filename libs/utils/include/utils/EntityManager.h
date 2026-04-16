@@ -78,7 +78,7 @@ public:
 
     // Return whether the given Entity has been destroyed (false) or not (true).
     // Thread safe.
-    bool isAlive(Entity e) const noexcept {
+    bool isAlive(Entity const e) const noexcept {
         assert(getIndex(e) < RAW_INDEX_COUNT);
         return (!e.isNull()) && (getGeneration(e) == mGens[getIndex(e)]);
     }
@@ -94,7 +94,7 @@ public:
     /* no user serviceable parts below */
 
     // current generation of the given index. Use for debugging and testing.
-    uint8_t getGenerationForIndex(size_t index) const noexcept {
+    uint8_t getGenerationForIndex(size_t const index) const noexcept {
         return mGens[index];
     }
 
@@ -107,6 +107,11 @@ public:
     void dumpActiveEntities(utils::io::ostream& out) const;
 #endif
 
+    // use carefully, several entities can have the same index.
+    static Entity::Type getIndex(Entity const e) noexcept  {
+        return e.getId() & INDEX_MASK;
+    }
+
 private:
     friend class EntityManagerImpl;
     EntityManager();
@@ -114,22 +119,20 @@ private:
 
     // GENERATION_SHIFT determines how many simultaneous Entities are available, the
     // minimum memory requirement is 2^GENERATION_SHIFT bytes.
-    static constexpr const int GENERATION_SHIFT = 17;
-    static constexpr const size_t RAW_INDEX_COUNT = (1 << GENERATION_SHIFT);
-    static constexpr const Entity::Type INDEX_MASK = (1 << GENERATION_SHIFT) - 1u;
+    static constexpr int GENERATION_SHIFT = 17;
+    static constexpr size_t RAW_INDEX_COUNT = (1 << GENERATION_SHIFT);
+    static constexpr Entity::Type INDEX_MASK = (1 << GENERATION_SHIFT) - 1u;
 
-    static inline Entity::Type getGeneration(Entity e) noexcept {
+    static Entity::Type getGeneration(Entity const e) noexcept {
         return e.getId() >> GENERATION_SHIFT;
     }
-    static inline Entity::Type getIndex(Entity e) noexcept  {
-        return e.getId() & INDEX_MASK;
-    }
-    static inline Entity::Type makeIdentity(Entity::Type g, Entity::Type i) noexcept {
+
+    static Entity::Type makeIdentity(Entity::Type const g, Entity::Type const i) noexcept {
         return (g << GENERATION_SHIFT) | (i & INDEX_MASK);
     }
 
     // stores the generation of each index.
-    uint8_t * const mGens;
+    uint8_t* const mGens;
 };
 
 } // namespace utils
