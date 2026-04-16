@@ -1432,7 +1432,6 @@ FenceStatus MetalFence::wait(uint64_t timeoutNs) {
             }
             return false;
         };
-        
         if (timeoutNs == FENCE_WAIT_FOR_EVER) {
             context.driver->waitForFence(predicate);
         } else {
