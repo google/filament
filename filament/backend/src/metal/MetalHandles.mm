@@ -1424,7 +1424,6 @@ void MetalFence::onSignal(MetalFenceSignalBlock block) {
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
     if (@available(iOS 12, *)) {
         using ns = std::chrono::nanoseconds;
-        
         FenceStatus result = FenceStatus::TIMEOUT_EXPIRED;
         auto predicate = [&] {
             if (state->status != FenceStatus::TIMEOUT_EXPIRED) {
