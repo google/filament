@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.22.1)
 # On iOS, the deployment target is set inside third_party/clang/ios.cmake
 if (APPLE AND NOT IOS)
     # This must be set before project() is called
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0 CACHE STRING "")
 endif()
 
 # ==================================================================================================
@@ -46,8 +46,6 @@ option(FILAMENT_ENABLE_ASAN_UBSAN "Enable Address and Undefined Behavior Sanitiz
 option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
 
 option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
-
-option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 

@@ -35,6 +35,7 @@
 #    include <arpa/inet.h>
 #endif
 
+#include <utils/Log.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 
@@ -373,6 +374,12 @@ LinearImage PSDDecoder::decode() {
         uint32_t width = ntohl(h.width);
         uint32_t height = ntohl(h.height);
 
+        // Limit dimensions to 30,000 as per PSD specification to prevent integer overflows
+        // during allocation in LinearImage.
+        if (width == 0 || height == 0 || width > 30000 || height > 30000) {
+            throw std::runtime_error("PSD dimensions exceed maximum allowed size (30,000)");
+        }
+
         uint32_t length;
 
         // color mode data section
@@ -394,6 +401,8 @@ LinearImage PSDDecoder::decode() {
             throw std::runtime_error("compressed images are not supported");
         }
 
+        // The multiplication width * height * 3 cannot overflow uint32_t because
+        // width and height are at most 30,000. (30000 * 30000 * 3 = 2.7e9 < 4.29e9)
         LinearImage image(width, height, 3);
 
         if (depth == 32) {
@@ -403,6 +412,9 @@ LinearImage PSDDecoder::decode() {
                          filament::math::float3& pixel =
                                 *reinterpret_cast< filament::math::float3*>(image.getPixelRef(x, y));
                         pixel[i] = read32(mStream);
+                        if (!mStream.good()) {
+                            throw std::runtime_error("Truncated PSD file");
+                        }
                     }
                 }
             }
@@ -413,6 +425,9 @@ LinearImage PSDDecoder::decode() {
                          filament::math::float3& pixel =
                                 *reinterpret_cast< filament::math::float3*>(image.getPixelRef(x, y));
                         pixel[i] = read16(mStream);
+                        if (!mStream.good()) {
+                            throw std::runtime_error("Truncated PSD file");
+                        }
                     }
                 }
             }
