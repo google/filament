@@ -442,7 +442,12 @@ foreach(mat_dir ${MATERIAL_DIRS})
         check_in_list(MATERIAL_VULKAN_METAL_SRCS ${mat_src} is_vk_metal)
         if (is_vk_metal)
             # Remove webgpu and related parameters
+            # The variant-filter=stereo is added in the root folder's CMakeLists.txt for webgpu
+            # Context is that webgpu does not support the stereo variant
             string(REPLACE "-a;webgpu;--variant-filter=stereo" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+
+            # Remove gl
+            string(REPLACE "-a;opengl" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
 
             # Remove any empty args
             string(REPLACE ";;" ";" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
