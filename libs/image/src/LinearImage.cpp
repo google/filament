@@ -16,21 +16,28 @@
 
 #include <image/LinearImage.h>
 
+#include <cstdint>
 #include <cstring> // for memset
 #include <memory>
-#include <climits>
 #include <stdexcept>
 
 namespace image  {
 
 struct LinearImage::SharedReference {
     SharedReference(uint32_t width, uint32_t height, uint32_t channels) {
-        const uint64_t nfloats = (uint64_t)width * height * channels;
-        if (nfloats > SIZE_MAX / sizeof(float)) {
-            throw std::overflow_error("LinearImage dimensions too large");
+        // width * height fits in uint64_t; the subsequent multiplication by
+        // channels can still overflow uint64_t, so saturate in two stages.
+        const uint64_t wh = uint64_t(width) * height;
+        if (channels != 0 && wh > UINT64_MAX / channels) {
+            throw std::runtime_error("LinearImage dimensions too large");
         }
-        float* floats = new float[static_cast<size_t>(nfloats)];
-        memset(floats, 0, sizeof(float) * static_cast<size_t>(nfloats));
+        const uint64_t nfloats = wh * channels;
+        if (nfloats > SIZE_MAX / sizeof(float)) {
+            throw std::runtime_error("LinearImage dimensions too large");
+        }
+        const size_t n = static_cast<size_t>(nfloats);
+        float* floats = new float[n];
+        memset(floats, 0, sizeof(float) * n);
         pixels = std::shared_ptr<float>(floats, std::default_delete<float[]>());
     }
     std::shared_ptr<float> pixels;
