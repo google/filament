@@ -511,6 +511,12 @@ Java_com_google_android_filament_Engine_nIsAutomaticInstancingEnabled(JNIEnv*, j
     return (jboolean)engine->isAutomaticInstancingEnabled();
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nHasUnrecoverableFailure(JNIEnv*, jclass, jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean)engine->hasUnrecoverableFailure();
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nGetMaxStereoscopicEyes(JNIEnv*, jclass, jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;

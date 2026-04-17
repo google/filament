@@ -298,8 +298,10 @@ public:
      * This is a convenience method that returns the same value as beginFrame().
      *
      * @return
-     *      *false* the current frame should be skipped,
+     *      *false* the current frame should be skipped, or an unrecoverable backend exception has occurred.
      *      *true* the current frame can be rendered
+     *
+     * @note This method will return false once a backend exception has been delivered to the main thread.
      *
      * @see
      * beginFrame()
@@ -345,7 +347,8 @@ public:
      * so can result is losing all or part of the FrameInfo history.
      *
      * @throws std::exception (or derived) if the backend thread encountered an unrecoverable error (when exceptions are enabled).
-     * @throws utils::Panic if called again after a backend exception was already thrown.
+     *
+     * @note This method will return false if called again after a backend exception was already thrown and delivered to the main thread.
      *
      * @see
      * endFrame()

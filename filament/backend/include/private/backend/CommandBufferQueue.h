@@ -86,9 +86,13 @@ public:
         mHasUnrecoverableError.store(true, std::memory_order_release);
     }
     void propagateBackendException() const;
+    bool hasExceptionBeenRethrown() const noexcept {
+        return mExceptionRethrown.load(std::memory_order_relaxed);
+    }
 #else
     void propagateBackendException() const noexcept {}
     constexpr bool hasUnrecoverableError() const noexcept { return false; }
+    constexpr bool hasExceptionBeenRethrown() const noexcept { return false; }
 #endif
 
 

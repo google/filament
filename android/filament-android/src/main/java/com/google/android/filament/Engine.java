@@ -776,6 +776,15 @@ public class Engine {
     }
 
     /**
+     * Returns whether the engine has encountered an unrecoverable failure.
+     *
+     * @return true if an unrecoverable failure has occurred, false otherwise.
+     */
+    public boolean hasUnrecoverableFailure() {
+        return nHasUnrecoverableFailure(getNativeObject());
+    }
+
+    /**
      * Retrieves the configuration settings of this {@link Engine}.
      *
      * This method returns the configuration object that was supplied to the Engine's {@link
@@ -1580,6 +1589,7 @@ public class Engine {
     private static native long nGetEntityManager(long nativeEngine);
     private static native void nSetAutomaticInstancingEnabled(long nativeEngine, boolean enable);
     private static native boolean nIsAutomaticInstancingEnabled(long nativeEngine);
+    private static native boolean nHasUnrecoverableFailure(long nativeEngine);
     private static native long nGetMaxStereoscopicEyes(long nativeEngine);
     private static native int nGetSupportedFeatureLevel(long nativeEngine);
     private static native int nSetActiveFeatureLevel(long nativeEngine, int ordinal);

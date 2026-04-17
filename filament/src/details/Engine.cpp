@@ -833,7 +833,7 @@ bool FEngine::flushAndWait(uint64_t const timeout) {
     if (UTILS_VERY_UNLIKELY(mCommandBufferQueue.hasUnrecoverableError())) {
         return false;
     }
-    mCommandBufferQueue.propagateBackendException();
+    propagateBackendException();
 
     FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isPaused())
             << "Cannot call Engine::flushAndWait() when rendering thread is paused!";

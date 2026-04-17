@@ -450,6 +450,8 @@ class_<Engine>("Engine")
 
     .function("isAutomaticInstancingEnabled", &Engine::isAutomaticInstancingEnabled)
 
+    .function("hasUnrecoverableFailure", &Engine::hasUnrecoverableFailure)
+
     .function("getSupportedFeatureLevel", &Engine::getSupportedFeatureLevel)
 
     .function("setActiveFeatureLevel", &Engine::setActiveFeatureLevel)

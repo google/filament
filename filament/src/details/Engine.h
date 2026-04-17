@@ -156,6 +156,14 @@ public:
     void propagateBackendException() const noexcept {}
 #endif
 
+    bool hasExceptionBeenRethrown() const noexcept {
+        return mCommandBufferQueue.hasExceptionBeenRethrown();
+    }
+
+    bool hasUnrecoverableFailure() const noexcept {
+        return mCommandBufferQueue.hasUnrecoverableError();
+    }
+
 public:
     static Engine* create(Builder const& builder);
 

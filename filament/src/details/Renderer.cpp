@@ -316,6 +316,9 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
 }
 
 bool FRenderer::shouldRenderFrame() const noexcept {
+    if (UTILS_VERY_UNLIKELY(mEngine.hasExceptionBeenRethrown())) {
+        return false;
+    }
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
     bool const renderFrame = mFrameSkipper.shouldRenderFrame(driver);
@@ -368,6 +371,10 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     FILAMENT_CHECK_PRECONDITION(swapChain) << "swapChain cannot be null.";
 
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT, "frameId", (mFrameId + 1));
+
+    if (UTILS_VERY_UNLIKELY(mEngine.hasExceptionBeenRethrown())) {
+        return false;
+    }
 
     mEngine.propagateBackendException();
 

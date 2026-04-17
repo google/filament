@@ -783,6 +783,17 @@ public:
     bool isAsynchronousModeEnabled() const noexcept;
 
     /**
+     * Returns whether the engine has encountered an unrecoverable failure.
+     *
+     * If this returns true, the engine is in an unrecoverable state and further calls to
+     * rendering methods will fail or be ignored. Apps can use this to check for fatal
+     * errors instead of relying on exceptions.
+     *
+     * @return true if an unrecoverable failure has occurred, false otherwise.
+     */
+    bool hasUnrecoverableFailure() const noexcept;
+
+    /**
      * Retrieves the configuration settings of this Engine.
      *
      * This method returns the configuration object that was supplied to the Engine's
