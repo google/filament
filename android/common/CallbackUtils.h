@@ -48,6 +48,9 @@ struct JniCallback : private filament::backend::CallbackHandler {
     // execute the callback on the java thread and destroy ourselves
     static void postToJavaAndDestroy(JniCallback* callback);
 
+    // destroy ourselves without executing the callback
+    static void destroy(JniCallback* callback);
+
     // CallbackHandler interface.
     void post(void* user, Callback callback) override;
 

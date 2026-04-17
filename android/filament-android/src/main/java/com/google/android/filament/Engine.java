@@ -321,8 +321,7 @@ public class Engine {
          *         be initialized, for instance if it doesn't support the right version of OpenGL or
          *         OpenGL ES.
          *
-         * @exception IllegalStateException can be thrown if there isn't enough memory to
-         * allocate the command buffer.
+         * @throws Error if there isn't enough memory to allocate the command buffer.
          */
         public Engine build() {
             long nativeEngine = nBuilderBuild(mNativeBuilder);
@@ -728,6 +727,8 @@ public class Engine {
      *                     program is terminated if exceptions are disabled.
      *
      * @return the active feature level.
+     *
+     * @throws RuntimeException if the feature level cannot be set.
      *
      * @see Builder#featureLevel
      * @see #getSupportedFeatureLevel
@@ -1270,9 +1271,10 @@ public class Engine {
      * Destroys a {@link Material} and frees all its associated resources.
      * <p>
      * All {@link MaterialInstance} of the specified {@link Material} must be destroyed before
-     * destroying it; if some {@link MaterialInstance} remain, this method fails silently.
+     * destroying it.
      *
      * @param material the {@link Material} to destroy
+     * @throws RuntimeException if some MaterialInstances remain.
      */
     public void destroyMaterial(@NonNull Material material) {
         assertDestroy(nDestroyMaterial(getNativeObject(), material.getNativeObject()));

@@ -272,6 +272,8 @@ public class VertexBuffer {
          * @return the newly created <code>VertexBuffer</code> object
          *
          * @exception IllegalStateException if the VertexBuffer could not be created
+         * @throws RuntimeException if a runtime error occurred, such as running out of
+         *            memory or other resources.
          */
         @NonNull
         public VertexBuffer build(@NonNull Engine engine) {

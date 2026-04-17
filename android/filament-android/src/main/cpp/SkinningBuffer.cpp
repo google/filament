@@ -16,7 +16,6 @@
 
 #include <jni.h>
 
-#include <functional>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,6 +23,7 @@
 
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace backend;
@@ -60,11 +60,13 @@ Java_com_google_android_filament_SkinningBuffer_nBuilderInitialize(JNIEnv*, jcla
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_SkinningBuffer_nBuilderBuild(JNIEnv*, jclass,
+Java_com_google_android_filament_SkinningBuffer_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeEngine) {
     SkinningBuffer::Builder* builder = (SkinningBuffer::Builder *) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->build(*engine);
+    });
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -76,16 +78,18 @@ Java_com_google_android_filament_SkinningBuffer_nSetBonesAsMatrices(JNIEnv* env,
         jint offset) {
     SkinningBuffer *skinningBuffer = (SkinningBuffer *) nativeSkinningBuffer;
     Engine *engine = (Engine *) nativeEngine;
-    AutoBuffer nioBuffer(env, matrices, boneCount * 16);
-    void* data = nioBuffer.getData();
-    size_t sizeInBytes = nioBuffer.getSize();
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
-    skinningBuffer->setBones(*engine,
-            static_cast<filament::math::mat4f const *>(data), (size_t)boneCount, (size_t)offset);
-    return 0;
+    return filament::android::wrapJni<jint>(env, [=]() {
+        AutoBuffer nioBuffer(env, matrices, boneCount * 16);
+        void* data = nioBuffer.getData();
+        size_t sizeInBytes = nioBuffer.getSize();
+        if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+            // BufferOverflowException
+            return -1;
+        }
+        skinningBuffer->setBones(*engine,
+                static_cast<filament::math::mat4f const *>(data), (size_t)boneCount, (size_t)offset);
+        return 0;
+    });
 }
 
 extern "C"
@@ -95,16 +99,18 @@ Java_com_google_android_filament_SkinningBuffer_nSetBonesAsQuaternions(JNIEnv* e
         jint boneCount, jint offset) {
     SkinningBuffer *skinningBuffer = (SkinningBuffer *) nativeSkinningBuffer;
     Engine *engine = (Engine *) nativeEngine;
-    AutoBuffer nioBuffer(env, quaternions, boneCount * 8);
-    void* data = nioBuffer.getData();
-    size_t sizeInBytes = nioBuffer.getSize();
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
-    skinningBuffer->setBones(*engine,
-            static_cast<RenderableManager::Bone const *>(data), (size_t)boneCount, (size_t)offset);
-    return 0;
+    return filament::android::wrapJni<jint>(env, [=]() {
+        AutoBuffer nioBuffer(env, quaternions, boneCount * 8);
+        void* data = nioBuffer.getData();
+        size_t sizeInBytes = nioBuffer.getSize();
+        if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+            // BufferOverflowException
+            return -1;
+        }
+        skinningBuffer->setBones(*engine,
+                static_cast<RenderableManager::Bone const *>(data), (size_t)boneCount, (size_t)offset);
+        return 0;
+    });
 }
 
 extern "C"

@@ -99,6 +99,7 @@ public class IndexBuffer {
          * @return the newly created <code>IndexBuffer</code> object
          *
          * @exception IllegalStateException if the IndexBuffer could not be created
+         * @throws RuntimeException if a runtime error occurred, such as running out of memory or other resources, or if a parameter to a builder function was invalid.
          *
          * @see #setBuffer
          */

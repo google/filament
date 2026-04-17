@@ -17,6 +17,7 @@
 #include <jni.h>
 
 #include <filament/LightManager.h>
+#include <common/JniUtils.h>
 
 #include <utils/Entity.h>
 
@@ -24,6 +25,7 @@
 
 using namespace filament;
 using namespace utils;
+using namespace filament::android;
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_LightManager_nGetComponentCount(JNIEnv*, jclass,
@@ -210,11 +212,13 @@ Java_com_google_android_filament_LightManager_nBuilderLightChannel(JNIEnv*, jcla
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_LightManager_nBuilderBuild(JNIEnv*, jclass,
+Java_com_google_android_filament_LightManager_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeEngine, jint entity) {
     LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return jboolean(builder->build(*engine, (Entity &) entity) == LightManager::Builder::Success);
+    return wrapJni<jboolean>(env, [=]() {
+        return jboolean(builder->build(*engine, (Entity &) entity) == LightManager::Builder::Success);
+    });
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -223,7 +227,9 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_LightManager_nComputeUniformSplits(JNIEnv* env, jclass,
         jfloatArray splitPositions, jint cascades) {
     jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
-    LightManager::ShadowCascades::computeUniformSplits(nativeSplits, (uint8_t) cascades);
+    wrapJni(env, [=]() {
+        LightManager::ShadowCascades::computeUniformSplits(nativeSplits, (uint8_t) cascades);
+    });
     env->ReleaseFloatArrayElements(splitPositions, nativeSplits, 0);
 }
 
@@ -231,7 +237,9 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_LightManager_nComputeLogSplits(JNIEnv* env, jclass,
         jfloatArray splitPositions, jint cascades, jfloat near, jfloat far) {
     jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
-    LightManager::ShadowCascades::computeLogSplits(nativeSplits, (uint8_t) cascades, near, far);
+    wrapJni(env, [=]() {
+        LightManager::ShadowCascades::computeLogSplits(nativeSplits, (uint8_t) cascades, near, far);
+    });
     env->ReleaseFloatArrayElements(splitPositions, nativeSplits, 0);
 }
 
@@ -239,7 +247,9 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_LightManager_nComputePracticalSplits(JNIEnv* env, jclass,
         jfloatArray splitPositions, jint cascades, jfloat near, jfloat far, jfloat lambda) {
     jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
-    LightManager::ShadowCascades::computePracticalSplits(nativeSplits, (uint8_t) cascades, near, far, lambda);
+    wrapJni(env, [=]() {
+        LightManager::ShadowCascades::computePracticalSplits(nativeSplits, (uint8_t) cascades, near, far, lambda);
+    });
     env->ReleaseFloatArrayElements(splitPositions, nativeSplits, 0);
 }
 
