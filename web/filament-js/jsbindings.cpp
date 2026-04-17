@@ -1907,7 +1907,7 @@ class_<MeshReader>("MeshReader")
         };
         // Parse the filamesh buffer. This creates the VB, IB, and renderable.
         return MeshReader::loadMeshFromBuffer(
-                engine, buffer.bd->buffer,
+                engine, buffer.bd->buffer, buffer.bd->size,
                 destructor, bundle, matreg);
     }), allow_raw_pointers());
 

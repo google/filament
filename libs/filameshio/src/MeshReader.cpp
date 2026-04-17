@@ -165,6 +165,9 @@ MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const ut
     Mesh mesh;
 
     int fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0) {
+        return mesh;
+    }
 
     size_t size = fileSize(fd);
     char* data = (char*) malloc(size);
@@ -176,7 +179,7 @@ MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const ut
         p += sizeof(MAGICID);
 
         if (!strncmp(MAGICID, magic, 8)) {
-            mesh = loadMeshFromBuffer(engine, data, nullptr, nullptr, materials);
+            mesh = loadMeshFromBuffer(engine, data, size, nullptr, nullptr, materials);
         }
 
         Fence::waitAndDestroy(engine->createFence());
@@ -188,42 +191,77 @@ MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const ut
 }
 
 MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
-        void const* data, Callback destructor, void* user,
+        void const* data, size_t dataSize, Callback destructor, void* user,
         MaterialInstance* defaultMaterial) {
     MaterialRegistry reg;
     reg.registerMaterialInstance(utils::CString(DEFAULT_MATERIAL), defaultMaterial);
-    return loadMeshFromBuffer(engine, data, destructor, user, reg);
+    return loadMeshFromBuffer(engine, data, dataSize, destructor, user, reg);
 }
 
 MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
-        void const* data, Callback destructor, void* user,
+        void const* data, size_t dataSize, Callback destructor, void* user,
         MaterialRegistry& materials) {
     const uint8_t* p = (const uint8_t*) data;
-    if (strncmp(MAGICID, (const char *) p, 8)) {
+    const uint8_t* const end = p + dataSize;
+
+    if (dataSize < 8 || strncmp(MAGICID, (const char *) p, 8)) {
         utils::slog.e << "Magic string not found." << utils::io::endl;
         return {};
     }
     p += 8;
 
+    if (size_t(end - p) < sizeof(Header)) {
+        utils::slog.e << "Buffer too small for header." << utils::io::endl;
+        return {};
+    }
     Header* header = (Header*) p;
     p += sizeof(Header);
 
+    if (header->vertexSize > size_t(end - p)) {
+        utils::slog.e << "Invalid vertexSize." << utils::io::endl;
+        return {};
+    }
     uint8_t const* vertexData = p;
     p += header->vertexSize;
 
+    if (header->indexSize > size_t(end - p)) {
+        utils::slog.e << "Invalid indexSize." << utils::io::endl;
+        return {};
+    }
     uint8_t const* indices = p;
     p += header->indexSize;
 
+    size_t partsBytes = size_t(header->parts) * sizeof(Part);
+    if (header->parts != 0 && partsBytes / sizeof(Part) != header->parts) {
+        utils::slog.e << "Invalid parts count." << utils::io::endl;
+        return {};
+    }
+    if (partsBytes > size_t(end - p)) {
+        utils::slog.e << "Invalid parts count." << utils::io::endl;
+        return {};
+    }
     Part* parts = (Part*) p;
-    p += header->parts * sizeof(Part);
+    p += partsBytes;
 
+    if (size_t(end - p) < sizeof(uint32_t)) {
+        utils::slog.e << "Buffer too small for material count." << utils::io::endl;
+        return {};
+    }
     uint32_t materialCount = (uint32_t) *p;
     p += sizeof(uint32_t);
 
     std::vector<std::string> partsMaterial(materialCount);
     for (size_t i = 0; i < materialCount; i++) {
+        if (size_t(end - p) < sizeof(uint32_t)) {
+            utils::slog.e << "Buffer too small for material name." << utils::io::endl;
+            return {};
+        }
         uint32_t nameLength = (uint32_t) *p;
         p += sizeof(uint32_t);
+        if (size_t(end - p) < nameLength + 1u) {
+            utils::slog.e << "Invalid material name length." << utils::io::endl;
+            return {};
+        }
         partsMaterial[i] = (const char*) p;
         p += nameLength + 1; // null terminated
     }
@@ -244,6 +282,10 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         size_t indexSize = header->indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
         size_t indexCount = header->indexCount;
         size_t uncompressedSize = indexSize * indexCount;
+        if (indexCount != 0 && uncompressedSize / indexCount != indexSize) {
+            utils::slog.e << "Index buffer size overflow." << utils::io::endl;
+            return {};
+        }
         void* uncompressed = malloc(uncompressedSize);
         int err = meshopt_decodeIndexBuffer(uncompressed, indexCount, indexSize, indices,
                 indicesSize);
@@ -303,6 +345,10 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
                 (hasUV1 ? sizeof(ushort2) : 0);
         size_t vertexCount = header->vertexCount;
         size_t uncompressedSize = vertexSize * vertexCount;
+        if (vertexCount != 0 && uncompressedSize / vertexCount != vertexSize) {
+            utils::slog.e << "Vertex buffer size overflow." << utils::io::endl;
+            return {};
+        }
         void* uncompressed = malloc(uncompressedSize);
         const uint8_t* srcdata = vertexData + sizeof(CompressionHeader);
         int err = 0;
