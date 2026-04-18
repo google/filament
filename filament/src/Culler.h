@@ -54,6 +54,16 @@ public:
             size_t count, size_t bit) noexcept;
 
     /*
+     * returns whether each AABB in an array intersects with a set of 12 planes
+     * used for tighter shadow caster culling.
+     */
+    static void intersects(result_type* results,
+            math::float4 const* planes12,
+            math::float3 const* center,
+            math::float3 const* extent,
+            size_t count, size_t bit) noexcept;
+
+    /*
      * returns whether each sphere in an array intersects with the frustum
      */
     static void intersects(
@@ -80,6 +90,12 @@ public:
     struct UTILS_PUBLIC Test {
         static void intersects(result_type* results,
                 Frustum const& frustum,
+                math::float3 const* c,
+                math::float3 const* e,
+                size_t count) noexcept;
+
+        static void intersects(result_type* results,
+                math::float4 const* planes12,
                 math::float3 const* c,
                 math::float3 const* e,
                 size_t count) noexcept;

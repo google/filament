@@ -101,6 +101,40 @@ void Culler::intersects(
     }
 }
 
+void Culler::intersects(
+        result_type* UTILS_RESTRICT results,
+        float4 const* UTILS_RESTRICT planes,
+        float3 const* UTILS_RESTRICT center,
+        float3 const* UTILS_RESTRICT extent,
+        size_t count, size_t const bit) noexcept {
+
+    count = round(count);
+#if defined(__clang__)
+    #pragma clang loop vectorize_width(FILAMENT_CULLER_VECTORIZE_HINT)
+#endif
+    for (size_t i = 0; i < count; i++) {
+        int visible = ~0;
+
+#if defined(__clang__)
+        #pragma clang loop unroll(full)
+#endif
+        for (size_t j = 0; j < 12; j++) {
+            const float dot =
+                    planes[j].x * center[i].x - std::abs(planes[j].x) * extent[i].x +
+                    planes[j].y * center[i].y - std::abs(planes[j].y) * extent[i].y +
+                    planes[j].z * center[i].z - std::abs(planes[j].z) * extent[i].z +
+                    planes[j].w;
+
+            visible &= fast::signbit(dot) << bit;
+        }
+
+        auto r = results[i];
+        r &= ~result_type(1u << bit);
+        r |= result_type(visible);
+        results[i] = r;
+    }
+}
+
 /*
  * returns whether a box intersects with the frustum
  */
@@ -137,6 +171,15 @@ void Culler::Test::intersects(
         float3 const* UTILS_RESTRICT e,
         size_t const count) noexcept {
     Culler::intersects(results, frustum, c, e, count, 0);
+}
+
+void Culler::Test::intersects(
+        result_type* UTILS_RESTRICT results,
+        float4 const* UTILS_RESTRICT planes12,
+        float3 const* UTILS_RESTRICT c,
+        float3 const* UTILS_RESTRICT e,
+        size_t const count) noexcept {
+    Culler::intersects(results, planes12, c, e, count, 0);
 }
 
 void Culler::Test::intersects(

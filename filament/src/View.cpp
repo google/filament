@@ -111,6 +111,10 @@ void View::setShadowingEnabled(bool const enabled) noexcept {
     downcast(this)->setShadowingEnabled(enabled);
 }
 
+void View::setTighterShadowCasterCullingEnabled(bool const enabled) noexcept {
+    downcast(this)->setTighterShadowCasterCullingEnabled(enabled);
+}
+
 void View::setRenderTarget(RenderTarget* renderTarget) noexcept {
     downcast(this)->setRenderTarget(downcast(renderTarget));
 }
@@ -317,6 +321,10 @@ uint8_t View::getVisibleLayers() const noexcept {
 
 bool View::isShadowingEnabled() const noexcept {
     return downcast(this)->isShadowingEnabled();
+}
+
+bool View::isTighterShadowCasterCullingEnabled() const noexcept {
+    return downcast(this)->isTighterShadowCasterCullingEnabled();
 }
 
 void View::setScreenSpaceRefractionEnabled(bool const enabled) noexcept {
