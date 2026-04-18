@@ -55,6 +55,7 @@ protected:
     std::vector<float> box_cx, box_cy, box_cz;
     std::vector<float> box_ex, box_ey, box_ez;
     std::vector<float> sphere_cx, sphere_cy, sphere_cz, sphere_r;
+    std::vector<float4> planes12;
     Culler::result_type* UTILS_RESTRICT visibles = nullptr;
 
 
@@ -103,6 +104,11 @@ public:
             sphere_r[i]  = sphere.w;
         }
 
+        planes12.resize(12);
+        for (size_t i = 0; i < 12; i++) {
+            planes12[i] = float4(rand(gen), rand(gen), rand(gen), rand(gen));
+        }
+
         visibles = (Culler::result_type*)utils::aligned_alloc(batch * sizeof(*visibles), 32);
     }
 
@@ -119,6 +125,19 @@ BENCHMARK_F(FilamentCullingFixture, boxCulling)(benchmark::State& state) {
                     box_cx.data(), box_cy.data(), box_cz.data(),
                     box_ex.data(), box_ey.data(), box_ez.data(),
                     BATCH_SIZE);
+        }
+        benchmark::ClobberMemory();
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * BATCH_SIZE);
+    }
+}
+
+BENCHMARK_F(FilamentCullingFixture, boxCulling12Planes)(benchmark::State& state) {
+    {
+        PerformanceCounters pc(state);
+        for (auto _: state) {
+            Culler::Test::intersects(visibles, planes12.data(), box_cx.data(), box_cy.data(),
+                    box_cz.data(), box_ex.data(), box_ey.data(), box_ez.data(), BATCH_SIZE);
         }
         benchmark::ClobberMemory();
         pc.stop();
