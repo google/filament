@@ -247,6 +247,14 @@ public:
 
     bool isShadowingEnabled() const noexcept { return mShadowingEnabled; }
 
+    void setTighterShadowCasterCullingEnabled(bool const enabled) noexcept {
+        mTighterShadowCasterCullingEnabled = enabled;
+    }
+
+    bool isTighterShadowCasterCullingEnabled() const noexcept {
+        return mTighterShadowCasterCullingEnabled;
+    }
+
     void setScreenSpaceRefractionEnabled(bool const enabled) noexcept { mScreenSpaceRefractionEnabled = enabled; }
 
     bool isScreenSpaceRefractionEnabled() const noexcept { return mScreenSpaceRefractionEnabled; }
@@ -626,6 +634,7 @@ private:
     AntiAliasing mAntiAliasing = AntiAliasing::FXAA;
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
+    bool mTighterShadowCasterCullingEnabled = false;
     bool mScreenSpaceRefractionEnabled = true;
     bool mHasPostProcessPass = true;
     bool mStencilBufferEnabled = false;
