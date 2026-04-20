@@ -41,6 +41,7 @@
 #include "details/Camera.h"
 #include "Froxelizer.h"
 #include "details/Engine.h"
+#include "details/View.h"
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
 #include "UniformBuffer.h"
@@ -801,6 +802,69 @@ TEST(FilamentTest, GoogleLineDirective) {
             "#line 100      \n"
             "#line");
     }
+}
+
+TEST(FilamentTest, GridSnapping) {
+    FEngine* engine = downcast(Engine::create());
+    FView* view = downcast(engine->createView());
+    FScene* scene = downcast(engine->createScene());
+    Entity cameraEntity = engine->getEntityManager().create();
+    FCamera* camera = downcast(engine->createCamera(cameraEntity));
+
+    view->setScene(scene);
+    view->setCamera(camera);
+
+    engine->features.view.enable_grid_based_world_origin = true;
+    engine->debug.view.camera_at_origin = true;
+    view->setGridSize(10.0);
+
+    // Test case 1: Camera at (0,0,0)
+    camera->setModelMatrix(mat4::translation(double3{0.0, 0.0, 0.0}));
+    CameraInfo ci = view->computeCameraInfo(*engine);
+    EXPECT_NEAR(ci.worldTransform[3].x, 0.0f, 1e-5f);
+
+    // Test case 2: Camera at (9.9,0,0) - should not snap yet if hysteresis is 50%
+    // Grid size is 10, threshold is 10.
+    camera->setModelMatrix(mat4::translation(double3{9.9, 0.0, 0.0}));
+    ci = view->computeCameraInfo(*engine);
+    EXPECT_NEAR(ci.worldTransform[3].x, 0.0f, 1e-5f);
+
+    // Test case 3: Camera at (10.1,0,0) - should snap to 10
+    camera->setModelMatrix(mat4::translation(double3{10.1, 0.0, 0.0}));
+    ci = view->computeCameraInfo(*engine);
+    // If it snapped to 10, the translation applied to world should be -10
+    EXPECT_NEAR(ci.worldTransform[3].x, -10.0f, 1e-5f);
+
+    // Test case 4: Move back to (1.0,0,0) - should stay at 10 due to hysteresis
+    // Diff to origin (10) is 9.0 < 10.
+    camera->setModelMatrix(mat4::translation(double3{1.0, 0.0, 0.0}));
+    ci = view->computeCameraInfo(*engine);
+    EXPECT_NEAR(ci.worldTransform[3].x, -10.0f, 1e-5f);
+
+    // Test case 5: Move to (-0.1,0,0) - should snap back to 0
+    // Diff to origin (10) is 10.1 > 10.
+    camera->setModelMatrix(mat4::translation(double3{-0.1, 0.0, 0.0}));
+    ci = view->computeCameraInfo(*engine);
+    EXPECT_NEAR(ci.worldTransform[3].x, 0.0f, 1e-5f);
+
+    // Test case 6: Automatic grid size
+    view->setGridSize(0.0); // Enable auto
+    static_cast<Camera*>(camera)->setProjection(90.0, 1.0, 0.1, 100.0, Camera::Fov::VERTICAL); // Set far plane to 100
+    
+    // Far plane is 100. Auto grid size should be 100 * 0.1 = 10.
+    camera->setModelMatrix(mat4::translation(double3{0.0, 0.0, 0.0}));
+    ci = view->computeCameraInfo(*engine);
+    EXPECT_NEAR(ci.worldTransform[3].x, 0.0f, 1e-5f);
+
+    camera->setModelMatrix(mat4::translation(double3{10.1, 0.0, 0.0}));
+    ci = view->computeCameraInfo(*engine);
+    EXPECT_NEAR(ci.worldTransform[3].x, -10.0f, 1e-5f); // Should snap to 10
+
+    engine->destroy(scene);
+    engine->destroy(view);
+    engine->destroyCameraComponent(cameraEntity);
+    engine->getEntityManager().destroy(cameraEntity);
+    Engine::destroy((Engine **)&engine);
 }
 
 int main(int argc, char** argv) {

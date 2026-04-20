@@ -158,6 +158,24 @@ Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jcla
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetGridSize(JNIEnv*, jclass, jlong nativeView, jdouble size) {
+    View* view = (View*) nativeView;
+    view->setGridSize(size);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_com_google_android_filament_View_nGetGridSize(JNIEnv*, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return view->getGridSize();
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_com_google_android_filament_View_nGetEffectiveGridSize(JNIEnv*, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return view->getEffectiveGridSize();
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nGetLastDynamicResolutionScale(JNIEnv *env, jclass, jlong nativeView, jfloatArray out_) {
     jfloat* out = env->GetFloatArrayElements(out_, nullptr);
     View *view = (View *) nativeView;

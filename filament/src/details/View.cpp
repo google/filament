@@ -58,6 +58,7 @@
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
@@ -179,7 +180,7 @@ FView::FView(FEngine& engine)
     FgviewerManager* fgviewerManager = engine.debug.fgviewer;
     if (UTILS_LIKELY(fgviewerManager)) {
         mFrameGraphViewerViewHandle =
-            fgviewerManager->createView(utils::CString(getName()));
+            fgviewerManager->createView(CString(getName()));
     }
 #endif
 
@@ -533,27 +534,100 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
 }
 
+/*
+ * Calculates an automatic grid size based on the camera's culling far plane.
+ * Falls back to a function of the near plane if the far plane is infinite.
+ * 
+ * camera: The camera to use for the calculation.
+ * Returns the calculated grid size.
+ */
+double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
+    double zf = camera->getCullingFar();
+    if (std::isinf(zf) || zf <= 0.0) {
+        // Fallback for infinite far plane or invalid values
+        // Use near plane as a baseline, assuming a reasonable ratio (e.g., 1000x)
+        return camera->getNear() * 1000.0;
+    }
+    // Default to 10% of the far plane distance
+    return zf * 0.1;
+}
+
+/*
+ * Computes a stable grid origin for the camera to improve floating-point precision.
+ * Snapping only occurs when the camera moves beyond the grid boundary plus hysteresis.
+ * 
+ * cameraPosition: The current world position of the camera.
+ * gridSize: The size of the grid cell.
+ * hysteresisRatio: The hysteresis margin as a ratio of the grid size [0, 1].
+ * Returns the stable grid origin.
+ */
+double3 FView::computeGridOrigin(double3 cameraPosition, double gridSize, double hysteresisRatio) const noexcept {
+    if (gridSize <= 0.0) {
+        return cameraPosition;
+    }
+
+    const double threshold = gridSize * (0.5 + hysteresisRatio);
+    const double3 currentOrigin = mGridOrigin;
+
+    // Compute target grid origin for each axis
+    const double3 targetOrigin = {
+            std::round(cameraPosition.x / gridSize) * gridSize,
+            std::round(cameraPosition.y / gridSize) * gridSize,
+            std::round(cameraPosition.z / gridSize) * gridSize
+    };
+
+    // Check threshold and update per axis without explicit loop to encourage vectorization
+    double3 newOrigin;
+    newOrigin.x = std::abs(cameraPosition.x - currentOrigin.x) > threshold ? targetOrigin.x : currentOrigin.x;
+    newOrigin.y = std::abs(cameraPosition.y - currentOrigin.y) > threshold ? targetOrigin.y : currentOrigin.y;
+    newOrigin.z = std::abs(cameraPosition.z - currentOrigin.z) > threshold ? targetOrigin.z : currentOrigin.z;
+
+    if (newOrigin != currentOrigin) {
+        mGridOrigin = newOrigin;
+        LOG(INFO) << "Grid snap: size=" << gridSize
+                      << ", origin=(" << newOrigin.x << ", " << newOrigin.y << ", " << newOrigin.z << ")";
+    }
+
+    return mGridOrigin;
+}
+
 CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
     FScene const* const scene = getScene();
 
     /*
      * We apply a "world origin" to "everything" in order to implement the IBL rotation.
-     * The "world origin" is also used to keep the origin close to the camera position to
+     * The "world origin" is also used to keep the origin close to the camera position (or snapped grid) to
      * improve fp precision in the shader for large scenes.
      */
-    double3 translation;
-    mat3 rotation;
+    double3 translation = 0.0;
+    mat3 rotation{ 1.0f };
 
     /*
      * Calculate all camera parameters needed to render this View for this frame.
      */
     FCamera const* const camera = mViewingCamera ? mViewingCamera : mCullingCamera;
+    double3 const cameraPosition = camera->getPosition();
+
+    // Internal policy controlled by feature flag and debug flags
     if (engine.debug.view.camera_at_origin) {
-        // this moves the camera to the origin, effectively doing all shader computations in
-        // view-space, which improves floating point precision in the shader by staying around
-        // zero, where fp precision is highest. This also ensures that when the camera is placed
-        // very far from the origin, objects are still rendered and lit properly.
-        translation = -camera->getPosition();
+        if (engine.features.view.enable_grid_based_world_origin) {
+            // This moves the camera to a snapped grid origin, improving floating point precision
+            // while avoiding per-frame transform updates for objects as long as the camera
+            // stays within the grid cell (plus hysteresis).
+            double gridSize = mGridSize;
+            if (gridSize <= 0.0) {
+                gridSize = calculateAutomaticGridSize(camera);
+            }
+            mEffectiveGridSize = gridSize;
+            const double hysteresisRatio = 0.5; // Automatic 50% hysteresis
+            translation = -computeGridOrigin(cameraPosition, gridSize, hysteresisRatio);
+        } else {
+            // this moves the camera to the origin, effectively doing all shader computations in
+            // view-space, which improves floating point precision in the shader by staying around
+            // zero, where fp precision is highest. This also ensures that when the camera is placed
+            // very far from the origin, objects are still rendered and lit properly.
+            translation = -cameraPosition;
+        }
     }
 
     FIndirectLight const* const ibl = scene->getIndirectLight();
@@ -1447,7 +1521,7 @@ void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) 
 
 void FView::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
     // MSAA is a post-process effect, and post-processing is disabled at FL0
-    if (mFeatureLevel >= backend::FeatureLevel::FEATURE_LEVEL_1) {
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
         mMultiSampleAntiAliasingOptions = options;
         assert_invariant(!options.enabled || !mRenderTarget || !mRenderTarget->hasSampleableDepth());
