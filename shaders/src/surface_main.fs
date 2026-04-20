@@ -1,4 +1,10 @@
+#if !defined(HAS_CUSTOM_OUTPUT)
 layout(location = 0) out vec4 fragColor;
+#else
+// Define fragColor even with custom outputs enabled to satisfy usages. It will be removed
+// during dead-code elimination.
+vec4 fragColor;
+#endif
 
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
 void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
@@ -116,4 +122,7 @@ void main() {
 #endif
 
 
+#if defined(HAS_CUSTOM_OUTPUT)
+    FRAG_OUTPUT_AT0 = inputs.FRAG_OUTPUT0;
+#endif
 }
