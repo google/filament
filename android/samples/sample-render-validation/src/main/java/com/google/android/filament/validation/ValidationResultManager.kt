@@ -35,6 +35,7 @@ data class ValidationResult(
 class ValidationResultManager(
     private val outputDir: File,
     private val deviceName: String,
+    private val deviceHardware: String,
     private val deviceCodeName: String,
     private val androidVersion: String,
     private val androidBuildNumber: String
@@ -44,7 +45,7 @@ class ValidationResultManager(
         private const val TAG = "ValidationResultManager"
     }
 
-    private val results = mutableListOf<ValidationResult>()
+    private val results = java.util.concurrent.CopyOnWriteArrayList<ValidationResult>()
     private val gpuDriverInfos = JSONObject()
 
     init {
@@ -293,6 +294,7 @@ class ValidationResultManager(
         metadataObject.put("gpu_driver_info", gpuDriverInfos)
         metadataObject.put("total_time_ms", totalTimeMs)
         metadataObject.put("device_name", deviceName ?: "")
+        metadataObject.put("device_hardware", deviceHardware ?: "")
         metadataObject.put("device_code_name", deviceCodeName ?: "")
         metadataObject.put("android_version", androidVersion ?: "")
         metadataObject.put("android_build_number", androidBuildNumber ?: "")

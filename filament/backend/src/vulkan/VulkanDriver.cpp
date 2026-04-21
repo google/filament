@@ -1008,7 +1008,9 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::ImmutableCString&& ta
     // it with appropriate VulkanCmdFence, which is associated with the current, recording command
     // buffer.
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
-    fence->setFence(cmdbuf->getFenceStatus());
+    signalFence([&] {
+        fence->setFence(cmdbuf->getFenceStatus());
+    });
     mResourceManager.associateHandle(fh.getId(), std::move(tag));
 }
 
@@ -1459,7 +1461,9 @@ void VulkanDriver::fenceCancel(FenceHandle const fh) {
     // Even though this is a synchronous call, the fence handle must be (and stay) valid
     assert_invariant(fh);
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
-    fence->cancel();
+    signalFence([&] {
+        fence->cancel();
+    });
 }
 
 FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
@@ -1486,7 +1490,18 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         until = now + nanoseconds(timeout);
     }
 
-    auto const [cmdfence, canceled] = fence->wait(until);
+    std::shared_ptr<VulkanCmdFence> cmdfence;
+    bool canceled = false;
+    waitForFence([&] {
+        auto status = fence->getStatus();
+        if (bool(status.first) || status.second) {
+            cmdfence = status.first;
+            canceled = status.second;
+            return true;
+        }
+        return false;
+    }, until);
+
     if (!cmdfence || canceled) {
         return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
     }

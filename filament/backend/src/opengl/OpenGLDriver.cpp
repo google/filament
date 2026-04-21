@@ -2074,9 +2074,9 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, ImmutableCString&& tag) {
     assert_invariant(f->state);
 
     if (mPlatform.canCreateFence()) {
-        std::lock_guard const lock(f->state->lock);
-        f->fence = mPlatform.createFence();
-        f->state->cond.notify_all();
+        signalFence([&] {
+            f->fence = mPlatform.createFence();
+        });
         return;
     }
 
@@ -2090,11 +2090,11 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, ImmutableCString&& tag) {
     // This is the case where we need to use OpenGL fences, as soon as we return, the user
     // is allowed to destroy the fence, so we need to keep a reference to the internal state.
     std::weak_ptr<GLFence::State> const weak = f->state;
-    whenGpuCommandsComplete([weak] {
+    whenGpuCommandsComplete([weak, this] {
         if (auto const state = weak.lock()) {
-            std::lock_guard const lock(state->lock);
-            state->status = FenceStatus::CONDITION_SATISFIED;
-            state->cond.notify_all();
+            signalFence([&] {
+                state->status = FenceStatus::CONDITION_SATISFIED;
+            });
         }
     });
 #else
@@ -2633,9 +2633,9 @@ void OpenGLDriver::fenceCancel(Handle<HwFence> fh) {
     GLFence const* const f = handle_cast<GLFence*>(fh);
     assert_invariant(f->state);
 
-    std::lock_guard const lock(f->state->lock);
-    f->state->status = FenceStatus::ERROR;
-    f->state->cond.notify_all();
+    signalFence([&] {
+        f->state->status = FenceStatus::ERROR;
+    });
 }
 
 FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
@@ -2661,22 +2661,18 @@ FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     // `f` is not supposed to become invalid while we wait.
 
     if (mPlatform.canCreateFence()) {
-        std::unique_lock lock(f->state->lock);
+        // we've been called before the fence was created asynchronously,
+        // so we need to wait for that, before using the real fence.
+        // By construction, "f" can't be destroyed while we wait, because its
+        // construction call is in the queue and a destroy call will have to come later.
+        waitForFence([f] {
+            return f->fence != nullptr;
+        }, until);
         if (f->fence == nullptr) {
-            // we've been called before the fence was created asynchronously,
-            // so we need to wait for that, before using the real fence.
-            // By construction, "f" can't be destroyed while we wait, because its
-            // construction call is in the queue and a destroy call will have to come later.
-            f->state->cond.wait_until(lock, until, [f] {
-                return f->fence != nullptr;
-            });
-            if (f->fence == nullptr) {
-                // the only possible choice here is that we timed out
-                assert_invariant(f->state->status == FenceStatus::TIMEOUT_EXPIRED);
-                return FenceStatus::TIMEOUT_EXPIRED;
-            }
+            // the only possible choice here is that we timed out
+            assert_invariant(f->state->status == FenceStatus::TIMEOUT_EXPIRED);
+            return FenceStatus::TIMEOUT_EXPIRED;
         }
-        lock.unlock();
         // here we know that we have the platform fence
         assert_invariant(f->fence);
         return mPlatform.waitFence(f->fence, timeout);
@@ -2689,11 +2685,15 @@ FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
 
     // This is the case where we need to use OpenGL fences
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    std::unique_lock lock(f->state->lock);
-    f->state->cond.wait_until(lock, until, [f] {
-        return f->state->status != FenceStatus::TIMEOUT_EXPIRED;
-    });
-    return f->state->status;
+    FenceStatus result = FenceStatus::TIMEOUT_EXPIRED;
+    waitForFence([&] {
+        if (f->state->status != FenceStatus::TIMEOUT_EXPIRED) {
+            result = f->state->status;
+            return true;
+        }
+        return false;
+    }, until);
+    return result;
 #else
     return FenceStatus::ERROR;
 #endif

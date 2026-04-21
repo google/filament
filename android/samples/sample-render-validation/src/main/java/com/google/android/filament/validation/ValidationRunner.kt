@@ -65,7 +65,22 @@ class ValidationRunner(
 
         // Sort by backend then model. This tries to minimize the number of times we need to
         // recreate the Engine, and then the ModelViewer.
-        expanded.sortedWith(compareBy({ it.first.backend }, { it.second }))
+        val sorted = expanded.sortedWith(compareBy({ it.first.backend }, { it.second }))
+
+        val filter = testFilter
+        if (filter != null && filter.count { it == '.' } == 2) {
+            val parts = filter.split(".")
+            val nameRegex = ("^" + parts[0].replace("*", ".*") + "$").toRegex()
+            val backendRegex = ("^" + parts[1].replace("*", ".*") + "$").toRegex()
+            val modelRegex = ("^" + parts[2].replace("*", ".*") + "$").toRegex()
+
+            sorted.filter { (test, model) ->
+                val testBackend = test.backend ?: "opengl"
+                test.name.matches(nameRegex) && testBackend.matches(backendRegex) && model.matches(modelRegex)
+            }
+        } else {
+            sorted
+        }
     }
 
     enum class State {
@@ -86,6 +101,7 @@ class ValidationRunner(
 
     var callback: Callback? = null
     var generateGoldens: Boolean = false
+    var testFilter: String? = null
 
     fun start() {
         if (sortedTests.isEmpty()) {
@@ -215,10 +231,11 @@ class ValidationRunner(
                         content.renderer = mv.renderer
                         content.scene = mv.scene
                         content.lightManager = mv.engine.lightManager
-
                         // Tick
                         val deltaTime = 1.0f / 60.0f
                         engine.tick(mv.engine, content, deltaTime)
+
+                        applyAnimation(mv, currentTestConfig!!.rendering)
 
                         frameCounter++
                         if (engine.shouldClose()) {
@@ -233,6 +250,30 @@ class ValidationRunner(
         }
     }
 
+    private fun applyAnimation(mv: com.google.android.filament.utils.ModelViewer, rendering: JSONObject) {
+        val animator = mv.animator ?: return
+        if (animator.animationCount == 0) return
+
+        var enabled = false
+        var time = 0.0f
+
+        if (rendering.has("animation")) {
+            val anim = rendering.optJSONObject("animation")
+            if (anim != null) {
+                enabled = anim.optBoolean("enabled", false)
+                time = anim.optDouble("time", 0.0).toFloat()
+            }
+        } else {
+            enabled = rendering.optBoolean("animation.enabled", false)
+            time = rendering.optDouble("animation.time", 0.0).toFloat()
+        }
+
+        if (enabled) {
+            animator.applyAnimation(0, time)
+            animator.updateBoneMatrices()
+        }
+    }
+
     private fun startAutomation() {
         val test = currentTestConfig!!
         val specJson = JSONObject()
@@ -243,12 +284,18 @@ class ValidationRunner(
         currentEngine = AutomationEngine(fullSpec)
         val options = AutomationEngine.Options()
         options.sleepDuration = 0.0f // Minimal sleep, let frames drive it
-        options.minFrameCount = 1 // Ensure some frames pass
+        options.minFrameCount = 15 // Ensure enough frames pass for temporal accumulation
         currentEngine?.setOptions(options)
 
         // Use batch mode to ensure shouldClose() works reliably
         currentEngine?.startBatchMode()
         currentEngine?.signalBatchMode() // Start immediately
+
+        // Clear the frame history so that temporal effects (like SSR or TAA) don't bleed over
+        // or ghost from the visual output of the previous test.
+        modelViewer?.let { mv ->
+            mv.view.clearFrameHistory(mv.engine)
+        }
 
         frameCounter = 0
         currentState = State.RUNNING_TEST
@@ -297,8 +344,6 @@ class ValidationRunner(
              Log.i("ValidationRunner", "Found golden at ${goldenFile.absolutePath}")
          } else {
              Log.w("ValidationRunner", "Golden not found for $testFullName. Searched in: ${searchPaths.joinToString { it.absolutePath }}")
-             // Fallback to old behavior for reference if everything else fails
-             goldenFile = modelParent.parentFile?.resolve("golden/${testFullName}.png") ?: File(modelParent, "golden/${testFullName}.png")
          }
 
          Thread {

@@ -1242,6 +1242,14 @@ char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) n
         case MaterialBuilder::OutputType::FLOAT2: return "vec2";
         case MaterialBuilder::OutputType::FLOAT3: return "vec3";
         case MaterialBuilder::OutputType::FLOAT4: return "vec4";
+        case MaterialBuilder::OutputType::INT:    return "int";
+        case MaterialBuilder::OutputType::INT2:   return "ivec2";
+        case MaterialBuilder::OutputType::INT3:   return "ivec3";
+        case MaterialBuilder::OutputType::INT4:   return "ivec4";
+        case MaterialBuilder::OutputType::UINT:   return "uint";
+        case MaterialBuilder::OutputType::UINT2:  return "uvec2";
+        case MaterialBuilder::OutputType::UINT3:  return "uvec3";
+        case MaterialBuilder::OutputType::UINT4:  return "uvec4";
     }
 }
 

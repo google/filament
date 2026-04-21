@@ -174,7 +174,7 @@
   <script src="../../web/lib/filament.js"></script>
   <script src="../../web/lib/gl-matrix-min.js"></script>
   <script>
-    Filament.init(['../../web/assets/cube_fl0/nonlit_fl0.filamat'], () => {
+    Filament.init(['../../web/assets/cube_fl0/nonlit.filamat'], () => {
       window.VertexAttribute = Filament.VertexAttribute;
       window.AttributeType = Filament.VertexBuffer$AttributeType;
       window.Projection = Filament.Camera$Projection;
@@ -257,7 +257,7 @@
           .bufferType(Filament.IndexBuffer$IndexType.USHORT)
           .build(engine);
         this.ib.setBuffer(engine, CUBE_INDICES);
-        const mat = engine.createMaterial('../../web/assets/cube_fl0/nonlit_fl0.filamat');
+        const mat = engine.createMaterial('../../web/assets/cube_fl0/nonlit.filamat');
         const matinst = mat.getDefaultInstance();
         Filament.RenderableManager.Builder(1)
           .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })

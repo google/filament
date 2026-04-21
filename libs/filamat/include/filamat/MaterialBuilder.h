@@ -278,7 +278,15 @@ public:
         FLOAT,
         FLOAT2,
         FLOAT3,
-        FLOAT4
+        FLOAT4,
+        INT,
+        INT2,
+        INT3,
+        INT4,
+        UINT,
+        UINT2,
+        UINT3,
+        UINT4
     };
 
     struct PreprocessorDefine {

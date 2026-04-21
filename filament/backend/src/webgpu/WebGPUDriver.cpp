@@ -702,7 +702,9 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
 void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, utils::ImmutableCString&& tag) {
     // The handle is constructed synchronously in createFenceS.
     const auto fence = handleCast<WebGPUFence>(fenceHandle);
-    fence->setSubmissionState(mQueueManager.getLatestSubmissionState());
+    signalFence([&] {
+        fence->setSubmissionState(mQueueManager.getLatestSubmissionState());
+    });
     setDebugTag(fenceHandle.getId(), std::move(tag));
 }
 
@@ -772,11 +774,7 @@ void WebGPUDriver::fenceCancel(FenceHandle fh) {
 }
 
 FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
-    const auto fence = handleCast<WebGPUFence>(fenceHandle);
-    if (!fence) {
-        return FenceStatus::ERROR;
-    }
-    return fence->getStatus();
+    return fenceWait(fenceHandle, 0);
 }
 
 FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const timeout) {
@@ -784,7 +782,38 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    return fence->wait(timeout);
+    
+    using namespace std::chrono;
+    auto now = steady_clock::now();
+    steady_clock::time_point until = steady_clock::time_point::max();
+
+    using TimeoutType = decltype(timeout);
+    constexpr TimeoutType maxTimeout = std::numeric_limits<TimeoutType>::max();
+    constexpr nanoseconds maxNano = nanoseconds::max();
+    if (timeout < maxNano.count() && timeout < maxTimeout && // Need to account for overflow
+            now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+        until = now + nanoseconds(timeout);
+    }
+
+    std::shared_ptr<WebGPUSubmissionState> state;
+    bool const success = waitForFence([&] {
+        state = fence->getState();
+        return bool(state);
+    }, until);
+    
+    if (!success) {
+        return FenceStatus::TIMEOUT_EXPIRED;
+    }
+    
+    auto duration_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(steady_clock::now() - now)
+                    .count());
+    // In the unlikely event that duration_ns is too close to timeout, we just assume the leftover
+    // timeout is 0.
+    if (timeout == 0 || duration_ns > timeout) {
+        duration_ns = timeout;
+    }
+    return state->waitForCompletion(timeout - duration_ns);
 }
 
 void WebGPUDriver::destroySync(Handle<HwSync> syncHandle) {

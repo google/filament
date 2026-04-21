@@ -31,8 +31,10 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import com.google.android.filament.utils.KTX1Loader
@@ -62,8 +64,12 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private lateinit var choreographer: Choreographer
     private lateinit var statusTextView: TextView
     private lateinit var testResultsHeader: TextView
+    private lateinit var progressContainer: FrameLayout
     private lateinit var testProgress: com.google.android.filament.validation.TestProgressBar
+    private lateinit var progressTriangle: ImageView
+    private lateinit var scrollView: ScrollView
     private lateinit var testSummaryText: TextView
+    private lateinit var deviceInfoText: TextView
     private lateinit var resultsContainer: LinearLayout
     private lateinit var inputManager: ValidationInputManager
     private var currentInput: ValidationInputManager.ValidationInput? = null
@@ -100,8 +106,10 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private val frameScheduler = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             choreographer.postFrameCallback(this)
-            modelViewer?.render(frameTimeNanos)
-            validationRunner?.onFrame(frameTimeNanos)
+            val rendered = modelViewer?.render(frameTimeNanos) ?: false
+            if (rendered) {
+                validationRunner?.onFrame(frameTimeNanos)
+            }
         }
     }
 
@@ -115,9 +123,21 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
         statusTextView = findViewById(R.id.status_text)
         testResultsHeader = findViewById(R.id.test_results_header)
+        progressContainer = findViewById(R.id.progress_container)
         testProgress = findViewById(R.id.test_progress)
+        progressTriangle = findViewById(R.id.progress_triangle)
+        scrollView = findViewById(R.id.scroll_view)
         testSummaryText = findViewById(R.id.test_summary_text)
+        deviceInfoText = findViewById(R.id.device_info_text)
+        deviceInfoText.text = "Running on: ${android.os.Build.MODEL}"
         resultsContainer = findViewById(R.id.results_container)
+
+        scrollView.viewTreeObserver.addOnScrollChangedListener {
+            updateTrianglePosition()
+        }
+        scrollView.viewTreeObserver.addOnGlobalLayoutListener {
+            updateTrianglePosition()
+        }
 
         runButton = findViewById(R.id.run_button)
         loadButton = findViewById(R.id.load_button)
@@ -438,6 +458,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         return ValidationResultManager(
             outputDir = outputDir,
             deviceName = android.os.Build.MODEL,
+            deviceHardware = android.os.Build.HARDWARE,
             deviceCodeName = android.os.Build.DEVICE,
             androidVersion = android.os.Build.VERSION.RELEASE,
             androidBuildNumber = android.os.Build.DISPLAY
@@ -470,7 +491,9 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             Log.i(TAG, "Output dir: ${input.outputDir.absolutePath}")
 
             testProgress.visibility = View.VISIBLE
+            progressContainer.visibility = View.VISIBLE
             testSummaryText.visibility = View.GONE
+            deviceInfoText.visibility = View.VISIBLE
             totalPassed = 0
             totalFailed = 0
             testProgress.reset(1)
@@ -493,6 +516,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             validationRunner = ValidationRunner(this, surfaceView, config, resultManager!!, backendFilter)
             validationRunner?.callback = this
             validationRunner?.generateGoldens = input.generateGoldens
+            validationRunner?.testFilter = input.testFilter
             validationRunner?.start()
 
         } catch (e: Exception) {
@@ -540,6 +564,36 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private var currentDiffBitmap: Bitmap? = null
     private var totalPassed = 0
     private var totalFailed = 0
+    private var totalTestsCount = 1
+
+    private fun updateTrianglePosition() {
+        if (progressContainer.visibility != View.VISIBLE || resultsContainer.childCount == 0) return
+
+        val scrollY = scrollView.scrollY
+        val visibleHeight = scrollView.height
+        val centerY = scrollY + visibleHeight / 2f
+
+        var bestIndex = -1
+        var minDistance = Float.MAX_VALUE
+        for (i in 0 until resultsContainer.childCount) {
+            val child = resultsContainer.getChildAt(i)
+            val childCenterY = child.top + child.height / 2f
+            val dist = Math.abs(childCenterY - centerY)
+            if (dist < minDistance) {
+                minDistance = dist
+                bestIndex = i
+            }
+        }
+
+        if (bestIndex >= 0) {
+            val progressWidth = testProgress.width
+            if (progressWidth > 0 && totalTestsCount > 0) {
+                val segmentWidth = progressWidth.toFloat() / totalTestsCount
+                val targetX = (bestIndex * segmentWidth) + (segmentWidth / 2f)
+                progressTriangle.translationX = targetX - progressTriangle.width / 2f
+            }
+        }
+    }
 
     override fun onTestFinished(result: ValidationResult) {
         runOnUiThread {
@@ -640,6 +694,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
             resultContainer.addView(imagesRow)
             resultsContainer.addView(resultContainer)
+            resultsContainer.post { updateTrianglePosition() }
 
             // Clear current images for next test
             currentRenderedBitmap = null
@@ -651,7 +706,9 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
     override fun onTestProgress(current: Int, total: Int) {
         runOnUiThread {
+            totalTestsCount = Math.max(1, total)
             testProgress.setMax(total)
+            updateTrianglePosition()
         }
     }
 
@@ -663,6 +720,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             val html = "Passed: <font color='$colorPassed'><b>$totalPassed</b></font> / $total &nbsp;&nbsp;&nbsp; Failed: <font color='$colorFailed'><b>$totalFailed</b></font>"
             testSummaryText.text = Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY)
             testSummaryText.visibility = View.VISIBLE
+            deviceInfoText.visibility = View.GONE
             statusTextView.text = "All tests finished!"
 
             // Re-enable UI

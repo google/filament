@@ -37,7 +37,8 @@ class ValidationInputManager(private val context: Context) {
         val outputDir: File,
         val generateGoldens: Boolean,
         val autoRun: Boolean = false,
-        val sourceZip: File? = null
+        val sourceZip: File? = null,
+        val testFilter: String? = null
     )
 
     public fun getBaseDir() : File {
@@ -70,6 +71,8 @@ class ValidationInputManager(private val context: Context) {
         // If we get a generateGoldens signal, then it should trigger a run
         val autoRun = intent.getBooleanExtra("auto_run", false) ||
             intent.getBooleanExtra("generate_goldens", false)
+
+        val testFilter = if (autoRun) intent.getStringExtra("test_filter") else null
 
         val outputPath = intent.getStringExtra("output_path")
 
@@ -134,7 +137,7 @@ class ValidationInputManager(private val context: Context) {
             else -> null
         }
 
-        return@withContext ValidationInput(config, outputDir, generateGoldens, autoRun, sourceZipFile)
+        return@withContext ValidationInput(config, outputDir, generateGoldens, autoRun, sourceZipFile, testFilter)
     }
 
     private var lastUnzippedFile: String? = null
@@ -150,7 +153,8 @@ class ValidationInputManager(private val context: Context) {
             outputDir = outputDir,
             generateGoldens = false,
             autoRun = false,
-            sourceZip = file
+            sourceZip = file,
+            testFilter = null
         )
         return newInput
     }
@@ -227,14 +231,15 @@ class ValidationInputManager(private val context: Context) {
             }
         }
 
-        // Copy DamagedHelmet.glb
+        // Copy models
         val modelsDir = File(filesDir, "models")
         modelsDir.mkdirs()
-        val modelOut = File(modelsDir, "helmet.glb")
-
-        assetManager.open("models/helmet.glb").use { input ->
-            FileOutputStream(modelOut).use { output ->
-                input.copyTo(output)
+        assetManager.list("models")?.forEach { modelFileName ->
+            val modelOut = File(modelsDir, modelFileName)
+            assetManager.open("models/$modelFileName").use { input ->
+                FileOutputStream(modelOut).use { output ->
+                    input.copyTo(output)
+                }
             }
         }
 
@@ -247,9 +252,15 @@ class ValidationInputManager(private val context: Context) {
 
         val models = configJson.getJSONObject("models")
 
-        // Ensure the default model points to the extracted file
-        // We can use absolute path to be safe since we know where it is now.
-        models.put("DamagedHelmet", modelOut.absolutePath)
+        // Update all model paths to point to the extracted files in the models directory
+        val keys = models.keys()
+        val newModels = JSONObject()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val fileName = models.getString(key)
+            newModels.put(key, java.io.File(modelsDir, fileName).absolutePath)
+        }
+        configJson.put("models", newModels)
 
         configOut.writeText(configJson.toString(2))
 
