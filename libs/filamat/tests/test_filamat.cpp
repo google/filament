@@ -923,7 +923,7 @@ TEST_F(MaterialCompiler, FeatureLevel0Sampler2D) {
   std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
-            material.baseColor = texture2D(materialParams_sampler, vec2(0.0, 0.0));
+            material.baseColor = texture(materialParams_sampler, vec2(0.0, 0.0));
         }
     )");
   filamat::MaterialBuilder builder;
@@ -941,7 +941,7 @@ TEST_F(MaterialCompiler, SamplerTransformName) {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             vec3 uvw = materialParams.sampler_transform * vec3(0.0, 0.0, 0.0);
-            material.baseColor = texture2D(materialParams_sampler, uvw.xy);
+            material.baseColor = texture(materialParams_sampler, uvw.xy);
         }
     )");
   filamat::MaterialBuilder builder;
@@ -960,7 +960,7 @@ TEST_F(MaterialCompiler, SamplerMissingTransformName) {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             vec3 uvw = materialParams.sampler_transform * vec3(0.0, 0.0, 0.0);
-            material.baseColor = texture2D(materialParams_sampler, uvw.xy);
+            material.baseColor = texture(materialParams_sampler, uvw.xy);
         }
     )");
   filamat::MaterialBuilder builder;
@@ -1057,6 +1057,85 @@ TEST_F(MaterialCompiler, ClientApiLevelReleasedUseOfUnstableApiFails) {
     builder.material(shaderCode.c_str());
     builder.setApiLevel(filament::RELEASED_MATERIAL_API_LEVEL);
 
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomOutputSuccess) {
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.customOutput = uvec4(1, 2, 3, 4);
+        }
+    )");
+
+    filamat::MaterialBuilder builder;
+    builder.material(shaderCode.c_str());
+    builder.shading(filament::Shading::UNLIT);
+    builder.blending(filament::BlendingMode::OPAQUE);
+    builder.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
+    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
+                   filamat::MaterialBuilder::OutputTarget::COLOR,
+                   filamat::MaterialBuilder::Precision::DEFAULT,
+                   filamat::MaterialBuilder::OutputType::UINT4,
+                   "customOutput");
+
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomOutputFeatureLevel0Fails) {
+    filamat::MaterialBuilder builder;
+    builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
+    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
+                   filamat::MaterialBuilder::OutputTarget::COLOR,
+                   filamat::MaterialBuilder::Precision::DEFAULT,
+                   filamat::MaterialBuilder::OutputType::UINT4,
+                   "customOutput");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomOutputMoreThanOneFails) {
+    filamat::MaterialBuilder builder;
+    builder.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
+    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
+                   filamat::MaterialBuilder::OutputTarget::COLOR,
+                   filamat::MaterialBuilder::Precision::DEFAULT,
+                   filamat::MaterialBuilder::OutputType::UINT4,
+                   "customOutput");
+    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
+                   filamat::MaterialBuilder::OutputTarget::COLOR,
+                   filamat::MaterialBuilder::Precision::DEFAULT,
+                   filamat::MaterialBuilder::OutputType::UINT4,
+                   "customOutput1");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomOutputLitFails) {
+    filamat::MaterialBuilder builder;
+    builder.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
+    builder.shading(filament::Shading::LIT);
+    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
+                   filamat::MaterialBuilder::OutputTarget::COLOR,
+                   filamat::MaterialBuilder::Precision::DEFAULT,
+                   filamat::MaterialBuilder::OutputType::UINT4,
+                   "customOutput");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomOutputTransparentFails) {
+    filamat::MaterialBuilder builder;
+    builder.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
+    builder.shading(filament::Shading::UNLIT);
+    builder.blending(filament::BlendingMode::TRANSPARENT);
+    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
+                   filamat::MaterialBuilder::OutputTarget::COLOR,
+                   filamat::MaterialBuilder::Precision::DEFAULT,
+                   filamat::MaterialBuilder::OutputType::UINT4,
+                   "customOutput");
     filamat::Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }

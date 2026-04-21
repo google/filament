@@ -1,7 +1,9 @@
-#if __VERSION__ == 100
-vec4 fragColor;
-#else
+#if !defined(HAS_CUSTOM_OUTPUT)
 layout(location = 0) out vec4 fragColor;
+#else
+// Define fragColor even with custom outputs enabled to satisfy usages. It will be removed
+// during dead-code elimination.
+vec4 fragColor;
 #endif
 
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
@@ -114,14 +116,13 @@ void main() {
 #if MATERIAL_FEATURE_LEVEL == 0
     if (CONFIG_SRGB_SWAPCHAIN_EMULATION) {
         if (frameUniforms.rec709 != 0) {
-            fragColor.r = pow(fragColor.r, 0.45454);
-            fragColor.g = pow(fragColor.g, 0.45454);
-            fragColor.b = pow(fragColor.b, 0.45454);
+            fragColor.rgb = pow(fragColor.rgb, vec3(0.45454));
         }
     }
 #endif
 
-#if __VERSION__ == 100
-    gl_FragData[0] = fragColor;
+
+#if defined(HAS_CUSTOM_OUTPUT)
+    FRAG_OUTPUT_AT0 = inputs.FRAG_OUTPUT0;
 #endif
 }

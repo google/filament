@@ -148,6 +148,14 @@ std::unordered_map<std::string_view, OutputType> Enums::mStringToOutputType = {
         { "float2",  OutputType::FLOAT2 },
         { "float3",  OutputType::FLOAT3 },
         { "float4",  OutputType::FLOAT4 },
+        { "int",     OutputType::INT },
+        { "int2",    OutputType::INT2 },
+        { "int3",    OutputType::INT3 },
+        { "int4",    OutputType::INT4 },
+        { "uint",    OutputType::UINT },
+        { "uint2",   OutputType::UINT2 },
+        { "uint3",   OutputType::UINT3 },
+        { "uint4",   OutputType::UINT4 }
 };
 
 template <>

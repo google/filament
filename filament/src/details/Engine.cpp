@@ -271,6 +271,7 @@ FEngine::FEngine(Builder const& builder) :
         mRenderableManager(*this),
         mLightManager(*this),
         mCameraManager(*this),
+        mMaterialCache(builder->mConfig.materialCacheCapacity, builder->mConfig.programCacheCapacity),
         mCommandBufferQueue(
                 builder->mConfig.minCommandBufferSizeMB * MiB,
                 builder->mConfig.commandBufferSizeMB * MiB,
@@ -1755,7 +1756,7 @@ void FEngine::compile(
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) {
     auto const variants = getMaterialCompileVariants(view, shadowReceiver, skinning);
-    material->compile(priority, variants, handler, std::move(callback));
+    const_cast<FMaterial*>(material)->compile(priority, variants, handler, std::move(callback));
 }
 
 // ------------------------------------------------------------------------------------------------
