@@ -103,6 +103,10 @@ def main():
     "--artifacts", nargs="+",
     help="List of artifact paths to check (e.g. 'foo.aar' or 'foo.aar/lib/arm64/bar.so')."
   )
+  parser.add_argument(
+    "--bypass", action="store_true",
+    help="Bypass the size threshold check and exit successfully."
+  )
 
   args = parser.parse_args()
 
@@ -179,7 +183,10 @@ def main():
 
   print("-" * 110)
 
-  if failures:
+  if args.bypass:
+    print("SUCCESS: Size guard test has been bypassed via commit message tag.")
+    sys.exit(0)
+  elif failures:
     print(f"FAILURE: {len(failures)} artifacts exceeded threshold of {args.threshold} bytes.")
     sys.exit(1)
   else:

@@ -302,16 +302,19 @@ public:
 
     // Resolves base level of input and outputs a texture from outDesc.
     // outDesc with, height, format and samples will be overridden.
-    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
-            utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor outDesc) noexcept;
+    // customPassName is an optional parameter to override the default "resolve" pass name.
+    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg, utils::StaticString outputBufferName,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc,
+            utils::CString customPassName = {}) noexcept;
 
     // Resolves base level of input and outputs a texture from outDesc using a shader instead of
     // driver-implemented API.
     // outDesc with, height, format and samples will be overridden.
+    // customPassName is an optional parameter to override the default "resolveDepthWithShader" pass
+    // name.
     FrameGraphId<FrameGraphTexture> resolveDepthWithShader(FrameGraph& fg,
             utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor outDesc) noexcept;
+            FrameGraphTexture::Descriptor outDesc, utils::CString customPassName = {}) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,

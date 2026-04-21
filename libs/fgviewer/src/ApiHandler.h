@@ -38,15 +38,19 @@ public:
         : mServer(server) {}
     ~ApiHandler() = default;
 
-    bool handleGet(CivetServer* server, struct mg_connection* conn);
+    bool handleGet(CivetServer* server, struct mg_connection* conn) override;
+    bool handlePost(CivetServer* server, struct mg_connection* conn) override;
 
     void updateFrameGraph(ViewHandle view_handle);
 
 private:
-    const FrameGraphInfo* getFrameGraphInfo(struct mg_request_info const* request);
+    bool handlePostMonitor(struct mg_connection* conn, struct mg_request_info const* request);
+    bool handlePostMonitorClear(struct mg_connection* conn, struct mg_request_info const* request);
 
+    bool handleGetMonitor(struct mg_connection* conn, struct mg_request_info const* request);
     bool handleGetStatus(struct mg_connection* conn,
                          struct mg_request_info const* request);
+    bool handleGetImage(struct mg_connection* conn, struct mg_request_info const* request);
 
     DebugServer* mServer;
 

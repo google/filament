@@ -84,6 +84,10 @@
 
 using namespace utils;
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include "fg/FgviewerManager.h"
+#endif
+
 namespace filament {
 
 using namespace backend;
@@ -172,10 +176,10 @@ FView::FView(FEngine& engine)
 #endif
 
 #if FILAMENT_ENABLE_FGVIEWER
-    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
-    if (UTILS_LIKELY(fgviewerServer)) {
+    FgviewerManager* fgviewerManager = engine.debug.fgviewer;
+    if (UTILS_LIKELY(fgviewerManager)) {
         mFrameGraphViewerViewHandle =
-            fgviewerServer->createView(utils::CString(getName()));
+            fgviewerManager->createView(utils::CString(getName()));
     }
 #endif
 
@@ -225,9 +229,9 @@ void FView::terminate(FEngine& engine) {
 #endif
 
 #if FILAMENT_ENABLE_FGVIEWER
-    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
-    if (UTILS_LIKELY(fgviewerServer)) {
-        fgviewerServer->destroyView(mFrameGraphViewerViewHandle);
+    FgviewerManager* fgviewerManager = engine.debug.fgviewer;
+    if (UTILS_LIKELY(fgviewerManager)) {
+        fgviewerManager->destroyView(mFrameGraphViewerViewHandle);
     }
 #endif
 }

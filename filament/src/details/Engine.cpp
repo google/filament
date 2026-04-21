@@ -96,6 +96,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include "fg/FgviewerManager.h"
+#endif
+
 #include "generated/resources/materials.h"
 
 using namespace filament::math;
@@ -107,6 +111,27 @@ using namespace backend;
 using namespace filaflat;
 
 namespace {
+
+#if FILAMENT_ENABLE_FGVIEWER || FILAMENT_ENABLE_MATDBG
+utils::CString getPortString(std::string_view serviceType) {
+    #ifndef __ANDROID__
+    char const* portString = getenv(serviceType.data());
+    #else
+    char const* portString = [&]() -> char const*{
+        if (serviceType == "FILAMENT_MATDBG_PORT") {
+            return "8081";
+        } else if (serviceType == "FILAMENT_FGVIEWER_PORT") {
+            return "8085";
+        }
+        return nullptr;
+    }();
+    #endif
+    if (portString) {
+        return utils::CString { portString };
+    }
+    return {};
+}
+#endif // FILAMENT_ENABLE_FGVIEWER || FILAMENT_ENABLE_MATDBG
 
 Platform::DriverConfig getDriverConfig(FEngine* instance) {
     Platform::DriverConfig const driverConfig {
@@ -870,13 +895,8 @@ int FEngine::loop() {
     }
 
 #if FILAMENT_ENABLE_MATDBG
-    #ifdef __ANDROID__
-        const char* portString = "8081";
-    #else
-        const char* portString = getenv("FILAMENT_MATDBG_PORT");
-    #endif
-    if (portString != nullptr) {
-        const int port = atoi(portString);
+    if (auto portString = getPortString("FILAMENT_MATDBG_PORT"); !portString.empty()) {
+        const int port = atoi(portString.c_str());
 
         ShaderLanguage preferredLanguage = ShaderLanguage::UNSPECIFIED;
         if (mBackend == Backend::METAL) {
@@ -900,20 +920,13 @@ int FEngine::loop() {
 #endif
 
 #if FILAMENT_ENABLE_FGVIEWER // NOLINT(*-include-cleaner)
-#ifdef __ANDROID__
-    const char* fgviewerPortString = "8085";
-#else
-    const char* fgviewerPortString = getenv("FILAMENT_FGVIEWER_PORT");
-#endif
-    if (fgviewerPortString != nullptr) {
-        const int fgviewerPort = atoi(fgviewerPortString);
-        debug.fgviewerServer = new fgviewer::DebugServer(fgviewerPort);
-
+    if (auto portString = getPortString("FILAMENT_FGVIEWER_PORT"); !portString.empty()) {
+        debug.fgviewer = new FgviewerManager(*this, std::move(portString));
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
-        if (!debug.fgviewerServer->isReady()) {
-            delete debug.fgviewerServer;
-            debug.fgviewerServer = nullptr;
+        if (!debug.fgviewer->isReady()) {
+            delete debug.fgviewer;
+            debug.fgviewer = nullptr;
         }
     }
 #endif
@@ -930,8 +943,8 @@ int FEngine::loop() {
     }
 #endif
 #if FILAMENT_ENABLE_FGVIEWER
-    if(debug.fgviewerServer) {
-        delete debug.fgviewerServer;
+    if (debug.fgviewer) {
+        delete debug.fgviewer;
     }
 #endif
 
@@ -1723,7 +1736,7 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     if (Variant::isValidDepthVariant(depthVariant)) {
         // if we have a valid depth variant, add the stereo and skinning bits
         depthVariant.setStereo(view->hasStereo());
-        
+
         size_t const depthStart = variants.size();
         variants.push_back(depthVariant);
         apply(depthStart, skinning, &Variant::setSkinning);

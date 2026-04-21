@@ -29,6 +29,11 @@ namespace filament::fgviewer {
 namespace {
 
 void writeJSONString(std::ostream& os, const char* str) {
+    if (!str) {
+        os << "\"\"";
+        return;
+    }
+
     os << '"';
     const char* p = str;
     while (*p != '\0') {
