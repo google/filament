@@ -10,7 +10,7 @@ runs:
     - name: Prerequisites
       if: runner.os == 'macOS'
       run: |
-        # Must have at least clang-16 for a webgpu/dawn build.
+        # Must have at least clang-17 for a webgpu/dawn build.
         sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
         # this enforces the gltf_viewer build to use apple clang as oppose the brew clang used for get-mesa
         echo "CC=/usr/bin/clang" >> $GITHUB_ENV
