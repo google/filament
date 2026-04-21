@@ -134,12 +134,19 @@ static Result transcodeImageLevel(ktx2_transcoder& transcoder,
 
     if (formatInfo.isCompressed) {
         const uint32_t qwordsPerBlock = basisu::get_qwords_per_block(destFormat);
-        const size_t byteCount = sizeof(uint64_t) * qwordsPerBlock * levelInfo.m_total_blocks;
+        const size_t byteCount = (size_t)sizeof(uint64_t) * (size_t)qwordsPerBlock * (size_t)levelInfo.m_total_blocks;
+        
+        if (qwordsPerBlock != 0 && levelInfo.m_total_blocks != 0 &&
+                byteCount / qwordsPerBlock / sizeof(uint64_t) != levelInfo.m_total_blocks) {
+            return Result::COMPRESSED_TRANSCODE_FAILURE;
+        }
+
         uint64_t* const blocks = (uint64_t*) malloc(byteCount);
         if (!transcoder.transcode_image_level(levelIndex, layerIndex, faceIndex, blocks,
                 levelInfo.m_total_blocks, formatInfo.basisFormat, decodeFlags,
                 outputRowPitch, outputRowCount, channel0,
                 channel1, &transcoderState)) {
+            free(blocks);
             return Result::COMPRESSED_TRANSCODE_FAILURE;
         }
         *pbd = new Texture::PixelBufferDescriptor(blocks,
@@ -149,11 +156,23 @@ static Result transcodeImageLevel(ktx2_transcoder& transcoder,
 
     const uint32_t rowCount = levelInfo.m_orig_height;
     const uint32_t bytesPerPix = basis_get_bytes_per_block_or_pixel(formatInfo.basisFormat);
-    const size_t byteCount = bytesPerPix * levelInfo.m_orig_width * rowCount;
+    
+    if (bytesPerPix == 0) {
+        return Result::UNCOMPRESSED_TRANSCODE_FAILURE;
+    }
+
+    const size_t byteCount = (size_t)bytesPerPix * (size_t)levelInfo.m_orig_width * (size_t)rowCount;
+    
+    if (levelInfo.m_orig_width != 0 &&
+            byteCount / bytesPerPix / levelInfo.m_orig_width != rowCount) {
+        return Result::UNCOMPRESSED_TRANSCODE_FAILURE;
+    }
+
     uint64_t* const rows = (uint64_t*) malloc(byteCount);
     if (!transcoder.transcode_image_level(levelIndex, layerIndex, faceIndex, rows,
             byteCount / bytesPerPix, formatInfo.basisFormat, decodeFlags,
             outputRowPitch, outputRowCount, channel0, channel1, &transcoderState)) {
+        free(rows);
         return Result::UNCOMPRESSED_TRANSCODE_FAILURE;
     }
     *pbd = new Texture::PixelBufferDescriptor(rows, byteCount,
@@ -259,6 +278,7 @@ Texture* Ktx2Reader::load(const void* data, size_t size, TransferFunction transf
             return nullptr;
         }
         texture->setImage(mEngine, levelIndex, std::move(*pbd));
+        delete pbd;
     }
     return texture;
 }

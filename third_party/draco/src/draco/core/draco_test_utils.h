@@ -15,11 +15,23 @@
 #ifndef DRACO_CORE_DRACO_TEST_UTILS_H_
 #define DRACO_CORE_DRACO_TEST_UTILS_H_
 
+#include <ostream>
+#include <sstream>
+#include <streambuf>
+
 #include "draco/core/draco_test_base.h"
+#include "draco/draco_features.h"
 #include "draco/io/mesh_io.h"
 #include "draco/io/point_cloud_io.h"
 
+#ifdef DRACO_TRANSCODER_SUPPORTED
+#include "draco/io/scene_io.h"
+#endif
+
 namespace draco {
+
+// Returns test temporary directory.
+std::string GetTestTempDir();
 
 // Returns the full path to a given file system entry, such as test file or test
 // directory.
@@ -64,6 +76,47 @@ inline std::unique_ptr<PointCloud> ReadPointCloudFromTestFile(
   const std::string path = GetTestFileFullPath(file_name);
   return ReadPointCloudFromFile(path).value();
 }
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+inline std::unique_ptr<Scene> ReadSceneFromTestFile(
+    const std::string &file_name) {
+  const std::string path = GetTestFileFullPath(file_name);
+  return ReadSceneFromFile(path).value();
+}
+
+// Loads geometry specified by a |file_name| that is going to be automatically
+// converted to the correct path available to the testing instance. Supported
+// geometry types are Mesh and Scene.
+template <typename T>
+std::unique_ptr<T> ReadGeometryFromTestFile(const std::string &file_name);
+
+#endif  // DRACO_TRANSCODER_SUPPORTED
+
+// Utility class for redirection and capture of stderr/stdout.
+class CaptureStream {
+ public:
+  explicit CaptureStream(std::ostream &stream)
+      : old_buffer_(stream.rdbuf(buffer_.rdbuf())), stream_(stream) {}
+
+  ~CaptureStream() { Reset(); }
+
+  std::string GetStringAndRelease() {
+    Reset();
+    return buffer_.str();
+  }
+
+  void Reset() {
+    if (old_buffer_) {
+      stream_.rdbuf(old_buffer_);
+      old_buffer_ = nullptr;
+    }
+  }
+
+ private:
+  std::ostringstream buffer_;
+  std::streambuf *old_buffer_ = nullptr;
+  std::ostream &stream_;
+};
 
 // Evaluates an expression that returns draco::Status. If the status is not OK,
 // the macro asserts and logs the error message.

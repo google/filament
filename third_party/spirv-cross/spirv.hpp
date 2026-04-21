@@ -638,6 +638,7 @@ enum Decoration {
     DecorationHostAccessINTEL = 6188,
     DecorationInitModeINTEL = 6190,
     DecorationImplementInRegisterMapINTEL = 6191,
+    DecorationConditionalINTEL = 6247,
     DecorationCacheControlLoadINTEL = 6442,
     DecorationCacheControlStoreINTEL = 6443,
     DecorationMax = 0x7fffffff,
@@ -1103,6 +1104,7 @@ enum Capability {
     CapabilityTextureBoxFilterQCOM = 4485,
     CapabilityTextureBlockMatchQCOM = 4486,
     CapabilityTileShadingQCOM = 4495,
+    CapabilityCooperativeMatrixConversionQCOM = 4496,
     CapabilityTextureBlockMatch2QCOM = 4498,
     CapabilityFloat16ImageAMD = 5008,
     CapabilityImageGatherBiasLodAMD = 5009,
@@ -1254,6 +1256,7 @@ enum Capability {
     CapabilityBitInstructions = 6025,
     CapabilityGroupNonUniformRotateKHR = 6026,
     CapabilityFloatControls2 = 6029,
+    CapabilityFMAKHR = 6030,
     CapabilityAtomicFloat32AddEXT = 6033,
     CapabilityAtomicFloat64AddEXT = 6034,
     CapabilityLongCompositesINTEL = 6089,
@@ -1278,6 +1281,9 @@ enum Capability {
     CapabilitySubgroup2DBlockTransposeINTEL = 6230,
     CapabilitySubgroupMatrixMultiplyAccumulateINTEL = 6236,
     CapabilityTernaryBitwiseFunctionINTEL = 6241,
+    CapabilityUntypedVariableLengthArrayINTEL = 6243,
+    CapabilitySpecConditionalINTEL = 6245,
+    CapabilityFunctionVariantsINTEL = 6246,
     CapabilityGroupUniformArithmeticKHR = 6400,
     CapabilityTensorFloat32RoundingINTEL = 6425,
     CapabilityMaskedGatherScatterINTEL = 6427,
@@ -1966,12 +1972,14 @@ enum Op {
     OpUntypedInBoundsPtrAccessChainKHR = 4424,
     OpUntypedArrayLengthKHR = 4425,
     OpUntypedPrefetchKHR = 4426,
+    OpFmaKHR = 4427,
     OpSubgroupAllKHR = 4428,
     OpSubgroupAnyKHR = 4429,
     OpSubgroupAllEqualKHR = 4430,
     OpGroupNonUniformRotateKHR = 4431,
     OpSubgroupReadInvocationKHR = 4432,
     OpExtInstWithForwardRefsKHR = 4433,
+    OpUntypedGroupAsyncCopyKHR = 4434,
     OpTraceRayKHR = 4445,
     OpExecuteCallableKHR = 4446,
     OpConvertUToAccelerationStructureKHR = 4447,
@@ -2008,10 +2016,14 @@ enum Op {
     OpImageBoxFilterQCOM = 4481,
     OpImageBlockMatchSSDQCOM = 4482,
     OpImageBlockMatchSADQCOM = 4483,
+    OpBitCastArrayQCOM = 4497,
     OpImageBlockMatchWindowSSDQCOM = 4500,
     OpImageBlockMatchWindowSADQCOM = 4501,
     OpImageBlockMatchGatherSSDQCOM = 4502,
     OpImageBlockMatchGatherSADQCOM = 4503,
+    OpCompositeConstructCoopMatQCOM = 4540,
+    OpCompositeExtractCoopMatQCOM = 4541,
+    OpExtractSubArrayQCOM = 4542,
     OpGroupIAddNonUniformAMD = 5000,
     OpGroupFAddNonUniformAMD = 5001,
     OpGroupFMinNonUniformAMD = 5002,
@@ -2093,6 +2105,7 @@ enum Op {
     OpTypeAccelerationStructureNV = 5341,
     OpExecuteCallableNV = 5344,
     OpRayQueryGetClusterIdNV = 5345,
+    OpRayQueryGetIntersectionClusterIdNV = 5345,
     OpHitObjectGetClusterIdNV = 5346,
     OpTypeCooperativeMatrixNV = 5358,
     OpCooperativeMatrixLoadNV = 5359,
@@ -2402,6 +2415,14 @@ enum Op {
     OpSubgroup2DBlockStoreINTEL = 6235,
     OpSubgroupMatrixMultiplyAccumulateINTEL = 6237,
     OpBitwiseFunctionINTEL = 6242,
+    OpUntypedVariableLengthArrayINTEL = 6244,
+    OpConditionalExtensionINTEL = 6248,
+    OpConditionalEntryPointINTEL = 6249,
+    OpConditionalCapabilityINTEL = 6250,
+    OpSpecConstantTargetINTEL = 6251,
+    OpSpecConstantArchitectureINTEL = 6252,
+    OpSpecConstantCapabilitiesINTEL = 6253,
+    OpConditionalCopyObjectINTEL = 6254,
     OpGroupIMulKHR = 6401,
     OpGroupFMulKHR = 6402,
     OpGroupBitwiseAndKHR = 6403,
@@ -2796,12 +2817,14 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case OpUntypedInBoundsPtrAccessChainKHR: *hasResult = true; *hasResultType = true; break;
     case OpUntypedArrayLengthKHR: *hasResult = true; *hasResultType = true; break;
     case OpUntypedPrefetchKHR: *hasResult = false; *hasResultType = false; break;
+    case OpFmaKHR: *hasResult = true; *hasResultType = true; break;
     case OpSubgroupAllKHR: *hasResult = true; *hasResultType = true; break;
     case OpSubgroupAnyKHR: *hasResult = true; *hasResultType = true; break;
     case OpSubgroupAllEqualKHR: *hasResult = true; *hasResultType = true; break;
     case OpGroupNonUniformRotateKHR: *hasResult = true; *hasResultType = true; break;
     case OpSubgroupReadInvocationKHR: *hasResult = true; *hasResultType = true; break;
     case OpExtInstWithForwardRefsKHR: *hasResult = true; *hasResultType = true; break;
+    case OpUntypedGroupAsyncCopyKHR: *hasResult = true; *hasResultType = true; break;
     case OpTraceRayKHR: *hasResult = false; *hasResultType = false; break;
     case OpExecuteCallableKHR: *hasResult = false; *hasResultType = false; break;
     case OpConvertUToAccelerationStructureKHR: *hasResult = true; *hasResultType = true; break;
@@ -2832,10 +2855,14 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case OpImageBoxFilterQCOM: *hasResult = true; *hasResultType = true; break;
     case OpImageBlockMatchSSDQCOM: *hasResult = true; *hasResultType = true; break;
     case OpImageBlockMatchSADQCOM: *hasResult = true; *hasResultType = true; break;
+    case OpBitCastArrayQCOM: *hasResult = true; *hasResultType = true; break;
     case OpImageBlockMatchWindowSSDQCOM: *hasResult = true; *hasResultType = true; break;
     case OpImageBlockMatchWindowSADQCOM: *hasResult = true; *hasResultType = true; break;
     case OpImageBlockMatchGatherSSDQCOM: *hasResult = true; *hasResultType = true; break;
     case OpImageBlockMatchGatherSADQCOM: *hasResult = true; *hasResultType = true; break;
+    case OpCompositeConstructCoopMatQCOM: *hasResult = true; *hasResultType = true; break;
+    case OpCompositeExtractCoopMatQCOM: *hasResult = true; *hasResultType = true; break;
+    case OpExtractSubArrayQCOM: *hasResult = true; *hasResultType = true; break;
     case OpGroupIAddNonUniformAMD: *hasResult = true; *hasResultType = true; break;
     case OpGroupFAddNonUniformAMD: *hasResult = true; *hasResultType = true; break;
     case OpGroupFMinNonUniformAMD: *hasResult = true; *hasResultType = true; break;
@@ -2914,7 +2941,7 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case OpRayQueryGetIntersectionTriangleVertexPositionsKHR: *hasResult = true; *hasResultType = true; break;
     case OpTypeAccelerationStructureKHR: *hasResult = true; *hasResultType = false; break;
     case OpExecuteCallableNV: *hasResult = false; *hasResultType = false; break;
-    case OpRayQueryGetClusterIdNV: *hasResult = true; *hasResultType = true; break;
+    case OpRayQueryGetIntersectionClusterIdNV: *hasResult = true; *hasResultType = true; break;
     case OpHitObjectGetClusterIdNV: *hasResult = true; *hasResultType = true; break;
     case OpTypeCooperativeMatrixNV: *hasResult = true; *hasResultType = false; break;
     case OpCooperativeMatrixLoadNV: *hasResult = true; *hasResultType = true; break;
@@ -3221,6 +3248,14 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case OpSubgroup2DBlockStoreINTEL: *hasResult = false; *hasResultType = false; break;
     case OpSubgroupMatrixMultiplyAccumulateINTEL: *hasResult = true; *hasResultType = true; break;
     case OpBitwiseFunctionINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpUntypedVariableLengthArrayINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpConditionalExtensionINTEL: *hasResult = false; *hasResultType = false; break;
+    case OpConditionalEntryPointINTEL: *hasResult = false; *hasResultType = false; break;
+    case OpConditionalCapabilityINTEL: *hasResult = false; *hasResultType = false; break;
+    case OpSpecConstantTargetINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSpecConstantArchitectureINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSpecConstantCapabilitiesINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpConditionalCopyObjectINTEL: *hasResult = true; *hasResultType = true; break;
     case OpGroupIMulKHR: *hasResult = true; *hasResultType = true; break;
     case OpGroupFMulKHR: *hasResult = true; *hasResultType = true; break;
     case OpGroupBitwiseAndKHR: *hasResult = true; *hasResultType = true; break;
@@ -3761,6 +3796,7 @@ inline const char* DecorationToString(Decoration value) {
     case DecorationHostAccessINTEL: return "HostAccessINTEL";
     case DecorationInitModeINTEL: return "InitModeINTEL";
     case DecorationImplementInRegisterMapINTEL: return "ImplementInRegisterMapINTEL";
+    case DecorationConditionalINTEL: return "ConditionalINTEL";
     case DecorationCacheControlLoadINTEL: return "CacheControlLoadINTEL";
     case DecorationCacheControlStoreINTEL: return "CacheControlStoreINTEL";
     default: return "Unknown";
@@ -4051,6 +4087,7 @@ inline const char* CapabilityToString(Capability value) {
     case CapabilityTextureBoxFilterQCOM: return "TextureBoxFilterQCOM";
     case CapabilityTextureBlockMatchQCOM: return "TextureBlockMatchQCOM";
     case CapabilityTileShadingQCOM: return "TileShadingQCOM";
+    case CapabilityCooperativeMatrixConversionQCOM: return "CooperativeMatrixConversionQCOM";
     case CapabilityTextureBlockMatch2QCOM: return "TextureBlockMatch2QCOM";
     case CapabilityFloat16ImageAMD: return "Float16ImageAMD";
     case CapabilityImageGatherBiasLodAMD: return "ImageGatherBiasLodAMD";
@@ -4177,6 +4214,7 @@ inline const char* CapabilityToString(Capability value) {
     case CapabilityBitInstructions: return "BitInstructions";
     case CapabilityGroupNonUniformRotateKHR: return "GroupNonUniformRotateKHR";
     case CapabilityFloatControls2: return "FloatControls2";
+    case CapabilityFMAKHR: return "FMAKHR";
     case CapabilityAtomicFloat32AddEXT: return "AtomicFloat32AddEXT";
     case CapabilityAtomicFloat64AddEXT: return "AtomicFloat64AddEXT";
     case CapabilityLongCompositesINTEL: return "LongCompositesINTEL";
@@ -4200,6 +4238,9 @@ inline const char* CapabilityToString(Capability value) {
     case CapabilitySubgroup2DBlockTransposeINTEL: return "Subgroup2DBlockTransposeINTEL";
     case CapabilitySubgroupMatrixMultiplyAccumulateINTEL: return "SubgroupMatrixMultiplyAccumulateINTEL";
     case CapabilityTernaryBitwiseFunctionINTEL: return "TernaryBitwiseFunctionINTEL";
+    case CapabilityUntypedVariableLengthArrayINTEL: return "UntypedVariableLengthArrayINTEL";
+    case CapabilitySpecConditionalINTEL: return "SpecConditionalINTEL";
+    case CapabilityFunctionVariantsINTEL: return "FunctionVariantsINTEL";
     case CapabilityGroupUniformArithmeticKHR: return "GroupUniformArithmeticKHR";
     case CapabilityTensorFloat32RoundingINTEL: return "TensorFloat32RoundingINTEL";
     case CapabilityMaskedGatherScatterINTEL: return "MaskedGatherScatterINTEL";
@@ -4769,12 +4810,14 @@ inline const char* OpToString(Op value) {
     case OpUntypedInBoundsPtrAccessChainKHR: return "OpUntypedInBoundsPtrAccessChainKHR";
     case OpUntypedArrayLengthKHR: return "OpUntypedArrayLengthKHR";
     case OpUntypedPrefetchKHR: return "OpUntypedPrefetchKHR";
+    case OpFmaKHR: return "OpFmaKHR";
     case OpSubgroupAllKHR: return "OpSubgroupAllKHR";
     case OpSubgroupAnyKHR: return "OpSubgroupAnyKHR";
     case OpSubgroupAllEqualKHR: return "OpSubgroupAllEqualKHR";
     case OpGroupNonUniformRotateKHR: return "OpGroupNonUniformRotateKHR";
     case OpSubgroupReadInvocationKHR: return "OpSubgroupReadInvocationKHR";
     case OpExtInstWithForwardRefsKHR: return "OpExtInstWithForwardRefsKHR";
+    case OpUntypedGroupAsyncCopyKHR: return "OpUntypedGroupAsyncCopyKHR";
     case OpTraceRayKHR: return "OpTraceRayKHR";
     case OpExecuteCallableKHR: return "OpExecuteCallableKHR";
     case OpConvertUToAccelerationStructureKHR: return "OpConvertUToAccelerationStructureKHR";
@@ -4805,10 +4848,14 @@ inline const char* OpToString(Op value) {
     case OpImageBoxFilterQCOM: return "OpImageBoxFilterQCOM";
     case OpImageBlockMatchSSDQCOM: return "OpImageBlockMatchSSDQCOM";
     case OpImageBlockMatchSADQCOM: return "OpImageBlockMatchSADQCOM";
+    case OpBitCastArrayQCOM: return "OpBitCastArrayQCOM";
     case OpImageBlockMatchWindowSSDQCOM: return "OpImageBlockMatchWindowSSDQCOM";
     case OpImageBlockMatchWindowSADQCOM: return "OpImageBlockMatchWindowSADQCOM";
     case OpImageBlockMatchGatherSSDQCOM: return "OpImageBlockMatchGatherSSDQCOM";
     case OpImageBlockMatchGatherSADQCOM: return "OpImageBlockMatchGatherSADQCOM";
+    case OpCompositeConstructCoopMatQCOM: return "OpCompositeConstructCoopMatQCOM";
+    case OpCompositeExtractCoopMatQCOM: return "OpCompositeExtractCoopMatQCOM";
+    case OpExtractSubArrayQCOM: return "OpExtractSubArrayQCOM";
     case OpGroupIAddNonUniformAMD: return "OpGroupIAddNonUniformAMD";
     case OpGroupFAddNonUniformAMD: return "OpGroupFAddNonUniformAMD";
     case OpGroupFMinNonUniformAMD: return "OpGroupFMinNonUniformAMD";
@@ -5194,6 +5241,14 @@ inline const char* OpToString(Op value) {
     case OpSubgroup2DBlockStoreINTEL: return "OpSubgroup2DBlockStoreINTEL";
     case OpSubgroupMatrixMultiplyAccumulateINTEL: return "OpSubgroupMatrixMultiplyAccumulateINTEL";
     case OpBitwiseFunctionINTEL: return "OpBitwiseFunctionINTEL";
+    case OpUntypedVariableLengthArrayINTEL: return "OpUntypedVariableLengthArrayINTEL";
+    case OpConditionalExtensionINTEL: return "OpConditionalExtensionINTEL";
+    case OpConditionalEntryPointINTEL: return "OpConditionalEntryPointINTEL";
+    case OpConditionalCapabilityINTEL: return "OpConditionalCapabilityINTEL";
+    case OpSpecConstantTargetINTEL: return "OpSpecConstantTargetINTEL";
+    case OpSpecConstantArchitectureINTEL: return "OpSpecConstantArchitectureINTEL";
+    case OpSpecConstantCapabilitiesINTEL: return "OpSpecConstantCapabilitiesINTEL";
+    case OpConditionalCopyObjectINTEL: return "OpConditionalCopyObjectINTEL";
     case OpGroupIMulKHR: return "OpGroupIMulKHR";
     case OpGroupFMulKHR: return "OpGroupFMulKHR";
     case OpGroupBitwiseAndKHR: return "OpGroupBitwiseAndKHR";

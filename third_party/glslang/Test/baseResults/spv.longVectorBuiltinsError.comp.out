@@ -1,0 +1,26 @@
+spv.longVectorBuiltinsError.comp
+ERROR: 0:27: 'max' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:27: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> float'
+ERROR: 0:28: 'max' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:28: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> uint'
+ERROR: 0:29: 'max' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:29: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> uint'
+ERROR: 0:30: 'max' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:30: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> uint'
+ERROR: 0:31: 'smoothstep' : ambiguous best function under implicit type conversion 
+ERROR: 0:32: 'radians' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:32: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> double'
+ERROR: 0:33: 'sin' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:33: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> double'
+ERROR: 0:34: 'atanh' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:34: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> double'
+ERROR: 0:35: 'abs' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:35: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> uint'
+ERROR: 0:36: 'max' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:36: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> uint'
+ERROR: 0:37: 'max' : can't resolve types (ambiguous long vector overload) 
+ERROR: 0:37: 'assign' :  cannot convert from ' temp void' to ' temp vector<5> uint'
+ERROR: 21 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

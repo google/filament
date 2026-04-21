@@ -13,7 +13,7 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
 
-target_link_libraries(${TARGET} matdbg filaflat backend_headers getopt)
+target_link_libraries(${TARGET} matdbg filaflat backend_headers )
 
 # glslang contains a copy of the SPIRV headers, so let's just use those. The leading ".." in the
 # following variable refers to the project name that we define in glslang/tnt, and the trailing ".."
@@ -25,9 +25,9 @@ set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 # =================================================================================================
 # Licenses
 # ==================================================================================================
-set(MODULE_LICENSES getopt glslang smol-v)
+set(MODULE_LICENSES glslang smol-v)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR}/generated)
-list_licenses(${GENERATION_ROOT}/licenses/licenses.inc ${MODULE_LICENSES})
+list_licenses(${GENERATION_ROOT}/licenses/licenses.inc "${MODULE_LICENSES}")
 target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})
 
 # ==================================================================================================

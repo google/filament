@@ -15,6 +15,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <vector>
 
@@ -27,12 +28,15 @@
 void print_usage(char* argv0) {
   std::string target_env_list = spvTargetEnvList(36, 105);
   printf(
-      R"(%s - Validate a SPIR-V binary file.
+      R"(%s - Validate a SPIR-V binary file(s).
 
-USAGE: %s [options] [<filename>]
+USAGE: %s [options] [<path>]
 
-The SPIR-V binary is read from <filename>. If no file is specified,
-or if the filename is "-", then the binary is read from standard input.
+The SPIR-V binary is read from <path>. If no path is specified,
+or if the path is "-", then the binary is read from standard input.
+The <path> parameter may also specify a directory; in this case,
+the tool will recursively process all regular files with the .spv
+extension within that directory.
 
 NOTE: The validator is a work in progress.
 
@@ -77,6 +81,53 @@ Options:
                                    Use validation rules from the specified environment.
 )",
       argv0, argv0, target_env_list.c_str());
+}
+
+bool process_single_file(const char* filename, spv_target_env& target_env,
+                         spvtools::ValidatorOptions& options,
+                         bool use_default_msg_consumer) {
+  std::vector<uint32_t> contents;
+  if (!ReadBinaryFile(filename, &contents)) return false;
+
+  spvtools::SpirvTools tools(target_env);
+
+  // Use a lambda expression here so filename can be captured. Messages use a
+  // fairly standard notation of `filename:line`.
+  auto CLIMessageConsumerWithFilename =
+      [filename](spv_message_level_t level, const char*,
+                 const spv_position_t& position, const char* message) {
+        const char* pretty_filename = filename;
+        if (!filename || 0 == strcmp(filename, "-")) {
+          pretty_filename = "stdin";
+        }
+
+        switch (level) {
+          case SPV_MSG_FATAL:
+          case SPV_MSG_INTERNAL_ERROR:
+          case SPV_MSG_ERROR:
+            std::cerr << "error: " << pretty_filename << ":" << position.index
+                      << ": " << message << std::endl;
+            break;
+          case SPV_MSG_WARNING:
+            std::cout << "warning: " << pretty_filename << ":" << position.index
+                      << ": " << message << std::endl;
+            break;
+          case SPV_MSG_INFO:
+            std::cout << "info: " << pretty_filename << ":" << position.index
+                      << ": " << message << std::endl;
+            break;
+          default:
+            break;
+        }
+      };
+
+  if (use_default_msg_consumer) {
+    tools.SetMessageConsumer(spvtools::utils::CLIMessageConsumer);
+  } else {
+    tools.SetMessageConsumer(CLIMessageConsumerWithFilename);
+  }
+
+  return tools.Validate(contents.data(), contents.size(), options);
 }
 
 int main(int argc, char** argv) {
@@ -201,13 +252,35 @@ int main(int argc, char** argv) {
     return return_code;
   }
 
-  std::vector<uint32_t> contents;
-  if (!ReadBinaryFile(inFile, &contents)) return 1;
+  if (inFile &&
+      std::filesystem::is_directory(std::filesystem::status(inFile))) {
+    const std::filesystem::path dir(inFile);
+    bool succeed = true;
+    for (auto const& entry :
+         std::filesystem::recursive_directory_iterator(dir)) {
+      if (!entry.is_regular_file()) {
+        continue;
+      }
 
-  spvtools::SpirvTools tools(target_env);
-  tools.SetMessageConsumer(spvtools::utils::CLIMessageConsumer);
+      std::filesystem::path filepath = entry.path();
 
-  bool succeed = tools.Validate(contents.data(), contents.size(), options);
+      if (filepath.extension() != ".spv") continue;
 
-  return !succeed;
+      // Copy the string, because in C++20 the result type of
+      // std::filesystem::path::u8string changes type from std::string to
+      // std::u8string, and the pointer type ends up incompatible. Normalize
+      // to std::string first via copying.
+      const auto filepath_u8str = filepath.u8string();
+      const std::string filepath_str(filepath_u8str.begin(),
+                                     filepath_u8str.end());
+      if (!process_single_file(filepath_str.c_str(), target_env, options,
+                               false)) {
+        succeed = false;
+      }
+    }
+
+    return !succeed;
+  }
+
+  return !process_single_file(inFile, target_env, options, true);
 }

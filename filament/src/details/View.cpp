@@ -76,6 +76,7 @@
 #include <cmath>
 #include <chrono>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <new>
 #include <ratio>
@@ -104,6 +105,10 @@ FView::FView(FEngine& engine)
           mSharedState(std::make_shared<SharedState>())
 {
     DriverApi& driver = engine.getDriverApi();
+
+    mIsHighPrecisionEvsmSupported = driver.isTextureFormatFilterable(TextureFormat::RGBA32F);
+
+    mFeatureLevel = engine.getSupportedFeatureLevel();
 
     auto const& layout = engine.getPerRenderableDescriptorSetLayout();
 
@@ -143,7 +148,7 @@ FView::FView(FEngine& engine)
 #ifndef NDEBUG
     // This can fail if another view has already registered this data source
     mDebugState->owner = debugRegistry.registerDataSource("d.view.frame_info",
-            [weak = std::weak_ptr(mDebugState)]() -> DebugRegistry::DataSource {
+            [weak = std::weak_ptr<DebugState>(mDebugState)]() -> DebugRegistry::DataSource {
                 // the View could have been destroyed by the time we do this
                 auto const state = weak.lock();
                 if (!state) {
@@ -1131,14 +1136,13 @@ void FView::prepareShadowMapping() const noexcept {
         uniforms = mShadowMapManager->getShadowMappingUniforms();
     }
 
-    constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
-    constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCF = 0u;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSM = 1u;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
     constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
     auto& s = mUniforms.edit();
     s.cascadeSplits = uniforms.cascadeSplits;
+    s.shadowAtlasResolution = uniforms.atlasResolution;
     s.ssContactShadowDistance = uniforms.ssContactShadowDistance;
     s.directionalShadows = int32_t(uniforms.directionalShadows);
     s.cascades = int32_t(uniforms.cascades);
@@ -1148,8 +1152,8 @@ void FView::prepareShadowMapping() const noexcept {
             break;
         case ShadowType::VSM:
             s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_EVSM;
-            s.vsmExponent = mVsmShadowOptions.highPrecision ? high : low;
-            s.vsmDepthScale = mVsmShadowOptions.minVarianceScale * 0.01f * s.vsmExponent;
+            s.vsmExponent = 0; // this is only used when rendering the shadowmap, not when using it
+            s.vsmMaxMoment = ShadowMapManager::getMaxMomentEVSM(mVsmShadowOptions);
             s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
             break;
         case ShadowType::DPCF:
@@ -1438,9 +1442,12 @@ void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) 
 }
 
 void FView::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
-    options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
-    mMultiSampleAntiAliasingOptions = options;
-    assert_invariant(!options.enabled || !mRenderTarget || !mRenderTarget->hasSampleableDepth());
+    // MSAA is a post-process effect, and post-processing is disabled at FL0
+    if (mFeatureLevel >= backend::FeatureLevel::FEATURE_LEVEL_1) {
+        options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
+        mMultiSampleAntiAliasingOptions = options;
+        assert_invariant(!options.enabled || !mRenderTarget || !mRenderTarget->hasSampleableDepth());
+    }
 }
 
 void FView::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
@@ -1478,6 +1485,9 @@ void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept
 }
 void FView::setVsmShadowOptions(VsmShadowOptions options) noexcept {
     options.msaaSamples = std::max(uint8_t(0), options.msaaSamples);
+    if (!mIsHighPrecisionEvsmSupported) {
+        options.highPrecision = false;
+    }
     mVsmShadowOptions = options;
 }
 

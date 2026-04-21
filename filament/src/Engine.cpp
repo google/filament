@@ -44,8 +44,10 @@
 #include <utils/Invocable.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
+#include <utils/tribool.h>
 
 #include <chrono>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -494,6 +496,14 @@ std::optional<bool> Engine::getFeatureFlag(char const* name) const noexcept {
 
 bool* Engine::getFeatureFlagPtr(char const* UTILS_NONNULL name) const noexcept {
     return downcast(this)->getFeatureFlagPtr(name);
+}
+
+void Engine::compile(CompilerPriorityQueue priority, Material const* material, View const* view,
+        tribool shadowReceiver, tribool skinning, CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) {
+    downcast(this)->compile(priority,
+            downcast(material), downcast(view), shadowReceiver, skinning,
+            handler, std::move(callback));
 }
 
 #if defined(__EMSCRIPTEN__)

@@ -55,6 +55,7 @@
 #include <math/vec4.h>
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -477,6 +478,9 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
     FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT)
             << "bone count > " << CONFIG_MAX_BONE_COUNT;
 
+    FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBufferOffset <= std::numeric_limits<uint16_t>::max())
+            << "skinning buffer offset > " << std::numeric_limits<uint16_t>::max();
+
     FILAMENT_CHECK_PRECONDITION(
             mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES || !mImpl->mInstanceBuffer)
             << "instance count is " << mImpl->mInstanceCount
@@ -577,7 +581,7 @@ void FRenderableManager::create(
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
-        destroy(entity);
+        destroy(entity, driver);
     }
     Instance const ci = manager.addComponent(entity);
     assert_invariant(ci);
@@ -733,41 +737,42 @@ void FRenderableManager::create(
 }
 
 // this destroys a single component from an entity
-void FRenderableManager::destroy(Entity const e) noexcept {
+void FRenderableManager::destroy(Entity const e, DriverApi& driver) noexcept {
     Instance const ci = getInstance(e);
     if (ci) {
-        destroyComponent(ci);
+        destroyComponent(ci, driver);
         mManager.removeComponent(e);
     }
 }
 
+void FRenderableManager::clientDestroy(utils::Entity e) noexcept {
+    destroy(e, mEngine.getDriverApi());
+}
+
 // this destroys all components in this manager
-void FRenderableManager::terminate() noexcept {
+void FRenderableManager::terminate(DriverApi& driver) noexcept {
     auto& manager = mManager;
     if (!manager.empty()) {
         DLOG(INFO) << "cleaning up " << manager.getComponentCount()
                    << " leaked Renderable components";
         while (!manager.empty()) {
             Instance const ci = manager.end() - 1;
-            destroyComponent(ci);
+            destroyComponent(ci, driver);
             manager.removeComponent(manager.getEntity(ci));
         }
     }
-    mHwRenderPrimitiveFactory.terminate(mEngine.getDriverApi());
+    mHwRenderPrimitiveFactory.terminate(driver);
 }
 
-void FRenderableManager::gc(EntityManager& em) noexcept {
-    mManager.gc(em, [this](Entity const e) {
-        destroy(e);
+void FRenderableManager::gc(EntityManager& em, DriverApi& driver) noexcept {
+    mManager.gc(em, [this, &driver](Entity const e) {
+        destroy(e, driver);
     });
 }
 
 // This is basically a Renderable's destructor.
-void FRenderableManager::destroyComponent(Instance const ci) noexcept {
+void FRenderableManager::destroyComponent(Instance const ci, DriverApi& driver) noexcept {
     auto& manager = mManager;
-    FEngine& engine = mEngine;
-
-    FEngine::DriverApi& driver = engine.getDriverApi();
 
     // See create(RenderableManager::Builder&, Entity)
     destroyComponentPrimitives(mHwRenderPrimitiveFactory, driver, manager[ci].primitives);
@@ -927,6 +932,9 @@ void FRenderableManager::setBones(Instance const ci,
         FILAMENT_CHECK_PRECONDITION(!bones.skinningBufferMode)
                 << "Disable skinning buffer mode to use this API";
 
+        FILAMENT_CHECK_PRECONDITION(offset <= bones.count)
+                << "bone offset is out of bounds (" << offset << " > " << bones.count << ")";
+
         assert_invariant(bones.handle && offset + boneCount <= bones.count);
         if (bones.handle) {
             boneCount = std::min(boneCount, bones.count - offset);
@@ -942,6 +950,9 @@ void FRenderableManager::setBones(Instance const ci,
 
         FILAMENT_CHECK_PRECONDITION(!bones.skinningBufferMode)
                 << "Disable skinning buffer mode to use this API";
+
+        FILAMENT_CHECK_PRECONDITION(offset <= bones.count)
+                << "bone offset is out of bounds (" << offset << " > " << bones.count << ")";
 
         assert_invariant(bones.handle && offset + boneCount <= bones.count);
         if (bones.handle) {

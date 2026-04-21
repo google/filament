@@ -1,0 +1,62 @@
+#version 450
+
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int32 : enable
+
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_NV_cooperative_vector : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_null_initializer : enable
+
+layout(local_size_x = 64) in;
+
+layout (binding = 0) buffer Q {float16_t data_q[];};
+
+
+void main()
+{
+    coopvecNV<float16_t, 16> inVec;
+    coopvecNV<float16_t, 16> outVec;
+
+
+    coopVecLoadNV(inVec, data_q, 16);
+    coopVecStoreNV(inVec, data_q, 16);
+    
+    const int matrixLayout = 3;
+    const int interpretation = gl_ComponentTypeFloat16NV;
+    coopVecMatMulAddNV(inVec,
+                       inVec,
+                       interpretation,
+                       data_q,
+                       16,
+                       interpretation,
+                       data_q,
+                       16,
+                       interpretation,
+                       16, 16,
+                       matrixLayout,
+                       false,
+                       2);
+    coopVecMatMulNV(inVec,
+                    inVec,
+                    interpretation,
+                    data_q,
+                    16,
+                    interpretation,
+                    16, 16,
+                    matrixLayout,
+                    false,
+                    2);
+    coopvecNV<float16_t, 8> a = coopvecNV<float16_t, 8>(0);
+    inVec = max(inVec, inVec);
+    inVec[5] = inVec[3] + inVec[4];
+
+    coopVecOuterProductAccumulateNV(inVec, inVec, data_q, 0, 0, matrixLayout, gl_ComponentTypeFloat16NV);
+    coopVecReduceSumAccumulateNV(inVec,  data_q, 0);
+
+    coopvecNV<int8_t, 8> a_8bit = coopvecNV<int8_t, 8>(0);
+    coopvecNV<int32_t, 8> b_32bit = coopvecNV<int32_t, 8>(0);
+    b_32bit = max(coopvecNV<int32_t, 8>(a_8bit), b_32bit);
+}

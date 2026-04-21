@@ -27,36 +27,48 @@ Pass::Status CombineAccessChains::Process() {
   bool modified = false;
 
   for (auto& function : *get_module()) {
-    modified |= ProcessFunction(function);
+    auto status = ProcessFunction(function);
+    if (status == Status::Failure) return Status::Failure;
+    if (status == Status::SuccessWithChange) modified = true;
   }
 
   return (modified ? Status::SuccessWithChange : Status::SuccessWithoutChange);
 }
 
-bool CombineAccessChains::ProcessFunction(Function& function) {
+Pass::Status CombineAccessChains::ProcessFunction(Function& function) {
   if (function.IsDeclaration()) {
-    return false;
+    return Status::SuccessWithoutChange;
   }
 
   bool modified = false;
+  bool failure = false;
 
   cfg()->ForEachBlockInReversePostOrder(
-      function.entry().get(), [&modified, this](BasicBlock* block) {
-        block->ForEachInst([&modified, this](Instruction* inst) {
+      function.entry().get(), [&modified, &failure, this](BasicBlock* block) {
+        if (failure) return;
+        block->ForEachInst([&modified, &failure, this](Instruction* inst) {
+          if (failure) return;
           switch (inst->opcode()) {
             case spv::Op::OpAccessChain:
             case spv::Op::OpInBoundsAccessChain:
             case spv::Op::OpPtrAccessChain:
-            case spv::Op::OpInBoundsPtrAccessChain:
-              modified |= CombineAccessChain(inst);
+            case spv::Op::OpInBoundsPtrAccessChain: {
+              auto status = CombineAccessChain(inst);
+              if (status == Status::Failure) {
+                failure = true;
+              } else if (status == Status::SuccessWithChange) {
+                modified = true;
+              }
               break;
+            }
             default:
               break;
           }
         });
       });
 
-  return modified;
+  if (failure) return Status::Failure;
+  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
 uint32_t CombineAccessChains::GetConstantValue(
@@ -121,9 +133,9 @@ const analysis::Type* CombineAccessChains::GetIndexedType(Instruction* inst) {
   return type;
 }
 
-bool CombineAccessChains::CombineIndices(Instruction* ptr_input,
-                                         Instruction* inst,
-                                         std::vector<Operand>* new_operands) {
+Pass::Status CombineAccessChains::CombineIndices(
+    Instruction* ptr_input, Instruction* inst,
+    std::vector<Operand>* new_operands) {
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
   analysis::ConstantManager* constant_mgr = context()->get_constant_mgr();
 
@@ -150,8 +162,10 @@ bool CombineAccessChains::CombineIndices(Instruction* ptr_input,
                          GetConstantValue(element_constant);
     const analysis::Constant* new_value_constant =
         constant_mgr->GetConstant(last_index_constant->type(), {new_value});
+    if (!new_value_constant) return Status::Failure;
     Instruction* new_value_inst =
         constant_mgr->GetDefiningInstruction(new_value_constant);
+    if (!new_value_inst) return Status::Failure;
     new_value_id = new_value_inst->result_id();
   } else if (!type->AsStruct() || combining_element_operands) {
     // Generate an addition of the two indices.
@@ -161,16 +175,17 @@ bool CombineAccessChains::CombineIndices(Instruction* ptr_input,
     Instruction* addition = builder.AddIAdd(last_index_inst->type_id(),
                                             last_index_inst->result_id(),
                                             element_inst->result_id());
+    if (!addition) return Status::Failure;
     new_value_id = addition->result_id();
   } else {
     // Indexing into structs must be constant, so bail out here.
-    return false;
+    return Status::SuccessWithoutChange;
   }
   new_operands->push_back({SPV_OPERAND_TYPE_ID, {new_value_id}});
-  return true;
+  return Status::SuccessWithChange;
 }
 
-bool CombineAccessChains::CreateNewInputOperands(
+Pass::Status CombineAccessChains::CreateNewInputOperands(
     Instruction* ptr_input, Instruction* inst,
     std::vector<Operand>* new_operands) {
   // Start by copying all the input operands of the feeder access chain.
@@ -182,7 +197,8 @@ bool CombineAccessChains::CreateNewInputOperands(
   if (IsPtrAccessChain(inst->opcode())) {
     // The last index of the feeder should be combined with the element operand
     // of |inst|.
-    if (!CombineIndices(ptr_input, inst, new_operands)) return false;
+    auto status = CombineIndices(ptr_input, inst, new_operands);
+    if (status != Status::SuccessWithChange) return status;
   } else {
     // The indices aren't being combined so now add the last index operand of
     // |ptr_input|.
@@ -196,10 +212,10 @@ bool CombineAccessChains::CreateNewInputOperands(
     new_operands->push_back(inst->GetInOperand(i));
   }
 
-  return true;
+  return Status::SuccessWithChange;
 }
 
-bool CombineAccessChains::CombineAccessChain(Instruction* inst) {
+Pass::Status CombineAccessChains::CombineAccessChain(Instruction* inst) {
   assert((inst->opcode() == spv::Op::OpPtrAccessChain ||
           inst->opcode() == spv::Op::OpAccessChain ||
           inst->opcode() == spv::Op::OpInBoundsAccessChain ||
@@ -212,10 +228,11 @@ bool CombineAccessChains::CombineAccessChain(Instruction* inst) {
       ptr_input->opcode() != spv::Op::OpInBoundsAccessChain &&
       ptr_input->opcode() != spv::Op::OpPtrAccessChain &&
       ptr_input->opcode() != spv::Op::OpInBoundsPtrAccessChain) {
-    return false;
+    return Status::SuccessWithoutChange;
   }
 
-  if (Has64BitIndices(inst) || Has64BitIndices(ptr_input)) return false;
+  if (Has64BitIndices(inst) || Has64BitIndices(ptr_input))
+    return Status::SuccessWithoutChange;
 
   // Handles the following cases:
   // 1. |ptr_input| is an index-less access chain. Replace the pointer
@@ -237,7 +254,7 @@ bool CombineAccessChains::CombineAccessChain(Instruction* inst) {
   // size/alignment of the type and converting the stride into an element
   // index.
   uint32_t array_stride = GetArrayStride(ptr_input);
-  if (array_stride != 0) return false;
+  if (array_stride != 0) return Status::SuccessWithoutChange;
 
   if (ptr_input->NumInOperands() == 1) {
     // The input is effectively a no-op.
@@ -249,14 +266,15 @@ bool CombineAccessChains::CombineAccessChain(Instruction* inst) {
     inst->SetOpcode(spv::Op::OpCopyObject);
   } else {
     std::vector<Operand> new_operands;
-    if (!CreateNewInputOperands(ptr_input, inst, &new_operands)) return false;
+    auto status = CreateNewInputOperands(ptr_input, inst, &new_operands);
+    if (status != Status::SuccessWithChange) return status;
 
     // Update the instruction.
     inst->SetOpcode(UpdateOpcode(inst->opcode(), ptr_input->opcode()));
     inst->SetInOperands(std::move(new_operands));
     context()->AnalyzeUses(inst);
   }
-  return true;
+  return Status::SuccessWithChange;
 }
 
 spv::Op CombineAccessChains::UpdateOpcode(spv::Op base_opcode,

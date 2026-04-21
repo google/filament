@@ -63,6 +63,39 @@ jobs:
             const globber = await glob.create('out/*.tgz');
             await upload({ github, context }, await globber.glob(), TAG);
 
+  build-arm-linux:
+    name: build-arm-linux
+    runs-on: 'arm-ubuntu-24.04-16core'
+    if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo "ref=${REF}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4.1.6
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - uses: ./.github/actions/linux-prereq
+      - name: Run build script
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+        run: |
+          cd build/linux && printf "y" | ./build.sh release
+          cd ../..
+          mv out/filament-release-linux.tgz out/filament-${TAG}-arm-linux.tgz
+      - uses: actions/github-script@v6
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+        with:
+          script: |
+            const upload = require('./build/common/upload-release-assets');
+            const { TAG } = process.env;
+            const globber = await glob.create('out/*.tgz');
+            await upload({ github, context }, await globber.glob(), TAG);
+
   build-mac:
     name: build-mac
     runs-on: macos-14-xlarge
@@ -99,7 +132,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: 'ubuntu-24.04-16core'
+    runs-on: 'arm-ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'web'
 
     steps:
@@ -187,6 +220,54 @@ jobs:
             const { TAG } = process.env;
             const globber = await glob.create(['out/*.aar', 'out/*.apk', 'out/*.tgz'].join('\n'));
             await upload({ github, context }, await globber.glob(), TAG);
+
+  sonatype-publish:
+    name: sonatype-publish
+    runs-on: 'ubuntu-24.04-16core'
+    # Depends on the the Android build for the Android binaries.
+    # Depends on the Mac, Linux, and Windows builds for host tools.
+    needs: [build-mac, build-linux, build-windows, build-android]
+    if: github.event_name == 'release' || github.event.inputs.platform == 'android'
+
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo "ref=${REF}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4.1.6
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: ./.github/actions/linux-prereq
+      - name: Download Android Release
+        run: |
+          gh release download ${TAG} \
+            --repo ${{ github.repository }} \
+            --pattern 'filament-*-android-native.tgz'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.git_ref.outputs.tag }}
+      - name: Unzip Android Release
+        run: |
+          mkdir -p out/android-release
+          tar -xzvf filament-${TAG}-android-native.tgz -C out/android-release/
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+      - name: Publish To Sonatype
+        run: |
+          cd android
+          ./gradlew publishToSonatype closeSonatypeStagingRepository
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.MAVEN_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
 
   build-ios:
     name: build-ios

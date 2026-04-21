@@ -14,6 +14,9 @@
 //
 #include "draco/point_cloud/point_cloud_builder.h"
 
+#include <string>
+#include <utility>
+
 namespace draco {
 
 PointCloudBuilder::PointCloudBuilder() {}
@@ -25,8 +28,14 @@ void PointCloudBuilder::Start(PointIndex::ValueType num_points) {
 
 int PointCloudBuilder::AddAttribute(GeometryAttribute::Type attribute_type,
                                     int8_t num_components, DataType data_type) {
+  return AddAttribute(attribute_type, num_components, data_type, false);
+}
+
+int PointCloudBuilder::AddAttribute(GeometryAttribute::Type attribute_type,
+                                    int8_t num_components, DataType data_type,
+                                    bool normalized) {
   GeometryAttribute ga;
-  ga.Init(attribute_type, nullptr, num_components, data_type, false,
+  ga.Init(attribute_type, nullptr, num_components, data_type, normalized,
           DataTypeLength(data_type) * num_components, 0);
   return point_cloud_->AddAttribute(ga, true, point_cloud_->num_points());
 }
@@ -72,5 +81,15 @@ std::unique_ptr<PointCloud> PointCloudBuilder::Finalize(
   }
   return std::move(point_cloud_);
 }
+
+void PointCloudBuilder::SetAttributeUniqueId(int att_id, uint32_t unique_id) {
+  point_cloud_->attribute(att_id)->set_unique_id(unique_id);
+}
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+void PointCloudBuilder::SetAttributeName(int att_id, const std::string &name) {
+  point_cloud_->attribute(att_id)->set_name(name);
+}
+#endif  // DRACO_TRANSCODER_SUPPORTED
 
 }  // namespace draco

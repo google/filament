@@ -23,7 +23,7 @@
 
 #include <vector>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <utils/Path.h>
 #include <utils/string.h>
@@ -71,18 +71,18 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hla:";
-    static const struct option OPTIONS[] = {
-            { "help",         no_argument, nullptr, 'h' },
-            { "license",      no_argument, nullptr, 'l' },
-            { "angle",  required_argument, nullptr, 'a' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",         utils::getopt::no_argument, nullptr, 'h' },
+            { "license",      utils::getopt::no_argument, nullptr, 'l' },
+            { "angle",  utils::getopt::required_argument, nullptr, 'a' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -97,7 +97,7 @@ static int handleArguments(int argc, char* argv[]) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 // CIE 2006 10-deg color matching functions (CMFs), from 390nm to 830nm, at 1nm intervals
@@ -802,7 +802,7 @@ static Reflectance computeColor(const std::vector<Sample>& samples) {
     xyz.f82 = XYZ_to_sRGB(xyz.f82);
 
     // Rescale values that are outside of the sRGB gamut (gold for instance)
-    // We should provide an option to compute f0 in wide gamut color spaces
+    // We should provide an utils::getopt::option to compute f0 in wide gamut color spaces
     if (any(greaterThan(xyz.f0,  float3{1.0f}))) xyz.f0  *= 1.0f / max(xyz.f0);
     if (any(greaterThan(xyz.f82, float3{1.0f}))) xyz.f82 *= 1.0f / max(xyz.f82);
 

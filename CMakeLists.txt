@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.22.1)
 # On iOS, the deployment target is set inside third_party/clang/ios.cmake
 if (APPLE AND NOT IOS)
     # This must be set before project() is called
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0 CACHE STRING "")
 endif()
 
 # ==================================================================================================
@@ -46,8 +46,6 @@ option(FILAMENT_ENABLE_ASAN_UBSAN "Enable Address and Undefined Behavior Sanitiz
 option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
 
 option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
-
-option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 
@@ -326,11 +324,13 @@ endif()
 if (FILAMENT_ENABLE_LTO)
     include(CheckIPOSupported)
 
-    check_ipo_supported(RESULT IPO_SUPPORT)
+    check_ipo_supported(RESULT IPO_SUPPORT OUTPUT IPO_ERROR)
 
     if (IPO_SUPPORT)
-        message(STATUS "LTO support is enabled")
+        message(STATUS "IPO / LTO is enabled")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO / LTO is not supported by this architecture: ${IPO_ERROR}")
     endif()
 endif()
 
@@ -867,6 +867,12 @@ endfunction()
 # Sub-projects
 # ==================================================================================================
 
+include(CheckSymbolExists)
+check_symbol_exists(getopt_long "getopt.h" HAS_SYSTEM_GETOPT)
+if (NOT HAS_SYSTEM_GETOPT)
+    add_subdirectory(${EXTERNAL}/getopt)
+endif()
+
 # Common to all platforms
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
 add_subdirectory(${LIBRARIES}/camutils)
@@ -902,7 +908,6 @@ add_subdirectory(${EXTERNAL}/cgltf/tnt)
 add_subdirectory(${EXTERNAL}/draco/tnt)
 add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
-add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 
@@ -953,7 +958,7 @@ set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
 if (WEBGL)
     add_subdirectory(web/filament-js)
-    add_subdirectory(web/samples)
+    add_subdirectory(web/examples)
 endif()
 
 if (IS_HOST_PLATFORM)

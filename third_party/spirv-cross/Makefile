@@ -25,6 +25,9 @@ ifeq ($(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS), 1)
 	CXXFLAGS += -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -fno-exceptions
 endif
 
+# This only builds CLI, so get extra coverage for the override.
+CXXFLAGS += -DSPIRV_CROSS_SPV_HEADER_NAMESPACE_OVERRIDE=spv_private
+
 all: $(TARGET)
 
 -include $(DEPS)

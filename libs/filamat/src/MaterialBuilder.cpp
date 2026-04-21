@@ -131,7 +131,7 @@ void MaterialBuilderBase::prepare(bool const vulkanSemantics,
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
     TargetLanguage glTargetLanguage = mOptimization > Optimization::PREPROCESSOR ?
                                       TargetLanguage::SPIRV : TargetLanguage::GLSL;
-    if (vulkanSemantics) {
+    if (vulkanSemantics || featureLevel == backend::FeatureLevel::FEATURE_LEVEL_0) {
         // Currently GLSLPostProcessor.cpp is incapable of compiling SPIRV to GLSL without
         // running the optimizer. For now we just activate the optimizer in that case.
         mOptimization = Optimization::PERFORMANCE;
@@ -167,7 +167,7 @@ void MaterialBuilderBase::prepare(bool const vulkanSemantics,
                     && featureLevel == backend::FeatureLevel::FEATURE_LEVEL_0
                     && shaderModel == ShaderModel::MOBILE) {
                 mCodeGenPermutations.push_back({
-                    shaderModel,
+                    ShaderModel::MOBILE,
                     TargetApi::OPENGL,
                     glTargetLanguage,
                     backend::FeatureLevel::FEATURE_LEVEL_0
@@ -849,17 +849,16 @@ static void showErrorMessage(const char* materialName, filament::Variant const v
     const char* targetApiString = "unknown";
     switch (targetApi) {
         case TargetApi::OPENGL:
-            targetApiString = (featureLevel == MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0)
-                              ? "GLES 2.0.\n" : "OpenGL.\n";
+            targetApiString = (featureLevel == MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0) ? "GLES 2.0" : "OpenGL";
             break;
         case TargetApi::VULKAN:
-            targetApiString = "Vulkan.\n";
+            targetApiString = "Vulkan";
             break;
         case TargetApi::METAL:
-            targetApiString = "Metal.\n";
+            targetApiString = "Metal";
             break;
         case TargetApi::WEBGPU:
-            targetApiString = "WebGPU.\n";
+            targetApiString = "WebGPU";
             break;
         case TargetApi::ALL:
             assert_invariant(false); // Unreachable.
@@ -869,24 +868,20 @@ static void showErrorMessage(const char* materialName, filament::Variant const v
     const char* shaderStageString = "unknown";
     switch (shaderType) {
         case ShaderStage::VERTEX:
-            shaderStageString = "Vertex Shader\n";
+            shaderStageString = "Vertex Shader";
             break;
         case ShaderStage::FRAGMENT:
-            shaderStageString = "Fragment Shader\n";
+            shaderStageString = "Fragment Shader";
             break;
         case ShaderStage::COMPUTE:
-            shaderStageString = "Compute Shader\n";
+            shaderStageString = "Compute Shader";
             break;
     }
 
     LOG(ERROR)
             << "Error in \"" << materialName << "\""
-            << ", Variant 0x" << io::hex << +variant.key
-            << ", " << targetApiString
-            << "=========================\n"
-            << "Generated " << shaderStageString
-            << "=========================\n"
-            << shaderCode;
+            << ", " << shaderStageString
+            << ", Variant " << io::hex << +variant.key;
 }
 
 bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Variant>& variants,
@@ -943,6 +938,35 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         JobSystem::Job* parent = jobSystem.createJob();
 
         for (const auto& v : variants) {
+            if (params.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+                assert_invariant(params.shaderModel == ShaderModel::MOBILE);
+                assert_invariant(params.targetApi == TargetApi::OPENGL);
+                // skip all variants that can't be used with ESSL1
+                if (filament::Variant::isValidStandardVariant(v.variant)) {
+                    if (v.variant.hasDirectionalLighting()) {
+                        continue;
+                    }
+                    if (v.variant.hasDynamicLighting()) {
+                        continue;
+                    }
+                }
+                if (filament::Variant::isShadowReceiverVariant(v.variant)) {
+                    continue;
+                }
+                if (filament::Variant::isStereoVariant(v.variant)) {
+                    continue;
+                }
+                if (filament::Variant::isDepthMomentsVariant(v.variant)) {
+                    continue;
+                }
+                if (filament::Variant::isShadowSampler2DVariant(v.variant)) {
+                    continue;
+                }
+                if (filament::Variant::isSSRVariant(v.variant)) {
+                    continue;
+                }
+            }
+
             JobSystem::Job* job = jobs::createJob(jobSystem, parent, [&]() {
                 if (cancelJobs.load()) {
                     return;
@@ -1006,8 +1030,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         return "unknown";
                     };
                     char filename[256];
-                    snprintf(filename, sizeof(filename), "%s_0x%02x.%s", mMaterialName.c_str_safe(),
-                            variantKey, getExtension(v.stage));
+                    snprintf(filename, sizeof(filename), "%s_0x%02x_fl%d.%s",
+                            mMaterialName.c_str_safe(), variantKey, (int) featureLevel,
+                            getExtension(v.stage));
                     printf("Writing variant 0x%02x to %s\n", variantKey, filename);
                     std::ofstream file(filename);
                     if (file.is_open()) {
@@ -1140,21 +1165,23 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
     // Generate the dictionaries.
     for (const auto& s : glslEntries) {
-        textDictionary.addText(s.shader);
+        textDictionary.addText(s.stage, s.shader);
     }
     for (const auto& s : essl1Entries) {
-        textDictionary.addText(s.shader);
+        textDictionary.addText(s.stage, s.shader);
     }
     for (auto& s : spirvEntries) {
         std::vector const spirv{ std::move(s.data) };
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
     for (const auto& s : metalEntries) {
-        textDictionary.addText(s.shader);
+        textDictionary.addText(s.stage, s.shader);
     }
     for (const auto& s : wgslEntries) {
-        textDictionary.addText(s.shader);
+        textDictionary.addText(s.stage, s.shader);
     }
+
+    textDictionary.resolve();
 
     // Emit dictionary chunk (TextDictionaryReader and DictionaryTextChunk)
     const auto& dictionaryChunk = container.push<DictionaryTextChunk>(
@@ -1276,6 +1303,25 @@ error:
         mShading = Shading::UNLIT;
     }
 
+    if (mMaterialDomain == MaterialDomain::SURFACE && !mOutputs.empty()) {
+        if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+            LOG(ERROR) << "Error: feature level 0 does not support custom outputs.";
+            goto error;
+        }
+        if (mOutputs.size() > 1) {
+            LOG(ERROR) << "Error: surface materials only support a maximum of 1 custom output.";
+            goto error;
+        }
+        if (mShading != Shading::UNLIT) {
+            LOG(ERROR) << "Error: custom outputs are only supported for unlit surface materials.";
+            goto error;
+        }
+        if (mBlendingMode != BlendingMode::OPAQUE) {
+            LOG(ERROR) << "Error: surface materials with custom outputs must use opaque blending.";
+            goto error;
+        }
+    }
+
     // Add a default color output.
     if (mMaterialDomain == MaterialDomain::POST_PROCESS && mOutputs.empty()) {
         output(VariableQualifier::OUT,
@@ -1322,8 +1368,7 @@ error:
     CodeGenParams const semanticCodeGenParams = {
             .shaderModel = ShaderModel::MOBILE,
             .targetApi = TargetApi::OPENGL,
-            .targetLanguage = (info.featureLevel == FeatureLevel::FEATURE_LEVEL_0) ?
-                              TargetLanguage::GLSL : TargetLanguage::SPIRV,
+            .targetLanguage = TargetLanguage::SPIRV,
             .featureLevel = info.featureLevel,
     };
 
@@ -1333,16 +1378,6 @@ error:
 
     if (!runSemanticAnalysis(&info, semanticCodeGenParams)) {
         goto error;
-    }
-
-    // adjust variant-filter for feature level *before* we start writing into the container
-    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-        // at feature level 0, many variants are not supported
-        mVariantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::VSM);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::SSR);
     }
 
     // Create chunk tree.
@@ -1417,7 +1452,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         auto const* stage = to_string(sib.getStageFlags());
         for (auto const& sampler: samplers) {
             LOG(ERROR) << "\"" << sampler.name.c_str() << "\" "
-                   << Enums::toString(sampler.type).c_str() << " " << stage << '\n';
+                   << Enums::toString(sampler.type) << " " << stage << '\n';
         }
     };
 

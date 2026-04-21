@@ -37,7 +37,9 @@ ERROR: 0:74: '' : second parameter must not have floate5m2 or floate4m3 basic ty
 ERROR: 0:75: '' : requires exactly two parameters 
 ERROR: 0:76: '' : types must match other than scalar type and coopmat Use 
 ERROR: 0:77: '' : first parameter must have floate5m2 or floate4m3 basic type 
-ERROR: 38 compilation errors.  No code generated.
+ERROR: 0:79: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp floate4m3_t' and a right operand of type ' temp floate4m3_t' (or there is no acceptable conversion)
+ERROR: 0:81: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 16, 16, 0> floate4m3_t' and a right operand of type ' temp coopmat<3, 16, 16, 0> floate4m3_t' (or there is no acceptable conversion)
+ERROR: 40 compilation errors.  No code generated.
 
 
 SPIR-V is not generated for failed compile or link

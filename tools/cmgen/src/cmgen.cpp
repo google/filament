@@ -44,7 +44,7 @@
 
 #include <string.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 
 using namespace filament::math;
@@ -245,35 +245,35 @@ static void license() {
 
 static int handleCommandLineArgments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hqidt:f:c:s:x:w:S:";
-    static const struct option OPTIONS[] = {
-            { "help",                       no_argument, nullptr, 'h' },
-            { "license",                    no_argument, nullptr, 'l' },
-            { "quiet",                      no_argument, nullptr, 'q' },
-            { "type",                 required_argument, nullptr, 't' },
-            { "format",               required_argument, nullptr, 'f' },
-            { "compression",          required_argument, nullptr, 'c' },
-            { "size",                 required_argument, nullptr, 's' },
-            { "extract",              required_argument, nullptr, 'e' },
-            { "extract-blur",         required_argument, nullptr, 'r' },
-            { "sh",                   optional_argument, nullptr, 'z' },
-            { "sh-output",            required_argument, nullptr, 'o' },
-            { "sh-irradiance",              no_argument, nullptr, 'i' },
-            { "sh-shader",                  no_argument, nullptr, 'b' },
-            { "sh-window",            required_argument, nullptr, 'w' },
-            { "clamp",                      no_argument, nullptr, 'K' },
-            { "ibl-is-mipmap",        required_argument, nullptr, 'y' },
-            { "ibl-ld",               required_argument, nullptr, 'p' },
-            { "ibl-irradiance",       required_argument, nullptr, 'P' },
-            { "ibl-dfg",              required_argument, nullptr, 'a' },
-            { "ibl-dfg-multiscatter",       no_argument, nullptr, 'u' },
-            { "ibl-dfg-cloth",              no_argument, nullptr, 'C' },
-            { "ibl-no-prefilter",           no_argument, nullptr, 'n' },
-            { "ibl-min-lod-size",     required_argument, nullptr, 'S' },
-            { "ibl-samples",          required_argument, nullptr, 'k' },
-            { "deploy",               required_argument, nullptr, 'x' },
-            { "no-mirror",                  no_argument, nullptr, 'm' },
-            { "debug",                      no_argument, nullptr, 'd' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",                       utils::getopt::no_argument, nullptr, 'h' },
+            { "license",                    utils::getopt::no_argument, nullptr, 'l' },
+            { "quiet",                      utils::getopt::no_argument, nullptr, 'q' },
+            { "type",                 utils::getopt::required_argument, nullptr, 't' },
+            { "format",               utils::getopt::required_argument, nullptr, 'f' },
+            { "compression",          utils::getopt::required_argument, nullptr, 'c' },
+            { "size",                 utils::getopt::required_argument, nullptr, 's' },
+            { "extract",              utils::getopt::required_argument, nullptr, 'e' },
+            { "extract-blur",         utils::getopt::required_argument, nullptr, 'r' },
+            { "sh",                   utils::getopt::optional_argument, nullptr, 'z' },
+            { "sh-output",            utils::getopt::required_argument, nullptr, 'o' },
+            { "sh-irradiance",              utils::getopt::no_argument, nullptr, 'i' },
+            { "sh-shader",                  utils::getopt::no_argument, nullptr, 'b' },
+            { "sh-window",            utils::getopt::required_argument, nullptr, 'w' },
+            { "clamp",                      utils::getopt::no_argument, nullptr, 'K' },
+            { "ibl-is-mipmap",        utils::getopt::required_argument, nullptr, 'y' },
+            { "ibl-ld",               utils::getopt::required_argument, nullptr, 'p' },
+            { "ibl-irradiance",       utils::getopt::required_argument, nullptr, 'P' },
+            { "ibl-dfg",              utils::getopt::required_argument, nullptr, 'a' },
+            { "ibl-dfg-multiscatter",       utils::getopt::no_argument, nullptr, 'u' },
+            { "ibl-dfg-cloth",              utils::getopt::no_argument, nullptr, 'C' },
+            { "ibl-no-prefilter",           utils::getopt::no_argument, nullptr, 'n' },
+            { "ibl-min-lod-size",     utils::getopt::required_argument, nullptr, 'S' },
+            { "ibl-samples",          utils::getopt::required_argument, nullptr, 'k' },
+            { "deploy",               utils::getopt::required_argument, nullptr, 'x' },
+            { "no-mirror",                  utils::getopt::no_argument, nullptr, 'm' },
+            { "debug",                      utils::getopt::no_argument, nullptr, 'd' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
     int opt;
     int option_index = 0;
@@ -281,8 +281,8 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
     bool format_specified = false;
     bool type_specified = false;
     bool ktx_format_requested = false;
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -471,7 +471,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
     if (num_sh_bands && g_sh_compute) {
         g_sh_compute = (size_t) num_sh_bands;
     }
-    return optind;
+    return utils::getopt::optind;
 }
 
 int main(int argc, char* argv[]) {
@@ -617,7 +617,7 @@ int main(int argc, char* argv[]) {
         levels.push_back(std::move(cml));
     }
 
-    // we mirror by default -- the mirror option in fact un-mirrors.
+    // we mirror by default -- the mirror utils::getopt::option in fact un-mirrors.
     g_mirror = !g_mirror;
     if (g_mirror) {
         if (!g_quiet) {

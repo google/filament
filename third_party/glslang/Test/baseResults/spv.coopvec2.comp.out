@@ -8,7 +8,7 @@ spv.coopvec2.comp
                               Capability Int8
                               Capability VulkanMemoryModelKHR
                               Capability CooperativeVectorNV
-                              Capability CapabilityReplicatedCompositesEXT
+                              Capability ReplicatedCompositesEXT
                               Extension  "SPV_EXT_replicated_composites"
                               Extension  "SPV_KHR_vulkan_memory_model"
                               Extension  "SPV_NV_cooperative_vector"

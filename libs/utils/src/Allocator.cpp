@@ -87,7 +87,7 @@ FreeList::Node* FreeList::init(void* begin, void* end,
     void* const p = pointermath::align(begin, alignment, extra);
     void* const n = pointermath::align(pointermath::add(p, elementSize), alignment, extra);
     assert_invariant(p >= begin && p < end);
-    assert_invariant(n >= begin && n < end && n > p);
+    assert_invariant(n >= begin && n <= end && n > p);
 
     const size_t d = uintptr_t(n) - uintptr_t(p);
     const size_t num = (uintptr_t(end) - uintptr_t(p)) / d;
@@ -128,7 +128,7 @@ AtomicFreeList::AtomicFreeList(void* begin, void* end,
     void* const p = pointermath::align(begin, alignment, extra);
     void* const n = pointermath::align(pointermath::add(p, elementSize), alignment, extra);
     assert_invariant(p >= begin && p < end);
-    assert_invariant(n >= begin && n < end && n > p);
+    assert_invariant(n >= begin && n <= end && n > p);
 
     const size_t d = uintptr_t(n) - uintptr_t(p);
     const size_t num = (uintptr_t(end) - uintptr_t(p)) / d;

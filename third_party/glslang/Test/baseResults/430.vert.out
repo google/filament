@@ -50,6 +50,7 @@ ERROR: 0:93: 'transform feedback qualifier' : not supported for this version or 
 ERROR: 0:93: 'transform feedback qualifier' : not supported for this version or the enabled extensions 
 ERROR: 0:93: 'transform feedback qualifier' : not supported for this version or the enabled extensions 
 ERROR: 0:117: 'input block' : not supported in this stage: vertex
+ERROR: 0:117: 'in' : cannot contain bool 
 ERROR: 0:123: 'input block' : not supported in this stage: vertex
 ERROR: 0:146: 'shared' : not supported in this stage: vertex
 ERROR: 0:150: 'barrier' : no matching overloaded function found 
@@ -64,7 +65,7 @@ ERROR: 0:221: 'textureQueryLevels' : no matching overloaded function found
 ERROR: 0:221: 'assign' :  cannot convert from ' const float' to ' temp int'
 ERROR: 0:222: 'textureQueryLevels' : no matching overloaded function found 
 ERROR: 0:222: 'assign' :  cannot convert from ' const float' to ' temp int'
-ERROR: 65 compilation errors.  No code generated.
+ERROR: 66 compilation errors.  No code generated.
 
 
 Shader version: 430

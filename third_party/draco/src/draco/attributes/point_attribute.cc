@@ -14,8 +14,8 @@
 //
 #include "draco/attributes/point_attribute.h"
 
+#include <tuple>
 #include <unordered_map>
-
 using std::unordered_map;
 
 // Shortcut for typed conditionals.
@@ -166,10 +166,12 @@ AttributeValueIndex::ValueType PointAttribute::DeduplicateFormattedValues(
   AttributeValueIndex unique_vals(0);
   typedef std::array<T, num_components_t> AttributeValue;
   typedef std::array<HashType, num_components_t> AttributeHashableValue;
+  typedef unordered_map<AttributeHashableValue, AttributeValueIndex,
+                        HashArray<AttributeHashableValue>>
+      ValueToIndexMap;
+
   // Hash map storing index of the first attribute with a given value.
-  unordered_map<AttributeHashableValue, AttributeValueIndex,
-                HashArray<AttributeHashableValue>>
-      value_to_index_map;
+  ValueToIndexMap value_to_index_map;
   AttributeValue att_value;
   AttributeHashableValue hashable_value;
   IndexTypeVector<AttributeValueIndex, AttributeValueIndex> value_map(
@@ -180,19 +182,19 @@ AttributeValueIndex::ValueType PointAttribute::DeduplicateFormattedValues(
     // Convert the value to hashable type. Bit-copy real attributes to integers.
     memcpy(&(hashable_value[0]), &(att_value[0]), sizeof(att_value));
 
-    // Check if the given attribute value has been used before already.
-    auto it = value_to_index_map.find(hashable_value);
-    if (it != value_to_index_map.end()) {
+    typename ValueToIndexMap::iterator it;
+    bool inserted;
+    std::tie(it, inserted) = value_to_index_map.insert(
+        std::pair<AttributeHashableValue, AttributeValueIndex>(hashable_value,
+                                                               unique_vals));
+
+    // Try to update the hash map with a new entry pointing to the latest unique
+    // vertex index.
+    if (!inserted) {
       // Duplicated value found. Update index mapping.
       value_map[i] = it->second;
     } else {
       // New unique value.
-      // Update the hash map with a new entry pointing to the latest unique
-      // vertex index.
-      value_to_index_map.insert(
-          std::pair<AttributeHashableValue, AttributeValueIndex>(hashable_value,
-                                                                 unique_vals));
-      // Add the unique value to the mesh builder.
       SetAttributeValue(unique_vals, &att_value);
       // Update index mapping.
       value_map[i] = unique_vals;
@@ -219,6 +221,49 @@ AttributeValueIndex::ValueType PointAttribute::DeduplicateFormattedValues(
   }
   num_unique_entries_ = unique_vals.value();
   return num_unique_entries_;
+}
+#endif
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+void PointAttribute::RemoveUnusedValues() {
+  if (is_mapping_identity()) {
+    return;  // For identity mapping, all values are always used.
+  }
+  // For explicit mapping we need to check if any point is mapped to a value.
+  // If not we can delete the value.
+  IndexTypeVector<AttributeValueIndex, bool> is_value_used(size(), false);
+  int num_used_values = 0;
+  for (PointIndex pi(0); pi < indices_map_.size(); ++pi) {
+    const AttributeValueIndex avi = indices_map_[pi];
+    if (!is_value_used[avi]) {
+      is_value_used[avi] = true;
+      num_used_values++;
+    }
+  }
+  if (num_used_values == size()) {
+    return;  // All values are used.
+  }
+
+  // Remap the values and update the point to value mapping.
+  IndexTypeVector<AttributeValueIndex, AttributeValueIndex>
+      old_to_new_value_map(size(), kInvalidAttributeValueIndex);
+  AttributeValueIndex new_avi(0);
+  for (AttributeValueIndex avi(0); avi < size(); ++avi) {
+    if (!is_value_used[avi]) {
+      continue;
+    }
+    if (avi != new_avi) {
+      SetAttributeValue(new_avi, GetAddress(avi));
+    }
+    old_to_new_value_map[avi] = new_avi++;
+  }
+
+  // Remap all points to the new attribute values.
+  for (PointIndex pi(0); pi < indices_map_.size(); ++pi) {
+    indices_map_[pi] = old_to_new_value_map[indices_map_[pi]];
+  }
+
+  num_unique_entries_ = num_used_values;
 }
 #endif
 

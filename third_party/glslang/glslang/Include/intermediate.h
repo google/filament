@@ -875,6 +875,44 @@ enum TOperator {
     EOpFetchMicroTriangleVertexPositionNV,
     EOpFetchMicroTriangleVertexBarycentricNV,
 
+    // 
+    // GL_EXT_shader_invocation_reorder
+    //
+
+    EOpHitObjectTraceRayEXT,
+    EOpHitObjectTraceRayMotionEXT,
+    EOpHitObjectRecordMissEXT,
+    EOpHitObjectRecordMissMotionEXT,
+    EOpHitObjectRecordEmptyEXT,
+    EOpHitObjectExecuteShaderEXT,
+    EOpHitObjectIsEmptyEXT,
+    EOpHitObjectIsMissEXT,
+    EOpHitObjectIsHitEXT,
+    EOpHitObjectGetRayTMinEXT,
+    EOpHitObjectGetRayTMaxEXT,
+    EOpHitObjectGetRayFlagsEXT,
+    EOpHitObjectGetObjectRayOriginEXT,
+    EOpHitObjectGetObjectRayDirectionEXT,
+    EOpHitObjectGetWorldRayOriginEXT,
+    EOpHitObjectGetWorldRayDirectionEXT,
+    EOpHitObjectGetWorldToObjectEXT,
+    EOpHitObjectGetObjectToWorldEXT,
+    EOpHitObjectGetInstanceCustomIndexEXT,
+    EOpHitObjectGetInstanceIdEXT,
+    EOpHitObjectGetGeometryIndexEXT,
+    EOpHitObjectGetPrimitiveIndexEXT,
+    EOpHitObjectGetHitKindEXT,
+    EOpHitObjectGetShaderBindingTableRecordIndexEXT,
+    EOpHitObjectSetShaderBindingTableRecordIndexEXT,
+    EOpHitObjectGetShaderRecordBufferHandleEXT,
+    EOpHitObjectGetAttributesEXT,
+    EOpHitObjectGetCurrentTimeEXT,
+    EOpReorderThreadEXT,
+    EOpHitObjectReorderExecuteEXT,
+    EOpHitObjectTraceReorderExecuteEXT,
+    EOpHitObjectTraceMotionReorderExecuteEXT,
+    EOpHitObjectRecordFromQueryEXT,
+    EOpHitObjectGetIntersectionTriangleVertexPositionsEXT,
     // HLSL operations
     //
 
@@ -985,6 +1023,12 @@ enum TOperator {
     EOpImageBlockMatchGatherSSDQCOM,
     EOpImageBlockMatchGatherSADQCOM,
 
+    // Cooperative Matrix Conversion
+    EOpBitCastArrayQCOM,
+    EOpExtractSubArrayQCOM,
+    EOpCompositeConstructCoopMatQCOM,
+    EOpCompositeExtractCoopMatQCOM,
+
     // GL_NV_cluster_acceleration_structure
     EOpRayQueryGetIntersectionClusterIdNV,
     EOpHitObjectGetClusterIdNV,
@@ -1015,6 +1059,7 @@ enum TLinkType {
 };
 
 class TIntermTraverser;
+class TIntermVariableDecl;
 class TIntermOperator;
 class TIntermAggregate;
 class TIntermUnary;
@@ -1043,6 +1088,7 @@ public:
     virtual const glslang::TSourceLoc& getLoc() const { return loc; }
     virtual void setLoc(const glslang::TSourceLoc& l) { loc = l; }
     virtual void traverse(glslang::TIntermTraverser*) = 0;
+    virtual       glslang::TIntermVariableDecl*  getAsVariableDecl()        { return nullptr; }
     virtual       glslang::TIntermTyped*         getAsTyped()               { return nullptr; }
     virtual       glslang::TIntermOperator*      getAsOperator()            { return nullptr; }
     virtual       glslang::TIntermConstantUnion* getAsConstantUnion()       { return nullptr; }
@@ -1056,6 +1102,7 @@ public:
     virtual       glslang::TIntermBranch*        getAsBranchNode()          { return nullptr; }
     virtual       glslang::TIntermLoop*          getAsLoopNode()            { return nullptr; }
 
+    virtual const glslang::TIntermVariableDecl*  getAsVariableDecl()  const { return nullptr; }
     virtual const glslang::TIntermTyped*         getAsTyped()         const { return nullptr; }
     virtual const glslang::TIntermOperator*      getAsOperator()      const { return nullptr; }
     virtual const glslang::TIntermConstantUnion* getAsConstantUnion() const { return nullptr; }
@@ -1084,6 +1131,37 @@ namespace glslang {
 struct TIntermNodePair {
     TIntermNode* node1;
     TIntermNode* node2;
+};
+
+//
+// Represent declaration of a variable.
+//
+class TIntermVariableDecl : public TIntermNode {
+public:
+    TIntermVariableDecl(TIntermSymbol* declSymbol, TIntermNode* initNode) : declSymbol(declSymbol), initNode(initNode)
+    {
+    }
+    TIntermVariableDecl(const TIntermVariableDecl&) = delete;
+    TIntermVariableDecl& operator=(const TIntermVariableDecl&) = delete;
+
+    void traverse(glslang::TIntermTraverser* traverser) override;
+
+    TIntermVariableDecl* getAsVariableDecl() override { return this; }
+    const TIntermVariableDecl* getAsVariableDecl() const override { return this; }
+
+    TIntermSymbol* getDeclSymbol() { return declSymbol; }
+    const TIntermSymbol* getDeclSymbol() const { return declSymbol; }
+
+    TIntermNode* getInitNode() { return initNode; }
+    const TIntermNode* getInitNode() const { return initNode; }
+
+private:
+    // This symbol represents the declared variable at its declaration point.
+    // It's not traversed by default. To traverse it, the visitor needs to have includeDeclSymbol enabled.
+    TIntermSymbol* declSymbol = nullptr;
+
+    // The initializer
+    TIntermNode* initNode = nullptr;
 };
 
 //
@@ -1130,7 +1208,7 @@ protected:
 //
 class TIntermLoop : public TIntermNode {
 public:
-    TIntermLoop(TIntermNode* aBody, TIntermTyped* aTest, TIntermTyped* aTerminal, bool testFirst) :
+    TIntermLoop(TIntermNode* aBody, TIntermNode* aTest, TIntermTyped* aTerminal, bool testFirst) :
         body(aBody),
         test(aTest),
         terminal(aTerminal),
@@ -1149,9 +1227,19 @@ public:
     virtual const TIntermLoop* getAsLoopNode() const { return this; }
     virtual void traverse(TIntermTraverser*);
     TIntermNode*  getBody() const { return body; }
-    TIntermTyped* getTest() const { return test; }
+    TIntermNode*  getTest() const { return test; }
     TIntermTyped* getTerminal() const { return terminal; }
     bool testFirst() const { return first; }
+
+    // Because the test node can be a declaration in a while loop, this function unwraps it to get the actual expression.
+    TIntermTyped* getTestExpr() const {
+        if (auto decl = test->getAsVariableDecl()) {
+            return decl->getInitNode()->getAsTyped();
+        }
+        else {
+            return test->getAsTyped();
+        }
+    }
 
     void setUnroll()     { unroll = true; }
     void setDontUnroll() {
@@ -1186,7 +1274,7 @@ public:
 
 protected:
     TIntermNode* body;       // code to loop over
-    TIntermTyped* test;      // exit condition associated with loop, could be 0 for 'for' loops
+    TIntermNode* test;       // exit condition associated with loop, could be 0 for 'for' loops
     TIntermTyped* terminal;  // exists for for-loops
     bool first;              // true for while and for, not for do-while
     bool unroll;             // true if unroll requested
@@ -1747,24 +1835,26 @@ enum TVisit
 class TIntermTraverser {
 public:
     POOL_ALLOCATOR_NEW_DELETE(glslang::GetThreadPoolAllocator())
-    TIntermTraverser(bool preVisit = true, bool inVisit = false, bool postVisit = false, bool rightToLeft = false) :
+    TIntermTraverser(bool preVisit = true, bool inVisit = false, bool postVisit = false, bool rightToLeft = false, bool includeDeclSymbol = false) :
             preVisit(preVisit),
             inVisit(inVisit),
             postVisit(postVisit),
             rightToLeft(rightToLeft),
+            includeDeclSymbol(includeDeclSymbol),
             depth(0),
             maxDepth(0) { }
     virtual ~TIntermTraverser() { }
 
-    virtual void visitSymbol(TIntermSymbol*)               { }
-    virtual void visitConstantUnion(TIntermConstantUnion*) { }
-    virtual bool visitBinary(TVisit, TIntermBinary*)       { return true; }
-    virtual bool visitUnary(TVisit, TIntermUnary*)         { return true; }
-    virtual bool visitSelection(TVisit, TIntermSelection*) { return true; }
-    virtual bool visitAggregate(TVisit, TIntermAggregate*) { return true; }
-    virtual bool visitLoop(TVisit, TIntermLoop*)           { return true; }
-    virtual bool visitBranch(TVisit, TIntermBranch*)       { return true; }
-    virtual bool visitSwitch(TVisit, TIntermSwitch*)       { return true; }
+    virtual void visitSymbol(TIntermSymbol*)                     { }
+    virtual void visitConstantUnion(TIntermConstantUnion*)       { }
+    virtual bool visitBinary(TVisit, TIntermBinary*)             { return true; }
+    virtual bool visitUnary(TVisit, TIntermUnary*)               { return true; }
+    virtual bool visitSelection(TVisit, TIntermSelection*)       { return true; }
+    virtual bool visitAggregate(TVisit, TIntermAggregate*)       { return true; }
+    virtual bool visitLoop(TVisit, TIntermLoop*)                 { return true; }
+    virtual bool visitBranch(TVisit, TIntermBranch*)             { return true; }
+    virtual bool visitSwitch(TVisit, TIntermSwitch*)             { return true; }
+    virtual bool visitVariableDecl(TVisit, TIntermVariableDecl*) { return true; }
 
     int getMaxDepth() const { return maxDepth; }
 
@@ -1790,6 +1880,11 @@ public:
     const bool inVisit;
     const bool postVisit;
     const bool rightToLeft;
+
+    // Whether to traverse declaration symbols in the traversal.
+    // By default, declaration symbols are not visited in the traversal to avoid 
+    // visiting them in SPIR-V generation where they are not needed.
+    const bool includeDeclSymbol;
 
 protected:
     TIntermTraverser& operator=(TIntermTraverser&);

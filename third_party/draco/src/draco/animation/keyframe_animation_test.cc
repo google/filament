@@ -24,8 +24,9 @@ class KeyframeAnimationTest : public ::testing::Test {
 
   bool CreateAndAddTimestamps(int32_t num_frames) {
     timestamps_.resize(num_frames);
-    for (int i = 0; i < timestamps_.size(); ++i)
+    for (int i = 0; i < timestamps_.size(); ++i) {
       timestamps_[i] = static_cast<draco::KeyframeAnimation::TimestampType>(i);
+    }
     return keyframe_animation_.SetTimestamps(timestamps_);
   }
 
@@ -33,8 +34,9 @@ class KeyframeAnimationTest : public ::testing::Test {
                                     uint32_t num_components) {
     // Create and add animation data with.
     animation_data_.resize(num_frames * num_components);
-    for (int i = 0; i < animation_data_.size(); ++i)
+    for (int i = 0; i < animation_data_.size(); ++i) {
       animation_data_[i] = static_cast<float>(i);
+    }
     return keyframe_animation_.AddKeyframes(draco::DT_FLOAT32, num_components,
                                             animation_data_);
   }

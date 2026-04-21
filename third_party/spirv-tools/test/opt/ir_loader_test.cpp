@@ -1523,6 +1523,74 @@ TEST(IrBuilder, UniqueIds) {
   });
 }
 
+TEST(IrBuilder, RoundTripSimpleGraphWithBody) {
+  DoRoundTripCheck(R"(OpCapability Shader
+OpCapability TensorsARM
+OpCapability GraphARM
+OpExtension "SPV_ARM_tensors"
+OpExtension "SPV_ARM_graph"
+%1 = OpExtInstImport "TOSA.001000.1"
+OpMemoryModel Logical GLSL450
+OpDecorate %2 DescriptorSet 0
+OpDecorate %2 Binding 0
+OpDecorate %3 DescriptorSet 0
+OpDecorate %3 Binding 1
+%uint = OpTypeInt 32 0
+%float = OpTypeFloat 32
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%uint_3 = OpConstant %uint 3
+%uint_4 = OpConstant %uint 4
+%uint_5 = OpConstant %uint 5
+%uint_10 = OpConstant %uint 10
+%float_0 = OpConstant %float 0
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1
+%_arr_uint_uint_4 = OpTypeArray %uint %uint_4
+%16 = OpConstantComposite %_arr_uint_uint_1 %uint_1
+%17 = OpConstantComposite %_arr_uint_uint_1 %uint_2
+%18 = OpConstantComposite %_arr_uint_uint_1 %uint_4
+%19 = OpConstantComposite %_arr_uint_uint_4 %uint_1 %uint_10 %uint_10 %uint_3
+%20 = OpConstantComposite %_arr_uint_uint_4 %uint_1 %uint_5 %uint_5 %uint_3
+%21 = OpTypeTensorARM %float %uint_1 %16
+%22 = OpTypeTensorARM %uint %uint_1 %17
+%23 = OpTypeTensorARM %uint %uint_1 %18
+%24 = OpTypeTensorARM %float %uint_4 %19
+%25 = OpTypeTensorARM %float %uint_4 %20
+%_ptr_UniformConstant_24 = OpTypePointer UniformConstant %24
+%_ptr_UniformConstant_25 = OpTypePointer UniformConstant %25
+%28 = OpConstantComposite %23 %uint_3 %uint_3
+%29 = OpConstantComposite %23 %uint_2 %uint_2
+%30 = OpConstantComposite %24 %uint_0 %uint_0 %uint_0 %uint_0
+%31 = OpConstantComposite %22 %float_0
+%32 = OpTypeGraphARM 1 %24 %25
+%2 = OpVariable %_ptr_UniformConstant_24 UniformConstant
+%3 = OpVariable %_ptr_UniformConstant_25 UniformConstant
+OpGraphEntryPointARM %33 "main" %2 %3
+%33 = OpGraphARM %32
+%34 = OpGraphInputARM %24 %uint_0
+%35 = OpExtInst %25 %1 AVG_POOL2D %28 %29 %30 %uint_2 %34 %31 %31
+OpGraphSetOutputARM %35 %uint_0
+OpGraphEndARM
+)");
+}
+
+TEST(IrBuilder, GraphInsideGraph) {
+  DoErrorMessageCheck("%2 = OpGraphARM %1\n%3 = OpGraphARM %2",
+                      "graph inside graph", 2);
+}
+
+TEST(IrBuilder, GraphEndOutsideOfGraph) {
+  DoErrorMessageCheck("OpGraphEndARM\n",
+                      "OpGraphEndARM without corresponding OpGraphARM", 1);
+}
+
+TEST(IrBuilder, GraphUnhandledInstruction) {
+  DoErrorMessageCheck(
+      "%2 = OpGraphARM %1\n%3 = OpGraphInputARM %4 %5\nOpNop\nOpGraphEndARM",
+      "unhandled instruction (opcode 0) inside graph", 3);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

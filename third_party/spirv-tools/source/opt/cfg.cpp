@@ -254,12 +254,13 @@ BasicBlock* CFG::SplitLoopHeader(BasicBlock* bb) {
   }
 
   // Adjust the OpPhi instructions as needed.
-  bb->ForEachPhiInst([latch_block, bb, new_header, context](Instruction* phi) {
+  bool ok = bb->WhileEachPhiInst([latch_block, bb, new_header,
+                                  context](Instruction* phi) -> bool {
     std::vector<uint32_t> preheader_phi_ops;
     std::vector<Operand> header_phi_ops;
 
-    // Identify where the original inputs to original OpPhi belong: header or
-    // preheader.
+    // Identify where the original inputs to original OpPhi belong: header
+    // or preheader.
     for (uint32_t i = 0; i < phi->NumInOperands(); i += 2) {
       uint32_t def_id = phi->GetSingleWordInOperand(i);
       uint32_t branch_id = phi->GetSingleWordInOperand(i + 1);
@@ -272,21 +273,24 @@ BasicBlock* CFG::SplitLoopHeader(BasicBlock* bb) {
       }
     }
 
-    // Create a phi instruction if and only if the preheader_phi_ops has more
-    // than one pair.
+    // Create a phi instruction if and only if the preheader_phi_ops has
+    // more than one pair.
     if (preheader_phi_ops.size() > 2) {
       InstructionBuilder builder(
           context, &*bb->begin(),
           IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
 
       Instruction* new_phi = builder.AddPhi(phi->type_id(), preheader_phi_ops);
+      if (!new_phi) {
+        return false;
+      }
 
       // Add the OpPhi to the header bb.
       header_phi_ops.push_back({SPV_OPERAND_TYPE_ID, {new_phi->result_id()}});
       header_phi_ops.push_back({SPV_OPERAND_TYPE_ID, {bb->id()}});
     } else {
-      // An OpPhi with a single entry is just a copy.  In this case use the same
-      // instruction in the new header.
+      // An OpPhi with a single entry is just a copy.  In this case use the
+      // same instruction in the new header.
       header_phi_ops.push_back({SPV_OPERAND_TYPE_ID, {preheader_phi_ops[0]}});
       header_phi_ops.push_back({SPV_OPERAND_TYPE_ID, {bb->id()}});
     }
@@ -297,7 +301,12 @@ BasicBlock* CFG::SplitLoopHeader(BasicBlock* bb) {
     new_header->begin()->InsertBefore(std::move(phi_owner));
     context->set_instr_block(phi, new_header);
     context->AnalyzeUses(phi);
+    return true;
   });
+
+  if (!ok) {
+    return nullptr;
+  }
 
   // Add a branch to the new header.
   InstructionBuilder branch_builder(

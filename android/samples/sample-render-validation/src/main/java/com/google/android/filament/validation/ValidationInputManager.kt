@@ -24,15 +24,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.zip.ZipFile
 
-/**
- * Handles the retrieval and preparation of test configuration and assets.
- * Supports loading from:
- * 1. Intent extras (local path or URL)
- * 2. Default embedded assets (fallback)
- */
 class ValidationInputManager(private val context: Context) {
 
     companion object {
@@ -40,38 +33,189 @@ class ValidationInputManager(private val context: Context) {
     }
 
     data class ValidationInput(
-        val config: RenderTestConfig,
+        val config: RenderTestConfig?,
         val outputDir: File,
-        val generateGoldens: Boolean
+        val generateGoldens: Boolean,
+        val autoRun: Boolean = false,
+        val sourceZip: File? = null,
+        val testFilter: String? = null
     )
+
+    public fun getBaseDir() : File {
+        // Note that this is the app's internal directory. Not visible unless you're root or you're
+        // this app.
+        return context.filesDir
+    }
+
+    public fun hasDefaultTest(): Boolean {
+        val defaultTestZip = File(getBaseDir(), "default_test.zip")
+        return defaultTestZip.exists()
+    }
+
+    public fun hasAnyTest(): Boolean {
+        val dir = getBaseDir()
+        val matchedFiles = dir.listFiles {_, name ->
+            name.endsWith("_test.zip")
+        }
+        return matchedFiles != null && matchedFiles.isNotEmpty()
+    }
 
     /**
      * Resolves the test configuration based on the provided intent extras.
      * This may involve extracting assets or downloading files.
      */
     suspend fun resolveConfig(intent: Intent): ValidationInput = withContext(Dispatchers.IO) {
-        val testConfigPath = intent.getStringExtra("test_config")
-        val urlConfig = intent.getStringExtra("url_config")
-        val urlModelsBase = intent.getStringExtra("url_models_base")
+        val zipPath = intent.getStringExtra("zip_path")
         val generateGoldens = intent.getBooleanExtra("generate_goldens", false)
+
+        // If we get a generateGoldens signal, then it should trigger a run
+        val autoRun = intent.getBooleanExtra("auto_run", false) ||
+            intent.getBooleanExtra("generate_goldens", false)
+
+        val testFilter = if (autoRun) intent.getStringExtra("test_filter") else null
+
         val outputPath = intent.getStringExtra("output_path")
 
-        val outputDir = if (outputPath != null) {
-            File(outputPath).apply { mkdirs() }
+        Log.i(TAG, "Resolving config with outputPath: $outputPath")
+
+        val baseDir = getBaseDir()
+        Log.i(TAG, "Base directory for resolution: ${baseDir.absolutePath}")
+
+        val outputDir = if (!outputPath.isNullOrBlank()) {
+            val file = File(outputPath)
+            val resolved = if (file.isAbsolute) {
+                file
+            } else {
+                File(baseDir, outputPath)
+            }
+
+            // Critical check: if resolved is root or very short, it's likely wrong
+            if (resolved.absolutePath == "/" || resolved.parent == null) {
+                Log.w(TAG, "Resolved outputDir is root ($resolved), defaulting to app-specific dir")
+                File(baseDir, "validation_results")
+            } else {
+                resolved
+            }
         } else {
-            File(context.getExternalFilesDir(null), "validation_results").apply { mkdirs() }
+            File(baseDir, "validation_results")
+        }
+
+        if (!outputDir.exists() && !outputDir.mkdirs()) {
+            Log.e(TAG, "Failed to create outputDir: ${outputDir.absolutePath}")
+        }
+        Log.i(TAG, "Final outputDir: ${outputDir.absolutePath}")
+
+        var sourceZipFile = if (zipPath != null) {
+            val file = File(zipPath)
+            val resolvedFile = if (file.isAbsolute) {
+                file
+            } else {
+                File(baseDir, zipPath)
+            }
+            Log.i(TAG, "Resolved zipPath '$zipPath' to ${resolvedFile.absolutePath} (exists: ${resolvedFile.exists()})")
+            resolvedFile
+        } else {
+            null
+        }
+
+        // Auto-load logic: if no zipPath provided, and default_test.zip is the ONLY zip, auto-load it
+        if (sourceZipFile == null) {
+            val exportDir = baseDir
+            val availableZips = exportDir.listFiles { _, name ->
+                name.endsWith(".zip") && !name.startsWith("results_")
+            }?.toList() ?: emptyList()
+
+            if (availableZips.size == 1 && availableZips[0].name == "default_test.zip") {
+                sourceZipFile = availableZips[0]
+                Log.i(TAG, "Auto-loaded default_test.zip since it's the only test bundle available.")
+            }
         }
 
         val config = when {
-            urlConfig != null -> downloadConfig(urlConfig, urlModelsBase)
-            testConfigPath != null -> ConfigParser.parseFromPath(testConfigPath)
-            else -> extractDefaultAssets()
+            sourceZipFile != null && sourceZipFile.exists() -> loadFromZip(sourceZipFile)
+            generateGoldens -> extractDefaultAssets()
+            else -> null
         }
 
-        return@withContext ValidationInput(config, outputDir, generateGoldens)
+        return@withContext ValidationInput(config, outputDir, generateGoldens, autoRun, sourceZipFile, testFilter)
     }
 
-    private suspend fun extractDefaultAssets(): RenderTestConfig {
+    private var lastUnzippedFile: String? = null
+    private var lastUnzippedTime: Long = 0
+
+    suspend fun loadValidationInputFromZip(file: File) : ValidationInput {
+        val config = loadFromZip(file)
+        val baseDir = getBaseDir()
+        val outputDir = File(baseDir, "validation_results").apply { mkdirs() }
+
+        val newInput = ValidationInputManager.ValidationInput(
+            config = config,
+            outputDir = outputDir,
+            generateGoldens = false,
+            autoRun = false,
+            sourceZip = file,
+            testFilter = null
+        )
+        return newInput
+    }
+
+    private suspend fun loadFromZip(zipFile: File): RenderTestConfig {
+        val baseCacheDir = context.externalCacheDir ?: context.cacheDir
+        val cacheDir = File(baseCacheDir, "unzipped_validation")
+
+        if (lastUnzippedFile == zipFile.absolutePath && lastUnzippedTime == zipFile.lastModified() &&
+                cacheDir.exists()) {
+            Log.i(TAG, "Zip file unmodified, skipping unzip to preserve generated goldens.")
+        } else {
+            Log.i(TAG, "Unzipping validation bundle: ${zipFile.absolutePath}")
+            if (cacheDir.exists()) cacheDir.deleteRecursively()
+            cacheDir.mkdirs()
+
+            Log.i(TAG, "Using cacheDir: ${cacheDir.absolutePath}")
+
+            ZipFile(zipFile).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    val entryFile = File(cacheDir, entry.name)
+                    // specific check to avoid zip slip vulnerability (though low risk here)
+                    if (!entryFile.canonicalPath.startsWith(cacheDir.canonicalPath)) {
+                        throw SecurityException("Zip entry is outside of the target dir: ${entry.name}")
+                    }
+
+                    if (entry.isDirectory) {
+                        entryFile.mkdirs()
+                    } else {
+                        entryFile.parentFile?.mkdirs()
+                        zip.getInputStream(entry).use { input ->
+                             FileOutputStream(entryFile).use { output ->
+                                 input.copyTo(output)
+                             }
+                        }
+                    }
+                }
+            }
+            lastUnzippedFile = zipFile.absolutePath
+            lastUnzippedTime = zipFile.lastModified()
+        }
+
+        // Find config.json
+        // We look for a file ending in .json within the unzipped structure
+        // Exclude results.json if it happened to be there
+        val jsonFiles = cacheDir.walkTopDown()
+            .filter { it.isFile && it.extension == "json" && it.name != "results.json" }
+            .toList()
+
+        if (jsonFiles.isEmpty()) throw IllegalStateException("No config.json found in zip")
+
+        // Prefer one named config.json or take the first one
+        val configFile = jsonFiles.find { it.name == "config.json" } ?: jsonFiles.first()
+
+        Log.i(TAG, "Parsed config from ${configFile.absolutePath}")
+        return ConfigParser.parseFromPath(configFile.absolutePath)
+    }
+
+    suspend fun extractDefaultAssets(): RenderTestConfig {
         Log.i(TAG, "Extracting default assets...")
         val filesDir = context.getExternalFilesDir(null) ?: context.filesDir
         val assetManager = context.assets
@@ -87,84 +231,39 @@ class ValidationInputManager(private val context: Context) {
             }
         }
 
-        // Copy DamagedHelmet.glb
+        // Copy models
         val modelsDir = File(filesDir, "models")
         modelsDir.mkdirs()
-        val modelOut = File(modelsDir, "DamagedHelmet.glb")
-
-        assetManager.open("DamagedHelmet.glb").use { input ->
-            FileOutputStream(modelOut).use { output ->
-                input.copyTo(output)
+        assetManager.list("models")?.forEach { modelFileName ->
+            val modelOut = File(modelsDir, modelFileName)
+            assetManager.open("models/$modelFileName").use { input ->
+                FileOutputStream(modelOut).use { output ->
+                    input.copyTo(output)
+                }
             }
         }
 
         // Update config to point to relative path (standardizing on relative for portability where possible)
         // or absolute. Here we use relative as per previous logic.
         val configJson = JSONObject(configOut.readText())
+
+        // Dynamically name the test bundle based on device model
+        configJson.put("name", "${android.os.Build.MODEL} Test")
+
         val models = configJson.getJSONObject("models")
 
-        // Ensure the default model points to the extracted file
-        // We can use absolute path to be safe since we know where it is now.
-        models.put("DamagedHelmet", modelOut.absolutePath)
+        // Update all model paths to point to the extracted files in the models directory
+        val keys = models.keys()
+        val newModels = JSONObject()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val fileName = models.getString(key)
+            newModels.put(key, java.io.File(modelsDir, fileName).absolutePath)
+        }
+        configJson.put("models", newModels)
 
         configOut.writeText(configJson.toString(2))
 
         return ConfigParser.parseFromPath(configOut.absolutePath)
-    }
-
-    private suspend fun downloadConfig(urlConfig: String, urlModelsBase: String?): RenderTestConfig {
-        Log.i(TAG, "Downloading config from $urlConfig")
-        val filesDir = context.getExternalFilesDir(null) ?: context.filesDir
-        val configDir = File(filesDir, "config")
-        configDir.mkdirs()
-
-        val modelsDir = File(filesDir, "models")
-        modelsDir.mkdirs()
-
-        val configName = "downloaded_config.json"
-        val configFile = File(configDir, configName)
-
-        downloadFile(urlConfig, configFile)
-
-        if (urlModelsBase != null) {
-            val configJson = JSONObject(configFile.readText())
-            val models = configJson.optJSONObject("models")
-            if (models != null) {
-                val keys = models.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val modelPath = models.getString(key)
-                    val fileName = File(modelPath).name
-                    val modelFile = File(modelsDir, fileName)
-                    val modelUrl = "$urlModelsBase/$fileName"
-
-                    Log.i(TAG, "Downloading model: $fileName from $modelUrl")
-                    downloadFile(modelUrl, modelFile)
-
-                    // Update config to point to absolute path
-                    models.put(key, modelFile.absolutePath)
-                }
-                configFile.writeText(configJson.toString())
-            }
-        }
-
-        return ConfigParser.parseFromPath(configFile.absolutePath)
-    }
-
-    private fun downloadFile(urlStr: String, destFile: File) {
-        val url = URL(urlStr)
-        val connection = url.openConnection() as HttpURLConnection
-        connection.connect()
-
-        if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-             throw Exception("Server returned HTTP ${connection.responseCode} for $urlStr")
-        }
-
-        destFile.parentFile?.mkdirs()
-        connection.inputStream.use { input ->
-            FileOutputStream(destFile).use { output ->
-                input.copyTo(output)
-            }
-        }
     }
 }

@@ -1,2 +1,3 @@
-set(DRACO_INCLUDE_DIRS "@DRACO_INCLUDE_DIRS@")
-set(DRACO_LIBRARIES "draco")
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/draco-targets.cmake")

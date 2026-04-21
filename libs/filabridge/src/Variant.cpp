@@ -32,41 +32,46 @@ namespace filament {
 Variant Variant::filterUserVariant(
         Variant variant, UserVariantFilterMask filterMask) noexcept {
     // these are easy to filter by just removing the corresponding bit
-    if (filterMask & (uint32_t)UserVariantFilterBit::DIRECTIONAL_LIGHTING) {
+    if (filterMask & uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING)) {
         variant.key &= ~DIR;
     }
-    if (filterMask & (uint32_t)UserVariantFilterBit::DYNAMIC_LIGHTING) {
+
+    if (filterMask & uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING)) {
         variant.key &= ~DYN;
     }
-    if (filterMask & (uint32_t)UserVariantFilterBit::SKINNING) {
+
+    if (filterMask & uint32_t(UserVariantFilterBit::SKINNING)) {
         variant.key &= ~SKN;
     }
-    if (filterMask & (uint32_t)UserVariantFilterBit::STE) {
+
+    if (filterMask & uint32_t(UserVariantFilterBit::STE)) {
         variant.key &= ~(filterMask & STE);
     }
-    if (!isValidDepthVariant(variant)) {
-        // we can't remove FOG from depth variants, this would, in fact, remove picking
-        if (filterMask & (uint32_t)UserVariantFilterBit::FOG) {
-            variant.key &= ~FOG;
+
+    if (isValidDepthVariant(variant)) {
+        // depth variants can have their MNT bit filtered
+        if (filterMask & uint32_t(UserVariantFilterBit::VSM)) {
+            variant.key &= ~MNT;
         }
     } else {
-        // depth variants can have their VSM bit filtered
-        if (filterMask & (uint32_t)UserVariantFilterBit::VSM) {
-            variant.key &= ~VSM;
+        // we can't remove FOG from depth variants, this would, in fact, remove picking
+        if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
+            variant.key &= ~FOG;
         }
     }
+
     if (!isSSRVariant(variant)) {
         // SSR variant needs to be handled separately
-        if (filterMask & (uint32_t)UserVariantFilterBit::SHADOW_RECEIVER) {
+        if (filterMask & uint32_t(UserVariantFilterBit::SHADOW_RECEIVER)) {
             variant.key &= ~SRE;
         }
-        if (filterMask & (uint32_t)UserVariantFilterBit::VSM) {
-            variant.key &= ~VSM;
+        if (filterMask & uint32_t(UserVariantFilterBit::VSM)) {
+            variant.key &= ~S2D;
         }
     } else {
         // see if we need to filter out the SSR variants
-        if (filterMask & (uint32_t)UserVariantFilterBit::SSR) {
-            variant.key &= ~SPECIAL_SSR;
+        if (filterMask & uint32_t(UserVariantFilterBit::SSR)) {
+            variant.key &= ~SPECIAL_SSR_VARIANT;
         }
     }
     return variant;

@@ -310,13 +310,7 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     engine.flush();     // flush command stream
 
     // Run GC
-    JobSystem& js = engine.getJobSystem();
-    auto *rootJob = js.createJob();
-    js.run(jobs::createJob(js, rootJob, &FEngine::gcManagers, &engine)); // gc all component managers
-    if (engine.isAsynchronousModeEnabled()) {
-        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
-    }
-    js.runAndWait(rootJob);
+    engine.gc();
 
     mFrameSkipper.frameSkipped();
 }
@@ -518,13 +512,7 @@ void FRenderer::endFrame() {
     engine.flush();     // flush command stream
 
     // Run GC
-    JobSystem& js = engine.getJobSystem();
-    auto *rootJob = js.createJob();
-    js.run(jobs::createJob(js, rootJob, &FEngine::gcManagers, &engine)); // gc all component managers
-    if (engine.isAsynchronousModeEnabled()) {
-        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
-    }
-    js.runAndWait(rootJob);
+    engine.gc();
 }
 
 void FRenderer::readPixels(
@@ -969,10 +957,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     variant.setDirectionalLighting(view.hasDirectionalLighting());
     variant.setDynamicLighting(view.hasDynamicLighting());
     variant.setFog(view.hasFog());
-    // The VSM bit has a different meaning for STANDARD_VARIANT (as opposed to DEPTH_VARIANT),
-    // In the STANDARD_VARIANT case, we are *using* the shadow-map, and the VSM only decides which
-    // type of sampler is used (samplerShadow or sampler2D).
-    variant.setVsm(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
+    variant.setShadowSampler2D(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
 
     /*
@@ -981,10 +966,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     if (view.needsShadowMap()) {
         Variant shadowVariant(Variant::DEPTH_VARIANT);
-        // The VSM bit has a different meaning for DEPTH_VARIANT (as opposed to STANDARD_VARIANT),
-        // In the DEPTH_VARIANT case, we are *generating* the shadow-map, and some computations
-        // are handled differently. In addition, the color buffer is used.
-        shadowVariant.setVsm(view.getShadowType() == ShadowType::VSM);
+        shadowVariant.setDepthMoments(view.getShadowType() == ShadowType::VSM);
 
         auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime,
                 RenderPassBuilder{ commandArena }
@@ -1380,7 +1362,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     // Debug: CSM visualisation
     if (UTILS_UNLIKELY(engine.debug.shadowmap.visualize_cascades &&
                        view.hasShadowing() && view.hasDirectionalLighting())) {
-        input = ppm.debugShadowCascades(fg, input, depth);
+        input = ppm.debugShadowCascades(fg, view.getShadowMapManager(), input, depth);
     }
 
     // TODO: DoF should be applied here, before TAA -- but if we do this it'll result in a lot of

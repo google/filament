@@ -75,6 +75,7 @@
 #include <utils/Invocable.h>
 #include <utils/JobSystem.h>
 #include <utils/Slice.h>
+#include <utils/tribool.h>
 
 #include <chrono>
 #include <memory>
@@ -456,8 +457,7 @@ public:
     }
 
     void prepare(backend::DriverApi& driver);
-    void gcManagers();
-    void gcDeferredAsyncObjectDestruction();
+    void gc();
     void submitFrame();
 
     using ShaderContent = utils::FixedCapacityVector<uint8_t>;
@@ -575,6 +575,20 @@ public:
     std::optional<bool> getFeatureFlag(char const* name) const noexcept;
     bool* getFeatureFlagPtr(std::string_view name, bool allowConstant = false) const noexcept;
 
+    void compile(
+        backend::CompilerPriorityQueue priority,
+        FMaterial const* material,
+        FView const* view,
+        utils::tribool shadowReceiver,
+        utils::tribool skinning,
+        backend::CallbackHandler* handler = nullptr,
+        utils::Invocable<void(Material*)>&& callback = {});
+
+    static utils::FixedCapacityVector<Variant> getMaterialCompileVariants(
+        FView const* view,
+        utils::tribool shadowReceiver,
+        utils::tribool skinning) noexcept;
+
 private:
     explicit FEngine(Builder const& builder);
     void init();
@@ -582,6 +596,8 @@ private:
 
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue) const;
+
+    void gcDeferredAsyncObjectDestruction();
 
     template<typename T>
     bool isValid(const T* ptr, ResourceList<T> const& list) const;

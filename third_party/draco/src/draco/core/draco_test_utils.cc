@@ -16,9 +16,9 @@
 
 #include <fstream>
 
+#include "draco/core/draco_test_base.h"
 #include "draco/core/macros.h"
 #include "draco/io/file_utils.h"
-#include "draco_test_base.h"
 
 namespace draco {
 
@@ -26,6 +26,8 @@ namespace {
 static constexpr char kTestDataDir[] = DRACO_TEST_DATA_DIR;
 static constexpr char kTestTempDir[] = DRACO_TEST_TEMP_DIR;
 }  // namespace
+
+std::string GetTestTempDir() { return std::string(kTestDataDir); }
 
 std::string GetTestFileFullPath(const std::string &file_name) {
   return std::string(kTestDataDir) + std::string("/") + file_name;
@@ -55,11 +57,13 @@ bool CompareGoldenFile(const std::string &golden_file_name, const void *data,
   size_t remaining_data_size = data_size;
   int offset = 0;
   while ((extracted_size = in_file.read(buffer, buffer_size).gcount()) > 0) {
-    if (remaining_data_size <= 0)
+    if (remaining_data_size <= 0) {
       break;  // Input and golden sizes are different.
+    }
     size_t size_to_check = extracted_size;
-    if (remaining_data_size < size_to_check)
+    if (remaining_data_size < size_to_check) {
       size_to_check = remaining_data_size;
+    }
     for (uint32_t i = 0; i < size_to_check; ++i) {
       if (buffer[i] != data_c8[offset++]) {
         LOG(INFO) << "Test output differed from golden file at byte "
@@ -76,5 +80,21 @@ bool CompareGoldenFile(const std::string &golden_file_name, const void *data,
   }
   return true;
 }
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+
+template <>
+std::unique_ptr<Mesh> ReadGeometryFromTestFile<Mesh>(
+    const std::string &file_name) {
+  return ReadMeshFromTestFile(file_name);
+}
+
+template <>
+std::unique_ptr<Scene> ReadGeometryFromTestFile<Scene>(
+    const std::string &file_name) {
+  return ReadSceneFromTestFile(file_name);
+}
+
+#endif  // DRACO_TRANSCODER_SUPPORTED
 
 }  // namespace draco

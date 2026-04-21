@@ -24,7 +24,11 @@
 #include <ostream>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace utils::io {
 
@@ -62,7 +66,6 @@ public:
     ostream& operator<<(const char* string) noexcept;
     ostream& operator<<(const unsigned char* string) noexcept;
 
-    ostream& operator<<(std::string const& s) noexcept;
     ostream& operator<<(std::string_view const& s) noexcept;
 
     ostream& operator<<(ostream& (* f)(ostream&)) noexcept { return f(*this); }
@@ -127,10 +130,13 @@ private:
 template<template<typename T> class VECTOR, typename T>
 inline ostream& operator<<(ostream& stream, const VECTOR<T>& v) {
     stream << "< ";
-    for (size_t i = 0; i < v.size() - 1; i++) {
-        stream << v[i] << ", ";
+    if (v.size() > 0) {
+        for (size_t i = 0; i < v.size() - 1; i++) {
+            stream << v[i] << ", ";
+        }
+        stream << v[v.size() - 1];
     }
-    stream << v[v.size() - 1] << " >";
+    stream << " >";
     return stream;
 }
 
@@ -149,11 +155,17 @@ class ostream;
 }
 
 inline std::ostream& operator<<(std::ostream& o, bitset32 const& s) noexcept {
-    return o << (void*) uintptr_t(s.getValue());
+    return o << reinterpret_cast<void*>(uintptr_t(s.getValue()));
 }
+
 inline io::ostream& operator<<(io::ostream& o, bitset32 const& s) noexcept {
-    return o << (void*) uintptr_t(s.getValue());
+    return o << reinterpret_cast<void*>(uintptr_t(s.getValue()));
 }
+
+inline io::ostream& operator<<(io::ostream& o, std::string const& s) noexcept {
+    return o << static_cast<std::string_view>(s);
+}
+
 }// namespace utils
 
 

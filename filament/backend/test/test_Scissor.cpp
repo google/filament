@@ -32,7 +32,6 @@ using namespace filament;
 using namespace filament::backend;
 
 TEST_F(BackendTest, ScissorViewportRegion) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     auto& api = getDriverApi();
 
     constexpr int kSrcTexWidth = 1024;

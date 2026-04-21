@@ -47,6 +47,7 @@ list(SORT NDK_VERSIONS)
 list(GET NDK_VERSIONS -1 NDK_VERSION)
 get_filename_component(NDK_VERSION ${NDK_VERSION} NAME)
 set(TOOLCHAIN ${ANDROID_HOME_UNIX}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/${HOST_NAME_L}-x86_64)
+set(CMAKE_ANDROID_NDK_VERSION ${NDK_VERSION})
 
 # specify the cross compiler
 set(COMPILER_SUFFIX)

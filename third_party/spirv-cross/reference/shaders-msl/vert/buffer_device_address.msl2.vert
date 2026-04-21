@@ -24,12 +24,12 @@ struct Position
 struct Registers
 {
     float4x4 view_projection;
-    device PositionReferences* references;
+    const device PositionReferences* references;
 };
 
 struct PositionReferences
 {
-    device Position* buffers[1];
+    const device Position* buffers[1];
 };
 
 struct main0_out
@@ -42,7 +42,7 @@ vertex main0_out main0(constant Registers& registers [[buffer(0)]], uint gl_Inst
 {
     main0_out out = {};
     int slice = int(gl_InstanceIndex);
-    device Position* __restrict positions = registers.references->buffers[slice];
+    const device Position* __restrict positions = registers.references->buffers[slice];
     float2 pos = positions->positions[int(gl_VertexIndex)] * 2.5;
     pos += ((float2(float(spvSMod(slice, 8)), float(slice / 8)) - float2(3.5)) * 3.0);
     out.gl_Position = registers.view_projection * float4(pos, 0.0, 1.0);

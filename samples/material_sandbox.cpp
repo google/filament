@@ -21,7 +21,7 @@
 #include <map>
 #include <vector>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <imgui.h>
 
@@ -127,22 +127,22 @@ static void printUsage(char* name) {
 
 static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "ha:vps:i:d:c:";
-    static const struct option OPTIONS[] = {
-            { "help",         no_argument,       nullptr, 'h' },
-            { "api",          required_argument, nullptr, 'a' },
-            { "ibl",          required_argument, nullptr, 'i' },
-            { "split-view",   no_argument,       nullptr, 'v' },
-            { "scale",        required_argument, nullptr, 's' },
-            { "shadow-plane", no_argument,       nullptr, 'p' },
-            { "single",       no_argument,       nullptr, 'n' },
-            { "dirt",         required_argument, nullptr, 'd' },
-            { "camera",       required_argument, nullptr, 'c' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",         utils::getopt::no_argument,       nullptr, 'h' },
+            { "api",          utils::getopt::required_argument, nullptr, 'a' },
+            { "ibl",          utils::getopt::required_argument, nullptr, 'i' },
+            { "split-view",   utils::getopt::no_argument,       nullptr, 'v' },
+            { "scale",        utils::getopt::required_argument, nullptr, 's' },
+            { "shadow-plane", utils::getopt::no_argument,       nullptr, 'p' },
+            { "single",       utils::getopt::no_argument,       nullptr, 'n' },
+            { "dirt",         utils::getopt::required_argument, nullptr, 'd' },
+            { "camera",       utils::getopt::required_argument, nullptr, 'c' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -187,7 +187,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 static void cleanup(Engine* engine, View*, Scene*) {

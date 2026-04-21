@@ -53,6 +53,7 @@
 #include <array>
 #include <random>
 #include <string_view>
+#include <optional>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -66,6 +67,7 @@ class FMaterialInstance;
 class FrameGraph;
 class RenderPass;
 class RenderPassBuilder;
+class ShadowMapManager;
 class UboManager;
 struct CameraInfo;
 
@@ -304,23 +306,21 @@ public:
             utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor outDesc) noexcept;
 
-    // Resolves base level of input and outputs a texture from outDesc.
+    // Resolves base level of input and outputs a texture from outDesc using a shader instead of
+    // driver-implemented API.
     // outDesc with, height, format and samples will be overridden.
-    FrameGraphId<FrameGraphTexture> resolveDepth(FrameGraph& fg,
+    FrameGraphId<FrameGraphTexture> resolveDepthWithShader(FrameGraph& fg,
             utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor outDesc) noexcept;
-
-    // VSM shadow mipmap pass
-    FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
-            math::float4 clearColor) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> output,
-            bool reinhard, size_t kernelWidth, float sigma) noexcept;
+            bool reinhard, size_t kernelWidth, float sigma,
+            std::optional<backend::Viewport> scissor = {}) noexcept;
 
     FrameGraphId<FrameGraphTexture> debugShadowCascades(FrameGraph& fg,
+            ShadowMapManager const& smm,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth) noexcept;
 
@@ -388,6 +388,8 @@ public:
 
     void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
 
+    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) const noexcept;
+
     backend::PipelineState getPipelineState(FMaterial const* ma, Variant::type_t variant) const noexcept;
 
     backend::PipelineState getPipelineState(FMaterial const* ma,
@@ -422,10 +424,10 @@ public:
 
     void resetForRender();
 
-private:
-    static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
 
-    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) const noexcept;
+    MaterialInstanceManager& getMaterialInstanceManager() noexcept {
+            return mMaterialInstanceManager;
+    }
 
     // Helper to get a MaterialInstance from a FMaterial
     // This currently just call FMaterial::getDefaultInstance().
@@ -434,12 +436,15 @@ private:
     }
 
     // Helper to get a MaterialInstance from a PostProcessMaterial.
-    FMaterialInstance* getMaterialInstance(FEngine& engine, backend::DriverApi& driver, PostProcessMaterial const& material,
-            PostProcessVariant variant = PostProcessVariant::OPAQUE) {
+    FMaterialInstance* getMaterialInstance(FEngine& engine, backend::DriverApi& driver,
+            PostProcessMaterial const& material, PostProcessVariant variant = PostProcessVariant::OPAQUE) {
         FMaterial const* ma = material.getMaterial(engine, driver, variant);
         return getMaterialInstance(ma);
     }
 
+    static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
+
+private:
     UboManager* getUboManager() const noexcept;
 
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
@@ -485,13 +490,6 @@ private:
     MaterialRegistryMap mMaterialRegistry;
 
     MaterialInstanceManager mMaterialInstanceManager;
-
-    struct {
-        int32_t colorGradingTranslucent = MaterialInstanceManager::INVALID_FIXED_INDEX;
-        int32_t colorGradingOpaque = MaterialInstanceManager::INVALID_FIXED_INDEX;
-        int32_t customResolve = MaterialInstanceManager::INVALID_FIXED_INDEX;
-        int32_t clearDepth = MaterialInstanceManager::INVALID_FIXED_INDEX;
-    } mFixedMaterialInstanceIndex;
 
     backend::Handle<backend::HwTexture> mStarburstTexture;
 

@@ -26,7 +26,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 using namespace utils;
 using namespace image;
@@ -126,11 +126,11 @@ static void saveDiffImage(const Path& path, const LinearImage& image) {
 }
 
 int main(int argc, char** argv) {
-    static struct option longOptions[] = {
-        {"config", required_argument, 0, 'c'},
-        {"mask", required_argument, 0, 'm'},
-        {"diff", required_argument, 0, 'd'},
-        {"help", no_argument, 0, 'h'},
+    static utils::getopt::option longOptions[] = {
+        {"config", utils::getopt::required_argument, 0, 'c'},
+        {"mask", utils::getopt::required_argument, 0, 'm'},
+        {"diff", utils::getopt::required_argument, 0, 'd'},
+        {"help", utils::getopt::no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
 
@@ -140,16 +140,16 @@ int main(int argc, char** argv) {
 
     int opt;
     int optionIndex = 0;
-    while ((opt = getopt_long(argc, argv, "c:m:d:h", longOptions, &optionIndex)) != -1) {
+    while ((opt = utils::getopt::getopt_long(argc, argv, "c:m:d:h", longOptions, &optionIndex)) != -1) {
         switch (opt) {
             case 'c':
-                configPath = Path(optarg);
+                configPath = Path(utils::getopt::optarg);
                 break;
             case 'm':
-                maskPath = Path(optarg);
+                maskPath = Path(utils::getopt::optarg);
                 break;
             case 'd':
-                diffPath = Path(optarg);
+                diffPath = Path(utils::getopt::optarg);
                 break;
             case 'h':
                 printUsage(argv[0]);
@@ -160,14 +160,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (optind + 2 > argc) {
+    if (utils::getopt::optind + 2 > argc) {
         std::cerr << "Error: Missing arguments." << std::endl;
         printUsage(argv[0]);
         return 1;
     }
 
-    Path refPath(argv[optind]);
-    Path candPath(argv[optind + 1]);
+    Path refPath(argv[utils::getopt::optind]);
+    Path candPath(argv[utils::getopt::optind + 1]);
 
     LinearImage refImg = loadImage(refPath);
     if (!refImg.isValid()) return 1;

@@ -44,7 +44,7 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
-target_link_libraries(${TARGET} getopt filamat filabridge utils)
+target_link_libraries(${TARGET}  filamat filabridge utils)
 
 # ==================================================================================================
 # Installation

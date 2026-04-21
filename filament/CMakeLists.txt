@@ -56,6 +56,7 @@ set(SRCS
         src/materials/bloom/bloom.cpp
         src/materials/colorGrading/colorGrading.cpp
         src/materials/dof/dof.cpp
+        src/materials/evsm/evsm.cpp
         src/materials/flare/flare.cpp
         src/materials/fog/fog.cpp
         src/materials/fsr/fsr.cpp
@@ -93,6 +94,7 @@ set(SRCS
         src/MorphTargetBuffer.cpp
         src/PostProcessManager.cpp
         src/ProgramSpecialization.cpp
+        src/LocalProgramCache.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
@@ -186,6 +188,7 @@ set(PRIVATE_HDRS
         src/MaterialCache.h
         src/MaterialDefinition.h
         src/MaterialParser.h
+        src/LocalProgramCache.h
         src/MaterialInstanceManager.h
         src/PIDController.h
         src/PostProcessManager.h
@@ -283,6 +286,8 @@ set(MATERIAL_SRCS
         src/materials/dof/dofMipmap.mat
         src/materials/dof/dofTiles.mat
         src/materials/dof/dofTilesSwizzle.mat
+        src/materials/evsm/gaussian.mat
+        src/materials/evsm/vsmMipmap.mat
         src/materials/flare/flare.mat
         src/materials/fog/fog.mat
         src/materials/fsr/fsr_easu.mat
@@ -299,7 +304,6 @@ set(MATERIAL_SRCS
         src/materials/ssao/mipmapDepth.mat
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
-        src/materials/vsmMipmap.mat
 )
 
 if (NOT FILAMENT_DISABLE_GTAO)
@@ -309,15 +313,16 @@ if (NOT FILAMENT_DISABLE_GTAO)
     )
 endif()
 
-set(MATERIAL_FL0_SRCS
-        src/materials/defaultMaterial.mat
-        src/materials/skybox.mat
-)
-
 set(MATERIAL_MULTIVIEW_SRCS
         src/materials/clearDepth.mat
         src/materials/defaultMaterial.mat
         src/materials/skybox.mat
+)
+
+# This set of materials should only be compiled for vulkan or metal because they contain operations
+# not allowed on other platforms. (e.g. sampling from a multi-sampled texture).
+set(MATERIAL_VULKAN_METAL_SRCS
+        src/materials/resolveDepth.mat
 )
 
 # ==================================================================================================
@@ -338,11 +343,6 @@ if (NOT DFG_LUT_SIZE)
     endif()
 endif()
 message(STATUS "DFG LUT size set to ${DFG_LUT_SIZE}x${DFG_LUT_SIZE}")
-
-# Whether to include FL0 materials.
-if (FILAMENT_ENABLE_FEATURE_LEVEL_0)
-    add_definitions(-DFILAMENT_ENABLE_FEATURE_LEVEL_0)
-endif()
 
 # Whether to include MULTIVIEW materials.
 if (FILAMENT_ENABLE_MULTIVIEW)
@@ -393,6 +393,27 @@ foreach(mat_src ${MATERIAL_SRCS})
 endforeach()
 list(REMOVE_DUPLICATES MATERIAL_DIRS)
 
+function(check_in_list list_name item out_var)
+    list(FIND ${list_name} "${item}" index)
+    if (index GREATER -1)
+        set(${out_var} TRUE PARENT_SCOPE)
+    else()
+        set(${out_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
+macro(compile_material output_path fullname flags_var comment_str)
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND matc ${${flags_var}} -o ${output_path} ${fullname}
+            MAIN_DEPENDENCY ${fullname}
+            DEPENDS matc
+            COMMENT "${comment_str}"
+    )
+    list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path})
+    list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path})
+endmacro()
+
 # For each directory, generate a single resource package
 foreach(mat_dir ${MATERIAL_DIRS})
     get_filename_component(package_name ${mat_dir} NAME)
@@ -415,44 +436,35 @@ foreach(mat_dir ${MATERIAL_DIRS})
 
         # --- Base material ---
         set(output_path "${MATERIAL_DIR}/${localname}.filamat")
-        add_custom_command(
-                OUTPUT ${output_path}
-                COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
-                MAIN_DEPENDENCY ${fullname}
-                DEPENDS matc
-                COMMENT "Compiling material ${fullname}"
-        )
-        list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path})
-        list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path})
+        set(MATC_CUSTOM_FLAGS "${MATC_BASE_FLAGS}")
+        set(COMMENT_STR "Compiling material ${fullname}")
 
-        # --- Feature Level 0 variant ---
-        list(FIND MATERIAL_FL0_SRCS ${mat_src} index)
-        if (${index} GREATER -1 AND FILAMENT_ENABLE_FEATURE_LEVEL_0)
-            string(REGEX REPLACE "[.]filamat$" "_fl0.filamat" output_path_fl0 ${output_path})
-            add_custom_command(
-                    OUTPUT ${output_path_fl0}
-                    COMMAND matc ${MATC_BASE_FLAGS} -PfeatureLevel=0 -o ${output_path_fl0} ${fullname}
-                    MAIN_DEPENDENCY ${fullname}
-                    DEPENDS matc
-                    COMMENT "Compiling material ${fullname} (FL0)"
-            )
-            list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path_fl0})
-            list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path_fl0})
+        check_in_list(MATERIAL_VULKAN_METAL_SRCS ${mat_src} is_vk_metal)
+        if (is_vk_metal)
+            # Remove webgpu and related parameters
+            # The variant-filter=stereo is added in the root folder's CMakeLists.txt for webgpu
+            # Context is that webgpu does not support the stereo variant
+            string(REPLACE "-a;webgpu;--variant-filter=stereo" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+
+            # Remove gl
+            string(REPLACE "-a;opengl" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+
+            # Remove any empty args
+            string(REPLACE ";;" ";" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+            string(REGEX REPLACE "^;|;$" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+
+            set(COMMENT_STR "Compiling material ${fullname} (Vulkan/Metal)")
         endif()
 
+        compile_material(${output_path} ${fullname} MATC_CUSTOM_FLAGS "${COMMENT_STR}")
+
         # --- Multiview variant ---
-        list(FIND MATERIAL_MULTIVIEW_SRCS ${mat_src} index)
-        if (${index} GREATER -1 AND FILAMENT_ENABLE_MULTIVIEW)
+        check_in_list(MATERIAL_MULTIVIEW_SRCS ${mat_src} is_multiview)
+        if (is_multiview AND FILAMENT_ENABLE_MULTIVIEW)
             string(REGEX REPLACE "[.]filamat$" "_multiview.filamat" output_path_multiview ${output_path})
-            add_custom_command(
-                    OUTPUT ${output_path_multiview}
-                    COMMAND matc ${MATC_BASE_FLAGS} -PstereoscopicType=multiview -o ${output_path_multiview} ${fullname}
-                    MAIN_DEPENDENCY ${fullname}
-                    DEPENDS matc
-                    COMMENT "Compiling material ${fullname} (Multiview)"
-            )
-            list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path_multiview})
-            list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path_multiview})
+            set(MATC_MULTIVIEW_FLAGS "${MATC_BASE_FLAGS}" "-PstereoscopicType=multiview")
+            set(COMMENT_STR "Compiling material ${fullname} (Multiview)")
+            compile_material(${output_path_multiview} ${fullname} MATC_MULTIVIEW_FLAGS "${COMMENT_STR}")
         endif()
     endforeach()
 
@@ -634,6 +646,12 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/separableGaussianBlur.filamat"
         DEPENDS src/materials/separableGaussianBlur.vs
         DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/gaussian.filamat"
+        DEPENDS src/materials/evsm/gaussian.fs
         APPEND
 )
 

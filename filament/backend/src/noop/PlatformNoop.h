@@ -26,6 +26,7 @@ class PlatformNoop final : public Platform {
 public:
 
     int getOSVersion() const noexcept final { return 0; }
+    utils::CString getDeviceInfo(DeviceInfoType, Driver*) const noexcept override { return {}; }
 
     ~PlatformNoop() noexcept override = default;
 

@@ -18,8 +18,23 @@ material {
             precision: high
         },
         {
-            type : uint,
+            type : int,
             name : cascadeCount,
+            precision: high
+        },
+        {
+            type : float2,
+            name : shadowAtlasResolution,
+            precision: high
+        },
+        {
+            type : mat4[4],
+            name : lightFromWorldMatrix,
+            precision: high
+        },
+        {
+            type : float4[4],
+            name : scissorNormalized,
             precision: high
         }
     ],
@@ -59,9 +74,10 @@ fragment {
         return vec3(0.0, 0.0, 0.0);
     }
 
-    int getShadowCascade(highp float z) {
-        ivec4 greaterZ = ivec4(greaterThan(frameUniforms.cascadeSplits, vec4(z)));
-        int cascadeCount = frameUniforms.cascades & 0xF;
+    int getShadowCascade(highp vec4 position) {
+        highp float z = position.z / position.w;
+        ivec4 greaterZ = ivec4(greaterThan(materialParams.cascadeSplits, vec4(z)));
+        int cascadeCount = materialParams.cascadeCount;
         return clamp(greaterZ.x + greaterZ.y + greaterZ.z + greaterZ.w, 0, cascadeCount - 1);
     }
 
@@ -70,11 +86,13 @@ fragment {
 
         // depth from the depth buffer
         highp float depth = textureLod(materialParams_depth, variable_vertex.xy, 0.0).r;
-        // convert to view-space (linear z).
-        highp vec4 p = mulMat4x4Float3(getViewFromClipMatrix(), vec3(0, 0, depth));
-        highp float z = p.z / p.w;
 
-        color.rgb *= uintToColorDebug(getShadowCascade(z));
+        highp vec2 clip = variable_vertex.xy * 2.0 - vec2(1.0);
+
+        // convert to view-space (linear z).
+        highp vec4 p = mulMat4x4Float3(getViewFromClipMatrix(), vec3(clip, depth));
+
+        color.rgb *= uintToColorDebug(getShadowCascade(p));
         postProcess.color = color;
     }
 }

@@ -51,6 +51,11 @@ public:
      */
     void waitForAllToFinish();
 
+    /**
+     * Check if all tasks have finished (work counter is 0) (thread-safe)
+     */
+    bool isIdle();
+
 private:
     std::mutex mMutex;
     std::condition_variable mFinishedCondition;

@@ -177,9 +177,7 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 
 TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL), "Stencil isn't applied");
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "see b/453757787");
-    SKIP_IF(Backend::VULKAN, "b/453777217");
+    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN), "Stencil not preserved");
 
     auto& api = getDriverApi();
 

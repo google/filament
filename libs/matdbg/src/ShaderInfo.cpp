@@ -40,8 +40,18 @@ size_t getShaderCount(const ChunkContainer& container, ChunkType type) {
         return 0;
     }
 
+    bool const isTextChunk = (
+            type == filamat::ChunkType::MaterialGlsl ||
+            type == filamat::ChunkType::MaterialEssl1 ||
+            type == filamat::ChunkType::MaterialWgsl ||
+            type == filamat::ChunkType::MaterialMetal);
+
     auto [start, end] = container.getChunkRange(type);
     Unflattener unflattener(start, end);
+
+    if (isTextChunk) {
+        unflattener.setCursor(unflattener.getCursor() + sizeof(uint16_t) * 4);
+    }
 
     uint64_t shaderCount = 0;
     if (!unflattener.read(&shaderCount) || shaderCount == 0) {
@@ -60,8 +70,18 @@ bool getShaderInfo(const ChunkContainer& container, ShaderInfo* info, ChunkType 
         return false;
     }
 
+    bool const isTextChunk = (
+            chunkType == filamat::ChunkType::MaterialGlsl ||
+            chunkType == filamat::ChunkType::MaterialEssl1 ||
+            chunkType == filamat::ChunkType::MaterialWgsl ||
+            chunkType == filamat::ChunkType::MaterialMetal);
+
     auto [start, end] = container.getChunkRange(chunkType);
     Unflattener unflattener(start, end);
+
+    if (isTextChunk) {
+        unflattener.setCursor(unflattener.getCursor() + sizeof(uint16_t) * 4);
+    }
 
     uint64_t shaderCount = 0;
     if (!unflattener.read(&shaderCount) || shaderCount == 0) {

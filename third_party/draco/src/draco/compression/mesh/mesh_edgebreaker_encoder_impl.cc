@@ -408,7 +408,7 @@ Status MeshEdgebreakerEncoderImpl<TraversalEncoder>::EncodeConnectivity() {
                                          init_face_connectivity_corners.begin(),
                                          init_face_connectivity_corners.end());
   // Encode connectivity for all non-position attributes.
-  if (attribute_data_.size() > 0) {
+  if (!attribute_data_.empty()) {
     // Use the same order of corner that will be used by the decoder.
     visited_faces_.assign(mesh_->num_faces(), false);
     for (CornerIndex ci : processed_connectivity_corners_) {

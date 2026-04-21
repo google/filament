@@ -54,11 +54,11 @@ spv_result_t ValidateConstantComposite(ValidationState_t& _,
   const auto constituent_count = inst->words().size() - 3;
   switch (result_type->opcode()) {
     case spv::Op::OpTypeVector:
-    case spv::Op::OpTypeCooperativeVectorNV: {
+    case spv::Op::OpTypeVectorIdEXT: {
       uint32_t num_result_components = _.GetDimension(result_type->id());
       bool comp_is_int32 = true, comp_is_const_int32 = true;
 
-      if (result_type->opcode() == spv::Op::OpTypeCooperativeVectorNV) {
+      if (result_type->opcode() == spv::Op::OpTypeVectorIdEXT) {
         uint32_t comp_count_id = result_type->GetOperandAs<uint32_t>(2);
         std::tie(comp_is_int32, comp_is_const_int32, num_result_components) =
             _.EvalInt32IfConst(comp_count_id);
@@ -463,7 +463,7 @@ bool IsTypeNullable(const std::vector<uint32_t>& instruction,
     case spv::Op::OpTypeMatrix:
     case spv::Op::OpTypeCooperativeMatrixNV:
     case spv::Op::OpTypeCooperativeMatrixKHR:
-    case spv::Op::OpTypeCooperativeVectorNV:
+    case spv::Op::OpTypeVectorIdEXT:
     case spv::Op::OpTypeVector: {
       auto base_type = _.FindDef(instruction[2]);
       return base_type && IsTypeNullable(base_type->words(), _);
@@ -502,6 +502,28 @@ spv_result_t ValidateConstantNull(ValidationState_t& _,
            << " cannot have a null value.";
   }
 
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateConstantSizeOfEXT(ValidationState_t& _,
+                                       const Instruction* inst) {
+  const Instruction* result_type = _.FindDef(inst->type_id());
+  const uint32_t bit_width = result_type->GetOperandAs<uint32_t>(1);
+  // VVL will validate the SPV_EXT_shader_64bit_indexing interaction
+  if (result_type->opcode() != spv::Op::OpTypeInt ||
+      (bit_width != 64 && bit_width != 32)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "For OpConstantSizeOfEXT instruction, its result type "
+           << "must be a 32-bit or 64-bit integer type scalar."
+           << " (OpCapability Int64 is required for 64-bit)";
+  }
+
+  const uint32_t type_operand = inst->GetOperandAs<uint32_t>(2);
+  if (!_.IsDescriptorType(type_operand)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "For OpConstantSizeOfEXT instruction, its Type operand <Id> "
+           << _.getIdName(type_operand) << " must be a Descriptor type.";
+  }
   return SPV_SUCCESS;
 }
 
@@ -606,6 +628,9 @@ spv_result_t ConstantPass(ValidationState_t& _, const Instruction* inst) {
       break;
     case spv::Op::OpSpecConstantOp:
       if (auto error = ValidateSpecConstantOp(_, inst)) return error;
+      break;
+    case spv::Op::OpConstantSizeOfEXT:
+      if (auto error = ValidateConstantSizeOfEXT(_, inst)) return error;
       break;
     default:
       break;

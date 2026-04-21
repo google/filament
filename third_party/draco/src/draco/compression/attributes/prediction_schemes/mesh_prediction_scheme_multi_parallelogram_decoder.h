@@ -18,6 +18,7 @@
 
 #include "draco/compression/attributes/prediction_schemes/mesh_prediction_scheme_decoder.h"
 #include "draco/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_shared.h"
+#include "draco/core/math_utils.h"
 #include "draco/draco_features.h"
 
 namespace draco {
@@ -89,7 +90,8 @@ bool MeshPredictionSchemeMultiParallelogramDecoder<DataTypeT, TransformT,
               p, corner_id, table, *vertex_to_data_map, out_data,
               num_components, parallelogram_pred_vals.get())) {
         for (int c = 0; c < num_components; ++c) {
-          pred_vals[c] += parallelogram_pred_vals[c];
+          pred_vals[c] =
+              AddAsUnsigned(pred_vals[c], parallelogram_pred_vals[c]);
         }
         ++num_parallelograms;
       }

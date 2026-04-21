@@ -50,6 +50,33 @@ OpFunctionEnd
               HasSubstr("Entry points cannot share the same name"));
 }
 
+TEST_F(ValidateEntryPoints, DuplicateConditionalEntryPointsAllowed) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability SpecConditionalINTEL
+OpExtension "SPV_INTEL_function_variants"
+OpMemoryModel Logical GLSL450
+OpConditionalEntryPointINTEL %10 GLCompute %3 "foo"
+OpConditionalEntryPointINTEL %11 GLCompute %4 "foo"
+%bool = OpTypeBool
+%1 = OpTypeVoid
+%2 = OpTypeFunction %1
+%10 = OpSpecConstantTrue %bool
+%11 = OpSpecConstantFalse %bool
+%3 = OpFunction %1 None %2
+%20 = OpLabel
+OpReturn
+OpFunctionEnd
+%4 = OpFunction %1 None %2
+%21 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(body);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
 TEST_F(ValidateEntryPoints, UniqueEntryPoints) {
   const std::string body = R"(
 OpCapability Shader

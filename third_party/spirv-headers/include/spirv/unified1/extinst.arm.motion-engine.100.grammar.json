@@ -1,0 +1,133 @@
+{
+  "copyright": [
+    "SPDX-FileCopyrightText: 2022-2025 Arm Ltd.",
+    "SPDX-License-Identifier: MIT"
+  ],
+  "version": 100,
+  "revision": 1,
+  "instructions": [
+    {
+      "opname": "MIN_SAD",
+      "opcode": 0,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "kernel_sizes"
+        },
+        {
+          "kind": "IdRef",
+          "name": "search_window_sizes"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_strides"
+        },
+        {
+          "kind": "IdRef",
+          "name": "window_strides"
+        },
+        {
+          "kind": "IdRef",
+          "name": "window_offsets"
+        },
+        {
+          "kind": "IdRef",
+          "name": "padding"
+        },
+        {
+          "kind": "IdRef",
+          "name": "search_pattern"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input0"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "MIN_SAD_COST",
+      "opcode": 1,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "kernel_sizes"
+        },
+        {
+          "kind": "IdRef",
+          "name": "search_window_sizes"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_strides"
+        },
+        {
+          "kind": "IdRef",
+          "name": "window_strides"
+        },
+        {
+          "kind": "IdRef",
+          "name": "window_offsets"
+        },
+        {
+          "kind": "IdRef",
+          "name": "padding"
+        },
+        {
+          "kind": "IdRef",
+          "name": "search_pattern"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input0"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "RAW_SAD",
+      "opcode": 2,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "kernel_sizes"
+        },
+        {
+          "kind": "IdRef",
+          "name": "search_window_sizes"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_strides"
+        },
+        {
+          "kind": "IdRef",
+          "name": "window_strides"
+        },
+        {
+          "kind": "IdRef",
+          "name": "window_offsets"
+        },
+        {
+          "kind": "IdRef",
+          "name": "padding"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input0"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    }
+  ],
+  "operand_kinds": []
+}

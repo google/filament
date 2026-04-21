@@ -108,6 +108,7 @@ bool ReduceLoadSize::ReplaceExtract(Instruction* inst) {
   Instruction* new_access_chain = ir_builder.AddAccessChain(
       pointer_to_result_type_id,
       composite_inst->GetSingleWordInOperand(kLoadPointerInIdx), ids);
+  // TODO(1841): Handle id overflow.
   Instruction* new_load =
       ir_builder.AddLoad(inst->type_id(), new_access_chain->result_id());
 

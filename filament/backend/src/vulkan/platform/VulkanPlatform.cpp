@@ -704,6 +704,30 @@ VulkanPlatform::VulkanPlatform() = default;
 
 VulkanPlatform::~VulkanPlatform() = default;
 
+utils::CString VulkanPlatform::getDeviceInfo(DeviceInfoType infoType,
+        Driver* driver) const noexcept {
+    if (mImpl->mPhysicalDevice == VK_NULL_HANDLE) {
+        return {};
+    }
+    auto& context = mImpl->mContext;
+    switch (infoType) {
+        case DeviceInfoType::VULKAN_DEVICE_NAME: {
+            return utils::CString(context.getPhysicalDeviceName());
+        }
+        case DeviceInfoType::VULKAN_DRIVER_NAME: {
+            return context.isDriverPropertiesSupported() ? utils::CString(context.getDriverName())
+                                                         : utils::CString();
+        }
+        case DeviceInfoType::VULKAN_DRIVER_INFO: {
+            return context.isDriverPropertiesSupported() ? utils::CString(context.getDriverInfo())
+                                                         : utils::CString();
+        }
+        default:
+            FILAMENT_CHECK_POSTCONDITION(false) << "Unsupported DeviceInfoType for VulkanPlatform";
+            return {};
+    }
+}
+
 VulkanPlatform::SwapChainBundle VulkanPlatform::getSwapChainBundle(SwapChainPtr handle) {
     return static_cast<VulkanPlatformSwapChainBase*>(handle)->getSwapChainBundle();
 }
@@ -950,6 +974,11 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     };
     if (setContains(deviceExts, VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME)) {
         chainStruct(&context.mPhysicalDeviceFeatures, &globalPriorityFeatures);
+    }
+
+    if (vkGetPhysicalDeviceProperties2) {
+        chainStruct(&context.mPhysicalDeviceProperties, &context.mDriverProperties);
+        context.mDriverPropertiesSupported = true;
     }
 
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,

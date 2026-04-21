@@ -94,17 +94,17 @@ struct MaterialDefinition {
             backend::ShaderModel const sm, bool isStereoSupported) const noexcept;
 
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
-            Variant const variant, bool useVsmDescriptorSetLayout) const noexcept;
+            Variant const variant, bool useS2dDescriptorSetLayout) const noexcept;
 
     // Keep track of the definitions of the descriptor set layouts, as these
     // may be used by some backends in parallel compilation of programs.
-    backend::DescriptorSetLayout perViewDescriptorSetLayoutDescription;
-    backend::DescriptorSetLayout perViewDescriptorSetLayoutVsmDescription;
+    backend::DescriptorSetLayout perViewDescriptorSetLayoutPcfDescription;
+    backend::DescriptorSetLayout perViewDescriptorSetLayoutS2dDescription;
     backend::DescriptorSetLayout descriptorSetLayoutDescription;
 
     // try to order by frequency of use
-    filament::DescriptorSetLayout perViewDescriptorSetLayout;
-    filament::DescriptorSetLayout perViewDescriptorSetLayoutVsm;
+    filament::DescriptorSetLayout perViewDescriptorSetLayoutPcf;
+    filament::DescriptorSetLayout perViewDescriptorSetLayoutS2d;
     filament::DescriptorSetLayout descriptorSetLayout;
     backend::Program::DescriptorSetInfo programDescriptorBindings;
 

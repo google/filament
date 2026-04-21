@@ -239,11 +239,12 @@ RandomAccessIterator partition_point(
         RandomAccessIterator first, RandomAccessIterator last, COMPARE pred,
         bool assume_power_of_two = false) {
     size_t len = last - first;
+    if (len == 0) return first;
 
     if (!assume_power_of_two) {
         // handle non power-of-two sized arrays. If it's POT, the next line is a no-op
         // and gets optimized out if the size is known at compile time.
-        len = 1u << (31 - clz(uint32_t(len)));     // next power of two length / 2
+        len = size_t(1) << ((sizeof(size_t) * 8 - 1) - clz(size_t(len)));     // next power of two length / 2
         size_t difference = (last - first) - len;
         first += !difference || pred(first[len]) ? difference : 0;
     }

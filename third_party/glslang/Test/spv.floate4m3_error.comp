@@ -75,5 +75,9 @@ void main()
     saturatedConvertEXT(b, f16, f16);
     saturatedConvertEXT(b, f16vec2(f16));
     saturatedConvertEXT(u8, u8);
+
+    b+b;
+    coopmat<floate4m3_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseA> cmA;
+    cmA+cmA;
 }
 

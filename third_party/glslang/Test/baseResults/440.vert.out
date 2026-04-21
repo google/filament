@@ -42,11 +42,13 @@ ERROR: 0:129: 'xfb_stride' : all stride settings must match for xfb buffer 3
 ERROR: 0:133: 'xfb_stride' : all stride settings must match for xfb buffer 3
 ERROR: 0:131: 'xfb_stride' : all stride settings must match for xfb buffer 3
 ERROR: 0:152: 'xfb_offset' : overlapping offsets at offset 64 in buffer 0
+ERROR: 0:148: 'out' : cannot contain bool 
 ERROR: 0:157: 'xfb_buffer' : buffer is too large: gl_MaxTransformFeedbackBuffers is 4
 ERROR: 0:158: 'xfb_offset' : must be a multiple of size of first component 
 ERROR: 0:159: 'xfb_offset' : type contains double or 64-bit integer; xfb_offset must be a multiple of 8 
 ERROR: 0:161: 'xfb_offset' : must be a multiple of size of first component 
 ERROR: 0:162: 'xfb_offset' : type contains double or 64-bit integer; xfb_offset must be a multiple of 8 
+ERROR: 0:157: 'out' : cannot contain bool 
 ERROR: 0:166: 'xfb_buffer' : buffer is too large: gl_MaxTransformFeedbackBuffers is 4
 ERROR: 0:169: 'xfb_buffer' : buffer is too large: gl_MaxTransformFeedbackBuffers is 4
 ERROR: 0:169: 'xfb_stride' : 1/4 stride is too large: gl_MaxTransformFeedbackInterleavedComponents is 64
@@ -61,7 +63,7 @@ ERROR: 0:193: 'assign' :  l-value required "gl_BaseVertexARB" (can't modify shad
 ERROR: 0:194: 'assign' :  l-value required "gl_BaseInstanceARB" (can't modify shader input)
 ERROR: 0:195: 'assign' :  l-value required "gl_DrawIDARB" (can't modify shader input)
 ERROR: 0:196: 'glBaseInstanceARB' : undeclared identifier 
-ERROR: 62 compilation errors.  No code generated.
+ERROR: 64 compilation errors.  No code generated.
 
 
 Shader version: 440

@@ -228,7 +228,6 @@ add_library(samples-common STATIC
 )
 
 target_include_directories(samples-common PRIVATE
-    ${ROOT_DIR}/third_party/getopt/include
 )
 target_link_libraries(samples-common filament)
 

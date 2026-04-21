@@ -61,14 +61,9 @@ struct GLTimerQuery : public HwTimerQuery {
  */
 
 class TimerQueryFactory {
-    static bool mGpuTimeSupported;
 public:
     static TimerQueryFactoryInterface* init(
             OpenGLPlatform& platform, OpenGLContext& context);
-
-    static bool isGpuTimeSupported() noexcept {
-        return mGpuTimeSupported;
-    }
 };
 
 class TimerQueryFactoryInterface {

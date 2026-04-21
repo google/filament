@@ -81,7 +81,8 @@
         <id value="46"  vendor="Nintendo" comment="Contact Steve Urquhart, steve.urquhart@ntd.nintendo.com"/>
         <id value="47"  vendor="ARM" comment="Contact Christopher Gautier, christopher.gautier@arm.com"/>
         <id value="48"  vendor="Goopax" comment="Contact Ingo Josopait, josopait@goopax.com"/>
-        <unused start="49" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
+        <id value="49"  vendor="Icyllis Milica" tool="Arc3D Shader Compiler" comment="Contact Icyllis Milica, https://github.com/BloCamLimb/Arc3D"/>
+        <unused start="50" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
     </ids>
 
     <!-- SECTION: SPIR-V Opcodes and Enumerants -->
@@ -139,13 +140,14 @@
     <ids type="opcode" start="6592" end="6655" vendor="Saarland University" comment="Contact devillers@cg.uni-saarland.de"/>
     <ids type="opcode" start="6656" end="6719" vendor="Meta" comment="Contact dunfanlu@meta.com"/>
     <ids type="opcode" start="6720" end="6783" vendor="MediaTek" comment="Contact samuel.huang@mediatek.com"/>
+    <ids type="opcode" start="6784" end="6911" vendor="Intel" comment="Contact mariusz.merecki@intel.com"/>
     <!-- Opcode enumerants to reserve for future use. To get a block, allocate
          multiples of 64 starting at the lowest available point in this
          block and add a corresponding <ids> tag immediately above. Make
          sure to fill in the vendor attribute, and preferably add a contact
          person/address in a comment attribute. -->
     <!-- Example new block: <ids type="opcode" start="XXXX" end="XXXX+64n-1" vendor="Add vendor" comment="Contact TBD"/> -->
-    <ids type="opcode" start="6784" end="65535" comment="Opcode range reservable for future use by vendors"/>
+    <ids type="opcode" start="6912" end="65535" comment="Opcode range reservable for future use by vendors"/>
     <!-- End reservations of opcodes -->
 
 
@@ -173,13 +175,14 @@
     <ids type="enumerant" start="6592" end="6655" vendor="Saarland University" comment="Contact devillers@cg.uni-saarland.de"/>
     <ids type="enumerant" start="6656" end="6719" vendor="Meta" comment="Contact dunfanlu@meta.com"/>
     <ids type="enumerant" start="6720" end="6783" vendor="MediaTek" comment="Contact samuel.huang@mediatek.com"/>
+    <ids type="enumerant" start="6784" end="6911" vendor="Intel" comment="Contact mariusz.merecki@intel.com"/>
     <!-- Enumerants to reserve for future use. To get a block, allocate
          multiples of 64 starting at the lowest available point in this
          block and add a corresponding <ids> tag immediately above. Make
          sure to fill in the vendor attribute, and preferably add a contact
          person/address in a comment attribute. -->
     <!-- Example new block: <ids type="enumerant" start="XXXX" end="XXXX+64n-1" vendor="Add vendor" comment="Contact TBD"/> -->
-    <ids type="enumerant" start="6784" end="4294967295" comment="Enumerant range reservable for future use by vendors"/>
+    <ids type="enumerant" start="6912" end="4294967295" comment="Enumerant range reservable for future use by vendors"/>
     <!-- End reservations of enumerants -->
 
 

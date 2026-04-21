@@ -20,6 +20,7 @@
 #include "MetalEnums.h"
 #include "MetalUtils.h"
 #include "MetalBufferPool.h"
+#include "MetalDriver.h"
 
 #include <filament/SwapChain.h>
 
@@ -183,9 +184,7 @@ id<MTLTexture> MetalSwapChain::createMultisampledTexture(MetalContext const& con
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
     if (context.supportsMemorylessRenderTargets) {
-        if (@available(macOS 11.0, *)) {
-            descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
-        }
+        descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
     }
 
     return [context.device newTextureWithDescriptor:descriptor];
@@ -269,6 +268,10 @@ MetalAttachment MetalSwapChain::acquireStencilTexture() {
 }
 
 id<MTLTexture> MetalSwapChain::ensureDepthStencilTexture(uint32_t width, uint32_t height) {
+    // Metal does not allow zero-sized textures, and will abort if we try to
+    // create one ([MTLTextureDescriptorInternal validateWithDevice:]).
+    width = std::max(width, 1u);
+    height = std::max(height, 1u);
     if (UTILS_LIKELY(depthStencilTexture && depthStencilTexture.width == width &&
                      depthStencilTexture.height == height)) {
         return depthStencilTexture;
@@ -1371,9 +1374,7 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(MTLPixelFormat forma
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
     if (context->supportsMemorylessRenderTargets) {
-        if (@available(macOS 11.0, *)) {
-            descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
-        }
+        descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
     }
 
     return [context->device newTextureWithDescriptor:descriptor];
@@ -1400,12 +1401,13 @@ void MetalFence::encode() {
 
         // Using a weak_ptr here because the Fence could be deleted before the block executes.
         std::weak_ptr<State> weakState = state;
+        MetalDriver* driver = context.driver;
         [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
                 uint64_t value) {
             if (auto s = weakState.lock()) {
-                std::lock_guard<std::mutex> guard(s->mutex);
-                s->status = FenceStatus::CONDITION_SATISFIED;
-                s->cv.notify_all();
+                driver->signalFence([&] {
+                    s->status = FenceStatus::CONDITION_SATISFIED;
+                });
             }
         }];
     }
@@ -1418,24 +1420,29 @@ void MetalFence::onSignal(MetalFenceSignalBlock block) {
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
     if (@available(iOS 12, *)) {
         using ns = std::chrono::nanoseconds;
-        std::unique_lock<std::mutex> guard(state->mutex);
-        while (state->status == FenceStatus::TIMEOUT_EXPIRED) {
-            if (timeoutNs == FENCE_WAIT_FOR_EVER) {
-                state->cv.wait(guard);
-            } else if (timeoutNs == 0 ||
-                    state->cv.wait_for(guard, ns(timeoutNs)) == std::cv_status::timeout) {
-                return state->status;
+        FenceStatus result = FenceStatus::TIMEOUT_EXPIRED;
+        auto predicate = [&] {
+            if (state->status != FenceStatus::TIMEOUT_EXPIRED) {
+                result = state->status;
+                return true;
             }
+            return false;
+        };
+        if (timeoutNs == FENCE_WAIT_FOR_EVER) {
+            context.driver->waitForFence(predicate);
+        } else {
+            auto const until = std::chrono::steady_clock::now() + ns(timeoutNs);
+            context.driver->waitForFence(predicate, until);
         }
-        return state->status;
+        return result;
     }
     return FenceStatus::ERROR;
 }
 
 void MetalFence::cancel() {
-    std::unique_lock guard(state->mutex);
-    state->status = FenceStatus::ERROR;
-    state->cv.notify_all();
+    context.driver->signalFence([&] {
+        state->status = FenceStatus::ERROR;
+    });
 }
 
 MetalDescriptorSetLayout::MetalDescriptorSetLayout(DescriptorSetLayout&& l) noexcept

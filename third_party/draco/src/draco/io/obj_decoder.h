@@ -34,8 +34,12 @@ class ObjDecoder {
   ObjDecoder();
 
   // Decodes an obj file stored in the input file.
-  // Returns nullptr if the decoding failed.
+  // Optional argument |mesh_files| will be populated with all paths to files
+  // relevant to the loaded mesh.
   Status DecodeFromFile(const std::string &file_name, Mesh *out_mesh);
+  Status DecodeFromFile(const std::string &file_name, Mesh *out_mesh,
+                        std::vector<std::string> *mesh_files);
+
   Status DecodeFromFile(const std::string &file_name,
                         PointCloud *out_point_cloud);
 
@@ -50,6 +54,8 @@ class ObjDecoder {
   // Flag for whether using metadata to record other information in the obj
   // file, e.g. material names, object names.
   void set_use_metadata(bool flag) { use_metadata_ = flag; }
+  // Enables preservation of polygons.
+  void set_preserve_polygons(bool flag) { preserve_polygons_ = flag; }
 
  protected:
   Status DecodeInternal();
@@ -88,6 +94,11 @@ class ObjDecoder {
   bool ParseMaterialFile(const std::string &file_name, Status *status);
   bool ParseMaterialFileDefinition(Status *status);
 
+  // Methods related to polygon triangulation and preservation.
+  static int Triangulate(int tri_index, int tri_corner);
+  static bool IsNewEdge(int tri_count, int tri_index, int tri_corner);
+
+ private:
   // If set to true, the parser will count the number of various definitions
   // but it will not parse the actual data or add any new entries to the mesh.
   bool counting_mode_;
@@ -102,7 +113,8 @@ class ObjDecoder {
   int tex_att_id_;
   int norm_att_id_;
   int material_att_id_;
-  int sub_obj_att_id_;  // Attribute id for storing sub-objects.
+  int sub_obj_att_id_;     // Attribute id for storing sub-objects.
+  int added_edge_att_id_;  // Attribute id for polygon reconstruction.
 
   bool deduplicate_input_values_;
 
@@ -115,6 +127,12 @@ class ObjDecoder {
   std::unordered_map<std::string, int> obj_name_to_id_;
 
   bool use_metadata_;
+
+  // Polygon preservation flags.
+  bool preserve_polygons_;
+  bool has_polygons_;
+
+  std::vector<std::string> *mesh_files_;
 
   DecoderBuffer buffer_;
 

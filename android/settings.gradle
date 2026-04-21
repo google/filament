@@ -1,3 +1,8 @@
+// Filament tools plugin
+pluginManagement {
+    includeBuild 'gradle-plugin'
+}
+
 // Libraries
 include ':filament-android'
 include ':filamat-android'

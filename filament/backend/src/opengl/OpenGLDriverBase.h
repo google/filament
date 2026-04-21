@@ -34,6 +34,7 @@ protected:
 public:
     virtual utils::CString getVendorString() const noexcept = 0;
     virtual utils::CString getRendererString() const noexcept = 0;
+    virtual utils::CString getVersionString() const noexcept = 0;
 };
 
 } // filament::backend

@@ -1,0 +1,12 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_ray_tracing_position_fetch : require
+
+hitAttributeEXT vec2 attribs;
+layout(location = 0) rayPayloadInEXT vec3 hitValue;
+
+void main()
+{
+    hitValue = ((gl_HitTriangleVertexPositionsEXT[0] * ((1.0 - attribs.x) - attribs.y)) + (gl_HitTriangleVertexPositionsEXT[1] * attribs.x)) + (gl_HitTriangleVertexPositionsEXT[2] * attribs.y);
+}
+

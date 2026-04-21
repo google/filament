@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <utils/Path.h>
 
@@ -64,7 +64,7 @@ struct Config {
 };
 
 static void printUsage(const char* name) {
-    std::string execName(utils::Path(name).getName());
+    std::string const execName(utils::Path(name).getName());
     std::string usage(
             "MATINFO prints information about material files compiled with matc\n"
             "\n"
@@ -133,33 +133,33 @@ static void license() {
 static int handleArguments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "hla:g:G:s:v:b:m:b:w:u:UXxyz";
     constexpr int DUMP_METAL_LIBRARY_OPTION = 1000;
-    static const struct option OPTIONS[] = {
-            { "help",               no_argument,       nullptr, 'h' },
-            { "license",            no_argument,       nullptr, 'l' },
-            { "analyze-spirv",      required_argument, nullptr, 'a' },
-            { "print-glsl",         required_argument, nullptr, 'g' },
-            { "print-essl1",        required_argument, nullptr, 'G' },
-            { "print-spirv",        required_argument, nullptr, 's' },
-            { "print-vkglsl",       required_argument, nullptr, 'v' },
-            { "print-metal",        required_argument, nullptr, 'm' },
-            { "print-wgsl",         required_argument, nullptr, 'u' },
-            { "print-dic-glsl",     no_argument,       nullptr, 'x' },
-            { "print-dic-essl1",    no_argument,       nullptr, 'X' },
-            { "print-dic-metal",    no_argument,       nullptr, 'y' },
-            { "print-dic-wgsl",     no_argument,       nullptr, 'U' },
-            { "print-dic-vk",       no_argument,       nullptr, 'z' },
-            { "dump-binary",        required_argument, nullptr, 'b' },  // backwards compatibility
-            { "dump-spirv-binary",  required_argument, nullptr, 'b' },
-            { "dump-metal-library", required_argument, nullptr, DUMP_METAL_LIBRARY_OPTION },
-            { "web-server",         required_argument, nullptr, 'w' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",               utils::getopt::no_argument,       nullptr, 'h' },
+            { "license",            utils::getopt::no_argument,       nullptr, 'l' },
+            { "analyze-spirv",      utils::getopt::required_argument, nullptr, 'a' },
+            { "print-glsl",         utils::getopt::required_argument, nullptr, 'g' },
+            { "print-essl1",        utils::getopt::required_argument, nullptr, 'G' },
+            { "print-spirv",        utils::getopt::required_argument, nullptr, 's' },
+            { "print-vkglsl",       utils::getopt::required_argument, nullptr, 'v' },
+            { "print-metal",        utils::getopt::required_argument, nullptr, 'm' },
+            { "print-wgsl",         utils::getopt::required_argument, nullptr, 'u' },
+            { "print-dic-glsl",     utils::getopt::no_argument,       nullptr, 'x' },
+            { "print-dic-essl1",    utils::getopt::no_argument,       nullptr, 'X' },
+            { "print-dic-metal",    utils::getopt::no_argument,       nullptr, 'y' },
+            { "print-dic-wgsl",     utils::getopt::no_argument,       nullptr, 'U' },
+            { "print-dic-vk",       utils::getopt::no_argument,       nullptr, 'z' },
+            { "dump-binary",        utils::getopt::required_argument, nullptr, 'b' },  // backwards compatibility
+            { "dump-spirv-binary",  utils::getopt::required_argument, nullptr, 'b' },
+            { "dump-metal-library", utils::getopt::required_argument, nullptr, DUMP_METAL_LIBRARY_OPTION },
+            { "web-server",         utils::getopt::required_argument, nullptr, 'w' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -230,7 +230,7 @@ static int handleArguments(int argc, char* argv[], Config* config) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 template<typename T>
@@ -590,7 +590,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
                 return false;
             }
 
-            size_t shaderCount = getShaderCount(container, filamat::ChunkType::MaterialWgsl);
+            size_t const shaderCount = getShaderCount(container, filamat::ChunkType::MaterialWgsl);
             info.resize(shaderCount);
             if (!getShaderInfo(container, info.data(), filamat::ChunkType::MaterialWgsl)) {
                 std::cerr << "Failed to parse WebGPU chunk." << std::endl;
@@ -632,8 +632,65 @@ static bool parseChunks(Config config, void* data, size_t size) {
             return false;
         }
 
+        std::vector<uint32_t> counts(dictionary.size(), 0);
+        bool hasCounts = false;
+
+        filamat::ChunkType chunkType = filamat::ChunkType::Unknown;
+        if (config.printDictionaryGLSL) {
+            chunkType = filamat::ChunkType::MaterialGlsl;
+        } else if (config.printDictionaryESSL1) {
+            chunkType = filamat::ChunkType::MaterialEssl1;
+        } else if (config.printDictionaryMetal) {
+            chunkType = filamat::ChunkType::MaterialMetal;
+        } else if (config.printDictionaryWGSL) {
+            chunkType = filamat::ChunkType::MaterialWgsl;
+        }
+
+        size_t indicesSize = 0;
+        if (chunkType != filamat::ChunkType::Unknown) {
+            filaflat::MaterialChunk materialChunk(container);
+            if (materialChunk.initialize(chunkType)) {
+                indicesSize = materialChunk.getDictionaryOccurrences(counts);
+                hasCounts = true;
+            }
+        }
+
+        size_t dictSize = 0;
+        for (uint32_t i = 0; i < dictionary.size(); i++) {
+            // Null-terminated string sizes map physically 1:1 with uncompressed Dictionary byte bounds
+            dictSize += dictionary[i].size();
+        }
+
+        std::cout << "Dictionary size: " << dictSize << " bytes" << std::endl;
+        if (hasCounts) {
+            std::cout << "Indices size: " << indicesSize << " bytes" << std::endl;
+        }
+        std::cout << std::endl;
+
+        uint32_t index = 0;
         for (auto const& i : dictionary) {
-            std::cout << (const char*)i.data() << std::endl;
+            if (hasCounts && counts[index] == 0) {
+                index++;
+                continue;
+            }
+
+            std::string str((const char*)i.data());
+            // Replace \n with literal \n
+            size_t pos = 0;
+            while ((pos = str.find('\n', pos)) != std::string::npos) {
+                str.replace(pos, 1, "\\n");
+                pos += 2;
+            }
+            if (hasCounts) {
+                int const bytes = (index < 240) ? 1 : ((index < 4080) ? 2 : 3);
+                std::cout << std::setw(6) << counts[index] << " | "
+                          << std::setw(4) << index << " | "
+                          << bytes << " | "
+                          << str << std::endl;
+            } else {
+                std::cout << str << std::endl;
+            }
+            index++;
         }
 
         return true;
@@ -670,21 +727,21 @@ static bool parseBinary(Config config, std::istream& in, long fileSize) {
 
 int main(int argc, char* argv[]) {
     Config config;
-    int optionIndex = handleArguments(argc, argv, &config);
+    int const optionIndex = handleArguments(argc, argv, &config);
 
-    int numArgs = argc - optionIndex;
+    int const numArgs = argc - optionIndex;
     if (numArgs < 1) {
         printUsage(argv[0]);
         return 1;
     }
 
-    Path src(argv[optionIndex]);
+    Path const src(argv[optionIndex]);
     if (!src.exists()) {
         std::cerr << "The source material " << src << " does not exist." << std::endl;
         return 1;
     }
 
-    long fileSize = static_cast<long>(getFileSize(src.c_str()));
+    long const fileSize = static_cast<long>(getFileSize(src.c_str()));
     if (fileSize <= 0) {
         std::cerr << "The source material " << src << " is invalid." << std::endl;
         return 1;

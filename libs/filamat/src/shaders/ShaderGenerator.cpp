@@ -60,7 +60,8 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
     CodeGenerator::generateDefine(out, "VARIANT_HAS_SHADOWING",
             litVariants && filament::Variant::isShadowReceiverVariant(variant));
     CodeGenerator::generateDefine(out, "VARIANT_HAS_VSM",
-            filament::Variant::isVSMVariant(variant));
+            filament::Variant::isShadowSampler2DVariant(variant) ||
+            filament::Variant::isDepthMomentsVariant(variant));
     CodeGenerator::generateDefine(out, "VARIANT_HAS_STEREO",
             hasStereo(variant, featureLevel));
     CodeGenerator::generateDefine(out, "VARIANT_DEPTH",
@@ -249,7 +250,9 @@ void ShaderGenerator::generateVertexDomainDefines(io::sstream& out, VertexDomain
 }
 
 void ShaderGenerator::generatePostProcessMaterialVariantDefines(io::sstream& out,
-        PostProcessVariant const variant) noexcept {
+        ShaderStage const, MaterialBuilder::FeatureLevel const featureLevel,
+        MaterialInfo const&, PostProcessVariant const variant) noexcept {
+    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
     switch (variant) {
         case PostProcessVariant::OPAQUE:
             CodeGenerator::generateDefine(out, "POST_PROCESS_OPAQUE", 1u);
@@ -604,6 +607,16 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
             +PerMaterialBindingPoints::MATERIAL_PARAMS,
             material.uib);
 
+    if (!filament::Variant::isValidDepthVariant(variant)) {
+        if (!mOutputs.empty()) {
+            CodeGenerator::generateDefine(fs, "HAS_CUSTOM_OUTPUT", 1u);
+            for (const auto& output: mOutputs) {
+                cg.generateOutput(fs, ShaderStage::FRAGMENT, output.name, output.location,
+                        output.qualifier, output.precision, output.type);
+            }
+        }
+    }
+
     CodeGenerator::generateSeparator(fs);
 
     if (featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
@@ -686,6 +699,8 @@ std::string ShaderGenerator::createSurfaceComputeProgram(ShaderModel const shade
 
     generateUserSpecConstants(cg, s, mConstants);
 
+    CodeGenerator::generateDefine(s, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
+
     CodeGenerator::generateSurfaceTypes(s, ShaderStage::COMPUTE);
 
     cg.generateUniforms(s, ShaderStage::COMPUTE,
@@ -736,7 +751,8 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
     }
 
     CodeGenerator::generatePostProcessInputs(vs, ShaderStage::VERTEX);
-    generatePostProcessMaterialVariantDefines(vs, PostProcessVariant(variantKey));
+    generatePostProcessMaterialVariantDefines(vs, ShaderStage::VERTEX,
+            featureLevel, material, PostProcessVariant(variantKey));
 
     cg.generateUniforms(vs, ShaderStage::VERTEX,
             DescriptorSetBindingPoints::PER_VIEW,
@@ -764,14 +780,16 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
 std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const sm,
         MaterialBuilder::TargetApi const targetApi, MaterialBuilder::TargetLanguage const targetLanguage,
         MaterialBuilder::FeatureLevel const featureLevel,
-        MaterialInfo const& material, uint8_t variant, uint32_t apiLevel) const noexcept {
+        MaterialInfo const& material, filament::Variant::type_t variantKey,
+        uint32_t apiLevel) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage, featureLevel);
     io::sstream fs;
     cg.generateCommonProlog(fs, ShaderStage::FRAGMENT, material, {}, apiLevel);
 
     generateUserSpecConstants(cg, fs, mConstants);
 
-    generatePostProcessMaterialVariantDefines(fs, PostProcessVariant(variant));
+    generatePostProcessMaterialVariantDefines(fs, ShaderStage::FRAGMENT,
+            featureLevel, material, PostProcessVariant(variantKey));
 
     // custom material variables
     size_t variableIndex = 0;
@@ -800,13 +818,16 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const 
     CodeGenerator::generatePostProcessGetters(fs, ShaderStage::FRAGMENT);
 
     // Generate post-process outputs.
-    for (const auto& output : mOutputs) {
-        if (output.target == MaterialBuilder::OutputTarget::COLOR) {
-            cg.generateOutput(fs, ShaderStage::FRAGMENT, output.name, output.location,
-                    output.qualifier, output.precision, output.type);
-        }
-        if (output.target == MaterialBuilder::OutputTarget::DEPTH) {
-            CodeGenerator::generateDefine(fs, "FRAG_OUTPUT_DEPTH", 1u);
+    if (!mOutputs.empty()) {
+        CodeGenerator::generateDefine(fs, "HAS_CUSTOM_OUTPUT", 1u);
+        for (const auto& output: mOutputs) {
+            if (output.target == MaterialBuilder::OutputTarget::COLOR) {
+                cg.generateOutput(fs, ShaderStage::FRAGMENT, output.name, output.location,
+                        output.qualifier, output.precision, output.type);
+            }
+            if (output.target == MaterialBuilder::OutputTarget::DEPTH) {
+                CodeGenerator::generateDefine(fs, "FRAG_OUTPUT_DEPTH", 1u);
+            }
         }
     }
 

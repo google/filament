@@ -260,7 +260,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mPipelineCache(*this, mPlatform->getDevice(), mContext),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
       mBufferCache(mContext, mResourceManager, mAllocator),
-      mFramebufferCache(mPlatform->getDevice()),
+      mFramebufferCache(mPlatform->getDevice(),
+              mPlatform->getCustomization().timeBeforeEvictionFbo),
       mYcbcrConversionCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
@@ -1007,7 +1008,9 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::ImmutableCString&& ta
     // it with appropriate VulkanCmdFence, which is associated with the current, recording command
     // buffer.
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
-    fence->setFence(cmdbuf->getFenceStatus());
+    signalFence([&] {
+        fence->setFence(cmdbuf->getFenceStatus());
+    });
     mResourceManager.associateHandle(fh.getId(), std::move(tag));
 }
 
@@ -1458,7 +1461,9 @@ void VulkanDriver::fenceCancel(FenceHandle const fh) {
     // Even though this is a synchronous call, the fence handle must be (and stay) valid
     assert_invariant(fh);
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
-    fence->cancel();
+    signalFence([&] {
+        fence->cancel();
+    });
 }
 
 FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
@@ -1485,7 +1490,18 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         until = now + nanoseconds(timeout);
     }
 
-    auto const [cmdfence, canceled] = fence->wait(until);
+    std::shared_ptr<VulkanCmdFence> cmdfence;
+    bool canceled = false;
+    waitForFence([&] {
+        auto status = fence->getStatus();
+        if (bool(status.first) || status.second) {
+            cmdfence = status.first;
+            canceled = status.second;
+            return true;
+        }
+        return false;
+    }, until);
+
     if (!cmdfence || canceled) {
         return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
     }
@@ -1545,6 +1561,16 @@ bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
         default:
             return isRenderTargetFormatSupported(format);
     }
+}
+
+bool VulkanDriver::isTextureFormatFilterable(TextureFormat format) {
+    VkFormat vkformat = fvkutils::getVkFormat(format);
+    if (vkformat == VK_FORMAT_UNDEFINED) {
+        return false;
+    }
+    VkFormatProperties info;
+    vkGetPhysicalDeviceFormatProperties(mPlatform->getPhysicalDevice(), vkformat, &info);
+    return (info.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0;
 }
 
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
@@ -1913,9 +1939,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     auto rt = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, rth);
 
-    VulkanCommandBuffer* commandBuffer = rt->isProtected() ?
-           &mCommands.getProtected() : &mCommands.get();
-
     // Filament has the expectation that the contents of the swap chain are not preserved on the
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
@@ -1929,6 +1952,11 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             acquireNextSwapchainImage();
         }
     }
+
+    // Note that this needs to come after the acquireNextswapchainImage() above because that path
+    // might flush the current command buffer.
+    VulkanCommandBuffer* commandBuffer =
+            rt->isProtected() ? &mCommands.getProtected() : &mCommands.get();
 
     // Note that retrieving the extent must come after the acquireNextSwapchainImage() above;
     // otherwise it might be 0.
@@ -1975,17 +2003,19 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     rpkey.initialDepthLayout = currentDepthLayout;
     rpkey.subpassMask = uint8_t(params.subpassMask);
 
-    VkRenderPass renderPass = mFramebufferCache.getRenderPass(rpkey);
+    fvkmemory::resource_ptr<VulkanRenderPass> renderPass =
+            mFramebufferCache.getRenderPass(rpkey, &mResourceManager);
     mPipelineCache.bindRenderPass(renderPass, 0);
 
     // Create the VkFramebuffer or fetch it from cache.
     VulkanFboCache::FboKey fbkey = rt->getFboKey();
-    fbkey.renderPass = renderPass;
+    fbkey.renderPass = renderPass->getVkRenderPass();
     fbkey.layers = 1;
 
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
-    VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
+    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
+            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
 
 // Assign a label to the framebuffer for debugging purposes.
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS | FVK_DEBUG_DEBUG_UTILS)
@@ -1998,12 +2028,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     // The current command buffer now has references to the render target and its attachments.
     commandBuffer->acquire(rt);
+    commandBuffer->acquire(renderPass);
+    commandBuffer->acquire(vkfb);
 
     // Populate the structures required for vkCmdBeginRenderPass.
     VkRenderPassBeginInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = renderPass,
-        .framebuffer = vkfb,
+        .renderPass = renderPass->getVkRenderPass(),
+        .framebuffer = vkfb->getVkFramebuffer(),
 
         // The renderArea field constrains the LoadOp, but scissoring does not.
         // Therefore, we do not set the scissor rect here, we only need it in draw().
@@ -2058,7 +2090,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     mCurrentRenderPass = {
         .commandBuffer = commandBuffer,
         .renderTarget = rt,
-        .renderPass = renderPassInfo.renderPass,
+        .renderPass = renderPass,
         .params = params,
         .currentSubpass = 0,
     };
@@ -2078,8 +2110,7 @@ void VulkanDriver::endRenderPass(int) {
     rt->emitBarriersEndRenderPass(*mCurrentRenderPass.commandBuffer);
 
     mCurrentRenderPass.renderTarget = {};
-    mCurrentRenderPass.renderPass = VK_NULL_HANDLE;
-
+    mCurrentRenderPass.renderPass = {};
     mCurrentRenderPass.commandBuffer = nullptr;
 }
 
@@ -2244,7 +2275,7 @@ void VulkanDriver::resolve(
         Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer) {
     FVK_SYSTRACE_SCOPE();
 
-    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
             << "resolve() cannot be invoked inside a render pass.";
 
     auto srcTexture = resource_ptr<VulkanTexture>::cast(&mResourceManager, src);
@@ -2287,7 +2318,7 @@ void VulkanDriver::blit(
         math::uint2 size) {
     FVK_SYSTRACE_SCOPE();
 
-    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
             << "blit() cannot be invoked inside a render pass.";
 
     auto srcTexture = resource_ptr<VulkanTexture>::cast(&mResourceManager, src);
@@ -2329,7 +2360,7 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 
     // Note: blitDEPRECATED is only used for Renderer::copyFrame()
 
-    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
             << "blitDEPRECATED() cannot be invoked inside a render pass.";
 
     FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)

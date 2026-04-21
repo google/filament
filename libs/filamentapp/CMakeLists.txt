@@ -52,7 +52,7 @@ set(LIBS
         filament
         filament-iblprefilter
         geometry
-        getopt
+        
         image
         imageio
         imgui

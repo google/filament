@@ -2115,13 +2115,14 @@ public class View {
         public int msaaSamples = 1;
         /**
          * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
-         * precision is rarely needed, but it does reduces light leaks as well as "fading"
+         * precision is rarely needed, but it does reduce light leaks as well as "fading"
          * of the shadows in some situations. Setting highPrecision to true for a single
          * shadow map will double the memory usage of all shadow maps.
+         * This may not be supported on all mobile devices.
          */
         public boolean highPrecision = false;
         /**
-         * VSM minimum variance scale, must be positive.
+         * @deprecated has no effect.
          */
         public float minVarianceScale = 0.5f;
         /**

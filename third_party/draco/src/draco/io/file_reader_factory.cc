@@ -1,5 +1,6 @@
 #include "draco/io/file_reader_factory.h"
 
+#include <string>
 #include <vector>
 
 namespace draco {
@@ -38,7 +39,6 @@ std::unique_ptr<FileReaderInterface> FileReaderFactory::OpenReader(
     }
     return reader;
   }
-  FILEREADER_LOG_ERROR("No file reader able to open input");
   return nullptr;
 }
 

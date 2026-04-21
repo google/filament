@@ -318,6 +318,8 @@ public:
     /**
      * Sets how many samples are to be used for MSAA in the post-process stage.
      * Default is 1 and disables MSAA.
+     * Note that post-processing is disabled at FL0. If the feature level is 
+     * set to 0, values passed to this function are ignored.
      *
      * @param count number of samples to use for multi-sampled anti-aliasing.\n
      *              0: treated as 1
@@ -408,7 +410,9 @@ public:
 
     /**
      * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
-     *
+     * Note that MSAA is a post-processing effect, and post-processing is disabled at FL0. 
+     * If the feature level is set to 0, values passed to this function are ignored.
+     * 
      * @param options multi-sample anti-aliasing options
      */
     void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;

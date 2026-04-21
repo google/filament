@@ -69,12 +69,11 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
     case spv::Op::OpGroupNonUniformFMul:
     case spv::Op::OpGroupNonUniformFMin: {
       const uint32_t result_type = inst->type_id();
-      if (_.IsBfloat16ScalarType(result_type) ||
-          _.IsBfloat16VectorType(result_type)) {
+      if (_.IsBfloat16Type(result_type)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode) << " doesn't support BFloat16 type.";
       }
-      if (_.IsFP8ScalarOrVectorType(result_type)) {
+      if (_.IsFP8Type(result_type)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << " doesn't support FP8 E4M3/E5M2 types.";
@@ -101,14 +100,28 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
     case spv::Op::OpIsInf:
     case spv::Op::OpIsFinite:
     case spv::Op::OpIsNormal:
+    case spv::Op::OpFOrdEqual:
+    case spv::Op::OpFUnordEqual:
+    case spv::Op::OpFOrdNotEqual:
+    case spv::Op::OpFUnordNotEqual:
+    case spv::Op::OpFOrdLessThan:
+    case spv::Op::OpFUnordLessThan:
+    case spv::Op::OpFOrdGreaterThan:
+    case spv::Op::OpFUnordGreaterThan:
+    case spv::Op::OpFOrdLessThanEqual:
+    case spv::Op::OpFUnordLessThanEqual:
+    case spv::Op::OpFOrdGreaterThanEqual:
+    case spv::Op::OpFUnordGreaterThanEqual:
+    case spv::Op::OpLessOrGreater:
+    case spv::Op::OpOrdered:
+    case spv::Op::OpUnordered:
     case spv::Op::OpSignBitSet: {
       const uint32_t operand_type = _.GetOperandTypeId(inst, 2);
-      if (_.IsBfloat16ScalarType(operand_type) ||
-          _.IsBfloat16VectorType(operand_type)) {
+      if (_.IsBfloat16Type(operand_type)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode) << " doesn't support BFloat16 type.";
       }
-      if (_.IsFP8ScalarOrVectorType(operand_type)) {
+      if (_.IsFP8Type(operand_type)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << " doesn't support FP8 E4M3/E5M2 types.";
@@ -118,12 +131,11 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
 
     case spv::Op::OpGroupNonUniformAllEqual: {
       const auto value_type = _.GetOperandTypeId(inst, 3);
-      if (_.IsBfloat16ScalarType(value_type) ||
-          _.IsBfloat16VectorType(value_type)) {
+      if (_.IsBfloat16Type(value_type)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode) << " doesn't support BFloat16 type.";
       }
-      if (_.IsFP8ScalarOrVectorType(value_type)) {
+      if (_.IsFP8Type(value_type)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << " doesn't support FP8 E4M3/E5M2 types.";
@@ -140,12 +152,12 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
       uint32_t res_component_type = 0;
       if (_.GetMatrixTypeInfo(result_type, &res_num_rows, &res_num_cols,
                               &res_col_type, &res_component_type)) {
-        if (_.IsBfloat16ScalarType(res_component_type)) {
+        if (_.IsBfloat16Type(res_component_type)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
                  << " doesn't support BFloat16 type.";
         }
-        if (_.IsFP8ScalarOrVectorType(res_component_type)) {
+        if (_.IsFP8Type(res_component_type)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
                  << " doesn't support FP8 E4M3/E5M2 types.";

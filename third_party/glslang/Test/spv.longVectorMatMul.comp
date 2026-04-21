@@ -1,0 +1,29 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_EXT_long_vector : enable
+#extension GL_NV_cooperative_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer MatrixBuf {
+    float16_t matrixData[];
+} matrixBuf;
+
+layout(set = 0, binding = 0) buffer MatrixBuf2 {
+    int8_t matrixData[];
+} matrixBuf2;
+
+void main()
+{
+    vector<float, 20> v7 = vector<float, 20>(1);
+    vector<float, 100> v8;
+
+    coopvecNV<float, 20> cv7 = coopvecNV<float, 20>(v7);
+    coopvecNV<float, 100> cv8;
+
+    coopVecMatMulNV(cv8, cv7, gl_ComponentTypeFloat16NV, matrixBuf.matrixData, 11, gl_ComponentTypeFloat16NV, 100, 20, gl_CooperativeVectorMatrixLayoutRowMajorNV, false, 300);
+    v8 = vector<float, 100>(cv8);
+}

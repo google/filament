@@ -342,13 +342,84 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
         break;
     }
   } else {
-    return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
-           << spvOpcodeString(opcode)
-           << " cannot appear in a function declaration";
+    _.ProgressToNextLayoutSectionOrder();
+    // All function sections have been processed. Recursively call
+    // ModuleLayoutPass to process the next section of the module
+    return ModuleLayoutPass(_, inst);
   }
   return SPV_SUCCESS;
 }
 
+spv_result_t GraphScopedInstructions(ValidationState_t& _,
+                                     const Instruction* inst, spv::Op opcode) {
+  if (_.IsOpcodeInCurrentLayoutSection(opcode)) {
+    switch (opcode) {
+      case spv::Op::OpGraphARM: {
+        if (_.graph_definition_region() > kGraphDefinitionOutside) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << "Cannot define a graph in a graph";
+        }
+        _.SetGraphDefinitionRegion(kGraphDefinitionBegin);
+      } break;
+      case spv::Op::OpGraphInputARM: {
+        if ((_.graph_definition_region() != kGraphDefinitionBegin) &&
+            (_.graph_definition_region() != kGraphDefinitionInputs)) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << "OpGraphInputARM"
+                 << " must immediately follow an OpGraphARM or OpGraphInputARM "
+                    "instruction.";
+        }
+        _.SetGraphDefinitionRegion(kGraphDefinitionInputs);
+      } break;
+      case spv::Op::OpGraphSetOutputARM: {
+        if ((_.graph_definition_region() != kGraphDefinitionBegin) &&
+            (_.graph_definition_region() != kGraphDefinitionInputs) &&
+            (_.graph_definition_region() != kGraphDefinitionBody) &&
+            (_.graph_definition_region() != kGraphDefinitionOutputs)) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << "Op" << spvOpcodeString(opcode)
+                 << " must immediately precede an OpGraphEndARM or "
+                    "OpGraphSetOutputARM instruction.";
+        }
+        _.SetGraphDefinitionRegion(kGraphDefinitionOutputs);
+      } break;
+      case spv::Op::OpGraphEndARM: {
+        if (_.graph_definition_region() != kGraphDefinitionOutputs) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << spvOpcodeString(opcode)
+                 << " must be preceded by at least one OpGraphSetOutputARM "
+                    "instruction";
+        }
+        _.SetGraphDefinitionRegion(kGraphDefinitionOutside);
+      } break;
+      case spv::Op::OpGraphEntryPointARM:
+        if (_.graph_definition_region() != kGraphDefinitionOutside) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << spvOpcodeString(opcode)
+                 << " cannot appear in the definition of a graph";
+        }
+        break;
+      default:
+        if (_.graph_definition_region() == kGraphDefinitionOutside) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << "Op" << spvOpcodeString(opcode)
+                 << " must appear in a graph body";
+        }
+        if (_.graph_definition_region() == kGraphDefinitionOutputs) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << spvOpcodeString(opcode)
+                 << " cannot appear after a graph output instruction";
+        }
+        _.SetGraphDefinitionRegion(kGraphDefinitionBody);
+        break;
+    }
+  } else {
+    return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+           << "Op" << spvOpcodeString(opcode)
+           << " cannot appear in the graph definitions section";
+  }
+  return SPV_SUCCESS;
+}
 }  // namespace
 
 // TODO(umar): Check linkage capabilities for function declarations
@@ -376,6 +447,11 @@ spv_result_t ModuleLayoutPass(ValidationState_t& _, const Instruction* inst) {
     case kLayoutFunctionDeclarations:
     case kLayoutFunctionDefinitions:
       if (auto error = FunctionScopedInstructions(_, inst, opcode)) {
+        return error;
+      }
+      break;
+    case kLayoutGraphDefinitions:
+      if (auto error = GraphScopedInstructions(_, inst, opcode)) {
         return error;
       }
       break;

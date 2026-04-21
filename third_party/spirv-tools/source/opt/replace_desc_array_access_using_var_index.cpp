@@ -41,14 +41,15 @@ Pass::Status ReplaceDescArrayAccessUsingVarIndex::Process() {
   Status status = Status::SuccessWithoutChange;
   for (Instruction& var : context()->types_values()) {
     if (descsroautil::IsDescriptorArray(context(), &var)) {
-      if (ReplaceVariableAccessesWithConstantElements(&var))
-        status = Status::SuccessWithChange;
+      Status s = ReplaceVariableAccessesWithConstantElements(&var);
+      if (s == Status::Failure) return Status::Failure;
+      if (s == Status::SuccessWithChange) status = Status::SuccessWithChange;
     }
   }
   return status;
 }
 
-bool ReplaceDescArrayAccessUsingVarIndex::
+Pass::Status ReplaceDescArrayAccessUsingVarIndex::
     ReplaceVariableAccessesWithConstantElements(Instruction* var) const {
   std::vector<Instruction*> work_list;
   get_def_use_mgr()->ForEachUser(var, [&work_list](Instruction* use) {
@@ -66,16 +67,16 @@ bool ReplaceDescArrayAccessUsingVarIndex::
   for (Instruction* access_chain : work_list) {
     if (descsroautil::GetAccessChainIndexAsConst(context(), access_chain) ==
         nullptr) {
-      ReplaceAccessChain(var, access_chain);
+      if (!ReplaceAccessChain(var, access_chain)) return Status::Failure;
       updated = true;
     }
   }
   // Note that we do not consider OpLoad and OpCompositeExtract because
   // OpCompositeExtract always has constant literals for indices.
-  return updated;
+  return updated ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
-void ReplaceDescArrayAccessUsingVarIndex::ReplaceAccessChain(
+bool ReplaceDescArrayAccessUsingVarIndex::ReplaceAccessChain(
     Instruction* var, Instruction* access_chain) const {
   uint32_t number_of_elements =
       descsroautil::GetNumberOfElementsForArrayOrStruct(context(), var);
@@ -83,21 +84,23 @@ void ReplaceDescArrayAccessUsingVarIndex::ReplaceAccessChain(
   if (number_of_elements == 1) {
     UseConstIndexForAccessChain(access_chain, 0);
     get_def_use_mgr()->AnalyzeInstUse(access_chain);
-    return;
+    return true;
   }
-  ReplaceUsersOfAccessChain(access_chain, number_of_elements);
+  return ReplaceUsersOfAccessChain(access_chain, number_of_elements);
 }
 
-void ReplaceDescArrayAccessUsingVarIndex::ReplaceUsersOfAccessChain(
+bool ReplaceDescArrayAccessUsingVarIndex::ReplaceUsersOfAccessChain(
     Instruction* access_chain, uint32_t number_of_elements) const {
   std::vector<Instruction*> final_users;
   CollectRecursiveUsersWithConcreteType(access_chain, &final_users);
   for (auto* inst : final_users) {
     std::deque<Instruction*> insts_to_be_cloned =
         CollectRequiredImageAndAccessInsts(inst);
-    ReplaceNonUniformAccessWithSwitchCase(
-        inst, access_chain, number_of_elements, insts_to_be_cloned);
+    if (!ReplaceNonUniformAccessWithSwitchCase(
+            inst, access_chain, number_of_elements, insts_to_be_cloned))
+      return false;
   }
+  return true;
 }
 
 void ReplaceDescArrayAccessUsingVarIndex::CollectRecursiveUsersWithConcreteType(
@@ -208,17 +211,23 @@ BasicBlock* ReplaceDescArrayAccessUsingVarIndex::CreateCaseBlock(
     const std::deque<Instruction*>& insts_to_be_cloned,
     uint32_t branch_target_id,
     std::unordered_map<uint32_t, uint32_t>* old_ids_to_new_ids) const {
-  auto* case_block = CreateNewBlock();
-  AddConstElementAccessToCaseBlock(case_block, access_chain, element_index,
-                                   old_ids_to_new_ids);
-  CloneInstsToBlock(case_block, access_chain, insts_to_be_cloned,
-                    old_ids_to_new_ids);
-  AddBranchToBlock(case_block, branch_target_id);
-  UseNewIdsInBlock(case_block, *old_ids_to_new_ids);
-  return case_block;
+  std::unique_ptr<BasicBlock> case_block(CreateNewBlock());
+  if (!case_block) return nullptr;
+
+  if (!AddConstElementAccessToCaseBlock(case_block.get(), access_chain,
+                                        element_index, old_ids_to_new_ids)) {
+    return nullptr;
+  }
+  if (!CloneInstsToBlock(case_block.get(), access_chain, insts_to_be_cloned,
+                         old_ids_to_new_ids)) {
+    return nullptr;
+  }
+  AddBranchToBlock(case_block.get(), branch_target_id);
+  UseNewIdsInBlock(case_block.get(), *old_ids_to_new_ids);
+  return case_block.release();
 }
 
-void ReplaceDescArrayAccessUsingVarIndex::CloneInstsToBlock(
+bool ReplaceDescArrayAccessUsingVarIndex::CloneInstsToBlock(
     BasicBlock* block, Instruction* inst_to_skip_cloning,
     const std::deque<Instruction*>& insts_to_be_cloned,
     std::unordered_map<uint32_t, uint32_t>* old_ids_to_new_ids) const {
@@ -227,6 +236,7 @@ void ReplaceDescArrayAccessUsingVarIndex::CloneInstsToBlock(
     std::unique_ptr<Instruction> clone(inst_to_be_cloned->Clone(context()));
     if (inst_to_be_cloned->HasResultId()) {
       uint32_t new_id = context()->TakeNextId();
+      if (new_id == 0) return false;
       clone->SetResultId(new_id);
       (*old_ids_to_new_ids)[inst_to_be_cloned->result_id()] = new_id;
     }
@@ -234,6 +244,7 @@ void ReplaceDescArrayAccessUsingVarIndex::CloneInstsToBlock(
     context()->set_instr_block(clone.get(), block);
     block->AddInstruction(std::move(clone));
   }
+  return true;
 }
 
 void ReplaceDescArrayAccessUsingVarIndex::UseNewIdsInBlock(
@@ -250,18 +261,19 @@ void ReplaceDescArrayAccessUsingVarIndex::UseNewIdsInBlock(
   }
 }
 
-void ReplaceDescArrayAccessUsingVarIndex::ReplaceNonUniformAccessWithSwitchCase(
+bool ReplaceDescArrayAccessUsingVarIndex::ReplaceNonUniformAccessWithSwitchCase(
     Instruction* access_chain_final_user, Instruction* access_chain,
     uint32_t number_of_elements,
     const std::deque<Instruction*>& insts_to_be_cloned) const {
   auto* block = context()->get_instr_block(access_chain_final_user);
   // If the instruction does not belong to a block (i.e. in the case of
   // OpDecorate), no replacement is needed.
-  if (!block) return;
+  if (!block) return true;
 
   // Create merge block and add terminator
   auto* merge_block = SeparateInstructionsIntoNewBlock(
       block, access_chain_final_user->NextNode());
+  if (!merge_block) return false;
 
   auto* function = block->GetParent();
 
@@ -273,6 +285,7 @@ void ReplaceDescArrayAccessUsingVarIndex::ReplaceNonUniformAccessWithSwitchCase(
     std::unique_ptr<BasicBlock> case_block(CreateCaseBlock(
         access_chain, idx, insts_to_be_cloned, merge_block->id(),
         &old_ids_to_new_ids_for_cloned_insts));
+    if (!case_block) return false;
     case_block_ids.push_back(case_block->id());
     function->InsertBasicBlockBefore(std::move(case_block), merge_block);
 
@@ -288,6 +301,7 @@ void ReplaceDescArrayAccessUsingVarIndex::ReplaceNonUniformAccessWithSwitchCase(
   std::unique_ptr<BasicBlock> default_block(
       CreateDefaultBlock(access_chain_final_user->HasResultId(), &phi_operands,
                          merge_block->id()));
+  if (!default_block) return false;
   uint32_t default_block_id = default_block->id();
   function->InsertBasicBlockBefore(std::move(default_block), merge_block);
 
@@ -301,11 +315,13 @@ void ReplaceDescArrayAccessUsingVarIndex::ReplaceNonUniformAccessWithSwitchCase(
   if (!phi_operands.empty()) {
     uint32_t phi_id = CreatePhiInstruction(merge_block, phi_operands,
                                            case_block_ids, default_block_id);
+    if (phi_id == 0) return false;
     context()->ReplaceAllUsesWith(access_chain_final_user->result_id(), phi_id);
   }
 
   // Replace OpPhi incoming block operand that uses |block| with |merge_block|
   ReplacePhiIncomingBlock(block->id(), merge_block->id());
+  return true;
 }
 
 BasicBlock*
@@ -316,13 +332,16 @@ ReplaceDescArrayAccessUsingVarIndex::SeparateInstructionsIntoNewBlock(
          &*separation_begin != separation_begin_inst) {
     ++separation_begin;
   }
-  return block->SplitBasicBlock(context(), context()->TakeNextId(),
-                                separation_begin);
+  uint32_t new_id = context()->TakeNextId();
+  if (new_id == 0) return nullptr;
+  return block->SplitBasicBlock(context(), new_id, separation_begin);
 }
 
 BasicBlock* ReplaceDescArrayAccessUsingVarIndex::CreateNewBlock() const {
-  auto* new_block = new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
-      context(), spv::Op::OpLabel, 0, context()->TakeNextId(), {})));
+  uint32_t new_id = context()->TakeNextId();
+  if (new_id == 0) return nullptr;
+  auto* new_block = new BasicBlock(std::unique_ptr<Instruction>(
+      new Instruction(context(), spv::Op::OpLabel, 0, new_id, {})));
   get_def_use_mgr()->AnalyzeInstDefUse(new_block->GetLabelInst());
   context()->set_instr_block(new_block->GetLabelInst(), new_block);
   return new_block;
@@ -336,7 +355,7 @@ void ReplaceDescArrayAccessUsingVarIndex::UseConstIndexForAccessChain(
                              {const_element_idx_id});
 }
 
-void ReplaceDescArrayAccessUsingVarIndex::AddConstElementAccessToCaseBlock(
+bool ReplaceDescArrayAccessUsingVarIndex::AddConstElementAccessToCaseBlock(
     BasicBlock* case_block, Instruction* access_chain,
     uint32_t const_element_idx,
     std::unordered_map<uint32_t, uint32_t>* old_ids_to_new_ids) const {
@@ -344,12 +363,14 @@ void ReplaceDescArrayAccessUsingVarIndex::AddConstElementAccessToCaseBlock(
   UseConstIndexForAccessChain(access_clone.get(), const_element_idx);
 
   uint32_t new_access_id = context()->TakeNextId();
+  if (new_access_id == 0) return false;
   (*old_ids_to_new_ids)[access_clone->result_id()] = new_access_id;
   access_clone->SetResultId(new_access_id);
   get_def_use_mgr()->AnalyzeInstDefUse(access_clone.get());
 
   context()->set_instr_block(access_clone.get(), case_block);
   case_block->AddInstruction(std::move(access_clone));
+  return true;
 }
 
 void ReplaceDescArrayAccessUsingVarIndex::AddBranchToBlock(
@@ -363,6 +384,7 @@ BasicBlock* ReplaceDescArrayAccessUsingVarIndex::CreateDefaultBlock(
     bool null_const_for_phi_is_needed, std::vector<uint32_t>* phi_operands,
     uint32_t merge_block_id) const {
   auto* default_block = CreateNewBlock();
+  if (!default_block) return nullptr;
   AddBranchToBlock(default_block, merge_block_id);
   if (!null_const_for_phi_is_needed) return default_block;
 
@@ -413,7 +435,11 @@ uint32_t ReplaceDescArrayAccessUsingVarIndex::CreatePhiInstruction(
                              kAnalysisDefUseAndInstrToBlockMapping};
   uint32_t phi_result_type_id =
       context()->get_def_use_mgr()->GetDef(phi_operands[0])->type_id();
-  auto* phi = builder.AddPhi(phi_result_type_id, incomings);
+  Instruction* phi = builder.AddPhi(phi_result_type_id, incomings);
+  if (!phi) {
+    return 0;
+  }
+  context()->get_def_use_mgr()->AnalyzeInstDefUse(phi);
   return phi->result_id();
 }
 

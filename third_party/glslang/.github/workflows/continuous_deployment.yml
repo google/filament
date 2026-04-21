@@ -17,7 +17,6 @@ on:
             - main
         paths-ignore:
             - 'README.md'
-            - 'README-spirv-remap.txt'
             - 'LICENSE.txt'
             - 'CODE_OF_CONDUCT.md'
             - 'BUILD.*'
@@ -41,8 +40,7 @@ jobs:
                 compiler: [{cc: clang, cxx: clang++}, {cc: gcc, cxx: g++}]
                 cmake_build_type: [Debug, Release]
         steps:
-            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-            - uses: lukka/get-cmake@6b3e96a9bc9976b8b546346fdd102effedae0ca8 # v4.0.3
+            - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
             - run: ./update_glslang_sources.py
             - name: Build
               env:
@@ -73,14 +71,13 @@ jobs:
                       lib/libMachineIndependent.a \
                       lib/libOSDependent.a \
                       lib/libSPIRV.a \
-                      lib/libSPVRemapper.a \
                       lib/libSPIRV-Tools.a \
                       lib/libSPIRV-Tools-opt.a
             - name: Deploy
               if: ${{ matrix.compiler.cc == 'clang' }}
               env:
                   ARCHIVE: glslang-main-${{matrix.os.family}}-${{matrix.cmake_build_type}}.zip
-              uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+              uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
               with:
                   script: |
                       const script = require('.github/workflows/deploy.js')
@@ -93,20 +90,20 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: [{genus: macos-13, family: osx}]
+                os: [{genus: macos-latest, family: osx}]
                 compiler: [{cc: clang, cxx: clang++}]
                 cmake_build_type: [Debug, Release]
         steps:
-            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-            - uses: lukka/get-cmake@6b3e96a9bc9976b8b546346fdd102effedae0ca8 # v4.0.3
+            - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
             - run: ./update_glslang_sources.py
             - name: Build
               env:
                   CC: ${{matrix.compiler.cc}}
                   CXX: ${{matrix.compiler.cxx}}
+                  MACOSX_DEPLOYMENT_TARGET: 11.0
               run: |
                   mkdir build && cd build
-                  cmake -DCMAKE_BUILD_TYPE=${{matrix.cmake_build_type}} -DCMAKE_INSTALL_PREFIX=`pwd`/install ..
+                  cmake -DCMAKE_BUILD_TYPE=${{matrix.cmake_build_type}} -DCMAKE_INSTALL_PREFIX=`pwd`/install "-D CMAKE_OSX_ARCHITECTURES=arm64;x86_64" ..
                   make -j4 install
             - name: Test
               run: |
@@ -128,13 +125,12 @@ jobs:
                       lib/libMachineIndependent.a \
                       lib/libOSDependent.a \
                       lib/libSPIRV.a \
-                      lib/libSPVRemapper.a \
                       lib/libSPIRV-Tools.a \
                       lib/libSPIRV-Tools-opt.a
             - name: Deploy
               env:
                   ARCHIVE: glslang-main-${{matrix.os.family}}-${{matrix.cmake_build_type}}.zip
-              uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+              uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
               with:
                   script: |
                       const script = require('.github/workflows/deploy.js')
@@ -150,8 +146,7 @@ jobs:
                 os: [{genus: windows-2022, family: windows}]
                 cmake_build_type: [Debug, Release]
         steps:
-            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-            - uses: lukka/get-cmake@6b3e96a9bc9976b8b546346fdd102effedae0ca8 # v4.0.3
+            - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
             - run: python update_glslang_sources.py
             - name: Build
               run: |
@@ -170,7 +165,6 @@ jobs:
                   7z a ${{env.ARCHIVE}} `
                       bin/glslang.exe `
                       bin/glslangValidator.exe `
-                      bin/spirv-remap.exe `
                       include/glslang/* `
                       lib/GenericCodeGend.lib `
                       lib/glslangd.lib `
@@ -178,7 +172,6 @@ jobs:
                       lib/MachineIndependentd.lib `
                       lib/OSDependentd.lib `
                       lib/SPIRVd.lib `
-                      lib/SPVRemapperd.lib `
                       lib/SPIRV-Toolsd.lib `
                       lib/SPIRV-Tools-optd.lib
             - name: Zip
@@ -190,7 +183,6 @@ jobs:
                   7z a ${{env.ARCHIVE}} `
                       bin/glslang.exe `
                       bin/glslangValidator.exe `
-                      bin/spirv-remap.exe `
                       include/glslang/* `
                       lib/GenericCodeGen.lib `
                       lib/glslang.lib `
@@ -198,13 +190,12 @@ jobs:
                       lib/MachineIndependent.lib `
                       lib/OSDependent.lib `
                       lib/SPIRV.lib `
-                      lib/SPVRemapper.lib `
                       lib/SPIRV-Tools.lib `
                       lib/SPIRV-Tools-opt.lib
             - name: Deploy
               env:
                   ARCHIVE: glslang-master-${{matrix.os.family}}-${{matrix.cmake_build_type}}.zip
-              uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+              uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
               with:
                   script: |
                       const script = require('.github/workflows/deploy.js')

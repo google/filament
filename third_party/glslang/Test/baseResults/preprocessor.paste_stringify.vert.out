@@ -1,0 +1,36 @@
+#version 450
+#extension GL_EXT_debug_printf : enable
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool before, after;
+
+void main() {
+               8 == 9 ? 9 : 8;
+                  "12 3";
+    debugPrintfEXT("%d", (before, "letters_too", "letters_too", after, 1));
+                             debugPrintfEXT("aaa1");
+
+    int pasted_symbol;
+    float pasted_symbol2;
+                    debugPrintfEXT("string");
+                         "3 == 4 ? 4 :3";
+                     "3 == 4 ? 4 :3";
+                "aaa";
+                  "hello";
+    debugPrintfEXT("regular string");
+    debugPrintfEXT("");
+}
+

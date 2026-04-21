@@ -17,8 +17,10 @@
 #include "VulkanFboCache.h"
 
 #include "VulkanConstants.h"
+#include "VulkanHandles.h"
 #include "vulkan/utils/Image.h"
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 
 // If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
@@ -61,17 +63,20 @@ bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k
     return true;
 }
 
-VulkanFboCache::VulkanFboCache(VkDevice device)
-    : mDevice(device) {}
+VulkanFboCache::VulkanFboCache(VkDevice device, uint32_t timeBeforeEvictionFbo)
+        : mDevice(device),
+          mTimeBeforeEvictionFbo(timeBeforeEvictionFbo) {}
 
 VulkanFboCache::~VulkanFboCache() {
     FILAMENT_CHECK_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty())
             << "Please explicitly call terminate() while the VkDevice is still alive.";
 }
 
-VkFramebuffer VulkanFboCache::getFramebuffer(FboKey const& config) noexcept {
+fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey const& config,
+        fvkmemory::ResourceManager* resManager,
+        fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept {
     FboMap::iterator iter = mFramebufferCache.find(config);
-    if (UTILS_LIKELY(iter != mFramebufferCache.end() && iter->second.handle != VK_NULL_HANDLE)) {
+    if (UTILS_LIKELY(iter != mFramebufferCache.end())) {
         iter.value().timestamp = mCurrentTime;
         return iter->second.handle;
     }
@@ -117,13 +122,17 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey const& config) noexcept {
     VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
                                                      << " error=" << static_cast<int32_t>(error);
-    mFramebufferCache[config] = {framebuffer, mCurrentTime};
-    return framebuffer;
+    fvkmemory::resource_ptr<VulkanFramebuffer> fbh =
+            fvkmemory::resource_ptr<VulkanFramebuffer>::construct(resManager, mDevice, framebuffer,
+                    renderTarget);
+    mFramebufferCache[config] = { fbh, mCurrentTime };
+    return fbh;
 }
 
-VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept {
+fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
+        RenderPassKey const& config, fvkmemory::ResourceManager* resManager) noexcept {
     auto iter = mRenderPassCache.find(config);
-    if (UTILS_LIKELY(iter != mRenderPassCache.end() && iter->second.handle != VK_NULL_HANDLE)) {
+    if (UTILS_LIKELY(iter != mRenderPassCache.end())) {
         iter.value().timestamp = mCurrentTime;
         return iter->second.handle;
     }
@@ -326,7 +335,9 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept
     VkResult error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create render pass."
                                                       << " error=" << error;
-    mRenderPassCache[config] = {renderPass, mCurrentTime};
+    fvkmemory::resource_ptr<VulkanRenderPass> rph =
+        fvkmemory::resource_ptr<VulkanRenderPass>::construct(resManager, mDevice, renderPass);
+    mRenderPassCache[config] = {rph, mCurrentTime};
 
 #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
     FVK_LOGD << "Created render pass " << renderPass << " with ";
@@ -343,13 +354,12 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept
              << "colorAttachmentCount[0] = " << subpasses[0].colorAttachmentCount;
 #endif
 
-    return renderPass;
+    return rph;
 }
 
 void VulkanFboCache::resetFramebuffers() noexcept {
     for (const auto& pair: mFramebufferCache) {
         mRenderPassRefCount[pair.first.renderPass]--;
-        vkDestroyFramebuffer(mDevice, pair.second.handle, VKALLOC);
     }
     mFramebufferCache.clear();
 }
@@ -357,9 +367,6 @@ void VulkanFboCache::resetFramebuffers() noexcept {
 void VulkanFboCache::terminate() noexcept {
     resetFramebuffers();
 
-    for (const auto& pair: mRenderPassCache) {
-        vkDestroyRenderPass(mDevice, pair.second.handle, VKALLOC);
-    }
     mRenderPassRefCount.clear();
     mRenderPassCache.clear();
 }
@@ -371,36 +378,36 @@ void VulkanFboCache::gc() noexcept {
     FVK_SYSTRACE_START("fbocache::gc");
 
     // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
-    if (++mCurrentTime <= TIME_BEFORE_EVICTION) {
-        return;
-    }
-    const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
+    ++mCurrentTime;
 
-    for (FboMap::iterator iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ) {
-        const FboVal fbo = iter->second;
-        if (fbo.timestamp < evictTime && fbo.handle) {
-            mRenderPassRefCount[iter->first.renderPass]--;
-            vkDestroyFramebuffer(mDevice, fbo.handle, VKALLOC);
-            iter.value().handle = VK_NULL_HANDLE;
+    if (UTILS_UNLIKELY(mCurrentTime > mTimeBeforeEvictionFbo)) {
+        const uint32_t evictTimeFbo = mCurrentTime - mTimeBeforeEvictionFbo;
+        for (FboMap::iterator iter = mFramebufferCache.begin(); iter != mFramebufferCache.end();) {
+            const FboVal fbo = iter->second;
+            if (fbo.timestamp < evictTimeFbo && fbo.handle) {
+                mRenderPassRefCount[iter->first.renderPass]--;
 
-            // erase(iterator) returns the iterator to the next element.
-            iter = mFramebufferCache.erase(iter);
-        } else {
-            ++iter;
+                // erase(iterator) returns the iterator to the next element.
+                iter = mFramebufferCache.erase(iter);
+            } else {
+                ++iter;
+            }
         }
     }
 
-    for (RenderPassMap::iterator iter = mRenderPassCache.begin(); iter != mRenderPassCache.end(); ) {
-        const VkRenderPass handle = iter->second.handle;
-        if (iter->second.timestamp < evictTime && handle && mRenderPassRefCount[handle] == 0) {
-            vkDestroyRenderPass(mDevice, handle, VKALLOC);
-            iter.value().handle = VK_NULL_HANDLE;
-
-            // erase(iterator) returns the iterator to the next element.
-            iter = mRenderPassCache.erase(iter);
-            mRenderPassRefCount.erase(handle);
-        } else {
-            ++iter;
+    if (UTILS_UNLIKELY(mCurrentTime > TIME_BEFORE_EVICTION)) {
+        const uint32_t evictTimeRp = mCurrentTime - TIME_BEFORE_EVICTION;
+        for (RenderPassMap::iterator iter = mRenderPassCache.begin();
+                iter != mRenderPassCache.end();) {
+            const VkRenderPass handle = iter->second.handle->getVkRenderPass();
+            if (iter->second.timestamp < evictTimeRp && handle &&
+                    mRenderPassRefCount[handle] == 0) {
+                // erase(iterator) returns the iterator to the next element.
+                iter = mRenderPassCache.erase(iter);
+                mRenderPassRefCount.erase(handle);
+            } else {
+                ++iter;
+            }
         }
     }
 

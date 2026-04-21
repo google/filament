@@ -1,0 +1,18 @@
+#version 450
+layout(local_size_x_id = 0) in;
+
+layout(constant_id = 1) const int A = 2;
+float D[A * gl_WorkGroupSize.x];
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	int I;
+	float V;
+};
+
+void main ()
+{
+	for (int i = 0; i < A * gl_WorkGroupSize.x; i++)
+		D[i] = 1.0 + float(i);
+	V = D[I] + D[I ^ 1];
+}

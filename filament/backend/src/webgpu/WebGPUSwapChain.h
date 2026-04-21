@@ -50,6 +50,9 @@ public:
 
     [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
 
+    [[nodiscard]] uint32_t getWidth() const { return mConfig.width; }
+    [[nodiscard]] uint32_t getHeight() const { return mConfig.height; }
+
     void present(DriverBase& driver);
 
     void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback) {

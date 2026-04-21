@@ -1,4 +1,4 @@
-FROM python:3.10.4
+FROM python:3.12.13
 
 RUN pip3 install pygithub==1.55
 

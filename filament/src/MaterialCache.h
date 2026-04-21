@@ -56,7 +56,12 @@ public:
     using ProgramCache =
             utils::RefCountedMap<ProgramSpecialization, backend::Handle<backend::HwProgram>>;
 
+    MaterialCache(uint32_t materialCapacity, uint32_t programCapacity);
     ~MaterialCache();
+
+    // All reference-counted resources should be freed by the time MaterialCache is destructed, but
+    // the LRU cache needs to be explicitly freed in addition.
+    void terminate(FEngine& engine);
 
     SpecializationConstantInternPool& getSpecializationConstantsInternPool() {
         return mSpecializationConstantsInternPool;

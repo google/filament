@@ -27,8 +27,6 @@
 #include <utils/debug.h>
 #include <utils/CString.h>
 
-#include <string>
-
 using namespace filament::backend;
 
 namespace filament {

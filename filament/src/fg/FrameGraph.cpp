@@ -117,6 +117,7 @@ void FrameGraph::reset() noexcept {
     mResourceNodes.clear();
     mResources.clear();
     mResourceSlots.clear();
+    mGraph.clear();
 }
 
 FrameGraph& FrameGraph::compile() noexcept {

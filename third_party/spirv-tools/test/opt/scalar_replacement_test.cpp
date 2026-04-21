@@ -1863,6 +1863,7 @@ OpReturn
 OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   auto result =
       SinglePassRunAndDisassemble<ScalarReplacementPass>(text, true, true, 0);
   EXPECT_EQ(Pass::Status::SuccessWithoutChange, std::get<1>(result));

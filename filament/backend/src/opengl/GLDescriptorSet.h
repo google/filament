@@ -44,27 +44,27 @@ struct GLTexture;
 struct GLTextureRef;
 struct GLDescriptorSetLayout;
 class OpenGLProgram;
-class OpenGLContext;
 class OpenGLDriver;
+class OpenGLState;
 
 struct GLDescriptorSet : public HwDescriptorSet {
 
     using HwDescriptorSet::HwDescriptorSet;
 
-    GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle dslh,
+    GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh,
             GLDescriptorSetLayout const* layout);
 
     // update a buffer descriptor in the set
-    void update(OpenGLContext& gl,
+    void update(OpenGLState& gl,
             descriptor_binding_t binding, GLBufferObject* bo, size_t offset, size_t size) noexcept;
 
     // update a sampler descriptor in the set
-    void update(OpenGLContext& gl, HandleAllocatorGL& handleAllocator,
+    void update(OpenGLState& gl, HandleAllocatorGL& handleAllocator,
             descriptor_binding_t binding, TextureHandle th, SamplerParams params) noexcept;
 
     // conceptually bind the set to the command buffer
     void bind(
-            OpenGLContext& gl,
+            OpenGLState& gl,
             HandleAllocatorGL& handleAllocator,
             OpenGLProgram const& p,
             descriptor_set_t set, uint32_t const* offsets, bool offsetsOnly) const noexcept;
@@ -138,7 +138,7 @@ private:
     };
     static_assert(sizeof(Descriptor) <= 32);
 
-    static void updateTextureView(OpenGLContext& gl,
+    static void updateTextureView(OpenGLState& gl,
             HandleAllocatorGL& handleAllocator, GLuint unit, GLTexture const* t) noexcept;
 
     utils::FixedCapacityVector<Descriptor> descriptors;     // 16

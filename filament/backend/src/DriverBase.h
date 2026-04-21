@@ -214,6 +214,25 @@ public:
 
     void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) final;
 
+    template<typename Predicate>
+    bool waitForFence(Predicate predicate, std::chrono::steady_clock::time_point until) {
+        std::unique_lock lock(mFenceMutex);
+        return mFenceCondition.wait_until(lock, until, predicate);
+    }
+
+    template<typename Predicate>
+    void waitForFence(Predicate predicate) {
+        std::unique_lock lock(mFenceMutex);
+        mFenceCondition.wait(lock, predicate);
+    }
+
+    template<typename Action>
+    void signalFence(Action action) {
+        std::lock_guard lock(mFenceMutex);
+        action();
+        mFenceCondition.notify_all();
+    }
+
     // --------------------------------------------------------------------------------------------
     // Privates
     // --------------------------------------------------------------------------------------------
@@ -253,6 +272,9 @@ private:
     std::condition_variable mServiceThreadCondition;
     std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue;
     bool mExitRequested = false;
+
+    std::condition_variable mFenceCondition;
+    std::mutex mFenceMutex;
 };
 
 

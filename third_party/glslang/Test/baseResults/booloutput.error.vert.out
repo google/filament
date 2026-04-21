@@ -1,0 +1,33 @@
+booloutput.error.vert
+ERROR: 0:3: 'out' : cannot be bool 
+ERROR: 0:9: 'out' : cannot contain bool 
+ERROR: 0:11: 'out' : cannot contain bool 
+ERROR: 3 compilation errors.  No code generated.
+
+
+Shader version: 460
+ERROR: node is still EOpNull!
+0:15  Function Definition: main( ( global void)
+0:15    Function Parameters: 
+0:?   Linker Objects
+0:?     'a' ( smooth out bool)
+0:?     's' ( smooth out structure{ global bool b})
+0:?     'anon@0' ( out block{ out bool c})
+0:?     'gl_VertexID' ( gl_VertexId int VertexId)
+0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
+
+
+Linked vertex stage:
+
+
+Shader version: 460
+ERROR: node is still EOpNull!
+0:15  Function Definition: main( ( global void)
+0:15    Function Parameters: 
+0:?   Linker Objects
+0:?     'a' ( smooth out bool)
+0:?     's' ( smooth out structure{ global bool b})
+0:?     'anon@0' ( out block{ out bool c})
+0:?     'gl_VertexID' ( gl_VertexId int VertexId)
+0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
+

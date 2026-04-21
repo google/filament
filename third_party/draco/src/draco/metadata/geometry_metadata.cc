@@ -18,6 +18,19 @@
 
 namespace draco {
 
+AttributeMetadata::AttributeMetadata(const AttributeMetadata &metadata)
+    : Metadata(metadata) {
+  att_unique_id_ = metadata.att_unique_id_;
+}
+
+GeometryMetadata::GeometryMetadata(const GeometryMetadata &metadata)
+    : Metadata(metadata) {
+  for (size_t i = 0; i < metadata.att_metadatas_.size(); ++i) {
+    att_metadatas_.push_back(std::unique_ptr<AttributeMetadata>(
+        new AttributeMetadata(*metadata.att_metadatas_[i])));
+  }
+}
+
 const AttributeMetadata *GeometryMetadata::GetAttributeMetadataByStringEntry(
     const std::string &entry_name, const std::string &entry_value) const {
   for (auto &&att_metadata : att_metadatas_) {
@@ -35,7 +48,7 @@ const AttributeMetadata *GeometryMetadata::GetAttributeMetadataByStringEntry(
 
 bool GeometryMetadata::AddAttributeMetadata(
     std::unique_ptr<AttributeMetadata> att_metadata) {
-  if (!att_metadata.get()) {
+  if (!att_metadata) {
     return false;
   }
   att_metadatas_.push_back(std::move(att_metadata));

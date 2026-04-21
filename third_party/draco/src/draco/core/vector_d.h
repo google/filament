@@ -34,7 +34,7 @@ class VectorD {
   typedef ScalarT Scalar;
   typedef VectorD<Scalar, dimension_t> Self;
 
-  // TODO(hemmer): Deprecate.
+  // TODO(b/199760123): Deprecate.
   typedef ScalarT CoefficientType;
 
   VectorD() {
@@ -45,7 +45,7 @@ class VectorD {
 
   // The following constructor does not compile in opt mode, which for now led
   // to the constructors further down, which is not ideal.
-  // TODO(hemmer): fix constructor below and remove others.
+  // TODO(b/199760123): Fix constructor below and remove others.
   // template <typename... Args>
   // explicit VectorD(Args... args) : v_({args...}) {}
 
@@ -111,7 +111,7 @@ class VectorD {
 
   Scalar &operator[](int i) { return v_[i]; }
   const Scalar &operator[](int i) const { return v_[i]; }
-  // TODO(hemmer): remove.
+  // TODO(b/199760123): Remove.
   // Similar to interface of Eigen library.
   Scalar &operator()(int i) { return v_[i]; }
   const Scalar &operator()(int i) const { return v_[i]; }

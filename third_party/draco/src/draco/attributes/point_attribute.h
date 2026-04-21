@@ -133,6 +133,12 @@ class PointAttribute : public GeometryAttribute {
     return attribute_transform_data_.get();
   }
 
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Removes unused values from the attribute. Value is unused when no point
+  // is mapped to the value. Only applicable when the mapping is not identity.
+  void RemoveUnusedValues();
+#endif
+
  private:
 #ifdef DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED
   template <typename T>

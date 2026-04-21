@@ -93,6 +93,10 @@ public:
         mHasScissor = true;
     }
 
+    void setScissor(backend::Viewport const& viewport) noexcept {
+        setScissor(viewport.left, viewport.bottom, viewport.width, viewport.height);
+    }
+
     void unsetScissor() noexcept {
         constexpr uint32_t maxvalu = std::numeric_limits<int32_t>::max();
         mScissorRect = { 0, 0, maxvalu, maxvalu };

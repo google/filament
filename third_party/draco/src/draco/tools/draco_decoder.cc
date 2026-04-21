@@ -20,6 +20,7 @@
 #include "draco/io/obj_encoder.h"
 #include "draco/io/parser_utils.h"
 #include "draco/io/ply_encoder.h"
+#include "draco/io/stl_encoder.h"
 
 namespace {
 
@@ -126,7 +127,6 @@ int main(int argc, char **argv) {
   }
 
   // Save the decoded geometry into a file.
-  // TODO(fgalligan): Change extension code to look for '.'.
   const std::string extension = draco::parser::ToLower(
       options.output.size() >= 4
           ? options.output.substr(options.output.size() - 4)
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
         return -1;
       }
     } else {
-      if (!obj_encoder.EncodeToFile(*pc.get(), options.output)) {
+      if (!obj_encoder.EncodeToFile(*pc, options.output)) {
         printf("Failed to store the decoded point cloud as OBJ.\n");
         return -1;
       }
@@ -153,13 +153,25 @@ int main(int argc, char **argv) {
         return -1;
       }
     } else {
-      if (!ply_encoder.EncodeToFile(*pc.get(), options.output)) {
+      if (!ply_encoder.EncodeToFile(*pc, options.output)) {
         printf("Failed to store the decoded point cloud as PLY.\n");
         return -1;
       }
     }
+  } else if (extension == ".stl") {
+    draco::StlEncoder stl_encoder;
+    if (mesh) {
+      draco::Status s = stl_encoder.EncodeToFile(*mesh, options.output);
+      if (s.code() != draco::Status::OK) {
+        printf("Failed to store the decoded mesh as STL.\n");
+        return -1;
+      }
+    } else {
+      printf("Can't store a point cloud as STL.\n");
+      return -1;
+    }
   } else {
-    printf("Invalid extension of the output file. Use either .ply or .obj.\n");
+    printf("Invalid output file extension. Use .obj .ply or .stl.\n");
     return -1;
   }
   printf("Decoded geometry saved to %s (%" PRId64 " ms to decode)\n",

@@ -10,7 +10,7 @@ ERROR: 0:29: 'vAnon' : redefinition
 ERROR: 0:43: 'origin_upper_left' : not supported with this profile: es
 ERROR: 0:43: 'pixel_center_integer' : not supported with this profile: es
 ERROR: 0:43: 'redeclaration' : cannot redeclare with different qualification: gl_FragCoord
-ERROR: 0:47: 'depth layout qualifier' : not supported with this profile: es
+ERROR: 0:47: 'depth layout qualifier' : not supported for this version or the enabled extensions 
 ERROR: 0:51: 'assign' :  l-value required "gl_FragDepth" (can't modify gl_FragDepth if using early_fragment_tests)
 ERROR: 0:79: 'textureGatherOffsets(...)' : must be a compile-time constant: offsets argument
 ERROR: 0:124: 'rgba32f' : format requires readonly or writeonly memory qualifier 

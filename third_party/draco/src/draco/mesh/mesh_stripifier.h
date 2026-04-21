@@ -71,8 +71,6 @@ class MeshStripifier {
     mesh_ = &mesh;
     num_strips_ = 0;
     num_encoded_faces_ = 0;
-    // TODO(ostava): We may be able to avoid computing the corner table if we
-    // already have it stored somewhere.
     corner_table_ = CreateCornerTableFromPositionAttribute(mesh_);
     if (corner_table_ == nullptr) {
       return false;

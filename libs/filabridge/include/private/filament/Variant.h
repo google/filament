@@ -48,20 +48,21 @@ struct Variant {
     // SRE: Shadow Receiver
     // SKN: Skinning
     // DEP: Depth only
-    // FOG: Fog
-    // PCK: Picking (depth variant only)
-    // VSM: Variance shadow maps (depth) / sampler type (standard)
+    // FOG: Fog (standard)
+    // PCK: Picking (depth)
+    // MNT: Output depth moments (depth)
+    // S2D: Sampler type for shadows (0: samplerShadowArray, 1: sampler2DArray) (standard)
     // STE: Instanced stereo rendering
     //
     //   X: either 1 or 0
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    // Variant              | STE | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   256
+    // Variant              | STE | S2D | FOG | DEP | SKN | SRE | DYN | DIR |   256
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                                    PCK
+    //                              MNT   PCK
     //
     // Standard variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                      | STE | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    128 - 44 = 84
+    //                      | STE | S2D | FOG |  0  | SKN | SRE | DYN | DIR |    128 - 44 = 84
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //      Vertex shader      X     0     0     0     X     X     X     X
     //    Fragment shader      0     X     X     0     0     X     X     X
@@ -72,7 +73,7 @@ struct Variant {
     //
     // Depth variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                      | STE | VSM | PCK |  1  | SKN |  0  |  0  |  0  |   16 - 4 = 12
+    //                      | STE | MNT | PCK |  1  | SKN |  0  |  0  |  0  |   16 - 4 = 12
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //       Vertex depth      X     X     0     1     X     0     0     0
     //     Fragment depth      0     0     X     1     0     0     0     0
@@ -96,13 +97,15 @@ struct Variant {
     static constexpr type_t DEP   = 0x10; // depth only variants
     static constexpr type_t FOG   = 0x20; // fog (standard)
     static constexpr type_t PCK   = 0x20; // picking (depth)
-    static constexpr type_t VSM   = 0x40; // variance shadow maps / sampler type
+    static constexpr type_t S2D   = 0x40; // sampler type
+    static constexpr type_t MNT   = 0x40; // variance shadow maps
     static constexpr type_t STE   = 0x80; // instanced stereo
 
     static constexpr type_t NO_VARIANT         = 0u;
 
     // special variants (variants that use the reserved space)
-    static constexpr type_t SPECIAL_SSR   = VSM | SRE; // screen-space reflections variant
+    static constexpr type_t SPECIAL_SSR_VARIANT=       S2D |       SRE            ;
+    static constexpr type_t SPECIAL_SSR_MASK   = STE | S2D | DEP | SRE | DYN | DIR;
 
     static constexpr type_t STANDARD_MASK      = DEP;
     static constexpr type_t STANDARD_VARIANT   = 0u;
@@ -127,29 +130,30 @@ struct Variant {
     void setSkinning(bool v) noexcept            { set(v, SKN); }
     void setFog(bool v) noexcept                 { set(v, FOG); }
     void setPicking(bool v) noexcept             { set(v, PCK); }
-    void setVsm(bool v) noexcept                 { set(v, VSM); }
+    void setShadowSampler2D(bool v) noexcept     { set(v, S2D); }
+    void setDepthMoments(bool v) noexcept        { set(v, MNT); }
     void setStereo(bool v) noexcept              { set(v, STE); }
 
     static constexpr bool isValidDepthVariant(Variant variant) noexcept {
         // Can't have VSM and PICKING together with DEPTH variants
-        constexpr type_t RESERVED_MASK  = VSM | PCK | DEP | SRE | DYN | DIR;
-        constexpr type_t RESERVED_VALUE = VSM | PCK | DEP;
+        constexpr type_t RESERVED_MASK  = MNT | PCK | DEP | SRE | DYN | DIR;
+        constexpr type_t RESERVED_VALUE = MNT | PCK | DEP;
         return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) &&
                ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
    }
 
     static constexpr bool isValidStandardVariant(Variant variant) noexcept {
         // can't have shadow receiver if we don't have any lighting
-        constexpr type_t RESERVED0_MASK  = VSM | FOG | SRE | DYN | DIR;
-        constexpr type_t RESERVED0_VALUE = VSM | FOG | SRE;
+        constexpr type_t RESERVED0_MASK  = S2D | FOG | SRE | DYN | DIR;
+        constexpr type_t RESERVED0_VALUE = S2D | FOG | SRE;
 
         // can't have shadow receiver if we don't have any lighting
-        constexpr type_t RESERVED1_MASK  = VSM | SRE | DYN | DIR;
+        constexpr type_t RESERVED1_MASK  = S2D | SRE | DYN | DIR;
         constexpr type_t RESERVED1_VALUE = SRE;
 
         // can't have VSM without shadow receiver
-        constexpr type_t RESERVED2_MASK  = VSM | SRE;
-        constexpr type_t RESERVED2_VALUE = VSM;
+        constexpr type_t RESERVED2_MASK  = S2D | SRE;
+        constexpr type_t RESERVED2_VALUE = S2D;
 
         return ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) &&
                ((variant.key & RESERVED0_MASK) != RESERVED0_VALUE) &&
@@ -174,11 +178,15 @@ struct Variant {
     }
 
     static constexpr bool isSSRVariant(Variant variant) noexcept {
-        return (variant.key & (STE | VSM | DEP | SRE | DYN | DIR)) == (VSM | SRE);
+        return (variant.key & SPECIAL_SSR_MASK) == SPECIAL_SSR_VARIANT;
     }
 
-    static constexpr bool isVSMVariant(Variant variant) noexcept {
-        return !isSSRVariant(variant) && ((variant.key & VSM) == VSM);
+    static constexpr bool isShadowSampler2DVariant(Variant variant) noexcept {
+        return !isSSRVariant(variant) && ((variant.key & (S2D | DEP)) == S2D);
+    }
+
+    static constexpr bool isDepthMomentsVariant(Variant variant) noexcept {
+        return !isSSRVariant(variant) && ((variant.key & (MNT | DEP)) == (MNT | DEP));
     }
 
     static constexpr bool isShadowReceiverVariant(Variant variant) noexcept {
@@ -202,13 +210,13 @@ struct Variant {
         // vertex shader.
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
             if (isSSRVariant(variant)) {
-                variant.key &= ~(VSM | SRE);
+                variant.key &= ~SPECIAL_SSR_VARIANT;
             }
             return variant & (STE | SKN | SRE | DYN | DIR);
         }
         if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
-            // Only VSM, skinning, and stereo affect the vertex shader's DEPTH variant
-            return variant & (STE | VSM | SKN | DEP);
+            // Only MNT, skinning, and stereo affect the vertex shader's DEPTH variant
+            return variant & (STE | MNT | SKN | DEP);
         }
         return {};
     }
@@ -217,11 +225,11 @@ struct Variant {
         // filter out fragment variants that are not needed. For e.g. skinning doesn't
         // affect the fragment shader.
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
-            return variant & (VSM | FOG | SRE | DYN | DIR);
+            return variant & (S2D | FOG | SRE | DYN | DIR);
         }
         if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
             // Only VSM & PICKING affects the fragment shader's DEPTH variant
-            return variant & (VSM | PCK | DEP);
+            return variant & (MNT | PCK | DEP);
         }
         return {};
     }
@@ -230,8 +238,8 @@ struct Variant {
         // special case for depth variant
         if (isValidDepthVariant(variant)) {
             if (!isLit) {
-                // if we're unlit, we never need the VSM variant
-                return variant & ~VSM;
+                // if we're unlit, we never need the MNT variant
+                return variant & ~MNT;
             }
             return variant;
         }
@@ -242,9 +250,9 @@ struct Variant {
             // when the shading mode is unlit, remove all the lighting variants
             return variant & UNLIT_MASK;
         }
-        // if shadow receiver is disabled, turn off VSM
+        // if shadow receiver is disabled, we pick the shadow sampler
         if (!(variant.key & SRE)) {
-            return variant & ~VSM;
+            return variant & ~S2D;
         }
         return variant;
     }

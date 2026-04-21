@@ -77,6 +77,8 @@ public:
      * Creates a new bundle by deserializing the given data.
      *
      * Typically, this constructor is used to consume the contents of a KTX file.
+     * 
+     * \note Asserts via `FILAMENT_CHECK_POSTCONDITION` if the input is malformed, truncated, or exceeds dimension limits.
      */
     Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes);
 
@@ -85,11 +87,15 @@ public:
      * memory.
      *
      * Typically, this method is used to write out the contents of a KTX file.
+     * 
+     * \note Asserts via `FILAMENT_CHECK_POSTCONDITION` if internal payload constraints are violated.
      */
     bool serialize(uint8_t* destination, uint32_t numBytes) const;
 
     /**
      * Computes the size (in bytes) of the serialized bundle.
+     * 
+     * \note Asserts via `FILAMENT_CHECK_POSTCONDITION` if internal LOD sizes are inconsistent or total size overflows 32-bit bounds.
      */
     uint32_t getSerializedLength() const;
 

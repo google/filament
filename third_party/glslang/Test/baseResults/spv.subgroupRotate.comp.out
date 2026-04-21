@@ -5,7 +5,7 @@ spv.subgroupRotate.comp
 
                               Capability Shader
                               Capability Float64
-                              Capability CapabilityGroupNonUniformRotateKHR
+                              Capability GroupNonUniformRotateKHR
                               Extension  "SPV_KHR_subgroup_rotate"
                1:             ExtInstImport  "GLSL.std.450"
                               MemoryModel Logical GLSL450

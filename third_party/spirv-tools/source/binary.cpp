@@ -856,7 +856,7 @@ void Parser::recordNumberType(size_t inst_offset,
       info.type = SPV_NUMBER_FLOATING;
       info.bit_width = peekAt(inst_offset + 2);
       if (inst->num_words >= 4) {
-        const spvtools::OperandDesc* desc;
+        const spvtools::OperandDesc* desc = nullptr;
         spv_result_t status = spvtools::LookupOperand(
             SPV_OPERAND_TYPE_FPENCODING, peekAt(inst_offset + 3), &desc);
         if (status == SPV_SUCCESS) {

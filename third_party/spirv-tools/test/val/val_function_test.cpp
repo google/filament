@@ -836,6 +836,200 @@ TEST_F(ValidateFunctionCall, LogicallyMismatchedPointersArraySize) {
               HasSubstr("type does not match Function <id>"));
 }
 
+TEST_F(ValidateFunctionCall, PointerReturnTypeStorageBuffer) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%ptr = OpTypePointer StorageBuffer %int
+%null = OpConstantNull %ptr
+%foo_ty = OpTypeFunction %ptr
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%call = OpFunctionCall %ptr %foo
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %ptr None %foo_ty
+%foo_entry = OpLabel
+OpReturnValue %null
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("In Logical addressing, functions may only return a storage "
+                "buffer pointer if the VariablePointersStorageBuffer "
+                "capability is declared"));
+}
+
+TEST_F(ValidateFunctionCall, PointerReturnTypeStorageBufferUntyped) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%ptr = OpTypeUntypedPointerKHR StorageBuffer
+%null = OpConstantNull %ptr
+%foo_ty = OpTypeFunction %ptr
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%call = OpFunctionCall %ptr %foo
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %ptr None %foo_ty
+%foo_entry = OpLabel
+OpReturnValue %null
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("In Logical addressing, functions may only return a storage "
+                "buffer pointer if the VariablePointersStorageBuffer "
+                "capability is declared"));
+}
+
+TEST_F(ValidateFunctionCall, PointerReturnTypeWorkgroup) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability VariablePointersStorageBuffer
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%ptr = OpTypePointer Workgroup %int
+%null = OpConstantNull %ptr
+%foo_ty = OpTypeFunction %ptr
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%call = OpFunctionCall %ptr %foo
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %ptr None %foo_ty
+%foo_entry = OpLabel
+OpReturnValue %null
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("In Logical addressing, functions may only return a workgroup "
+                "pointer if the VariablePointers capability is declared"));
+}
+
+TEST_F(ValidateFunctionCall, PointerReturnTypeWorkgroupUntyped) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability VariablePointersStorageBuffer
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%ptr = OpTypeUntypedPointerKHR Workgroup
+%null = OpConstantNull %ptr
+%foo_ty = OpTypeFunction %ptr
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%call = OpFunctionCall %ptr %foo
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %ptr None %foo_ty
+%foo_entry = OpLabel
+OpReturnValue %null
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("In Logical addressing, functions may only return a workgroup "
+                "pointer if the VariablePointers capability is declared"));
+}
+
+TEST_F(ValidateFunctionCall, PointerReturnTypePrivate) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability VariablePointers
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%ptr = OpTypePointer Private %int
+%var = OpVariable %ptr Private
+%foo_ty = OpTypeFunction %ptr
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%call = OpFunctionCall %ptr %foo
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %ptr None %foo_ty
+%foo_entry = OpLabel
+OpReturnValue %var
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("In Logical addressing, functions may not return a "
+                        "pointer in this storage class"));
+}
+
+TEST_F(ValidateFunctionCall, PointerReturnTypePrivateUntyped) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability VariablePointers
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%ptr = OpTypeUntypedPointerKHR Private
+%var = OpUntypedVariableKHR %ptr Private %int
+%foo_ty = OpTypeFunction %ptr
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%call = OpFunctionCall %ptr %foo
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %ptr None %foo_ty
+%foo_entry = OpLabel
+OpReturnValue %var
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("In Logical addressing, functions may not return a "
+                        "pointer in this storage class"));
+}
+
 TEST_F(ValidateFunctionCall, UntypedPointerParameterMismatch) {
   const std::string spirv = R"(
 OpCapability Shader

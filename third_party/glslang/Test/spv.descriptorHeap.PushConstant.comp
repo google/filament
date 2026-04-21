@@ -1,0 +1,17 @@
+#version 450
+#extension GL_EXT_descriptor_heap: require
+layout(local_size_x = 1) in;
+
+layout(descriptor_heap) buffer O { uint outputBuffer[]; } buffers[];
+
+layout(constant_id = 0) const int PUSH_LENGTH = 1;
+
+layout(push_constant, std430) uniform P {
+    int pushData[PUSH_LENGTH];
+};
+
+void main() {
+    for (int i = 0; i < PUSH_LENGTH; ++i) {
+        buffers[0].outputBuffer[i] = pushData[i];
+    }
+}

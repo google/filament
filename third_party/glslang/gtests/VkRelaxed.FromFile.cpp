@@ -297,6 +297,7 @@ INSTANTIATE_TEST_SUITE_P(
         {{"vk.relaxed.stagelink.vert", "vk.relaxed.stagelink.frag"}, {}},
         {{"vk.relaxed.errorcheck.vert", "vk.relaxed.errorcheck.frag"}, {}},
         {{"vk.relaxed.changeSet.vert", "vk.relaxed.changeSet.frag" }, { {"0"}, {"1"} } },
+        {{"vk.relaxed.syntaxerror.vert", "vk.relaxed.syntaxerror.frag"}, {}},
     }))
 );
 // clang-format on

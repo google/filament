@@ -460,9 +460,11 @@ TEST_F(ValidateEntryPoint, NoEntryPointBad) {
       OpMemoryModel Logical GLSL450)";
   CompileSuccessfully(spirv);
   EXPECT_EQ(SPV_ERROR_INVALID_BINARY, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("No OpEntryPoint instruction was found. This is only "
-                        "allowed if the Linkage capability is being used."));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "No OpEntryPoint instruction was found. This is only "
+          "allowed if the Linkage or GraphARM capability is being used."));
 }
 
 // Invalid. A function may not be a target of both OpEntryPoint and
@@ -631,7 +633,8 @@ TEST_F(ValidateLayout, ModuleProcessedInvalidInFunctionBeforeLabel) {
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("ModuleProcessed cannot appear in a function declaration"));
+      HasSubstr(
+          "ModuleProcessed cannot appear in the graph definitions section"));
 }
 
 TEST_F(ValidateLayout, ModuleProcessedInvalidInBasicBlock) {
@@ -653,7 +656,8 @@ TEST_F(ValidateLayout, ModuleProcessedInvalidInBasicBlock) {
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("ModuleProcessed cannot appear in a function declaration"));
+      HasSubstr(
+          "ModuleProcessed cannot appear in the graph definitions section"));
 }
 
 // TODO(umar): Test optional instructions

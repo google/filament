@@ -94,6 +94,13 @@ afterEvaluate { project ->
     }
 
     signing {
+        def signingKey = findProperty("signingKey")
+        def signingPassword = findProperty("signingPassword")
+        if (signingKey && signingPassword) {
+            println("Signing with in-memory keys")
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
+
         publishing.publications.all { publication ->
             sign publication
         }

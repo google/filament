@@ -128,6 +128,11 @@ filegroup(
     srcs = ["include/spirv/unified1/extinst.tosa.001000.1.grammar.json"],
 )
 
+filegroup(
+    name = "spirv_ext_inst_arm_motion_engine_100",
+    srcs = ["include/spirv/unified1/extinst.arm.motion-engine.100.grammar.json"],
+)
+
 cc_library(
     name = "spirv_common_headers",
     hdrs = [
@@ -137,6 +142,7 @@ cc_library(
         "include/spirv/1.1/OpenCL.std.h",
         "include/spirv/1.2/GLSL.std.450.h",
         "include/spirv/1.2/OpenCL.std.h",
+        "include/spirv/unified1/ArmMotionEngine.100.h",
         "include/spirv/unified1/GLSL.std.450.h",
         "include/spirv/unified1/NonSemanticClspvReflection.h",
         "include/spirv/unified1/NonSemanticDebugPrintf.h",

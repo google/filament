@@ -30,9 +30,6 @@
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"
-#include "vulkan/utils/StaticVector.h"
-
-#include <backend/Program.h>
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
@@ -195,7 +192,7 @@ public:
     }
 
     // The current layout used by the descriptor set. This one will match the bindings, including
-    // external samplers data. 
+    // external samplers data.
     // This will not necessarilly be the same as `mLayout`.
     VkDescriptorSetLayout boundLayout = VK_NULL_HANDLE;
 
@@ -203,7 +200,7 @@ public:
 
     fvkutils::UniformBufferBitmask const& dynamicUboMask;
     uint8_t const uniqueDynamicUboCount;
-    
+
     // Flag to indicate if the current layout needs to be recreated or not.
     // This should only set to `true` when a external sampler image is bound to the descriptor set.
     bool isLayoutDirty = false;
@@ -239,118 +236,6 @@ struct VulkanMemoryMappedBuffer : public HwMemoryMappedBuffer, Resource {
     MapBufferAccessFlags access{};
     uint32_t size = 0;
     uint32_t offset = 0;
-};
-
-using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
-using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
-
-struct PushConstantDescription {
-    explicit PushConstantDescription(backend::Program const& program);
-
-    VkPushConstantRange const* getVkRanges() const noexcept { return mRanges; }
-    uint32_t getVkRangeCount() const noexcept { return mRangeCount; }
-    void write(VkCommandBuffer cmdbuf, VkPipelineLayout layout, backend::ShaderStage stage,
-            uint8_t index, backend::PushConstantVariant const& value);
-
-private:
-    static constexpr uint32_t ENTRY_SIZE = sizeof(uint32_t);
-
-    struct ConstantDescription {
-        utils::FixedCapacityVector<backend::ConstantType> types;
-        uint32_t offset = 0;
-    };
-
-    // Describes the constants in each shader stage.
-    ConstantDescription mDescriptions[Program::SHADER_TYPE_COUNT];
-    VkPushConstantRange mRanges[Program::SHADER_TYPE_COUNT];
-    uint32_t mRangeCount;
-};
-
-struct VulkanProgram : public HwProgram, fvkmemory::Resource {
-    using BindingList = fvkutils::StaticVector<uint16_t, MAX_SAMPLER_COUNT>;
-
-    VulkanProgram(VkDevice device, Program const& builder) noexcept;
-    ~VulkanProgram();
-
-    /**
-     * Cancels any parallel compilation jobs that have not yet run for this
-     * program.
-     */
-    inline void cancelParallelCompilation() {
-        mParallelCompilationCanceled.store(true, std::memory_order_release);
-    }
-
-    /**
-     * Writes out any queued push constants using the provided VkPipelineLayout.
-     *
-     * @param layout The layout that is to be used along with these push constants,
-     *               in the next draw call.
-     */
-    void flushPushConstants(VkPipelineLayout layout);
-
-    inline VkShaderModule getVertexShader() const {
-        return mInfo->shaders[0];
-    }
-
-    inline VkShaderModule getFragmentShader() const { return mInfo->shaders[1]; }
-
-    inline uint32_t getPushConstantRangeCount() const {
-        return mInfo->pushConstantDescription.getVkRangeCount();
-    }
-
-    inline VkPushConstantRange const* getPushConstantRanges() const {
-        return mInfo->pushConstantDescription.getVkRanges();
-    }
-
-    /**
-     * Returns true if parallel compilation is canceled, false if not. Parallel
-     * compilation will be canceled if this program is destroyed before relevant
-     * pipelines are created.
-     *
-     * @return true if parallel compilation should run for this program, false if not
-     */
-    inline bool isParallelCompilationCanceled() const {
-        return mParallelCompilationCanceled.load(std::memory_order_acquire);
-    }
-
-    inline void writePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
-            backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-        // It's possible that we don't have the layout yet. When external samplers are used, bindPipeline()
-        // in VulkanDriver returns early, without binding a layout. If that happens, the layout is not
-        // set until draw time. Any push constants that are written during that time should be saved for
-        // later, and flushed when the layout is set.
-        if (layout != VK_NULL_HANDLE) {
-            mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
-        } else {
-            mQueuedPushConstants.push_back({cmdbuf, stage, index, value});
-        }
-    }
-
-    // TODO: handle compute shaders.
-    // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.
-    static constexpr uint8_t const MAX_SHADER_MODULES = 2;
-
-private:
-    struct PipelineInfo {
-        explicit PipelineInfo(backend::Program const& program) noexcept
-            : pushConstantDescription(program)
-            {}
-
-        VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
-        PushConstantDescription pushConstantDescription;
-    };
-
-    struct PushConstantInfo {
-        VkCommandBuffer cmdbuf;
-        backend::ShaderStage stage;
-        uint8_t index;
-        backend::PushConstantVariant value;
-    };
-
-    PipelineInfo* mInfo;
-    VkDevice mDevice = VK_NULL_HANDLE;
-    std::atomic<bool> mParallelCompilationCanceled { false };
-    std::vector<PushConstantInfo> mQueuedPushConstants;
 };
 
 // The render target bundles together a set of attachments, each of which can have one of the
@@ -419,7 +304,7 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
         return mInfo->fbkey.samples;
     }
 
-    uint8_t getColorTargetCount(VulkanRenderPass const& pass) const;
+    uint8_t getColorTargetCount(VulkanRenderPassContext const& pass) const;
 
     inline bool hasDepth() const { return mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX; }
 
@@ -583,6 +468,39 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive, fvkmemory::Resource {
 
     fvkmemory::resource_ptr<VulkanVertexBuffer> vertexBuffer;
     fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer;
+};
+
+struct VulkanFramebuffer : public fvkmemory::Resource {
+    VulkanFramebuffer(VkDevice device,
+            VkFramebuffer framebuffer,
+            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget);
+    ~VulkanFramebuffer();
+
+    inline VkFramebuffer getVkFramebuffer() const noexcept {
+        return mFramebuffer;
+    }
+
+private:
+    VkDevice mDevice;
+    VkFramebuffer mFramebuffer;
+
+    // We need to keep a reference to the renderTarget because the key of the framebuffer in the
+    // cache has references to the image views that are derived from the textures of the render
+    // target.
+    fvkmemory::resource_ptr<VulkanRenderTarget> mRenderTarget;
+};
+
+struct VulkanRenderPass : public fvkmemory::Resource {
+    VulkanRenderPass(VkDevice device, VkRenderPass renderPass);
+    ~VulkanRenderPass();
+
+    inline VkRenderPass getVkRenderPass() const noexcept {
+        return mRenderPass;
+    }
+
+private:
+    VkDevice mDevice;
+    VkRenderPass mRenderPass;
 };
 
 } // namespace filament::backend

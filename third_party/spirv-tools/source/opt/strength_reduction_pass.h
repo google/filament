@@ -32,7 +32,7 @@ class StrengthReductionPass : public Pass {
  private:
   // Replaces multiple by power of 2 with an equivalent bit shift.
   // Returns true if something changed.
-  bool ReplaceMultiplyByPowerOf2(BasicBlock::iterator*);
+  Status ReplaceMultiplyByPowerOf2(BasicBlock::iterator*);
 
   // Scan the types and constants in the module looking for the integer
   // types that we are
@@ -47,7 +47,7 @@ class StrengthReductionPass : public Pass {
 
   // Replaces certain instructions in function bodies with presumably cheaper
   // ones. Returns true if something changed.
-  bool ScanFunctions();
+  Status ScanFunctions();
 
   // Type ids for the types of interest, or 0 if they do not exist.
   uint32_t int32_type_id_;

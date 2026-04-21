@@ -17,6 +17,7 @@
 // TODO: Clean-up. We shouldn't need this #ifndef here, but a client has requested that perfetto be
 // disabled due to size increase.  In their case, this flag would be defined across targets. Hence
 // we guard below with an #ifndef.
+#include <cstring>
 #ifndef FILAMENT_TRACING_ENABLED
 // Note: The overhead of TRACING is not negligible especially with parallel_for().
 #define FILAMENT_TRACING_ENABLED false
@@ -55,7 +56,6 @@
 #if defined(WIN32)
 #    define NOMINMAX
 #    include <windows.h>
-#    include <string>
 # else
 #    include <pthread.h>
 #endif
@@ -98,7 +98,11 @@ namespace utils {
 
 void JobSystem::setThreadName(const char* name) noexcept {
 #if defined(__linux__)
-    pthread_setname_np(pthread_self(), name);
+    constexpr size_t MAX_PTHREAD_NAME_LEN = 16;
+    char buf[MAX_PTHREAD_NAME_LEN];
+    strncpy(buf, name, MAX_PTHREAD_NAME_LEN - 1);
+    buf[MAX_PTHREAD_NAME_LEN - 1] = '\0';
+    pthread_setname_np(pthread_self(), buf);
 #elif defined(__APPLE__)
     pthread_setname_np(name);
 #elif defined(WIN32)
@@ -205,14 +209,22 @@ JobSystem::JobSystem(const size_t userThreadCount, const size_t adoptableThreads
     static_assert(std::atomic<bool>::is_always_lock_free);
     static_assert(std::atomic<uint16_t>::is_always_lock_free);
 
-    std::random_device rd;
     const size_t hardwareThreadCount = mThreadCount;
     auto& states = mThreadStates;
 
     #pragma nounroll
     for (size_t i = 0, n = states.size(); i < n; i++) {
+        // don't use std::random_device because it forces the use of std::string
+        constexpr uint32_t base_seed = 1337;
+        uint32_t seed = base_seed + static_cast<uint32_t>(i);
+        seed = (seed ^ 61) ^ (seed >> 16);
+        seed = seed + (seed << 3);
+        seed = seed ^ (seed >> 4);
+        seed = seed * 0x27d4eb2d;
+        seed = seed ^ (seed >> 15);
+
         auto& state = states[i];
-        state.rndGen = default_random_engine(rd());
+        state.rndGen = default_random_engine(seed);
         state.js = this;
         if (i < hardwareThreadCount) {
             // don't start a thread of adoptable thread slots
@@ -236,7 +248,8 @@ JobSystem::~JobSystem() {
 inline void JobSystem::incRef(Job const* job) noexcept {
     // no action is taken when incrementing the reference counter, therefore we can safely use
     // memory_order_relaxed.
-    job->refCount.fetch_add(1, std::memory_order_relaxed);
+    UTILS_UNUSED_IN_RELEASE auto c = job->refCount.fetch_add(1, std::memory_order_relaxed);
+    assert_invariant(c < 255);
 }
 
 UTILS_NOINLINE

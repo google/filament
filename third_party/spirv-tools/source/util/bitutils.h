@@ -206,6 +206,23 @@ T ZeroExtendValue(T value, uint32_t number_of_bits) {
   return utils::ClearHighBits(value, bit_width - number_of_bits);
 }
 
+// Returns the the least significant bit from |value|.
+template <typename T>
+constexpr T LSB(T value) {
+  static_assert(std::is_integral<T>::value, "LSB requires integer type");
+  if constexpr (std::is_unsigned_v<T>) {
+    // Prevent warnings about doing a -x on unsigned values.
+    return value & (~value + 1);
+  } else {
+    return value & -value;
+  }
+}
+
+static_assert(LSB<uint32_t>(UINT32_MAX) == uint32_t(0x00000001), "LSB failed");
+static_assert(LSB<uint32_t>(0x10001000) == uint32_t(0x00001000), "LSB failed");
+static_assert(LSB<uint32_t>(0x10000000) == uint32_t(0x10000000), "LSB failed");
+static_assert(LSB<int32_t>(-1) == int32_t(0x00000001), "LSB failed");
+
 }  // namespace utils
 }  // namespace spvtools
 

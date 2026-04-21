@@ -109,7 +109,7 @@
 #include <math/mat3.h>
 #include <math/vec3.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <algorithm>
 #include <array>
@@ -430,38 +430,38 @@ static void printUsage(const char* name) {
 int main(int argc, char* argv[]) {
     Config config;
 
-    static const option long_options[] = {
-        { "n", required_argument, nullptr, 'n' },
-        { "mode", required_argument, nullptr, 'm' },
-        { "min", required_argument, nullptr, 's' },
-        { "max", required_argument, nullptr, 'e' },
-        { "dispersion", required_argument, nullptr, 'p' },
-        { "lut", no_argument, nullptr, 'l' },
-        { "analytic", no_argument, nullptr, 'a' },
-        { "no-correct", no_argument, nullptr, 'c' },
-        { "debug", no_argument, nullptr, 'd' },
-        { "format", required_argument, nullptr, 'f' },
-        { "help", no_argument, nullptr, 'h' },
+    static const utils::getopt::option long_options[] = {
+        { "n", utils::getopt::required_argument, nullptr, 'n' },
+        { "mode", utils::getopt::required_argument, nullptr, 'm' },
+        { "min", utils::getopt::required_argument, nullptr, 's' },
+        { "max", utils::getopt::required_argument, nullptr, 'e' },
+        { "dispersion", utils::getopt::required_argument, nullptr, 'p' },
+        { "lut", utils::getopt::no_argument, nullptr, 'l' },
+        { "analytic", utils::getopt::no_argument, nullptr, 'a' },
+        { "no-correct", utils::getopt::no_argument, nullptr, 'c' },
+        { "debug", utils::getopt::no_argument, nullptr, 'd' },
+        { "format", utils::getopt::required_argument, nullptr, 'f' },
+        { "help", utils::getopt::no_argument, nullptr, 'h' },
         { nullptr, 0, nullptr, 0 }
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "n:m:s:e:p:lacdf:h", long_options, nullptr)) != -1) {
+    while ((opt = utils::getopt::getopt_long(argc, argv, "n:m:s:e:p:lacdf:h", long_options, nullptr)) != -1) {
         switch (opt) {
             case 'n':
-                config.n = std::atoi(optarg);
+                config.n = std::atoi(utils::getopt::optarg);
                 break;
             case 'm':
-                config.mode = optarg;
+                config.mode = utils::getopt::optarg;
                 break;
             case 's':
-                config.minLambda = std::atof(optarg);
+                config.minLambda = std::atof(utils::getopt::optarg);
                 break;
             case 'e':
-                config.maxLambda = std::atof(optarg);
+                config.maxLambda = std::atof(utils::getopt::optarg);
                 break;
             case 'p':
-                if (std::string(optarg) == "linear") config.dispersion = DispersionModel::Linear;
+                if (std::string(utils::getopt::optarg) == "linear") config.dispersion = DispersionModel::Linear;
                 else config.dispersion = DispersionModel::Cauchy;
                 break;
             case 'l':
@@ -477,7 +477,7 @@ int main(int argc, char* argv[]) {
                 config.debug = true;
                 break;
             case 'f':
-                config.format = optarg;
+                config.format = utils::getopt::optarg;
                 break;
             case 'h':
                 printUsage(argv[0]);

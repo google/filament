@@ -37,6 +37,10 @@ class RemoveDuplicatesPass : public Pass {
   Status Process() override;
 
  private:
+  // Remove duplicate extensions from the module
+  //
+  // Returns true if the module was modified, false otherwise.
+  bool RemoveDuplicateExtensions() const;
   // Remove duplicate capabilities from the module
   //
   // Returns true if the module was modified, false otherwise.

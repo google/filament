@@ -72,6 +72,15 @@ Options (in lexicographical order):
                be invalid.
   --verify-ids
                Verify that IDs in the resulting modules are truly unique.
+  --fnvar-targets
+               CSV file specifying OpSpecConditionalTarget parameters for each
+               linked module.
+  --fnvar-architectures
+               CSV file specifying OpSpecConditionalArchitecture parameters for
+               each linked module.
+  --fnvar-capabilities
+               For each function variant, include its required capabilities
+               under OpSpecConditionalCapabilitiesINTEL.
   --version
                Display linker version information.
 )",
@@ -90,6 +99,9 @@ FLAG_LONG_bool(   allow_partial_linkage,  /* default_value= */ false,           
 FLAG_LONG_bool(   allow_pointer_mismatch, /* default_value= */ false,               /* required= */ false);
 FLAG_SHORT_string(o,                      /* default_value= */ "",                  /* required= */ false);
 FLAG_LONG_string( target_env,             /* default_value= */ kDefaultEnvironment, /* required= */ false);
+FLAG_LONG_string( fnvar_targets,          /* default_value= */ "",                  /* required= */ false);
+FLAG_LONG_string( fnvar_architectures,    /* default_value= */ "",                  /* required= */ false);
+FLAG_LONG_bool(   fnvar_capabilities,     /* default_value= */ false,               /* required= */ false);
 FLAG_LONG_bool(   use_highest_version,    /* default_value= */ false,               /* required= */ false);
 // clang-format on
 
@@ -140,6 +152,33 @@ int main(int, const char* argv[]) {
     fprintf(stderr, "error: No input file specified\n");
     return 1;
   }
+  options.SetInFiles(inFiles);
+
+  if (!flags::fnvar_targets.value().empty()) {
+    std::vector<char> fn_variants_csv_chars;
+    const bool ret = ReadTextFile(flags::fnvar_targets.value().c_str(),
+                                  &fn_variants_csv_chars);
+    if (!ret) {
+      return 1;
+    }
+    const std::string csv_text(fn_variants_csv_chars.begin(),
+                               fn_variants_csv_chars.end());
+    options.SetFnVarTargetsCsv(csv_text);
+  }
+
+  if (!flags::fnvar_architectures.value().empty()) {
+    std::vector<char> fn_variants_csv_chars;
+    const bool ret = ReadTextFile(flags::fnvar_architectures.value().c_str(),
+                                  &fn_variants_csv_chars);
+    if (!ret) {
+      return 1;
+    }
+    const std::string csv_text(fn_variants_csv_chars.begin(),
+                               fn_variants_csv_chars.end());
+    options.SetFnVarArchitecturesCsv(csv_text);
+  }
+
+  options.SetHasFnVarCapabilities(flags::fnvar_capabilities.value());
 
   std::vector<std::vector<uint32_t>> contents(inFiles.size());
   for (size_t i = 0u; i < inFiles.size(); ++i) {

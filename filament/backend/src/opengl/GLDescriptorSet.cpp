@@ -21,8 +21,8 @@
 #include "GLTexture.h"
 #include "GLUtils.h"
 #include "OpenGLDriver.h"
-#include "OpenGLContext.h"
 #include "OpenGLProgram.h"
+#include "OpenGLState.h"
 
 #include "gl_headers.h"
 
@@ -49,7 +49,7 @@
 
 namespace filament::backend {
 
-GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle dslh,
+GLDescriptorSet::GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh,
         GLDescriptorSetLayout const* layout)
         : descriptors(layout->maxDescriptorBinding + 1),
           dslh(std::move(dslh)) {
@@ -142,7 +142,7 @@ GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle ds
     }
 }
 
-void GLDescriptorSet::update(OpenGLContext&,
+void GLDescriptorSet::update(OpenGLState&,
         descriptor_binding_t binding, GLBufferObject* bo, size_t offset, size_t size) noexcept {
     assert_invariant(binding < descriptors.size());
     std::visit([=](auto&& arg) {
@@ -164,7 +164,7 @@ void GLDescriptorSet::update(OpenGLContext&,
     }, descriptors[binding].desc);
 }
 
-void GLDescriptorSet::update(OpenGLContext& gl, HandleAllocatorGL& handleAllocator,
+void GLDescriptorSet::update(OpenGLState& gl, HandleAllocatorGL& handleAllocator,
         descriptor_binding_t binding, TextureHandle th, SamplerParams params) noexcept {
 
     GLTexture* t = th ? handleAllocator.handle_cast<GLTexture*>(th) : nullptr;
@@ -183,9 +183,18 @@ void GLDescriptorSet::update(OpenGLContext& gl, HandleAllocatorGL& handleAllocat
                 params.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
                 params.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
             }
+
             // GLES3.x specification forbids depth textures to be filtered.
-            if (t && isDepthFormat(t->format)
-                    && params.compareMode == SamplerCompareMode::NONE) {
+            bool const isDepthFmt = t && isDepthFormat(t->format);
+            bool const depthTextureNoPcf = isDepthFmt &&
+                    params.compareMode == SamplerCompareMode::NONE;
+
+            // GLES3.x may not support filtering of fp32 textures
+            bool const isFp32Fmt = t && isFp32ColorFormat(t->format);
+            bool const fp32TextureNotFilterable = isFp32Fmt &&
+                    !gl.context().ext.OES_texture_float_linear;
+
+            if (t && (depthTextureNoPcf || fp32TextureNotFilterable)) {
                 params.filterMag = SamplerMagFilter::NEAREST;
                 switch (params.filterMin) {
                     case SamplerMinFilter::LINEAR:
@@ -223,7 +232,7 @@ void GLDescriptorSet::update(OpenGLContext& gl, HandleAllocatorGL& handleAllocat
     }, descriptors[binding].desc);
 }
 
-void GLDescriptorSet::updateTextureView(OpenGLContext& gl,
+void GLDescriptorSet::updateTextureView(OpenGLState& gl,
         HandleAllocatorGL& handleAllocator, GLuint unit, GLTexture const* t) noexcept {
     // The common case is that we don't have a ref handle (we only have one if
     // the texture ever had a View on it).
@@ -260,7 +269,7 @@ void GLDescriptorSet::updateTextureView(OpenGLContext& gl,
 }
 
 void GLDescriptorSet::bind(
-        OpenGLContext& gl,
+        OpenGLState& gl,
         HandleAllocatorGL& handleAllocator,
         OpenGLProgram const& p,
         descriptor_set_t set, uint32_t const* offsets, bool offsetsOnly) const noexcept {
@@ -341,7 +350,44 @@ void GLDescriptorSet::bind(
                 if (arg.handle) {
                     GLTexture const* const t = handleAllocator.handle_cast<GLTexture*>(arg.handle);
                     gl.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
-                    SamplerParams const params = arg.params;
+                    SamplerParams params = arg.params;
+
+#if defined(__EMSCRIPTEN__)
+                    // From https://registry.khronos.org/OpenGL-Refpages/es2.0/
+                    // GLES 2.0 will draw mipmapped samplers as black if the following conditions are not met:
+                    //
+                    // "...if the width or height of a texture image are not powers of two and either the
+                    // GL_TEXTURE_MIN_FILTER is set to one of the functions that requires mipmaps or the
+                    // GL_TEXTURE_WRAP_S or GL_TEXTURE_WRAP_T is not set to GL_CLAMP_TO_EDGE, then the
+                    // texture image unit will return (R, G, B, A) = (0, 0, 0, 1)."
+                    //
+                    // "If the texture has dimensions w × h , there are [floor(log2(max(w, h))) + 1] mipmap levels.
+                    // Level 0 is the original texture; level [floor(log2(max(w, h)))] is the final 1 × 1 mipmap."
+                    // "Suppose that a texture is accessed from a fragment shader or vertex shader and has set GL_TEXTURE_MIN_FILTER
+                    // to one of the functions that requires mipmaps. If either the dimensions of the texture images currently
+                    // defined (with previous calls to glTexImage2D, glCompressedTexImage2D, or glCopyTexImage2D) do not follow
+                    // the proper sequence for mipmaps (described above), or there are fewer texture images defined than are needed,
+                    // or the set of texture images were defined with different formats or types, then the texture image unit
+                    // will return (R, G, B, A) = (0, 0, 0, 1)."
+                    //
+                    // So we force the sampler to a valid state in those cases.
+                    auto isPowerOfTwo = [](uint32_t x) -> bool { return (x & (x - 1)) == 0 && x > 0; };
+                    bool textureIsPowerOfTwo = isPowerOfTwo(t->width) && isPowerOfTwo(t->height);
+
+                    uint32_t requiredMipLevels = (std::floor(std::log2(std::max(t->width, std::max(t->height, t->depth)))) + 1);
+                    bool textureHasRequiredMipLevels = t->levels == requiredMipLevels;
+
+                    bool samplerCanBeInvalid = params.filterMin > SamplerMinFilter::LINEAR;
+                    if (samplerCanBeInvalid && (!textureIsPowerOfTwo || !textureHasRequiredMipLevels)) {
+                        if (params.filterMin == SamplerMinFilter::NEAREST_MIPMAP_NEAREST
+                            || params.filterMin == SamplerMinFilter::LINEAR_MIPMAP_NEAREST) {
+                            params.filterMin = SamplerMinFilter::NEAREST;
+                        } else {
+                            params.filterMin = SamplerMinFilter::LINEAR;
+                        }
+                    }
+#endif
+
                     glTexParameteri(t->gl.target, GL_TEXTURE_MIN_FILTER,
                             (GLint)GLUtils::getTextureFilter(params.filterMin));
                     glTexParameteri(t->gl.target, GL_TEXTURE_MAG_FILTER,

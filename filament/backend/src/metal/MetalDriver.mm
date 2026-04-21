@@ -1259,6 +1259,21 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
     }
 }
 
+bool MetalDriver::isTextureFormatFilterable(TextureFormat format) {
+    if (isFp32ColorFormat(format)) {
+        if (@available(macOS 11.0, iOS 14.0, *)) {
+            return mContext->device.supports32BitFloatFiltering;
+        }
+        return mContext->highestSupportedGpuFamily.apple >= 7 ||
+               mContext->highestSupportedGpuFamily.mac >= 1;
+    }
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+        isDepthFormat(format) || isStencilFormat(format)) {
+        return false;
+    }
+    return true;
+}
+
 bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
     MTLPixelFormat mtlFormat = getMetalFormat(mContext, format);
     // RGB9E5 isn't supported on Mac as a color render target.
@@ -1269,11 +1284,8 @@ bool MetalDriver::isFrameBufferFetchSupported() {
     // FrameBuffer fetch is achievable via "programmable blending" in Metal, and only supported on
     // Apple GPUs with readWriteTextureSupport.
     // On macOS, framebuffer fetch requires MSL 2.3, which is only available with macOS 11.0.
-    if (@available(macOS 11.0, *)) {
-        return mContext->highestSupportedGpuFamily.apple >= 1 &&
-               mContext->device.readWriteTextureSupport;
-    }
-    return false;
+    return mContext->highestSupportedGpuFamily.apple >= 1 &&
+           mContext->device.readWriteTextureSupport;
 }
 
 bool MetalDriver::isFrameBufferFetchMultiSampleSupported() {
@@ -2283,12 +2295,14 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
     // Bind the offset data.
     if (mContext->dynamicOffsets.isDirty()) {
         const auto [size, data] = mContext->dynamicOffsets.getOffsets();
-        [mContext->currentRenderPassEncoder setFragmentBytes:data
-                                                      length:size * sizeof(uint32_t)
-                                                     atIndex:DYNAMIC_OFFSET_BINDING];
-        [mContext->currentRenderPassEncoder setVertexBytes:data
-                                                    length:size * sizeof(uint32_t)
-                                                   atIndex:DYNAMIC_OFFSET_BINDING];
+        if (size > 0) {
+            [mContext->currentRenderPassEncoder setFragmentBytes:data
+                                                          length:size * sizeof(uint32_t)
+                                                         atIndex:DYNAMIC_OFFSET_BINDING];
+            [mContext->currentRenderPassEncoder setVertexBytes:data
+                                                        length:size * sizeof(uint32_t)
+                                                       atIndex:DYNAMIC_OFFSET_BINDING];
+        }
         mContext->dynamicOffsets.setDirty(false);
     }
 

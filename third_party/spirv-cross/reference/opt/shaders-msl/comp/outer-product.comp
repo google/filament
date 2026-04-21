@@ -25,7 +25,7 @@ struct ReadSSBO
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
-kernel void main0(device SSBO& _21 [[buffer(0)]], const device ReadSSBO& _26 [[buffer(1)]])
+kernel void main0(device SSBO& _21 [[buffer(0)]], device ReadSSBO& _26 [[buffer(1)]])
 {
     float2 _29 = _26.v2;
     _21.m22 = float2x2(_29 * _29.x, _29 * _29.y);

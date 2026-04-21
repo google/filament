@@ -39,6 +39,10 @@ using namespace utils;
 
 namespace image {
 
+// Define maximum sane image dimensions to prevent integer overflows and memory exhaustion (DoS).
+constexpr size_t MAX_IMAGE_DIMENSION = 65536;
+constexpr size_t MAX_IMAGE_PIXELS = 16384 * 16384;
+
 const char HDRDecoder::sigRadiance[] = { '#', '?', 'R', 'A', 'D', 'I', 'A', 'N', 'C', 'E', 0xa };
 const char HDRDecoder::sigRGBE[]     = { '#', '?', 'R', 'G', 'B', 'E', 0xa };
 
@@ -59,16 +63,16 @@ HDRDecoder::HDRDecoder(std::istream& stream)
 HDRDecoder::~HDRDecoder() = default;
 
 LinearImage HDRDecoder::decode() {
-    float gamma;
-    float exposure;
-    char sy, sx;
+    float gamma = 1.0f;
+    float exposure = 1.0f;
+    char sy = 0, sx = 0;
     unsigned int height = 0, width = 0;
     {
-        char buf[1024];
-        do {
-            char format[128];
-            mStream.getline(buf, sizeof(buf), 0xa);
+        char buf[1024] = {}; // Initialize buffer to prevent reading stack garbage
+        // Check mStream status in the loop condition to prevent an infinite loop on EOF or read error
+        while (mStream.getline(buf, sizeof(buf), 0xa)) {
             if (buf[0] == '#') continue;
+            char format[128] = {0};
             sscanf(buf, "FORMAT=%127s", format); // NOLINT
             sscanf(buf, "GAMMA=%f", &gamma); // NOLINT
             sscanf(buf, "EXPOSURE=%f", &exposure); // NOLINT
@@ -76,14 +80,29 @@ LinearImage HDRDecoder::decode() {
                 (sscanf(buf, "%cX %u %cY %u", &sx, &width, &sy, &height) == 4)) {  // NOLINT
                 break;
             }
-        } while (true);
+        }
+
+        // Verify that dimensions were successfully found before proceeding
+        if (width == 0 || height == 0) {
+            slog.e << "Invalid or missing image dimensions" << io::endl;
+            return {};
+        }
     }
+
+    // Enforce sane limits on dimensions to prevent integer overflow and massive allocations
+    if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION ||
+        (size_t(width) * size_t(height) > MAX_IMAGE_PIXELS)) {
+        slog.e << "Image dimensions exceed safety limits" << io::endl;
+        return {};
+    }
+
     LinearImage image(width, height, 3);
 
     if (sx == '-') image = (image);
     if (sy == '+') image = verticalFlip(image);
 
     // Allocate memory to hold one row of decoded pixel data.
+    // width is now validated, so width * 4 will not integer overflow.
     std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width * 4]);
 
     // First, test for non-RLE images.
@@ -127,21 +146,37 @@ LinearImage HDRDecoder::decode() {
                 size_t num_bytes = 0;
                 while (num_bytes < width) {
                     uint8_t rle_count;
-                    mStream.read((char*) &rle_count, 1);
+                    if (!mStream.read((char*) &rle_count, 1)) {
+                        slog.e << "Unexpected EOF during RLE read" << io::endl;
+                        return {};
+                    }
+
                     if (rle_count > 128) {
+                        size_t run_length = rle_count - 128;
+                        // Prevent Heap Buffer Overflow by checking bounds
+                        if (num_bytes + run_length > width) {
+                            slog.e << "RLE buffer overflow detected" << io::endl;
+                            return {};
+                        }
                         char v;
                         mStream.read(&v, 1);
-                        memset(d, v, size_t(rle_count - 128));
-                        d += rle_count - 128;
-                        num_bytes += rle_count - 128;
+                        memset(d, v, run_length);
+                        d += run_length;
+                        num_bytes += run_length;
                     } else {
                         if (rle_count == 0) {
                             slog.e << "run length is zero" << io::endl;
                             return {};
                         }
-                        mStream.read(d, rle_count);
-                        d += rle_count;
-                        num_bytes += rle_count;
+                        size_t run_length = rle_count;
+                        // Prevent Heap Buffer Overflow by checking bounds
+                        if (num_bytes + run_length > width) {
+                            slog.e << "RLE buffer overflow detected" << io::endl;
+                            return {};
+                        }
+                        mStream.read(d, run_length);
+                        d += run_length;
+                        num_bytes += run_length;
                     }
                 }
             }

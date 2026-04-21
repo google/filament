@@ -225,9 +225,10 @@ into <strong>branch</strong> of <code>filament-assets</code>. This branch is pai
 <code>filament</code> repo.</p>
 <p>As an example, imagine I am working on a PR, and I've uploaded my change, which is in a
 branch called <code>my-pr-branch</code>, to <code>filament</code>. This PR requires updating the golden. We would do
-it in the following fashion</p>
+it in the following fashion on a macOS machine:</p>
 <h3 id="using-a-script-to-update-the-golden-repo"><a class="header" href="#using-a-script-to-update-the-golden-repo">Using a script to update the golden repo</a></h3>
 <ul>
+<li>Make sure you've completed the steps in 'Setting up python'</li>
 <li>Run interactive mode in the <code>update_golden.py</code> script.
 <pre><code>python3 test/renderdiff/src/update_golden.py
 </code></pre>
@@ -262,6 +263,27 @@ git switch -c my-pr-branch-golden
 branch of the golden repo (i.e. <code>my-pr-branch-golden</code>).</li>
 <li>If the PR is merged, then there is another workflow that will merge <code>my-pr-branch-golden</code>
 to the <code>main</code> branch of the golden repo.</li>
+</ul>
+<h3 id="automated-update-via-commit-message"><a class="header" href="#automated-update-via-commit-message">Automated update via commit message</a></h3>
+<p>Alternatively, if you are confident in your changes and want the CI to handle the update
+for you, you can use the following tag in your commit message:</p>
+<ul>
+<li>In the commit message of your working branch on <code>filament</code>, add the following line:
+<pre><code>RDIFF_ACCEPT_NEW_GOLDENS
+</code></pre>
+</li>
+</ul>
+<p>This has the following effects:</p>
+<ul>
+<li>The presubmit test <code>test-renderdiff</code> will be bypassed (it will not perform rendering or
+comparison).</li>
+<li>When the PR is merged, the postsubmit CI will automatically:
+<ol>
+<li>Build Filament and generate the new images.</li>
+<li>Upload them to a temporary branch in <code>filament-assets</code>.</li>
+<li>Merge that branch into <code>main</code>.</li>
+</ol>
+</li>
 </ul>
 <h2 id="viewing-test-results"><a class="header" href="#viewing-test-results">Viewing test results</a></h2>
 <p>We provide a viewer for looking at the result of a test run. The viewer is a webapp that can

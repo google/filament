@@ -29,7 +29,7 @@ struct main0_in
     int vIn2 [[user(locn1)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], device UBO& _34 [[buffer(0)]], texture2d<int> Buf [[texture(0)]], sampler BufSmplr [[sampler(0)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(main0_in in [[stage_in]], const device UBO& _34 [[buffer(0)]], texture2d<int> Buf [[texture(0)]], sampler BufSmplr [[sampler(0)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
     int _40 = spvSMod(Buf.read(uint2(int2(gl_FragCoord.xy)), 0).x, 16);

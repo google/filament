@@ -139,7 +139,7 @@ private:
 
     resource_ptr<VulkanSwapChain> mCurrentSwapChain;
     resource_ptr<VulkanRenderTarget> mDefaultRenderTarget;
-    VulkanRenderPass mCurrentRenderPass = {};
+    VulkanRenderPassContext mCurrentRenderPass = {};
     VmaAllocator mAllocator = VK_NULL_HANDLE;
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
 

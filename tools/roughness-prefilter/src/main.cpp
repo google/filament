@@ -33,7 +33,7 @@
 #include <utils/JobSystem.h>
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 using namespace filament::math;
 using namespace image;
@@ -108,22 +108,22 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hr:c:f:m:l";
-    static const struct option OPTIONS[] = {
-            { "help",                 no_argument, nullptr, 'h' },
-            { "license",              no_argument, nullptr, 's' },
-            { "format",         required_argument, nullptr, 'f' },
-            { "compression",    required_argument, nullptr, 'c' },
-            { "roughness",      required_argument, nullptr, 'r' },
-            { "roughness-map",  required_argument, nullptr, 'm' },
-            { "linear",               no_argument, nullptr, 'l' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
+    static const utils::getopt::option OPTIONS[] = {
+            { "help",                 utils::getopt::no_argument, nullptr, 'h' },
+            { "license",              utils::getopt::no_argument, nullptr, 's' },
+            { "format",         utils::getopt::required_argument, nullptr, 'f' },
+            { "compression",    utils::getopt::required_argument, nullptr, 'c' },
+            { "roughness",      utils::getopt::required_argument, nullptr, 'r' },
+            { "roughness-map",  utils::getopt::required_argument, nullptr, 'm' },
+            { "linear",               utils::getopt::no_argument, nullptr, 'l' },
+            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
     };
 
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -183,7 +183,7 @@ static int handleArguments(int argc, char* argv[]) {
         }
     }
 
-    return optind;
+    return utils::getopt::optind;
 }
 
 inline bool isPOT(size_t x) {

@@ -131,8 +131,6 @@ template("glslang_sources_common") {
       "SPIRV/Logger.h",
       "SPIRV/NonSemanticDebugPrintf.h",
       "SPIRV/NonSemanticShaderDebugInfo100.h",
-      "SPIRV/SPVRemapper.cpp",
-      "SPIRV/SPVRemapper.h",
       "SPIRV/SpvBuilder.cpp",
       "SPIRV/SpvBuilder.h",
       "SPIRV/SpvPostProcess.cpp",
@@ -335,20 +333,6 @@ executable("glslang_validator") {
     "${target_gen_dir}/include",
     "${spirv_tools_dir}/include",
   ]
-
-  configs -= _configs_to_remove
-  configs += _configs_to_add
-}
-
-executable("spirv-remap") {
-  sources = [ "StandAlone/spirv-remap.cpp" ]
-  defines = [
-    "ENABLE_OPT=1",
-    "ENABLE_SPIRV=1",
-  ]
-  deps = [ ":glslang_sources" ]
-
-  include_dirs = [ "${spirv_tools_dir}/include" ]
 
   configs -= _configs_to_remove
   configs += _configs_to_add

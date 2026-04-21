@@ -12,10 +12,11 @@
         android:supportsRtl="true"
         android:largeHeap="true"
         android:requestLegacyExternalStorage="true"
-        android:theme="@android:style/Theme.NoTitleBar">
+        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:screenOrientation="fullSensor">
             <intent-filter>

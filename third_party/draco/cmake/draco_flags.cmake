@@ -1,3 +1,17 @@
+# Copyright 2021 The Draco Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
 if(DRACO_CMAKE_DRACO_FLAGS_CMAKE_)
   return()
 endif() # DRACO_CMAKE_DRACO_FLAGS_CMAKE_
@@ -24,7 +38,7 @@ macro(draco_set_compiler_flags_for_sources)
   endif()
 
   set_source_files_properties(${compiler_SOURCES} PROPERTIES COMPILE_FLAGS
-                              ${compiler_FLAGS})
+                                                             ${compiler_FLAGS})
 
   if(DRACO_VERBOSE GREATER 1)
     foreach(source ${compiler_SOURCES})
@@ -80,7 +94,13 @@ macro(draco_test_cxx_flag)
   # Run the actual compile test.
   unset(draco_all_cxx_flags_pass CACHE)
   message("--- Running combined CXX flags test, flags: ${all_cxx_flags}")
-  check_cxx_compiler_flag("${all_cxx_flags}" draco_all_cxx_flags_pass)
+
+  # check_cxx_compiler_flag() requires that the flags are a string. When flags
+  # are passed as a list it will remove the list separators, and attempt to run
+  # a compile command using list entries concatenated together as a single
+  # argument. Avoid the problem by forcing the argument to be a string.
+  draco_set_and_stringify(SOURCE_VARS all_cxx_flags DEST all_cxx_flags_string)
+  check_cxx_compiler_flag("${all_cxx_flags_string}" draco_all_cxx_flags_pass)
 
   if(cxx_test_FLAG_REQUIRED AND NOT draco_all_cxx_flags_pass)
     draco_die("Flag test failed for required flag(s): "
@@ -194,6 +214,9 @@ macro(draco_test_exe_linker_flag)
   else()
     unset(CMAKE_EXE_LINKER_FLAGS)
   endif()
+
+  list(APPEND DRACO_EXE_LINKER_FLAGS ${${link_FLAG_LIST_VAR_NAME}})
+  list(REMOVE_DUPLICATES DRACO_EXE_LINKER_FLAGS)
 endmacro()
 
 # Runs the draco compiler tests. This macro builds up the list of list var(s)
@@ -234,5 +257,36 @@ macro(draco_set_cxx_flags)
 
   if(cxx_flags)
     draco_test_cxx_flag(FLAG_LIST_VAR_NAMES ${cxx_flag_lists})
+  endif()
+endmacro()
+
+# Collects Draco built-in and user-specified linker flags and tests them. Halts
+# configuration and reports the error when any flags cause the build to fail.
+#
+# Note: draco_test_exe_linker_flag() does the real work of setting the flags and
+# running the test compile commands.
+macro(draco_set_exe_linker_flags)
+  unset(linker_flag_lists)
+
+  if(DRACO_VERBOSE)
+    message("draco_set_exe_linker_flags: "
+            "draco_base_exe_linker_flags=${draco_base_exe_linker_flags}")
+  endif()
+
+  if(draco_base_exe_linker_flags)
+    list(APPEND linker_flag_lists draco_base_exe_linker_flags)
+  endif()
+
+  if(linker_flag_lists)
+    unset(test_linker_flags)
+
+    if(DRACO_VERBOSE)
+      message("draco_set_exe_linker_flags: "
+              "linker_flag_lists=${linker_flag_lists}")
+    endif()
+
+    draco_set_and_stringify(DEST test_linker_flags SOURCE_VARS
+                            ${linker_flag_lists})
+    draco_test_exe_linker_flag(FLAG_LIST_VAR_NAME test_linker_flags)
   endif()
 endmacro()

@@ -20,7 +20,7 @@
 
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
+#include <utils/getopt.h>
 
 #include <iostream>
 #include <string>
@@ -73,16 +73,16 @@ filament::Engine::Backend parseArgumentsForBackend(int argc, char* argv[]) {
     // The first colon in OPTSTR turns on silent error reporting. This is important, as the
     // arguments may also contain gtest parameters we don't know about.
     static constexpr const char* OPTSTR = "ha:";
-    static const struct option OPTIONS[] = {
-        { "help", no_argument,       nullptr, 'h' },
-        { "api",  required_argument, nullptr, 'a' },
+    static const utils::getopt::option OPTIONS[] = {
+        { "help", utils::getopt::no_argument,       nullptr, 'h' },
+        { "api",  utils::getopt::required_argument, nullptr, 'a' },
         { nullptr, 0,                nullptr, 0 }
     };
     int opt;
     int optionIndex = 0;
 
-    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
+        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
         switch (opt) {
             default:
             case 'h':

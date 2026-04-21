@@ -39,9 +39,6 @@ void main()
     origi = atomicExchange(atomi, origi, gl_ScopeDevice, 0, 0);
     origu = atomicCompSwap(atomu, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire);
     atomicAdd(bufferu.x, 1, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsRelease);
-    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsRelease);
-    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire);
-    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, 0, 0);
 
     uint y;
     y = bufferu.x;
@@ -70,5 +67,83 @@ void main()
 
     imageAtomicStore(imageMS, ivec2(0,0), 1, 4, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
     imageAtomicStore(imagei, ivec2(0,0), -7, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
-}
 
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, 0, 0);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsMakeAvailable);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable);
+
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease);
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease);
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsMakeAvailable);
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable);
+
+    origu = atomicLoad(atomu, gl_ScopeDevice, 0, 0);
+    origu = atomicLoad(atomu, gl_ScopeDevice, 0, gl_SemanticsVolatile);
+    origu = atomicLoad(atomu, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    origu = atomicLoad(atomu, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire);
+    origu = atomicLoad(atomu, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsVolatile);
+    origu = atomicLoad(atomu, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+    origu = atomicLoad(atomu, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire | gl_SemanticsMakeVisible | gl_SemanticsVolatile);
+
+    atomicStore(atomu, 10U, gl_ScopeDevice, 0, 0);
+    atomicStore(atomu, 10U, gl_ScopeDevice, 0, gl_SemanticsVolatile);
+    atomicStore(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
+    atomicStore(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsRelease);
+    atomicStore(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsVolatile);
+    atomicStore(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsMakeAvailable);
+    atomicStore(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsRelease | gl_SemanticsMakeAvailable | gl_SemanticsVolatile);
+
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, 0, 0);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, 0, gl_SemanticsVolatile);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsVolatile);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsVolatile);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsVolatile);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsMakeAvailable);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable);
+    origu = atomicAnd(atomu, 10U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable | gl_SemanticsVolatile);
+
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, 0, 0, 0, 0);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, 0, gl_SemanticsVolatile, 0, gl_SemanticsVolatile);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire, 0, 0);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease, 0, 0);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, 0, 0);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsVolatile, 0, gl_SemanticsVolatile);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsVolatile, 0, gl_SemanticsVolatile);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsVolatile, 0, gl_SemanticsVolatile);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible, 0, 0);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsMakeAvailable, 0, 0);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable, 0, 0);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable | gl_SemanticsVolatile, 0, gl_SemanticsVolatile);
+
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsVolatile, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsVolatile);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire | gl_SemanticsMakeVisible | gl_SemanticsVolatile, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire | gl_SemanticsMakeVisible | gl_SemanticsVolatile);
+
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsVolatile, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsVolatile);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeAvailable, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+    atomicCompSwap(atomu, 10U, 20U, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible | gl_SemanticsMakeAvailable | gl_SemanticsVolatile, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire | gl_SemanticsMakeVisible | gl_SemanticsVolatile);
+}

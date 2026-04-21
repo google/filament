@@ -700,22 +700,29 @@ void UpgradeMemoryModel::UpgradeBarriers() {
       roots.push(e.GetSingleWordInOperand(1u));
       if (context()->ProcessCallTreeFromRoots(CollectBarriers, &roots)) {
         for (auto barrier : barriers) {
-          // Add OutputMemoryKHR to the semantics of the barriers.
+          // Add OutputMemoryKHR to the semantics of the non-relaxed barriers.
           uint32_t semantics_id = barrier->GetSingleWordInOperand(2u);
           Instruction* semantics_inst =
               context()->get_def_use_mgr()->GetDef(semantics_id);
           analysis::Type* semantics_type =
               context()->get_type_mgr()->GetType(semantics_inst->type_id());
           uint64_t semantics_value = GetIndexValue(semantics_inst);
-          const analysis::Constant* constant =
-              context()->get_constant_mgr()->GetConstant(
-                  semantics_type,
-                  {static_cast<uint32_t>(semantics_value) |
-                   uint32_t(spv::MemorySemanticsMask::OutputMemoryKHR)});
-          barrier->SetInOperand(2u, {context()
-                                         ->get_constant_mgr()
-                                         ->GetDefiningInstruction(constant)
-                                         ->result_id()});
+          const uint64_t memory_order_mask =
+              uint64_t(spv::MemorySemanticsMask::Acquire |
+                       spv::MemorySemanticsMask::Release |
+                       spv::MemorySemanticsMask::AcquireRelease |
+                       spv::MemorySemanticsMask::SequentiallyConsistent);
+          if (semantics_value & memory_order_mask) {
+            const analysis::Constant* constant =
+                context()->get_constant_mgr()->GetConstant(
+                    semantics_type,
+                    {static_cast<uint32_t>(semantics_value) |
+                     uint32_t(spv::MemorySemanticsMask::OutputMemoryKHR)});
+            barrier->SetInOperand(2u, {context()
+                                           ->get_constant_mgr()
+                                           ->GetDefiningInstruction(constant)
+                                           ->result_id()});
+          }
         }
       }
       barriers.clear();
@@ -797,11 +804,13 @@ void UpgradeMemoryModel::UpgradeExtInst(Instruction* ext_inst) {
   InstructionBuilder builder(
       context(), where,
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+  // TODO(1841): Handle id overflow.
   auto extract_0 =
       builder.AddCompositeExtract(element_type_id, ext_inst->result_id(), {0});
   context()->ReplaceAllUsesWith(ext_inst->result_id(), extract_0->result_id());
   // The extract's input was just changed to itself, so fix that.
   extract_0->SetInOperand(0u, {ext_inst->result_id()});
+  // TODO(1841): Handle id overflow.
   auto extract_1 =
       builder.AddCompositeExtract(pointee_type_id, ext_inst->result_id(), {1});
   builder.AddStore(ptr_id, extract_1->result_id());

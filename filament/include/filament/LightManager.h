@@ -372,7 +372,7 @@ public:
         } vsm;
 
         /**
-         * Light bulb radius used for soft shadows. Currently this is only used when DPCF or PCSS is
+         * Light bulb radius used for soft shadows. Currently, this is only used when DPCF or PCSS is
          * enabled. (2cm by default).
          */
         float shadowBulbRadius = 0.02f;

@@ -165,6 +165,9 @@ SSAPropagator::PropStatus CCPPass::VisitAssignment(Instruction* instr) {
       context()->get_instruction_folder().FoldInstructionToConstant(instr,
                                                                     map_func);
 
+  if (folded_inst && context()->id_overflow()) {
+    return SSAPropagator::kFailed;
+  }
   if (folded_inst != nullptr) {
     // We do not want to change the body of the function by adding new
     // instructions.  When folding we can only generate new constants.
@@ -360,6 +363,13 @@ void CCPPass::Initialize() {
     }
   }
 
+  // Mark the extended instruction imports as `kVarying`. We know they
+  // will not be constants, and will be used by `OpExtInst` instructions.
+  // This allows those instructions to be fully processed.
+  for (const auto& inst : get_module()->ext_inst_imports()) {
+    values_[inst.result_id()] = kVaryingSSAId;
+  }
+
   original_id_bound_ = context()->module()->IdBound();
 }
 
@@ -369,6 +379,7 @@ Pass::Status CCPPass::Process() {
   // Process all entry point functions.
   ProcessFunction pfn = [this](Function* fp) { return PropagateConstants(fp); };
   bool modified = context()->ProcessReachableCallTree(pfn);
+  if (context()->id_overflow()) return Pass::Status::Failure;
   return modified ? Pass::Status::SuccessWithChange
                   : Pass::Status::SuccessWithoutChange;
 }

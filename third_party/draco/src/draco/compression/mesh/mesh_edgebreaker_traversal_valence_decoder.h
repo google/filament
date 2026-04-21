@@ -129,7 +129,11 @@ class MeshEdgebreakerTraversalValenceDecoder
       if (context_counter < 0) {
         return TOPOLOGY_INVALID;
       }
-      const int symbol_id = context_symbols_[active_context_][context_counter];
+      const uint32_t symbol_id =
+          context_symbols_[active_context_][context_counter];
+      if (symbol_id > 4) {
+        return TOPOLOGY_INVALID;
+      }
       last_symbol_ = edge_breaker_symbol_to_topology_id[symbol_id];
     } else {
 #ifdef DRACO_BACKWARDS_COMPATIBILITY_SUPPORTED

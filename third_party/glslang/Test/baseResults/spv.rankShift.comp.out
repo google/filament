@@ -16,10 +16,8 @@ spv.rankShift.comp
                               Name 11  "arg0"
                               Name 15  "arg1"
                               Decorate 11(arg0) Location 4
-                              Decorate 11(arg0) Binding 0
                               Decorate 11(arg0) DescriptorSet 0
                               Decorate 15(arg1) Location 5
-                              Decorate 15(arg1) Binding 1
                               Decorate 15(arg1) DescriptorSet 0
                               Decorate 32 BuiltIn WorkgroupSize
                2:             TypeVoid
