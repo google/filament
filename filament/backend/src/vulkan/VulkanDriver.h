@@ -132,7 +132,12 @@ private:
     // Flush the current command buffer and reset the pipeline state.
     void endCommandRecording();
 
-    void acquireNextSwapchainImage();
+    // Returns whether the acquire was successful
+    bool acquireNextSwapchainImage();
+
+    bool skipDueToEmptyRenderPass() const {
+        return !bool(mCurrentRenderPass.renderTarget);
+    }
 
     VulkanPlatform* mPlatform = nullptr;
     fvkmemory::ResourceManager mResourceManager;

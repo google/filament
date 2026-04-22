@@ -149,41 +149,73 @@ void VulkanSwapChain::present(DriverBase& driver) {
     }
 }
 
-void VulkanSwapChain::acquire(bool& resized) {
-    // It's ok to call acquire multiple times due to it being linked to Driver::makeCurrent().
+std::pair<bool, bool> VulkanSwapChain::acquire() {
+    // Indicates whether the backing swapchain has changed (and might invalidate the associated
+    // images that are tracked in the FBO cache).
+    bool swapchainRecreated = false;
+
+    // Final result of the call to acquire a swapchain image.
+    VkResult result = VK_NOT_READY;
+
+    // It's ok to call acquire multiple times due to it being linked to Driver::makeCurrent(). If a
+    // valid swapchain has already been acquired, then this method is no-op.
     if (mAcquired) {
-        return;
+        return { mAcquired, swapchainRecreated };
     }
 
-    // Check if the swapchain should be resized.
-    if ((resized = mPlatform->hasResized(swapChain))) {
-        if (mFlushAndWaitOnResize) {
-            mCommands->flush();
-            mCommands->wait();
-        }
-        mPlatform->recreate(swapChain);
-        update();
+    // Check if the surface has resized; if so, we need to recreate a swapchain, which is done in
+    // the while loop.
+    if (mPlatform->hasResized(swapChain)) {
+        // This indicates a surface size change and a need to recreate swapchain.
+        result = VK_ERROR_OUT_OF_DATE_KHR;
     }
 
     VulkanPlatform::ImageSyncData imageSyncData;
-    VkResult const result = mPlatform->acquire(swapChain, &imageSyncData);
+
+    // Following is written as a loop to cover a few cases:
+    //   - If resize is true from hasResized() above, then result == VK_ERROR_OUT_OF_DATE_KHR.
+    //     And we will first recreate the swapchain before acquiring (on tryCount == 0).
+    //   - If resize is not true, then just try to acquire (on tryCount == 0)
+    //       - If the acquire succeeds, then result == VK_SUCCESS, break loop
+    //       - if acquire fails and result = VK_SUBOPTIMAL_KHR or VK_ERROR_OUT_OF_DATE_KHR
+    //         (on tryCount == 1), then
+    //           - recreate swapchain and try to acquire again (on tryCount == 1).
+
+    for (uint8_t tryCount = 0; result != VK_SUCCESS && tryCount < 2; tryCount++) {
+        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR) {
+            // Following recreates the swapchain
+
+            // Calling flush multiptle times is ok, since it's no-op if not recording.
+            if (mFlushAndWaitOnResize) {
+                mCommands->flush();
+                mCommands->wait();
+            }
+            mPlatform->recreate(swapChain);
+            update();
+            swapchainRecreated = true;
+        }
+        result = mPlatform->acquire(swapChain, &imageSyncData);
+    }
 
     if (result != VK_SUCCESS) {
         // We just don't set mAcquired here so the next present will just skip.
         FVK_LOGD << "Failed to acquire next image in the swapchain result=" << (int) result;
-        return;
+        return { false, swapchainRecreated };
     }
+
+    // At this point acquiring the next swapchain image has succeeded
 
     mCurrentSwapIndex = imageSyncData.imageIndex;
     assert_invariant(mCurrentSwapIndex < mFinishedDrawing.size());
     mFinishedDrawing[mCurrentSwapIndex] = {};
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
-            << "Cannot acquire in swapchain. error=" << static_cast<int32_t>(result);
+
     if (imageSyncData.imageReadySemaphore != VK_NULL_HANDLE) {
         mCommands->injectDependency(imageSyncData.imageReadySemaphore,
                 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     }
     mAcquired = true;
+
+    return { true, swapchainRecreated };
 }
 
 }// namespace filament::backend

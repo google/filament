@@ -814,9 +814,8 @@ void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
-    texture.dec();
-
     mExternalImageManager.removeExternallySampledTexture(texture);
+    texture.dec();
 }
 
 void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils::ImmutableCString&& tag) {
@@ -1947,9 +1946,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         fvkmemory::resource_ptr<VulkanSwapChain> sc = mCurrentSwapChain;
         assert_invariant(sc);
         if (sc->isFirstRenderPass()) {
-            discardStart |= TargetBufferFlags::COLOR;
-            sc->markFirstRenderPass();
-            acquireNextSwapchainImage();
+            if (!acquireNextSwapchainImage()) {
+                // We've failed to acquire the next image. Subsequent calls cannot assume the render
+                // pass exists.
+                mCurrentRenderPass = {};
+                return;
+            } else {
+                discardStart |= TargetBufferFlags::COLOR;
+                sc->markFirstRenderPass();
+            }
         }
     }
 
@@ -2098,6 +2103,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
 void VulkanDriver::endRenderPass(int) {
     FVK_SYSTRACE_SCOPE();
+    if (skipDueToEmptyRenderPass()) {
+        return;
+    }
 
     VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
     vkCmdEndRenderPass(cmdbuffer);
@@ -2115,6 +2123,10 @@ void VulkanDriver::endRenderPass(int) {
 }
 
 void VulkanDriver::nextSubpass(int) {
+    if (skipDueToEmptyRenderPass()) {
+        return;
+    }
+
     FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.currentSubpass == 0)
             << "Only two subpasses are currently supported.";
 
@@ -2201,6 +2213,9 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 
 void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
+    if (skipDueToEmptyRenderPass()) {
+        return;
+    }
     assert_invariant(mPipelineState.program && "Expect a program when writing to push constants");
     assert_invariant(mCurrentRenderPass.commandBuffer && "Should be called within a renderpass");
     mPipelineState.program->writePushConstant(mCurrentRenderPass.commandBuffer->buffer(),
@@ -2466,6 +2481,10 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
 void VulkanDriver::bindPipelineImpl(PipelineState const& pipelineState,
         VkPipelineLayout pipelineLayout, fvkutils::DescriptorSetMask descriptorSetMask) {
     FVK_SYSTRACE_SCOPE();
+    if (skipDueToEmptyRenderPass()) {
+        return;
+    }
+
     auto commands = mCurrentRenderPass.commandBuffer;
     auto vbi = resource_ptr<VulkanVertexBufferInfo>::cast(&mResourceManager,
             pipelineState.vertexBufferInfo);
@@ -2528,6 +2547,9 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& pipelineState,
 
 void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     FVK_SYSTRACE_SCOPE();
+    if (skipDueToEmptyRenderPass()) {
+        return;
+    }
 
     VulkanCommandBuffer* commands = mCurrentRenderPass.commandBuffer;
     VkCommandBuffer cmdbuffer = commands->buffer();
@@ -2584,6 +2606,10 @@ void VulkanDriver::bindDescriptorSet(
 
 void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FVK_SYSTRACE_SCOPE();
+    if (skipDueToEmptyRenderPass()) {
+        return;
+    }
+
     VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
     auto const& [doBindInDraw, bundle] = mPipelineState.bindInDraw;
 
@@ -2643,6 +2669,10 @@ void VulkanDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
 }
 
 void VulkanDriver::scissor(Viewport scissorBox) {
+    if (skipDueToEmptyRenderPass()) {
+        return;
+    }
+
     VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
 
     // TODO: it's a common case that scissor() is called with (0, 0, maxint, maxint)
@@ -2725,23 +2755,31 @@ void VulkanDriver::endCommandRecording() {
     mDescriptorSetCache.resetCachedState();
 }
 
-void VulkanDriver::acquireNextSwapchainImage() {
+bool VulkanDriver::acquireNextSwapchainImage() {
     assert_invariant(mCurrentSwapChain);
     assert_invariant(mDefaultRenderTarget);
 
     // Swapchain has already been bound to the default render target.  We just return.
     if (mDefaultRenderTarget->isSwapchainBound()) {
-        return;
+        // true means that the rendertarget has the right images attached.
+        return true;
     }
 
-    bool resized = false;
-    mCurrentSwapChain->acquire(resized);
-    if (resized) {
+    auto const [acquired, backingChanged] = mCurrentSwapChain->acquire();
+    if (backingChanged) {
         mFramebufferCache.resetFramebuffers();
     }
     // Note that ordering this after the above lines is necessary since we set the swapchain image
     // to the render target in bindSwapChain().
-    mDefaultRenderTarget->bindSwapChain(mCurrentSwapChain);
+
+    if (acquired) {
+        mDefaultRenderTarget->bindSwapChain(mCurrentSwapChain);
+        return true;
+    }
+    mDefaultRenderTarget->releaseSwapchain();
+    // We failed to acquire the next image in the swapchain.  The rendertarget is no longer valid
+    // for use.
+    return false;
 }
 
 // explicit instantiation of the Dispatcher
