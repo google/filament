@@ -1861,14 +1861,9 @@ class_<KtxInfo>("KtxInfo")
 class_<MeshReader::MaterialRegistry>("MeshReader$MaterialRegistry")
     .constructor<>()
     .function("size", &MeshReader::MaterialRegistry::numRegistered)
-    .function("get", EMBIND_LAMBDA(val, (MeshReader::MaterialRegistry* self, std::string k), {
+    .function("get", EMBIND_LAMBDA(filament::MaterialInstance*, (MeshReader::MaterialRegistry* self, std::string k), {
           const utils::CString name(k.c_str(), k.size());
-          auto i = self->getMaterialInstance(name);
-          if (i == nullptr) {
-              return val::undefined();
-          } else {
-              return val(i);
-          }
+          return self->getMaterialInstance(name);
     }), allow_raw_pointers())
     .function("set", EMBIND_LAMBDA(void, (MeshReader::MaterialRegistry* self, std::string k, filament::MaterialInstance* v), {
           const utils::CString name(k.c_str(), k.size());
