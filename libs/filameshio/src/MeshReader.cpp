@@ -292,18 +292,39 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         memcpy(&nameLength, base + consumed, sizeof(uint32_t));
         consumed += sizeof(uint32_t);
 
-        // Promote to size_t before adding 1 so that nameLength == UINT32_MAX
-        // cannot wrap to 0 and bypass the bounds check.
-        const size_t nameSpan = size_t(nameLength) + 1;
-        if (nameSpan > dataSize - consumed) {
+        // Bound nameLength against the remaining buffer before adding 1 so
+        // the add cannot wrap on 32-bit targets where size_t is 32-bit.
+        if (nameLength >= dataSize - consumed) {
             utils::slog.e << "Invalid material name length." << utils::io::endl;
             return {};
         }
-        partsMaterial[i] = (const char*) (base + consumed);
-        consumed += nameSpan;
+        // Copy exactly nameLength bytes. Assigning from a bare C-string
+        // pointer would fall back to strlen and could read past the declared
+        // span if the buffer is not NUL-terminated at the expected offset.
+        partsMaterial[i].assign((const char*) (base + consumed), nameLength);
+        consumed += size_t(nameLength) + 1;
     }
 
     Mesh mesh;
+
+    // Pre-compute compressed-buffer sizing so we can reject malformed headers
+    // before allocating any engine-owned resources (which would otherwise
+    // leak on early return).
+    constexpr uint32_t uintmax = std::numeric_limits<uint32_t>::max();
+    const bool hasUV1 = header.offsetUV1 != uintmax && header.strideUV1 != uintmax;
+    const size_t indexStride = header.indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
+    const size_t vertexStride = sizeof(half4) + sizeof(short4) + sizeof(ubyte4) + sizeof(ushort2) +
+            (hasUV1 ? sizeof(ushort2) : 0);
+    if (header.flags & COMPRESSION) {
+        if (header.indexCount > 0 && indexStride > SIZE_MAX / header.indexCount) {
+            utils::slog.e << "Index buffer size overflow." << utils::io::endl;
+            return {};
+        }
+        if (header.vertexCount > 0 && vertexStride > SIZE_MAX / header.vertexCount) {
+            utils::slog.e << "Vertex buffer size overflow." << utils::io::endl;
+            return {};
+        }
+    }
 
     mesh.indexBuffer = IndexBuffer::Builder()
             .indexCount(header.indexCount)
@@ -316,23 +337,20 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     // passed to the GPU.
     const size_t indicesSize = header.indexSize;
     if (header.flags & COMPRESSION) {
-        size_t indexSize = header.indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
-        size_t indexCount = header.indexCount;
-        if (indexCount > 0 && indexSize > SIZE_MAX / indexCount) {
-            utils::slog.e << "Index buffer size overflow." << utils::io::endl;
-            return {};
-        }
-        size_t uncompressedSize = indexSize * indexCount;
+        const size_t indexCount = header.indexCount;
+        const size_t uncompressedSize = indexStride * indexCount;
         void* uncompressed = malloc(uncompressedSize);
         if (!uncompressed) {
             utils::slog.e << "Failed to allocate index buffer." << utils::io::endl;
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
-        int err = meshopt_decodeIndexBuffer(uncompressed, indexCount, indexSize, indices,
+        int err = meshopt_decodeIndexBuffer(uncompressed, indexCount, indexStride, indices,
                 indicesSize);
         if (err) {
             free(uncompressed);
             utils::slog.e << "Unable to decode index buffer." << utils::io::endl;
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
         if (destructor) {
@@ -366,9 +384,6 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
                         header.offsetUV0, uint8_t(header.strideUV0))
             .normalized(VertexAttribute::UV0, header.flags & TEXCOORD_SNORM16);
 
-    constexpr uint32_t uintmax = std::numeric_limits<uint32_t>::max();
-    const bool hasUV1 = header.offsetUV1 != uintmax && header.strideUV1 != uintmax;
-
     if (hasUV1) {
         vbb
             .attribute(VertexAttribute::UV1, 0, VertexBuffer::AttributeType::HALF2,
@@ -383,24 +398,20 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     // passed to the GPU.
     const size_t verticesSize = header.vertexSize;
     if (header.flags & COMPRESSION) {
-        size_t vertexSize = sizeof(half4) + sizeof(short4) + sizeof(ubyte4) + sizeof(ushort2) +
-                (hasUV1 ? sizeof(ushort2) : 0);
-        size_t vertexCount = header.vertexCount;
-        if (vertexCount > 0 && vertexSize > SIZE_MAX / vertexCount) {
-            utils::slog.e << "Vertex buffer size overflow." << utils::io::endl;
-            return {};
-        }
-        size_t uncompressedSize = vertexSize * vertexCount;
+        const size_t vertexCount = header.vertexCount;
+        const size_t uncompressedSize = vertexStride * vertexCount;
         void* uncompressed = malloc(uncompressedSize);
         if (!uncompressed) {
             utils::slog.e << "Failed to allocate vertex buffer." << utils::io::endl;
+            engine->destroy(mesh.indexBuffer);
+            engine->destroy(mesh.vertexBuffer);
             return {};
         }
         const uint8_t* srcdata = vertexData + sizeof(CompressionHeader);
         int err = 0;
         if (header.flags & INTERLEAVED) {
-            err |= meshopt_decodeVertexBuffer(uncompressed, vertexCount, vertexSize, srcdata,
-                    vertexSize);
+            err |= meshopt_decodeVertexBuffer(uncompressed, vertexCount, vertexStride, srcdata,
+                    vertexStride);
         } else {
             CompressionHeader sizes;
             memcpy(&sizes, vertexData, sizeof(CompressionHeader));
@@ -430,6 +441,8 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         if (err) {
             free(uncompressed);
             utils::slog.e << "Unable to decode vertex buffer." << utils::io::endl;
+            engine->destroy(mesh.indexBuffer);
+            engine->destroy(mesh.vertexBuffer);
             return {};
         }
         if (destructor) {
