@@ -58,7 +58,6 @@
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
@@ -535,57 +534,76 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
 }
 
 /*
- * Calculates an automatic grid size based on the camera's culling far plane.
- * Falls back to a function of the near plane if the far plane is infinite.
+ * Calculates an automatic grid size based on the camera frustum dimensions.
+ * Handles both perspective and orthographic projections.
+ * 
+ * For perspective projections, it uses the width of the frustum at the far plane.
+ * This ensures that the grid size scales with the visible volume and accounts for
+ * field-of-view (zooming in reduces grid size to preserve precision).
+ * For orthographic projections, it uses the absolute width of the frustum.
  * 
  * camera: The camera to use for the calculation.
- * Returns the calculated grid size.
+ * Returns the calculated grid size (10% of the computed width, chosen as a
+ * reasonable balance between precision and snapping frequency).
  */
 double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
-    double zf = camera->getCullingFar();
-    if (std::isinf(zf) || zf <= 0.0) {
-        // Fallback for infinite far plane or invalid values
-        // Use near plane as a baseline, assuming a reasonable ratio (e.g., 1000x)
-        return camera->getNear() * 1000.0;
+    auto const& p = camera->getCullingProjectionMatrix();
+    
+    // Base scale is the width of the frustum at Z=1 for perspective,
+    // or the absolute width for orthographic.
+    double baseScale = 2.0 / std::abs(p[0][0]);
+    
+    // Detect perspective by checking if P[3][2] is non-zero
+    bool const isPerspective = std::abs(p[3][2]) > 1e-5;
+    
+    if (isPerspective) {
+        double const zf = camera->getCullingFar();
+        // Scale at far plane
+        return baseScale * zf * 0.1;
+    } else {
+        // Ortho: baseScale is the full width of the frustum.
+        // Use 10% of the width as grid size.
+        return baseScale * 0.1;
     }
-    // Default to 10% of the far plane distance
-    return zf * 0.1;
 }
 
 /*
  * Computes a stable grid origin for the camera to improve floating-point precision.
  * Snapping only occurs when the camera moves beyond the grid boundary plus hysteresis.
  * 
+ * This implementation follows Strategy A: only update the grid size when a position snap occurs.
+ * This prevents instability when the frustum (and thus auto grid size) changes smoothly.
+ * Alternative Strategy B (scale hysteresis) could be used if we want to respond to large scale changes without moving.
+ * 
  * cameraPosition: The current world position of the camera.
- * gridSize: The size of the grid cell.
+ * currentGridSize: The grid size used in the previous frame (stable).
+ * newGridSize: The new calculated grid size (target).
  * hysteresisRatio: The hysteresis margin as a ratio of the grid size [0, 1].
+ * forceSnap: Force a snap regardless of threshold (used for manual grid size changes).
  * Returns the stable grid origin.
  */
-double3 FView::computeGridOrigin(double3 cameraPosition, double gridSize, double hysteresisRatio) const noexcept {
-    if (gridSize <= 0.0) {
+double3 FView::computeGridOrigin(double3 cameraPosition, double currentGridSize, double newGridSize, double hysteresisRatio, bool forceSnap) const noexcept {
+    if (currentGridSize <= 0.0) {
         return cameraPosition;
     }
 
-    const double threshold = gridSize * (0.5 + hysteresisRatio);
+    const double threshold = currentGridSize * (0.5 + hysteresisRatio);
     const double3 currentOrigin = mGridOrigin;
 
-    // Compute target grid origin for each axis
-    const double3 targetOrigin = {
-            std::round(cameraPosition.x / gridSize) * gridSize,
-            std::round(cameraPosition.y / gridSize) * gridSize,
-            std::round(cameraPosition.z / gridSize) * gridSize
-    };
+    // Check threshold per axis (without loop)
+    bool const snapX = std::abs(cameraPosition.x - currentOrigin.x) > threshold;
+    bool const snapY = std::abs(cameraPosition.y - currentOrigin.y) > threshold;
+    bool const snapZ = std::abs(cameraPosition.z - currentOrigin.z) > threshold;
 
-    // Check threshold and update per axis without explicit loop to encourage vectorization
-    double3 newOrigin;
-    newOrigin.x = std::abs(cameraPosition.x - currentOrigin.x) > threshold ? targetOrigin.x : currentOrigin.x;
-    newOrigin.y = std::abs(cameraPosition.y - currentOrigin.y) > threshold ? targetOrigin.y : currentOrigin.y;
-    newOrigin.z = std::abs(cameraPosition.z - currentOrigin.z) > threshold ? targetOrigin.z : currentOrigin.z;
-
-    if (newOrigin != currentOrigin) {
+    if (snapX || snapY || snapZ || forceSnap) {
+        // Snap triggered! Use new grid size to compute new origin.
+        double3 const newOrigin = {
+                std::round(cameraPosition.x / newGridSize) * newGridSize,
+                std::round(cameraPosition.y / newGridSize) * newGridSize,
+                std::round(cameraPosition.z / newGridSize) * newGridSize
+        };
         mGridOrigin = newOrigin;
-        LOG(INFO) << "Grid snap: size=" << gridSize
-                      << ", origin=(" << newOrigin.x << ", " << newOrigin.y << ", " << newOrigin.z << ")";
+        mEffectiveGridSize = newGridSize;
     }
 
     return mGridOrigin;
@@ -614,13 +632,26 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
             // This moves the camera to a snapped grid origin, improving floating point precision
             // while avoiding per-frame transform updates for objects as long as the camera
             // stays within the grid cell (plus hysteresis).
-            double gridSize = mGridSize;
-            if (gridSize <= 0.0) {
-                gridSize = calculateAutomaticGridSize(camera);
+
+            // Determine the target grid size (either manual or automatic).
+            double newGridSize = mGridSize;
+            if (newGridSize <= 0.0) {
+                newGridSize = calculateAutomaticGridSize(camera);
             }
-            mEffectiveGridSize = gridSize;
-            const double hysteresisRatio = 0.5; // Automatic 50% hysteresis
-            translation = -computeGridOrigin(cameraPosition, gridSize, hysteresisRatio);
+
+            // For the first frame, initialize the effective grid size.
+            double currentGridSize = mEffectiveGridSize;
+            if (currentGridSize <= 0.0) {
+                // First time initialization
+                currentGridSize = newGridSize;
+                mEffectiveGridSize = currentGridSize;
+            }
+            
+            // Force snap if user manually changed grid size to a positive value
+            bool const forceSnap = (mGridSize > 0.0 && mGridSize != currentGridSize);
+            
+            constexpr double hysteresisRatio = 0.5; // Automatic 50% hysteresis
+            translation = -computeGridOrigin(cameraPosition, currentGridSize, newGridSize, hysteresisRatio, forceSnap);
         } else {
             // this moves the camera to the origin, effectively doing all shader computations in
             // view-space, which improves floating point precision in the shader by staying around

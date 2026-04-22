@@ -545,7 +545,7 @@ private:
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
-    math::double3 computeGridOrigin(math::double3 cameraPosition, double gridSize, double hysteresisRatio) const noexcept;
+    math::double3 computeGridOrigin(math::double3 cameraPosition, double currentGridSize, double newGridSize, double hysteresisRatio, bool forceSnap = false) const noexcept;
     double calculateAutomaticGridSize(const FCamera* camera) const noexcept;
 
     void updateUBOs(backend::DriverApi& driver,

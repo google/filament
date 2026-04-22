@@ -805,7 +805,7 @@ TEST(FilamentTest, GoogleLineDirective) {
 }
 
 TEST(FilamentTest, GridSnapping) {
-    FEngine* engine = downcast(Engine::create());
+    FEngine* engine = downcast(Engine::create(backend::Backend::NOOP));
     FView* view = downcast(engine->createView());
     FScene* scene = downcast(engine->createScene());
     Entity cameraEntity = engine->getEntityManager().create();
@@ -847,18 +847,32 @@ TEST(FilamentTest, GridSnapping) {
     ci = view->computeCameraInfo(*engine);
     EXPECT_NEAR(ci.worldTransform[3].x, 0.0f, 1e-5f);
 
-    // Test case 6: Automatic grid size
+    // Test case 6: Automatic grid size (Perspective)
     view->setGridSize(0.0); // Enable auto
     static_cast<Camera*>(camera)->setProjection(90.0, 1.0, 0.1, 100.0, Camera::Fov::VERTICAL); // Set far plane to 100
     
-    // Far plane is 100. Auto grid size should be 100 * 0.1 = 10.
+    // FOV 90, aspect 1.0 -> baseScale = 2.0. Width at far plane = 200.
+    // Auto grid size should be 2.0 * 100 * 0.1 = 20.
     camera->setModelMatrix(mat4::translation(double3{0.0, 0.0, 0.0}));
     ci = view->computeCameraInfo(*engine);
     EXPECT_NEAR(ci.worldTransform[3].x, 0.0f, 1e-5f);
 
-    camera->setModelMatrix(mat4::translation(double3{10.1, 0.0, 0.0}));
+    camera->setModelMatrix(mat4::translation(double3{20.1, 0.0, 0.0}));
     ci = view->computeCameraInfo(*engine);
-    EXPECT_NEAR(ci.worldTransform[3].x, -10.0f, 1e-5f); // Should snap to 10
+    EXPECT_NEAR(ci.worldTransform[3].x, -20.0f, 1e-5f); // Should snap to 20
+
+    // Test case 7: Ortho automatic grid size
+    view->setGridSize(0.0); // Enable auto
+    static_cast<Camera*>(camera)->setProjection(Camera::Projection::ORTHO, -10.0, 10.0, -10.0, 10.0, -100.0, 100.0);
+    // Width is 20. Auto grid size should be 20 * 0.1 = 2.
+    // Move to -0.1 to trigger snap from previous origin (20) with threshold 20
+    camera->setModelMatrix(mat4::translation(double3{-0.1, 0.0, 0.0}));
+    ci = view->computeCameraInfo(*engine);
+    EXPECT_NEAR(ci.worldTransform[3].x, 0.0f, 1e-5f); // Should snap to 0
+
+    camera->setModelMatrix(mat4::translation(double3{2.1, 0.0, 0.0}));
+    ci = view->computeCameraInfo(*engine);
+    EXPECT_NEAR(ci.worldTransform[3].x, -2.0f, 1e-5f); // Should snap to 2
 
     engine->destroy(scene);
     engine->destroy(view);
