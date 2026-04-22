@@ -72,7 +72,7 @@ getVkTransition(const VulkanLayoutTransition& transition) {
             srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             break;
-        case VulkanLayout::DEPTH_ATTACHMENT:
+        case VulkanLayout::DEPTH_STENCIL_ATTACHMENT:
             srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
             break;
@@ -116,7 +116,7 @@ getVkTransition(const VulkanLayoutTransition& transition) {
             dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             break;
-        case VulkanLayout::DEPTH_ATTACHMENT:
+        case VulkanLayout::DEPTH_STENCIL_ATTACHMENT:
             dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
                             | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;

@@ -21,6 +21,7 @@
 #include "common/NioUtils.h"
 
 #include <algorithm>
+#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace filament::geometry;
@@ -125,7 +126,9 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_SurfaceOrientation_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeBuilder) {
     auto wrapper = (JniWrapper *) nativeBuilder;
-    return (jlong) wrapper->builder->build();
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) wrapper->builder->build();
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL

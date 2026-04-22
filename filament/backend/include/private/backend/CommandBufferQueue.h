@@ -23,6 +23,8 @@
 #include <utils/Mutex.h>
 
 #include <vector>
+#include <exception>
+#include <atomic>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -75,6 +77,25 @@ public:
 
     bool isExitRequested() const;
 
+#ifdef __EXCEPTIONS
+    bool hasUnrecoverableError() const noexcept {
+        return mHasUnrecoverableError.load(std::memory_order_acquire);
+    }
+    void setUnrecoverableException(std::exception_ptr e) noexcept {
+        mBackendException = e;
+        mHasUnrecoverableError.store(true, std::memory_order_release);
+    }
+    void propagateBackendException() const;
+    bool hasExceptionBeenRethrown() const noexcept {
+        return mExceptionRethrown.load(std::memory_order_relaxed);
+    }
+#else
+    void propagateBackendException() const noexcept {}
+    constexpr bool hasUnrecoverableError() const noexcept { return false; }
+    constexpr bool hasExceptionBeenRethrown() const noexcept { return false; }
+#endif
+
+
 private:
     const size_t mRequiredSize;
 
@@ -91,6 +112,12 @@ private:
     bool mPaused = false;
 
     static constexpr uint32_t EXIT_REQUESTED = 0x31415926;
+
+#ifdef __EXCEPTIONS
+    mutable std::exception_ptr mBackendException;
+    std::atomic<bool> mHasUnrecoverableError{false};
+    mutable std::atomic<bool> mExceptionRethrown{false};
+#endif
 };
 
 } // namespace filament::backend

@@ -287,13 +287,13 @@ void VulkanRenderTarget::bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> 
     if (swapchain->getDepth()) {
         VulkanAttachment depth = createSwapchainAttachment(swapchain->getDepth());
         mInfo->attachments.push_back(depth);
-        mInfo->depthIndex = 1;
+        mInfo->depthStencilIndex = 1;
 
-        rpkey.depthFormat = depth.getFormat();
-        fbkey.depth = depth.getImageView();
+        rpkey.depthStencilFormat = depth.getFormat();
+        fbkey.depthStencil = depth.getImageView();
     } else {
-        rpkey.depthFormat = VK_FORMAT_UNDEFINED;
-        fbkey.depth = VK_NULL_HANDLE;
+        rpkey.depthStencilFormat = VK_FORMAT_UNDEFINED;
+        fbkey.depthStencil = VK_NULL_HANDLE;
     }
     mInfo->colors.set(0);
 }
@@ -307,12 +307,11 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
         VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
         uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-        VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount)
+        VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
       mOffscreen(true),
       mProtected(false),
       mInfo(std::make_unique<Auxiliary>()) {
-    auto& depth = depthStencil[0];
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
@@ -322,7 +321,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
     auto& rpkey = mInfo->rpkey;
     rpkey.samples = samples;
-    rpkey.depthFormat = depth.getFormat();
+    rpkey.depthStencilFormat = depthStencil.getFormat();
     rpkey.viewCount = layerCount;
 
     auto& fbkey = mInfo->fbkey;
@@ -383,27 +382,27 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         attachments.insert(attachments.end(), msaaAttachments.begin(), msaaAttachments.end());
     }
 
-    if (depth.texture) {
-        auto depthTexture = depth.texture;
-        mInfo->depthIndex = (uint8_t) attachments.size();
-        attachments.push_back(depth);
-        fbkey.depth = depth.getImageView();
+    if (depthStencil.texture) {
+        auto depthStencilTexture = depthStencil.texture;
+        mInfo->depthStencilIndex = (uint8_t) attachments.size();
+        attachments.push_back(depthStencil);
+        fbkey.depthStencil = depthStencil.getImageView();
         if (samples > 1) {
-            mInfo->msaaDepthIndex = mInfo->depthIndex;
-            if (depthTexture->samples == 1) {
+            mInfo->msaaDepthStencilIndex = mInfo->depthStencilIndex;
+            if (depthStencilTexture->samples == 1) {
                 // MSAA depth texture must have the mipmap count of 1
                 uint8_t const msLevel = 1;
                 // Create sidecar MSAA texture for the depth attachment if it does not already
                 // exist.
-                auto msaaTexture = initMsaaTexture(depthTexture, device, physicalDevice, context,
+                auto msaaTexture = initMsaaTexture(depthStencilTexture, device, physicalDevice, context,
                         allocator, commands, resourceManager, msLevel, samples, stagePool);
-                mInfo->msaaDepthIndex = (uint8_t) attachments.size();
+                mInfo->msaaDepthStencilIndex = (uint8_t) attachments.size();
                 VulkanAttachment msaaAttachment = {
                     .texture = msaaTexture,
                     .layerCount = layerCount,
                 };
                 attachments.push_back(msaaAttachment);
-                fbkey.depth = msaaAttachment.getImageView();
+                fbkey.depthStencil = msaaAttachment.getImageView();
             }
         }
     }
@@ -460,11 +459,11 @@ void VulkanRenderTarget::emitBarriersBeginRenderPass(VulkanCommandBuffer& comman
             barrier(attachments[i], VulkanLayout::COLOR_ATTACHMENT);
         }
     }
-    if (mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX) {
-        barrier(attachments[mInfo->depthIndex], VulkanLayout::DEPTH_ATTACHMENT);
+    if (mInfo->depthStencilIndex != Auxiliary::UNDEFINED_INDEX) {
+        barrier(attachments[mInfo->depthStencilIndex], VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
     }
-    if (mInfo->msaaDepthIndex != Auxiliary::UNDEFINED_INDEX) {
-        barrier(attachments[mInfo->msaaDepthIndex], VulkanLayout::DEPTH_ATTACHMENT);
+    if (mInfo->msaaDepthStencilIndex != Auxiliary::UNDEFINED_INDEX) {
+        barrier(attachments[mInfo->msaaDepthStencilIndex], VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
     }
 }
 
@@ -478,7 +477,7 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
         bool const isDepth = attachment.isDepth();
         auto texture = attachment.texture;
         if (isDepth) {
-            texture->setLayout(range, VulkanFboCache::FINAL_DEPTH_ATTACHMENT_LAYOUT);
+            texture->setLayout(range, VulkanFboCache::FINAL_DEPTH_STENCIL_ATTACHMENT_LAYOUT);
             if (!texture->transitionLayout(&commands, range, VulkanLayout::DEPTH_SAMPLER)) {
                 texture->attachmentToSamplerBarrier(&commands, range);
             }

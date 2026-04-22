@@ -321,8 +321,7 @@ public class Engine {
          *         be initialized, for instance if it doesn't support the right version of OpenGL or
          *         OpenGL ES.
          *
-         * @exception IllegalStateException can be thrown if there isn't enough memory to
-         * allocate the command buffer.
+         * @throws Error if there isn't enough memory to allocate the command buffer.
          */
         public Engine build() {
             long nativeEngine = nBuilderBuild(mNativeBuilder);
@@ -729,6 +728,8 @@ public class Engine {
      *
      * @return the active feature level.
      *
+     * @throws RuntimeException if the feature level cannot be set.
+     *
      * @see Builder#featureLevel
      * @see #getSupportedFeatureLevel
      * @see #getActiveFeatureLevel
@@ -773,6 +774,15 @@ public class Engine {
      */
     public boolean isAutomaticInstancingEnabled() {
         return nIsAutomaticInstancingEnabled(getNativeObject());
+    }
+
+    /**
+     * Returns whether the engine has encountered an unrecoverable failure.
+     *
+     * @return true if an unrecoverable failure has occurred, false otherwise.
+     */
+    public boolean hasUnrecoverableFailure() {
+        return nHasUnrecoverableFailure(getNativeObject());
     }
 
     /**
@@ -1261,9 +1271,10 @@ public class Engine {
      * Destroys a {@link Material} and frees all its associated resources.
      * <p>
      * All {@link MaterialInstance} of the specified {@link Material} must be destroyed before
-     * destroying it; if some {@link MaterialInstance} remain, this method fails silently.
+     * destroying it.
      *
      * @param material the {@link Material} to destroy
+     * @throws RuntimeException if some MaterialInstances remain.
      */
     public void destroyMaterial(@NonNull Material material) {
         assertDestroy(nDestroyMaterial(getNativeObject(), material.getNativeObject()));
@@ -1580,6 +1591,7 @@ public class Engine {
     private static native long nGetEntityManager(long nativeEngine);
     private static native void nSetAutomaticInstancingEnabled(long nativeEngine, boolean enable);
     private static native boolean nIsAutomaticInstancingEnabled(long nativeEngine);
+    private static native boolean nHasUnrecoverableFailure(long nativeEngine);
     private static native long nGetMaxStereoscopicEyes(long nativeEngine);
     private static native int nGetSupportedFeatureLevel(long nativeEngine);
     private static native int nSetActiveFeatureLevel(long nativeEngine, int ordinal);

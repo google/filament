@@ -75,6 +75,12 @@ public:
     // thread via `purge()`.
     virtual void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) = 0;
 
+    /**
+     * Flags the driver as having encountered an unrecoverable error.
+     * This will interrupt all pending fence waits and prevent further waits.
+     */
+    virtual void setUnrecoverableError() noexcept {}
+
     virtual ShaderModel getShaderModel() const noexcept = 0;
 
     // The shader languages used for shaders for this driver in order of preference, used to inform

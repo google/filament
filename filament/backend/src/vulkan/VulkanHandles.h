@@ -252,7 +252,7 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
             VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
             VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-            VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount);
+            VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount);
 
     ~VulkanRenderTarget();
 
@@ -284,12 +284,12 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
         return mInfo->attachments[0];
     }
 
-    inline VulkanAttachment& getDepth() const {
-        assert_invariant(hasDepth());
+    inline VulkanAttachment& getDepthStencil() const {
+        assert_invariant(hasDepthStencil());
         if (mInfo->fbkey.samples == 1) {
-            return mInfo->attachments[mInfo->depthIndex];
+            return mInfo->attachments[mInfo->depthStencilIndex];
         }
-        return mInfo->attachments[mInfo->msaaDepthIndex];
+        return mInfo->attachments[mInfo->msaaDepthStencilIndex];
     }
 
     inline VulkanFboCache::RenderPassKey const& getRenderPassKey() const {
@@ -306,7 +306,7 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
 
     uint8_t getColorTargetCount(VulkanRenderPassContext const& pass) const;
 
-    inline bool hasDepth() const { return mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX; }
+    inline bool hasDepthStencil() const { return mInfo->depthStencilIndex != Auxiliary::UNDEFINED_INDEX; }
 
     inline bool isSwapChain() const { return !mOffscreen; }
     inline bool isProtected() const { return mProtected; }
@@ -341,8 +341,8 @@ private:
         VulkanFboCache::FboKey fbkey = {};
         std::vector<VulkanAttachment> attachments;
         utils::bitset32 colors;
-        int8_t depthIndex = UNDEFINED_INDEX;
-        int8_t msaaDepthIndex = UNDEFINED_INDEX;
+        int8_t depthStencilIndex = UNDEFINED_INDEX;
+        int8_t msaaDepthStencilIndex = UNDEFINED_INDEX;
         int8_t msaaIndex = UNDEFINED_INDEX;
     };
     bool mOffscreen;

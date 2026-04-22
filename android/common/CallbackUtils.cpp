@@ -75,6 +75,17 @@ void JniCallback::postToJavaAndDestroy(JniCallback* callback) {
     delete callback;
 }
 
+void JniCallback::destroy(JniCallback* callback) {
+    JNIEnv* env = filament::VirtualMachineEnv::get().getEnvironment();
+    env->DeleteGlobalRef(callback->mHandler);
+    env->DeleteGlobalRef(callback->mCallback);
+#ifdef __ANDROID__
+    env->DeleteGlobalRef(callback->mCallbackUtils.handlerClass);
+#endif
+    env->DeleteGlobalRef(callback->mCallbackUtils.executorClass);
+    delete callback;
+}
+
 // -----------------------------------------------------------------------------------------------
 
 JniBufferCallback* JniBufferCallback::make(filament::Engine*,

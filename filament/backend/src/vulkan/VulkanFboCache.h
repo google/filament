@@ -43,18 +43,18 @@ class VulkanFboCache {
 public:
     constexpr static VulkanLayout FINAL_COLOR_ATTACHMENT_LAYOUT = VulkanLayout::COLOR_ATTACHMENT;
     constexpr static VulkanLayout FINAL_RESOLVE_ATTACHMENT_LAYOUT = VulkanLayout::COLOR_ATTACHMENT;
-    constexpr static VulkanLayout FINAL_DEPTH_ATTACHMENT_LAYOUT = VulkanLayout::DEPTH_ATTACHMENT;
+    constexpr static VulkanLayout FINAL_DEPTH_STENCIL_ATTACHMENT_LAYOUT = VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
 
     // RenderPassKey is a small POD representing the immutable state that is used to construct
     // a VkRenderPass. It is hashed and used as a lookup key.
     struct alignas(8) RenderPassKey {
         VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
-        VkFormat depthFormat; // 4 bytes
+        VkFormat depthStencilFormat; // 4 bytes
         TargetBufferFlags clear; // 4 bytes
         TargetBufferFlags discardStart; // 4 bytes
         TargetBufferFlags discardEnd; // 4 bytes
 
-        VulkanLayout initialDepthLayout; // 1 byte
+        VulkanLayout initialDepthStencilLayout; // 1 byte
         uint8_t samples; // 1 byte
         uint8_t needsResolveMask; // 1 byte
         uint8_t usesLazilyAllocatedMemory; // 1 byte
@@ -86,7 +86,7 @@ public:
         uint16_t samples; // 2 bytes
         VkImageView color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
         VkImageView resolve[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
-        VkImageView depth; // 8 bytes
+        VkImageView depthStencil; // 8 bytes
     };
     struct FboVal {
         fvkmemory::resource_ptr<VulkanFramebuffer> handle;

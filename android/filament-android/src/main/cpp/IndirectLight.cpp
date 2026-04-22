@@ -21,6 +21,7 @@
 #include <common/NioUtils.h>
 #include <common/CallbackUtils.h>
 #include <math/mat4.h>
+#include <common/JniUtils.h>
 
 using namespace filament;
 
@@ -37,11 +38,13 @@ Java_com_google_android_filament_IndirectLight_nDestroyBuilder(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_IndirectLight_nBuilderBuild(JNIEnv*, jclass,
+Java_com_google_android_filament_IndirectLight_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeEngine) {
     IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL

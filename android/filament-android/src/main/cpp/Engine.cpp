@@ -16,6 +16,8 @@
 
 #include <jni.h>
 
+#include <exception>
+
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/MorphTargetBuffer.h>
@@ -28,14 +30,18 @@
 #include <filament/View.h>
 
 #include "common/CallbackUtils.h"
+#include "common/JniUtils.h"
 
 using namespace filament;
 using namespace utils;
+using namespace filament::android;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Engine_nDestroyEngine(JNIEnv*, jclass, jlong nativeEngine) {
-    Engine* engine = (Engine*) nativeEngine;
-    Engine::destroy(&engine);
+Java_com_google_android_filament_Engine_nDestroyEngine(JNIEnv *env, jclass, jlong nativeEngine) {
+    wrapJni(env, [=]() {
+        Engine* engine = (Engine*) nativeEngine;
+        Engine::destroy(&engine);
+    });
 }
 
 // SwapChain
@@ -77,11 +83,13 @@ Java_com_google_android_filament_Engine_nCreateSwapChainFromRawPointer(JNIEnv*,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroySwapChain(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroySwapChain(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeSwapChain) {
     Engine* engine = (Engine*) nativeEngine;
     SwapChain* swapChain = (SwapChain*) nativeSwapChain;
-    return engine->destroy(swapChain);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(swapChain);
+    });
 }
 
 // View
@@ -94,11 +102,13 @@ Java_com_google_android_filament_Engine_nCreateView(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyView(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyView(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeView) {
     Engine* engine = (Engine*) nativeEngine;
     View* view = (View*) nativeView;
-    return engine->destroy(view);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(view);
+    });
 }
 
 // Renderer
@@ -111,11 +121,13 @@ Java_com_google_android_filament_Engine_nCreateRenderer(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyRenderer(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyRenderer(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeRenderer) {
     Engine* engine = (Engine*) nativeEngine;
     Renderer* renderer = (Renderer*) nativeRenderer;
-    return engine->destroy(renderer);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(renderer);
+    });
 }
 
 // Camera
@@ -137,11 +149,13 @@ Java_com_google_android_filament_Engine_nGetCameraComponent(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Engine_nDestroyCameraComponent(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyCameraComponent(JNIEnv *env, jclass,
         jlong nativeEngine, jint entity_) {
-    Engine* engine = (Engine*) nativeEngine;
-    Entity& entity = *reinterpret_cast<Entity*>(&entity_);
-    engine->destroyCameraComponent(entity);
+    wrapJni(env, [=]() {
+        Engine* engine = (Engine*) nativeEngine;
+        Entity entity = *reinterpret_cast<const Entity*>(&entity_);
+        engine->destroyCameraComponent(entity);
+    });
 }
 
 // Scene
@@ -154,11 +168,13 @@ Java_com_google_android_filament_Engine_nCreateScene(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyScene(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyScene(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeScene) {
     Engine* engine = (Engine*) nativeEngine;
     Scene* scene = (Scene*) nativeScene;
-    return engine->destroy(scene);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(scene);
+    });
 }
 
 // Fence
@@ -171,119 +187,147 @@ Java_com_google_android_filament_Engine_nCreateFence(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyFence(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyFence(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeFence) {
     Engine* engine = (Engine*) nativeEngine;
     Fence* fence = (Fence*) nativeFence;
-    return engine->destroy(fence);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(fence);
+    });
 }
 
 // Stream
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyStream(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyStream(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeStream) {
     Engine* engine = (Engine*) nativeEngine;
     Stream* stream = (Stream*) nativeStream;
-    return engine->destroy(stream);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(stream);
+    });
 }
 
 // Others...
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyIndexBuffer(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyIndexBuffer(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeIndexBuffer) {
     Engine* engine = (Engine*) nativeEngine;
     IndexBuffer* indexBuffer = (IndexBuffer*) nativeIndexBuffer;
-    return engine->destroy(indexBuffer);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(indexBuffer);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyVertexBuffer(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyVertexBuffer(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeVertexBuffer) {
     Engine* engine = (Engine*) nativeEngine;
     VertexBuffer* vertexBuffer = (VertexBuffer*) nativeVertexBuffer;
-    return engine->destroy(vertexBuffer);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(vertexBuffer);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroySkinningBuffer(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroySkinningBuffer(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeSkinningBuffer) {
     Engine* engine = (Engine*) nativeEngine;
     SkinningBuffer* skinningBuffer = (SkinningBuffer*) nativeSkinningBuffer;
-    return engine->destroy(skinningBuffer);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(skinningBuffer);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyMorphTargetBuffer(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyMorphTargetBuffer(JNIEnv *env, jclass,
                 jlong nativeEngine, jlong nativeMorphTargetBuffer) {
     Engine* engine = (Engine*) nativeEngine;
     MorphTargetBuffer* mtb = (MorphTargetBuffer*) nativeMorphTargetBuffer;
-    return engine->destroy(mtb);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(mtb);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyIndirectLight(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyIndirectLight(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeIndirectLight) {
     Engine* engine = (Engine*) nativeEngine;
     IndirectLight* indirectLight = (IndirectLight*) nativeIndirectLight;
-    return engine->destroy(indirectLight);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(indirectLight);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyMaterial(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyMaterial(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeMaterial) {
     Engine* engine = (Engine*) nativeEngine;
     Material* material = (Material*) nativeMaterial;
-    return engine->destroy(material);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(material);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyMaterialInstance(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyMaterialInstance(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeMaterialInstance) {
     Engine* engine = (Engine*) nativeEngine;
     MaterialInstance* materialInstance = (MaterialInstance*) nativeMaterialInstance;
-    return engine->destroy(materialInstance);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(materialInstance);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroySkybox(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroySkybox(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeSkybox) {
     Engine* engine = (Engine*) nativeEngine;
     Skybox* skybox = (Skybox*) nativeSkybox;
-    return engine->destroy(skybox);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(skybox);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyColorGrading(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyColorGrading(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeColorGrading) {
     Engine* engine = (Engine*) nativeEngine;
     ColorGrading* colorGrading = (ColorGrading*) nativeColorGrading;
-    return engine->destroy(colorGrading);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(colorGrading);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyTexture(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyTexture(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeTexture) {
     Engine* engine = (Engine*) nativeEngine;
     Texture* texture = (Texture*) nativeTexture;
-    return engine->destroy(texture);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(texture);
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nDestroyRenderTarget(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyRenderTarget(JNIEnv *env, jclass,
         jlong nativeEngine, jlong nativeTarget) {
     Engine* engine = (Engine*) nativeEngine;
     RenderTarget* target = (RenderTarget*) nativeTarget;
-    return engine->destroy(target);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->destroy(target);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Engine_nDestroyEntity(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nDestroyEntity(JNIEnv *env, jclass,
         jlong nativeEngine, jint entity_) {
-    Engine* engine = (Engine*) nativeEngine;
-    Entity& entity = *reinterpret_cast<Entity*>(&entity_);
-    engine->destroy(entity);
+    wrapJni(env, [=]() {
+        Engine* engine = (Engine*) nativeEngine;
+        Entity entity = *reinterpret_cast<const Entity*>(&entity_);
+        engine->destroy(entity);
+    });
 }
 
 
@@ -415,17 +459,21 @@ Java_com_google_android_filament_Engine_nIsValidSwapChain(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Engine_nFlushAndWait(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nFlushAndWait(JNIEnv *env, jclass,
         jlong nativeEngine, jlong timeout) {
     Engine* engine = (Engine*) nativeEngine;
-    return engine->flushAndWait((uint64_t)timeout);
+    return wrapJni<jboolean>(env, [=]() {
+        return engine->flushAndWait((uint64_t)timeout);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Engine_nFlush(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nFlush(JNIEnv *env, jclass,
         jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    engine->flush();
+    wrapJni(env, [=]() {
+        engine->flush();
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -436,21 +484,32 @@ Java_com_google_android_filament_Engine_nIsPaused(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Engine_nCompile(JNIEnv* env, jclass,
+Java_com_google_android_filament_Engine_nCompile(JNIEnv *env, jclass,
         jlong nativeEngine, jint priority, jlong nativeMaterial, jlong nativeView,
         jint shadowReceiver, jint skinning, jobject handler, jobject runnable) {
     Engine* engine = (Engine*) nativeEngine;
     Material* material = (Material*) nativeMaterial;
     View* view = (View*) nativeView;
     JniCallback* jniCallback = JniCallback::make(env, handler, runnable);
-    engine->compile(
-            (backend::CompilerPriorityQueue) priority,
-            material, view,
-            (utils::tribool::value_t) shadowReceiver,
-            (utils::tribool::value_t) skinning,
-            jniCallback->getHandler(), [jniCallback](Material*){
-                JniCallback::postToJavaAndDestroy(jniCallback);
-            });
+    wrapJni(env, [=]() {
+#if defined(__EXCEPTIONS)
+        try {
+#endif
+            engine->compile(
+                    (backend::CompilerPriorityQueue) priority,
+                    material, view,
+                    (utils::tribool::value_t) shadowReceiver,
+                    (utils::tribool::value_t) skinning,
+                    jniCallback->getHandler(), [jniCallback](Material*){
+                        JniCallback::postToJavaAndDestroy(jniCallback);
+                    });
+#if defined(__EXCEPTIONS)
+        } catch (...) {
+            JniCallback::destroy(jniCallback);
+            throw;
+        }
+#endif
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -511,6 +570,12 @@ Java_com_google_android_filament_Engine_nIsAutomaticInstancingEnabled(JNIEnv*, j
     return (jboolean)engine->isAutomaticInstancingEnabled();
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nHasUnrecoverableFailure(JNIEnv*, jclass, jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean)engine->hasUnrecoverableFailure();
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nGetMaxStereoscopicEyes(JNIEnv*, jclass, jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
@@ -526,10 +591,12 @@ Java_com_google_android_filament_Engine_nGetSupportedFeatureLevel(JNIEnv *, jcla
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Engine_nSetActiveFeatureLevel(JNIEnv *, jclass,
+Java_com_google_android_filament_Engine_nSetActiveFeatureLevel(JNIEnv *env, jclass,
         jlong nativeEngine, jint ordinal) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jint)engine->setActiveFeatureLevel((Engine::FeatureLevel)ordinal);
+    return wrapJni<jint>(env, [=]() {
+        return (jint)engine->setActiveFeatureLevel((Engine::FeatureLevel)ordinal);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -651,9 +718,11 @@ Java_com_google_android_filament_Engine_nSetBuilderFeature(JNIEnv *env, jclass c
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_Engine_nBuilderBuild(JNIEnv*, jclass, jlong nativeBuilder) {
+Java_com_google_android_filament_Engine_nBuilderBuild(JNIEnv *env, jclass, jlong nativeBuilder) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
-    return (jlong) builder->build();
+    return wrapJniBackend<jlong>(env, [=]() {
+        return (jlong) builder->build();
+    });
 }
 
 extern "C"

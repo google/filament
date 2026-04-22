@@ -33,11 +33,11 @@ namespace filament::backend {
 
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
-    if (k1.initialDepthLayout != k2.initialDepthLayout) return false;
+    if (k1.initialDepthStencilLayout != k2.initialDepthStencilLayout) return false;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (k1.colorFormat[i] != k2.colorFormat[i]) return false;
     }
-    if (k1.depthFormat != k2.depthFormat) return false;
+    if (k1.depthStencilFormat != k2.depthStencilFormat) return false;
     if (k1.clear != k2.clear) return false;
     if (k1.discardStart != k2.discardStart) return false;
     if (k1.discardEnd != k2.discardEnd) return false;
@@ -55,7 +55,7 @@ bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k
     if (k1.height != k2.height) return false;
     if (k1.layers != k2.layers) return false;
     if (k1.samples != k2.samples) return false;
-    if (k1.depth != k2.depth) return false;
+    if (k1.depthStencil != k2.depthStencil) return false;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (k1.color[i] != k2.color[i]) return false;
         if (k1.resolve[i] != k2.resolve[i]) return false;
@@ -96,8 +96,8 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
             attachments[attachmentCount++] = attachment;
         }
     }
-    if (config.depth) {
-        attachments[attachmentCount++] = config.depth;
+    if (config.depthStencil) {
+        attachments[attachmentCount++] = config.depthStencil;
     }
 
     #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
@@ -151,26 +151,27 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
     VkAttachmentReference inputAttachmentRef[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference colorAttachmentRefs[2][MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference resolveAttachmentRef[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
-    VkAttachmentReference depthAttachmentRef = {};
+    VkAttachmentReference depthStencilAttachmentRef = {};
 
-    const bool hasDepth = config.depthFormat != VK_FORMAT_UNDEFINED;
+    const bool hasDepthOrStencil = fvkutils::isVkDepthFormat(config.depthStencilFormat) ||
+                                   fvkutils::isVkStencilFormat(config.depthStencilFormat);
 
     VkSubpassDescription subpasses[2] = {{
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .pInputAttachments = nullptr,
         .pColorAttachments = colorAttachmentRefs[0],
         .pResolveAttachments = resolveAttachmentRef,
-        .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
+        .pDepthStencilAttachment = hasDepthOrStencil ? &depthStencilAttachmentRef : nullptr
     },
     {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .pInputAttachments = inputAttachmentRef,
         .pColorAttachments = colorAttachmentRefs[1],
         .pResolveAttachments = resolveAttachmentRef,
-        .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
+        .pDepthStencilAttachment = hasDepthOrStencil ? &depthStencilAttachmentRef : nullptr
     }};
 
-    // The attachment list contains: Color Attachments, Resolve Attachments, and Depth Attachment.
+    // The attachment list contains: Color Attachments, Resolve Attachments, and Depth/Stencil Attachment.
     // For simplicity, create an array that can hold the maximum possible number of attachments.
     // Note that this needs to have the same ordering as the corollary array in getFramebuffer.
     VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
@@ -310,22 +311,26 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
         };
     }
 
-    // Populate the Depth Attachment.
-    if (hasDepth) {
-        const bool clear = any(config.clear & TargetBufferFlags::DEPTH);
-        const bool discardStart = any(config.discardStart & TargetBufferFlags::DEPTH);
-        const bool discardEnd = any(config.discardEnd & TargetBufferFlags::DEPTH);
-        depthAttachmentRef.layout = fvkutils::getVkLayout(VulkanLayout::DEPTH_ATTACHMENT);
-        depthAttachmentRef.attachment = attachmentIndex;
+    // Populate the Depth/Stencil Attachment.
+    if (hasDepthOrStencil) {
+        const bool clearDepth = any(config.clear & TargetBufferFlags::DEPTH);
+        const bool discardStartDepth = any(config.discardStart & TargetBufferFlags::DEPTH);
+        const bool discardEndDepth = any(config.discardEnd & TargetBufferFlags::DEPTH);
+        const bool clearStencil = any(config.clear & TargetBufferFlags::STENCIL);
+        const bool discardStartStencil = any(config.discardStart & TargetBufferFlags::STENCIL);
+        const bool discardEndStencil = any(config.discardEnd & TargetBufferFlags::STENCIL);
+
+        depthStencilAttachmentRef.layout = fvkutils::getVkLayout(VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
+        depthStencilAttachmentRef.attachment = attachmentIndex;
         attachments[attachmentIndex++] = {
-            .format = config.depthFormat,
+            .format = config.depthStencilFormat,
             .samples = (VkSampleCountFlagBits) config.samples,
-            .loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep),
-            .storeOp = discardEnd ? kDisableStore : kEnableStore,
-            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = fvkutils::getVkLayout(config.initialDepthLayout),
-            .finalLayout = fvkutils::getVkLayout(FINAL_DEPTH_ATTACHMENT_LAYOUT),
+            .loadOp = clearDepth ? kClear : (discardStartDepth ? kDontCare : kKeep),
+            .storeOp = discardEndDepth ? kDisableStore : kEnableStore,
+            .stencilLoadOp = clearStencil ? kClear : (discardStartStencil ? kDontCare : kKeep),
+            .stencilStoreOp = discardEndStencil ? kDisableStore : kEnableStore,
+            .initialLayout = fvkutils::getVkLayout(config.initialDepthStencilLayout),
+            .finalLayout = fvkutils::getVkLayout(FINAL_DEPTH_STENCIL_ATTACHMENT_LAYOUT),
         };
     }
     renderPassInfo.attachmentCount = attachmentIndex;

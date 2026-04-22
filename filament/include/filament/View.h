@@ -464,7 +464,7 @@ public:
     /**
      * Enables or disables bloom in the post-processing stage. Disabled by default.
      *
-     * @param options options
+     * @param options options. Values may be silently clamped to valid ranges.
      */
     void setBloomOptions(BloomOptions options) noexcept;
 

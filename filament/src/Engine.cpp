@@ -474,6 +474,10 @@ bool Engine::isAsynchronousModeEnabled() const noexcept {
     return downcast(this)->isAsynchronousModeEnabled();
 }
 
+bool Engine::hasUnrecoverableFailure() const noexcept {
+    return downcast(this)->hasUnrecoverableFailure();
+}
+
 size_t Engine::getMaxStereoscopicEyes() noexcept {
     return FEngine::getMaxStereoscopicEyes();
 }

@@ -68,23 +68,23 @@ backend::AsyncCallId Texture::setImageAsync(Engine& engine, size_t const level,
             handler, std::move(callback), user);
 }
 
-void Texture::setExternalImage(Engine& engine, ExternalImageHandleRef image) noexcept {
+void Texture::setExternalImage(Engine& engine, ExternalImageHandleRef image) {
     downcast(this)->setExternalImage(downcast(engine), image);
 }
 
-void Texture::setExternalImage(Engine& engine, void* image) noexcept {
+void Texture::setExternalImage(Engine& engine, void* image) {
     downcast(this)->setExternalImage(downcast(engine), image);
 }
 
-void Texture::setExternalImage(Engine& engine, void* image, size_t const plane) noexcept {
+void Texture::setExternalImage(Engine& engine, void* image, size_t const plane) {
     downcast(this)->setExternalImage(downcast(engine), image, plane);
 }
 
-void Texture::setExternalStream(Engine& engine, Stream* stream) noexcept {
+void Texture::setExternalStream(Engine& engine, Stream* stream) {
     downcast(this)->setExternalStream(downcast(engine), downcast(stream));
 }
 
-void Texture::generateMipmaps(Engine& engine) const noexcept {
+void Texture::generateMipmaps(Engine& engine) const {
     downcast(this)->generateMipmaps(downcast(engine));
 }
 

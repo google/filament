@@ -269,9 +269,8 @@ public class Renderer {
 
     /**
      * Set the time at which the frame must be presented to the display.
-     * <p>
+     *
      * This must be called between {@link #beginFrame} and {@link #endFrame}.
-     * </p>
      *
      * @param monotonicClockNanos  The time in nanoseconds corresponding to the system monotonic
      *                             up-time clock. The presentation time is typically set in the
@@ -354,6 +353,8 @@ public class Renderer {
      *         returned and produce a frame anyways, by making calls to {@link #render(View)},
      *         in which case {@link #endFrame} must be called.
      *
+     * @throws Error if the backend thread encountered an unrecoverable error.
+     *
      * @see #endFrame
      * @see #render
      */
@@ -369,6 +370,8 @@ public class Renderer {
      * </p>
      *
      * <br><p>All calls to render() must happen <b>before</b> endFrame().</p>
+     *
+     * @throws Error if the backend thread encountered an unrecoverable error, or if called again after a backend exception was already thrown.
      *
      * @see #beginFrame
      * @see #render
@@ -425,6 +428,7 @@ public class Renderer {
      * </ul>
      *
      * @param view the {@link View} to render
+     * @throws Error if the backend thread encountered an unrecoverable error, or if called again after a backend exception was already thrown.
      * @see #beginFrame
      * @see #endFrame
      * @see View
@@ -454,6 +458,7 @@ public class Renderer {
      * <li><code>renderStandaloneView()</code> performs potentially heavy computations and cannot be
      * multi-threaded. However, internally, it is highly multi-threaded to both improve performance
      * and mitigate the call's latency.</li>
+     * </ul>
      *
      * @param view the {@link View} to render. This View must have an associated {@link RenderTarget}
      * @see View
@@ -519,14 +524,14 @@ public class Renderer {
      * <p><code>readPixels</code> must be called within a frame, meaning after {@link #beginFrame}
      * and before {@link #endFrame}. Typically, <code>readPixels</code> will be called after
      * {@link #render}.</p>
-     * <br>
-     * <p>After calling this method, the callback associated with <code>buffer</code>
-     * will be invoked on the main thread, indicating that the read-back has completed.
-     * Typically, this will happen after multiple calls to {@link #beginFrame},
-     * {@link #render}, {@link #endFrame}.</p>
-     * <br>
-     * <p><code>readPixels</code> is intended for debugging and testing.
-     * It will impact performance significantly.</p>
+     *
+     * <p>After issuing this method, the callback associated with <code>buffer</code> will be invoked on the
+     * main thread, indicating that the read-back has completed. Typically, this will happen
+     * after multiple calls to {@link #beginFrame}, {@link #render}, {@link #endFrame}.</p>
+     *
+     * <p>It is also possible to use a {@link Fence} to wait for the read-back.</p>
+     *
+     * <p><code>readPixels</code> is intended for debugging and testing. It will impact performance significantly.</p>
      *
      * @param xoffset   left offset of the sub-region to read back
      * @param yoffset   bottom offset of the sub-region to read back
@@ -604,18 +609,19 @@ public class Renderer {
      *
      * <p>Typically <code>readPixels</code> will be called after {@link #render} and before
      * {@link #endFrame}.</p>
-     * <br>
-     * <p>After calling this method, the callback associated with <code>buffer</code>
-     * will be invoked on the main thread, indicating that the read-back has completed.
-     * Typically, this will happen after multiple calls to {@link #beginFrame},
-     * {@link #render}, {@link #endFrame}.</p>
-     * <br>
+     *
+     * <p>After issuing this method, the callback associated with <code>buffer</code> will be invoked on the
+     * main thread, indicating that the read-back has completed. Typically, this will happen
+     * after multiple calls to {@link #beginFrame}, {@link #render}, {@link #endFrame}.</p>
+     *
+     * <p>It is also possible to use a {@link Fence} to wait for the read-back.</p>
+     *
      * <p>OpenGL only: if issuing a <code>readPixels</code> on a {@link RenderTarget} backed by a
      * {@link Texture} that had data uploaded to it via {@link Texture#setImage}, the data returned
      * from <code>readPixels</code> will be y-flipped with respect to the {@link Texture#setImage}
      * call.</p>
-     * <p><code>readPixels</code> is intended for debugging and testing.
-     * It will impact performance significantly.</p>
+     *
+     * <p><code>readPixels</code> is intended for debugging and testing. It will impact performance significantly.</p>
      *
      * @param renderTarget  {@link RenderTarget} to read back from
      * @param xoffset       left offset of the sub-region to read back

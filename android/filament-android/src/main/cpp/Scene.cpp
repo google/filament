@@ -19,9 +19,11 @@
 #include <filament/Scene.h>
 
 #include <utils/Entity.h>
+#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace utils;
+using namespace filament::android;
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nSetSkybox(JNIEnv *env, jclass type, jlong nativeScene,
@@ -43,15 +45,20 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nAddEntity(JNIEnv *env, jclass type, jlong nativeScene,
         jint entity) {
     Scene* scene = (Scene*) nativeScene;
-    scene->addEntity((Entity&) entity);
+    wrapJni(env, [=]() {
+        scene->addEntity((Entity&) entity);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nAddEntities(JNIEnv *env, jclass type, jlong nativeScene,
         jintArray entities) {
     Scene* scene = (Scene*) nativeScene;
+    jsize length = env->GetArrayLength(entities);
     Entity* nativeEntities = (Entity*) env->GetIntArrayElements(entities, nullptr);
-    scene->addEntities(nativeEntities, env->GetArrayLength(entities));
+    wrapJni(env, [=]() {
+        scene->addEntities(nativeEntities, length);
+    });
     env->ReleaseIntArrayElements(entities, (jint*) nativeEntities, JNI_ABORT);
 }
 
@@ -59,15 +66,20 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nRemove(JNIEnv *env, jclass type, jlong nativeScene,
         jint entity) {
     Scene* scene = (Scene*) nativeScene;
-    scene->remove((Entity&) entity);
+    wrapJni(env, [=]() {
+        scene->remove((Entity&) entity);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nRemoveEntities(JNIEnv *env, jclass type, jlong nativeScene,
         jintArray entities) {
     Scene* scene = (Scene*) nativeScene;
+    jsize length = env->GetArrayLength(entities);
     Entity* nativeEntities = (Entity*) env->GetIntArrayElements(entities, nullptr);
-    scene->removeEntities(nativeEntities, env->GetArrayLength(entities));
+    wrapJni(env, [=]() {
+        scene->removeEntities(nativeEntities, length);
+    });
     env->ReleaseIntArrayElements(entities, (jint*) nativeEntities, JNI_ABORT);
 }
 

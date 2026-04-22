@@ -885,6 +885,8 @@ public class Texture {
          * @return A newly created <code>Texture</code>
          * @exception IllegalStateException if a parameter to a builder function was invalid.
          *            A mode detailed message about the error is output in the system log.
+         * @throws RuntimeException if a runtime error occurred, such as running out of
+         *            memory or other resources.
          */
         @NonNull
         public Texture build(@NonNull Engine engine) {

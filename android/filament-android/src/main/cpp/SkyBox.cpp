@@ -19,6 +19,7 @@
 #include <filament/Skybox.h>
 
 #include <math/vec4.h>
+#include <common/JniUtils.h>
 
 using namespace filament;
 
@@ -76,7 +77,9 @@ Java_com_google_android_filament_Skybox_nBuilderBuild(JNIEnv *env, jclass type,
         jlong nativeSkyBoxBuilder, jlong nativeEngine) {
     Skybox::Builder *builder = (Skybox::Builder *) nativeSkyBoxBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -567,7 +567,7 @@ public:
      * @see PlatformCocoaGL::createExternalImage
      * @see PlatformCocoaTouchGL::createExternalImage
      */
-    void setExternalImage(Engine& engine, ExternalImageHandleRef image) noexcept;
+    void setExternalImage(Engine& engine, ExternalImageHandleRef image);
 
     /**
      * Specify the external image to associate with this Texture. Typically, the external
@@ -594,7 +594,7 @@ public:
      * @deprecated Instead, use setExternalImage(Engine& engine, ExternalImageHandleRef image)
      */
     UTILS_DEPRECATED
-    void setExternalImage(Engine& engine, void* UTILS_NONNULL image) noexcept;
+    void setExternalImage(Engine& engine, void* UTILS_NONNULL image);
 
     /**
      * Specify the external image and plane to associate with this Texture. Typically, the external
@@ -625,7 +625,7 @@ public:
      *                      kCVPixelFormatType_420YpCbCr8BiPlanarFullRange images. On platforms
      *                      other than iOS, this method is a no-op.
      */
-    void setExternalImage(Engine& engine, void* UTILS_NONNULL image, size_t plane) noexcept;
+    void setExternalImage(Engine& engine, void* UTILS_NONNULL image, size_t plane);
 
     /**
      * Specify the external stream to associate with this Texture. Typically, the external
@@ -644,7 +644,7 @@ public:
      * @see Builder::sampler(), Stream
      *
      */
-    void setExternalStream(Engine& engine, Stream* UTILS_NULLABLE stream) noexcept;
+    void setExternalStream(Engine& engine, Stream* UTILS_NULLABLE stream);
 
     /**
      * Generates all the mipmap levels automatically. This requires the texture to have a
@@ -656,7 +656,7 @@ public:
      * @attention \p engine must be the instance passed to Builder::build()
      * @attention This Texture instance must NOT use SamplerType::SAMPLER_3D or it has no effect
      */
-    void generateMipmaps(Engine& engine) const noexcept;
+    void generateMipmaps(Engine& engine) const;
 
     /**
      * This non-blocking method checks if the resource has finished creation. If the resource

@@ -216,6 +216,24 @@ void FMaterialInstance::commit(FEngine& engine) const {
 }
 
 void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManager) const {
+    if (!mTextureParameters.empty()) {
+        FEngine const& engine = mMaterial->getEngine();
+        // First pass: check preconditions
+        for (auto const& [binding, p]: mTextureParameters) {
+            assert_invariant(p.texture);
+            FILAMENT_CHECK_PRECONDITION(engine.isValid(p.texture))
+                    << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
+        }
+        // Second pass: update state
+        for (auto const& [binding, p]: mTextureParameters) {
+            Handle<HwTexture> const handle = p.texture->getHwHandleForSampling();
+            assert_invariant(handle);
+            mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
+                binding, handle, p.params);
+        }
+    }
+
+
     if (mUniforms.isDirty()) {
         mUniforms.clean();
         if (isUsingUboBatching()) {
@@ -230,19 +248,6 @@ void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManage
             auto* ubHandle = std::get_if<Handle<HwBufferObject>>(&mUboData);
             assert_invariant(ubHandle != nullptr);
             driver.updateBufferObject(*ubHandle, mUniforms.toBufferDescriptor(driver), 0);
-        }
-    }
-    if (!mTextureParameters.empty()) {
-        for (auto const& [binding, p]: mTextureParameters) {
-            assert_invariant(p.texture);
-            // TODO: figure out a way to do this more efficiently (isValid() is a hashmap lookup)
-            FEngine const& engine = mMaterial->getEngine();
-            FILAMENT_CHECK_PRECONDITION(engine.isValid(p.texture))
-                    << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
-            Handle<HwTexture> const handle = p.texture->getHwHandleForSampling();
-            assert_invariant(handle);
-            mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
-                binding, handle, p.params);
         }
     }
 

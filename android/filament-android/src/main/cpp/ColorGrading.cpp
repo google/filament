@@ -21,6 +21,7 @@
 
 #include <math/vec3.h>
 #include <math/vec4.h>
+#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace math;
@@ -37,10 +38,12 @@ Java_com_google_android_filament_ColorGrading_nDestroyBuilder(JNIEnv*, jclass, j
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_ColorGrading_nBuilderBuild(JNIEnv*, jclass, jlong nativeBuilder, jlong nativeEngine) {
+Java_com_google_android_filament_ColorGrading_nBuilderBuild(JNIEnv* env, jclass, jlong nativeBuilder, jlong nativeEngine) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
