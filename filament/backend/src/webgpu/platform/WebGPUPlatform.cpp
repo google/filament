@@ -250,6 +250,8 @@ void printInstanceDetails(wgpu::Instance const& instance) {
 //either returns a valid instance or panics
 [[nodiscard]] wgpu::Instance createInstance() {
     wgpu::DawnTogglesDescriptor dawnTogglesDescriptor{};
+    // allow_unsafe_apis is required to expose the immediate_address_space and maxImmediateSize limit.
+    std::vector<const char*> toggles = {"allow_unsafe_apis"};
 #if defined(FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING)
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     FWGPU_LOGI << "setting on toggle enable_immediate_error_handling";
@@ -260,10 +262,10 @@ void printInstanceDetails(wgpu::Instance const& instance) {
      * occurred when breaking into the un-captured error callback.
      * https://crbug.com/dawn/1789
      */
-    static const char* toggleName = "enable_immediate_error_handling";
-    dawnTogglesDescriptor.enabledToggleCount = 1;
-    dawnTogglesDescriptor.enabledToggles = &toggleName;
+    toggles.push_back("enable_immediate_error_handling");
 #endif
+    dawnTogglesDescriptor.enabledToggleCount = toggles.size();
+    dawnTogglesDescriptor.enabledToggles = toggles.data();
     const wgpu::InstanceFeatureName features[] = {wgpu::InstanceFeatureName::TimedWaitAny};
     wgpu::InstanceDescriptor instanceDescriptor{
         .nextInChain = &dawnTogglesDescriptor,
@@ -626,6 +628,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     limitsToRequest.maxStorageTexturesPerShaderStage =
             std::min(MAX_MIPMAP_STORAGE_TEXTURES_PER_STAGE,
                     supportedLimits.maxStorageTexturesPerShaderStage);
+    limitsToRequest.maxImmediateSize = supportedLimits.maxImmediateSize;
     deviceDescriptor.requiredLimits = &limitsToRequest;
 
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,

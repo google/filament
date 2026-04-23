@@ -578,7 +578,10 @@ void ViewerGui::applyAnimation(double currentTime, FilamentInstance* instance) {
         mCurrentStartTime = currentTime;
         mResetAnimation = false;
     }
-    const double elapsedSeconds = currentTime - mCurrentStartTime;
+    double elapsedSeconds = currentTime - mCurrentStartTime;
+    if (mSettings.animation.time >= 0.0f) {
+        elapsedSeconds = mSettings.animation.time;
+    }
     if (animationCount > 0 && mCurrentAnimation >= 0) {
         if (mCurrentAnimation == animationCount) {
             for (size_t i = 0; i < animationCount; i++) {

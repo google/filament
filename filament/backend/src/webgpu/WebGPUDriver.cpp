@@ -1472,7 +1472,18 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
-    //todo
+    assert_invariant(mRenderPassEncoder && "Should be called within a renderpass");
+    uint32_t data = 0;
+    if (std::holds_alternative<int32_t>(value)) {
+        int32_t v = std::get<int32_t>(value);
+        std::memcpy(&data, &v, sizeof(data));
+    } else if (std::holds_alternative<float>(value)) {
+        float v = std::get<float>(value);
+        std::memcpy(&data, &v, sizeof(data));
+    } else if (std::holds_alternative<bool>(value)) {
+        data = std::get<bool>(value) ? 1 : 0;
+    }
+    mRenderPassEncoder.SetImmediates(index * sizeof(uint32_t), &data, sizeof(uint32_t));
 }
 
 void WebGPUDriver::insertEventMarker(char const* string) {

@@ -69,11 +69,14 @@ void WebGPUPipelineLayoutCache::populateKey(PipelineLayoutRequest const& request
 
 wgpu::PipelineLayout WebGPUPipelineLayoutCache::createPipelineLayout(
         PipelineLayoutRequest const& request) {
+    wgpu::Limits supportedLimits{};
+    mDevice.GetLimits(&supportedLimits);
+
     const wgpu::PipelineLayoutDescriptor descriptor{
         .label = wgpu::StringView(request.label.c_str_safe()),
         .bindGroupLayoutCount = request.bindGroupLayoutCount,
         .bindGroupLayouts = request.bindGroupLayouts.data(),
-        // TODO investigate immediateDataRangeByteSize
+        .immediateSize = supportedLimits.maxImmediateSize,
     };
     const wgpu::PipelineLayout layout{ mDevice.CreatePipelineLayout(&descriptor) };
     FILAMENT_CHECK_POSTCONDITION(layout)

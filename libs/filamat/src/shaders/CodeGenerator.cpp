@@ -923,28 +923,6 @@ utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out
                 return "float";
         }
     };
-    // This is a workaround for WebGPU not supporting push constants for skinning.
-    // We replace the push constant with a regular constant struct initialized to 0.
-    if (mTargetApi == TargetApi::WEBGPU) {
-        assert_invariant(
-                pushConstants.size() == 1 &&
-                "The current workaround for WebGPU push constants assumes for now that only 1");
-        assert_invariant(pushConstants[0].name == CString("morphingBufferOffset") &&
-                         "The current workaround for WebGPU push constants assumes only the "
-                         "morphingBufferOffset constant is present.");
-        assert_invariant(pushConstants[0].type == ConstantType::INT &&
-                         "The current workaround for WebGPU push constants assumes "
-                         "morphingBufferOffset is an integer type.");
-        out << "struct " << STRUCT_NAME << " {\n";
-        for (auto const& constant: pushConstants) {
-            out << "    " << getType(constant.type) << " " << constant.name.c_str() << ";\n";
-        }
-        out << "};\n";
-        out << "const " << STRUCT_NAME << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << " = "
-            << STRUCT_NAME << "(0);\n";
-        return out;
-    }
-
     bool const outputSpirv =
             mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
     if (outputSpirv) {

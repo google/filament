@@ -613,7 +613,10 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     writerOptions.allow_non_uniform_derivatives = true;
     writerOptions.disable_unreachable_code_warning = true;
     writerOptions.allowed_features.extensions.insert(tint::wgsl::Extension::kClipDistances);
-    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::WgslFromIR(tintReadResult.Get(), writerOptions);
+    writerOptions.allowed_features.features.insert(
+            tint::wgsl::LanguageFeature::kImmediateAddressSpace);
+    tint::Result<tint::wgsl::writer::Output> wgslOut =
+            tint::wgsl::writer::WgslFromIR(tintReadResult.Get(), writerOptions);
 
     if (wgslOut != tintSuccess) {
         slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
