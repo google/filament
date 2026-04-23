@@ -1,0 +1,26 @@
+name: Linux
+
+on:
+  workflow_run:
+    workflows: ["Postsubmit CI"]
+    types: [completed]
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion != 'skipped' }}
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: { jobs } } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            const job = jobs.find(j => j.name === 'build-linux');
+            if (job && job.conclusion !== 'success') {
+              core.setFailed(`Linux build failed: ${job.conclusion}`);
+            } else if (!job) {
+              core.warning(`Job build-linux not found in the workflow run.`);
+            }
