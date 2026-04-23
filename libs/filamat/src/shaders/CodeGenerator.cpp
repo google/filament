@@ -881,14 +881,6 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
 
     static const char* types[] = { "int", "float", "bool" };
 
-    // Spec constants aren't fully supported in Tint,
-    // workaround until https://issues.chromium.org/issues/42250586 is resolved
-    if (mTargetApi == TargetApi::WEBGPU) {
-        std::string const variableName = "FILAMENT_SPEC_CONST_" + std::to_string(id) + "_" + name;
-        out << " const " << types[value.index()] << " " << variableName << " = " << constantString << ";\n";
-        out << types[value.index()] << " " << name << " =  " << variableName << ";\n";
-        return out;
-    }
     if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {
         out << "layout (constant_id = " << id << ") const "
             << types[value.index()] << " " << name << " = " << constantString << ";\n";
