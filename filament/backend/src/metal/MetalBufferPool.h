@@ -55,10 +55,13 @@ public:
 
 private:
     id<MTLDevice> mDevice;
+
+    std::mutex mMutex;
+    // The following are protected by mMutex
     TrackedMetalBuffer mCurrentUploadBuffer = nil;
     size_t mHead = 0;
-    size_t mCapacity;
-    std::mutex mMutex;
+
+    const size_t mCapacity; // Constant after construction
 };
 
 // Manages a pool of Metal buffers, periodically releasing ones that have been unused for awhile.
