@@ -44,6 +44,8 @@ function print_help {
     echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Exclude Vulkan support from the Android build."
+    echo "    -E"
+    echo "        Disable C++ exceptions."
     echo "    -W"
     echo "        Include WebGPU support for the target platform. (NOT functional atm)."
     echo "    -s"
@@ -275,6 +277,7 @@ function build_tools_for_split_build {
         -DCMAKE_BUILD_TYPE="${build_type_arg}" \
         ${WEBGPU_OPTION} \
         ${architectures} \
+        ${EXCEPTIONS_OPTION} \
         ../..
 
     ${BUILD_COMMAND} ${WEB_HOST_TOOLS}
@@ -318,6 +321,7 @@ function build_desktop_target {
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${OSMESA_OPTION} \
+            ${EXCEPTIONS_OPTION} \
             ${architectures} \
             ../..
         ln -sf "out/cmake-${lc_target}/compile_commands.json" \
@@ -378,6 +382,7 @@ function build_webgl_with_target {
             -DWEBGL=1 \
             ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
+            ${EXCEPTIONS_OPTION} \
             ../..
         ln -sf "out/cmake-webgl-${lc_target}/compile_commands.json" \
            ../../compile_commands.json
@@ -457,6 +462,7 @@ function build_android_target {
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${ENABLE_PERFETTO} \
+            ${EXCEPTIONS_OPTION} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -698,6 +704,7 @@ function build_ios_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${STEREOSCOPIC_OPTION} \
+            ${EXCEPTIONS_OPTION} \
             ../..
         ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -858,7 +865,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
+while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
     case ${opt} in
         h)
             print_help
@@ -1008,6 +1015,9 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
             ;;
         P)  ENABLE_PERFETTO="-DFILAMENT_ENABLE_PERFETTO=ON"
             echo "Enabled perfetto"
+            ;;
+        E)  EXCEPTIONS_OPTION="-DFILAMENT_ENABLE_EXCEPTIONS=OFF"
+            echo "Disabling exceptions."
             ;;
         x)  BACKEND_DEBUG_FLAG_OPTION="-DFILAMENT_BACKEND_DEBUG_FLAG=${OPTARG}"
             ;;
