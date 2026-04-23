@@ -130,6 +130,10 @@ std::pair<id<MTLBuffer>, size_t> MetalBumpAllocator::allocateStagingArea(size_t 
     if (size > mCapacity) {
         return { [mDevice newBufferWithLength:size options:MTLStorageModeShared], 0 };
     }
+
+    // TODO: We could optimize performance in the future by using thread-local staging areas or
+    // bump allocators per thread. For now, we use a mutex to ensure thread-safety.
+    std::lock_guard<std::mutex> lock(mMutex);
     assert_invariant(mCurrentUploadBuffer);
 
     // Align the head to a 4-byte boundary.

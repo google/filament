@@ -58,6 +58,7 @@ private:
     TrackedMetalBuffer mCurrentUploadBuffer = nil;
     size_t mHead = 0;
     size_t mCapacity;
+    std::mutex mMutex;
 };
 
 // Manages a pool of Metal buffers, periodically releasing ones that have been unused for awhile.

@@ -175,11 +175,15 @@ public:
     /**
      * Update the buffer with data inside src. Potentially allocates a new buffer allocation to hold
      * the bytes which will be released when the current frame is finished.
+     *
+     * @param cmdBuffer The command buffer to use for the copy. If this is nil, uses the current
+     * pending command buffer.
      */
     using TagResolver = utils::Invocable<const char*(void)>;
-    void copyIntoBuffer(void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag);
-    void copyIntoBufferUnsynchronized(
-            void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag);
+    void copyIntoBuffer(id<MTLCommandBuffer> cmdBuffer, void* src, size_t size, size_t byteOffset,
+            TagResolver&& getHandleTag);
+    void copyIntoBufferUnsynchronized(id<MTLCommandBuffer> cmdBuffer, void* src, size_t size,
+            size_t byteOffset, TagResolver&& getHandleTag);
 
     /**
      * Denotes that this buffer is used for a draw call ensuring that its allocation remains valid
@@ -187,7 +191,6 @@ public:
      *
      * @return The MTLBuffer representing the current state of the buffer to bind, it never returns
      * nil.
-     *
      */
     id<MTLBuffer> getGpuBufferForDraw() noexcept;
 
@@ -225,10 +228,10 @@ private:
         BUMP_ALLOCATOR,
     };
 
-    void uploadWithPoolBuffer(
-            void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag) const;
-    void uploadWithBumpAllocator(
-            void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag) const;
+    void uploadWithPoolBuffer(id<MTLCommandBuffer> cmdBuffer, void* src, size_t size,
+            size_t byteOffset, TagResolver&& getHandleTag) const;
+    void uploadWithBumpAllocator(id<MTLCommandBuffer> cmdBuffer, void* src, size_t size,
+            size_t byteOffset, TagResolver&& getHandleTag) const;
 
     UploadStrategy mUploadStrategy;
     TrackedMetalBuffer mBuffer;
