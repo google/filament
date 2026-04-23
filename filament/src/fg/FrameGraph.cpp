@@ -136,8 +136,10 @@ FrameGraph& FrameGraph::compile() noexcept {
 
 #if FILAMENT_ENABLE_FGVIEWER
     // Add passes for reading back textures
-    mFgviewer->addReadbacksToFramegraph(*this, mView->getRenderTargetHandle(),
-            mView->getViewHandle());
+    if (UTILS_LIKELY(mFgviewer && mView)) {
+        mFgviewer->addReadbacksToFramegraph(*this, mView->getRenderTargetHandle(),
+                mView->getViewHandle());
+    }
 #endif
 
     DependencyGraph& dependencyGraph = mGraph;
@@ -211,7 +213,9 @@ FrameGraph& FrameGraph::compile() noexcept {
     }
 
 #if FILAMENT_ENABLE_FGVIEWER
-    mFgviewer->framegraphUpdated(*this, *mView);
+    if (UTILS_LIKELY(mFgviewer && mView)) {
+        mFgviewer->framegraphUpdated(*this, *mView);
+    }
 #endif
     return *this;
 }
@@ -256,7 +260,9 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
     driver.popGroupMarker();
 
 #if FILAMENT_ENABLE_FGVIEWER
-    mFgviewer->framegraphExecuted();
+    if (UTILS_LIKELY(mFgviewer)) {
+        mFgviewer->framegraphExecuted();
+    }
 #endif
 }
 

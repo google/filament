@@ -79,6 +79,10 @@ The following CMake options are boolean options specific to Filament:
 - `FILAMENT_INSTALL_BACKEND_TEST`: Install the backend test library so it can be consumed on iOS
 - `FILAMENT_USE_EXTERNAL_GLES3`:   Experimental: Compile Filament against OpenGL ES 3
 - `FILAMENT_SKIP_SAMPLES`:         Don't build sample apps
+- `FILAMENT_ENABLE_EXCEPTIONS`:    Enable C++ exceptions (default: ON, OFF for iOS). Required for JNI bindings.
+- `FILAMENT_ENABLE_RTTI`:          Enable C++ RTTI (default: OFF).
+
+Note: If you intend to use the JNI library (Android/Java build), you need to have `FILAMENT_ENABLE_EXCEPTIONS` enabled. If you are using Filament on Android as a pure native library and want to save space, you can disable it (e.g., using `./build.sh -E`).
 
 To turn an option on or off:
 
