@@ -381,7 +381,7 @@ TEST(FilamentTest, LightManagerCallback) {
 }
 
 TEST(FilamentTest, TransformManagerCallback) {
-    FEngine* engine = downcast(Engine::create());
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
     auto& tcm = engine->getTransformManager();
     EntityManager& em = EntityManager::get();
     Entity e = em.create();
