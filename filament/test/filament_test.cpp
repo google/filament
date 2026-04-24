@@ -343,7 +343,7 @@ TEST(FilamentTest, RenderableManagerCallback) {
 }
 
 TEST(FilamentTest, LightManagerCallback) {
-    FEngine* engine = downcast(Engine::create());
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
     auto& lm = engine->getLightManager();
     EntityManager& em = EntityManager::get();
     Entity e = em.create();
