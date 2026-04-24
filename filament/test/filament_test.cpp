@@ -305,7 +305,7 @@ TEST(FilamentTest, TransformManager) {
 }
 
 TEST(FilamentTest, RenderableManagerCallback) {
-    FEngine* engine = downcast(Engine::create());
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
     auto& rm = engine->getRenderableManager();
     EntityManager& em = EntityManager::get();
     Entity e = em.create();
