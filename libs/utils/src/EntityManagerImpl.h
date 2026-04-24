@@ -20,6 +20,7 @@
 #include <utils/EntityManager.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/CallStack.h>
 #include <utils/Entity.h>
 #include <utils/FixedCapacityVector.h>
