@@ -602,6 +602,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_CircularBuffer.cpp
             test/test_CommandBufferQueue.cpp
             test/test_Template.cpp
+            test/test_AsyncUploads.cpp
             test/test_Platform.cpp
         )
         if (FILAMENT_SUPPORTS_WEBGPU)
