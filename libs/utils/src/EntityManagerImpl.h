@@ -176,6 +176,7 @@ public:
         std::unique_lock<Mutex> lock(mFreeListLock);
         if (mDirtyCount > 0) {
             Entity localBuffer[MAX_DIRTY_COUNT];
+            assert_invariant(mDirtyCount <= MAX_DIRTY_COUNT);
             std::copy(mDirtyEntities, mDirtyEntities + mDirtyCount, localBuffer);
             size_t const count = mDirtyCount;
             mDirtyCount = 0;
