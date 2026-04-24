@@ -22,4 +22,4 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     target_link_libraries(test_imagediff PRIVATE imagediff gtest image utils)
 endif()
 
-install(TARGETS imagediff ARCHIVE DESTINATION lib/${DIST_ARCH} LIBRARY DESTINATION lib/${DIST_ARCH})
+install(TARGETS imagediff ARCHIVE DESTINATION lib/${DIST_DIR} LIBRARY DESTINATION lib/${DIST_DIR})

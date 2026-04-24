@@ -775,6 +775,12 @@ function build_ios {
 
         build/ios/create-xc-frameworks.sh -o "${lib_dir}" "${xcframework_paths[@]}"
 
+        rm -rf \
+            "${lib_dir}/arm64-iphoneos" \
+            "${lib_dir}/arm64-iphonesimulator" \
+            "${lib_dir}/x86_64-iphonesimulator" \
+            "${lib_dir}/universal"
+
         archive_ios "Debug"
     fi
 
@@ -806,6 +812,12 @@ function build_ios {
         fi
 
         build/ios/create-xc-frameworks.sh -o "${lib_dir}" "${xcframework_paths[@]}"
+
+        rm -rf \
+            "${lib_dir}/arm64-iphoneos" \
+            "${lib_dir}/arm64-iphonesimulator" \
+            "${lib_dir}/x86_64-iphonesimulator" \
+            "${lib_dir}/universal"
 
         archive_ios "Release"
     fi
