@@ -40,6 +40,7 @@
 #include <deque>
 #include <memory>
 #include <mutex> // for std::lock_guard
+#include <new>
 #include <utility>
 #include <vector>
 
@@ -49,15 +50,38 @@ static constexpr size_t MIN_FREE_INDICES = 1024;
 
 class UTILS_PRIVATE EntityManagerImpl : public EntityManager {
 public:
+    friend class EntityManager;
+
     using EntityManager::getGeneration;
     using EntityManager::getIndex;
     using EntityManager::makeIdentity;
     using EntityManager::create;
     using EntityManager::destroy;
 
+    EntityManagerImpl() noexcept
+            : mGens(new(std::nothrow) uint8_t[RAW_INDEX_COUNT]) {
+        // initialize all the generations to 0
+        std::fill_n(mGens, RAW_INDEX_COUNT, 0);
+    }
+
+    ~EntityManagerImpl() noexcept {
+        delete [] mGens;
+    }
+
+    bool isAlive(Entity const e) const noexcept {
+        assert(getIndex(e) < RAW_INDEX_COUNT);
+        if (e.isNull()) {
+            return false;
+        }
+
+        std::lock_guard const lock(mFreeListLock);
+        bool const alive = (getGeneration(e) == mGens[getIndex(e)]);
+        return alive;
+    }
+
     UTILS_NOINLINE
     size_t getEntityCount() const noexcept {
-        std::lock_guard<Mutex> const lock(mFreeListLock);
+        std::lock_guard const lock(mFreeListLock);
         if (mCurrentIndex < RAW_INDEX_COUNT) {
             return (mCurrentIndex - 1) - mFreeList.size();
         } else {
@@ -66,13 +90,13 @@ public:
     }
 
     UTILS_NOINLINE
-    void create(size_t n, Entity* entities) {
+    void create(size_t const n, Entity* entities) {
         Entity::Type index{};
         auto& freeList = mFreeList;
         uint8_t const* const gens = mGens;
 
         // this must be thread-safe, acquire the free-list mutex
-        std::lock_guard<Mutex> const lock(mFreeListLock);
+        std::lock_guard const lock(mFreeListLock);
         Entity::Type currentIndex = mCurrentIndex;
         for (size_t i = 0; i < n; i++) {
             if (UTILS_UNLIKELY(currentIndex >= RAW_INDEX_COUNT || freeList.size() >= MIN_FREE_INDICES)) {
@@ -98,11 +122,11 @@ public:
     }
 
     UTILS_NOINLINE
-    void destroy(size_t n, Entity* entities) noexcept {
+    void destroy(size_t const n, Entity* entities) noexcept {
         auto& freeList = mFreeList;
         uint8_t* const gens = mGens;
 
-        std::unique_lock<Mutex> lock(mFreeListLock);
+        std::unique_lock lock(mFreeListLock);
         for (size_t i = 0; i < n; i++) {
             if (!entities[i]) {
                 // behave like free(), ok to free null Entity.
@@ -110,19 +134,15 @@ public:
             }
 
             // it's an error to delete an Entity twice...
-            assert(isAlive(entities[i]));
+            bool const isAlive = getGeneration(entities[i]) == mGens[getIndex(entities[i])];
+            assert(isAlive);
 
             // ... deleting a dead Entity will corrupt the internal state, so we protect ourselves
             // against it. We don't guarantee anything about external state -- e.g. the listeners
             // will be called.
-            if (isAlive(entities[i])) {
+            if (UTILS_LIKELY(isAlive)) {
                 Entity::Type const index = getIndex(entities[i]);
                 freeList.push_back(index);
-
-                // The generation update doesn't require the lock because it's only used for isAlive()
-                // and entities work as weak references -- it just means that isAlive() could return
-                // true a little longer than expected in some other threads.
-                // We do need a memory fence though, it is provided by the mFreeListLock.unlock() below.
                 gens[index]++;
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
@@ -151,22 +171,22 @@ public:
     }
 
     void registerListener(Listener* l) noexcept {
-        std::lock_guard<Mutex> const lock(mListenerLock);
+        std::lock_guard const lock(mListenerLock);
         mListeners.insert(l);
     }
 
     void unregisterListener(Listener* l) noexcept {
-        std::lock_guard<Mutex> const lock(mListenerLock);
+        std::lock_guard const lock(mListenerLock);
         mListeners.erase(l);
     }
 
     void registerChangeCallback(void const* token, ChangeCallback callback) noexcept {
-        std::lock_guard<Mutex> const lock(mListenerLock);
+        std::lock_guard const lock(mListenerLock);
         mChangeCallbacks.push_back({token, std::move(callback)});
     }
 
     void unregisterChangeCallback(void const* token) noexcept {
-        std::lock_guard<Mutex> const lock(mListenerLock);
+        std::lock_guard const lock(mListenerLock);
         mChangeCallbacks.erase(
                 std::remove_if(mChangeCallbacks.begin(), mChangeCallbacks.end(),
                         [token](auto const& info) { return info.token == token; }),
@@ -174,7 +194,7 @@ public:
     }
 
     void flushNotifications() noexcept {
-        std::unique_lock<Mutex> lock(mFreeListLock);
+        std::unique_lock lock(mFreeListLock);
         if (mDirtyCount > 0) {
             Entity localBuffer[MAX_DIRTY_COUNT];
             assert_invariant(mDirtyCount <= MAX_DIRTY_COUNT);
@@ -208,7 +228,7 @@ public:
 
 private:
     std::vector<ChangeCallback> getChangeCallbacks() const noexcept {
-        std::lock_guard<Mutex> const lock(mListenerLock);
+        std::lock_guard const lock(mListenerLock);
         std::vector<ChangeCallback> result;
         result.reserve(mChangeCallbacks.size());
         for (auto const& info : mChangeCallbacks) {
@@ -217,7 +237,7 @@ private:
         return result;
     }
 
-    void triggerChangeCallbacks(Entity const* entities, size_t n) const noexcept {
+    void triggerChangeCallbacks(Entity const* entities, size_t const n) const noexcept {
         auto const callbacks = getChangeCallbacks();
         Slice const slice(entities, n);
         for (auto const& callback : callbacks) {
@@ -226,7 +246,7 @@ private:
     }
 
     FixedCapacityVector<Listener*> getListeners() const noexcept {
-        std::lock_guard<Mutex> const lock(mListenerLock);
+        std::lock_guard const lock(mListenerLock);
         tsl::robin_set<Listener*> const& listeners = mListeners;
         FixedCapacityVector<Listener*> result(listeners.size());
         result.resize(result.capacity()); // unfortunately this memset()
@@ -234,22 +254,20 @@ private:
         return result; // the c++ standard guarantees a move
     }
 
-    uint32_t mCurrentIndex = 1;
-
-    // stores indices that got freed
-    mutable Mutex mFreeListLock;
-    std::deque<Entity::Type> mFreeList;
-
-    mutable Mutex mListenerLock;
-    tsl::robin_set<Listener*> mListeners;
-
+    static constexpr size_t MAX_DIRTY_COUNT = 16;
     struct CallbackInfo {
         void const* token;
         ChangeCallback callback;
     };
-    std::vector<CallbackInfo> mChangeCallbacks;
 
-    static constexpr size_t MAX_DIRTY_COUNT = 16;
+    mutable Mutex mFreeListLock;
+    uint32_t mCurrentIndex = 1;
+    std::deque<Entity::Type> mFreeList;     // stores indices that got freed
+    uint8_t* const mGens;                   // stores the generation of each index.
+
+    mutable Mutex mListenerLock;
+    tsl::robin_set<Listener*> mListeners;
+    std::vector<CallbackInfo> mChangeCallbacks;
     Entity mDirtyEntities[MAX_DIRTY_COUNT];
     size_t mDirtyCount = 0;
 
