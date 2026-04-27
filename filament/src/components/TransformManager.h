@@ -69,6 +69,10 @@ public:
         return mManager.getEntities();
     }
 
+    const utils::PagedArenaBitset& getEntityBitset() const noexcept {
+        return mManager.getEntityBitset();
+    }
+
     void setAccurateTranslationsEnabled(bool enable) noexcept;
 
     bool isAccurateTranslationsEnabled() const noexcept {
