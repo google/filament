@@ -1418,15 +1418,15 @@ bool FEngine::destroy(const FMaterialInstance* p) {
     size_t const count = rcm.getComponentCount();
     for (size_t i = 0; i < count; i++) {
         Entity const entity = entities[i];
-        if (em.isAlive(entity)) {
-            RenderableManager::Instance const ri = rcm.getInstance(entity);
-            size_t const primitiveCount = rcm.getPrimitiveCount(ri, 0);
-            for (size_t j = 0; j < primitiveCount; j++) {
-                auto const* const mi = rcm.getMaterialInstanceAt(ri, 0, j);
-                auto const& featureFlags = features.engine.debug;
+        RenderableManager::Instance const ri = rcm.getInstance(entity);
+        size_t const primitiveCount = rcm.getPrimitiveCount(ri, 0);
+        for (size_t j = 0; j < primitiveCount; j++) {
+            auto const* const mi = rcm.getMaterialInstanceAt(ri, 0, j);
+            if (UTILS_VERY_UNLIKELY(mi == p)) {
+                // if we have a match, we check again with the liveness of the entity
                 FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
-                        mi != p,
-                        featureFlags.assert_material_instance_in_use)
+                        ((mi != p) || !em.isAlive(entity)),
+                        features.engine.debug.assert_material_instance_in_use)
                         << "destroying MaterialInstance \"" << mi->getName()
                         << "\" which is still in use by Renderable (entity=" << entity.getId()
                         << ", instance=" << ri.asValue() << ", index=" << j << ")";
