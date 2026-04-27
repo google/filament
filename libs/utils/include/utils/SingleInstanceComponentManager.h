@@ -20,6 +20,7 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
 #include <utils/Slice.h>
@@ -264,6 +265,10 @@ public:
         using SoA::template Field<E>::operator =;
     };
 
+    const PagedArenaBitset& getEntityBitset() const noexcept {
+        return mEntities;
+    }
+
 protected:
     template<size_t ElementIndex>
     typename SoA::template TypeAt<ElementIndex>* data() noexcept {
@@ -330,6 +335,7 @@ private:
     // maps an entity to an instance index
     tsl::robin_map<Entity, Instance, Entity::Hasher> mInstanceMap;
     default_random_engine mRng;
+    PagedArenaBitset mEntities;
 };
 
 // Keep these outside of the class because CLion has trouble parsing them
@@ -344,6 +350,7 @@ SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
             // index 0 is used when the component doesn't exist
             ci = Instance(mData.size() - 1);
             mInstanceMap[e] = ci;
+            mEntities.add(e.getId());
             notifyChange(e);
         } else {
             // if the entity already has this component, just return its instance
@@ -376,6 +383,7 @@ SingleInstanceComponentManager<Elements ... >::removeComponent(Entity const e) {
         }
         mData.pop_back();
         map.erase(pos);
+        mEntities.remove(e.getId());
         notifyChange(e);
         return last;
     }

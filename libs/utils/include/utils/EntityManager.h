@@ -20,6 +20,7 @@
 #include <utils/Entity.h>
 #include <utils/compiler.h>
 #include <utils/Slice.h>
+#include <utils/PagedArenaBitset.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -114,6 +115,8 @@ public:
     // unregisters a listener.
     void unregisterListener(Listener* l) noexcept;
 
+    // Returns the bitset of alive entities.
+    PagedArenaBitset getAliveEntities() const noexcept;
 
 
     /* no user serviceable parts below */
