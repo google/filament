@@ -124,8 +124,8 @@ void FScene::prepare(JobSystem& js,
      * First compute the exact number of renderables and lights in the scene.
      * Also find the main directional light.
      */
-
-    for (Entity const e: entities) {
+    entities.forEachSetBit([&](uint32_t id) {
+        Entity const e = Entity::import(int32_t(id));
         if (UTILS_LIKELY(em.isAlive(e))) {
             auto ti = tcm.getInstance(e);
             auto li = lcm.getInstance(e);
@@ -146,7 +146,7 @@ void FScene::prepare(JobSystem& js,
                 renderableInstances.emplace_back(ri, ti);
             }
         }
-    }
+    });
 
     FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
@@ -459,7 +459,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
                 shadowInfo[i].castsShadows);
     }
 
-    driver.updateBufferObject(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) }, 0);
+    driver.updateBufferObject(lightUbh, {lp, positionalLightCount * sizeof(LightsUib)}, 0);
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn
@@ -470,13 +470,12 @@ inline void FScene::computeLightRanges(
         float2* UTILS_RESTRICT const zrange,
         CameraInfo const& UTILS_RESTRICT camera,
         float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
-
     // without this clang seems to assume the src and dst might overlap even if they're
     // restricted.
     // we're guaranteed to have a multiple of 4 lights (at least)
     count = uint32_t(count + 3u) & ~3u;
 
-    for (size_t i = 0 ; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         // this loop gets vectorized x4
         const float4 sphere = spheres[i];
         const float4 center = camera.view * sphere.xyz; // camera points towards the -z axis
@@ -487,7 +486,7 @@ inline void FScene::computeLightRanges(
         f = camera.projection * f;
         // convert to NDC
         const float min = (n.w > camera.zn) ? (n.z / n.w) : -1.0f;
-        const float max = (f.w < camera.zf) ? (f.z / f.w) :  1.0f;
+        const float max = (f.w < camera.zf) ? (f.z / f.w) : 1.0f;
         // convert to screen space
         zrange[i].x = (min + 1.0f) * 0.5f;
         zrange[i].y = (max + 1.0f) * 0.5f;
@@ -496,17 +495,19 @@ inline void FScene::computeLightRanges(
 
 UTILS_NOINLINE
 void FScene::addEntity(Entity const entity) {
-    mEntities.insert(entity);
+    mEntities.add(entity.getId());
 }
 
 UTILS_NOINLINE
 void FScene::addEntities(const Entity* entities, size_t const count) {
-    mEntities.insert(entities, entities + count);
+    for (size_t i = 0; i < count; ++i, ++entities) {
+        addEntity(*entities);
+    }
 }
 
 UTILS_NOINLINE
 void FScene::remove(Entity const entity) {
-    mEntities.erase(entity);
+    mEntities.remove(entity.getId());
 }
 
 UTILS_NOINLINE
@@ -526,12 +527,7 @@ size_t FScene::getRenderableCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
     FRenderableManager const& rcm = engine.getRenderableManager();
-    size_t count = 0;
-    auto const& entities = mEntities;
-    for (Entity const e : entities) {
-        count += em.isAlive(e) && rcm.getInstance(e) ? 1 : 0;
-    }
-    return count;
+    return PagedArenaBitset::intersectSize(em.getAliveEntities(), rcm.getEntityBitset(), mEntities);
 }
 
 UTILS_NOINLINE
@@ -539,17 +535,12 @@ size_t FScene::getLightCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
     FLightManager const& lcm = engine.getLightManager();
-    size_t count = 0;
-    auto const& entities = mEntities;
-    for (Entity const e : entities) {
-        count += em.isAlive(e) && lcm.getInstance(e) ? 1 : 0;
-    }
-    return count;
+    return PagedArenaBitset::intersectSize(em.getAliveEntities(), lcm.getEntityBitset(), mEntities);
 }
 
 UTILS_NOINLINE
 bool FScene::hasEntity(Entity const entity) const noexcept {
-    return mEntities.find(entity) != mEntities.end();
+    return mEntities[entity.getId()];
 }
 
 UTILS_NOINLINE
@@ -589,7 +580,9 @@ bool FScene::hasContactShadows() const noexcept {
 
 UTILS_NOINLINE
 void FScene::forEach(Invocable<void(Entity)>&& functor) const noexcept {
-    std::for_each(mEntities.begin(), mEntities.end(), std::move(functor));
+    mEntities.forEachSetBit([&](uint32_t const bit) {
+        functor(Entity::import(int32_t(bit)));
+    });
 }
 
 } // namespace filament

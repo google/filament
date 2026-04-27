@@ -30,6 +30,7 @@
 #include <filament/Scene.h>
 
 #include <utils/Entity.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
@@ -181,6 +182,8 @@ public:
     bool hasContactShadows() const noexcept;
 
 private:
+    using EntitySet = utils::PagedArenaBitset;
+
     friend class Scene;
     void setSkybox(FSkybox* skybox) noexcept;
     void setIndirectLight(FIndirectLight* ibl) noexcept { mIndirectLight = ibl; }
@@ -203,14 +206,6 @@ private:
     FIndirectLight* mIndirectLight = nullptr;
 
     /*
-     * list of Entities in the scene. We use a robin_set<> so we can do efficient removes
-     * (a vector<> could work, but removes would be O(n)). robin_set<> iterates almost as
-     * nicely as vector<>, which is a good compromise.
-     */
-    tsl::robin_set<utils::Entity, utils::Entity::Hasher> mEntities;
-
-
-    /*
      * The data below is valid only during a view pass. i.e. if a scene is used in multiple
      * views, the data below is updated for each view.
      * In essence, this data should be owned by View, but it's so scene-specific, that for now
@@ -219,6 +214,7 @@ private:
     RenderableSoa mRenderableData;
     LightSoa mLightData;
     bool mHasContactShadows = false;
+    EntitySet mEntities;
 };
 
 FILAMENT_DOWNCAST(Scene)
