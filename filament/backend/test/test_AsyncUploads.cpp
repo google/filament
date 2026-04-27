@@ -53,8 +53,6 @@ static void signalCallback(void* user) {
 TEST_F(BackendTest, BasicAsyncFlow) {
     SKIP_IF(Backend::VULKAN, "Vulkan does not support asynchronous resource uploading");
     SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL),
-            "Mesa does not support shared contexts");
 
     constexpr int kRenderTargetSize = 512;
 
@@ -184,7 +182,7 @@ TEST_F(BackendTest, BasicAsyncFlow) {
             addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
 
     // Bind texture
-    SamplerParams samplerParams;
+    SamplerParams samplerParams {};
     samplerParams.filterMin = SamplerMinFilter::NEAREST;
     samplerParams.filterMag = SamplerMagFilter::NEAREST;
 
