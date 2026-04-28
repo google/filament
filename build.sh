@@ -368,6 +368,11 @@ function build_wasm_with_target {
         ISSUE_CMAKE_ALWAYS=true
     fi
 
+    if [[ "${WEBGPU_OPTION}" == *"-DFILAMENT_SUPPORTS_WEBGPU=ON"* ]]; then
+        WEBGPU_OPTION="${WEBGPU_OPTION} -DCMAKE_CXX_FLAGS=\"--use-port=emdawnwebgpu\""
+        WEBGPU_OPTION="${WEBGPU_OPTION} -DCMAKE_C_FLAGS=\"--use-port=emdawnwebgpu\""
+    fi
+
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         # Apply the emscripten environment within a subshell.
         (
@@ -1027,7 +1032,8 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
             echo "Consider using -c after changing this option to clear the Gradle cache."
             ;;
         W)
-            WEBGPU_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=ON"
+            WEBGPU_OPTION='-DFILAMENT_SUPPORTS_WEBGPU=ON'
+
             WEBGPU_ANDROID_GRADLE_OPTION="-Pcom.google.android.filament.include-webgpu"
             echo "Enable support for WebGPU(Experimental) in the core Filament library."
             ;;

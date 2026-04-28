@@ -57,20 +57,29 @@ namespace {
 constexpr uint32_t MAX_MIPMAP_STORAGE_TEXTURES_PER_STAGE = 12u;
 
 constexpr std::array REQUIRED_FEATURES = {
-    wgpu::FeatureName::TransientAttachments,
     // Qualcomm 500 and 600 GPUs do not support this so it is not part of core webgpu spec. To
     // support such devices, we will either need Filament to not attempt this, or find another
     // workaround. https://github.com/gpuweb/gpuweb/issues/2648
     wgpu::FeatureName::RG11B10UfloatRenderable,
     // necessary for blit conversions of formats like RGBA32Float...
     wgpu::FeatureName::Float32Filterable,
+
+
+    // Unsupported on WASM
+#if !defined(__EMSCRIPTEN__)
+    wgpu::FeatureName::TransientAttachments,
+#endif
 };
 
 constexpr std::array OPTIONAL_FEATURES = {
     wgpu::FeatureName::CoreFeaturesAndLimits,
     wgpu::FeatureName::DepthClipControl,
     wgpu::FeatureName::Depth32FloatStencil8,
+
+    // Unsupported on WASM
+#if !defined(__EMSCRIPTEN__)
     wgpu::FeatureName::TextureComponentSwizzle,
+#endif
 };
 
 enum class LimitToValidate : uint8_t {
@@ -266,12 +275,21 @@ void printInstanceDetails(wgpu::Instance const& instance) {
 #endif
     dawnTogglesDescriptor.enabledToggleCount = toggles.size();
     dawnTogglesDescriptor.enabledToggles = toggles.data();
-    const wgpu::InstanceFeatureName features[] = {wgpu::InstanceFeatureName::TimedWaitAny};
+
+#if defined(__EMSCRIPTEN__)
+    constexpr std::array<wgpu::InstanceFeatureName, 0> features;
+#else
+    constexpr std::array features = {
+        wgpu::InstanceFeatureName::TimedWaitAny
+    };
+#endif
+
     wgpu::InstanceDescriptor instanceDescriptor{
         .nextInChain = &dawnTogglesDescriptor,
-        .requiredFeatures = features,
+        .requiredFeatureCount = features.size(),
+        .requiredFeatures = features.data(),
     };
-    instanceDescriptor.requiredFeatureCount = 1;
+
     wgpu::Instance instance = wgpu::CreateInstance(&instanceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(instance != nullptr) << "Unable to create WebGPU instance.";
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -351,6 +369,8 @@ struct AdapterDetails final {
         : info(std::move(info)),
           powerPreference(powerPreference),
           adapter(std::move(adapter)) {}
+    AdapterDetails(AdapterDetails&& other) noexcept = default;
+
     AdapterDetails& operator=(AdapterDetails&& other) noexcept {
         adapter = std::exchange(other.adapter, nullptr);
         info = std::exchange(other.info, {});
@@ -373,8 +393,10 @@ struct AdapterDetails final {
 
 [[nodiscard]] std::string toString(AdapterDetails const& details) {
     std::stringstream out;
-    out << adapterInfoToString(details.info)
-        << " power preference " << powerPreferenceToString(details.powerPreference);
+    out << adapterInfoToString(details.info);
+#if !defined(__EMSCRIPTEN__)
+    out << " power preference " << powerPreferenceToString(details.powerPreference);
+#endif
     return out.str();
 }
 

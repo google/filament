@@ -64,6 +64,22 @@
 
 using namespace std::chrono_literals;
 
+
+// https://issues.chromium.org/issues/507581790
+// Manual polyfill pending upstream fix.
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/em_js.h>
+
+EM_JS(void, wgpuRenderPassEncoderSetImmediates, (WGPURenderPassEncoder passEncoder,
+                uint32_t offset, void const * data, size_t size), {
+    const encoder = WebGPU.Internals.jsObjects[passEncoder];
+    if (encoder && encoder.setImmediates) {
+        const buffer = HEAPU8.slice(data, data + size);
+        encoder.setImmediates(offset, buffer);
+    }
+})
+#endif
+
 namespace filament::backend {
 
 namespace {
@@ -147,8 +163,10 @@ void WebGPUDriver::terminate() {
 }
 
 void WebGPUDriver::tick(int) {
+#if !defined(__EMSCRIPTEN__)
     mDevice.Tick();
     mAdapter.GetInstance().ProcessEvents();
+#endif
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -198,7 +216,9 @@ void WebGPUDriver::finish(int /* dummy */) {
     // processed. Note that blocking with mReadPixelMapsCounter.waitForAllToFinish will only
     // deadlock since we could not advance the counter.
     while (!mReadPixelMapsCounter.isIdle()) {
+#if !defined(__EMSCRIPTEN__)
         mAdapter.GetInstance().ProcessEvents();
+#endif
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
@@ -782,7 +802,7 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    
+
     using namespace std::chrono;
     auto now = steady_clock::now();
     steady_clock::time_point until = steady_clock::time_point::max();
@@ -800,15 +820,15 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
         state = fence->getState();
         return bool(state);
     }, until);
-    
+
     if (status == FenceStatus::ERROR) {
         return FenceStatus::ERROR;
     }
-    
+
     if (status == FenceStatus::TIMEOUT_EXPIRED) {
         return FenceStatus::TIMEOUT_EXPIRED;
     }
-    
+
     auto duration_ns = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::nanoseconds>(steady_clock::now() - now)
                     .count());
@@ -837,7 +857,11 @@ bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
+#if defined(__EMSCRIPTEN__)
+    return false;
+#else
     return mDevice.HasFeature(wgpu::FeatureName::TextureComponentSwizzle);
+#endif
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
@@ -859,7 +883,7 @@ bool WebGPUDriver::isTextureFormatFilterable(TextureFormat format) {
     if (isFp32ColorFormat(format)) {
         return mDevice.HasFeature(wgpu::FeatureName::Float32Filterable);
     }
-    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) ||
         isDepthFormat(format) || isStencilFormat(format)) {
         return false;
     }
@@ -1324,7 +1348,8 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                     const uint8_t mipLevel = colorInfos[i].level;
                     const uint32_t arrayLayer = colorInfos[i].layer;
                     customColorViews[customColorViewCount] =
-                            colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer, renderTarget->getLayerCount());
+                            colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer,
+                                    renderTarget->getLayerCount());
                     if (msaaSidecarsRequired) {
                         const wgpu::TextureView msaaSidecarView{
                             colorTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
@@ -1483,7 +1508,12 @@ void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
     } else if (std::holds_alternative<bool>(value)) {
         data = std::get<bool>(value) ? 1 : 0;
     }
+#if defined(__EMSCRIPTEN__)
+    wgpuRenderPassEncoderSetImmediates(mRenderPassEncoder.Get(), index * sizeof(uint32_t), &data,
+            sizeof(uint32_t));
+#else
     mRenderPassEncoder.SetImmediates(index * sizeof(uint32_t), &data, sizeof(uint32_t));
+#endif
 }
 
 void WebGPUDriver::insertEventMarker(char const* string) {

@@ -39,6 +39,10 @@ set(LOPTS "${LOPTS} -s FULL_ES3")
 set(LOPTS "${LOPTS} -s MIN_WEBGL_VERSION=2")
 set(LOPTS "${LOPTS} -s MAX_WEBGL_VERSION=2")
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    set(LOPTS "${LOPTS} --use-port=emdawnwebgpu")
+endif()
+
 foreach (JS_FILENAME ${EXTERN_POSTJS_SRC})
   set(LOPTS "${LOPTS} --extern-post-js ${JS_FILENAME}")
 endforeach()

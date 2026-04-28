@@ -474,12 +474,12 @@ if (NOT MSVC)
 endif()
 
 if (ANDROID OR WASM)
-    # On Android and WebGL RELEASE builds, we omit unwind info to save space.
+    # On Android and WASM RELEASE builds, we omit unwind info to save space.
     # (We keep unwind info on iOS to allow readable stack traces in crash reports.)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
 endif()
 
-# With WebGL, we disable RTTI because we pass emscripten::val back and forth
+# With WASM, we disable RTTI because we pass emscripten::val back and forth
 # between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
 # NOTE: This is not documented in emscripten so we should consider a different approach.
 if (WASM)
@@ -603,7 +603,7 @@ if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
     add_definitions(-DFILAMENT_SUPPORTS_WEBP_TEXTURES)
 endif()
 
-# Build with Metal support on non-WebGL Apple platforms.
+# Build with Metal support on non-WASM Apple platforms.
 if (APPLE AND NOT WASM)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
 else()
@@ -969,7 +969,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${EXTERNAL}/spirv-headers)
 endif()
 
-if (FILAMENT_SUPPORTS_WEBGPU)
+if (FILAMENT_SUPPORTS_WEBGPU AND NOT WASM)
     add_subdirectory(${EXTERNAL}/dawn/tnt/)
 endif()
 
@@ -1021,7 +1021,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/specgen)
 endif()
 
-# Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
+# Generate exported executables for cross-compiled builds (Android, WASM, and iOS)
 if ((NOT CMAKE_CROSSCOMPILING AND NOT FILAMENT_IMPORT_PREBUILT_EXECUTABLES) OR FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
     export(TARGETS matc cmgen filamesh mipgen resgen uberz glslminifier FILE ${IMPORT_EXECUTABLES})
 endif()

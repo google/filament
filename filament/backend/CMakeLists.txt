@@ -358,6 +358,11 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             include/backend/platforms/WebGPUPlatformAndroid.h
             src/webgpu/platform/WebGPUPlatformAndroid.cpp
         )
+    elseif (WASM)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformWasm.h
+            src/webgpu/platform/WebGPUPlatformWasm.cpp
+        )
     endif()
 
     if (TNT_DEV)
@@ -431,7 +436,7 @@ if (FILAMENT_USE_ABSEIL_LOGGING)
     target_link_libraries(${TARGET} PRIVATE absl::log)
 endif()
 
-# Android, iOS, and WebGL do not use bluegl.
+# Android, iOS, and WASM do not use bluegl.
 if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WASM)
     target_link_libraries(${TARGET} PRIVATE bluegl)
 endif()
@@ -441,7 +446,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
 endif()
 
-if (FILAMENT_SUPPORTS_WEBGPU)
+if (FILAMENT_SUPPORTS_WEBGPU AND NOT WASM)
     target_link_libraries(${TARGET} PRIVATE webgpu_dawn dawncpp_headers)
 endif()
 
@@ -559,7 +564,7 @@ install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(TARGETS ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 
-if (FILAMENT_SUPPORTS_WEBGPU)
+if (FILAMENT_SUPPORTS_WEBGPU AND NOT WASM)
     install(TARGETS webgpu_dawn ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 endif()
 

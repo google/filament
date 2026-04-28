@@ -392,6 +392,9 @@ WebGPURenderPassMipmapGenerator::getScalarSampleTypeFrom(const wgpu::TextureForm
         case wgpu::TextureFormat::R16Snorm:
         case wgpu::TextureFormat::RG16Snorm:
         case wgpu::TextureFormat::RGBA16Snorm:
+
+        // Formats not available on WASM
+#if !defined(__EMSCRIPTEN__)
         case wgpu::TextureFormat::R8BG8Biplanar420Unorm:
         case wgpu::TextureFormat::R10X6BG10X6Biplanar420Unorm:
         case wgpu::TextureFormat::R8BG8A8Triplanar420Unorm:
@@ -400,6 +403,7 @@ WebGPURenderPassMipmapGenerator::getScalarSampleTypeFrom(const wgpu::TextureForm
         case wgpu::TextureFormat::R10X6BG10X6Biplanar422Unorm:
         case wgpu::TextureFormat::R10X6BG10X6Biplanar444Unorm:
         case wgpu::TextureFormat::OpaqueYCbCrAndroid:
+#endif
             return ScalarSampleType::F32;
         case wgpu::TextureFormat::Depth16Unorm:
         case wgpu::TextureFormat::Depth24Plus:

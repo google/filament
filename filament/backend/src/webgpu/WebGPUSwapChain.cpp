@@ -387,9 +387,12 @@ wgpu::Texture WebGPUSwapChain::getCurrentTexture() {
 }
 
 void WebGPUSwapChain::present(DriverBase& driver) {
+#if !defined(__EMSCRIPTEN__)
     if (!isHeadless()) {
         mSurface.Present();
     }
+#endif
+
     if (mFrameScheduled.callback) {
         driver.scheduleCallback(mFrameScheduled.handler,
                 [callback = mFrameScheduled.callback]() {

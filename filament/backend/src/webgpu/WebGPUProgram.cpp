@@ -75,6 +75,10 @@ namespace {
         .label = label.data()
     };
     const wgpu::ShaderModule shaderModule = device.CreateShaderModule(&descriptor);
+
+#if !defined(__EMSCRIPTEN__)
+    // TODO: We don't really need to wait for compilation info in production. It's helpful only
+    // for debugging.
     const wgpu::Instance instance = device.GetAdapter().GetInstance();
 
     // Synchronously compile the shader module.
@@ -143,6 +147,7 @@ namespace {
             PANIC_POSTCONDITION("Timed out creating/compiling shader %s", descriptor.label.data);
             break;
     }
+#endif
     FILAMENT_CHECK_POSTCONDITION(shaderModule) << "Failed to create " << descriptor.label;
     return shaderModule;
 }

@@ -81,7 +81,9 @@ void WebGPUQueueManager::finish() {
     // This is similar to draining a work queue. We currently have no other way to force the "last"
     // callback to be called.
     while (mLatestSubmissionState->getStatus() == FenceStatus::TIMEOUT_EXPIRED) {
+#if !defined(__EMSCRIPTEN__)
         mDevice.GetAdapter().GetInstance().ProcessEvents();
+#endif
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
