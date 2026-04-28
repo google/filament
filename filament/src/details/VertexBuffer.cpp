@@ -168,7 +168,22 @@ VertexBuffer::Builder& VertexBuffer::Builder::async(CallbackHandler* handler,
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
-    FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
+
+    // Attribute-less rendering: allow bufferCount(0) only when no attributes are declared.
+    // This is used for procedural geometry that reads gl_VertexID/gl_VertexIndex/[[vertex_id]].
+    bool const isAttributeless =
+            mImpl->mBufferCount == 0 && mImpl->mDeclaredAttributes.none();
+
+    if (!isAttributeless) {
+        FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
+    } else {
+        FILAMENT_CHECK_PRECONDITION(
+                engine.getActiveFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0)
+                << "Attribute-less vertex buffers (bufferCount == 0) are not supported at "
+                   "FEATURE_LEVEL_0"; // GLES2 has no `gl_VertexID`
+        FILAMENT_CHECK_PRECONDITION(!mImpl->mAdvancedSkinningEnabled)
+                << "Attribute-less vertex buffers are incompatible with advanced skinning";
+    }
 
     static_assert(DOCUMENTED_MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_BUFFER_COUNT);
 
@@ -221,8 +236,10 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
         attributedBuffers.set(attributes[j].buffer);
     });
 
-    FILAMENT_CHECK_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount)
-            << "At least one buffer slot was never assigned to an attribute.";
+    if (!isAttributeless) {
+        FILAMENT_CHECK_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount)
+                << "At least one buffer slot was never assigned to an attribute.";
+    }
 
     if (mImpl->mAdvancedSkinningEnabled) {
         FILAMENT_CHECK_PRECONDITION(!mImpl->mDeclaredAttributes[VertexAttribute::BONE_INDICES])

@@ -695,6 +695,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
             cmd.info.indexOffset = primitive.getIndexOffset();
             cmd.info.indexCount = primitive.getIndexCount();
             cmd.info.type = primitive.getPrimitiveType();
+            cmd.info.isIndexed = primitive.isIndexed();
             cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
 // FIXME: morphtarget buffer
 //            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?
@@ -1114,7 +1115,12 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                             +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
                 }
 
-                driver.draw2(info.indexOffset, info.indexCount, info.instanceCount);
+                if (UTILS_LIKELY(info.isIndexed)) {
+                    driver.draw2(info.indexOffset, info.indexCount, info.instanceCount);
+                } else {
+                    // For non-indexed draws, indexOffset/indexCount carry vertexOffset/vertexCount.
+                    driver.drawArrays(info.indexOffset, info.indexCount, info.instanceCount);
+                }
             }
         }
 

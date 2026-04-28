@@ -1797,7 +1797,8 @@ void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, Primit
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     auto vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
-    auto indexBuffer = handle_cast<MetalIndexBuffer>(ibh);
+    // ibh is permitted to be null for non-indexed (attribute-less) primitives.
+    auto indexBuffer = ibh ? handle_cast<MetalIndexBuffer>(ibh) : nullptr;
     primitive->vertexBuffer = vertexBuffer;
     primitive->indexBuffer = indexBuffer;
     primitive->type = pt;
@@ -2357,10 +2358,15 @@ void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
         maxBufferIndex = std::max(maxBufferIndex, vertexBufferIndex);
     }
 
-    const auto bufferCount = maxBufferIndex + 1;
-    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            USER_VERTEX_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX, vertexBuffers,
-            vertexBufferOffsets, bufferCount);
+    // For attribute-less primitives `vbi->bufferMapping` is empty, in which case the loop above
+    // never runs. Don't bind a phantom buffer in that case (would otherwise be a 1-slot bind of
+    // a nil pointer).
+    if (!vbi->bufferMapping.empty()) {
+        const auto bufferCount = maxBufferIndex + 1;
+        MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext),
+                mContext->currentRenderPassEncoder, USER_VERTEX_BUFFER_BINDING_START,
+                MetalBuffer::Stage::VERTEX, vertexBuffers, vertexBufferOffsets, bufferCount);
+    }
 
     // Bind the zero buffer, used for missing vertex attributes.
     static const char bytes[16] = { 0 };
@@ -2468,6 +2474,49 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
                                                   indexBuffer:metalIndexBuffer
                                             indexBufferOffset:indexOffset * primitive->indexBuffer->elementSize
                                                 instanceCount:instanceCount];
+}
+
+void MetalDriver::drawArrays(uint32_t vertexOffset, uint32_t vertexCount,
+        uint32_t instanceCount) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
+
+    FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
+            << "drawArrays() without a valid command encoder.";
+    DEBUG_LOG("drawArrays(...)\n");
+
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!mContext->validPipelineBound)) {
+        return;
+    }
+
+    // Bind the offset data.
+    if (mContext->dynamicOffsets.isDirty()) {
+        const auto [size, data] = mContext->dynamicOffsets.getOffsets();
+        if (size > 0) {
+            [mContext->currentRenderPassEncoder setFragmentBytes:data
+                                                          length:size * sizeof(uint32_t)
+                                                         atIndex:DYNAMIC_OFFSET_BINDING];
+            [mContext->currentRenderPassEncoder setVertexBytes:data
+                                                        length:size * sizeof(uint32_t)
+                                                       atIndex:DYNAMIC_OFFSET_BINDING];
+        }
+        mContext->dynamicOffsets.setDirty(false);
+    }
+
+    // Update push constants.
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+        auto& pushConstants = mContext->currentPushConstants[i];
+        if (UTILS_UNLIKELY(pushConstants.isDirty())) {
+            pushConstants.setBytes(mContext->currentRenderPassEncoder, static_cast<ShaderStage>(i));
+        }
+    }
+
+    auto primitive = handle_cast<MetalRenderPrimitive>(mContext->currentRenderPrimitive);
+    [mContext->currentRenderPassEncoder drawPrimitives:getMetalPrimitiveType(primitive->type)
+                                           vertexStart:vertexOffset
+                                           vertexCount:vertexCount
+                                         instanceCount:instanceCount];
 }
 
 void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,

@@ -54,7 +54,11 @@ public:
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
     backend::RenderPrimitiveHandle getHwHandle() const noexcept { return mHandle; }
     backend::VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
+    // For indexed primitives, this is the index offset; for non-indexed primitives, we reuse this
+    // field for the vertex offset of the draw call. See `isIndexed() and mIsIndexed`.
     uint32_t getIndexOffset() const noexcept { return mIndexOffset; }
+    // For indexed primitives, this is the index count; for non-indexed primitives, the vertex
+    // count of the draw call.
     uint32_t getIndexCount() const noexcept { return mIndexCount; }
     uint32_t getMorphingBufferOffset() const noexcept { return mMorphingBufferOffset; }
 
@@ -62,6 +66,7 @@ public:
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
     bool isGlobalBlendOrderEnabled() const noexcept { return mGlobalBlendOrderEnabled; }
+    bool isIndexed() const noexcept { return mIsIndexed; }
 
     void setMaterialInstance(FMaterialInstance const* mi) noexcept { mMaterialInstance = mi; }
 
@@ -90,6 +95,9 @@ private:
     AttributeBitset mEnabledAttributes = {};
     uint16_t mBlendOrder = 0;
     bool mGlobalBlendOrderEnabled = false;
+    // True for the standard indexed draw path; false when the primitive was set up without an
+    // IndexBuffer (attribute-less / non-indexed rendering).
+    bool mIsIndexed = true;
     backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::TRIANGLES;
 };
 

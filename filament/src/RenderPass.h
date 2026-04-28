@@ -268,6 +268,7 @@ public:
         bool hasSkinning : 1;                               //              1 bit
         bool hasMorphing : 1;                               //              1 bit
         bool hasHybridInstancing : 1;                       //              1 bit
+        bool isIndexed : 1;                                 //              1 bit
 
         uint32_t rfu[2];                                    // 8 bytes
     };
