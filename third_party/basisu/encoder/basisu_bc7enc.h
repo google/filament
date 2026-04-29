@@ -1,5 +1,5 @@
 // File: basisu_bc7enc.h
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2024 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ namespace basisu
 
 #define BC7ENC_TRUE (1)
 #define BC7ENC_FALSE (0)
-		
+
 	typedef struct { float m_c[4]; } bc7enc_vec4F;
 
 	extern const float g_bc7_weights1x[2 * 4];
@@ -36,9 +36,9 @@ namespace basisu
 	extern const float g_astc_weights4x[16 * 4];
 	extern const float g_astc_weights5x[32 * 4];
 	extern const float g_astc_weights_3levelsx[3 * 4];
-			
+
 	extern basist::astc_quant_bin g_astc_sorted_order_unquant[basist::BC7ENC_TOTAL_ASTC_RANGES][256]; // [sorted unquantized order]
-	
+
 	struct color_cell_compressor_params
 	{
 		uint32_t m_num_pixels;
@@ -94,12 +94,12 @@ namespace basisu
 	};
 
 	uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_params* pParams, color_cell_compressor_results* pResults, const bc7enc_compress_block_params* pComp_params);
-		
+
 	uint64_t color_cell_compression_est_astc(
 		uint32_t num_weights, uint32_t num_comps, const uint32_t* pWeight_table,
 		uint32_t num_pixels, const basist::color_quad_u8* pPixels,
 		uint64_t best_err_so_far, const uint32_t weights[4]);
-		
+
 	inline void bc7enc_compress_block_params_init_linear_weights(bc7enc_compress_block_params* p)
 	{
 		p->m_perceptual = BC7ENC_FALSE;
@@ -128,5 +128,5 @@ namespace basisu
 
 	// bc7enc_compress_block_init() MUST be called before calling bc7enc_compress_block() (or you'll get artifacts).
 	void bc7enc_compress_block_init();
-				
+
 } // namespace basisu

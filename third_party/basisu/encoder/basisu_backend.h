@@ -1,5 +1,5 @@
 // basisu_backend.h
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2024 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -103,8 +103,8 @@ namespace basisu
 		{
 			clear();
 		}
-				
-		uint32_t m_endpoint_predictor; 
+
+		uint32_t m_endpoint_predictor;
 
 		int m_endpoint_index;
 		int m_selector_index;
@@ -115,10 +115,10 @@ namespace basisu
 		void clear()
 		{
 			m_endpoint_predictor = 0;
-			
+
 			m_endpoint_index = 0;
 			m_selector_index = 0;
-						
+
 			m_selector_history_buf_index = 0;
 			m_is_cr_target = false;
 		}
@@ -137,7 +137,7 @@ namespace basisu
 		color_rgba m_color5;
 		uint32_t m_inten5;
 		bool m_color5_valid;
-				
+
 		void clear()
 		{
 			clear_obj(*this);
@@ -153,7 +153,7 @@ namespace basisu
 		float m_endpoint_rdo_quality_thresh;
 		float m_selector_rdo_quality_thresh;
 		uint32_t m_compression_level;
-								
+
 		bool m_used_global_codebooks;
 
 		bool m_validate;
@@ -285,7 +285,7 @@ namespace basisu
 		basisu_backend_params m_params;
 		basisu_backend_slice_desc_vec m_slices;
 		basisu_backend_output m_output;
-		
+
 		etc1_endpoint_palette_entry_vec m_endpoint_palette;
 		etc1_selector_palette_entry_vec m_selector_palette;
 
@@ -331,12 +331,12 @@ namespace basisu
 
 			return slice.m_first_block_index + block_y * slice.m_num_blocks_x + block_x;
 		}
-				
+
 		uint32_t get_total_blocks(uint32_t slice_index) const
 		{
 			return m_slices[slice_index].m_num_blocks_x * m_slices[slice_index].m_num_blocks_y;
 		}
-								
+
 		uint32_t get_total_blocks() const
 		{
 			uint32_t total_blocks = 0;
@@ -406,4 +406,3 @@ namespace basisu
 	};
 
 } // namespace basisu
-

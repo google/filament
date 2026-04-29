@@ -1,5 +1,5 @@
 // basisu_backend.cpp
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2026 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -666,7 +666,7 @@ namespace basisu
 			if (m_params.m_debug_images)
 			{
 				image gi_unpacked;
-				gi.unpack(gi_unpacked);
+				gi.unpack(gi_unpacked, false);
 
 				char buf[256];
 #ifdef _WIN32				
