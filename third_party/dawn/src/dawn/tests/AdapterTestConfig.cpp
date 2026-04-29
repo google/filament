@@ -93,7 +93,8 @@ BackendTestConfig VulkanBackend(std::initializer_list<const char*> forceEnabledW
 
 TestAdapterProperties::TestAdapterProperties(const wgpu::AdapterInfo& info,
                                              bool selected,
-                                             bool compatibilityMode)
+                                             bool compatibilityMode,
+                                             wgpu::BackendType innerBackendType)
     : vendorID(info.vendorID),
       vendorName(info.vendor),
       architecture(info.architecture),
@@ -102,8 +103,12 @@ TestAdapterProperties::TestAdapterProperties(const wgpu::AdapterInfo& info,
       driverDescription(info.description),
       adapterType(info.adapterType),
       backendType(info.backendType),
+      innerBackendType(innerBackendType),
       compatibilityMode(compatibilityMode),
-      selected(selected) {}
+      selected(selected) {
+    DAWN_ASSERT((backendType == wgpu::BackendType::WebGPU) !=
+                (innerBackendType == wgpu::BackendType::Undefined));
+}
 
 std::string TestAdapterProperties::ParamName() const {
     switch (backendType) {

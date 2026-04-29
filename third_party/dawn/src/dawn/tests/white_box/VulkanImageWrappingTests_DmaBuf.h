@@ -29,6 +29,7 @@
 #define SRC_DAWN_TESTS_WHITE_BOX_VULKANIMAGEWRAPPINGTESTS_DMABUF_H_
 
 #include <memory>
+
 #include "dawn/tests/white_box/VulkanImageWrappingTests.h"
 
 namespace dawn::native::vulkan {

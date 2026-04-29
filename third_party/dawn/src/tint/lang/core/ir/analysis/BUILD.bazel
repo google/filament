@@ -42,11 +42,13 @@ cc_library(
     "for_loop_analysis.cc",
     "integer_range_analysis.cc",
     "loop_analysis.cc",
+    "subgroup_matrix.cc",
   ],
   hdrs = [
     "for_loop_analysis.h",
     "integer_range_analysis.h",
     "loop_analysis.h",
+    "subgroup_matrix.h",
   ],
   deps = [
     "//src/tint/api/common",
@@ -77,6 +79,7 @@ cc_library(
     "for_loop_analysis_test.cc",
     "integer_range_analysis_test.cc",
     "loop_analysis_test.cc",
+    "subgroup_matrix_test.cc",
   ],
   deps = [
     "//src/tint/api/common",

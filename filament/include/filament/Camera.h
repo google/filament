@@ -273,7 +273,7 @@ public:
      * @param near      distance in world units from the camera to the near plane.
      * @param far       distance in world units from the camera to the far plane. \p far != \p near.
      */
-    void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
+    void setCustomProjection(math::mat4 const& projection, double near, double far);
 
     /** Sets the projection matrix.
      *
@@ -286,7 +286,7 @@ public:
      * @param far       distance in world units from the camera to the far plane. \p far != \p near.
      */
     void setCustomProjection(math::mat4 const& projection, math::mat4 const& projectionForCulling,
-            double near, double far) noexcept;
+            double near, double far);
 
     /** Sets a custom projection matrix for each eye.
      *

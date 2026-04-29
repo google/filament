@@ -40,9 +40,7 @@ class Module;
 namespace tint::core::ir::transform {
 
 /// The capabilities that the transform can support.
-// TODO(crbug.com/363031535): Remove kAllowDuplicateBindings when MSL no
-// longer needs FlattenBindings.
-const Capabilities kVertexPullingCapabilities{Capability::kAllowDuplicateBindings};
+const Capabilities kVertexPullingCapabilities{};
 
 /// This transform replaces vertex shader inputs with storage buffers, so that we can apply
 /// robustness to the vertex input accesses.

@@ -25,6 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/tests/white_box/VulkanImageWrappingTests_OpaqueFD.h"
+
 #include <unistd.h>
 
 #include <memory>
@@ -35,7 +37,6 @@
 #include "dawn/native/vulkan/FencedDeleter.h"
 #include "dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
 #include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/tests/white_box/VulkanImageWrappingTests_OpaqueFD.h"
 #include "gtest/gtest.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 
@@ -106,9 +107,7 @@ class VulkanImageWrappingTestBackendOpaqueFD : public VulkanImageWrappingTestBac
     }
 
     bool SupportsTestParams(const TestParams& params) const override {
-        return mDeviceVk->GetDeviceInfo().HasExt(DeviceExt::ExternalMemoryFD) &&
-               (!params.useDedicatedAllocation ||
-                mDeviceVk->GetDeviceInfo().HasExt(DeviceExt::DedicatedAllocation));
+        return mDeviceVk->GetDeviceInfo().HasExt(DeviceExt::ExternalMemoryFD);
     }
 
     std::unique_ptr<ExternalTexture> CreateTexture(uint32_t width,

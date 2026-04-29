@@ -121,6 +121,7 @@ UnsafeUnserializedValue(T&& value) -> UnsafeUnserializedValue<std::decay_t<T>>;
 //   #undef MEMBERS
 #define DAWN_SERIALIZABLE(qualifier, Name, MEMBERS)                     \
     struct Name##__Contents {                                           \
+        using Contents = Name##__Contents;                              \
         DAWN_VISITABLE_MEMBERS(MEMBERS)                                 \
         bool operator==(const Name##__Contents& other) const = default; \
     };                                                                  \

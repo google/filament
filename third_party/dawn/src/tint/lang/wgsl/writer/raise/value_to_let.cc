@@ -197,17 +197,12 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ValueToLet(core::ir::Module& ir) {
-    auto result =
-        core::ir::ValidateAndDumpIfNeeded(ir, "wgsl.ValueToLet",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowMultipleEntryPoints,
-                                              core::ir::Capability::kAllowOverrides,
-                                          }
-
-        );
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir,
+                          core::ir::Capabilities{
+                              core::ir::Capability::kAllowMultipleEntryPoints,
+                              core::ir::Capability::kAllowOverrides,
+                          },
+                          "before wgsl.ValueToLet");
 
     State{ir}.Process();
 

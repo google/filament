@@ -81,7 +81,38 @@ class DAWN_PLATFORM_EXPORT WaitableEvent {
     virtual bool IsComplete() = 0;  // Non-blocking check if the event is complete
 };
 
+enum class JobStatus {
+    Continue,   // For long-running tasks, returning |Continue| will schedule the task again.
+    Cancelled,  // For long-running tasks that need to be terminated for shutdown, this may be
+                // injected when Cancel() is called.
+    Completed,  // For long-running tasks that actually finish.
+};
+
+class DAWN_PLATFORM_EXPORT JobHandle {
+  public:
+    // A job must be joined and canceled before the JobHandle is destroyed.
+    JobHandle() = default;
+    virtual ~JobHandle() = default;
+
+    JobHandle(JobHandle&& other) = default;
+    JobHandle& operator=(JobHandle&&) = default;
+
+    // Cancels the job (and all potential workers) ASAP. As an implementation
+    // note, one can imagine this forcing the callback to return |Cancelled|
+    // on its next iteration, thereby causing the job to be considered done
+    // and cancelled.
+    virtual void Cancel() = 0;
+
+    // Joins the job (and all potential workers), waiting for them to return.
+    virtual void Join() = 0;
+
+  private:
+    JobHandle(const JobHandle&) = delete;
+    JobHandle& operator=(const JobHandle&) = delete;
+};
+
 using PostWorkerTaskCallback = void (*)(void* userdata);
+using PostWorkerJobCallback = JobStatus (*)(void* userdata);
 
 class DAWN_PLATFORM_EXPORT WorkerTaskPool {
   public:
@@ -93,15 +124,20 @@ class DAWN_PLATFORM_EXPORT WorkerTaskPool {
 
     virtual std::unique_ptr<WaitableEvent> PostWorkerTask(PostWorkerTaskCallback,
                                                           void* userdata) = 0;
+
+    // This will start up to a worker which calls |cb| with |userdata| when scheduling permits while
+    // |cb| returns |Continue|. In general, |cb| should periodically yield regardless of whether it
+    // completed its work in order to allow for cancellation or reprioritization when appropriate.
+    virtual std::unique_ptr<JobHandle> PostWorkerJob(PostWorkerJobCallback cb, void* userdata);
 };
 
 // These features map to similarly named ones in src/chromium/src/gpu/config/gpu_finch_features.h
 // in `namespace features`.
 enum class Features {
     kWebGPUUseDXC,
-    kWebGPUUseVulkanMemoryModel,
     kWebGPUEnableRangeAnalysisForRobustness,
     kWebGPUUseSpirv14,
+    kWebGPUDecomposeUniformBuffers,
 };
 
 class DAWN_PLATFORM_EXPORT Platform {

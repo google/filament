@@ -40,7 +40,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 using SpirvReader_VectorElementPointerTest = core::ir::transform::TransformTest;
 
 TEST_F(SpirvReader_VectorElementPointerTest, NonPointerAccess) {
-    auto* vec = b.FunctionParam("vec", ty.vec4<u32>());
+    auto* vec = b.FunctionParam("vec", ty.vec4u());
     auto* foo = b.Function("foo", ty.u32());
     foo->SetParams({vec});
     b.Append(foo->Block(), [&] {
@@ -226,7 +226,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, MultipleUses) {
         auto* vec = b.Var<function, vec4<u32>>("vec");
         auto* access = b.Access<ptr<function, u32>>(vec, 2_u);
         auto* load = b.Load(access);
-        auto* add = b.Add<u32>(load, 1_u);
+        auto* add = b.Add(load, 1_u);
         b.Store(access, add);
         b.Return(foo);
     });
@@ -390,7 +390,7 @@ $B1: {  # root
 TEST_F(SpirvReader_VectorElementPointerTest, ViaStruct) {
     auto* str_ty = ty.Struct(mod.symbols.New("str"), {{
                                                          mod.symbols.New("vec"),
-                                                         ty.vec4<f32>(),
+                                                         ty.vec4f(),
                                                      }});
 
     auto* foo = b.Function("foo", ty.void_());
@@ -480,6 +480,64 @@ str = struct @align(16) {
     %3:ptr<function, vec4<f32>, read_write> = access %arr, 1u, 0u, 3u, 2u
     store_vector_element %3, 1u, 42.0f
     ret
+  }
+}
+)";
+
+    Run(VectorElementPointer);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_VectorElementPointerTest, PreserveAccessMode) {
+    auto* str_ty = ty.Struct(mod.symbols.New("str"), {{
+                                                         mod.symbols.New("vec"),
+                                                         ty.vec4u(),
+                                                     }});
+    auto* var = b.Var("var", ty.ptr(storage, str_ty, read));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
+    auto* foo = b.Function("foo", ty.u32());
+    b.Append(foo->Block(), [&] {
+        auto* access = b.Access<ptr<storage, u32, read>>(var, 0_u, 2_u);
+        auto* load = b.Load(access);
+        b.Return(foo, load);
+    });
+
+    auto* src = R"(
+str = struct @align(16) {
+  vec:vec4<u32> @offset(0)
+}
+
+$B1: {  # root
+  %var:ptr<storage, str, read> = var undef @binding_point(0, 0)
+}
+
+%foo = func():u32 {
+  $B2: {
+    %3:ptr<storage, u32, read> = access %var, 0u, 2u
+    %4:u32 = load %3
+    ret %4
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+str = struct @align(16) {
+  vec:vec4<u32> @offset(0)
+}
+
+$B1: {  # root
+  %var:ptr<storage, str, read> = var undef @binding_point(0, 0)
+}
+
+%foo = func():u32 {
+  $B2: {
+    %3:ptr<storage, vec4<u32>, read> = access %var, 0u
+    %4:u32 = load_vector_element %3, 2u
+    ret %4
   }
 }
 )";

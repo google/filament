@@ -22,6 +22,7 @@
 #include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "google/protobuf/compiler/code_generator_lite.h"
 #include "google/protobuf/compiler/java/context.h"
 #include "google/protobuf/compiler/java/doc_comment.h"
 #include "google/protobuf/compiler/java/field_common.h"
@@ -68,7 +69,6 @@ bool BitfieldTracksMutability(const FieldDescriptor* const descriptor) {
   switch (descriptor->type()) {
     case FieldDescriptor::TYPE_GROUP:
     case FieldDescriptor::TYPE_MESSAGE:
-    case FieldDescriptor::TYPE_ENUM:
       return true;
     default:
       return false;
@@ -393,6 +393,36 @@ void MessageBuilderGenerator::GenerateCommonBuilderMethods(
       "classname", name_resolver_->GetImmutableClassName(descriptor_));
 
   GenerateBuildPartial(printer);
+
+  // We include these methods only in open source to maintain long term ABI
+  // compatibility, and there should be no need to include them in Google3.
+  if (google::protobuf::internal::IsOss() && descriptor_->extension_range_count() > 0) {
+    printer->Print(
+        "public <Type> Builder setExtension(\n"
+        "    com.google.protobuf.GeneratedMessage.GeneratedExtension<\n"
+        "        $classname$, Type> extension,\n"
+        "    Type value) {\n"
+        "  return super.setExtension(extension, value);\n"
+        "}\n"
+        "public <Type> Builder setExtension(\n"
+        "    com.google.protobuf.GeneratedMessage.GeneratedExtension<\n"
+        "        $classname$, java.util.List<Type>> extension,\n"
+        "    int index, Type value) {\n"
+        "  return super.setExtension(extension, index, value);\n"
+        "}\n"
+        "public <Type> Builder addExtension(\n"
+        "    com.google.protobuf.GeneratedMessage.GeneratedExtension<\n"
+        "        $classname$, java.util.List<Type>> extension,\n"
+        "    Type value) {\n"
+        "  return super.addExtension(extension, value);\n"
+        "}\n"
+        "public <Type> Builder clearExtension(\n"
+        "    com.google.protobuf.GeneratedMessage.GeneratedExtension<\n"
+        "        $classname$, Type> extension) {\n"
+        "  return super.clearExtension(extension);\n"
+        "}\n",
+        "classname", name_resolver_->GetImmutableClassName(descriptor_));
+  }
 
   // -----------------------------------------------------------------
 
@@ -746,50 +776,46 @@ void MessageBuilderGenerator::GenerateIsInitialized(io::Printer* printer) {
     const FieldGeneratorInfo* info = context_->GetFieldGeneratorInfo(field);
     if (GetJavaType(field) == JAVATYPE_MESSAGE &&
         HasRequiredFields(field->message_type())) {
-      switch (field->label()) {
-        case FieldDescriptor::LABEL_REQUIRED:
+      if (field->is_required()) {
+        printer->Print(
+            "if (!get$name$().isInitialized()) {\n"
+            "  return false;\n"
+            "}\n",
+            "type",
+            name_resolver_->GetImmutableClassName(field->message_type()),
+            "name", info->capitalized_name);
+      } else if (field->is_repeated()) {
+        if (IsMapEntry(field->message_type())) {
           printer->Print(
-              "if (!get$name$().isInitialized()) {\n"
-              "  return false;\n"
+              "for ($type$ item : get$name$Map().values()) {\n"
+              "  if (!item.isInitialized()) {\n"
+              "    return false;\n"
+              "  }\n"
+              "}\n",
+              "type",
+              MapValueImmutableClassdName(field->message_type(),
+                                          name_resolver_),
+              "name", info->capitalized_name);
+        } else {
+          printer->Print(
+              "for (int i = 0; i < get$name$Count(); i++) {\n"
+              "  if (!get$name$(i).isInitialized()) {\n"
+              "    return false;\n"
+              "  }\n"
               "}\n",
               "type",
               name_resolver_->GetImmutableClassName(field->message_type()),
               "name", info->capitalized_name);
-          break;
-        case FieldDescriptor::LABEL_OPTIONAL:
-          printer->Print(
-              "if (has$name$()) {\n"
-              "  if (!get$name$().isInitialized()) {\n"
-              "    return false;\n"
-              "  }\n"
-              "}\n",
-              "name", info->capitalized_name);
-          break;
-        case FieldDescriptor::LABEL_REPEATED:
-          if (IsMapEntry(field->message_type())) {
-            printer->Print(
-                "for ($type$ item : get$name$Map().values()) {\n"
-                "  if (!item.isInitialized()) {\n"
-                "    return false;\n"
-                "  }\n"
-                "}\n",
-                "type",
-                MapValueImmutableClassdName(field->message_type(),
-                                            name_resolver_),
-                "name", info->capitalized_name);
-          } else {
-            printer->Print(
-                "for (int i = 0; i < get$name$Count(); i++) {\n"
-                "  if (!get$name$(i).isInitialized()) {\n"
-                "    return false;\n"
-                "  }\n"
-                "}\n",
-                "type",
-                name_resolver_->GetImmutableClassName(field->message_type()),
-                "name", info->capitalized_name);
-          }
-          break;
-      }
+        }
+      } else {
+        printer->Print(
+            "if (has$name$()) {\n"
+            "  if (!get$name$().isInitialized()) {\n"
+            "    return false;\n"
+            "  }\n"
+            "}\n",
+            "name", info->capitalized_name);
+      };
     }
   }
 

@@ -29,7 +29,6 @@
 #define SRC_DAWN_NATIVE_OPENGL_EGLFUNCTIONS_H_
 
 #include "dawn/common/egl_platform.h"
-
 #include "dawn/common/ityp_bitset.h"
 #include "dawn/native/Error.h"
 
@@ -69,6 +68,7 @@ enum class EGLExt {
     // ANGLE specific
     ANGLECreateContextBackwardsCompatible,  // EGL_ANGLE_create_context_backwards_compatible
     ANGLECreateContextExtensionsEnabled,    // EGL_ANGLE_create_context_extensions_enabled
+    ANGLEContextVirtualization,             // EGL_ANGLE_context_virtualization
 
     EnumCount,
 };

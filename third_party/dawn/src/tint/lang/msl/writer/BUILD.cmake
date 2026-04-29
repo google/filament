@@ -35,7 +35,6 @@
 ################################################################################
 
 include(lang/msl/writer/common/BUILD.cmake)
-include(lang/msl/writer/helpers/BUILD.cmake)
 include(lang/msl/writer/printer/BUILD.cmake)
 include(lang/msl/writer/raise/BUILD.cmake)
 
@@ -54,6 +53,7 @@ tint_target_add_dependencies(tint_lang_msl_writer lib
   tint_api_common
   tint_lang_core
   tint_lang_core_constant
+  tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_ir_transform
   tint_lang_core_type
@@ -149,6 +149,7 @@ tint_add_target(tint_lang_msl_writer_fuzz fuzz
 
 tint_target_add_dependencies(tint_lang_msl_writer_fuzz fuzz
   tint_api_common
+  tint_api_helpers
   tint_cmd_fuzz_ir_fuzz
   tint_lang_core
   tint_lang_core_constant
@@ -175,7 +176,6 @@ if(TINT_BUILD_MSL_WRITER)
   tint_target_add_dependencies(tint_lang_msl_writer_fuzz fuzz
     tint_lang_msl_writer
     tint_lang_msl_writer_common
-    tint_lang_msl_writer_helpers
     tint_lang_msl_writer_printer
   )
 endif(TINT_BUILD_MSL_WRITER)

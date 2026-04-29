@@ -28,10 +28,11 @@
 #ifndef SRC_TINT_UTILS_BYTES_BUFFER_READER_H_
 #define SRC_TINT_UTILS_BYTES_BUFFER_READER_H_
 
+#include <cstddef>
+#include <span>
 #include <string_view>
 
 #include "src/tint/utils/bytes/reader.h"
-#include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/ice/ice.h"
 
 namespace tint::bytes {
@@ -39,26 +40,28 @@ namespace tint::bytes {
 /// BufferReader is an implementation of the Reader interface backed by a buffer.
 class BufferReader final : public Reader {
   public:
-    // Destructor
+    /// Destructor
     ~BufferReader() override;
 
+    // This constructor represents the boundary between unsafe and safe memory constructs, since a
+    // raw pointer is being converted to a std::span. There is no way to avoid this warning, because
+    // if the compiler could statically guarantee the raw pointer + size was valid here, there would
+    // be no need for std::span to exist.
+    TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE_IN_CONTAINER);
     /// Constructor
     /// @param data the data to read from
     /// @param size the number of bytes in the buffer
-    BufferReader(const std::byte* data, size_t size) : data_(data), bytes_remaining_(size) {
-        TINT_ASSERT(data);
-    }
+    BufferReader(const std::byte* data, size_t size) : data_(data, size) { TINT_ASSERT(data); }
+    TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE_IN_CONTAINER);
 
     /// Constructor
     /// @param str the string to read from
-    explicit BufferReader(std::string_view str)
-        : data_(reinterpret_cast<const std::byte*>(str.data())), bytes_remaining_(str.length()) {}
+    explicit BufferReader(std::string_view str) : data_(std::as_bytes(std::span{str})) {}
 
     /// Constructor
-    /// @param slice the byte slice to read from
-    explicit BufferReader(Slice<const std::byte> slice)
-        : data_(slice.data), bytes_remaining_(slice.len) {
-        TINT_ASSERT(slice.data);
+    /// @param span the byte span to read from
+    explicit BufferReader(std::span<const std::byte> span) : data_(span) {
+        TINT_ASSERT(span.data());
     }
 
     /// @copydoc Reader::Read
@@ -69,10 +72,7 @@ class BufferReader final : public Reader {
 
   private:
     /// The data to read from
-    const std::byte* data_ = nullptr;
-
-    /// The number of bytes remaining
-    size_t bytes_remaining_ = 0;
+    std::span<const std::byte> data_;
 };
 
 }  // namespace tint::bytes

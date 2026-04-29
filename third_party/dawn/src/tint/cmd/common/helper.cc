@@ -32,6 +32,11 @@
 #include <utility>
 #include <vector>
 
+#ifdef _WIN32
+#include <fcntl.h>  // for _O_BINARY
+#include <io.h>     // for _setmode, _fileno
+#endif
+
 #if TINT_BUILD_SPV_READER
 #include "spirv-tools/libspirv.hpp"
 #include "src/tint/lang/spirv/reader/reader.h"
@@ -56,13 +61,6 @@
 namespace tint::cmd {
 namespace {
 
-enum class InputFormat {
-    kUnknown,
-    kWgsl,
-    kSpirvBin,
-    kSpirvAsm,
-};
-
 /// @param out the stream to write to
 /// @param value the InputFormat
 /// @returns @p out so calls can be chained
@@ -84,11 +82,11 @@ auto& operator<<(STREAM& out, InputFormat value) {
 
 InputFormat InputFormatFromFilename(const std::string& filename) {
     auto input_format = InputFormat::kUnknown;
-    if (tint::HasSuffix(filename, ".wgsl")) {
+    if (filename.ends_with(".wgsl")) {
         input_format = InputFormat::kWgsl;
-    } else if (tint::HasSuffix(filename, ".spv")) {
+    } else if (filename.ends_with(".spv")) {
         input_format = InputFormat::kSpirvBin;
-    } else if (tint::HasSuffix(filename, ".spvasm")) {
+    } else if (filename.ends_with(".spvasm")) {
         input_format = InputFormat::kSpirvAsm;
     }
     return input_format;
@@ -105,41 +103,34 @@ void PrintBindings(tint::inspector::Inspector& inspector, const std::string& ep_
                   << "\t\t resource_type = " << ResourceTypeToString(binding.resource_type) << "\n"
                   << "\t\t dim = " << TextureDimensionToString(binding.dim) << "\n"
                   << "\t\t sampled_kind = " << SampledKindToString(binding.sampled_kind) << "\n"
+                  << "\t\t sampler_type = " << SamplerTypeToString(binding.sampler_type) << "\n"
                   << "\t\t image_format = " << TexelFormatToString(binding.image_format) << "\n\n";
     }
 }
 
 #if TINT_BUILD_SPV_READER
 tint::Program ReadSpirv(const std::vector<uint32_t>& data, const LoadProgramOptions& opts) {
-    if (opts.use_ir_reader) {
 #if TINT_BUILD_WGSL_WRITER
-        // Parse the SPIR-V binary to a core Tint IR module.
-        auto result = tint::spirv::reader::ReadIR(data, opts.spirv_reader_options);
-        if (result != Success) {
-            std::cerr << "Failed to parse SPIR-V: " << result.Failure() << "\n";
-            exit(1);
-        }
-
-        // Convert the IR module to a Program.
-        tint::wgsl::writer::ProgramOptions writer_options;
-        writer_options.allow_non_uniform_derivatives =
-            opts.spirv_reader_options.allow_non_uniform_derivatives;
-        writer_options.allowed_features = opts.spirv_reader_options.allowed_features;
-        auto prog_result = tint::wgsl::writer::ProgramFromIR(result.Get(), writer_options);
-        if (prog_result != Success) {
-            std::cerr << "Failed to convert IR to Program:\n\n" << prog_result.Failure() << "\n\n";
-            std::cerr << tint::core::ir::Disassembler(result.Get()).Plain() << "\n";
-            exit(1);
-        }
-
-        return prog_result.Move();
-#else
-        std::cerr << "Tint not built with the WGSL writer enabled\n";
+    // Parse the SPIR-V binary to a core Tint IR module.
+    auto result = tint::spirv::reader::ReadIR(data, opts.spirv_reader_options);
+    if (result != Success) {
+        std::cerr << "Failed to parse SPIR-V: " << result.Failure() << "\n";
         exit(1);
-#endif  // TINT_BUILD_WGSL_READER
-    } else {
-        return tint::spirv::reader::Read(data, opts.spirv_reader_options);
     }
+
+    // Convert the IR module to a Program.
+    auto prog_result = tint::wgsl::writer::ProgramFromIR(result.Get(), opts.wgsl_writer_options);
+    if (prog_result != Success) {
+        std::cerr << "Failed to convert IR to Program:\n\n" << prog_result.Failure() << "\n\n";
+        std::cerr << tint::core::ir::Disassembler(result.Get()).Plain() << "\n";
+        exit(1);
+    }
+
+    return prog_result.Move();
+#else
+    std::cerr << "Tint not built with the WGSL writer enabled\n";
+    exit(1);
+#endif  // TINT_BUILD_WGSL_READER
 }
 #endif  // TINT_BUILD_SPV_READER
 
@@ -160,12 +151,21 @@ void PrintWGSL(std::ostream& out, const tint::Program& program) {
 }
 
 ProgramInfo LoadProgramInfo(const LoadProgramOptions& opts) {
-    auto input_format = InputFormatFromFilename(opts.filename);
+    InputFormat input_format = opts.input_format;
+    if (input_format == InputFormat::kUnknown) {
+        input_format = InputFormatFromFilename(opts.filename);
+    }
+    if (input_format == InputFormat::kUnknown && IsStdin(opts.filename)) {
+        std::cerr << "No input format given for data read from stdin";
+        exit(1);
+    }
 
     auto load = [&]() -> ProgramInfo {
         switch (input_format) {
             case InputFormat::kUnknown:
-                break;
+                // Prints "unknown input format"
+                std::cerr << input_format << " input format\n";
+                exit(1);
 
             case InputFormat::kWgsl: {
 #if TINT_BUILD_WGSL_READER
@@ -237,8 +237,7 @@ ProgramInfo LoadProgramInfo(const LoadProgramOptions& opts) {
             }
         }
 
-        std::cerr << "Unknown input format: " << input_format << "\n";
-        exit(1);
+        TINT_UNREACHABLE();
     };
 
     ProgramInfo info = load();
@@ -260,10 +259,6 @@ ProgramInfo LoadProgramInfo(const LoadProgramOptions& opts) {
         // Flush any diagnostics written to stderr. We depend on these being emitted to the console
         // before the program for end-to-end tests.
         fflush(stderr);
-    }
-
-    if (!info.program.IsValid()) {
-        exit(1);
     }
 
     return info;
@@ -395,11 +390,29 @@ std::string SampledKindToString(tint::inspector::ResourceBinding::SampledKind ki
             return "UInt";
         case tint::inspector::ResourceBinding::SampledKind::kSInt:
             return "SInt";
-        case tint::inspector::ResourceBinding::SampledKind::kUnknown:
-            break;
+        case tint::inspector::ResourceBinding::SampledKind::kFilterable:
+            return "Filterable";
+        case tint::inspector::ResourceBinding::SampledKind::kUnfilterable:
+            return "Unfilterable";
+        case tint::inspector::ResourceBinding::SampledKind::kUnknownFilterable:
+            return "unknown-filterable";
     }
 
     return "Unknown";
+}
+
+std::string SamplerTypeToString(tint::inspector::ResourceBinding::SamplerType type) {
+    switch (type) {
+        case inspector::ResourceBinding::SamplerType::kComparison:
+            return "comparison";
+        case inspector::ResourceBinding::SamplerType::kFiltering:
+            return "filtering";
+        case inspector::ResourceBinding::SamplerType::kNonFiltering:
+            return "non-filtering";
+        case inspector::ResourceBinding::SamplerType::kUnknownFiltering:
+            return "unknown-filtering";
+    }
+    return "unknown";
 }
 
 std::string TexelFormatToString(tint::inspector::ResourceBinding::TexelFormat format) {
@@ -500,8 +513,6 @@ std::string ResourceTypeToString(tint::inspector::ResourceBinding::ResourceType 
             return "ReadOnlyStorageBuffer";
         case tint::inspector::ResourceBinding::ResourceType::kSampler:
             return "Sampler";
-        case tint::inspector::ResourceBinding::ResourceType::kComparisonSampler:
-            return "ComparisonSampler";
         case tint::inspector::ResourceBinding::ResourceType::kSampledTexture:
             return "SampledTexture";
         case tint::inspector::ResourceBinding::ResourceType::kMultisampledTexture:
@@ -613,6 +624,16 @@ std::string OverrideTypeToString(tint::inspector::Override::Type type) {
 
 bool IsStdout(const std::string& name) {
     return name.empty() || name == "-";
+}
+
+bool IsStdin(const std::string& name) {
+    return name.empty() || name == "-";
+}
+
+void SetStdinModeBinary() {
+#ifdef _WIN32
+    _setmode(_fileno(stdin), _O_BINARY);
+#endif
 }
 
 }  // namespace tint::cmd

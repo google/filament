@@ -923,28 +923,6 @@ utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out
                 return "float";
         }
     };
-    // This is a workaround for WebGPU not supporting push constants for skinning.
-    // We replace the push constant with a regular constant struct initialized to 0.
-    if (mTargetApi == TargetApi::WEBGPU) {
-        assert_invariant(
-                pushConstants.size() == 1 &&
-                "The current workaround for WebGPU push constants assumes for now that only 1");
-        assert_invariant(pushConstants[0].name == CString("morphingBufferOffset") &&
-                         "The current workaround for WebGPU push constants assumes only the "
-                         "morphingBufferOffset constant is present.");
-        assert_invariant(pushConstants[0].type == ConstantType::INT &&
-                         "The current workaround for WebGPU push constants assumes "
-                         "morphingBufferOffset is an integer type.");
-        out << "struct " << STRUCT_NAME << " {\n";
-        for (auto const& constant: pushConstants) {
-            out << "    " << getType(constant.type) << " " << constant.name.c_str() << ";\n";
-        }
-        out << "};\n";
-        out << "const " << STRUCT_NAME << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << " = "
-            << STRUCT_NAME << "(0);\n";
-        return out;
-    }
-
     bool const outputSpirv =
             mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
     if (outputSpirv) {
@@ -1242,6 +1220,14 @@ char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) n
         case MaterialBuilder::OutputType::FLOAT2: return "vec2";
         case MaterialBuilder::OutputType::FLOAT3: return "vec3";
         case MaterialBuilder::OutputType::FLOAT4: return "vec4";
+        case MaterialBuilder::OutputType::INT:    return "int";
+        case MaterialBuilder::OutputType::INT2:   return "ivec2";
+        case MaterialBuilder::OutputType::INT3:   return "ivec3";
+        case MaterialBuilder::OutputType::INT4:   return "ivec4";
+        case MaterialBuilder::OutputType::UINT:   return "uint";
+        case MaterialBuilder::OutputType::UINT2:  return "uvec2";
+        case MaterialBuilder::OutputType::UINT3:  return "uvec3";
+        case MaterialBuilder::OutputType::UINT4:  return "uvec4";
     }
 }
 

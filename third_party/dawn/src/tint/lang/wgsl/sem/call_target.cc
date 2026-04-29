@@ -30,7 +30,6 @@
 #include <utility>
 
 #include "src/tint/utils/math/hash.h"
-#include "src/tint/utils/symbol/symbol_table.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::sem::CallTarget);
 

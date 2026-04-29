@@ -39,10 +39,11 @@
 #include "dawn/common/RefCounted.h"
 #include "dawn/common/egl_platform.h"
 #include "dawn/native/opengl/EGLFunctions.h"
+#include "partition_alloc/pointers/raw_ref.h"
 
 namespace dawn::native::opengl {
 
-static constexpr EGLConfig kNoConfig = 0;
+inline constexpr EGLConfig kNoConfig = 0;
 
 // Represents a connection to an EGL driver, with its EGLDisplay, its functions and other metadata
 // global to EGL.
@@ -60,7 +61,7 @@ class DisplayEGL : public RefCounted {
     ~DisplayEGL() override;
 
     // A convenience ref to avoid having to call an accessor function every time we need to use EGL
-    const EGLFunctions& egl;
+    const raw_ref<const EGLFunctions> egl;
     EGLDisplay GetDisplay() const;
     EGLint GetAPIEnum() const;
     EGLint GetAPIBit() const;

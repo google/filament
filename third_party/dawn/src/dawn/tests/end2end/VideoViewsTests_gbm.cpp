@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <gbm.h>
 
+#include <cstring>
 #include <memory>
 #include <string>
 #include <utility>

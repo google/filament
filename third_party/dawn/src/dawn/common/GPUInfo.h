@@ -40,7 +40,7 @@ namespace dawn::gpu_info {
 // D3D12: AA.BB.CCC.DDDD
 // Vulkan: AAA.BBB.CCC.DDD on Nvidia, CCC.DDDD for Intel Windows, and AA.BB.CCC for others,
 // See https://vulkan.gpuinfo.org/
-static constexpr uint32_t kMaxVersionFields = 4;
+inline constexpr uint32_t kMaxVersionFields = 4;
 
 class DriverVersion {
   public:
@@ -52,6 +52,8 @@ class DriverVersion {
 
     uint32_t size() const;
     std::string ToString() const;
+
+    std::strong_ordering operator<=>(const DriverVersion& other) const;
 
   private:
     absl::InlinedVector<uint16_t, kMaxVersionFields> mDriverVersion;
@@ -67,17 +69,37 @@ class IntelWindowsDriverVersion {
     uint32_t mBuildNumber = 0;
 };
 
-// Do comparison between two Intel Mesa driver versions.
-// - Return a negative number if build number of version1 is smaller
-// - Return a positive number if build number of version1 is bigger
-// - Return 0 if version1 and version2 represent same driver version
-int CompareIntelMesaDriverVersion(const DriverVersion& version1, const DriverVersion& version2);
-
 // Intel architectures
 bool IsSkylake(PCIDeviceID deviceId);
 bool IsIrisPlus655(PCIDeviceID deviceId);
 
-bool IsIntelGen11OrOlder(PCIVendorID venderId, PCIDeviceID deviceId);
+// GPU generation is an internal concept, rather than a value defined by vendors
+// Intel generations
+enum class IntelGen {
+    Unknown = 0,
+    Gen7 = 7,
+    Gen8 = 8,
+    Gen9 = 9,
+    Gen10 = 10,
+    Gen11 = 11,
+    Xe = 12,
+    Xe2 = 13,
+    Xe3 = 14,
+};
+
+// Qualcomm ACPI generations
+enum class QualcommACPIGen {
+    Unknown = 0,
+    Adreno6xx = 6,
+    Adreno7xx = 7,
+    Adreno8xx = 8,
+};
+
+IntelGen GetIntelGen(PCIVendorID venderId, PCIDeviceID deviceId);
+QualcommACPIGen GetQualcommACPIGen(PCIVendorID venderId, PCIDeviceID deviceId);
+
+// ARM
+bool IsMaliG68(PCIDeviceID deviceId);
 
 }  // namespace dawn::gpu_info
 #endif  // SRC_DAWN_COMMON_GPUINFO_H_

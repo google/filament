@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include "src/tint/utils/generation_id.h"
+#include "src/tint/utils/symbol/generation_id.h"
 
 namespace tint {
 
@@ -44,7 +44,7 @@ class Symbol {
     /// @param val the symbol value
     /// @param pid the identifier of the program that owns this Symbol
     /// @param name the name this symbol represents
-    Symbol(uint32_t val, tint::GenerationID pid, std::string_view name);
+    Symbol(uint32_t val, GenerationID pid, std::string_view name);
 
     /// Copy constructor
     /// @param o the symbol to copy
@@ -100,20 +100,11 @@ class Symbol {
     /// @returns the string representing the name of the symbol
     std::string Name() const;
 
-    /// @returns the identifier of the Program that owns this symbol.
-    tint::GenerationID GenerationID() const { return generation_id_; }
-
   private:
     uint32_t val_ = static_cast<uint32_t>(-1);
-    tint::GenerationID generation_id_;
+    GenerationID generation_id_;
     std::string_view name_;
 };
-
-/// @param sym the Symbol
-/// @returns the GenerationID that owns the given Symbol
-inline GenerationID GenerationIDOf(Symbol sym) {
-    return sym.IsValid() ? sym.GenerationID() : GenerationID();
-}
 
 }  // namespace tint
 

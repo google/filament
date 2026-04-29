@@ -112,6 +112,8 @@ public class MorphTargetBuffer {
          * @return the newly created <code>MorphTargetBuffer</code> object
          *
          * @exception IllegalStateException if the MorphTargetBuffer could not be created
+         * @throws RuntimeException if a runtime error occurred, such as running out of
+         *            memory or other resources.
          *
          * @see #setMorphTargetBufferOffsetAt
          */

@@ -7,9 +7,9 @@ namespace Google\Protobuf\Internal;
 
 use Google\Protobuf\Internal\GPBType;
 use Google\Protobuf\Internal\GPBWire;
-use Google\Protobuf\Internal\RepeatedField;
 use Google\Protobuf\Internal\InputStream;
 use Google\Protobuf\Internal\GPBUtil;
+use Google\Protobuf\RepeatedField;
 
 /**
  * Generated from protobuf message <code>google.protobuf.FieldOptions</code>
@@ -97,9 +97,11 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
      */
     protected $deprecated = null;
     /**
+     * DEPRECATED. DO NOT USE!
      * For Google-internal migration only. Do not use.
      *
-     * Generated from protobuf field <code>optional bool weak = 10 [default = false];</code>
+     * Generated from protobuf field <code>optional bool weak = 10 [default = false, deprecated = true];</code>
+     * @deprecated
      */
     protected $weak = null;
     /**
@@ -204,20 +206,21 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
      *           for accessors, or it will be completely ignored; in the very least, this
      *           is a formalization for deprecating fields.
      *     @type bool $weak
+     *           DEPRECATED. DO NOT USE!
      *           For Google-internal migration only. Do not use.
      *     @type bool $debug_redact
      *           Indicate that the field value should not be printed out when using debug
      *           formats, e.g. when the field contains sensitive credentials.
      *     @type int $retention
-     *     @type array<int>|\Google\Protobuf\Internal\RepeatedField $targets
-     *     @type array<\Google\Protobuf\Internal\FieldOptions\EditionDefault>|\Google\Protobuf\Internal\RepeatedField $edition_defaults
+     *     @type int[] $targets
+     *     @type \Google\Protobuf\Internal\FieldOptions\EditionDefault[] $edition_defaults
      *     @type \Google\Protobuf\Internal\FeatureSet $features
      *           Any features defined in the specific edition.
      *           WARNING: This field should only be used by protobuf plugins or special
      *           cases like the proto compiler. Other uses are discouraged and
      *           developers should rely on the protoreflect APIs for their client language.
      *     @type \Google\Protobuf\Internal\FieldOptions\FeatureSupport $feature_support
-     *     @type array<\Google\Protobuf\Internal\UninterpretedOption>|\Google\Protobuf\Internal\RepeatedField $uninterpreted_option
+     *     @type \Google\Protobuf\Internal\UninterpretedOption[] $uninterpreted_option
      *           The parser stores options it doesn't recognize here. See above.
      * }
      */
@@ -531,35 +534,47 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * DEPRECATED. DO NOT USE!
      * For Google-internal migration only. Do not use.
      *
-     * Generated from protobuf field <code>optional bool weak = 10 [default = false];</code>
+     * Generated from protobuf field <code>optional bool weak = 10 [default = false, deprecated = true];</code>
      * @return bool
+     * @deprecated
      */
     public function getWeak()
     {
+        if (isset($this->weak)) {
+            @trigger_error('weak is deprecated.', E_USER_DEPRECATED);
+        }
         return isset($this->weak) ? $this->weak : false;
     }
 
     public function hasWeak()
     {
+        if (isset($this->weak)) {
+            @trigger_error('weak is deprecated.', E_USER_DEPRECATED);
+        }
         return isset($this->weak);
     }
 
     public function clearWeak()
     {
+        @trigger_error('weak is deprecated.', E_USER_DEPRECATED);
         unset($this->weak);
     }
 
     /**
+     * DEPRECATED. DO NOT USE!
      * For Google-internal migration only. Do not use.
      *
-     * Generated from protobuf field <code>optional bool weak = 10 [default = false];</code>
+     * Generated from protobuf field <code>optional bool weak = 10 [default = false, deprecated = true];</code>
      * @param bool $var
      * @return $this
+     * @deprecated
      */
     public function setWeak($var)
     {
+        @trigger_error('weak is deprecated.', E_USER_DEPRECATED);
         GPBUtil::checkBool($var);
         $this->weak = $var;
 
@@ -638,7 +653,7 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>repeated .google.protobuf.FieldOptions.OptionTargetType targets = 19;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<int>
      */
     public function getTargets()
     {
@@ -647,7 +662,7 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>repeated .google.protobuf.FieldOptions.OptionTargetType targets = 19;</code>
-     * @param array<int>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param int[] $var
      * @return $this
      */
     public function setTargets($var)
@@ -660,7 +675,7 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>repeated .google.protobuf.FieldOptions.EditionDefault edition_defaults = 20;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Protobuf\Internal\FieldOptions\EditionDefault>
      */
     public function getEditionDefaults()
     {
@@ -669,7 +684,7 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>repeated .google.protobuf.FieldOptions.EditionDefault edition_defaults = 20;</code>
-     * @param array<\Google\Protobuf\Internal\FieldOptions\EditionDefault>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Protobuf\Internal\FieldOptions\EditionDefault[] $var
      * @return $this
      */
     public function setEditionDefaults($var)
@@ -758,7 +773,7 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
      * The parser stores options it doesn't recognize here. See above.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.UninterpretedOption uninterpreted_option = 999;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Protobuf\Internal\UninterpretedOption>
      */
     public function getUninterpretedOption()
     {
@@ -769,7 +784,7 @@ class FieldOptions extends \Google\Protobuf\Internal\Message
      * The parser stores options it doesn't recognize here. See above.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.UninterpretedOption uninterpreted_option = 999;</code>
-     * @param array<\Google\Protobuf\Internal\UninterpretedOption>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Protobuf\Internal\UninterpretedOption[] $var
      * @return $this
      */
     public function setUninterpretedOption($var)

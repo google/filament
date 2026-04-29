@@ -34,26 +34,28 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 TEST_F(SpirvWriterTest, Let_Constant) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         b.Let("l", u32(42));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpName %l \"l\"");
     EXPECT_INST("%l = OpConstant %uint 42");
 }
 
 TEST_F(SpirvWriterTest, Let_SharedConstant) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         b.Let("l1", u32(42));
         b.Let("l2", u32(42));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpName %l1 \"l1\"");
     EXPECT_INST("OpName %l1 \"l2\"");
     EXPECT_INST("%l1 = OpConstant %uint 42");

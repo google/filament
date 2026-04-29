@@ -57,6 +57,7 @@ ResultOrError<D3D12DeviceInfo> GatherDeviceInfo(const PhysicalDevice& physicalDe
                               D3D12_FEATURE_D3D12_OPTIONS, &featureOptions, sizeof(featureOptions)),
                           "ID3D12Device::CheckFeatureSupport"));
     info.resourceHeapTier = featureOptions.ResourceHeapTier;
+    info.resourceBindingTier = featureOptions.ResourceBindingTier;
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOptions2 = {};
     if (SUCCEEDED(physicalDevice.GetDevice()->CheckFeatureSupport(

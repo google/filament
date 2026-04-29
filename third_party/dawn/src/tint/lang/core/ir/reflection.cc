@@ -37,18 +37,20 @@ namespace tint::core::ir {
 
 Result<WorkgroupInfo> GetWorkgroupInfo(core::ir::Module& ir) {
     std::optional<std::array<uint32_t, 3>> const_wg_size;
+    std::optional<uint32_t> const_sg_size;
     for (auto func : ir.functions) {
         if (!func->IsEntryPoint()) {
             continue;
         }
         const_wg_size = func->WorkgroupSizeAsConst();
+        const_sg_size = func->SubgroupSizeAsConst();
     }
 
     if (!const_wg_size) {
         return Failure{"IR GetWorkgroupInfo: Could not find workgroup size"};
     }
 
-    size_t wg_storage_size = 0u;
+    uint64_t wg_storage_size = 0u;
     for (auto* inst : *ir.root_block) {
         if (auto* as_var = inst->As<core::ir::Var>()) {
             auto* ptr = as_var->Result()->Type()->As<core::type::Pointer>();
@@ -56,16 +58,17 @@ Result<WorkgroupInfo> GetWorkgroupInfo(core::ir::Module& ir) {
                 continue;
             }
             auto* ty = ptr->StoreType();
-            uint32_t align = ty->Align();
-            uint32_t size = ty->Size();
+            uint64_t align = ty->Align();
+            uint64_t size = ty->Size();
 
             // This essentially matches std430 layout rules from GLSL, which are in
             // turn specified as an upper bound for Vulkan layout sizing.
-            wg_storage_size += tint::RoundUp(16u, tint::RoundUp(align, size));
+            wg_storage_size +=
+                tint::RoundUp(static_cast<uint64_t>(16u), tint::RoundUp(align, size));
         }
     }
     return WorkgroupInfo{(*const_wg_size)[0], (*const_wg_size)[1], (*const_wg_size)[2],
-                         wg_storage_size};
+                         wg_storage_size, const_sg_size};
 }
 
 }  // namespace tint::core::ir

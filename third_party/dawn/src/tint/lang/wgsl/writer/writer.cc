@@ -33,14 +33,15 @@
 #include "src/tint/lang/wgsl/writer/ast_printer/ast_printer.h"
 #include "src/tint/lang/wgsl/writer/ir_to_program/ir_to_program.h"
 #include "src/tint/lang/wgsl/writer/raise/raise.h"
+#include "src/tint/utils/ice/ice.h"
 
 namespace tint::wgsl::writer {
 
-Result<Output> Generate(const Program& program) {
+Result<Output> Generate(const Program& program, const Options& options) {
     Output output;
 
     // Generate the WGSL code.
-    auto impl = std::make_unique<ASTPrinter>(program);
+    auto impl = std::make_unique<ASTPrinter>(program, options);
     if (!impl->Generate()) {
         return Failure{impl->Diagnostics().Str()};
     }
@@ -49,19 +50,14 @@ Result<Output> Generate(const Program& program) {
     return output;
 }
 
-Result<Output> WgslFromIR(core::ir::Module& module, const ProgramOptions& options) {
-    auto res = ProgramFromIR(module, options);
-    if (res != Success) {
-        return res.Failure();
-    }
-    return Generate(res.Move());
+Result<Output> WgslFromIR(core::ir::Module& module, const Options& options) {
+    TINT_CHECK_RESULT_UNWRAP(res, ProgramFromIR(module, options));
+    return Generate(res, options);
 }
 
-Result<Program> ProgramFromIR(core::ir::Module& module, const ProgramOptions& options) {
+Result<Program> ProgramFromIR(core::ir::Module& module, const Options& options) {
     // core-dialect -> WGSL-dialect
-    if (auto res = Raise(module); res != Success) {
-        return res.Failure();
-    }
+    TINT_CHECK_RESULT(Raise(module));
 
     auto program = IRToProgram(module, options);
     if (!program.IsValid()) {

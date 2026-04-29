@@ -28,9 +28,9 @@
 #ifndef SRC_TINT_UTILS_BYTES_READER_H_
 #define SRC_TINT_UTILS_BYTES_READER_H_
 
+#include <bit>
 #include <string>
 
-#include "src/tint/utils/bytes/endianness.h"
 #include "src/tint/utils/bytes/swap.h"
 #include "src/tint/utils/result.h"
 
@@ -60,13 +60,13 @@ class Reader {
     /// @param endianness the encoded endianness of the integer
     /// @return the deserialized integer
     template <typename T>
-    Result<T> Int(Endianness endianness = Endianness::kLittle) {
+    Result<T> Int(std::endian endianness = std::endian::little) {
         static_assert(std::is_integral_v<T>);
         T out = 0;
         if (size_t n = Read(reinterpret_cast<std::byte*>(&out), sizeof(T)); n != sizeof(T)) {
             return Failure{"EOF"};
         }
-        if (NativeEndianness() != endianness) {
+        if (std::endian::native != endianness) {
             out = Swap(out);
         }
         return out;

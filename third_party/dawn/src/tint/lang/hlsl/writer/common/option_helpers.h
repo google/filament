@@ -34,14 +34,19 @@
 #include "src/tint/lang/core/ir/transform/multiplanar_options.h"
 #include "src/tint/lang/hlsl/writer/common/options.h"
 
+namespace tint::core::ir {
+class Module;
+}  // namespace tint::core::ir
+
 namespace tint::hlsl::writer {
 
 /// The remapper data
 using RemapperData = std::unordered_map<BindingPoint, BindingPoint>;
 
+/// @param ir the module
 /// @param options the options
 /// @returns success or failure
-Result<SuccessType> ValidateBindingOptions(const Options& options);
+Result<SuccessType> ValidateBindingOptions(const core::ir::Module& ir, const Options& options);
 
 /// Populates binding-related option from the writer options
 /// @param options the writer options
@@ -53,7 +58,8 @@ void PopulateBindingRelatedOptions(
     const Options& options,
     RemapperData& remapper_data,
     tint::transform::multiplanar::BindingsMap& multiplanar_map,
-    ArrayLengthFromUniformOptions& array_length_from_uniform_options);
+    ArrayLengthFromUniformOptions& array_length_from_uniform_options,
+    ArrayOffsetFromUniformOptions& array_offset_from_uniform_options);
 
 }  // namespace tint::hlsl::writer
 

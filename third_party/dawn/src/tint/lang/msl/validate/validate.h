@@ -29,14 +29,16 @@
 #define SRC_TINT_LANG_MSL_VALIDATE_VALIDATE_H_
 
 #include <string>
-#include <utility>
+
+#include "src/tint/utils/result.h"
 
 namespace tint::msl::validate {
 
 /// The version of MSL to validate against.
-/// Note: these must kept be in ascending order
+/// Note: these must be kept in ascending order
 enum class MslVersion {
     kMsl_2_3,
+    kMsl_2_4,
     kMsl_3_2,
 };
 
@@ -45,21 +47,15 @@ inline bool operator<(MslVersion a, MslVersion b) {
     return static_cast<int>(a) < static_cast<int>(b);
 }
 
-/// The return structure of Validate()
-struct Result {
-    /// True if validation passed
-    bool failed = false;
-    /// Output of Metal compiler.
-    std::string output;
-};
-
 /// Validate attempts to compile the shader with the Metal Shader Compiler,
 /// verifying that the shader compiles successfully.
 /// @param xcrun_path path to xcrun
 /// @param source the generated MSL source
 /// @param version the version of MSL to validate against
 /// @return the result of the compile
-Result Validate(const std::string& xcrun_path, const std::string& source, MslVersion version);
+Result<SuccessType> Validate(const std::string& xcrun_path,
+                             const std::string& source,
+                             MslVersion version);
 
 #if TINT_BUILD_IS_MAC
 /// ValidateUsingMetal attempts to compile the shader with the runtime Metal Shader Compiler
@@ -67,7 +63,7 @@ Result Validate(const std::string& xcrun_path, const std::string& source, MslVer
 /// @param source the generated MSL source
 /// @param version the version of MSL to validate against
 /// @return the result of the compile
-Result ValidateUsingMetal(const std::string& source, MslVersion version);
+Result<SuccessType> ValidateUsingMetal(const std::string& source, MslVersion version);
 #endif  // TINT_BUILD_IS_MAC
 
 }  // namespace tint::msl::validate

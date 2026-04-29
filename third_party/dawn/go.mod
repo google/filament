@@ -14,7 +14,6 @@ require (
 	github.com/mattn/go-isatty v0.0.17
 	github.com/mzohreva/gographviz v0.0.0-20180226085351-533f4a37d9c6
 	github.com/sergi/go-diff v1.3.1
-	github.com/spf13/afero v1.9.2
 	github.com/stretchr/testify v1.8.2
 	github.com/tidwall/jsonc v0.3.2
 	go.chromium.org/luci v0.0.0-20230311013728-313c8e2205bc

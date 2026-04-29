@@ -51,12 +51,13 @@ cc_library(
     "//src/tint/lang/core/ir",
     "//src/tint/lang/core/type",
     "//src/tint/lang/hlsl/writer/common",
+    "//src/tint/lang/null/writer/common",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
     "//src/tint/lang/wgsl/inspector",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/sem",
-    "//src/tint/lang/wgsl/writer/ir_to_program",
+    "//src/tint/lang/wgsl/writer/common",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
@@ -83,6 +84,11 @@ cc_library(
     ":tint_build_msl_writer": [
       "//src/tint/lang/msl/writer",
       "//src/tint/lang/msl/writer/common",
+    ],
+    "//conditions:default": [],
+  }) + select({
+    ":tint_build_null_writer": [
+      "//src/tint/lang/null/writer",
     ],
     "//conditions:default": [],
   }) + select({
@@ -120,7 +126,7 @@ cc_library(
   deps = [
     "//src/tint/api",
     "//src/tint/lang/wgsl",
-    "//src/tint/lang/wgsl/writer/ir_to_program",
+    "//src/tint/lang/wgsl/writer/common",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
@@ -155,6 +161,11 @@ alias(
 alias(
   name = "tint_build_msl_writer",
   actual = "//src/tint:tint_build_msl_writer_true",
+)
+
+alias(
+  name = "tint_build_null_writer",
+  actual = "//src/tint:tint_build_null_writer_true",
 )
 
 alias(

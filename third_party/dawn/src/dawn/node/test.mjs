@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { describe, it, before, after } from 'node:test';
+import { Worker, } from 'node:worker_threads';
 
 const require = createRequire(import.meta.url);
 
@@ -259,6 +260,29 @@ describe('tests', async () => {
       assert.ok(() => e?.error.message.includes('maxTextureDimension2D'));
     });
 
+  });
+
+  describe('worker threads tests', () => {
+    it('can request adapter in multiple worker threads simultaneously', async () => {
+      const numWorkers = 4;
+      const workers = [];
+
+      for (let i = 0; i < numWorkers; i++) {
+        workers.push(new Promise((resolve, reject) => {
+          const worker = new Worker(join(__dirname, 'worker-test.mjs'), { type: 'module' });
+          worker.on('message', (msg) => {
+            if (msg === 'success') resolve();
+            else reject(new Error(`Worker failed: ${msg}`));
+          });
+          worker.on('error', reject);
+          worker.on('exit', (code) => {
+            if (code !== 0) reject(new Error(`Worker stopped with exit code ${code}`));
+          });
+        }));
+      }
+
+      await Promise.all(workers);
+    });
   });
 
 });

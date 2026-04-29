@@ -66,6 +66,7 @@ def RunGenerators(api: str, registry: str, directory: str, styleFile: str, targe
     from generators.dispatch_table_helper_generator import DispatchTableHelperGenerator
     from generators.helper_file_generator import HelperFileGenerator
     from generators.loader_extension_generator import LoaderExtensionGenerator
+    from generators.vk_result_to_string_generator import VkResultToStringGenerator
 
     # These set fields that are needed by both OutputGenerator and BaseGenerator,
     # but are uniform and don't need to be set at a per-generated file level
@@ -75,6 +76,7 @@ def RunGenerators(api: str, registry: str, directory: str, styleFile: str, targe
     # Generated directory and dispatch table helper file name may be API specific (e.g. Vulkan SC)
     generated_directory = 'loader/generated'
     dispatch_table_helper_filename = 'vk_dispatch_table_helper.h'
+    result_to_string_filename = 'vk_result_to_string_helper.h'
 
     generators.update({
         'vk_layer_dispatch_table.h': {
@@ -101,6 +103,11 @@ def RunGenerators(api: str, registry: str, directory: str, styleFile: str, targe
             'generator' : DispatchTableHelperGenerator,
             'genCombined': False,
             'directory' : 'tests/framework/layer/generated',
+        },
+        f'{result_to_string_filename}': {
+            'generator' : VkResultToStringGenerator,
+            'genCombined': False,
+            'directory' : 'tests/framework/generated',
         }
     })
 
@@ -115,7 +122,7 @@ def RunGenerators(api: str, registry: str, directory: str, styleFile: str, targe
     for index, target in enumerate(targets, start=1):
         print(f'[{index}|{len(targets)}] Generating {target}')
 
-        # First grab a class contructor object and create an instance
+        # First grab a class constructor object and create an instance
         generator = generators[target]['generator']
         gen = generator()
 

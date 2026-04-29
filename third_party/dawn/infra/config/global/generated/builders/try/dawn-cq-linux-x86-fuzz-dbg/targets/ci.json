@@ -1,0 +1,62 @@
+{
+  "dawn-linux-x86-fuzz-dbg": {
+    "isolated_scripts": [
+      {
+        "args": [
+          "-check",
+          "-ir",
+          "--append-cwd-as-build"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/tint:fuzzer_corpus_tests/",
+        "module_scheme": "single",
+        "name": "tint_ir_fuzzer_corpus_check_tests",
+        "resultdb": {
+          "result_format": "single"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "fuzzer_corpus_tests",
+        "test_id_prefix": "ninja://src/tint:fuzzer_corpus_tests/"
+      },
+      {
+        "args": [
+          "-check",
+          "--append-cwd-as-build"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/tint:fuzzer_corpus_tests/",
+        "module_scheme": "single",
+        "name": "tint_wgsl_fuzzer_corpus_check_tests",
+        "resultdb": {
+          "result_format": "single"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "io_timeout": 1800,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "fuzzer_corpus_tests",
+        "test_id_prefix": "ninja://src/tint:fuzzer_corpus_tests/"
+      }
+    ]
+  }
+}

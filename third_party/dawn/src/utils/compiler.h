@@ -72,15 +72,6 @@
 #define DAWN_HAS_CPP_ATTRIBUTE(x) 0
 #endif
 
-// DAWN_BUILTIN_UNREACHABLE()
-//
-// Hints the compiler that a code path is unreachable.
-#if DAWN_COMPILER_IS(MSVC)
-#define DAWN_BUILTIN_UNREACHABLE() __assume(false)
-#else
-#define DAWN_BUILTIN_UNREACHABLE() __builtin_unreachable()
-#endif
-
 // DAWN_LIKELY(EXPR)
 //
 // Where available, hints the compiler that the expression will be true to help it generate code

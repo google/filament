@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/ast/struct.h"
+
 #include "src/tint/lang/wgsl/ast/alias.h"
 #include "src/tint/lang/wgsl/ast/helper_test.h"
 
@@ -62,16 +63,6 @@ TEST_F(AstStructDeathTest, Assert_Null_Attribute) {
             ProgramBuilder b;
             b.Structure(b.Sym("S"), tint::Vector{b.Member("a", b.ty.i32())},
                         tint::Vector<const Attribute*, 1>{nullptr});
-        },
-        "internal compiler error");
-}
-
-TEST_F(AstStructDeathTest, Assert_DifferentGenerationID_StructMember) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Structure(b1.Sym("S"), tint::Vector{b2.Member("a", b2.ty.i32())});
         },
         "internal compiler error");
 }

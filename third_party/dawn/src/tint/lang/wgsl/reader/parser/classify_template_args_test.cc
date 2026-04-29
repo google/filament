@@ -26,8 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gmock/gmock.h"
-
-#include "src/tint/lang/wgsl/reader/parser/classify_template_args.h"
 #include "src/tint/lang/wgsl/reader/parser/lexer.h"
 #include "src/tint/utils/containers/transform.h"
 
@@ -52,7 +50,6 @@ TEST_P(WGSLParserClassifyTemplateArgsTest, Classify) {
     Source::File file("", params.wgsl);
     Lexer l(&file);
     auto tokens = l.Lex();
-    ClassifyTemplateArguments(tokens);
     auto types = tint::Transform(tokens, [&](const Token& t) { return t.type(); });
     EXPECT_THAT(types, testing::ContainerEq(params.tokens));
 }

@@ -38,7 +38,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "dawn/common/MutexProtected.h"
 #include "dawn/common/Ref.h"
-#include "dawn/common/RefCountedWithExternalCount.h"
+#include "dawn/common/RefCounted.h"
 #include "dawn/common/ityp_array.h"
 #include "dawn/common/ityp_bitset.h"
 #include "dawn/native/Adapter.h"
@@ -50,7 +50,7 @@
 #include "dawn/native/Toggles.h"
 #include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
-#include "tint/lang/wgsl/enums.h"
+#include "tint/tint.h"
 
 namespace dawn::platform {
 class Platform;
@@ -74,7 +74,7 @@ InstanceBase* APICreateInstance(const InstanceDescriptor* descriptor);
 
 // This is called InstanceBase for consistency across the frontend, even if the backends don't
 // specialize this class.
-class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<RefCounted> {
+class InstanceBase final : public ErrorSink, public RefCounted {
   public:
     static ResultOrError<Ref<InstanceBase>> Create(const InstanceDescriptor* descriptor = nullptr);
 
@@ -132,6 +132,7 @@ class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<
     void RemoveDevice(DeviceBase* device);
 
     bool HasFeature(wgpu::InstanceFeatureName feature) const;
+    bool HasFeature(wgpu::WGSLLanguageFeatureName feature) const;
 
     const std::vector<std::string>& GetRuntimeSearchPaths() const;
 
@@ -161,7 +162,6 @@ class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<
     ~InstanceBase() override;
 
     void DeleteThis() override;
-    void WillDropLastExternalRef() override;
 
     InstanceBase(const InstanceBase& other) = delete;
     InstanceBase& operator=(const InstanceBase& other) = delete;
@@ -207,6 +207,8 @@ class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<
 
     TogglesState mToggles;
     TogglesInfo mTogglesInfo;
+
+    InstanceLimits mLimits;
 
     absl::flat_hash_set<wgpu::InstanceFeatureName> mInstanceFeatures;
     absl::flat_hash_set<wgpu::WGSLLanguageFeatureName> mWGSLFeatures;

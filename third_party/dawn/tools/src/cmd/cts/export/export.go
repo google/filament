@@ -32,7 +32,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -114,11 +113,11 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 
 	log.Printf("checking out cts @ '%v'...", ctsHash)
 
-	tmpDir, err := os.MkdirTemp("", "dawn-cts-export")
+	tmpDir, err := cfg.OsWrapper.MkdirTemp("", "dawn-cts-export")
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer cfg.OsWrapper.RemoveAll(tmpDir)
 
 	ctsDir := filepath.Join(tmpDir, "cts")
 
@@ -127,7 +126,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 		return fmt.Errorf("failed to find git on PATH: %w", err)
 	}
 
-	git, err := git.New(gitExe)
+	git, err := git.New(gitExe, cfg.OsWrapper)
 	if err != nil {
 		return err
 	}

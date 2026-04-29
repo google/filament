@@ -42,6 +42,8 @@ D3D12_QUERY_HEAP_TYPE D3D12QueryHeapType(wgpu::QueryType type) {
             return D3D12_QUERY_HEAP_TYPE_OCCLUSION;
         case wgpu::QueryType::Timestamp:
             return D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+        default:
+            DAWN_UNREACHABLE();
     }
 }
 }  // anonymous namespace
@@ -75,7 +77,7 @@ ID3D12QueryHeap* QuerySet::GetQueryHeap() const {
 
 QuerySet::~QuerySet() = default;
 
-void QuerySet::DestroyImpl() {
+void QuerySet::DestroyImpl(DestroyReason reason) {
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the query set is explicitly destroyed with APIDestroy.
     //   This case is NOT thread-safe and needs proper synchronization with other
@@ -83,7 +85,7 @@ void QuerySet::DestroyImpl() {
     // - It may be called when the last ref to the query set is dropped and it
     //   is implicitly destroyed. This case is thread-safe because there are no
     //   other threads using the query set since there are no other live refs.
-    QuerySetBase::DestroyImpl();
+    QuerySetBase::DestroyImpl(reason);
     ToBackend(GetDevice())->ReferenceUntilUnused(mQueryHeap);
     mQueryHeap = nullptr;
 }

@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
-
-#include "gmock/gmock.h"
 
 namespace tint::resolver {
 namespace {
@@ -60,7 +59,7 @@ TEST_F(ResolverPixelLocalExtensionTest, AddressSpaceUsedWithExtension) {
 
     Structure("S", Vector{Member("a", ty.i32())});
 
-    GlobalVar("v", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar("v", ty.AsType("S"), core::AddressSpace::kPixelLocal);
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
@@ -73,7 +72,7 @@ TEST_F(ResolverPixelLocalExtensionTest, AddressSpaceUsedWithoutExtension) {
 
     AST().AddGlobalVariable(create<ast::Var>(
         /* name */ Ident("v"),
-        /* type */ ty("S"),
+        /* type */ ty.AsType("S"),
         /* declared_address_space */ Expr(Source{{12, 34}}, core::AddressSpace::kPixelLocal),
         /* declared_access */ nullptr,
         /* initializer */ nullptr,
@@ -96,8 +95,8 @@ TEST_F(ResolverPixelLocalExtensionTest, PixelLocalTwoVariablesUsedInEntryPoint) 
     // }
     Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     Structure("S", Vector{Member("i", ty.i32())});
-    GlobalVar(Source{{1, 2}}, "a", ty("S"), core::AddressSpace::kPixelLocal);
-    GlobalVar(Source{{3, 4}}, "b", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{1, 2}}, "a", ty.AsType("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{3, 4}}, "b", ty.AsType("S"), core::AddressSpace::kPixelLocal);
 
     Func(Source{{5, 6}}, "main", {}, ty.void_(),
          Vector{Assign(Phony(), MemberAccessor("a", "i")),
@@ -128,8 +127,8 @@ TEST_F(ResolverPixelLocalExtensionTest, PixelLocalTwoVariablesUsedInEntryPointWi
     // }
     Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     Structure("S", Vector{Member("i", ty.i32())});
-    GlobalVar(Source{{1, 2}}, "a", ty("S"), core::AddressSpace::kPixelLocal);
-    GlobalVar(Source{{3, 4}}, "b", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{1, 2}}, "a", ty.AsType("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{3, 4}}, "b", ty.AsType("S"), core::AddressSpace::kPixelLocal);
 
     Func(Source{{5, 6}}, "uses_a", {}, ty.void_(),
          Vector{Assign(Phony(), MemberAccessor("a", "i"))});
@@ -161,7 +160,7 @@ TEST_F(ResolverPixelLocalExtensionTest, VertexStageDirect) {
     // }
     Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     Structure("S", Vector{Member("i", ty.i32())});
-    GlobalVar(Source{{56, 78}}, "v", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{56, 78}}, "v", ty.AsType("S"), core::AddressSpace::kPixelLocal);
     Func("F", Empty, ty.vec4<f32>(),
          Vector{
              Assign(MemberAccessor(Expr(Source{{12, 34}}, "v"), "i"), 42_a),
@@ -186,7 +185,7 @@ TEST_F(ResolverPixelLocalExtensionTest, ComputeStageDirect) {
     // }
     Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     Structure("S", Vector{Member("i", ty.i32())});
-    GlobalVar(Source{{56, 78}}, "v", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{56, 78}}, "v", ty.AsType("S"), core::AddressSpace::kPixelLocal);
     Func("F", Empty, ty.void_(),
          Vector{Assign(MemberAccessor(Expr(Source{{12, 34}}, "v"), "i"), 42_a)},
          Vector{Stage(ast::PipelineStage::kCompute), WorkgroupSize(1_a)});
@@ -207,7 +206,7 @@ TEST_F(ResolverPixelLocalExtensionTest, FragmentStageDirect) {
     // }
     Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     Structure("S", Vector{Member("i", ty.i32())});
-    GlobalVar(Source{{56, 78}}, "v", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{56, 78}}, "v", ty.AsType("S"), core::AddressSpace::kPixelLocal);
     Func("F", Empty, ty.void_(),
          Vector{Assign(MemberAccessor(Expr(Source{{12, 34}}, "v"), "i"), 42_a)},
          Vector{Stage(ast::PipelineStage::kFragment)});
@@ -227,7 +226,7 @@ TEST_F(ResolverPixelLocalExtensionTest, VertexStageIndirect) {
     // }
     Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     Structure("S", Vector{Member("i", ty.i32())});
-    GlobalVar(Source{{3, 4}}, "v", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{3, 4}}, "v", ty.AsType("S"), core::AddressSpace::kPixelLocal);
     Func(Source{{5, 6}}, "X", Empty, ty.void_(),
          Vector{Assign(MemberAccessor(Expr(Source{{1, 2}}, "v"), "i"), 42_a)});
     Func(Source{{7, 8}}, "Y", Empty, ty.void_(), Vector{CallStmt(Call("X"))});
@@ -260,7 +259,7 @@ TEST_F(ResolverPixelLocalExtensionTest, ComputeStageIndirect) {
     // }
     Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     Structure("S", Vector{Member("i", ty.i32())});
-    GlobalVar(Source{{3, 4}}, "v", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{3, 4}}, "v", ty.AsType("S"), core::AddressSpace::kPixelLocal);
     Func(Source{{5, 6}}, "X", Empty, ty.void_(),
          Vector{Assign(MemberAccessor(Expr(Source{{1, 2}}, "v"), "i"), 42_a)});
     Func(Source{{7, 8}}, "Y", Empty, ty.void_(), Vector{CallStmt(Call("X"))});
@@ -288,7 +287,7 @@ TEST_F(ResolverPixelLocalExtensionTest, FragmentStageIndirect) {
     // }
     Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     Structure("S", Vector{Member("i", ty.i32())});
-    GlobalVar(Source{{3, 4}}, "v", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{3, 4}}, "v", ty.AsType("S"), core::AddressSpace::kPixelLocal);
     Func(Source{{5, 6}}, "X", Empty, ty.void_(),
          Vector{Assign(MemberAccessor(Expr(Source{{1, 2}}, "v"), "i"), 42_a)});
     Func(Source{{7, 8}}, "Y", Empty, ty.void_(), Vector{CallStmt(Call("X"))});
@@ -346,7 +345,7 @@ TEST_P(ResolverPixelLocalExtensionTest_Types, Struct) {
                        Member("a", ty.i32()),
                        Member(Source{{12, 34}}, "m", GetParam().type(*this)),
                    });
-    GlobalVar(Source{{56, 78}}, "v", ty("S"), core::AddressSpace::kPixelLocal);
+    GlobalVar(Source{{56, 78}}, "v", ty.AsType("S"), core::AddressSpace::kPixelLocal);
 
     if (GetParam().pass) {
         EXPECT_TRUE(r()->Resolve()) << r()->error();

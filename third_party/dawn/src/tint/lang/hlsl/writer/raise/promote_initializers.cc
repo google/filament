@@ -94,6 +94,16 @@ struct State {
                     !operand->Type()->IsAnyOf<core::type::Struct, core::type::Array>()) {
                     continue;
                 }
+
+                // Avoid promoting const-zero structs and arrays in the root block, because they may
+                // fail to be const-folded by DXC. This allows them to be initialized with
+                // zero-casting in HLSL instead.
+                if (is_root_block) {
+                    if (auto* c = operand->As<core::ir::Constant>(); c && c->Value()->AllZero()) {
+                        continue;
+                    }
+                }
+
                 if (operand->IsAnyOf<core::ir::InstructionResult, core::ir::Constant>()) {
                     worklist.Push({inst, i, operand});
                 }
@@ -122,8 +132,8 @@ struct State {
         while (!const_worklist.IsEmpty()) {
             auto item = const_worklist.Pop();
 
-            tint::Slice<core::ir::Value* const> args = item->Args();
-            for (size_t i = 0; i < args.Length(); ++i) {
+            auto args = item->Args();
+            for (size_t i = 0; i < args.size(); ++i) {
                 auto ret = ProcessConstant(args[i], item, i);
                 if (ret.has_value()) {
                     const_worklist.Insert(0, *ret);
@@ -137,7 +147,7 @@ struct State {
                                                         core::ir::Construct* parent,
                                                         size_t idx) {
         auto* const_val = operand->As<core::ir::Constant>();
-        TINT_ASSERT(const_val);
+        TINT_IR_ASSERT(ir, const_val);
 
         if (!const_val->Type()->Is<core::type::Struct>()) {
             return std::nullopt;
@@ -238,11 +248,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> PromoteInitializers(core::ir::Module& ir) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "hlsl.PromoteInitializers", kPromoteInitializersCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kPromoteInitializersCapabilities, "before hlsl.PromoteInitializers");
 
     State{ir}.Process();
 

@@ -45,6 +45,7 @@ import (
 type Flags struct {
 	Verbose          bool
 	Colors           bool
+	FailuresOnly     bool
 	NumRunners       int
 	Log              string
 	ResultsPath      string
@@ -57,6 +58,7 @@ type Flags struct {
 func (f *Flags) Register(fsReader oswrapper.FilesystemReader) {
 	flag.BoolVar(&f.Verbose, "verbose", false, "print extra information while testing")
 	flag.BoolVar(&f.Colors, "colors", term.CanUseAnsiEscapeSequences(), "enable / disable colors")
+	flag.BoolVar(&f.FailuresOnly, "failures-only", false, "output only failures to log file")
 	flag.IntVar(&f.NumRunners, "j", runtime.NumCPU()/2, "number of concurrent runners. 0 runs serially")
 	flag.StringVar(&f.Log, "log", "", "path to log file of tests run and result")
 	flag.StringVar(&f.ResultsPath, "output", "", "path to write test results file")
@@ -70,7 +72,8 @@ func (f *Flags) Register(fsReader oswrapper.FilesystemReader) {
 // Note: Ensure you call Close() on the returned State
 func (f *Flags) Process(fsReaderWriter oswrapper.FilesystemReaderWriter) (*State, error) {
 	s := &State{
-		resultsPath: f.ResultsPath,
+		resultsPath:  f.ResultsPath,
+		failuresOnly: f.FailuresOnly,
 	}
 
 	// Create the stdout writer
@@ -123,6 +126,7 @@ type State struct {
 	Expectations Expectations
 	CTS          CTS
 	resultsPath  string
+	failuresOnly bool
 	logWriter    io.WriteCloser
 }
 
@@ -136,7 +140,9 @@ func (s *State) Close(results Results) error {
 	if s.resultsPath != "" {
 		expectations := Expectations{}
 		for testCase, result := range results {
-			expectations[testCase] = result.Status
+			if !s.failuresOnly || result.Status == Fail {
+				expectations[testCase] = result.Status
+			}
 		}
 
 		if err := expectations.Save(s.resultsPath); err != nil {

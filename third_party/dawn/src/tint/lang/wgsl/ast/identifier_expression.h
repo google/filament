@@ -41,23 +41,13 @@ namespace tint::ast {
 class IdentifierExpression final : public Castable<IdentifierExpression, Expression> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param identifier the identifier
-    IdentifierExpression(GenerationID pid,
-                         NodeID nid,
-                         const Source& src,
-                         const Identifier* identifier);
+    IdentifierExpression(NodeID nid, const Source& src, const Identifier* identifier);
 
     /// Destructor
     ~IdentifierExpression() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const IdentifierExpression* Clone(CloneContext& ctx) const override;
 
     /// The identifier for the expression
     Identifier const* const identifier;

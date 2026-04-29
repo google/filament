@@ -91,6 +91,12 @@ std::unique_ptr<dawn::platform::WorkerTaskPool> Platform::CreateWorkerTaskPool()
     return std::make_unique<AsyncWorkerThreadPool>();
 }
 
+std::unique_ptr<dawn::platform::JobHandle> WorkerTaskPool::PostWorkerJob(PostWorkerJobCallback cb,
+                                                                         void* userdata) {
+    DAWN_UNREACHABLE();
+    return nullptr;
+}
+
 bool Platform::IsFeatureEnabled(Features feature) {
     switch (feature) {
         case Features::kWebGPUUseDXC:
@@ -99,11 +105,11 @@ bool Platform::IsFeatureEnabled(Features feature) {
 #else
             return false;
 #endif
-        case Features::kWebGPUUseVulkanMemoryModel:
-            return false;
         case Features::kWebGPUEnableRangeAnalysisForRobustness:
             return true;
         case Features::kWebGPUUseSpirv14:
+            return true;
+        case Features::kWebGPUDecomposeUniformBuffers:
             return true;
     }
     return false;

@@ -32,6 +32,7 @@
 #include "src/tint/lang/core/ir/transform/helper_test.h"
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/spirv/ir/builtin_call.h"
+#include "src/tint/lang/spirv/type/literal.h"
 #include "src/tint/lang/spirv/writer/common/options.h"
 
 namespace tint::spirv::writer::raise {
@@ -2739,7 +2740,9 @@ TEST_F(SpirvWriter_ForkExplicitLayoutTypesTest, ArrayLength) {
 
     auto* func = b.Function("foo", ty.void_());
     b.Append(func->Block(), [&] {
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), BuiltinFn::kArrayLength, buffer, 1_u);
+        auto* literal_index = b.Constant(
+            mod.constant_values.Get<core::constant::Scalar<u32>>(ty.Get<type::Literal>(), 1_u));
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), BuiltinFn::kArrayLength, buffer, literal_index);
         b.Return(func);
     });
 
@@ -2939,7 +2942,7 @@ TEST_F(SpirvWriter_ForkExplicitLayoutTypesTest, Spv14_CopyLogical_ArrayRemoveLay
         core::ir::Capability::kAllowNonCoreTypes,
     };
 
-    auto* array_ty = ty.array(ty.u32(), 4, 4);
+    auto* array_ty = ty.array(ty.u32(), 4);
     auto* ssbo = b.Var("ssbo", ty.ptr(storage, array_ty));
     ssbo->SetBindingPoint(0, 0);
     mod.root_block->Append(ssbo);
@@ -2996,7 +2999,7 @@ TEST_F(SpirvWriter_ForkExplicitLayoutTypesTest, Spv14_CopyLogical_ArrayAddLayout
         core::ir::Capability::kAllowNonCoreTypes,
     };
 
-    auto* array_ty = ty.array(ty.u32(), 4, 4);
+    auto* array_ty = ty.array(ty.u32(), 4);
     auto* ssbo = b.Var("ssbo", ty.ptr(storage, array_ty));
     ssbo->SetBindingPoint(0, 0);
     mod.root_block->Append(ssbo);

@@ -1303,6 +1303,25 @@ error:
         mShading = Shading::UNLIT;
     }
 
+    if (mMaterialDomain == MaterialDomain::SURFACE && !mOutputs.empty()) {
+        if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+            LOG(ERROR) << "Error: feature level 0 does not support custom outputs.";
+            goto error;
+        }
+        if (mOutputs.size() > 1) {
+            LOG(ERROR) << "Error: surface materials only support a maximum of 1 custom output.";
+            goto error;
+        }
+        if (mShading != Shading::UNLIT) {
+            LOG(ERROR) << "Error: custom outputs are only supported for unlit surface materials.";
+            goto error;
+        }
+        if (mBlendingMode != BlendingMode::OPAQUE) {
+            LOG(ERROR) << "Error: surface materials with custom outputs must use opaque blending.";
+            goto error;
+        }
+    }
+
     // Add a default color output.
     if (mMaterialDomain == MaterialDomain::POST_PROCESS && mOutputs.empty()) {
         output(VariableQualifier::OUT,

@@ -98,7 +98,7 @@ diag::Diagnostic& ConstParamValidator::AddError(const Instruction& inst) {
 }
 
 const constant::Value* GetConstArg(const CoreBuiltinCall* call, uint32_t param_index) {
-    if (call->Args().Length() <= param_index) {
+    if (call->Args().size() <= param_index) {
         return nullptr;
     }
     if (call->Args()[param_index] == nullptr) {

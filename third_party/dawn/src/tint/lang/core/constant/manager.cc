@@ -42,6 +42,7 @@
 #include "src/tint/lang/core/type/i8.h"
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/matrix.h"
+#include "src/tint/lang/core/type/u16.h"
 #include "src/tint/lang/core/type/u32.h"
 #include "src/tint/lang/core/type/u64.h"
 #include "src/tint/lang/core/type/u8.h"
@@ -115,6 +116,10 @@ const Scalar<u8>* Manager::Get(u8 value) {
     return Get<Scalar<u8>>(types.u8(), value);
 }
 
+const Scalar<u16>* Manager::Get(u16 value) {
+    return Get<Scalar<u16>>(types.u16(), value);
+}
+
 const Scalar<f32>* Manager::Get(f32 value) {
     return Get<Scalar<f32>>(types.f32(), value);
 }
@@ -182,6 +187,7 @@ const Value* Manager::Zero(const core::type::Type* type) {
         [&](const core::type::U32*) { return Get(u32(0)); },               //
         [&](const core::type::I8*) { return Get(i8(0)); },                 //
         [&](const core::type::U8*) { return Get(u8(0)); },                 //
+        [&](const core::type::U16*) { return Get(u16(0)); },               //
         [&](const core::type::U64*) { return Get(u64(0)); },               //
         [&](const core::type::F32*) { return Get(f32(0)); },               //
         [&](const core::type::F16*) { return Get(f16(0)); },               //

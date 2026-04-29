@@ -156,6 +156,7 @@ set(SRCS
         src/ds/StructureDescriptorSet.cpp
         src/fg/Blackboard.cpp
         src/fg/DependencyGraph.cpp
+        src/fg/FgviewerManager.cpp
         src/fg/FrameGraph.cpp
         src/fg/FrameGraphPass.cpp
         src/fg/FrameGraphResources.cpp
@@ -319,6 +320,12 @@ set(MATERIAL_MULTIVIEW_SRCS
         src/materials/skybox.mat
 )
 
+# This set of materials should only be compiled for vulkan or metal because they contain operations
+# not allowed on other platforms. (e.g. sampling from a multi-sampled texture).
+set(MATERIAL_VULKAN_METAL_SRCS
+        src/materials/resolveDepth.mat
+)
+
 # ==================================================================================================
 # Configuration
 # ==================================================================================================
@@ -387,6 +394,27 @@ foreach(mat_src ${MATERIAL_SRCS})
 endforeach()
 list(REMOVE_DUPLICATES MATERIAL_DIRS)
 
+function(check_in_list list_name item out_var)
+    list(FIND ${list_name} "${item}" index)
+    if (index GREATER -1)
+        set(${out_var} TRUE PARENT_SCOPE)
+    else()
+        set(${out_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
+macro(compile_material output_path fullname flags_var comment_str)
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND matc ${${flags_var}} -o ${output_path} ${fullname}
+            MAIN_DEPENDENCY ${fullname}
+            DEPENDS matc
+            COMMENT "${comment_str}"
+    )
+    list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path})
+    list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path})
+endmacro()
+
 # For each directory, generate a single resource package
 foreach(mat_dir ${MATERIAL_DIRS})
     get_filename_component(package_name ${mat_dir} NAME)
@@ -409,29 +437,35 @@ foreach(mat_dir ${MATERIAL_DIRS})
 
         # --- Base material ---
         set(output_path "${MATERIAL_DIR}/${localname}.filamat")
-        add_custom_command(
-                OUTPUT ${output_path}
-                COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
-                MAIN_DEPENDENCY ${fullname}
-                DEPENDS matc
-                COMMENT "Compiling material ${fullname}"
-        )
-        list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path})
-        list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path})
+        set(MATC_CUSTOM_FLAGS "${MATC_BASE_FLAGS}")
+        set(COMMENT_STR "Compiling material ${fullname}")
+
+        check_in_list(MATERIAL_VULKAN_METAL_SRCS ${mat_src} is_vk_metal)
+        if (is_vk_metal)
+            # Remove webgpu and related parameters
+            # The variant-filter=stereo is added in the root folder's CMakeLists.txt for webgpu
+            # Context is that webgpu does not support the stereo variant
+            string(REPLACE "-a;webgpu;--variant-filter=stereo" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+
+            # Remove gl
+            string(REPLACE "-a;opengl" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+
+            # Remove any empty args
+            string(REPLACE ";;" ";" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+            string(REGEX REPLACE "^;|;$" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+
+            set(COMMENT_STR "Compiling material ${fullname} (Vulkan/Metal)")
+        endif()
+
+        compile_material(${output_path} ${fullname} MATC_CUSTOM_FLAGS "${COMMENT_STR}")
 
         # --- Multiview variant ---
-        list(FIND MATERIAL_MULTIVIEW_SRCS ${mat_src} index)
-        if (${index} GREATER -1 AND FILAMENT_ENABLE_MULTIVIEW)
+        check_in_list(MATERIAL_MULTIVIEW_SRCS ${mat_src} is_multiview)
+        if (is_multiview AND FILAMENT_ENABLE_MULTIVIEW)
             string(REGEX REPLACE "[.]filamat$" "_multiview.filamat" output_path_multiview ${output_path})
-            add_custom_command(
-                    OUTPUT ${output_path_multiview}
-                    COMMAND matc ${MATC_BASE_FLAGS} -PstereoscopicType=multiview -o ${output_path_multiview} ${fullname}
-                    MAIN_DEPENDENCY ${fullname}
-                    DEPENDS matc
-                    COMMENT "Compiling material ${fullname} (Multiview)"
-            )
-            list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path_multiview})
-            list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path_multiview})
+            set(MATC_MULTIVIEW_FLAGS "${MATC_BASE_FLAGS}" "-PstereoscopicType=multiview")
+            set(COMMENT_STR "Compiling material ${fullname} (Multiview)")
+            compile_material(${output_path_multiview} ${fullname} MATC_MULTIVIEW_FLAGS "${COMMENT_STR}")
         endif()
     endforeach()
 
@@ -710,10 +744,10 @@ if (MSVC)
     set(OPTIMIZATION_FLAGS
         /fp:fast
     )
-elseif(WEBGL)
+elseif (WASM)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
-elseif(FILAMENT_USING_GCC)
+elseif (FILAMENT_USING_GCC)
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -fno-finite-math-only

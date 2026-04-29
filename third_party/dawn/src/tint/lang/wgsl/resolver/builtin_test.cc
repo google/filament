@@ -25,31 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gmock/gmock.h"
-#include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
-#include "src/tint/lang/wgsl/ast/assignment_statement.h"
-#include "src/tint/lang/wgsl/ast/break_statement.h"
 #include "src/tint/lang/wgsl/ast/builtin_texture_helper_test.h"
-#include "src/tint/lang/wgsl/ast/call_statement.h"
-#include "src/tint/lang/wgsl/ast/continue_statement.h"
-#include "src/tint/lang/wgsl/ast/if_statement.h"
-#include "src/tint/lang/wgsl/ast/loop_statement.h"
-#include "src/tint/lang/wgsl/ast/return_statement.h"
 #include "src/tint/lang/wgsl/ast/stage_attribute.h"
-#include "src/tint/lang/wgsl/ast/switch_statement.h"
-#include "src/tint/lang/wgsl/ast/unary_op_expression.h"
-#include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/call.h"
-#include "src/tint/lang/wgsl/sem/function.h"
 #include "src/tint/lang/wgsl/sem/member_accessor_expression.h"
 #include "src/tint/lang/wgsl/sem/statement.h"
 #include "src/tint/lang/wgsl/sem/variable.h"
-#include "src/tint/utils/text/string.h"
 #include "src/tint/utils/text/string_stream.h"
 
 using ::testing::ElementsAre;
@@ -70,7 +55,7 @@ struct BuiltinData {
     wgsl::BuiltinFn builtin;
 };
 
-inline std::ostream& operator<<(std::ostream& out, BuiltinData data) {
+[[maybe_unused]] inline std::ostream& operator<<(std::ostream& out, BuiltinData data) {
     out << data.name;
     return out;
 }
@@ -2196,7 +2181,7 @@ class ResolverBuiltinTest_TextureOperation : public ResolverTestWithParam<Textur
     ast::Type GetCoordsType(core::type::TextureDimension dim, ast::Type scalar) {
         switch (dim) {
             case core::type::TextureDimension::k1d:
-                return ty(scalar);
+                return scalar;
             case core::type::TextureDimension::k2d:
             case core::type::TextureDimension::k2dArray:
                 return ty.vec2(scalar);
@@ -2216,7 +2201,7 @@ class ResolverBuiltinTest_TextureOperation : public ResolverTestWithParam<Textur
 
     void add_call_param(std::string name, ast::Type type, ExpressionList* call_params) {
         std::string type_name = type->identifier->symbol.Name();
-        if (tint::HasPrefix(type_name, "texture") || tint::HasPrefix(type_name, "sampler")) {
+        if (type_name.starts_with("texture") || type_name.starts_with("sampler")) {
             GlobalVar(name, type, Binding(0_a), Group(0_a));
         } else {
             GlobalVar(name, type, core::AddressSpace::kPrivate);
@@ -2778,6 +2763,419 @@ INSTANTIATE_TEST_SUITE_P(
                     BuiltinData{"workgroupBarrier", wgsl::BuiltinFn::kWorkgroupBarrier}));
 
 }  // namespace synchronization_builtin_tests
+
+namespace resource_tests {
+
+using ResolverBuiltinTest_Resources = ResolverTest;
+
+TEST_F(ResolverBuiltinTest_Resources, getResource_SampledTexture_F32_Filterable) {
+    Enable(wgsl::Extension::kChromiumExperimentalResourceTable);
+
+    auto tex_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32(),
+                                     core::TextureFilterable::kFilterable);
+    auto* ident = Ident("getResource", tex_ty);
+    auto* call = Call(ident, 0_u);
+    auto* assign = Assign(Phony(), call);
+    WrapInFunction(assign);
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+    ASSERT_NE(TypeOf(call), nullptr);
+
+    auto* call_ty = TypeOf(call);
+    EXPECT_TRUE(call_ty->Is<core::type::SampledTexture>());
+    EXPECT_EQ(call_ty->As<core::type::SampledTexture>()->Filterable(),
+              core::TextureFilterable::kFilterable);
+}
+
+TEST_F(ResolverBuiltinTest_Resources, getResource_Sampler_Filtering) {
+    Enable(wgsl::Extension::kChromiumExperimentalResourceTable);
+
+    auto samp_ty = ty.sampler(core::SamplerFiltering::kNonFiltering);
+    auto* call = Call(Ident("getResource", samp_ty), 0_u);
+    auto* assign = Assign(Phony(), call);
+    WrapInFunction(assign);
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+    ASSERT_NE(TypeOf(call), nullptr);
+
+    auto* call_ty = TypeOf(call);
+    EXPECT_TRUE(call_ty->Is<core::type::Sampler>());
+    EXPECT_EQ(call_ty->As<core::type::Sampler>()->Filtering(),
+              core::SamplerFiltering::kNonFiltering);
+}
+
+TEST_F(ResolverBuiltinTest_Resources, hasResource) {
+    Enable(wgsl::Extension::kChromiumExperimentalResourceTable);
+
+    auto tex_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32(),
+                                     core::TextureFilterable::kFilterable);
+    auto* call = Call(Ident("hasResource", tex_ty), 0_u);
+    auto* assign = Assign(Phony(), call);
+    WrapInFunction(assign);
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+    EXPECT_TRUE(TypeOf(call)->Is<core::type::Bool>());
+}
+
+TEST_F(ResolverBuiltinTest_Resources, getResource_SampledTexture_F32_RequiresFilterable) {
+    Enable(wgsl::Extension::kChromiumExperimentalResourceTable);
+
+    auto tex_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
+    auto* call = Call(Ident("getResource", tex_ty), 0_u);
+    auto* assign = Assign(Phony(), call);
+    WrapInFunction(assign);
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(),
+              R"(error: no matching call to 'getResource<texture_2d<f32>>(u32)'
+
+20 candidate functions:
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_2d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_2d'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_2d_array'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_cube'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_cube_array'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_multisampled_2d'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<S  ✗ >(index: I  ✓ ) -> S' where:
+      ✗  'S' is 'sampler_comparison'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_1d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_2d_array<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_3d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_cube<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_cube_array<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_multisampled_2d<K>'
+      ✗  'K' is 'f32', 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_1d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_2d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_2d_array<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_3d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_cube<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_cube_array<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<S  ✗ >(index: I  ✓ ) -> S' where:
+      ✗  'S' is 'sampler<F>'
+      ✗  'F' is 'filtering' or 'non_filtering'
+      ✓  'I' is 'i32' or 'u32'
+)");
+}
+
+TEST_F(ResolverBuiltinTest_Resources, getResource_Sampler_RequiresFiltering) {
+    Enable(wgsl::Extension::kChromiumExperimentalResourceTable);
+
+    auto samp_ty = ty.sampler(core::type::SamplerKind::kSampler);
+    auto* call = Call(Ident("getResource", samp_ty), 0_u);
+    auto* assign = Assign(Phony(), call);
+    WrapInFunction(assign);
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(), R"(error: no matching call to 'getResource<sampler>(u32)'
+
+20 candidate functions:
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_2d'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_2d_array'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_cube'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_cube_array'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_depth_multisampled_2d'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<S  ✗ >(index: I  ✓ ) -> S' where:
+      ✗  'S' is 'sampler_comparison'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_1d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_2d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_2d_array<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_3d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_cube<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_cube_array<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_multisampled_2d<K>'
+      ✗  'K' is 'f32', 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_1d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_2d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_2d_array<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_3d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_cube<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<T  ✗ >(index: I  ✓ ) -> T' where:
+      ✗  'T' is 'texture_cube_array<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'getResource<S  ✗ >(index: I  ✓ ) -> S' where:
+      ✗  'S' is 'sampler<F>'
+      ✗  'F' is 'filtering' or 'non_filtering'
+      ✓  'I' is 'i32' or 'u32'
+)");
+}
+
+TEST_F(ResolverBuiltinTest_Resources, hasResource_SampledTexture_F32_RequriesFilterable) {
+    Enable(wgsl::Extension::kChromiumExperimentalResourceTable);
+
+    auto tex_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
+    auto* call = Call(Ident("hasResource", tex_ty), 0_u);
+    auto* assign = Assign(Phony(), call);
+    WrapInFunction(assign);
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(),
+              R"(error: no matching call to 'hasResource<texture_2d<f32>>(u32)'
+
+20 candidate functions:
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_2d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_2d'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_2d_array'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_cube'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_cube_array'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_multisampled_2d'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<S  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'S' is 'sampler_comparison'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_1d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_2d_array<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_3d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_cube<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_cube_array<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_multisampled_2d<K>'
+      ✗  'K' is 'f32', 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_1d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_2d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_2d_array<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_3d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_cube<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_cube_array<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<S  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'S' is 'sampler<F>'
+      ✗  'F' is 'filtering' or 'non_filtering'
+      ✓  'I' is 'i32' or 'u32'
+)");
+}
+
+TEST_F(ResolverBuiltinTest_Resources, hasResource_Sampler_RequiresFiltering) {
+    Enable(wgsl::Extension::kChromiumExperimentalResourceTable);
+
+    auto samp_ty = ty.sampler(core::type::SamplerKind::kSampler);
+    auto* call = Call(Ident("hasResource", samp_ty), 0_u);
+    auto* assign = Assign(Phony(), call);
+    WrapInFunction(assign);
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(), R"(error: no matching call to 'hasResource<sampler>(u32)'
+
+20 candidate functions:
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_2d'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_2d_array'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_cube'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_cube_array'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_depth_multisampled_2d'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<S  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'S' is 'sampler_comparison'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_1d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_2d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_2d_array<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_3d<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_cube<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_cube_array<K>'
+      ✗  'K' is 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_multisampled_2d<K>'
+      ✗  'K' is 'f32', 'i32' or 'u32'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_1d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_2d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_2d_array<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_3d<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_cube<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<T  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'T' is 'texture_cube_array<f32, F>'
+      ✗  'F' is 'filterable' or 'unfilterable'
+      ✓  'I' is 'i32' or 'u32'
+ • 'hasResource<S  ✗ >(index: I  ✓ ) -> bool' where:
+      ✗  'S' is 'sampler<F>'
+      ✗  'F' is 'filtering' or 'non_filtering'
+      ✓  'I' is 'i32' or 'u32'
+)");
+}
+
+}  // namespace resource_tests
 
 }  // namespace
 }  // namespace tint::resolver

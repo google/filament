@@ -118,27 +118,5 @@ TEST_F(CaseStatementDeathTest, Assert_Null_Selector) {
         "internal compiler error");
 }
 
-TEST_F(CaseStatementDeathTest, Assert_DifferentGenerationID_Call) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<CaseStatement>(tint::Vector{b1.DefaultCaseSelector()},
-                                     b2.create<BlockStatement>(tint::Empty, tint::Empty));
-        },
-        "internal compiler error");
-}
-
-TEST_F(CaseStatementDeathTest, Assert_DifferentGenerationID_Selector) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<CaseStatement>(tint::Vector{b2.CaseSelector(b2.Expr(2_i))},
-                                     b1.create<BlockStatement>(tint::Empty, tint::Empty));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

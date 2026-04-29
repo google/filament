@@ -30,14 +30,13 @@
 #include <string>
 #include <vector>
 
+#include "GLFW/glfw3.h"
 #include "dawn/common/Constants.h"
 #include "dawn/tests/DawnTest.h"
 #include "dawn/utils/ComboRenderBundleEncoderDescriptor.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 #include "webgpu/webgpu_glfw.h"
-
-#include "GLFW/glfw3.h"
 
 namespace dawn::utils {
 static constexpr std::array<wgpu::CompositeAlphaMode, 5> kAllAlphaModes = {
@@ -191,6 +190,9 @@ TEST_P(SurfaceConfigurationValidationTests, AnyCombinationOfCapabilities) {
     // builders but not locally. This is a similar limitation to SurfaceTests.SwitchPresentMode.
     DAWN_SUPPRESS_TEST_IF(IsWindows() && IsVulkan() && IsNvidia());
 
+    // TODO(crbug.com/463551855): Flaky on Snapdragon X Elite SoCs.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm());
+
     wgpu::Surface surface = CreateTestSurface();
 
     wgpu::SurfaceConfiguration config = baseConfig;
@@ -323,7 +325,7 @@ TEST_P(SurfaceConfigurationValidationTests, StorageRequiresCapableFormat) {
         config.usage = wgpu::TextureUsage::StorageBinding;
         config.format = caps.formats[i];
 
-        if (utils::TextureFormatSupportsStorageTexture(config.format, device, false)) {
+        if (utils::TextureFormatSupportsStorageTexture(device, config.format)) {
             surface.Configure(&config);
         } else {
             ASSERT_DEVICE_ERROR_MSG(surface.Configure(&config),
@@ -332,6 +334,7 @@ TEST_P(SurfaceConfigurationValidationTests, StorageRequiresCapableFormat) {
     }
 }
 
+// TODO(crbug.com/465183957): Implement swap chain for WebGPUBackend.
 DAWN_INSTANTIATE_TEST(SurfaceConfigurationValidationTests,
                       D3D11Backend(),
                       D3D12Backend(),

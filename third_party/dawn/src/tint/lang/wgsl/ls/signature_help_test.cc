@@ -26,11 +26,11 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
+
 #include <sstream>
 #include <string_view>
 
 #include "gmock/gmock.h"
-
 #include "langsvr/lsp/lsp.h"
 #include "langsvr/lsp/primitives.h"
 #include "langsvr/lsp/printer.h"

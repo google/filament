@@ -37,19 +37,13 @@ namespace tint::ast {
 class ConstAssert final : public Castable<ConstAssert, Statement> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the variable statement source
     /// @param condition the assertion condition
-    ConstAssert(GenerationID pid, NodeID nid, const Source& source, const Expression* condition);
+    ConstAssert(NodeID nid, const Source& source, const Expression* condition);
 
     /// Destructor
     ~ConstAssert() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext` `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const ConstAssert* Clone(CloneContext& ctx) const override;
 
     /// The assertion condition
     const Expression* const condition;

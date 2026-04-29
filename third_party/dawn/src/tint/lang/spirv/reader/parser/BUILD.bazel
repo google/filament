@@ -55,7 +55,6 @@ cc_library(
     "//src/tint/lang/spirv/intrinsic",
     "//src/tint/lang/spirv/ir",
     "//src/tint/lang/spirv/type",
-    "//src/tint/lang/wgsl",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
@@ -75,6 +74,7 @@ cc_library(
   }) + select({
     ":tint_build_spv_reader_or_tint_build_spv_writer": [
       "//src/tint/lang/spirv/validate",
+      "@spirv_headers//:spirv_cpp11_headers", "@spirv_headers//:spirv_c_headers",
       "@spirv_tools//:spirv_tools_opt",
       "@spirv_tools",
     ],
@@ -117,7 +117,6 @@ cc_library(
     "//src/tint/lang/core/constant",
     "//src/tint/lang/core/ir",
     "//src/tint/lang/core/type",
-    "//src/tint/lang/wgsl",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",

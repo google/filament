@@ -1,0 +1,230 @@
+{
+  "__copyright": "Copyright 2025 WebGPU-Native developers\n\nSPDX-License-Identifier: BSD-3-Clause\n",
+  "_comment": "AUTO-GENERATED FILE! Edit webgpu.yml instead.",
+  "bitflags": [
+    {
+      "doc": "New bitflag should have the namespace prefix in the name by default.\n",
+      "entries": [
+        {
+          "doc": "TODO\n",
+          "name": "none"
+        },
+        {
+          "doc": "New bitflag entries shouldn't have the namespace prefix in the name by default.\n",
+          "name": "new_value"
+        }
+      ],
+      "name": "new_bitflag1"
+    },
+    {
+      "doc": "New bitflag can be declared in the 'webgpu' namespace explicitly.\n",
+      "entries": [
+        {
+          "doc": "TODO\n",
+          "name": "none"
+        },
+        {
+          "doc": "New bitflag entries shouldn't have the namespace prefix in the name by default.\n",
+          "name": "new_value"
+        }
+      ],
+      "name": "new_bitflag2",
+      "namespace": "webgpu"
+    },
+    {
+      "doc": "Extended bitflag shouldn't have the namespace prefix in the name by default.\n",
+      "entries": [
+        {
+          "doc": "New bitflag entries that extend should have the prefix in the name by default.\n",
+          "name": "new_value",
+          "value": 1152921504606846976
+        }
+      ],
+      "extended": true,
+      "name": "old_bitflag"
+    }
+  ],
+  "callbacks": [
+    {
+      "args": [
+        {
+          "doc": "TODO\n",
+          "name": "message",
+          "passed_with_ownership": false,
+          "type": "out_string"
+        }
+      ],
+      "doc": "New callback type should have the namespace prefix in the names by default.\n",
+      "name": "new_callback1",
+      "style": "callback_mode"
+    },
+    {
+      "args": [
+        {
+          "doc": "TODO\n",
+          "name": "message",
+          "passed_with_ownership": false,
+          "type": "out_string"
+        }
+      ],
+      "doc": "New callback type can be declared in the 'webgpu' namespace explicitly.\n",
+      "name": "new_callback2",
+      "namespace": "webgpu",
+      "style": "callback_mode"
+    }
+  ],
+  "constants": [
+    {
+      "doc": "New constant should have the namespace prefix in the name by default.\n",
+      "name": "new_constant1",
+      "value": "uint32_max"
+    },
+    {
+      "doc": "New constant can be declared in the 'webgpu' namespace explicitly.\n",
+      "name": "new_constant2",
+      "namespace": "webgpu",
+      "value": "uint64_max"
+    },
+    {
+      "doc": "The 'compatibility_mode' namespace also has no prefix.\n(This test is not really related to extensions, it's just easiest to test here.)\n",
+      "name": "new_constant3",
+      "namespace": "compatibility_mode",
+      "value": "uint64_max"
+    }
+  ],
+  "copyright": "Copyright 2025 WebGPU-Native developers\n\nSPDX-License-Identifier: BSD-3-Clause\n",
+  "doc": "This is a bare minimum extensions file to verify all extension types.\n",
+  "enum_prefix": 32767,
+  "enums": [
+    {
+      "doc": "New enum should have the namespace prefix in the name by default.\n",
+      "entries": [
+        {
+          "doc": "New enum entries for a new enum should not duplicate prefix.\n",
+          "name": "new_value"
+        }
+      ],
+      "name": "new_enum1"
+    },
+    {
+      "doc": "New enum can be declared in the 'webgpu' namespace explicitly.\n",
+      "entries": [
+        {
+          "doc": "New enum entries for a new enum should not duplicate prefix.\n",
+          "name": "new_value"
+        }
+      ],
+      "name": "new_enum2",
+      "namespace": "webgpu"
+    },
+    {
+      "doc": "Extended enum shouldn't have the namespace prefix in the name by default.\n",
+      "entries": [
+        {
+          "doc": "New enum entries that extend should have the prefix in the name by default.\n",
+          "name": "new_value"
+        }
+      ],
+      "extended": true,
+      "name": "old_enum"
+    }
+  ],
+  "functions": [
+    {
+      "doc": "New function should have the namespace prefix in the name by default.\n",
+      "name": "new_function1"
+    },
+    {
+      "doc": "New function can be declared in the 'webgpu' namespace explicitly.\n",
+      "name": "new_function2",
+      "namespace": "webgpu"
+    }
+  ],
+  "name": "prefix",
+  "objects": [
+    {
+      "doc": "New object should have the namespace prefix in the name by default.\n",
+      "methods": [
+        {
+          "doc": "Method on new object should not have the namespace prefix in the name by default.\n",
+          "name": "new_method"
+        }
+      ],
+      "name": "new_object1"
+    },
+    {
+      "doc": "New object can be declared in the 'webgpu' namespace explicitly.\n",
+      "methods": [
+        {
+          "doc": "Method on new object should not have the namespace prefix in the name by default.\n",
+          "name": "new_method"
+        }
+      ],
+      "name": "new_object2",
+      "namespace": "webgpu"
+    },
+    {
+      "doc": "Extended object shouldn't have the namespace prefix in the name by default.\n",
+      "extended": true,
+      "methods": [
+        {
+          "doc": "New method on old object should have the namespace prefix in the name by default.\n",
+          "name": "new_method1"
+        },
+        {
+          "doc": "New method on old object can be declared in the 'webgpu' namespace explicitly.\n",
+          "name": "new_method2",
+          "namespace": "webgpu"
+        }
+      ],
+      "name": "old_object"
+    }
+  ],
+  "structs": [
+    {
+      "doc": "New struct should have the namespace prefix in the name by default.\n",
+      "members": [
+        {
+          "default": "constant.new_constant1",
+          "doc": "New struct members should not have namespace prefix in the name.\n",
+          "name": "member1",
+          "type": "uint32"
+        },
+        {
+          "default": "constant.new_constant2",
+          "doc": "TODO\n",
+          "name": "member2",
+          "type": "uint64"
+        }
+      ],
+      "name": "new_struct1",
+      "type": "standalone"
+    },
+    {
+      "doc": "New struct can be declared in the 'webgpu' namespace explicitly.\n",
+      "members": [
+        {
+          "doc": "TODO\n",
+          "name": "struct_member",
+          "type": "struct.new_struct1"
+        }
+      ],
+      "name": "new_struct2",
+      "namespace": "webgpu",
+      "type": "extensible"
+    }
+  ],
+  "typedefs": [
+    {
+      "doc": "New typedef should have the namespace prefix in the name by default.\n",
+      "name": "new_typedef1",
+      "type": "uint32"
+    },
+    {
+      "doc": "New typedef can be declared in the 'webgpu' namespace explicitly.\n",
+      "name": "new_typedef2",
+      "namespace": "webgpu",
+      "type": "uint64"
+    }
+  ]
+}

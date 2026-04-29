@@ -316,6 +316,8 @@ public class IndirectLight {
          * @return A newly created <code>IndirectLight</code>
          *
          * @exception IllegalStateException if a parameter to a builder function was invalid.
+         * @throws RuntimeException if a runtime error occurred, such as running out of
+         *            memory or other resources.
          */
         @NonNull
         public IndirectLight build(@NonNull Engine engine) {

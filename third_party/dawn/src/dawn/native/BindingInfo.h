@@ -29,6 +29,7 @@
 #define SRC_DAWN_NATIVE_BINDINGINFO_H_
 
 #include <cstdint>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -40,29 +41,29 @@
 #include "dawn/native/IntegerTypes.h"
 #include "dawn/native/PerStage.h"
 #include "dawn/native/Serializable.h"
-
 #include "dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
 // Not a real WebGPU limit, but used to optimize parts of Dawn which expect valid usage of the
 // API. There should never be more bindings than the max per stage, for each stage.
-static constexpr uint32_t kMaxBindingsPerPipelineLayout =
+inline constexpr uint32_t kMaxBindingsPerPipelineLayout =
     3 * (kMaxSampledTexturesPerShaderStage + kMaxSamplersPerShaderStage +
          kMaxStorageBuffersPerShaderStage + kMaxStorageTexturesPerShaderStage +
          kMaxUniformBuffersPerShaderStage);
 
-static constexpr BindingIndex kMaxBindingsPerPipelineLayoutTyped =
+inline constexpr BindingIndex kMaxBindingsPerPipelineLayoutTyped =
     BindingIndex(kMaxBindingsPerPipelineLayout);
 
 // TODO(enga): Figure out a good number for this.
-static constexpr uint32_t kMaxOptimalBindingsPerGroup = 32;
+inline constexpr uint32_t kMaxOptimalBindingsPerGroup = 32;
 
 enum class BindingInfoType {
     Buffer,
     Sampler,
     Texture,
     StorageTexture,
+    TexelBuffer,
     ExternalTexture,
     StaticSampler,
     // Internal to vulkan only.
@@ -81,11 +82,9 @@ DAWN_SERIALIZABLE(struct, BufferBindingInfo, BUFFER_BINDING_INFO_MEMBER) {
 #undef BUFFER_BINDING_INFO_MEMBER
 
 // A mirror of wgpu::TextureBindingLayout for use inside dawn::native.
-#define TEXTURE_BINDING_INFO_MEMBER(X)                                                       \
-    /* For shader reflection UnfilterableFloat is never used and the sample type is Float */ \
-    /* for any texture_Nd<f32>.                                                           */ \
-    X(wgpu::TextureSampleType, sampleType)                                                   \
-    X(wgpu::TextureViewDimension, viewDimension)                                             \
+#define TEXTURE_BINDING_INFO_MEMBER(X)           \
+    X(wgpu::TextureSampleType, sampleType)       \
+    X(wgpu::TextureViewDimension, viewDimension) \
     X(bool, multisampled)
 DAWN_SERIALIZABLE(struct, TextureBindingInfo, TEXTURE_BINDING_INFO_MEMBER) {
     static TextureBindingInfo From(const TextureBindingLayout& layout);
@@ -102,18 +101,28 @@ DAWN_SERIALIZABLE(struct, StorageTextureBindingInfo, STORAGE_TEXTURE_BINDING_INF
 };
 #undef STORAGE_TEXTURE_BINDING_INFO_MEMBER
 
+// A mirror of wgpu::TexelBufferBindingLayout for use inside dawn::native.
+#define TEXEL_BUFFER_BINDING_INFO_MEMBER(X) \
+    X(wgpu::TextureFormat, format)          \
+    X(wgpu::TexelBufferAccess, access)
+DAWN_SERIALIZABLE(struct, TexelBufferBindingInfo, TEXEL_BUFFER_BINDING_INFO_MEMBER) {
+    static TexelBufferBindingInfo From(const TexelBufferBindingLayout& layout);
+};
+#undef TEXEL_BUFFER_BINDING_INFO_MEMBER
+
 // A mirror of wgpu::SamplerBindingLayout for use inside dawn::native.
-#define SAMPLER_BINDING_INFO_MEMBER(X)                                               \
-    /* For shader reflection NonFiltering is never used and Filtering is used for */ \
-    /* any `sampler`.                                                             */ \
-    X(wgpu::SamplerBindingType, type)
+#define SAMPLER_BINDING_INFO_MEMBER(X) X(wgpu::SamplerBindingType, type)
 DAWN_SERIALIZABLE(struct, SamplerBindingInfo, SAMPLER_BINDING_INFO_MEMBER) {
     static SamplerBindingInfo From(const SamplerBindingLayout& layout);
 };
 #undef SAMPLER_BINDING_INFO_MEMBER
 
-// A mirror of wgpu::ExternalTextureBindingLayout for use inside dawn::native.
-#define EXTERNAL_TEXTURE_BINDING_INFO_MEMBER(X)  // ExternalTextureBindingInfo has no member
+// The binding layout for ExternalTexture contains the indices of the expanded entries for it.
+#define EXTERNAL_TEXTURE_BINDING_INFO_MEMBER(X) \
+    X(BindingIndex, metadata)                   \
+    X(BindingIndex, plane0)                     \
+    X(BindingIndex, plane1)                     \
+    X(std::optional<BindingIndex>, staticSampler)
 DAWN_SERIALIZABLE(struct, ExternalTextureBindingInfo, EXTERNAL_TEXTURE_BINDING_INFO_MEMBER){};
 #undef EXTERNAL_TEXTURE_BINDING_INFO_MEMBER
 
@@ -122,17 +131,31 @@ DAWN_SERIALIZABLE(struct, ExternalTextureBindingInfo, EXTERNAL_TEXTURE_BINDING_I
 DAWN_SERIALIZABLE(struct, InputAttachmentBindingInfo, INPUT_ATTACHMENT_BINDING_INFO_MEMBER){};
 #undef INPUT_ATTACHMENT_BINDING_INFO_MEMBER
 
+// Describes what a static sampler binding is used for. While it could just be a boolean for whether
+// or not a single texture is required, having the enums lets us do more precise assertions.
+enum class StaticSamplerUse : uint8_t {
+    // A static sampler that can be combined with any (non-YCbCr) texture in the shader.
+    Freestanding,
+    // A YCbCr sampler that can only be used to sample the texture at `sampledTextureIndex`.
+    SingleTextureYCbCr,
+    // A static sampler created in the expansion of an ExternalTexture, so a YCbCr sampler may be
+    // swapped in if needed during pipeline specialization in the Vulkan backend.
+    InternalForExternalTexture,
+};
+
 // A mirror of wgpu::StaticSamplerBindingLayout for use inside dawn::native.
 struct StaticSamplerBindingInfo {
+    // Note that this doesn't initialize the BindingIndex member as it is computed after sorting the
+    // entries in the BindGroupLayout.
     static StaticSamplerBindingInfo From(const StaticSamplerBindingLayout& layout);
 
-    // Holds a ref instead of an unowned pointer.
+    // Hold a ref as the sampler to keep it alive even if it is freed after BGL creation.
     Ref<SamplerBase> sampler;
-    // Holds the BindingNumber of the single texture with which this sampler is
-    // statically paired, if any.
-    BindingNumber sampledTextureBinding;
-    // Whether this instance is statically paired with a single texture.
-    bool isUsedForSingleTextureBinding = false;
+    // Holds the BindingIndex of the single texture with which this sampler is statically paired, if
+    // any.
+    BindingIndex sampledTextureIndex = BindingIndex(0);
+    // What this sampler will be used for.
+    StaticSamplerUse use;
 
     bool operator==(const StaticSamplerBindingInfo& other) const = default;
 };
@@ -149,7 +172,9 @@ struct BindingInfo {
     std::variant<BufferBindingInfo,
                  SamplerBindingInfo,
                  TextureBindingInfo,
+                 TexelBufferBindingInfo,
                  StorageTextureBindingInfo,
+                 ExternalTextureBindingInfo,
                  StaticSamplerBindingInfo,
                  InputAttachmentBindingInfo>
         bindingLayout;
@@ -158,19 +183,67 @@ struct BindingInfo {
 };
 
 BindingInfoType GetBindingInfoType(const BindingInfo& bindingInfo);
+// Returns the type of binding contained in a valid BindGroupLayoutEntry.
+BindingInfoType GetBindingInfoType(const BindGroupLayoutEntry* entry);
 
 // Match tint::BindingPoint, can convert to/from tint::BindingPoint using ToTint and FromTint.
-#define BINDING_SLOT_MEMBER(X) \
-    X(BindGroupIndex, group)   \
+#define WGSL_BIND_POINT_MEMBER(X) \
+    X(BindGroupIndex, group)      \
     X(BindingNumber, binding)
-DAWN_SERIALIZABLE(struct, BindingSlot, BINDING_SLOT_MEMBER){};
+// clang-format off
+DAWN_SERIALIZABLE(struct, WGSLBindPoint, WGSL_BIND_POINT_MEMBER){
+    constexpr WGSLBindPoint() = default;
+    constexpr WGSLBindPoint(BindGroupIndex groupIn, BindingNumber bindingIn)
+        : Contents{groupIn, bindingIn} {}
+
+    constexpr bool operator<(const WGSLBindPoint& rhs) const {
+        if (group < rhs.group) {
+            return true;
+        }
+        if (group > rhs.group) {
+            return false;
+        }
+        return binding < rhs.binding;
+    }
+
+    template <typename H>
+    friend H AbslHashValue(H h, const WGSLBindPoint& b) {
+        return H::combine(std::move(h), b.group, b.binding);
+    }
+};
+// clang-format on
 #undef BINDING_SLOT_MEMBER
+
+// Represents a single binding in a pipeline.
+struct BindPoint {
+    BindGroupIndex group;
+    BindingIndex binding;
+
+    template <typename H>
+    friend H AbslHashValue(H h, const BindPoint& b) {
+        return H::combine(std::move(h), b.group, b.binding);
+    }
+    constexpr bool operator==(const BindPoint& other) const = default;
+};
+
+// Represents a single pre-expansion binding in a pipeline.
+struct APIBindPoint {
+    BindGroupIndex group;
+    APIBindingIndex binding;
+
+    template <typename H>
+    friend H AbslHashValue(H h, const APIBindPoint& b) {
+        return H::combine(std::move(h), b.group, b.binding);
+    }
+    constexpr bool operator==(const APIBindPoint& other) const = default;
+};
 
 struct PerStageBindingCounts {
     uint32_t sampledTextureCount;
     uint32_t samplerCount;
     uint32_t storageBufferCount;
     uint32_t storageTextureCount;
+    uint32_t texelBufferCount;
     uint32_t uniformBufferCount;
     uint32_t externalTextureCount;
     uint32_t staticSamplerCount;

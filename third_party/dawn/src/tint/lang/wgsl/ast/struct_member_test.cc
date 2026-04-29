@@ -85,25 +85,5 @@ TEST_F(StructMemberDeathTest, Assert_Null_Attribute) {
         "internal compiler error");
 }
 
-TEST_F(StructMemberDeathTest, Assert_DifferentGenerationID_Symbol) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Member(b2.Sym("a"), b1.ty.i32(), tint::Vector{b1.MemberSize(4_a)});
-        },
-        "internal compiler error");
-}
-
-TEST_F(StructMemberDeathTest, Assert_DifferentGenerationID_Attribute) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Member("a", b1.ty.i32(), tint::Vector{b2.MemberSize(4_a)});
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

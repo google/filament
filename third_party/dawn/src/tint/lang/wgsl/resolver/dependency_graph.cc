@@ -52,7 +52,6 @@
 #include "src/tint/lang/wgsl/ast/if_statement.h"
 #include "src/tint/lang/wgsl/ast/increment_decrement_statement.h"
 #include "src/tint/lang/wgsl/ast/input_attachment_index_attribute.h"
-#include "src/tint/lang/wgsl/ast/internal_attribute.h"
 #include "src/tint/lang/wgsl/ast/interpolate_attribute.h"
 #include "src/tint/lang/wgsl/ast/invariant_attribute.h"
 #include "src/tint/lang/wgsl/ast/let.h"
@@ -61,13 +60,11 @@
 #include "src/tint/lang/wgsl/ast/must_use_attribute.h"
 #include "src/tint/lang/wgsl/ast/override.h"
 #include "src/tint/lang/wgsl/ast/return_statement.h"
-#include "src/tint/lang/wgsl/ast/row_major_attribute.h"
 #include "src/tint/lang/wgsl/ast/stage_attribute.h"
-#include "src/tint/lang/wgsl/ast/stride_attribute.h"
 #include "src/tint/lang/wgsl/ast/struct.h"
 #include "src/tint/lang/wgsl/ast/struct_member_align_attribute.h"
-#include "src/tint/lang/wgsl/ast/struct_member_offset_attribute.h"
 #include "src/tint/lang/wgsl/ast/struct_member_size_attribute.h"
+#include "src/tint/lang/wgsl/ast/subgroup_size_attribute.h"
 #include "src/tint/lang/wgsl/ast/switch_statement.h"
 #include "src/tint/lang/wgsl/ast/templated_identifier.h"
 #include "src/tint/lang/wgsl/ast/traverse_expressions.h"
@@ -389,17 +386,11 @@ class DependencyScanner {
                 TraverseExpression(wg->y);
                 TraverseExpression(wg->z);
             },
-            [&](const ast::InternalAttribute* i) {
-                for (auto* dep : i->dependencies) {
-                    TraverseExpression(dep);
-                }
-            },
+            [&](const ast::SubgroupSizeAttribute* sg) { TraverseExpression(sg->subgroup_size); },
             [&](Default) {
                 if (!attr->IsAnyOf<ast::BuiltinAttribute, ast::DiagnosticAttribute,
                                    ast::InterpolateAttribute, ast::InvariantAttribute,
-                                   ast::MustUseAttribute, ast::RowMajorAttribute,
-                                   ast::StageAttribute, ast::StrideAttribute,
-                                   ast::StructMemberOffsetAttribute>()) {
+                                   ast::MustUseAttribute, ast::StageAttribute>()) {
                     TINT_ICE() << "unhandled attribute type: " << attr->TypeInfo().name;
                 }
             });
@@ -419,6 +410,10 @@ class DependencyScanner {
         kTexelFormat,
         /// Access
         kAccess,
+        /// Texture filterable
+        kTextureFilterable,
+        /// Sampler filtering
+        kSamplerFiltering,
     };
 
     /// BuiltinInfo stores information about the builtin that a symbol represents.
@@ -435,7 +430,9 @@ class DependencyScanner {
                      core::BuiltinType,
                      core::AddressSpace,
                      core::TexelFormat,
-                     core::Access>
+                     core::Access,
+                     core::TextureFilterable,
+                     core::SamplerFiltering>
             value = {};
     };
 
@@ -463,6 +460,14 @@ class DependencyScanner {
             if (auto access = core::ParseAccess(symbol.NameView());
                 access != core::Access::kUndefined) {
                 return BuiltinInfo{BuiltinType::kAccess, access};
+            }
+            if (auto filterable = core::ParseTextureFilterable(symbol.NameView());
+                filterable != core::TextureFilterable::kUndefined) {
+                return BuiltinInfo{BuiltinType::kTextureFilterable, filterable};
+            }
+            if (auto filterable = core::ParseSamplerFiltering(symbol.NameView());
+                filterable != core::SamplerFiltering::kUndefined) {
+                return BuiltinInfo{BuiltinType::kSamplerFiltering, filterable};
             }
             return BuiltinInfo{};
         });
@@ -497,6 +502,14 @@ class DependencyScanner {
                 case BuiltinType::kAccess:
                     graph_.resolved_identifiers.Add(
                         from, ResolvedIdentifier(builtin_info.Value<core::Access>()));
+                    break;
+                case BuiltinType::kTextureFilterable:
+                    graph_.resolved_identifiers.Add(
+                        from, ResolvedIdentifier(builtin_info.Value<core::TextureFilterable>()));
+                    break;
+                case BuiltinType::kSamplerFiltering:
+                    graph_.resolved_identifiers.Add(
+                        from, ResolvedIdentifier(builtin_info.Value<core::SamplerFiltering>()));
                     break;
             }
             return;
@@ -707,10 +720,9 @@ struct DependencyAnalysis {
 
             sorted_.Add(global->node);
 
-            if (DAWN_UNLIKELY(!stack.IsEmpty())) {
-                // Each stack.push() must have a corresponding stack.pop_back().
-                TINT_ICE() << "stack not empty after returning from TraverseDependencies()";
-            }
+            // Each stack.push() must have a corresponding stack.pop_back().
+            TINT_ASSERT(stack.IsEmpty())
+                << "stack not empty after returning from TraverseDependencies()";
         }
     }
 

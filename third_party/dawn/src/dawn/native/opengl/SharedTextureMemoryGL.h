@@ -34,10 +34,11 @@
 namespace dawn::native::opengl {
 
 class Device;
+struct OpenGLFunctions;
 
 class SharedTextureMemory : public SharedTextureMemoryBase {
   public:
-    virtual ResultOrError<GLuint> GenerateGLTexture() = 0;
+    virtual ResultOrError<GLuint> GenerateGLTexture(const OpenGLFunctions& gl) = 0;
 
   protected:
     SharedTextureMemory(Device* device,

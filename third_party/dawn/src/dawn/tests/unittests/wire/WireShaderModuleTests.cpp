@@ -108,6 +108,13 @@ TEST_P(WireShaderModuleTests, GetCompilationInfo) {
                                      const auto* utf16 =
                                          reinterpret_cast<const wgpu::DawnCompilationMessageUtf16*>(
                                              infoMessage->nextInChain);
+
+                                     // The client should always be copying the data returned from
+                                     // the server so the memory addresses should never be equal.
+                                     EXPECT_NE(info, &mCompilationInfo);
+                                     EXPECT_NE(infoMessage, &mMessage);
+                                     EXPECT_NE(utf16, &mUtf18);
+
                                      return infoMessage->message == mMessage.message &&
                                             infoMessage->type == mMessage.type &&
                                             infoMessage->lineNum == mMessage.lineNum &&

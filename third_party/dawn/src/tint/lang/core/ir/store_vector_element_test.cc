@@ -39,7 +39,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 using IR_StoreVectorElementTest = IRTestHelper;
 
 TEST_F(IR_StoreVectorElementTest, Create) {
-    auto* to = b.Var(ty.ptr<private_, vec3<i32>>());
+    auto* to = b.Var(ty.ptr<private_, vec3i>());
     auto* inst = b.StoreVectorElement(to, 2_i, 4_i);
 
     ASSERT_TRUE(inst->Is<StoreVectorElement>());
@@ -57,7 +57,7 @@ TEST_F(IR_StoreVectorElementTest, Create) {
 }
 
 TEST_F(IR_StoreVectorElementTest, Usage) {
-    auto* to = b.Var(ty.ptr<private_, vec3<i32>>());
+    auto* to = b.Var(ty.ptr<private_, vec3i>());
     auto* inst = b.StoreVectorElement(to, 2_i, 4_i);
 
     ASSERT_NE(inst->To(), nullptr);
@@ -71,14 +71,14 @@ TEST_F(IR_StoreVectorElementTest, Usage) {
 }
 
 TEST_F(IR_StoreVectorElementTest, Result) {
-    auto* to = b.Var(ty.ptr<private_, vec3<i32>>());
+    auto* to = b.Var(ty.ptr<private_, vec3i>());
     auto* inst = b.StoreVectorElement(to, 2_i, 4_i);
 
     EXPECT_TRUE(inst->Results().IsEmpty());
 }
 
 TEST_F(IR_StoreVectorElementTest, Clone) {
-    auto* to = b.Var(ty.ptr<private_, vec3<i32>>());
+    auto* to = b.Var(ty.ptr<private_, vec3i>());
     auto* inst = b.StoreVectorElement(to, 2_i, 4_i);
 
     auto* new_to = clone_ctx.Clone(to);

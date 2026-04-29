@@ -89,6 +89,7 @@ cc_library(
     "program_to_ir_test.cc",
     "shadowing_test.cc",
     "store_test.cc",
+    "swizzle_assignment_test.cc",
     "unary_test.cc",
     "var_test.cc",
   ],

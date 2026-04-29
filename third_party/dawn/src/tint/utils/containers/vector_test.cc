@@ -31,7 +31,6 @@
 #include <tuple>
 
 #include "gmock/gmock.h"
-
 #include "src/tint/utils/containers/predicates.h"
 #include "src/tint/utils/macros/compiler.h"
 #include "src/tint/utils/memory/bitcast.h"
@@ -1281,11 +1280,11 @@ TEST(TintVectorTest, RepeatMoveAssignRef_WithSpill) {
     EXPECT_TRUE(AllExternallyHeld(vec));
 }
 
-TEST(TintVectorTest, CopyAssignSlice_N2_to_N2) {
+TEST(TintVectorTest, CopyAssignSpan_N2_to_N2) {
     std::string data[] = {"hello", "world"};
-    Slice<std::string> slice(data);
+    std::span<std::string> span(data);
     Vector<std::string, 2> vec_b;
-    vec_b = slice;
+    vec_b = span;
     EXPECT_EQ(vec_b.Length(), 2u);
     EXPECT_EQ(vec_b.Capacity(), 2u);
     EXPECT_EQ(vec_b[0], "hello");
@@ -1293,11 +1292,11 @@ TEST(TintVectorTest, CopyAssignSlice_N2_to_N2) {
     EXPECT_TRUE(AllInternallyHeld(vec_b));
 }
 
-TEST(TintVectorTest, CopyAssignSlice_N2_to_N1) {
+TEST(TintVectorTest, CopyAssignSpan_N2_to_N1) {
     std::string data[] = {"hello", "world"};
-    Slice<std::string> slice(data);
+    std::span<std::string> span(data);
     Vector<std::string, 1> vec_b;
-    vec_b = slice;
+    vec_b = span;
     EXPECT_EQ(vec_b.Length(), 2u);
     EXPECT_EQ(vec_b.Capacity(), 2u);
     EXPECT_EQ(vec_b[0], "hello");
@@ -1305,11 +1304,11 @@ TEST(TintVectorTest, CopyAssignSlice_N2_to_N1) {
     EXPECT_TRUE(AllExternallyHeld(vec_b));
 }
 
-TEST(TintVectorTest, CopyAssignSlice_N2_to_N3) {
+TEST(TintVectorTest, CopyAssignSpan_N2_to_N3) {
     std::string data[] = {"hello", "world"};
-    Slice<std::string> slice(data);
+    std::span<std::string> span(data);
     Vector<std::string, 3> vec_b;
-    vec_b = slice;
+    vec_b = span;
     EXPECT_EQ(vec_b.Length(), 2u);
     EXPECT_EQ(vec_b.Capacity(), 3u);
     EXPECT_EQ(vec_b[0], "hello");
@@ -1317,11 +1316,11 @@ TEST(TintVectorTest, CopyAssignSlice_N2_to_N3) {
     EXPECT_TRUE(AllInternallyHeld(vec_b));
 }
 
-TEST(TintVectorTest, CopyAssignSlice_N2_to_N0) {
+TEST(TintVectorTest, CopyAssignSpan_N2_to_N0) {
     std::string data[] = {"hello", "world"};
-    Slice<std::string> slice(data);
+    std::span<std::string> span(data);
     Vector<std::string, 0> vec_b;
-    vec_b = slice;
+    vec_b = span;
     EXPECT_EQ(vec_b.Length(), 2u);
     EXPECT_EQ(vec_b.Capacity(), 2u);
     EXPECT_EQ(vec_b[0], "hello");
@@ -2088,22 +2087,20 @@ TEST(TintVectorTest, All) {
     EXPECT_FALSE(vec.All(Ne(9)));
 }
 
-TEST(TintVectorTest, Slice) {
+TEST(TintVectorTest, AsSpan) {
     Vector<std::string, 3> vec{"hello", "world"};
-    auto slice = vec.Slice();
-    static_assert(std::is_same_v<decltype(slice), Slice<std::string>>);
-    EXPECT_EQ(slice.data, &vec[0]);
-    EXPECT_EQ(slice.len, 2u);
-    EXPECT_EQ(slice.cap, 3u);
+    auto span = vec.AsSpan();
+    static_assert(std::is_same_v<decltype(span), std::span<std::string>>);
+    EXPECT_EQ(span.data(), &vec[0]);
+    EXPECT_EQ(span.size(), 2u);
 }
 
-TEST(TintVectorTest, SliceConst) {
+TEST(TintVectorTest, AsSpanConst) {
     const Vector<std::string, 3> vec{"hello", "world"};
-    auto slice = vec.Slice();
-    static_assert(std::is_same_v<decltype(slice), Slice<const std::string>>);
-    EXPECT_EQ(slice.data, &vec[0]);
-    EXPECT_EQ(slice.len, 2u);
-    EXPECT_EQ(slice.cap, 3u);
+    auto span = vec.AsSpan();
+    static_assert(std::is_same_v<decltype(span), std::span<const std::string>>);
+    EXPECT_EQ(span.data(), &vec[0]);
+    EXPECT_EQ(span.size(), 2u);
 }
 
 TEST(TintVectorTest, ostream) {
@@ -2466,5 +2463,5 @@ TINT_INSTANTIATE_TYPEINFO(tint::C1);
 TINT_INSTANTIATE_TYPEINFO(tint::C2a);
 TINT_INSTANTIATE_TYPEINFO(tint::C2b);
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 TINT_END_DISABLE_WARNING(UNREACHABLE_CODE);

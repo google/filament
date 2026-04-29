@@ -51,8 +51,8 @@ libtint_source_set("strconv") {
     "parse_num.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
-    "${tint_src_dir}:abseil",
+    "${dawn_root}:abseil",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/ice",
     "${tint_src_dir}/utils/macros",

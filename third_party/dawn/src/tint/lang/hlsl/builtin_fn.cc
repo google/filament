@@ -34,6 +34,8 @@
 //                       Do not modify this file directly
 ////////////////////////////////////////////////////////////////////////////////
 
+// clang-format off
+
 #include "src/tint/lang/hlsl/builtin_fn.h"
 
 namespace tint::hlsl {
@@ -48,6 +50,10 @@ const char* str(BuiltinFn i) {
             return "asuint";
         case BuiltinFn::kAsfloat:
             return "asfloat";
+        case BuiltinFn::kAsuint16:
+            return "asuint16";
+        case BuiltinFn::kAsfloat16:
+            return "asfloat16";
         case BuiltinFn::kDot4AddI8Packed:
             return "dot4add_i8packed";
         case BuiltinFn::kDot4AddU8Packed:
@@ -116,6 +122,14 @@ const char* str(BuiltinFn i) {
             return "Load3F16";
         case BuiltinFn::kLoad4F16:
             return "Load4F16";
+        case BuiltinFn::kLoadU16:
+            return "LoadU16";
+        case BuiltinFn::kLoad2U16:
+            return "Load2U16";
+        case BuiltinFn::kLoad3U16:
+            return "Load3U16";
+        case BuiltinFn::kLoad4U16:
+            return "Load4U16";
         case BuiltinFn::kStore:
             return "Store";
         case BuiltinFn::kStore2:
@@ -132,6 +146,14 @@ const char* str(BuiltinFn i) {
             return "Store3F16";
         case BuiltinFn::kStore4F16:
             return "Store4F16";
+        case BuiltinFn::kStoreU16:
+            return "StoreU16";
+        case BuiltinFn::kStore2U16:
+            return "Store2U16";
+        case BuiltinFn::kStore3U16:
+            return "Store3U16";
+        case BuiltinFn::kStore4U16:
+            return "Store4U16";
         case BuiltinFn::kGatherCmp:
             return "GatherCmp";
         case BuiltinFn::kGather:
@@ -173,8 +195,7 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kInterlockedOr:
         case BuiltinFn::kInterlockedXor:
         case BuiltinFn::kWaveReadLaneAt:
-            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad,
-                                                   core::ir::Instruction::Access::kStore};
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kTextureStore:
         case BuiltinFn::kStore:
@@ -185,6 +206,10 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kStore2F16:
         case BuiltinFn::kStore3F16:
         case BuiltinFn::kStore4F16:
+        case BuiltinFn::kStoreU16:
+        case BuiltinFn::kStore2U16:
+        case BuiltinFn::kStore3U16:
+        case BuiltinFn::kStore4U16:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kLoad:
@@ -195,6 +220,10 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kLoad2F16:
         case BuiltinFn::kLoad3F16:
         case BuiltinFn::kLoad4F16:
+        case BuiltinFn::kLoadU16:
+        case BuiltinFn::kLoad2U16:
+        case BuiltinFn::kLoad3U16:
+        case BuiltinFn::kLoad4U16:
         case BuiltinFn::kGatherCmp:
         case BuiltinFn::kGather:
         case BuiltinFn::kGatherAlpha:
@@ -212,6 +241,8 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kAsint:
         case BuiltinFn::kAsuint:
         case BuiltinFn::kAsfloat:
+        case BuiltinFn::kAsuint16:
+        case BuiltinFn::kAsfloat16:
         case BuiltinFn::kDot4AddI8Packed:
         case BuiltinFn::kDot4AddU8Packed:
         case BuiltinFn::kF32Tof16:
@@ -236,3 +267,5 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
 }
 
 }  // namespace tint::hlsl
+
+// clang-format on

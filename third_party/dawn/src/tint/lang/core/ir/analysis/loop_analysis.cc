@@ -28,7 +28,7 @@
 #include "src/tint/lang/core/ir/analysis/loop_analysis.h"
 
 #include "src/tint/lang/core/ir/binary.h"
-#include "src/tint/lang/core/ir/bitcast.h"
+#include "src/tint/lang/core/ir/core_builtin_call.h"
 #include "src/tint/lang/core/ir/exit_loop.h"
 #include "src/tint/lang/core/ir/function.h"
 #include "src/tint/lang/core/ir/if.h"
@@ -62,8 +62,13 @@ InstClass* As(Value* val) {
 
 /// Returns the value, after unwrapping all bitcasts.
 Value* UnwrapBitcast(Value* val) {
-    while (auto* bitcast = As<Bitcast>(val)) {
-        val = bitcast->Val();
+    while (auto* inst_res = val->As<InstructionResult>()) {
+        auto* call = inst_res->Instruction()->As<CoreBuiltinCall>();
+        if (call && call->Func() == core::BuiltinFn::kBitcast) {
+            val = call->Args()[0];
+            continue;
+        }
+        break;
     }
     return val;
 }
@@ -185,10 +190,10 @@ struct LoopAnalysisImpl {
         for (auto* inst : *loop.Body()) {
             // The Switch returns `true` if more instructions should be checked, otherwise `false`.
             bool keep_going = Switch(
-                inst,                            //
-                [&](Load*) { return true; },     //
-                [&](Bitcast*) { return true; },  //
-                [&](Binary*) { return true; },   //
+                inst,                                                                        //
+                [&](Load*) { return true; },                                                 //
+                [&](CoreBuiltinCall* c) { return c->Func() == core::BuiltinFn::kBitcast; },  //
+                [&](Binary*) { return true; },                                               //
                 [&](If* i) {
                     if (IsBreakIfOnIndex(loop, i, index)) {
                         // The loop is finite.

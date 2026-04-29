@@ -25,11 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/utils/text/string.h"
+
 #include <algorithm>
 
 #include "src/tint/utils/containers/transform.h"
 #include "src/tint/utils/containers/vector.h"
-#include "src/tint/utils/text/string.h"
 #include "src/tint/utils/text/styled_text.h"
 
 namespace tint {
@@ -64,7 +65,7 @@ size_t Distance(std::string_view str_a, std::string_view str_b) {
 }
 
 void SuggestAlternatives(std::string_view got,
-                         Slice<const std::string_view> strings,
+                         std::span<const std::string_view> strings,
                          StyledText& ss,
                          const SuggestAlternativeOptions& options /* = {} */) {
     // If the string typed was within kSuggestionDistance of one of the possible enum values,

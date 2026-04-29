@@ -1,0 +1,45 @@
+diff --git a/third_party/dawn/third_party/dawn/src/tint/lang/spirv/reader/lower/texture.cc b/third_party/dawn/third_party/dawn/src/tint/lang/spirv/reader/lower/texture.cc
+index 766e0c5bde..de521890f7 100644
+--- a/third_party/dawn/third_party/dawn/src/tint/lang/spirv/reader/lower/texture.cc
++++ b/third_party/dawn/third_party/dawn/src/tint/lang/spirv/reader/lower/texture.cc
+@@ -303,7 +303,11 @@ struct State {
+                     continue;
+                 }
+ 
++#if defined(TINT_APPLECLANG_17_WORKAROUND)
++                param->SetType(TypeFor(ptr->StoreType()));
++#else
+                 param->SetType(ptr->StoreType());
++#endif
+                 usages_to_update.Push(param);
+                 called_functions_to_fixup.Add(func);
+             }
+@@ -604,7 +608,16 @@ struct State {
+                        bool is_proj,
+                        core::ir::Value* coords,
+                        Vector<core::ir::Value*, 5>& new_args) {
++        // Workaround for AppleClang 17 optimizer bug. When compiled with -fstrict-aliasing and
++        // -fvisibility=hidden, the inline RTTI type hashes for Castable can mismatch across static
++        // library boundaries in Tint. This causes dynamic downcasts (e.g. type->As<Texture>()) to
++        // incorrectly return nullptr, triggering TINT_ASSERT(tex_ty). Routing the object through
++        // UnwrapPtr() (an out-of-line function) bypasses the localized inline RTTI optimizer bug.
++#if defined(TINT_APPLECLANG_17_WORKAROUND)
++        auto* tex_ty = type->UnwrapPtr()->As<core::type::Texture>();
++#else
+         auto* tex_ty = type->As<core::type::Texture>();
++#endif
+         TINT_ASSERT(tex_ty);
+ 
+         auto coords_received = Length(coords->Type());
+@@ -1024,7 +1037,11 @@ struct State {
+     void ImageQuerySize(spirv::ir::BuiltinCall* call) {
+         auto* image = call->Args()[0];
+ 
++#if defined(TINT_APPLECLANG_17_WORKAROUND)
++        auto* tex_ty = image->Type()->UnwrapPtr()->As<core::type::Texture>();
++#else
+         auto* tex_ty = image->Type()->As<core::type::Texture>();
++#endif
+         TINT_ASSERT(tex_ty);
+ 
+         b.InsertBefore(call, [&] {

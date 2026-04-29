@@ -75,10 +75,9 @@ TEST_F(WGSLParserTest, FunctionDecl_Unicode) {
         "\xf0\x9d\x95\xa1\xf0\x9d\x95\x92\xf0\x9d\x95\xa3\xf0\x9d\x95\x92\xf0\x9d"
         "\x95\x9e\x5f\xf0\x9d\x95\x93";
 
-    std::string src = "fn $function($param_a : i32, $param_b : f32) { return; }";
-    src = tint::ReplaceAll(src, "$function", function_ident);
-    src = tint::ReplaceAll(src, "$param_a", param_a_ident);
-    src = tint::ReplaceAll(src, "$param_b", param_b_ident);
+    std::string src = "fn " + function_ident + "(" +  //
+                      param_a_ident + " : i32, " +    //
+                      param_b_ident + " : f32) { return; }";
 
     auto p = parser(src);
     auto attrs = p->attribute_list();

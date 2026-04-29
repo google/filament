@@ -29,6 +29,7 @@
 #define SRC_TINT_LANG_WGSL_AST_STRUCT_MEMBER_SIZE_ATTRIBUTE_H_
 
 #include <stddef.h>
+
 #include <string>
 
 #include "src/tint/lang/wgsl/ast/attribute.h"
@@ -40,24 +41,14 @@ namespace tint::ast {
 class StructMemberSizeAttribute final : public Castable<StructMemberSizeAttribute, Attribute> {
   public:
     /// constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param expr the size expression
-    StructMemberSizeAttribute(GenerationID pid,
-                              NodeID nid,
-                              const Source& src,
-                              const Expression* expr);
+    StructMemberSizeAttribute(NodeID nid, const Source& src, const Expression* expr);
     ~StructMemberSizeAttribute() override;
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const StructMemberSizeAttribute* Clone(CloneContext& ctx) const override;
 
     /// The size expression
     const Expression* const expr;

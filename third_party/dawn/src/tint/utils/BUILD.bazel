@@ -39,12 +39,10 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "utils",
   srcs = [
-    "generation_id.cc",
     "reflection.cc",
     "result.cc",
   ],
   hdrs = [
-    "generation_id.h",
     "internal_limits.h",
     "reflection.h",
     "result.h",

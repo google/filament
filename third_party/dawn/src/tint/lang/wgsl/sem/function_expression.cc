@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/sem/function_expression.h"
+
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::sem::FunctionExpression);
@@ -38,9 +39,5 @@ FunctionExpression::FunctionExpression(const ast::IdentifierExpression* declarat
     : Base(declaration, statement), function_(function) {}
 
 FunctionExpression::~FunctionExpression() = default;
-
-const ast::IdentifierExpression* FunctionExpression::Declaration() const {
-    return static_cast<const ast::IdentifierExpression*>(Base::Declaration());
-}
 
 }  // namespace tint::sem

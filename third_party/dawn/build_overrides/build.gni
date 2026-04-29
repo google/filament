@@ -25,10 +25,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-declare_args() {
-  # Tell Dawn and dependencies to not do Chromium-specific things
-  build_with_chromium = false
+import("//build/config/gclient_args.gni")
 
+declare_args() {
   # In standalone Dawn builds, don't try to use the hermetic install of Xcode
   # that Chromium uses
   use_system_xcode = ""

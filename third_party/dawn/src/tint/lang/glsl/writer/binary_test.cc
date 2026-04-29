@@ -50,7 +50,7 @@ using GlslWriterBinaryTest = GlslWriterTestWithParam<BinaryData>;
 TEST_P(GlslWriterBinaryTest, Emit) {
     auto params = GetParam();
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(1_u));
         auto* r = b.Let("right", b.Constant(2_u));
@@ -61,7 +61,8 @@ TEST_P(GlslWriterBinaryTest, Emit) {
 
     Options opts{};
     opts.disable_polyfill_integer_div_mod = true;
-    ASSERT_TRUE(Generate(opts)) << err_ << output_.glsl;
+    auto result = Generate(opts);
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
@@ -90,7 +91,7 @@ using GlslWriterBinaryBoolTest = GlslWriterTestWithParam<BinaryData>;
 TEST_P(GlslWriterBinaryBoolTest, Emit) {
     auto params = GetParam();
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(1_u));
         auto* r = b.Let("right", b.Constant(2_u));
@@ -99,7 +100,8 @@ TEST_P(GlslWriterBinaryBoolTest, Emit) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
@@ -124,7 +126,7 @@ using GlslWriterBinaryBitwiseBoolTest = GlslWriterTestWithParam<BinaryData>;
 TEST_P(GlslWriterBinaryBitwiseBoolTest, Emit) {
     auto params = GetParam();
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(true));
         auto* r = b.Let("right", b.Constant(false));
@@ -133,7 +135,8 @@ TEST_P(GlslWriterBinaryBitwiseBoolTest, Emit) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
@@ -149,7 +152,7 @@ void main() {
 TEST_P(GlslWriterBinaryBitwiseBoolTest, EmitVec) {
     auto params = GetParam();
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Splat(ty.vec2<bool>(), true));
         auto* r = b.Let("right", b.Splat(ty.vec2<bool>(), false));
@@ -158,7 +161,8 @@ TEST_P(GlslWriterBinaryBitwiseBoolTest, EmitVec) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
@@ -179,16 +183,17 @@ using GlslWriterBinaryRelationalVecTest = GlslWriterTestWithParam<BinaryData>;
 TEST_P(GlslWriterBinaryRelationalVecTest, Emit) {
     auto params = GetParam();
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
-        auto* l = b.Let("left", b.Splat(ty.vec2<f32>(), 1_f));
-        auto* r = b.Let("right", b.Splat(ty.vec2<f32>(), 2_f));
+        auto* l = b.Let("left", b.Splat(ty.vec2f(), 1_f));
+        auto* r = b.Let("right", b.Splat(ty.vec2f(), 2_f));
         auto* bin = b.Binary(params.op, ty.vec2<bool>(), l, r);
         b.Let("val", bin);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
@@ -210,16 +215,17 @@ INSTANTIATE_TEST_SUITE_P(
                     BinaryData{"greaterThanEqual", core::BinaryOp::kGreaterThanEqual}));
 
 TEST_F(GlslWriterTest, Binary_Float_Modulo) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
-        auto* l = b.Let("left", b.Splat(ty.vec2<f32>(), 1_f));
-        auto* r = b.Let("right", b.Splat(ty.vec2<f32>(), 2_f));
-        auto* bin = b.Modulo(ty.vec2<f32>(), l, r);
+        auto* l = b.Let("left", b.Splat(ty.vec2f(), 1_f));
+        auto* r = b.Let("right", b.Splat(ty.vec2f(), 2_f));
+        auto* bin = b.Modulo(l, r);
         b.Let("val", bin);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 vec2 tint_float_modulo(vec2 x, vec2 y) {
   return (x - (y * trunc((x / y))));

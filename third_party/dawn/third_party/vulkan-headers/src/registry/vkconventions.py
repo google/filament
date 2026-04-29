@@ -1,6 +1,6 @@
 #!/usr/bin/env python3 -i
 #
-# Copyright 2013-2025 The Khronos Group Inc.
+# Copyright 2013-2026 The Khronos Group Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -311,4 +311,20 @@ class VulkanSCConventions(VulkanConventions):
     def xml_api_name(self):
         """Return the name used in the default API XML registry for the default API"""
         return 'vulkansc'
+
+class VulkanBaseConventions(VulkanConventions):
+
+    def specURL(self, spectype='api'):
+        """Return public registry URL which ref pages should link to for the
+           current all-extensions HTML specification, so xrefs in the
+           asciidoc source that are not to ref pages can link into it
+           instead. N.b. this may need to change on a per-refpage basis if
+           there are multiple documents involved.
+        """
+        return 'https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html'
+
+    @property
+    def xml_api_name(self):
+        """Return the name used in the default API XML registry for the default API"""
+        return 'vulkanbase'
 

@@ -40,6 +40,7 @@
 #include <functional>
 #include <type_traits>
 #include <utility>
+
 #include "dawn/common/Compiler.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
 
@@ -176,7 +177,7 @@ class DAWN_TRIVIAL_ABI DAWN_GSL_POINTER raw_ptr {
         typename U = T,
         typename Unused = std::enable_if_t<!std::is_void_v<typename std::remove_cv<U>::type> &&
                                            partition_alloc::internal::is_offset_type<Z>>>
-    U& operator[](Z delta) const {
+    DAWN_FORCE_INLINE U& operator[](Z delta) const {
         return wrapped_ptr_[delta];
     }
 

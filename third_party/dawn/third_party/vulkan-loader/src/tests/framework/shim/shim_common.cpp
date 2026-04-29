@@ -27,20 +27,16 @@
 
 #include "shim.h"
 
-void PlatformShim::redirect_all_paths(std::filesystem::path const& path) {
-    redirect_category(path, ManifestCategory::implicit_layer);
-    redirect_category(path, ManifestCategory::explicit_layer);
-    redirect_category(path, ManifestCategory::icd);
-}
+#include "env_var_wrapper.h"
 
 std::vector<std::string> parse_env_var_list(std::string const& var) {
     std::vector<std::string> items;
     size_t start = 0;
     size_t len = 0;
     for (size_t i = 0; i < var.size(); i++) {
-#if defined(WIN32)
+#if defined(_WIN32)
         if (var[i] == ';') {
-#elif COMMON_UNIX_PLATFORMS
+#elif TESTING_COMMON_UNIX_PLATFORMS
         if (var[i] == ':') {
 #endif
             if (len != 0) {
@@ -58,7 +54,7 @@ std::vector<std::string> parse_env_var_list(std::string const& var) {
     return items;
 }
 
-#if defined(WIN32)
+#if defined(_WIN32)
 
 D3DKMT_Adapter& D3DKMT_Adapter::add_driver_manifest_path(std::filesystem::path const& src) { return add_path(src, driver_paths); }
 D3DKMT_Adapter& D3DKMT_Adapter::add_implicit_layer_manifest_path(std::filesystem::path const& src) {
@@ -91,10 +87,7 @@ void PlatformShim::reset() {
     hkey_current_user_settings.clear();
 }
 
-void PlatformShim::set_fake_path([[maybe_unused]] ManifestCategory category, [[maybe_unused]] std::filesystem::path const& path) {}
-void PlatformShim::add_known_path([[maybe_unused]] std::filesystem::path const& path) {}
-
-void PlatformShim::add_manifest(ManifestCategory category, std::filesystem::path const& path) {
+void PlatformShim::add_manifest_to_registry(ManifestCategory category, std::filesystem::path const& path) {
     if (category == ManifestCategory::settings) {
         hkey_local_machine_settings.emplace_back(path);
     } else if (category == ManifestCategory::implicit_layer) {
@@ -106,7 +99,7 @@ void PlatformShim::add_manifest(ManifestCategory category, std::filesystem::path
     }
 }
 
-void PlatformShim::add_unsecured_manifest(ManifestCategory category, std::filesystem::path const& path) {
+void PlatformShim::add_unsecured_manifest_to_registry(ManifestCategory category, std::filesystem::path const& path) {
     if (category == ManifestCategory::settings) {
         hkey_current_user_settings.emplace_back(path);
     } else if (category == ManifestCategory::implicit_layer) {
@@ -146,9 +139,7 @@ void PlatformShim::add_CM_Device_ID([[maybe_unused]] std::wstring const& id, [[m
     //     // add_key_value_string(id_key, "VulkanLayerName", layer_path.c_str());
 }
 
-void PlatformShim::redirect_category(std::filesystem::path const&, ManifestCategory) {}
-
-#elif COMMON_UNIX_PLATFORMS
+#elif TESTING_COMMON_UNIX_PLATFORMS
 
 #include <dirent.h>
 #include <unistd.h>
@@ -162,93 +153,12 @@ std::string category_path_name(ManifestCategory category) {
         return "icd.d";
 }
 
-void PlatformShim::reset() { redirection_map.clear(); }
-
-bool PlatformShim::is_fake_path(std::filesystem::path const& path) { return redirection_map.count(path) > 0; }
-std::filesystem::path const& PlatformShim::get_real_path_from_fake_path(std::filesystem::path const& path) {
-    return redirection_map.at(path);
-}
-void PlatformShim::redirect_path(std::filesystem::path const& path, std::filesystem::path const& new_path) {
-    redirection_map[path] = new_path;
-}
-void PlatformShim::remove_redirect(std::filesystem::path const& path) { redirection_map.erase(path); }
-
-bool PlatformShim::is_known_path(std::filesystem::path const& path) { return known_path_set.count(path) > 0; }
-void PlatformShim::add_known_path(std::filesystem::path const& path) { known_path_set.insert(path); }
-void PlatformShim::remove_known_path(std::filesystem::path const& path) { known_path_set.erase(path); }
-
-void PlatformShim::add_manifest([[maybe_unused]] ManifestCategory category, [[maybe_unused]] std::filesystem::path const& path) {}
-void PlatformShim::add_unsecured_manifest([[maybe_unused]] ManifestCategory category,
-                                          [[maybe_unused]] std::filesystem::path const& path) {}
-
-void PlatformShim::set_app_package_path(std::filesystem::path const& path) {}
-
-void parse_and_add_env_var_override(std::vector<std::string>& paths, std::string env_var_contents) {
-    auto parsed_paths = parse_env_var_list(env_var_contents);
-    paths.insert(paths.end(), parsed_paths.begin(), parsed_paths.end());
+void PlatformShim::add_system_library(std::string const& filename, std::filesystem::path const& actual_path) {
+    system_library_redirection_map[filename] = actual_path;
 }
 
-void PlatformShim::redirect_category(std::filesystem::path const& new_path, ManifestCategory category) {
-    std::vector<std::string> paths;
-    auto home = std::filesystem::path(get_env_var("HOME"));
-    if (category == ManifestCategory::settings) {
-        redirect_path(home / ".local/share/vulkan" / category_path_name(category), new_path);
-        return;
-    }
-
-    if (!home.empty()) {
-        paths.push_back((home / ".config"));
-        paths.push_back((home / ".local/share"));
-    }
-    // Don't report errors on apple - these env-vars are not suppose to be defined
-    bool report_errors = true;
-#if defined(__APPLE__)
-    report_errors = false;
-#endif
-    parse_and_add_env_var_override(paths, get_env_var("XDG_CONFIG_HOME", report_errors));
-    if (category == ManifestCategory::explicit_layer) {
-        parse_and_add_env_var_override(paths, get_env_var("VK_LAYER_PATH", false));  // don't report failure
-    }
-    if (category == ManifestCategory::implicit_layer) {
-        parse_and_add_env_var_override(paths, get_env_var("VK_IMPLICIT_LAYER_PATH", false));  // don't report failure
-    }
-    parse_and_add_env_var_override(paths, FALLBACK_DATA_DIRS);
-    parse_and_add_env_var_override(paths, FALLBACK_CONFIG_DIRS);
-
-    auto sys_conf_dir = std::string(SYSCONFDIR);
-    if (!sys_conf_dir.empty()) {
-        paths.push_back(sys_conf_dir);
-    }
-#if defined(EXTRASYSCONFDIR)
-    // EXTRASYSCONFDIR default is /etc, if SYSCONFDIR wasn't defined, it will have /etc put
-    // as its default. Don't want to double add it
-    auto extra_sys_conf_dir = std::string(EXTRASYSCONFDIR);
-    if (!extra_sys_conf_dir.empty() && sys_conf_dir != extra_sys_conf_dir) {
-        paths.push_back(extra_sys_conf_dir);
-    }
-#endif
-
-    for (auto& path : paths) {
-        if (!path.empty()) {
-            redirect_path(std::filesystem::path(path) / "vulkan" / category_path_name(category), new_path);
-        }
-    }
-}
-
-void PlatformShim::set_fake_path(ManifestCategory category, std::filesystem::path const& path) {
-    // use /etc as the 'redirection path' by default since its always searched
-    redirect_path(std::filesystem::path(SYSCONFDIR) / "vulkan" / category_path_name(category), path);
-}
-
-void PlatformShim::redirect_dlopen_name(std::filesystem::path const& filename, std::filesystem::path const& actual_path) {
-    dlopen_redirection_map[filename] = actual_path;
-}
-
-bool PlatformShim::is_dlopen_redirect_name(std::filesystem::path const& filename) {
-    return dlopen_redirection_map.count(filename) == 1;
-}
-
-std::filesystem::path PlatformShim::query_default_redirect_path(ManifestCategory category) {
-    return std::filesystem::path(SYSCONFDIR) / "vulkan" / category_path_name(category);
+std::filesystem::path PlatformShim::get_system_library(std::string const& filename) {
+    return system_library_redirection_map.count(filename) == 1 ? system_library_redirection_map.at(filename)
+                                                               : std::filesystem::path{};
 }
 #endif

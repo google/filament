@@ -25,6 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include "dawn/wire/client/Adapter.h"
 
 #include <memory>
@@ -197,6 +202,18 @@ void Adapter::SetInfo(const WGPUAdapterInfo* info) {
                 mPowerProperties.powerPreference = powerProperties->powerPreference;
                 break;
             }
+            case WGPUSType_AdapterPropertiesExplicitComputeSubgroupSizeConfigs: {
+                auto* subgroupSizeConfigs =
+                    reinterpret_cast<WGPUAdapterPropertiesExplicitComputeSubgroupSizeConfigs*>(
+                        chain);
+                mExplicitComputeSubgroupSizeConfigs.minExplicitComputeSubgroupSize =
+                    subgroupSizeConfigs->minExplicitComputeSubgroupSize;
+                mExplicitComputeSubgroupSizeConfigs.maxExplicitComputeSubgroupSize =
+                    subgroupSizeConfigs->maxExplicitComputeSubgroupSize;
+                mExplicitComputeSubgroupSizeConfigs.maxComputeWorkgroupSubgroups =
+                    subgroupSizeConfigs->maxComputeWorkgroupSubgroups;
+                break;
+            }
             default:
                 DAWN_UNREACHABLE();
                 break;
@@ -255,6 +272,22 @@ WGPUStatus Adapter::APIGetInfo(WGPUAdapterInfo* info) const {
                 powerProperties->powerPreference = mPowerProperties.powerPreference;
                 break;
             }
+            case WGPUSType_AdapterPropertiesExplicitComputeSubgroupSizeConfigs: {
+                if (!APIHasFeature(WGPUFeatureName_ChromiumExperimentalSubgroupSizeControl)) {
+                    return WGPUStatus_Error;
+                }
+                auto* explicitComputeSubgroupSizeConfigs =
+                    reinterpret_cast<WGPUAdapterPropertiesExplicitComputeSubgroupSizeConfigs*>(
+                        chain);
+                explicitComputeSubgroupSizeConfigs->minExplicitComputeSubgroupSize =
+                    mExplicitComputeSubgroupSizeConfigs.minExplicitComputeSubgroupSize;
+                explicitComputeSubgroupSizeConfigs->maxExplicitComputeSubgroupSize =
+                    mExplicitComputeSubgroupSizeConfigs.maxExplicitComputeSubgroupSize;
+                explicitComputeSubgroupSizeConfigs->maxComputeWorkgroupSubgroups =
+                    mExplicitComputeSubgroupSizeConfigs.maxComputeWorkgroupSubgroups;
+                break;
+            }
+
             default:
                 break;
         }
@@ -289,7 +322,7 @@ WGPUFuture Adapter::APIRequestDevice(const WGPUDeviceDescriptor* descriptor,
     Client* client = GetClient();
     Ref<Device> device = client->Make<Device>(GetEventManagerHandle(), this, descriptor);
     auto [futureIDInternal, tracked] =
-        GetEventManager().TrackEvent(std::make_unique<RequestDeviceEvent>(callbackInfo, device));
+        GetEventManager().TrackEvent(AcquireRef(new RequestDeviceEvent(callbackInfo, device)));
     if (!tracked) {
         return {futureIDInternal};
     }
@@ -304,10 +337,10 @@ WGPUFuture Adapter::APIRequestDevice(const WGPUDeviceDescriptor* descriptor,
     }
 
     AdapterRequestDeviceCmd cmd;
-    cmd.adapterId = GetWireId();
+    cmd.adapterId = GetWireHandle(client).id;
     cmd.eventManagerHandle = GetEventManagerHandle();
     cmd.future = {futureIDInternal};
-    cmd.deviceObjectHandle = device->GetWireHandle();
+    cmd.deviceObjectHandle = device->GetWireHandle(client);
     cmd.deviceLostFuture = device->APIGetLostFuture();
     cmd.descriptor = &wireDescriptor;
 

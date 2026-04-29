@@ -22,7 +22,7 @@ To publish a new package to npm, do the following.
 3. Edit the version number in `package.json`. You cannot publish the same version more than once.
 4. From the root folder in your Filament repo, do:
 ```
-./build.sh -ap webgl release
+./build.sh -ap wasm release
 ./build.sh -ap all release
 ```
 5. Make a commit and a tag whose label is the 3-tiered version number prefixed with a `v`:
@@ -36,7 +36,7 @@ git commit && git tag -a v{XX}.{YY}.{ZZ}
 :---: | :---
 
 ```
-cd out/cmake-webgl-release/web/filament-js
+cd out/cmake-wasm-release/web/filament-js
 npm publish --dry-run
 ```
 8. If the output of the dry run looks okay to you (double check the version number!), then finally

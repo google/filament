@@ -165,7 +165,7 @@ tint_fuzzer_test("{{$.Directory.Name}}") {
 --------------------------------------------------------------------------------
 */ -}}
 {{- define "ExternalDependencyTargets"}}
-{{-        if eq $.Name "abseil"                         -}}"${tint_src_dir}:abseil",
+{{-        if eq $.Name "abseil"                         -}}"${dawn_root}:abseil",
 {{-   else if eq $.Name "dl"                             -}}"${tint_src_dir}:dl",
 {{-   else if eq $.Name "dxc-include"                    -}}"${tint_src_dir}:dxc-include",
 {{-   else if eq $.Name "dxcompiler-for-fuzzer"          -}}"${tint_src_dir}:dxcompiler-for-fuzzer",
@@ -176,11 +176,14 @@ tint_fuzzer_test("{{$.Directory.Name}}") {
 {{-   else if eq $.Name "jsoncpp"                        -}}"${tint_src_dir}:jsoncpp",
 {{-   else if eq $.Name "langsvr"                        -}}"${tint_src_dir}:langsvr",
 {{-   else if eq $.Name "libprotobuf-mutator"            -}}"${tint_lpm_dir}:libprotobuf-mutator",
+{{-   else if eq $.Name "mesa"                           -}}"${tint_mesa_dir}:mesa",
 {{-   else if eq $.Name "metal"                          -}}"${tint_src_dir}:metal",
 {{-   else if eq $.Name "spirv-headers"                  -}}"${tint_spirv_headers_dir}:spv_headers",
 {{-   else if eq $.Name "spirv-opt-internal"             -}}"${tint_spirv_tools_dir}:spvtools", "${tint_spirv_tools_dir}:spvtools_opt", "${tint_spirv_tools_dir}:spvtools_val",
 {{-   else if eq $.Name "spirv-tools"                    -}}"${tint_spirv_tools_dir}:spvtools_headers", "${tint_spirv_tools_dir}:spvtools_val",
 {{-   else if eq $.Name "thread"                         -}}"${tint_src_dir}:thread",
+{{-   else if eq $.Name "vulkan-headers"                 -}}"${dawn_vulkan_headers_dir}:vulkan_headers",
+{{-   else if eq $.Name "libvulkan"                      -}}"${dawn_vulkan_loader_dir}:libvulkan",
 {{-   else if eq $.Name "winsock"                        -}}"${tint_src_dir}:winsock",
 {{-   else if eq $.Name "src_utils"                      -}}"${dawn_root}/src/utils:utils",
 {{-   else if eq $.Name "src_utils_chromium_test_compat" -}}"${dawn_root}/src/utils/chromium_test_compat:chromium_test_compat",

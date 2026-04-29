@@ -75,8 +75,6 @@ func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, e
 	return nil, nil
 }
 
-// TODO(crbug.com/344014313): Add unittests once expectations.Load() uses
-// dependency injection.
 func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	if len(c.flags.expectations) == 0 {
 		c.flags.expectations = common.DefaultExpectationsPaths(cfg.OsWrapper)
@@ -84,7 +82,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 
 	for _, expectationFilename := range c.flags.expectations {
 		// Load expectations.txt
-		content, err := expectations.Load(expectationFilename)
+		content, err := expectations.Load(expectationFilename, cfg.OsWrapper)
 		if err != nil {
 			return err
 		}
@@ -98,7 +96,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	}
 
 	// Load slow_tests.txt
-	content, err := expectations.Load(c.flags.slow)
+	content, err := expectations.Load(c.flags.slow, cfg.OsWrapper)
 	if err != nil {
 		return err
 	}
@@ -107,7 +105,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	// Print any diagnostics
 	diags.Print(os.Stdout, c.flags.slow)
 	if numErrs := diags.NumErrors(); numErrs > 0 {
-		return fmt.Errorf("%v errors found", numErrs)
+		return fmt.Errorf("%v errors found in %v", numErrs, c.flags.slow)
 	}
 
 	fmt.Println("no issues found")

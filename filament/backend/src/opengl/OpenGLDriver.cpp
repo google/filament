@@ -2665,12 +2665,17 @@ FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
         // so we need to wait for that, before using the real fence.
         // By construction, "f" can't be destroyed while we wait, because its
         // construction call is in the queue and a destroy call will have to come later.
-        waitForFence([f] {
+        FenceStatus status = waitForFence([f] {
             return f->fence != nullptr;
         }, until);
+
+        if (status == FenceStatus::ERROR) {
+            return FenceStatus::ERROR;
+        }
+
         if (f->fence == nullptr) {
             // the only possible choice here is that we timed out
-            assert_invariant(f->state->status == FenceStatus::TIMEOUT_EXPIRED);
+            assert_invariant(status == FenceStatus::TIMEOUT_EXPIRED);
             return FenceStatus::TIMEOUT_EXPIRED;
         }
         // here we know that we have the platform fence
@@ -2686,13 +2691,17 @@ FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     // This is the case where we need to use OpenGL fences
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     FenceStatus result = FenceStatus::TIMEOUT_EXPIRED;
-    waitForFence([&] {
+    FenceStatus status = waitForFence([&] {
         if (f->state->status != FenceStatus::TIMEOUT_EXPIRED) {
             result = f->state->status;
             return true;
         }
         return false;
     }, until);
+
+    if (status == FenceStatus::ERROR) {
+        return FenceStatus::ERROR;
+    }
     return result;
 #else
     return FenceStatus::ERROR;

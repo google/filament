@@ -29,15 +29,21 @@
 
 #include "src/tint/lang/core/ir/core_builtin_call.h"
 #include "src/tint/lang/core/ir/module.h"
+#include "src/tint/lang/core/ir/referenced_module_vars.h"
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/ir/var.h"
 #include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/pointer.h"
 #include "src/tint/lang/core/type/storage_texture.h"
+#include "src/tint/lang/core/type/texel_buffer.h"
+#include "src/tint/lang/core/type/u16.h"
 #include "src/tint/lang/glsl/writer/common/option_helpers.h"
 #include "src/tint/lang/glsl/writer/printer/printer.h"
 #include "src/tint/lang/glsl/writer/raise/raise.h"
 
 namespace tint::glsl::writer {
+
+namespace {
 
 Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& options) {
     // Check for unsupported types.
@@ -45,20 +51,60 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
         if (ty->Is<core::type::SubgroupMatrix>()) {
             return Failure("subgroup matrices are not supported by the GLSL backend");
         }
+        if (ty->Is<core::type::TexelBuffer>()) {
+            // TODO(crbug/382544164): Prototype texel buffer feature
+            return Failure("texel buffers are not supported by the GLSL backend");
+        }
+        if (auto* ba = ty->As<core::type::BindingArray>()) {
+            if (ba->Count()->Is<core::type::RuntimeArrayCount>()) {
+                return Failure("runtime binding array not supported by the GLSL backend");
+            }
+
+            // TODO(464058128): Add support for binding_array<texture_1d<*>, N> in the
+            // TexturePolyfill transform.
+            auto* tex = ba->ElemType()->As<core::type::Texture>();
+            if (tex && tex->Dim() == core::type::TextureDimension::k1d) {
+                return Failure(
+                    "1D textures inside binding arrays are not yet supported by the GLSL backend");
+            }
+        }
+        if (ty->Is<core::type::Buffer>()) {
+            return Failure("buffers are not supported by the GLSL backend");
+        }
+        if (ty->Is<core::type::U16>()) {
+            return Failure("16-bit unsigned integers are not supported by the GLSL backend");
+        }
+    }
+
+    core::ir::Function* ep_func = nullptr;
+    for (auto* f : ir.functions) {
+        if (!f->IsEntryPoint()) {
+            continue;
+        }
+        if (f->SubgroupSize().has_value()) {
+            return Failure("subgroups are not supported by the GLSL backend");
+        }
+        if (ir.NameOf(f).NameView() == options.entry_point_name) {
+            ep_func = f;
+            break;
+        }
+    }
+
+    // No entrypoint, so no bindings needed
+    if (!ep_func) {
+        return Failure("entry point not found");
     }
 
     // Make sure that every texture variable is in the texture_builtins_from_uniform binding list,
     // otherwise TextureBuiltinsFromUniform will fail.
     // TODO(https://issues.chromium.org/427172887) Be more precise for the
-    // texture_builtins_from_uniform checks. Also make sure there is at most one user-declared
-    // immediate, and make a note of its size.
-    uint32_t user_immediate_size = 0;
-    for (auto* inst : *ir.root_block) {
-        auto* var = inst->As<core::ir::Var>();
+    // texture_builtins_from_uniform checks. Also ensure there is at most one user-declared
+    // immediate.
+    core::ir::ReferencedModuleVars<const core::ir::Module> referenced_module_vars{ir};
+    auto& refs = referenced_module_vars.TransitiveReferences(ep_func);
 
-        if (!var) {
-            continue;
-        }
+    Vector<tint::BindingPoint, 4> ext_tex_bps;
+    for (auto* var : refs) {
         auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
 
         // The pixel_local extension is not supported by the GLSL backend.
@@ -68,32 +114,6 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
 
         if (ptr->AddressSpace() == core::AddressSpace::kHandle) {
             const core::type::Type* handle_type = ptr->StoreType();
-            uint32_t count = 1;
-            if (auto* ba = handle_type->As<core::type::BindingArray>()) {
-                handle_type = ba->ElemType();
-                count = ba->Count()->As<core::type::ConstantArrayCount>()->value;
-            }
-
-            // Check texture types that need metadata for texture_builtins_from_uniform.
-            if (handle_type->Is<core::type::Texture>() &&
-                !handle_type->IsAnyOf<core::type::StorageTexture, core::type::ExternalTexture>()) {
-                bool found = false;
-                auto binding = options.bindings.texture.at(var->BindingPoint().value());
-                for (auto& bp : options.bindings.texture_builtins_from_uniform.ubo_contents) {
-                    if (bp.binding == binding) {
-                        if (bp.count < count) {
-                            return Failure(
-                                "binding_array of textures doesn't have enough data in "
-                                "texture_builtins_from_uniform list");
-                        }
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    return Failure("texture missing from texture_builtins_from_uniform list");
-                }
-            }
 
             // Check texel formats for read-write storage textures when targeting ES.
             if (options.version.IsES()) {
@@ -111,14 +131,6 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
                 }
             }
         }
-
-        if (ptr->AddressSpace() == core::AddressSpace::kImmediate) {
-            if (user_immediate_size > 0) {
-                // We've already seen a user-declared immediate data.
-                return Failure("multiple user-declared immediate data");
-            }
-            user_immediate_size = tint::RoundUp(4u, ptr->StoreType()->Size());
-        }
     }
 
     // Check for calls to unsupported builtin functions.
@@ -134,95 +146,70 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
         if (call->Func() == core::BuiltinFn::kInputAttachmentLoad) {
             return Failure("input attachments are not supported by the GLSL backend");
         }
+        if (call->Func() == core::BuiltinFn::kGetResource ||
+            call->Func() == core::BuiltinFn::kHasResource) {
+            return Failure("resource tables not supported by the GLSL backend");
+        }
+        if (call->Func() == core::BuiltinFn::kPrint) {
+            return Failure("print is not supported by the GLSL backend");
+        }
+        if (call->Func() == core::BuiltinFn::kAtomicStoreMax ||
+            call->Func() == core::BuiltinFn::kAtomicStoreMin) {
+            return Failure(
+                "64-bit (vec2u) atomic operations are not yet supported by the GLSL backend");
+        }
     }
 
     // Check for unsupported shader IO builtins.
-    for (auto& func : ir.functions) {
-        if (!func->IsEntryPoint()) {
-            continue;
+    auto check_io_attributes = [&](const core::IOAttributes& attributes) -> Result<SuccessType> {
+        if (attributes.builtin == core::BuiltinValue::kSubgroupId ||
+            attributes.builtin == core::BuiltinValue::kSubgroupInvocationId ||
+            attributes.builtin == core::BuiltinValue::kSubgroupSize ||
+            attributes.builtin == core::BuiltinValue::kNumSubgroups) {
+            return Failure("subgroups are not supported by the GLSL backend");
         }
-
-        // subgroup builtins are not supported.
-        for (auto* param : func->Params()) {
-            if (auto* str = param->Type()->As<core::type::Struct>()) {
-                for (auto* member : str->Members()) {
-                    if (member->Attributes().builtin == core::BuiltinValue::kSubgroupId ||
-                        member->Attributes().builtin == core::BuiltinValue::kSubgroupInvocationId ||
-                        member->Attributes().builtin == core::BuiltinValue::kSubgroupSize) {
-                        return Failure("subgroups are not supported by the GLSL backend");
-                    }
-                }
-            } else {
-                if (param->Builtin() == core::BuiltinValue::kSubgroupId ||
-                    param->Builtin() == core::BuiltinValue::kSubgroupInvocationId ||
-                    param->Builtin() == core::BuiltinValue::kSubgroupSize) {
-                    return Failure("subgroups are not supported by the GLSL backend");
-                }
-            }
+        if (attributes.builtin == core::BuiltinValue::kClipDistances) {
+            return Failure("clip_distances is not supported by the GLSL backend");
         }
-
-        // clip_distance is not supported.
-        if (auto* str = func->ReturnType()->As<core::type::Struct>()) {
-            for (auto* member : str->Members()) {
-                if (member->Attributes().builtin == core::BuiltinValue::kClipDistances) {
-                    return Failure("clip_distances is not supported by the GLSL backend");
-                }
-            }
+        if (attributes.builtin == core::BuiltinValue::kCullDistance) {
+            return Failure("cull_distance is not supported by the GLSL backend");
         }
-    }
-
-    static constexpr uint32_t kMaxOffset = 0x1000;
-    Hashset<uint32_t, 4> immediate_word_offsets;
-    auto check_immediate_offset = [&](uint32_t offset) {
-        // Excessive values can cause OOM / timeouts when padding structures in the printer.
-        if (offset > kMaxOffset) {
-            return false;
+        if (attributes.color.has_value()) {
+            return Failure("@color attribute is not supported by the GLSL backend");
         }
-        // Offset must be 4-byte aligned.
-        if (offset & 0x3) {
-            return false;
-        }
-        // Offset must not have already been used.
-        if (!immediate_word_offsets.Add(offset >> 2)) {
-            return false;
-        }
-        // Offset must be after the user-defined immediate data.
-        if (offset < user_immediate_size) {
-            return false;
-        }
-        return true;
+        return Success;
     };
-
-    if (options.first_instance_offset && !check_immediate_offset(*options.first_instance_offset)) {
-        return Failure("invalid offset for first_instance_offset immediate data");
-    }
-
-    if (options.first_vertex_offset && !check_immediate_offset(*options.first_vertex_offset)) {
-        return Failure("invalid offset for first_vertex_offset immediate data");
-    }
-
-    if (options.depth_range_offsets) {
-        if (!check_immediate_offset(options.depth_range_offsets->max) ||
-            !check_immediate_offset(options.depth_range_offsets->min)) {
-            return Failure("invalid offsets for depth range immediate data");
+    // Check input attributes.
+    for (auto* param : ep_func->Params()) {
+        if (auto* str = param->Type()->As<core::type::Struct>()) {
+            for (auto* member : str->Members()) {
+                TINT_CHECK_RESULT(check_io_attributes(member->Attributes()));
+            }
+        } else {
+            TINT_CHECK_RESULT(check_io_attributes(param->Attributes()));
         }
     }
-
-    {
-        auto res = ValidateBindingOptions(options);
-        if (res != Success) {
-            return res.Failure();
+    // Check output attributes.
+    if (auto* str = ep_func->ReturnType()->As<core::type::Struct>()) {
+        for (auto* member : str->Members()) {
+            TINT_CHECK_RESULT(check_io_attributes(member->Attributes()));
         }
+    } else {
+        TINT_CHECK_RESULT(check_io_attributes(ep_func->ReturnAttributes()));
     }
+
+    TINT_CHECK_RESULT(ValidateBindingOptions(options));
 
     return Success;
 }
 
+}  // namespace
+
 Result<Output> Generate(core::ir::Module& ir, const Options& options) {
+    TINT_CHECK_RESULT(CanGenerate(ir, options));
+
     // Raise from core-dialect to GLSL-dialect.
-    if (auto res = Raise(ir, options); res != Success) {
-        return res.Failure();
-    }
+    TINT_CHECK_RESULT(Raise(ir, options));
 
     return Print(ir, options);
 }

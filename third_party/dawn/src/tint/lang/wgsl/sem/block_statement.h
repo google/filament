@@ -29,7 +29,6 @@
 #define SRC_TINT_LANG_WGSL_SEM_BLOCK_STATEMENT_H_
 
 #include <cstddef>
-#include <vector>
 
 #include "src/tint/lang/wgsl/sem/statement.h"
 
@@ -37,7 +36,6 @@
 namespace tint::ast {
 class BlockStatement;
 class ContinueStatement;
-class Variable;
 }  // namespace tint::ast
 
 namespace tint::sem {

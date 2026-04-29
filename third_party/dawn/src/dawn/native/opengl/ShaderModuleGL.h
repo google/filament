@@ -53,14 +53,12 @@ class EmulatedTextureBuiltinRegistrar;
 class PipelineLayout;
 struct OpenGLFunctions;
 
-std::string GetBindingName(BindGroupIndex group, BindingNumber bindingNumber);
-
 #define COMBINED_SAMPLER_ELEMENT_MEMBERS(X)                                                 \
     X(BindGroupIndex, group)                                                                \
-    X(BindingNumber, binding)                                                               \
+    X(BindingIndex, index)                                                                  \
     /* Return the array size of the element in the WGSL / GLSL as OpenGL requires that a */ \
     /* non-arrayed (arraySize = 1) binding uses glUniform1i and not glUniform1iv. */        \
-    X(BindingIndex, arraySize, 1)
+    X(BindingIndex, shaderArraySize, 1)
 DAWN_SERIALIZABLE(struct, CombinedSamplerElement, COMBINED_SAMPLER_ELEMENT_MEMBERS){};
 #undef COMBINED_SAMPLER_ELEMENT_MEMBERS
 
@@ -84,27 +82,24 @@ class ShaderModule final : public ShaderModuleBase {
     static ResultOrError<Ref<ShaderModule>> Create(
         Device* device,
         const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-        const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult);
+        const std::vector<tint::wgsl::Extension>& internalExtensions);
 
     ResultOrError<GLuint> CompileShader(const OpenGLFunctions& gl,
                                         const ProgrammableStage& programmableStage,
                                         SingleShaderStage stage,
-                                        bool usesVertexIndex,
-                                        bool usesInstanceIndex,
-                                        bool usesFragDepth,
+                                        const ImmediateConstantMask& pipelineImmediateMask,
                                         VertexAttributeMask bgraSwizzleAttributes,
                                         std::vector<CombinedSampler>* combinedSamplers,
                                         const PipelineLayout* layout,
                                         EmulatedTextureBuiltinRegistrar* emulatedTextureBuiltings,
-                                        bool* needsSSBOLengthUniformBuffer);
+                                        bool* needsSSBOLengthUniformBuffer,
+                                        Extent3D* workgroupSize);
 
   private:
     ShaderModule(Device* device,
                  const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
                  std::vector<tint::wgsl::Extension> internalExtensions);
     ~ShaderModule() override = default;
-    MaybeError Initialize(ShaderModuleParseResult* parseResult);
 };
 
 }  // namespace opengl

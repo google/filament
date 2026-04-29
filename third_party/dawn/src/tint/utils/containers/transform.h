@@ -29,6 +29,7 @@
 #define SRC_TINT_UTILS_CONTAINERS_TRANSFORM_H_
 
 #include <algorithm>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -100,31 +101,32 @@ auto Transform(const Vector<IN, N>& in, TRANSFORMER&& transform)
     return result;
 }
 
-/// Transform performs an element-wise transformation of a slice.
-/// @param in the input slice.
+/// Transform performs an element-wise transformation of a span.
+/// @param in the input span.
 /// @param transform the transformation function with signature: `OUT(IN)`
 /// @tparam N the small-array size of the returned Vector
 /// @returns a new vector with each element of the source vector transformed by `transform`.
 template <size_t N, typename IN, typename TRANSFORMER>
-auto Transform(Slice<IN> in, TRANSFORMER&& transform) -> Vector<decltype(transform(in[0])), N> {
+auto Transform(std::span<IN> in, TRANSFORMER&& transform) -> Vector<decltype(transform(in[0])), N> {
     Vector<decltype(transform(in[0])), N> result;
-    result.Reserve(in.len);
-    for (size_t i = 0; i < in.len; ++i) {
+    result.Reserve(in.size());
+    for (size_t i = 0; i < in.size(); ++i) {
         result.Push(transform(in[i]));
     }
     return result;
 }
 
-/// Transform performs an element-wise transformation of a slice.
-/// @param in the input slice.
+/// Transform performs an element-wise transformation of a span.
+/// @param in the input span.
 /// @param transform the transformation function with signature: `OUT(IN, size_t)`
 /// @tparam N the small-array size of the returned Vector
 /// @returns a new vector with each element of the source vector transformed by `transform`.
 template <size_t N, typename IN, typename TRANSFORMER>
-auto Transform(Slice<IN> in, TRANSFORMER&& transform) -> Vector<decltype(transform(in[0], 1u)), N> {
+auto Transform(std::span<IN> in, TRANSFORMER&& transform)
+    -> Vector<decltype(transform(in[0], 1u)), N> {
     Vector<decltype(transform(in[0], 1u)), N> result;
-    result.Reserve(in.len);
-    for (size_t i = 0; i < in.len; ++i) {
+    result.Reserve(in.size());
+    for (size_t i = 0; i < in.size(); ++i) {
         result.Push(transform(in[i], i));
     }
     return result;
@@ -137,7 +139,7 @@ auto Transform(Slice<IN> in, TRANSFORMER&& transform) -> Vector<decltype(transfo
 /// @returns a new vector with each element of the source vector transformed by `transform`.
 template <size_t N, typename IN, typename TRANSFORMER>
 auto Transform(VectorRef<IN> in, TRANSFORMER&& transform) -> Vector<decltype(transform(in[0])), N> {
-    return Transform<N>(in.Slice(), std::forward<TRANSFORMER>(transform));
+    return Transform<N>(in.AsSpan(), std::forward<TRANSFORMER>(transform));
 }
 
 /// Transform performs an element-wise transformation of a vector reference.
@@ -148,7 +150,7 @@ auto Transform(VectorRef<IN> in, TRANSFORMER&& transform) -> Vector<decltype(tra
 template <size_t N, typename IN, typename TRANSFORMER>
 auto Transform(VectorRef<IN> in, TRANSFORMER&& transform)
     -> Vector<decltype(transform(in[0], 1u)), N> {
-    return Transform<N>(in.Slice(), std::forward<TRANSFORMER>(transform));
+    return Transform<N>(in.AsSpan(), std::forward<TRANSFORMER>(transform));
 }
 
 /// TransformN performs an element-wise transformation of a vector, transforming and returning at

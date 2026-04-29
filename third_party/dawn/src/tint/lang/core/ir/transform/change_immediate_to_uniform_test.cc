@@ -517,7 +517,7 @@ $B1: {  # root
 TEST_F(IRChangeImmediateToUniformTest, PushConstantAccessChainReused) {
     auto* sb = ty.Struct(mod.symbols.New("SB"), {
                                                     {mod.symbols.New("c"), ty.f32()},
-                                                    {mod.symbols.New("d"), ty.vec3<f32>()},
+                                                    {mod.symbols.New("d"), ty.vec3f()},
                                                 });
 
     auto* var = b.Var("v", immediate, sb, core::Access::kRead);
@@ -525,7 +525,7 @@ TEST_F(IRChangeImmediateToUniformTest, PushConstantAccessChainReused) {
 
     auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
     b.Append(func->Block(), [&] {
-        auto* x = b.Access(ty.ptr(immediate, ty.vec3<f32>(), core::Access::kRead), var, 1_u);
+        auto* x = b.Access(ty.ptr(immediate, ty.vec3f(), core::Access::kRead), var, 1_u);
         b.Let("b", b.LoadVectorElement(x, 1_u));
         b.Let("c", b.LoadVectorElement(x, 2_u));
         b.Return(func);
@@ -647,6 +647,255 @@ $B1: {  # root
     %7:ptr<uniform, array<vec4<i32>, 2>, read> = access %l, 1u
     %8:array<vec4<i32>, 2> = load %7
     %b:array<vec4<i32>, 2> = let %8
+    ret
+  }
+}
+)";
+
+    ChangeImmediateToUniformConfig config = {};
+    Run(ChangeImmediateToUniform, config);
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IRChangeImmediateToUniformTest, PassImmediatePointerToFunction) {
+    auto* sb = ty.Struct(mod.symbols.New("SB"), {
+                                                    {mod.symbols.New("a"), ty.i32()},
+                                                });
+
+    auto* var = b.Var("v", immediate, sb, core::Access::kRead);
+    b.ir.root_block->Append(var);
+
+    auto* helper = b.Function("helper", ty.void_());
+    auto* ptr_param = b.FunctionParam("p", ty.ptr(immediate, sb, core::Access::kRead));
+    helper->SetParams({ptr_param});
+
+    b.Append(helper->Block(), [&] {
+        b.Load(b.Access(ty.ptr<immediate, i32, core::Access::kRead>(), ptr_param, 0_u));
+        b.Return(helper);
+    });
+
+    auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+    b.Append(func->Block(), [&] {
+        b.Call(helper, var);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+SB = struct @align(4) {
+  a:i32 @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<immediate, SB, read> = var undef
+}
+
+%helper = func(%p:ptr<immediate, SB, read>):void {
+  $B2: {
+    %4:ptr<immediate, i32, read> = access %p, 0u
+    %5:i32 = load %4
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %7:void = call %helper, %v
+    ret
+  }
+}
+)";
+    ASSERT_EQ(src, str());
+
+    auto* expect = R"(
+SB = struct @align(4) {
+  a:i32 @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<uniform, SB, read> = var undef @binding_point(0, 0)
+}
+
+%helper = func(%p:ptr<uniform, SB, read>):void {
+  $B2: {
+    %4:ptr<uniform, i32, read> = access %p, 0u
+    %5:i32 = load %4
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %7:void = call %helper, %v
+    ret
+  }
+}
+)";
+
+    ChangeImmediateToUniformConfig config = {};
+    Run(ChangeImmediateToUniform, config);
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IRChangeImmediateToUniformTest, PassMultipleImmediatePointersToFunction) {
+    auto* sb = ty.Struct(mod.symbols.New("SB"), {
+                                                    {mod.symbols.New("a"), ty.i32()},
+                                                    {mod.symbols.New("b"), ty.i32()},
+                                                });
+
+    auto* var = b.Var("v", immediate, sb, core::Access::kRead);
+    b.ir.root_block->Append(var);
+
+    auto* helper = b.Function("helper", ty.void_());
+    auto* ptr_param1 = b.FunctionParam("p1", ty.ptr(immediate, ty.i32(), core::Access::kRead));
+    auto* ptr_param2 = b.FunctionParam("p2", ty.ptr(immediate, ty.i32(), core::Access::kRead));
+    helper->SetParams({ptr_param1, ptr_param2});
+
+    b.Append(helper->Block(), [&] {
+        b.Load(ptr_param1);
+        b.Load(ptr_param2);
+        b.Return(helper);
+    });
+
+    auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+    b.Append(func->Block(), [&] {
+        auto* access_a = b.Access(ty.ptr(immediate, ty.i32(), core::Access::kRead), var, 0_u);
+        auto* access_b = b.Access(ty.ptr(immediate, ty.i32(), core::Access::kRead), var, 1_u);
+        b.Call(helper, access_a, access_b);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+SB = struct @align(4) {
+  a:i32 @offset(0)
+  b:i32 @offset(4)
+}
+
+$B1: {  # root
+  %v:ptr<immediate, SB, read> = var undef
+}
+
+%helper = func(%p1:ptr<immediate, i32, read>, %p2:ptr<immediate, i32, read>):void {
+  $B2: {
+    %5:i32 = load %p1
+    %6:i32 = load %p2
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %8:ptr<immediate, i32, read> = access %v, 0u
+    %9:ptr<immediate, i32, read> = access %v, 1u
+    %10:void = call %helper, %8, %9
+    ret
+  }
+}
+)";
+    ASSERT_EQ(src, str());
+
+    auto* expect = R"(
+SB = struct @align(4) {
+  a:i32 @offset(0)
+  b:i32 @offset(4)
+}
+
+$B1: {  # root
+  %v:ptr<uniform, SB, read> = var undef @binding_point(0, 0)
+}
+
+%helper = func(%p1:ptr<uniform, i32, read>, %p2:ptr<uniform, i32, read>):void {
+  $B2: {
+    %5:i32 = load %p1
+    %6:i32 = load %p2
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %8:ptr<uniform, i32, read> = access %v, 0u
+    %9:ptr<uniform, i32, read> = access %v, 1u
+    %10:void = call %helper, %8, %9
+    ret
+  }
+}
+)";
+
+    ChangeImmediateToUniformConfig config = {};
+    Run(ChangeImmediateToUniform, config);
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IRChangeImmediateToUniformTest, CallFunctionWithImmediatePointerMultipleTimes) {
+    auto* sb = ty.Struct(mod.symbols.New("SB"), {
+                                                    {mod.symbols.New("a"), ty.i32()},
+                                                });
+
+    auto* var = b.Var("v", immediate, sb, core::Access::kRead);
+    b.ir.root_block->Append(var);
+
+    auto* helper = b.Function("helper", ty.void_());
+    auto* ptr_param = b.FunctionParam("p", ty.ptr(immediate, ty.i32(), core::Access::kRead));
+    helper->SetParams({ptr_param});
+
+    b.Append(helper->Block(), [&] {
+        b.Load(ptr_param);
+        b.Return(helper);
+    });
+
+    auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+    b.Append(func->Block(), [&] {
+        auto* access_a = b.Access(ty.ptr(immediate, ty.i32(), core::Access::kRead), var, 0_u);
+        b.Call(helper, access_a);
+        b.Call(helper, access_a);
+        b.Call(helper, access_a);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+SB = struct @align(4) {
+  a:i32 @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<immediate, SB, read> = var undef
+}
+
+%helper = func(%p:ptr<immediate, i32, read>):void {
+  $B2: {
+    %4:i32 = load %p
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %6:ptr<immediate, i32, read> = access %v, 0u
+    %7:void = call %helper, %6
+    %8:void = call %helper, %6
+    %9:void = call %helper, %6
+    ret
+  }
+}
+)";
+    ASSERT_EQ(src, str());
+
+    auto* expect = R"(
+SB = struct @align(4) {
+  a:i32 @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<uniform, SB, read> = var undef @binding_point(0, 0)
+}
+
+%helper = func(%p:ptr<uniform, i32, read>):void {
+  $B2: {
+    %4:i32 = load %p
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %6:ptr<uniform, i32, read> = access %v, 0u
+    %7:void = call %helper, %6
+    %8:void = call %helper, %6
+    %9:void = call %helper, %6
     ret
   }
 }

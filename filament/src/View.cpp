@@ -58,6 +58,18 @@ Viewport const& View::getViewport() const noexcept {
     return downcast(this)->getViewport();
 }
 
+void View::setGridSize(double size) noexcept {
+    downcast(this)->setGridSize(size);
+}
+
+double View::getGridSize() const noexcept {
+    return downcast(this)->getGridSize();
+}
+
+double View::getEffectiveGridSize() const noexcept {
+    return downcast(this)->getEffectiveGridSize();
+}
+
 void View::setFrustumCullingEnabled(bool const culling) noexcept {
     downcast(this)->setFrustumCullingEnabled(culling);
 }

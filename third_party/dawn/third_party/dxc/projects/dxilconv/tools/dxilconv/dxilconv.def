@@ -1,5 +1,0 @@
-LIBRARY dxilconv
-
-EXPORTS
-    DxcCreateInstance
-    DxcCreateInstance2

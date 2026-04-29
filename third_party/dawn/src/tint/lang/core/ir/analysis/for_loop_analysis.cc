@@ -27,35 +27,103 @@
 
 #include "src/tint/lang/core/ir/analysis/for_loop_analysis.h"
 
+#include <optional>
 #include <utility>
 
 #include "src/tint/lang/core/ir/access.h"
 #include "src/tint/lang/core/ir/binary.h"
-#include "src/tint/lang/core/ir/bitcast.h"
 #include "src/tint/lang/core/ir/builtin_call.h"
 #include "src/tint/lang/core/ir/exit_if.h"
 #include "src/tint/lang/core/ir/exit_loop.h"
 #include "src/tint/lang/core/ir/function.h"
 #include "src/tint/lang/core/ir/if.h"
-#include "src/tint/lang/core/ir/let.h"
 #include "src/tint/lang/core/ir/load.h"
 #include "src/tint/lang/core/ir/load_vector_element.h"
 #include "src/tint/lang/core/ir/loop.h"
 #include "src/tint/lang/core/ir/multi_in_block.h"
+#include "src/tint/lang/core/ir/next_iteration.h"
 #include "src/tint/lang/core/ir/store.h"
 #include "src/tint/lang/core/ir/swizzle.h"
-#include "src/tint/lang/core/ir/traverse.h"
 #include "src/tint/lang/core/ir/unary.h"
 #include "src/tint/lang/core/ir/value.h"
-#include "src/tint/lang/core/ir/var.h"
-#include "src/tint/lang/core/type/i32.h"
-#include "src/tint/lang/core/type/pointer.h"
-#include "src/tint/lang/core/type/type.h"
-#include "src/tint/lang/core/type/u32.h"
 #include "src/tint/utils/containers/hashset.h"
-#include "src/tint/utils/rtti/switch.h"
 
 namespace tint::core::ir::analysis {
+
+namespace {
+
+std::optional<Hashset<const core::ir::Instruction*, 32>> SinkChain(
+    const core::ir::Instruction* root) {
+    Hashset<const core::ir::Instruction*, 32> sink_chain{root};
+    const Instruction* inst = root->prev;
+    while (inst) {
+        const auto& results = inst->Results();
+        if (results.Length() != 1u) {
+            // We do not support more than one result for simplicity.
+            return std::nullopt;
+        }
+
+        // Check that the instruction can be inlined as an expression (i.e. it either loads or
+        // operates on values).
+        if (!inst->IsAnyOf<Access, Binary, BuiltinCall, Load, LoadVectorElement, Swizzle,
+                           Unary>()) {
+            return std::nullopt;
+        }
+
+        for (const auto& each_usage : inst->Result()->UsagesUnsorted()) {
+            // All usages must sink into the root instruction.
+            if (!each_usage->instruction || !sink_chain.Contains(each_usage->instruction)) {
+                return std::nullopt;
+            }
+        }
+        sink_chain.Add(inst);
+        inst = inst->prev;
+    }
+    return sink_chain;
+}
+
+const core::ir::Store* GetContinuingSimpleLoopUpdate(const Loop* loop) {
+    // Check whether the continuing block can be embedded in a for-loop update statement.
+    // We can do this if the following conditions hold:
+    //  - the last instruction of the continuing block is a next_iteration with no operands
+    //  - the preceding instruction is a store
+    //  - all other instructions in the block sink into that store
+    //  - none of these instructions will be emitted as statements (e.g. var declarations)
+    //  - none of the operands to these instructions are defined in the loop body
+
+    if (!loop->Continuing() || loop->Continuing()->IsEmpty()) {
+        return nullptr;
+    }
+    auto* next_iteration = loop->Continuing()->Back()->As<const core::ir::NextIteration>();
+    if (!next_iteration || !next_iteration->Operands().IsEmpty()) {
+        return nullptr;
+    }
+
+    auto* store = As<core::ir::Store>(next_iteration->prev);
+    if (!store) {
+        return nullptr;
+    }
+
+    auto sink_chain = SinkChain(store);
+    if (!sink_chain) {
+        return nullptr;
+    }
+
+    // If an operand was defined in the loop body, then sinking may violate scoping rules.
+    for (auto inst : *sink_chain) {
+        for (auto* operand : inst->Operands()) {
+            if (auto* result = operand->As<InstructionResult>()) {
+                if (result->Instruction()->Block() == loop->Body()) {
+                    return nullptr;
+                }
+            }
+        }
+    }
+
+    return store;
+}
+
+}  // namespace
 
 void ForLoopAnalysis::AttemptForLoopDeduction(const Loop* loop) {
     // Find the first 'if' which should be the condition for the for-loop.
@@ -74,46 +142,25 @@ void ForLoopAnalysis::AttemptForLoopDeduction(const Loop* loop) {
                 // moving into conditional).
                 return;
             }
-        } else if (inst->Is<const Binary>() || inst->Is<const BuiltinCall>() ||
-                   inst->Is<const Access>() || inst->Is<const Load>() ||
-                   inst->Is<const Swizzle>() || inst->Is<const Unary>() ||
-                   inst->Is<const LoadVectorElement>()) {
-            // Allowed instructions since either load or operate on values (side effect free).
-            continue;
-        } else {
-            // Conservatively fail for all other functions that could potentially store/mutate
-            // memory.
-            return;
         }
     }
     if (!if_to_remove) {
         return;
     }
 
-    Hashset<const core::ir::Instruction*, 32> sink_chain;
-    // Add the 'if' instruction to set to avoid adding it to the body.
-    sink_chain.Add(if_to_remove);
-    const Instruction* inst = if_to_remove->prev;
-    while (inst) {
-        const auto& results = inst->Results();
-        if (results.Length() != 1u) {
-            // We do not support more than one result for simplicity.
-            return;
-        }
-
-        for (const auto& each_usage : inst->Result()->UsagesUnsorted()) {
-            // All usages must sink into the condition of the if
-            if (!each_usage->instruction || !sink_chain.Contains(each_usage->instruction)) {
-                return;
-            }
-        }
-        sink_chain.Add(inst);
-        inst = inst->prev;
+    // Check that all instructions that precede the condition feed into it.
+    auto sink_chain = SinkChain(if_to_remove);
+    if (!sink_chain) {
+        return;
     }
 
-    body_removed_instructions = std::move(sink_chain);
+    body_removed_instructions = std::move(sink_chain.value());
+
     // Valid condition found. Success criteria for condition hoisting.
     for_condition = if_to_remove->Condition();
+
+    // Now check whether the continuing block can be embedded in a for-loop update statement.
+    continuing_update_store = GetContinuingSimpleLoopUpdate(loop);
 }
 
 ForLoopAnalysis::ForLoopAnalysis(const Loop& loop) {

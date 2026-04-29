@@ -40,7 +40,6 @@
 #include "dawn/native/d3d/UtilsD3D.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "dawn/platform/tracing/TraceEvent.h"
-
 #include "tint/tint.h"
 
 namespace dawn::native::d3d {
@@ -190,9 +189,10 @@ ResultOrError<ComPtr<ID3DBlob>> CompileShaderFXC(const d3d::D3DBytecodeCompilati
     ComPtr<ID3DBlob> compiledShader;
     ComPtr<ID3DBlob> errors;
 
-    auto result = r.d3dCompile.UnsafeGetValue()(
-        hlslSource.c_str(), hlslSource.length(), nullptr, nullptr, nullptr, entryPointName.c_str(),
-        r.fxcShaderProfile.data(), r.compileFlags, 0, &compiledShader, &errors);
+    auto result = r.d3dCompile.UnsafeGetValue()(hlslSource.c_str(), hlslSource.length(),
+                                                "C:\\fakepath", nullptr, nullptr,
+                                                entryPointName.c_str(), r.fxcShaderProfile.data(),
+                                                r.compileFlags, 0, &compiledShader, &errors);
 
     if (FAILED(result)) {
         const char* resultAsString = HRESULTAsString(result);
@@ -223,37 +223,19 @@ MaybeError TranslateToHLSL(d3d::HlslCompilationRequest r,
                                            "ShaderModuleProgramToIR");
 
         // Requires Tint Program here right before actual using.
-        auto inputProgram = r.inputProgram.UnsafeGetValue()->GetTintProgram();
+        auto shaderModule = r.inputProgram.UnsafeGetValue();
+        auto inputProgram = shaderModule->GetTintProgram();
+        auto device = shaderModule->GetDevice();
         const tint::Program* tintInputProgram = &(inputProgram->program);
 
-        ir = tint::wgsl::reader::ProgramToLoweredIR(*tintInputProgram);
+        tint::wgsl::reader::IROptions irOptions{
+            .dump_ir_when_validating = device->IsToggleEnabled(Toggle::DumpTintIR),
+            .enable_validation_asserts =
+                device->IsToggleEnabled(Toggle::EnableTintIRValidationAsserts),
+        };
+        ir = tint::wgsl::reader::ProgramToLoweredIR(*tintInputProgram, irOptions);
         DAWN_INVALID_IF(ir != tint::Success, "An error occurred while generating Tint IR\n%s",
                         ir.Failure().reason);
-    }
-
-    {
-        SCOPED_DAWN_HISTOGRAM_TIMER_MICROS(tracePlatform.UnsafeGetValue(),
-                                           "ShaderModuleSingleEntryPoint");
-        auto singleEntryPointResult =
-            tint::core::ir::transform::SingleEntryPoint(ir.Get(), r.entryPointName);
-        DAWN_INVALID_IF(singleEntryPointResult != tint::Success,
-                        "Pipeline single entry point (IR) failed:\n%s",
-                        singleEntryPointResult.Failure().reason);
-    }
-
-    // this needs to run after SingleEntryPoint transform which removes unused
-    // overrides for the current entry point.
-    {
-        SCOPED_DAWN_HISTOGRAM_TIMER_MICROS(tracePlatform.UnsafeGetValue(),
-                                           "ShaderModuleSubstituteOverrides");
-        tint::core::ir::transform::SubstituteOverridesConfig cfg;
-        cfg.map = std::move(r.substituteOverrideConfig);
-        auto substituteOverridesResult =
-            tint::core::ir::transform::SubstituteOverrides(ir.Get(), cfg);
-
-        DAWN_INVALID_IF(substituteOverridesResult != tint::Success,
-                        "Pipeline override substitution (IR) failed:\n%s",
-                        substituteOverridesResult.Failure().reason);
     }
 
     tint::Result<tint::hlsl::writer::Output> result;
@@ -269,12 +251,15 @@ MaybeError TranslateToHLSL(d3d::HlslCompilationRequest r,
     // have been substituted.
     if (r.stage == SingleShaderStage::Compute) {
         // Validate workgroup size and workgroup storage size.
-        Extent3D _;
-        DAWN_TRY_ASSIGN(
-            _, ValidateComputeStageWorkgroupSize(
-                   result->workgroup_info.x, result->workgroup_info.y, result->workgroup_info.z,
-                   result->workgroup_info.storage_size, /* usesSubgroupMatrix */ false,
-                   r.maxSubgroupSize, r.limits, r.adapterSupportedLimits.UnsafeGetValue()));
+        Extent3D workgroupSize;
+        DAWN_TRY_ASSIGN(workgroupSize,
+                        ValidateComputeStageWorkgroupSize(
+                            result->workgroup_info, /*usesSubgroupMatrix=*/false, r.maxSubgroupSize,
+                            r.limits, r.adapterSupportedLimits.UnsafeGetValue()));
+        DAWN_TRY(ValidateExplicitComputeSubgroupSize(
+            result->workgroup_info, r.minExplicitComputeSubgroupSize,
+            r.maxExplicitComputeSubgroupSize, r.maxComputeWorkgroupSubgroups));
+        compiledShader->workgroupSize = workgroupSize;
     }
 
     bool usesVertexIndex = false;
@@ -382,6 +367,10 @@ ResultOrError<CompiledShader> CompileShader(d3d::D3DCompilationRequest r) {
             break;
         }
     }
+
+    // Compute SHA3 of the shader blob.
+    compiledShader.sha3 =
+        Sha3_256::Hash(compiledShader.shaderBlob.Data(), compiledShader.shaderBlob.Size());
 
     // If dumpShaders is false, we don't need the HLSL for logging. Clear the contents so it
     // isn't stored into the cache.

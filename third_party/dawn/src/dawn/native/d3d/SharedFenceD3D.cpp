@@ -34,7 +34,7 @@
 
 namespace dawn::native::d3d {
 
-SharedFence::SharedFence(Device* device, StringView label, SystemHandle ownedHandle)
+SharedFence::SharedFence(Device* device, StringView label, utils::SystemHandle ownedHandle)
     : SharedFenceBase(device, label), mHandle(std::move(ownedHandle)) {}
 
 MaybeError SharedFence::ExportInfoImpl(UnpackedPtr<SharedFenceExportInfo>& info) const {

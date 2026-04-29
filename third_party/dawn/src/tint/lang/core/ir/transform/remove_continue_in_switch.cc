@@ -27,6 +27,8 @@
 
 #include "src/tint/lang/core/ir/transform/remove_continue_in_switch.h"
 
+#include <utility>
+
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -82,7 +84,12 @@ struct State {
         auto* flag = GetContinueFlag(swtch, cont->Loop());
         b.InsertBefore(cont, [&] {
             b.Store(flag, true);
-            b.ExitSwitch(swtch);
+
+            // If the switch produces result values, just use `undef` as the switch result will not
+            // be used in this codepath.
+            Vector<Value*, 1> results;
+            results.Resize(swtch->Results().Length(), nullptr);
+            b.ExitSwitch(swtch, std::move(results));
         });
         cont->Destroy();
     }
@@ -113,17 +120,16 @@ struct State {
 }  // namespace
 
 Result<SuccessType> RemoveContinueInSwitch(Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.RemoveContinueInSwitch",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowVectorElementPointer,
-                                              core::ir::Capability::kAllowHandleVarsWithoutBindings,
-                                              core::ir::Capability::kAllowClipDistancesOnF32,
-                                              core::ir::Capability::kAllowDuplicateBindings,
-                                              core::ir::Capability::kAllowNonCoreTypes,
-                                          });
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir,
+                          core::ir::Capabilities{
+                              core::ir::Capability::kAllow16BitIntegers,
+                              core::ir::Capability::kAllowVectorElementPointer,
+                              core::ir::Capability::kAllowHandleVarsWithoutBindings,
+                              core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
+                              core::ir::Capability::kAllowDuplicateBindings,
+                              core::ir::Capability::kAllowNonCoreTypes,
+                          },
+                          "before core.RemoveContinueInSwitch");
 
     State{ir}.Process();
 

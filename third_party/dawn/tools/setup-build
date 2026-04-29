@@ -44,6 +44,7 @@ VERBOSE=""
 SISO="1"
 SHARED=""
 INSTALL=""
+UBSAN=""
 
 function show_usage() {
   echo "setup-build [-f] $POSSIBLE_BUILD_SYSTEMS $POSSIBLE_BUILD_TYPES $POSSIBLE_BUILD_ARCHS [fuzz|fuzzer]"
@@ -68,9 +69,10 @@ function show_usage() {
   echo "  local         Use local compilation instead of remote"
   echo "  remoteexec    Use siso to improve compile time (the default)"
   echo "  shared        Build shared libs (cmake only)"
+  echo "  ubsan         Enable undefined behaviour sanitizer"
   if [[ ! -z "$1" ]]; then
     echo
-    echo "$1"
+    echo "error: $1"
   fi
   exit 1
 }
@@ -140,6 +142,9 @@ for arg in "$@"; do
     "shared")
       SHARED=1
     ;;
+    "ubsan")
+      UBSAN=1
+    ;;
     "--help" | "-help" | "-h")
       show_usage
     ;;
@@ -157,12 +162,19 @@ if [[ -z "$BUILD_TYPE" ]]; then
   show_usage "build type $POSSIBLE_BUILD_TYPES required"
 fi
 
+if [[ ( -n "$UBSAN" ) && ( "$BUILD_SYSTEM-$BUILD_TYPE" == "gn-debug" ) ]]; then
+  show_usage "the gn build does not support ubsan with debug builds: use a release build instead"
+fi
+
 BUILD_DIR="$BUILD_SYSTEM-$BUILD_TYPE"
 if [[ ! -z "$BUILD_ARCH" ]]; then
   BUILD_DIR+="-$BUILD_ARCH"
 fi
 if [[ ! -z "$BUILD_FUZZER" ]]; then
   BUILD_DIR+="-fuzz"
+fi
+if [[ ! -z "$UBSAN" ]]; then
+  BUILD_DIR+="-ubsan"
 fi
 
 function generate() {
@@ -208,12 +220,17 @@ case $BUILD_SYSTEM in
     fi
     if [[ -n "$SISO" ]]; then
         GN_ARGS+=" use_siso=true"
+        GN_ARGS+=" use_remoteexec=true"
     else
         GN_ARGS+=" use_siso=false"
+    fi
+    if [[ -n "$UBSAN" ]]; then
+        GN_ARGS+=" is_ubsan=true"
     fi
     if grep 'dawn_node.*True' .gclient >/dev/null; then
         GN_ARGS+=" dawn_build_node_bindings=true"
     fi
+    GN_ARGS+=" use_clang_modules=false"
     if [[ -z "$FORCE" && -f "$ROOT_DIR/out/$BUILD_DIR/args.gn" ]]; then
       generate "gn" "gen" $GN_OPTIONS "out/active" # keep existing args
     else
@@ -227,6 +244,7 @@ case $BUILD_SYSTEM in
     CMAKE_FLAGS+=("-DTINT_BUILD_MSL_WRITER=1")
     CMAKE_FLAGS+=("-DTINT_BUILD_SPV_WRITER=1")
     CMAKE_FLAGS+=("-DTINT_BUILD_WGSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_SPV_READER=1")
     # tintd requires third_party/jsoncpp and third_party/langsvr
     # which are only downloaded when dawn_tintd=True in .gclient
     if grep 'dawn_tintd.*True' .gclient >/dev/null; then
@@ -245,9 +263,6 @@ case $BUILD_SYSTEM in
     fi
     if [[ -x $(command -v ccache) ]]; then
       CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER_LAUNCHER=ccache")
-    fi
-    if [[ -n "$SHARED" ]]; then
-      CMAKE_FLAGS+=("-DBUILD_SHARED_LIBS=ON")
     fi
     case $BUILD_TYPE in
       "debug")
@@ -271,14 +286,24 @@ case $BUILD_SYSTEM in
         show_usage "invalid build architecture '$BUILD_ARCH'"
       ;;
     esac
+    if [[ -n "$UBSAN" ]]; then
+      CMAKE_FLAGS+=("-DDAWN_ENABLE_UBSAN=ON")
+    fi
     if [[ -n "$INSTALL" ]]; then
       CMAKE_FLAGS+=("-DCMAKE_INSTALL_PREFIX=out/install")
       CMAKE_FLAGS+=("-DTINT_ENABLE_INSTALL=ON")
       CMAKE_FLAGS+=("-DDAWN_ENABLE_INSTALL=ON")
+      # Build Dawn as a monolithic library.  This is incompatible
+      # with BUILD_SHARED_LIBS=ON
+      CMAKE_FLAGS+=("-DBUILD_SHARED_LIBS=OFF")
       if [[ -n "$SHARED" ]]; then
         CMAKE_FLAGS+=("-DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED")
       else
         CMAKE_FLAGS+=("-DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC")
+      fi
+    else
+      if [[ -n "$SHARED" ]]; then
+        CMAKE_FLAGS+=("-DBUILD_SHARED_LIBS=ON")
       fi
     fi
     generate "cmake"             \

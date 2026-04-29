@@ -31,6 +31,8 @@
 
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d12/DeviceD3D12.h"
+#include "dawn/native/d3d12/QueueD3D12.h"
+#include "dawn/utils/SystemHandle.h"
 
 namespace dawn::native::d3d12 {
 
@@ -41,8 +43,13 @@ ResultOrError<Ref<SharedFence>> SharedFence::Create(
     const SharedFenceDXGISharedHandleDescriptor* descriptor) {
     DAWN_INVALID_IF(descriptor->handle == nullptr, "shared HANDLE is missing.");
 
-    SystemHandle ownedHandle;
-    DAWN_TRY_ASSIGN(ownedHandle, SystemHandle::Duplicate(descriptor->handle));
+    const auto& queueFence = ToBackend(device->GetQueue())->GetSharedFence();
+    if (queueFence &&
+        ::CompareObjectHandles(queueFence->GetSystemHandle().Get(), descriptor->handle)) {
+        return queueFence;
+    }
+
+    utils::SystemHandle ownedHandle = utils::SystemHandle::Duplicate(descriptor->handle);
 
     Ref<SharedFence> fence = AcquireRef(new SharedFence(device, label, std::move(ownedHandle)));
     DAWN_TRY(CheckHRESULT(device->GetD3D12Device()->OpenSharedHandle(descriptor->handle,
@@ -56,7 +63,7 @@ ResultOrError<Ref<SharedFence>> SharedFence::Create(
 ResultOrError<Ref<SharedFence>> SharedFence::Create(Device* device,
                                                     StringView label,
                                                     ComPtr<ID3D12Fence> d3d12Fence) {
-    SystemHandle ownedHandle;
+    utils::SystemHandle ownedHandle;
     DAWN_TRY(
         CheckHRESULT(device->GetD3D12Device()->CreateSharedHandle(
                          d3d12Fence.Get(), nullptr, GENERIC_ALL, nullptr, ownedHandle.GetMut()),
@@ -67,7 +74,7 @@ ResultOrError<Ref<SharedFence>> SharedFence::Create(Device* device,
     return fence;
 }
 
-void SharedFence::DestroyImpl() {
+void SharedFence::DestroyImpl(DestroyReason reason) {
     ToBackend(GetDevice())->ReferenceUntilUnused(std::move(mFence));
     mFence = nullptr;
 }

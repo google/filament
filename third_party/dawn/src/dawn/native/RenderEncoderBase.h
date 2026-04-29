@@ -72,6 +72,7 @@ class RenderEncoderBase : public ProgrammableEncoder {
                                      uint64_t drawCountBufferOffset = 0);
 
     void APISetPipeline(RenderPipelineBase* pipeline);
+    void APISetResourceTable(ResourceTableBase* table);
 
     void APISetVertexBuffer(uint32_t slot, BufferBase* buffer, uint64_t offset, uint64_t size);
     void APISetIndexBuffer(BufferBase* buffer,
@@ -83,6 +84,8 @@ class RenderEncoderBase : public ProgrammableEncoder {
                          BindGroupBase* group,
                          uint32_t dynamicOffsetCount = 0,
                          const uint32_t* dynamicOffsets = nullptr);
+
+    void APISetImmediates(uint32_t offset, const void* data, size_t size);
 
     const AttachmentState* GetAttachmentState() const;
     bool IsDepthReadOnly() const;
@@ -97,7 +100,7 @@ class RenderEncoderBase : public ProgrammableEncoder {
                       ErrorTag errorTag,
                       StringView label);
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     CommandBufferStateTracker mCommandBufferState;
     RenderPassResourceUsageTracker mUsageTracker;

@@ -228,6 +228,11 @@ MaybeError SwapChain::InitializeSwapChainFromScratch() {
                                                  static_cast<HWND>(GetSurface()->GetHWND()),
                                                  &swapChainDesc, nullptr, nullptr, &swapChain1),
                 "Creating the IDXGISwapChain1"));
+
+            DAWN_TRY(
+                CheckHRESULT(factory2->MakeWindowAssociation(
+                                 static_cast<HWND>(GetSurface()->GetHWND()), DXGI_MWA_NO_ALT_ENTER),
+                             "Disabling DXGI's alt+enter fullscreen handling"));
             break;
         }
         case Surface::Type::WindowsCoreWindow: {

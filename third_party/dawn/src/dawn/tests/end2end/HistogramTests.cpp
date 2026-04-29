@@ -189,7 +189,8 @@ DAWN_INSTANTIATE_TEST(HistogramTests,
                       NullBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // namespace
 }  // namespace dawn

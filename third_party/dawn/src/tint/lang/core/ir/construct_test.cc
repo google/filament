@@ -78,7 +78,7 @@ TEST_F(IR_ConstructTest, Clone) {
     EXPECT_EQ(mod.Types().f32(), new_c->Result()->Type());
 
     auto args = new_c->Args();
-    EXPECT_EQ(2u, args.Length());
+    EXPECT_EQ(2u, args.size());
 
     auto* val0 = args[0]->As<Constant>()->Value();
     EXPECT_TRUE(val0->As<core::constant::Scalar<bool>>()->ValueAs<bool>());
@@ -93,7 +93,7 @@ TEST_F(IR_ConstructTest, CloneEmpty) {
     auto* new_c = clone_ctx.Clone(c);
     EXPECT_NE(c->Result(), new_c->Result());
     EXPECT_EQ(mod.Types().f32(), new_c->Result()->Type());
-    EXPECT_TRUE(new_c->Args().IsEmpty());
+    EXPECT_TRUE(new_c->Args().empty());
 }
 
 }  // namespace

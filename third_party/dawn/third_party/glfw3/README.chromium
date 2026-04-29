@@ -1,0 +1,10 @@
+Name: GLFW
+Short Name: GLFW
+URL: https://github.com/glfw/glfw
+Update Mechanism: Manual
+Security Critical: no
+Version: N/A
+Revision: DEPS
+License: Zlib
+License File: LICENSE
+Shipped: no

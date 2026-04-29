@@ -46,7 +46,7 @@ FrameGraphInfo::Pass::Pass(uint32_t id, utils::CString name, std::vector<Resourc
                                     renderTargets(std::move(renderTargets)) {}
 
 bool FrameGraphInfo::Pass::operator==(const Pass& rhs) const {
-    return id == rhs.id && name == rhs.name && reads == rhs.reads && writes == rhs.writes &&
+    return name == rhs.name && reads == rhs.reads && writes == rhs.writes &&
            renderTargets == rhs.renderTargets;
 }
 

@@ -27,10 +27,9 @@
 
 #include <array>
 
-#include "gtest/gtest.h"
-
 #include "dawn/common/TypedInteger.h"
 #include "dawn/common/ityp_span.h"
+#include "gtest/gtest.h"
 
 namespace dawn {
 namespace {
@@ -81,16 +80,16 @@ TEST_F(ITypSpanTest, BeginEndFrontBackData) {
     Span span(arr.data(), Key(arr.size()));
 
     // non-const versions
-    ASSERT_EQ(span.begin(), &span[Key(0)]);
-    ASSERT_EQ(span.end(), &span[Key(0)] + static_cast<size_t>(span.size()));
+    ASSERT_EQ(&*span.begin(), &span[Key(0)]);
+    ASSERT_EQ(&*span.end(), &span[Key(0)] + static_cast<size_t>(span.size()));
     ASSERT_EQ(&span.front(), &span[Key(0)]);
     ASSERT_EQ(&span.back(), &span[Key(9)]);
     ASSERT_EQ(span.data(), &span[Key(0)]);
 
     // const versions
     const Span& constSpan = span;
-    ASSERT_EQ(constSpan.begin(), &constSpan[Key(0)]);
-    ASSERT_EQ(constSpan.end(), &constSpan[Key(0)] + static_cast<size_t>(constSpan.size()));
+    ASSERT_EQ(&*constSpan.begin(), &constSpan[Key(0)]);
+    ASSERT_EQ(&*constSpan.end(), &constSpan[Key(0)] + static_cast<size_t>(constSpan.size()));
     ASSERT_EQ(&constSpan.front(), &constSpan[Key(0)]);
     ASSERT_EQ(&constSpan.back(), &constSpan[Key(9)]);
     ASSERT_EQ(constSpan.data(), &constSpan[Key(0)]);
@@ -120,6 +119,26 @@ TEST_F(ITypSpanTest, SpanFromUntyped) {
         ASSERT_EQ(arr.data(), span.data());
         ASSERT_EQ(arr.size(), static_cast<size_t>(span.size()));
     }
+}
+
+// Name "*DeathTest" per https://google.github.io/googletest/advanced.html#death-test-naming
+using ITypSpanDeathTest = ITypSpanTest;
+
+// Out of bounds accesses should crash even in release (the underlying container
+// should have asserts enabled).
+TEST_F(ITypSpanDeathTest, OutOfBounds) {
+    // MSVC doesn't have asserts (without _MSVC_STL_HARDENING).
+    if constexpr (DAWN_COMPILER_IS(MSVC)) {
+        GTEST_SKIP();
+    }
+
+    std::array<Val, 10> arr;
+
+    Span span(arr.data(), Key(arr.size()));
+    EXPECT_DEATH(span[Key(10)], "");
+
+    const Span& constSpan = span;
+    EXPECT_DEATH(constSpan[Key(10)], "");
 }
 
 }  // anonymous namespace

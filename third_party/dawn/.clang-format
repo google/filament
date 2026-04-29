@@ -1,10 +1,44 @@
 # http://clang.llvm.org/docs/ClangFormatStyleOptions.html
 BasedOnStyle: Chromium
 
+InsertBraces: true
+InsertNewlineAtEOF: true
+
+# Sort #includes by following
+# https://google.github.io/styleguide/cppguide.html#Names_and_Order_of_Includes
+#
+# ref: https://clang.llvm.org/docs/ClangFormatStyleOptions.html#includeblocks
+IncludeBlocks: Regroup
+IncludeCategories:
+  # windows_with_undefs should appear before any dawn header
+  - Regex:           '^"dawn/common/windows_with_undefs\.h"'
+    Priority:        1
+  # vk_struct_helper should appear last. Note the low priority number.
+  - Regex:           '^<vulkan/utility/vk_struct_helper\.hpp>'
+    Priority:        9
+
+  # Other C system headers.
+  - Regex:           '^<.*\.h>'
+    Priority:        2
+  # C++ standard library headers.
+  - Regex:           '^<.*>'
+    Priority:        3
+  # Other libraries.
+  - Regex:           '.*'
+    Priority:        4
+
+## Dawn modifications
+
 ColumnLimit: 100
 
 # Use 4 space indents
 IndentWidth: 4
 ObjCBlockIndentWidth: 4
 AccessModifierOffset: -2
-InsertBraces: true
+
+# Note this option is buggy and won't always actually prevent macro contents
+# from being reformatted. It sort of works though.
+WhitespaceSensitiveMacros:
+    - "DAWN_MULTILINE"
+    # Note: if we run into issues with EM_ASM being autoformatted incorrectly, we should add it here.
+    # https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#calling-javascript-from-c-c

@@ -88,6 +88,9 @@ func Export(ctx context.Context,
 
 		// Fetch the table column names
 		columns, err := fetchRow[string](s, spreadsheet, dataSheet, 0)
+		if err != nil {
+			return err
+		}
 
 		counts := container.NewMap[string, int]()
 		for _, r := range results {
@@ -96,7 +99,7 @@ func Export(ctx context.Context,
 				// Check the unimplemented query tree to see if this should be classed as
 				// 'Unimplemented' instead.
 				if node := unimplemented.Get(r.Query); node != nil && node.Data != nil {
-					counts[string("Unimplemented")]++
+					counts[("Unimplemented")]++
 					continue
 				}
 			}
@@ -152,16 +155,6 @@ func Export(ctx context.Context,
 // given index.
 func rowRange(index int, sheet *sheets.Sheet) string {
 	return fmt.Sprintf("%v!A%v:%v", sheet.Properties.Title, index+1, index+1)
-}
-
-// columnRange returns a sheets range ("name!i1:i") for the entire column with
-// the given index.
-func columnRange(index int, sheet *sheets.Sheet) string {
-	col := 'A' + index
-	if index > 25 {
-		panic("UNIMPLEMENTED")
-	}
-	return fmt.Sprintf("%v!%c1:%c", sheet.Properties.Title, col, col)
 }
 
 // fetchRow returns all the values in the given sheet's row.

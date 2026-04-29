@@ -17,14 +17,18 @@ set(DAWN_BUILD_MONOLITHIC_LIBRARY STATIC)
 set(TINT_BUILD_CMD_TOOLS OFF)
 set(DAWN_ENABLE_VULKAN ON)
 
+set(DAWN_BUILD_PROTOBUF OFF)
+set(DAWN_ENABLE_DESKTOP_GL OFF)
+set(DAWN_ENABLE_OPENGLES OFF)
+set(DAWN_USE_GLFW OFF)
+
 if (FILAMENT_BUILD_FILAMAT)
     set(TINT_BUILD_SPV_READER ON)
 endif ()
 
-# TODO: Dawn requires macOS 11.0, but Filament sets the min to 10.15.
-# Silence the availability warnings for now. We can re-enable once we bump Filament's macOS min.
 if (CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang")
-    add_compile_options(-Wno-unguarded-availability-new)
+    # Workaround for AppleClang 17 optimizer bug causing RTTI cast failures in Tint.
+    add_compile_options(-DTINT_APPLECLANG_17_WORKAROUND=1)
 endif()
 
 add_subdirectory(../  ${PROJECT_BINARY_DIR}/third_party/dawn)

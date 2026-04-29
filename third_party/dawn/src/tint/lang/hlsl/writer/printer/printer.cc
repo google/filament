@@ -42,7 +42,6 @@
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/ir/access.h"
 #include "src/tint/lang/core/ir/analysis/for_loop_analysis.h"
-#include "src/tint/lang/core/ir/bitcast.h"
 #include "src/tint/lang/core/ir/block.h"
 #include "src/tint/lang/core/ir/break_if.h"
 #include "src/tint/lang/core/ir/call.h"
@@ -90,6 +89,7 @@
 #include "src/tint/lang/core/type/matrix.h"
 #include "src/tint/lang/core/type/multisampled_texture.h"
 #include "src/tint/lang/core/type/pointer.h"
+#include "src/tint/lang/core/type/resource_table.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/core/type/sampler.h"
 #include "src/tint/lang/core/type/storage_texture.h"
@@ -97,6 +97,7 @@
 #include "src/tint/lang/core/type/texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/core/type/type.h"
+#include "src/tint/lang/core/type/u16.h"
 #include "src/tint/lang/core/type/u32.h"
 #include "src/tint/lang/core/type/vector.h"
 #include "src/tint/lang/core/type/void.h"
@@ -159,10 +160,7 @@ class Printer : public tint::TextGenerator {
 
     /// @returns the generated HLSL shader
     tint::Result<Output> Generate() {
-        auto valid = core::ir::ValidateAndDumpIfNeeded(ir_, "hlsl.Printer", kPrinterCapabilities);
-        if (valid != Success) {
-            return std::move(valid.Failure());
-        }
+        core::ir::AssertValid(ir_, kPrinterCapabilities, "before hlsl.Printer");
 
         // Emit module-scope declarations.
         EmitRootBlock(ir_.root_block);
@@ -227,7 +225,7 @@ class Printer : public tint::TextGenerator {
         {
             if (func->Stage() == core::ir::Function::PipelineStage::kCompute) {
                 auto wg_opt = func->WorkgroupSizeAsConst();
-                TINT_ASSERT(wg_opt.has_value());
+                TINT_IR_ASSERT(ir_, wg_opt.has_value());
 
                 auto& wg = wg_opt.value();
                 Line() << "[numthreads(" << wg[0] << ", " << wg[1] << ", " << wg[2] << ")]";
@@ -236,6 +234,14 @@ class Printer : public tint::TextGenerator {
                 result_.workgroup_info.x = wg[0];
                 result_.workgroup_info.y = wg[1];
                 result_.workgroup_info.z = wg[2];
+
+                auto sg_opt = func->SubgroupSizeAsConst();
+                if (sg_opt.has_value()) {
+                    Line() << "[WaveSize(" << sg_opt.value() << ")]";
+
+                    // Store the subgroup size information away to return from the generator.
+                    result_.workgroup_info.subgroup_size = sg_opt;
+                }
             }
 
             auto out = Line();
@@ -245,9 +251,9 @@ class Printer : public tint::TextGenerator {
             if (func->IsEntryPoint()) {
                 if (!options_.remapped_entry_point_name.empty()) {
                     func_name = options_.remapped_entry_point_name;
-                    TINT_ASSERT(!IsKeyword(func_name));
+                    TINT_IR_ASSERT(ir_, !IsKeyword(func_name));
                 }
-                TINT_ASSERT(result_.entry_point_name.empty());
+                TINT_IR_ASSERT(ir_, result_.entry_point_name.empty());
                 result_.entry_point_name = func_name;
                 result_.pipeline_stage = func->Stage();
             }
@@ -272,12 +278,12 @@ class Printer : public tint::TextGenerator {
                 if (is_ep && !param->Type()->Is<core::type::Struct>()) {
                     // ICE likely indicates that the ShaderIO transform was not run, or a builtin
                     // parameter was added after it was run.
-                    TINT_ICE() << "Unsupported non-struct entry point parameter";
+                    TINT_IR_ICE(ir_) << "Unsupported non-struct entry point parameter";
                 } else if (!is_ep && ptr) {
                     switch (ptr->AddressSpace()) {
                         case core::AddressSpace::kStorage:
                         case core::AddressSpace::kUniform: {
-                            TINT_UNREACHABLE();
+                            TINT_IR_UNREACHABLE(ir_);
                         }
                         default:
                             // Transform regular pointer parameters in to `inout` parameters.
@@ -327,7 +333,7 @@ class Printer : public tint::TextGenerator {
 
                 [&](const core::ir::BreakIf* i) { EmitBreakIf(i); },                        //
                 [&](const core::ir::Call* i) { EmitCallStmt(i); },                          //
-                [&](const core::ir::Continue*) { EmitContinue(); },                         //
+                [&](const core::ir::Continue* c) { EmitContinue(c); },                      //
                 [&](const core::ir::ExitLoop*) { EmitExitLoop(); },                         //
                 [&](const core::ir::ExitSwitch*) { EmitExitSwitch(); },                     //
                 [&](const core::ir::If* i) { EmitIf(i); },                                  //
@@ -344,7 +350,6 @@ class Printer : public tint::TextGenerator {
                 [&](const core::ir::ExitIf*) { /* do nothing handled by transform */ },     //
                                                                                             //
                 [&](const core::ir::Access*) { /* inlined */ },                             //
-                [&](const core::ir::Bitcast*) { /* inlined */ },                            //
                 [&](const core::ir::Construct*) { /* inlined */ },                          //
                 [&](const core::ir::CoreBinary*) { /* inlined */ },                         //
                 [&](const core::ir::CoreUnary*) { /* inlined */ },                          //
@@ -374,7 +379,7 @@ class Printer : public tint::TextGenerator {
                     out << "w";
                     break;
                 default:
-                    TINT_UNREACHABLE();
+                    TINT_IR_UNREACHABLE(ir_);
             }
 
         } else {
@@ -470,11 +475,13 @@ class Printer : public tint::TextGenerator {
         }
     }
 
-    void EmitContinue() {
+    void EmitContinue(const core::ir::Continue* c) {
         if (emit_continuing_) {
             emit_continuing_();
         }
-        Line() << "continue;";
+        if (c->Block() != c->Loop()->Body()) {
+            Line() << "continue;";
+        }
     }
 
     void EmitExitLoop() { Line() << "break;"; }
@@ -505,34 +512,46 @@ class Printer : public tint::TextGenerator {
                 ? new core::ir::analysis::ForLoopAnalysis(*l)
                 : nullptr);
 
-        auto emit_continuing = [&] {
-            Line() << "{";
-            {
-                const ScopedIndent si(current_buffer_);
-                EmitBlock(l->Continuing());
-            }
-            Line() << "}";
-        };
-        TINT_SCOPED_ASSIGNMENT(emit_continuing_, emit_continuing);
-
         Line() << "{";
         {
             const ScopedIndent init(current_buffer_);
             EmitBlock(l->Initializer());
 
             bool has_loop_condition = false;
+            bool uses_for_loop_update = false;
             if (analysis) {
                 if (auto* if_cond = analysis->GetIfCondition()) {
-                    auto while_construct_line = Line();
-                    while_construct_line << "while(";
+                    auto loop_header = Line();
+                    if (auto* store = analysis->GetContinuingUpdateStore()) {
+                        loop_header << "for( ; ";
+                        EmitValue(loop_header, if_cond);
+                        loop_header << "; ";
+                        EmitStore(store, loop_header);
+                        uses_for_loop_update = true;
+                    } else {
+                        loop_header << "while(";
+                        EmitValue(loop_header, if_cond);
+                    }
+                    loop_header << ") {";
                     has_loop_condition = true;
-                    EmitValue(while_construct_line, if_cond);
-                    while_construct_line << ") {";
                 }
             }
             if (!has_loop_condition) {
                 Line() << "while(true) {";
             }
+
+            auto emit_continuing = [&] {
+                if (uses_for_loop_update) {
+                    return;
+                }
+                Line() << "{";
+                {
+                    const ScopedIndent si(current_buffer_);
+                    EmitBlock(l->Continuing());
+                }
+                Line() << "}";
+            };
+            TINT_SCOPED_ASSIGNMENT(emit_continuing_, emit_continuing);
 
             {
                 const ScopedIndent si(current_buffer_);
@@ -584,8 +603,8 @@ class Printer : public tint::TextGenerator {
                         EmitVar(out, var);
 
                         auto* ty = ptr->StoreType();
-                        uint32_t align = ty->Align();
-                        uint32_t size = ty->Size();
+                        uint64_t align = ty->Align();
+                        uint64_t size = ty->Size();
 
                         // This essentially matches std430 layout rules from GLSL, which are in
                         // turn specified as an upper bound for Vulkan layout sizing.
@@ -593,7 +612,7 @@ class Printer : public tint::TextGenerator {
                         // Since D3D is even less specific, we assume Vulkan behavior as a
                         // good-enough approximation everywhere.
                         result_.workgroup_info.storage_size +=
-                            tint::RoundUp(16u, tint::RoundUp(align, size));
+                            tint::RoundUp(static_cast<uint64_t>(16u), tint::RoundUp(align, size));
 
                         break;
                     }
@@ -601,7 +620,7 @@ class Printer : public tint::TextGenerator {
                     // uniform address space by the ChangeImmediateToUniform transform.
                     case core::AddressSpace::kImmediate:
                     default: {
-                        TINT_ICE() << "unhandled address space " << space;
+                        TINT_IR_ICE(ir_) << "unhandled address space " << space;
                     }
                 }
             },
@@ -610,7 +629,7 @@ class Printer : public tint::TextGenerator {
 
     void EmitUniformVariable(const core::ir::Var* var) {
         auto bp = var->BindingPoint();
-        TINT_ASSERT(bp.has_value());
+        TINT_IR_ASSERT(ir_, bp.has_value());
 
         Line() << "cbuffer cbuffer_" << NameOf(var->Result()) << RegisterAndSpace('b', bp.value())
                << " {";
@@ -628,7 +647,7 @@ class Printer : public tint::TextGenerator {
         EmitTypeAndName(out, var->Result()->Type(), NameOf(var->Result()));
 
         auto bp = var->BindingPoint();
-        TINT_ASSERT(bp.has_value());
+        TINT_IR_ASSERT(ir_, bp.has_value());
 
         out << RegisterAndSpace(buf->Access() == core::Access::kRead ? 't' : 'u', bp.value())
             << ";";
@@ -636,11 +655,13 @@ class Printer : public tint::TextGenerator {
 
     void EmitHandleVariable(const core::ir::Var* var) {
         auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
-        TINT_ASSERT(ptr);
+        TINT_IR_ASSERT(ir_, ptr);
 
         auto* type_for_register = ptr->StoreType();
         if (auto* arr = type_for_register->As<core::type::BindingArray>()) {
             type_for_register = arr->ElemType();
+        } else if (auto* rt = type_for_register->As<core::type::ResourceTable>()) {
+            type_for_register = rt->GetBindingType();
         }
 
         char register_space = Switch(
@@ -657,7 +678,7 @@ class Printer : public tint::TextGenerator {
             TINT_ICE_ON_NO_MATCH);
 
         auto bp = var->BindingPoint();
-        TINT_ASSERT(bp.has_value());
+        TINT_IR_ASSERT(ir_, bp.has_value());
 
         auto out = Line();
         EmitTypeAndName(out, var->Result()->Type(), NameOf(var->Result()));
@@ -666,7 +687,7 @@ class Printer : public tint::TextGenerator {
 
     void EmitVar(StringStream& out, const core::ir::Var* var) {
         auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
-        TINT_ASSERT(ptr);
+        TINT_IR_ASSERT(ir_, ptr);
 
         auto space = ptr->AddressSpace();
 
@@ -691,7 +712,7 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitLet(const core::ir::Let* l, LetType type) {
-        TINT_ASSERT(!l->Result()->Type()->Is<core::type::Pointer>());
+        TINT_IR_ASSERT(ir_, !l->Result()->Type()->Is<core::type::Pointer>());
 
         auto out = Line();
 
@@ -710,15 +731,15 @@ class Printer : public tint::TextGenerator {
     void EmitReturn(const core::ir::Return* r) {
         // If this return has no arguments and the current block is for the function which is
         // being returned, skip the return.
-        if (current_block_ == current_function_->Block() && r->Args().IsEmpty()) {
+        if (current_block_ == current_function_->Block() && r->Args().empty()) {
             return;
         }
 
         auto out = Line();
         out << "return";
-        if (!r->Args().IsEmpty()) {
+        if (!r->Args().empty()) {
             out << " ";
-            EmitValue(out, r->Args().Front());
+            EmitValue(out, r->Args().front());
         }
         out << ";";
     }
@@ -771,6 +792,17 @@ class Printer : public tint::TextGenerator {
         } else if (fn == BuiltinFn::kLoad4F16 || fn == BuiltinFn::kStore4F16) {
             // Note space between '> >' is required for DXC
             suffix = "<vector<float16_t, 4> >";
+        } else if (fn == BuiltinFn::kLoadU16 || fn == BuiltinFn::kStoreU16) {
+            suffix = "<uint16_t>";
+        } else if (fn == BuiltinFn::kLoad2U16 || fn == BuiltinFn::kStore2U16) {
+            // Note space between '> >' is required for DXC
+            suffix = "<vector<uint16_t, 2> >";
+        } else if (fn == BuiltinFn::kLoad3U16 || fn == BuiltinFn::kStore3U16) {
+            // Note space between '> >' is required for DXC
+            suffix = "<vector<uint16_t, 3> >";
+        } else if (fn == BuiltinFn::kLoad4U16 || fn == BuiltinFn::kStore4U16) {
+            // Note space between '> >' is required for DXC
+            suffix = "<vector<uint16_t, 4> >";
         }
 
         if (fn == BuiltinFn::kLoadF16 || fn == BuiltinFn::kLoad2F16 || fn == BuiltinFn::kLoad3F16 ||
@@ -778,6 +810,12 @@ class Printer : public tint::TextGenerator {
             fn = BuiltinFn::kLoad;
         } else if (fn == BuiltinFn::kStoreF16 || fn == BuiltinFn::kStore2F16 ||
                    fn == BuiltinFn::kStore3F16 || fn == BuiltinFn::kStore4F16) {
+            fn = BuiltinFn::kStore;
+        } else if (fn == BuiltinFn::kLoadU16 || fn == BuiltinFn::kLoad2U16 ||
+                   fn == BuiltinFn::kLoad3U16 || fn == BuiltinFn::kLoad4U16) {
+            fn = BuiltinFn::kLoad;
+        } else if (fn == BuiltinFn::kStoreU16 || fn == BuiltinFn::kStore2U16 ||
+                   fn == BuiltinFn::kStore3U16 || fn == BuiltinFn::kStore4U16) {
             fn = BuiltinFn::kStore;
         }
 
@@ -881,7 +919,7 @@ class Printer : public tint::TextGenerator {
                 // Swizzle single value if it's not already the right type
                 // (typically a single scalar value).
                 const bool swizzle_value =
-                    (c->Args().Length() == 1) && (c->Args()[0]->Type() != c->Result()->Type());
+                    (c->Args().size() == 1) && (c->Args()[0]->Type() != c->Result()->Type());
                 if (swizzle_value) {
                     out << "(";
                 }
@@ -939,7 +977,7 @@ class Printer : public tint::TextGenerator {
                     out << "w";
                     break;
                 default:
-                    TINT_UNREACHABLE();
+                    TINT_IR_UNREACHABLE(ir_);
             }
         }
     }
@@ -951,7 +989,7 @@ class Printer : public tint::TextGenerator {
         auto* current_type = a->Object()->Type();
 
         for (auto* index : a->Indices()) {
-            TINT_ASSERT(current_type);
+            TINT_IR_ASSERT(ir_, current_type);
 
             current_type = current_type->UnwrapPtr();
             Switch(
@@ -963,7 +1001,7 @@ class Printer : public tint::TextGenerator {
                     current_type = member->Type();
                 },
                 [&](const core::type::Vector*) {
-                    TINT_ASSERT(index == a->Indices().Back());
+                    TINT_IR_ASSERT(ir_, index == a->Indices().back());
                     EmitVectorAccess(out, index);
                 },
                 [&](Default) {
@@ -1148,9 +1186,9 @@ class Printer : public tint::TextGenerator {
                 break;
             case core::BuiltinFn::kInputAttachmentLoad:
                 // WGSL extension: chromium_internal_input_attachments
-                TINT_ICE() << "HLSL does not support inputAttachmentLoad";
+                TINT_IR_ICE(ir_) << "HLSL does not support inputAttachmentLoad";
             default:
-                TINT_UNREACHABLE() << "unhandled: " << func;
+                TINT_IR_UNREACHABLE(ir_) << "unhandled: " << func;
         }
     }
 
@@ -1159,14 +1197,18 @@ class Printer : public tint::TextGenerator {
     /// @param load the load
     void EmitLoad(StringStream& out, const core::ir::Load* load) { EmitValue(out, load->From()); }
 
-    /// Emit a store
+    /// Emit a store to a new line.
     void EmitStore(const core::ir::Store* s) {
         auto out = Line();
+        EmitStore(s, out);
+        out << ";";
+    }
 
+    /// Emit a store to an existing line.
+    void EmitStore(const core::ir::Store* s, LineWriter& out) {
         EmitValue(out, s->To());
         out << " = ";
         EmitValue(out, s->From());
-        out << ";";
     }
 
     /// Emit a binary instruction
@@ -1210,7 +1252,7 @@ class Printer : public tint::TextGenerator {
                 case core::BinaryOp::kLogicalOr:
                     // These should have been replaced by if statments as HLSL is not
                     // short-circuting.
-                    TINT_UNREACHABLE() << "logical and/or should not be present";
+                    TINT_IR_UNREACHABLE(ir_) << "logical and/or should not be present";
             }
             return "<error>";
         };
@@ -1248,6 +1290,7 @@ class Printer : public tint::TextGenerator {
             [&](const core::type::F32*) { PrintF32(out, c->ValueAs<f32>()); },
             [&](const core::type::I32*) { PrintI32(out, c->ValueAs<i32>()); },
             [&](const core::type::U32*) { out << c->ValueAs<AInt>() << "u"; },
+            [&](const core::type::U16*) { out << "uint16_t(" << c->ValueAs<AInt>() << "u)"; },
             [&](const core::type::Array* a) { EmitConstantArray(out, c, a); },
             [&](const core::type::Vector* v) { EmitConstantVector(out, c, v); },
             [&](const core::type::Matrix* m) { EmitConstantMatrix(out, c, m); },
@@ -1275,7 +1318,7 @@ class Printer : public tint::TextGenerator {
         out << "{";
 
         auto count = a->ConstantCount();
-        TINT_ASSERT(count.has_value() && count.value() > 0);
+        TINT_IR_ASSERT(ir_, count.has_value() && count.value() > 0);
 
         for (size_t i = 0; i < count; i++) {
             if (i > 0) {
@@ -1384,6 +1427,7 @@ class Printer : public tint::TextGenerator {
             [&](const core::type::F32*) { out << "float"; },      //
             [&](const core::type::I32*) { out << "int"; },        //
             [&](const core::type::U32*) { out << "uint"; },       //
+            [&](const core::type::U16*) { out << "uint16_t"; },   //
             [&](const core::type::Void*) { out << "void"; },      //
 
             [&](const core::type::Atomic* atomic) { EmitType(out, atomic->Type(), name); },
@@ -1403,6 +1447,14 @@ class Printer : public tint::TextGenerator {
             },
             [&](const core::type::Sampler* sampler) { EmitSamplerType(out, sampler); },
             [&](const core::type::Texture* tex) { EmitTextureType(out, tex); },
+            [&](const core::type::ResourceTable* rt) {
+                // We want to emit an unbounded array of the internal binding type
+                // e.g. "Texture1D<float4> tint_bindless[]"
+                EmitType(out, rt->GetBindingType());
+                TINT_ASSERT(!name.empty() && name_printed);
+                out << " " << name << "[]";
+                *name_printed = true;
+            },
             TINT_ICE_ON_NO_MATCH);
     }
 
@@ -1414,12 +1466,12 @@ class Printer : public tint::TextGenerator {
         std::vector<uint32_t> sizes;
         while (auto* arr = base_type->As<core::type::Array>()) {
             if (DAWN_UNLIKELY(arr->Count()->Is<core::type::RuntimeArrayCount>())) {
-                TINT_ICE() << "runtime arrays may only exist in storage buffers, which "
-                              "should have "
-                              "been transformed into a ByteAddressBuffer";
+                TINT_IR_ICE(ir_) << "runtime arrays may only exist in storage buffers, which "
+                                    "should have "
+                                    "been transformed into a ByteAddressBuffer";
             }
             const auto count = arr->ConstantCount();
-            TINT_ASSERT(count.has_value() && count.value() > 0);
+            TINT_IR_ASSERT(ir_, count.has_value() && count.value() > 0);
 
             sizes.push_back(count.value());
             base_type = arr->ElemType();
@@ -1452,7 +1504,7 @@ class Printer : public tint::TextGenerator {
         }
 
         auto* constant_count = ary->Count()->As<core::type::ConstantArrayCount>();
-        TINT_ASSERT(constant_count != nullptr);
+        TINT_IR_ASSERT(ir_, constant_count != nullptr);
         out << "[" << constant_count->value << "]";
     }
 
@@ -1497,7 +1549,7 @@ class Printer : public tint::TextGenerator {
 
     void EmitTextureType(StringStream& out, const core::type::Texture* tex) {
         if (DAWN_UNLIKELY(tex->Is<core::type::ExternalTexture>())) {
-            TINT_ICE() << "Multiplanar external texture transform was not run.";
+            TINT_IR_ICE(ir_) << "Multiplanar external texture transform was not run.";
         }
 
         auto* storage = tex->As<core::type::StorageTexture>();
@@ -1530,14 +1582,14 @@ class Printer : public tint::TextGenerator {
                 out << "CubeArray";
                 break;
             default:
-                TINT_UNREACHABLE() << "unexpected TextureDimension " << tex->Dim();
+                TINT_IR_UNREACHABLE(ir_) << "unexpected TextureDimension " << tex->Dim();
         }
 
         if (storage) {
             auto* component = ImageFormatToRWtextureType(storage->TexelFormat());
             if (DAWN_UNLIKELY(!component)) {
-                TINT_ICE() << "Unsupported StorageTexture TexelFormat: "
-                           << static_cast<int>(storage->TexelFormat());
+                TINT_IR_ICE(ir_) << "Unsupported StorageTexture TexelFormat: "
+                                 << static_cast<int>(storage->TexelFormat());
             }
             out << "<" << component << ">";
         } else if (depth_ms) {
@@ -1552,7 +1604,7 @@ class Printer : public tint::TextGenerator {
             } else if (DAWN_LIKELY(subtype->Is<core::type::U32>())) {
                 out << "uint4";
             } else {
-                TINT_ICE() << "Unsupported multisampled texture type";
+                TINT_IR_ICE(ir_) << "Unsupported multisampled texture type";
             }
             out << ">";
         }
@@ -1588,7 +1640,7 @@ class Printer : public tint::TextGenerator {
                 if (auto location = attributes.location) {
                     auto& pipeline_stage_uses = str->PipelineStageUses();
                     if (DAWN_UNLIKELY(pipeline_stage_uses.Count() != 1)) {
-                        TINT_ICE() << "invalid entry point IO struct uses";
+                        TINT_IR_ICE(ir_) << "invalid entry point IO struct uses";
                     }
                     if (pipeline_stage_uses.Contains(
                             core::type::PipelineStageUsage::kVertexInput)) {
@@ -1609,7 +1661,7 @@ class Printer : public tint::TextGenerator {
                         }
 
                     } else {
-                        TINT_ICE() << "invalid use of location attribute";
+                        TINT_IR_ICE(ir_) << "invalid use of location attribute";
                     }
                 }
                 if (auto builtin = attributes.builtin) {
@@ -1618,7 +1670,7 @@ class Printer : public tint::TextGenerator {
                         name = "SV_ClipDistance" + std::to_string(which_clip_distance);
                         ++which_clip_distance;
                     } else {
-                        name = builtin_to_attribute(builtin.value());
+                        name = builtin_to_attribute(builtin.value(), attributes.depth_mode);
 
                         switch (builtin.value()) {
                             case core::BuiltinValue::kVertexIndex:
@@ -1631,14 +1683,14 @@ class Printer : public tint::TextGenerator {
                                 break;
                         }
                     }
-                    TINT_ASSERT(!name.empty());
+                    TINT_IR_ASSERT(ir_, !name.empty());
 
                     post += " : " + name;
                 }
                 if (auto interpolation = attributes.interpolation) {
                     auto mod =
                         interpolation_to_modifiers(interpolation->type, interpolation->sampling);
-                    TINT_ASSERT(!mod.empty());
+                    TINT_IR_ASSERT(ir_, !mod.empty());
 
                     pre += mod;
                 }
@@ -1650,7 +1702,7 @@ class Printer : public tint::TextGenerator {
                 }
                 if (attributes.color) {
                     // WGSL extension: chromium_experimental_framebuffer_fetch
-                    TINT_ICE() << "HLSL does not support @color attribute";
+                    TINT_IR_ICE(ir_) << "HLSL does not support @color attribute";
                 }
 
                 out << pre;
@@ -1665,7 +1717,8 @@ class Printer : public tint::TextGenerator {
         preamble_buffer_.Append(str_buf);
     }
 
-    std::string builtin_to_attribute(core::BuiltinValue builtin) const {
+    std::string builtin_to_attribute(core::BuiltinValue builtin,
+                                     std::optional<core::BuiltinDepthMode> depth_mode) const {
         switch (builtin) {
             case core::BuiltinValue::kPosition:
                 return "SV_Position";
@@ -1676,6 +1729,12 @@ class Printer : public tint::TextGenerator {
             case core::BuiltinValue::kFrontFacing:
                 return "SV_IsFrontFace";
             case core::BuiltinValue::kFragDepth:
+                if (depth_mode == core::BuiltinDepthMode::kGreater) {
+                    return "SV_DepthGreaterEqual";
+                }
+                if (depth_mode == core::BuiltinDepthMode::kLess) {
+                    return "SV_DepthLessEqual";
+                }
                 return "SV_Depth";
             case core::BuiltinValue::kLocalInvocationId:
                 return "SV_GroupThreadID";
@@ -1689,14 +1748,14 @@ class Printer : public tint::TextGenerator {
                 return "SV_SampleIndex";
             case core::BuiltinValue::kSampleMask:
                 return "SV_Coverage";
-            case core::BuiltinValue::kPrimitiveId:
+            case core::BuiltinValue::kPrimitiveIndex:
                 return "SV_PrimitiveId";
             case core::BuiltinValue::kBarycentricCoord:
                 return "SV_Barycentrics";
             default:
                 break;
         }
-        TINT_ICE() << "Unhandled BuiltinValue: " << ToString(builtin);
+        TINT_IR_ICE(ir_) << "Unhandled BuiltinValue: " << ToString(builtin);
     }
 
     std::string interpolation_to_modifiers(core::InterpolationType type,
@@ -1759,7 +1818,7 @@ class Printer : public tint::TextGenerator {
     std::string StructName(const core::type::Struct* s) {
         return names_.GetOrAdd(s, [&] {
             auto name = s->Name().Name();
-            if (HasPrefix(name, "__")) {
+            if (name.starts_with("__")) {
                 name = UniqueIdentifier(name.substr(2));
             }
             if (ShouldRename(name)) {

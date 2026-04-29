@@ -792,7 +792,7 @@ func TestStatuses(t *testing.T) {
 }
 
 func TestSaveLoad(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 
 	in := result.ResultsByExecutionMode{
 		"bar": result.List{
@@ -810,10 +810,10 @@ func TestSaveLoad(t *testing.T) {
 	}
 
 	saveLocation := filepath.Join(fileutils.ThisDir(), "cache.txt")
-	err := result.SaveWithWrapper(saveLocation, in, wrapper)
+	err := result.Save(saveLocation, in, wrapper)
 	require.NoErrorf(t, err, "Error saving results: %v", err)
 
-	out, err := result.LoadWithWrapper(saveLocation, wrapper)
+	out, err := result.Load(saveLocation, wrapper)
 	require.NoErrorf(t, err, "Error loading results: %v", err)
 	require.Equal(t, in, out)
 }

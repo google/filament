@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/tests/DawnTest.h"
-
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 
@@ -138,6 +137,55 @@ TEST_P(ScissorTest, EmptyRect) {
     EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kZero, renderPass.color, 1, 0);
     EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kZero, renderPass.color, 1, 1);
 }
+
+// Test setting an all zero scissor with point-list and draw twice.
+// The 1st draw without scissor, the 2nd with. The 2nd should not draw.
+TEST_P(ScissorTest, ZeroRectPointList2Draws) {
+    // TODO(464436694): Zero size scissor fails on Intel Mac for this case.
+    DAWN_SUPPRESS_TEST_IF(IsMetal() && IsIntel());
+
+    utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, 1, 1);
+
+    wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+        struct VOut {
+            @builtin(position) pos : vec4f,
+            @location(0) @interpolate(flat, either) vNdx: u32,
+        };
+        @vertex
+        fn vs(@builtin(vertex_index) VertexIndex : u32) -> VOut {
+            return VOut(vec4f(0.0, 0.0, 0.5, 1.0), VertexIndex);
+        }
+        @fragment
+        fn fs(v: VOut) -> @location(0) vec4f {
+            return vec4f(f32(v.vNdx), 1.0, 0.0, 1.0);
+        }
+    )");
+
+    utils::ComboRenderPipelineDescriptor descriptor;
+    descriptor.vertex.module = module;
+    descriptor.cFragment.module = module;
+    descriptor.cTargets[0].format = renderPass.colorFormat;
+    descriptor.primitive.topology = wgpu::PrimitiveTopology::PointList;
+
+    wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&descriptor);
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    {
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass.renderPassInfo);
+        pass.SetPipeline(pipeline);
+        pass.Draw(1, 1, 1, 0);  // draws 1,1,0,1 (yellow)
+        pass.SetScissorRect(0, 0, 0, 0);
+        pass.Draw(1, 1, 0, 0);  // would draw 0,1,0,1 (green) except scissor
+        pass.End();
+    }
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // Test that yellow pixel was written and not overwritten by green.
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8::kYellow, renderPass.color, 0, 0);
+}
+
 // Test that the scissor setting doesn't get inherited between renderpasses
 TEST_P(ScissorTest, NoInheritanceBetweenRenderPass) {
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, 100, 100);
@@ -173,7 +221,8 @@ DAWN_INSTANTIATE_TEST(ScissorTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

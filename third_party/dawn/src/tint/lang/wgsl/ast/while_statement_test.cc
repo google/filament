@@ -56,8 +56,8 @@ TEST_F(WhileStatementTest, Creation_WithSource) {
 }
 
 TEST_F(WhileStatementTest, Creation_WithAttributes) {
-    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "foo");
-    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "bar");
+    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("foo"));
+    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("bar"));
     auto* cond = create<BinaryExpression>(core::BinaryOp::kLessThan, Expr("i"), Expr(5_u));
     auto* body = Block(Return());
     auto* l = While(cond, body, tint::Vector{attr1, attr2});
@@ -82,26 +82,6 @@ TEST_F(WhileStatementDeathTest, Assert_Null_Body) {
             auto* cond =
                 b.create<BinaryExpression>(core::BinaryOp::kLessThan, b.Expr("i"), b.Expr(5_u));
             b.While(cond, nullptr);
-        },
-        "internal compiler error");
-}
-
-TEST_F(WhileStatementDeathTest, Assert_DifferentGenerationID_Condition) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.While(b2.Expr(true), b1.Block());
-        },
-        "internal compiler error");
-}
-
-TEST_F(WhileStatementDeathTest, Assert_DifferentGenerationID_Body) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.While(b1.Expr(true), b2.Block());
         },
         "internal compiler error");
 }

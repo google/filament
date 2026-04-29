@@ -28,6 +28,7 @@
 // GEN_BUILD:CONDITION(tint_build_is_linux || tint_build_is_mac)
 
 #include <unistd.h>
+
 #include <memory>
 
 #include "src/tint/utils/system/env.h"

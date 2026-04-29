@@ -2,7 +2,9 @@
 #include <cassert>
 #include <memory>
 
-#include "benchmark/benchmark.h"
+#include "benchmark/benchmark_api.h"
+#include "benchmark/registration.h"
+#include "benchmark/state.h"
 
 #define FIXTURE_BECHMARK_NAME MyFixture
 

@@ -57,7 +57,7 @@ func (c Content) Validate() Diagnostics {
 					out = append(out, Diagnostic{
 						Severity: Error,
 						Line:     ex.Line,
-						Message:  fmt.Sprintf("\"Slow\" expectation is not valid here. Use slow_tests.txt instead."),
+						Message:  "\"Slow\" expectation is not valid here. Use slow_tests.txt instead.",
 					})
 				}
 			}

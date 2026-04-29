@@ -27,15 +27,15 @@
 
 #include "dawn/native/metal/BackendMTL.h"
 
+#include <string>
+#include <vector>
+
 #include "dawn/common/NSRef.h"
 #include "dawn/common/SystemUtils.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/Instance.h"
 #include "dawn/native/MetalBackend.h"
 #include "dawn/native/metal/PhysicalDeviceMTL.h"
-
-#include <string>
-#include <vector>
 
 namespace dawn::native::metal {
 
@@ -46,7 +46,7 @@ bool CheckMetalValidationEnabled(InstanceBase* instance) {
         return true;
     }
 
-    // Sometime validation layer can be enabled eternally via xcode or command line.
+    // Validation layer can also be enabled externally via Xcode or command line.
     if (GetEnvironmentVar("METAL_DEVICE_WRAPPER_TYPE").first == "1" ||
         GetEnvironmentVar("MTL_DEBUG_LAYER").first == "1") {
         return true;
@@ -58,8 +58,17 @@ bool CheckMetalValidationEnabled(InstanceBase* instance) {
 }  // anonymous namespace
 
 Backend::Backend(InstanceBase* instance) : BackendConnection(instance, wgpu::BackendType::Metal) {
-    if (GetInstance()->IsBackendValidationEnabled()) {
-        setenv("METAL_DEVICE_WRAPPER_TYPE", "1", 1);
+    switch (GetInstance()->GetBackendValidationLevel()) {
+        case dawn::native::BackendValidationLevel::Full:
+            // See `man MetalValidation` for docs.
+            setenv("MTL_SHADER_VALIDATION", "1", 1);
+            setenv("MTL_SHADER_VALIDATION_REPORT_TO_STDERR", "1", 1);
+            [[fallthrough]];
+        case dawn::native::BackendValidationLevel::Partial:
+            setenv("METAL_DEVICE_WRAPPER_TYPE", "1", 1);
+            break;
+        case dawn::native::BackendValidationLevel::Disabled:
+            break;
     }
 }
 
@@ -87,13 +96,13 @@ std::vector<Ref<PhysicalDeviceBase>> Backend::DiscoverPhysicalDevices(
     }
 #endif
 
-        // iOS only has a single device so MTLCopyAllDevices doesn't exist there.
+    // iOS only has a single device so MTLCopyAllDevices doesn't exist there.
 #if DAWN_PLATFORM_IS(IOS)
-        Ref<PhysicalDevice> physicalDevice = AcquireRef(new PhysicalDevice(
-            GetInstance(), AcquireNSPRef(MTLCreateSystemDefaultDevice()), metalValidationEnabled));
-        if (!GetInstance()->ConsumedErrorAndWarnOnce(physicalDevice->Initialize())) {
-            mPhysicalDevices.push_back(std::move(physicalDevice));
-        }
+    Ref<PhysicalDevice> physicalDevice = AcquireRef(new PhysicalDevice(
+        GetInstance(), AcquireNSPRef(MTLCreateSystemDefaultDevice()), metalValidationEnabled));
+    if (!GetInstance()->ConsumedErrorAndWarnOnce(physicalDevice->Initialize())) {
+        mPhysicalDevices.push_back(std::move(physicalDevice));
+    }
 #endif
 
     return std::vector<Ref<PhysicalDeviceBase>>{mPhysicalDevices};

@@ -34,6 +34,7 @@ set(sample_util_depends
     dawn::dawn_common
     dawn::dawn_system_utils
     dawn::dawn_wgpu_utils
+    dawn::partition_alloc
 )
 if (NOT EMSCRIPTEN)
     list(APPEND sample_util_depends

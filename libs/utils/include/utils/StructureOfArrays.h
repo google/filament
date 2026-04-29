@@ -55,8 +55,17 @@ public:
     static constexpr size_t getArrayCount() noexcept { return kArrayCount; }
 
     // Size needed to store "size" array elements
-    static size_t getNeededSize(size_t size) noexcept {
+    static size_t getNeededSize(size_t const size) noexcept {
         return getOffset(kArrayCount - 1, size) + sizeof(TypeAt<kArrayCount - 1>) * size;
+    }
+
+    template<typename OtherAllocator>
+    void copyRange(size_t destOffset,
+            const StructureOfArraysBase<OtherAllocator, Elements...>& src, size_t srcOffset, size_t count) {
+        assert(destOffset + count <= mCapacity);
+        assert(srcOffset + count <= src.mSize);
+        Copier<OtherAllocator> copier{this, src, destOffset, srcOffset, count};
+        const_cast<StructureOfArraysBase*>(this)->for_each_index(mArrays, copier);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -77,27 +86,37 @@ public:
         friend class IteratorValue;
         friend iterator;
         friend const_iterator;
+        friend class StructureOfArraysBase;
         StructureOfArraysBase* const UTILS_RESTRICT soa;
         size_t const index;
 
-        IteratorValueRef(StructureOfArraysBase* soa, size_t index) : soa(soa), index(index) { }
+        IteratorValueRef(StructureOfArraysBase* soa, size_t const index) : soa(soa), index(index) { }
 
         // assigns a value_type to a reference (i.e. assigns to what's pointed to by the reference)
         template<size_t ... Is>
         IteratorValueRef& assign(IteratorValue const& rhs, std::index_sequence<Is...>);
+
+        template<size_t ... Is>
+        IteratorValueRef& assign(Structure const& rhs, std::index_sequence<Is...>);
+
+        template<size_t ... Is>
+        IteratorValueRef& assign(Structure&& rhs, std::index_sequence<Is...>) noexcept;
 
         // assigns a value_type to a reference (i.e. assigns to what's pointed to by the reference)
         template<size_t ... Is>
         IteratorValueRef& assign(IteratorValue&& rhs, std::index_sequence<Is...>) noexcept;
 
         // objects pointed to by reference can be swapped, so provide the special swap() function.
-        friend void swap(IteratorValueRef lhs, IteratorValueRef rhs) {
+        friend void swap(IteratorValueRef const lhs, IteratorValueRef const rhs) {
             lhs.soa->swap(lhs.index, rhs.index);
         }
 
     public:
         // references can be created by copy-assignment only
         IteratorValueRef(IteratorValueRef const& rhs) noexcept : soa(rhs.soa), index(rhs.index) { }
+
+        IteratorValueRef& operator=(Structure const& rhs);
+        IteratorValueRef& operator=(Structure&& rhs) noexcept;
 
         // copy the content of a reference to the content of this one
         IteratorValueRef& operator=(IteratorValueRef const& rhs);
@@ -119,6 +138,10 @@ public:
         template<size_t I> TypeAt<I> const& get() const { return soa->elementAt<I>(index); }
         template<size_t I> TypeAt<I>& get() { return soa->elementAt<I>(index); }
     };
+
+    IteratorValueRef operator[](size_t index) noexcept {
+        return {this, index};
+    }
 
 
     /*
@@ -175,7 +198,7 @@ public:
         CVQualifiedSOAPointer soa; // don't use restrict, can have aliases if multiple iterators are created
         size_t index;
 
-        Iterator(CVQualifiedSOAPointer soa, size_t index) : soa(soa), index(index) {}
+        Iterator(CVQualifiedSOAPointer soa, size_t const index) : soa(soa), index(index) {}
 
     public:
         using value_type = IteratorValue;
@@ -196,10 +219,10 @@ public:
 
         Iterator& operator++() { ++index; return *this; }
         Iterator& operator--() { --index; return *this; }
-        Iterator& operator+=(size_t n) { index += n; return *this; }
-        Iterator& operator-=(size_t n) { index -= n; return *this; }
-        Iterator operator+(size_t n) const { return { soa, index + n }; }
-        Iterator operator-(size_t n) const { return { soa, index - n }; }
+        Iterator& operator+=(size_t const n) { index += n; return *this; }
+        Iterator& operator-=(size_t const n) { index -= n; return *this; }
+        Iterator operator+(size_t const n) const { return { soa, index + n }; }
+        Iterator operator-(size_t const n) const { return { soa, index - n }; }
         difference_type operator-(Iterator const& rhs) const { return index - rhs.index; }
         bool operator==(Iterator const& rhs) const { return (index == rhs.index); }
         bool operator!=(Iterator const& rhs) const { return (index != rhs.index); }
@@ -222,7 +245,7 @@ public:
 
     StructureOfArraysBase() = default;
 
-    explicit StructureOfArraysBase(size_t capacity) {
+    explicit StructureOfArraysBase(size_t const capacity) {
         setCapacity(capacity);
     }
 
@@ -270,7 +293,7 @@ public:
     // set the capacity of the array. the capacity cannot be smaller than the current size,
     // the call is a no-op in that case.
     UTILS_NOINLINE
-    void setCapacity(size_t capacity) {
+    void setCapacity(size_t const capacity) {
         // allocate enough space for "capacity" elements of each array
         // capacity cannot change when optional storage is specified
         if (capacity >= mSize) {
@@ -292,7 +315,7 @@ public:
         }
     }
 
-    void ensureCapacity(size_t needed) {
+    void ensureCapacity(size_t const needed) {
         if (UTILS_UNLIKELY(needed > mCapacity)) {
             // not enough space, increase the capacity
             const size_t capacity = (needed > SIZE_MAX / 3) ? needed : (needed * 3 + 1) / 2;
@@ -305,7 +328,7 @@ public:
     // If the arrays don't have enough capacity, the capacity is increased accordingly
     // (the capacity is set to 3/2 of the asked size).
     UTILS_NOINLINE
-    void resize(size_t needed) {
+    void resize(size_t const needed) {
         ensureCapacity(needed);
         resizeNoCheck(needed);
         if (needed <= mCapacity) {
@@ -318,7 +341,7 @@ public:
     }
 
 
-    inline void swap(size_t i, size_t j) noexcept {
+    void swap(size_t i, size_t j) noexcept {
         forEach([i, j](auto p) {
             using std::swap;
             swap(p[i], p[j]);
@@ -326,7 +349,7 @@ public:
     }
 
     // remove and destroy the last element of each array
-    inline void pop_back() noexcept {
+    void pop_back() noexcept {
         if (mSize) {
             destroy_each(mSize - 1, mSize);
             mSize--;
@@ -483,80 +506,97 @@ public:
         using Type = typename SoA::template TypeAt<E>;
 
         UTILS_ALWAYS_INLINE Field& operator = (Field&& rhs) noexcept {
-            soa.elementAt<E>(i) = soa.elementAt<E>(rhs.i);
+            soa.template elementAt<E>(i) = soa.template elementAt<E>(rhs.i);
             return *this;
         }
 
         // auto-conversion to the field's type
         UTILS_ALWAYS_INLINE operator Type&() noexcept {
-            return soa.elementAt<E>(i);
+            return soa.template elementAt<E>(i);
         }
         UTILS_ALWAYS_INLINE operator Type const&() const noexcept {
-            return soa.elementAt<E>(i);
+            return soa.template elementAt<E>(i);
         }
         // dereferencing the selected field
         UTILS_ALWAYS_INLINE Type& operator ->() noexcept {
-            return soa.elementAt<E>(i);
+            return soa.template elementAt<E>(i);
         }
         UTILS_ALWAYS_INLINE Type const& operator ->() const noexcept {
-            return soa.elementAt<E>(i);
+            return soa.template elementAt<E>(i);
         }
         // address-of the selected field
         UTILS_ALWAYS_INLINE Type* operator &() noexcept {
-            return &soa.elementAt<E>(i);
+            return &soa.template elementAt<E>(i);
         }
         UTILS_ALWAYS_INLINE Type const* operator &() const noexcept {
-            return &soa.elementAt<E>(i);
+            return &soa.template elementAt<E>(i);
         }
         // assignment to the field
         UTILS_ALWAYS_INLINE Type const& operator = (Type const& other) noexcept {
-            return (soa.elementAt<E>(i) = other);
+            return (soa.template elementAt<E>(i) = other);
         }
         UTILS_ALWAYS_INLINE Type const& operator = (Type&& other) noexcept {
-            return (soa.elementAt<E>(i) = std::forward<Type>(other));
+            return (soa.template elementAt<E>(i) = std::forward<Type>(other));
         }
         // comparisons
         UTILS_ALWAYS_INLINE bool operator==(Type const& other) const {
-            return (soa.elementAt<E>(i) == other);
+            return (soa.template elementAt<E>(i) == other);
         }
         UTILS_ALWAYS_INLINE bool operator!=(Type const& other) const {
-            return (soa.elementAt<E>(i) != other);
+            return (soa.template elementAt<E>(i) != other);
         }
         // calling the field
         template <typename ... ARGS>
         UTILS_ALWAYS_INLINE decltype(auto) operator()(ARGS&& ... args) noexcept {
-            return soa.elementAt<E>(i)(std::forward<ARGS>(args)...);
+            return soa.template elementAt<E>(i)(std::forward<ARGS>(args)...);
         }
         template <typename ... ARGS>
         UTILS_ALWAYS_INLINE decltype(auto) operator()(ARGS&& ... args) const noexcept {
-            return soa.elementAt<E>(i)(std::forward<ARGS>(args)...);
+            return soa.template elementAt<E>(i)(std::forward<ARGS>(args)...);
         }
     };
 
 private:
+    template<typename OtherAllocator>
+    struct Copier {
+        StructureOfArraysBase* dest;
+        const StructureOfArraysBase<OtherAllocator, Elements...>& src;
+        size_t destOffset;
+        size_t srcOffset;
+        size_t count;
+
+        template<size_t I>
+        void operator()(TypeAt<I>* destPtr) const {
+            using ElementType = TypeAt<I>;
+            ElementType const* const s = std::get<I>(src.mArrays) + srcOffset;
+            ElementType* const d = destPtr + destOffset;
+            std::copy_n(s, count, d);
+        }
+    };
+
     template<std::size_t I = 0, typename FuncT, typename... Tp>
-    inline std::enable_if_t<I == sizeof...(Tp), void>
+    std::enable_if_t<I == sizeof...(Tp), void>
     for_each(std::tuple<Tp...>&, FuncT) {}
 
     template<std::size_t I = 0, typename FuncT, typename... Tp>
-    inline std::enable_if_t<I < sizeof...(Tp), void>
+    std::enable_if_t<I < sizeof...(Tp), void>
     for_each(std::tuple<Tp...>& t, FuncT f) {
         f(I, std::get<I>(t));
         for_each<I + 1, FuncT, Tp...>(t, f);
     }
 
     template<std::size_t I = 0, typename FuncT, typename... Tp>
-    inline std::enable_if_t<I == sizeof...(Tp), void>
+    std::enable_if_t<I == sizeof...(Tp), void>
     for_each_index(std::tuple<Tp...>&, FuncT) {}
 
     template<std::size_t I = 0, typename FuncT, typename... Tp>
-    inline std::enable_if_t<I < sizeof...(Tp), void>
+    std::enable_if_t<I < sizeof...(Tp), void>
     for_each_index(std::tuple<Tp...>& t, FuncT f) {
         f.template operator()<I>(std::get<I>(t));
         for_each_index<I + 1, FuncT, Tp...>(t, f);
     }
 
-    inline void resizeNoCheck(size_t needed) noexcept {
+    void resizeNoCheck(size_t const needed) noexcept {
         assert(mCapacity >= needed);
         if (needed < mSize) {
             // we shrink the arrays
@@ -570,12 +610,12 @@ private:
     }
 
     // this calculates the offset adjusted for all data alignment of a given array
-    static inline size_t getOffset(size_t index, size_t capacity) noexcept {
+    static size_t getOffset(size_t index, size_t const capacity) noexcept {
         auto offsets = getOffsets(capacity);
         return offsets[index];
     }
 
-    static inline std::array<size_t, kArrayCount> getOffsets(size_t capacity) noexcept {
+    static std::array<size_t, kArrayCount> getOffsets(size_t capacity) noexcept {
         // compute the required size of each array
         const size_t sizes[] = { (sizeof(Elements) * capacity)... };
 
@@ -618,7 +658,7 @@ private:
         });
     }
 
-    void move_each(void* buffer, size_t capacity) noexcept {
+    void move_each(void* buffer, size_t const capacity) noexcept {
         auto offsets = getOffsets(capacity);
         size_t index = 0;
         if (mSize) {
@@ -653,7 +693,7 @@ private:
         // update the pointers
         for_each(mArrays, [buffer, &offsets](size_t i, auto&& p) {
             using Type = std::remove_reference_t<decltype(p)>;
-            p = Type((char*)buffer + offsets[i]);
+            p = Type(static_cast<char*>(buffer) + offsets[i]);
         });
     }
 
@@ -668,7 +708,6 @@ private:
 
 
 template<typename Allocator, typename... Elements>
-inline
 typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
 StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::operator=(
         IteratorValueRef const& rhs) {
@@ -676,7 +715,6 @@ StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::operator=(
 }
 
 template<typename Allocator, typename... Elements>
-inline
 typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
 StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::operator=(
         IteratorValueRef&& rhs) noexcept {
@@ -684,8 +722,21 @@ StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::operator=(
 }
 
 template<typename Allocator, typename... Elements>
+typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
+StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::operator=(
+        Structure const& rhs) {
+    return assign(rhs, std::make_index_sequence<kArrayCount>());
+}
+
+template<typename Allocator, typename... Elements>
+typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
+StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::operator=(
+        Structure&& rhs) noexcept {
+    return assign(std::move(rhs), std::make_index_sequence<kArrayCount>());
+}
+
+template<typename Allocator, typename... Elements>
 template<size_t... Is>
-inline
 typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
 StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::assign(
         IteratorValue const& rhs, std::index_sequence<Is...>) {
@@ -696,7 +747,24 @@ StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::assign(
 
 template<typename Allocator, typename... Elements>
 template<size_t... Is>
-inline
+typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
+StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::assign(
+        Structure const& rhs, std::index_sequence<Is...>) {
+    auto UTILS_UNUSED l = {(soa->template elementAt<Is>(index) = std::get<Is>(rhs), 0)...};
+    return *this;
+}
+
+template<typename Allocator, typename... Elements>
+template<size_t... Is>
+typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
+StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::assign(
+        Structure&& rhs, std::index_sequence<Is...>) noexcept {
+    auto UTILS_UNUSED l = {(soa->template elementAt<Is>(index) = std::move(std::get<Is>(rhs)), 0)...};
+    return *this;
+}
+
+template<typename Allocator, typename... Elements>
+template<size_t... Is>
 typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
 StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::assign(
         IteratorValue&& rhs, std::index_sequence<Is...>) noexcept {

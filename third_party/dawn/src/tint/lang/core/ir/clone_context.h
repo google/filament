@@ -28,7 +28,8 @@
 #ifndef SRC_TINT_LANG_CORE_IR_CLONE_CONTEXT_H_
 #define SRC_TINT_LANG_CORE_IR_CLONE_CONTEXT_H_
 
-#include "src/tint/utils/containers/const_propagating_ptr.h"
+#include <span>
+
 #include "src/tint/utils/containers/hashmap.h"
 #include "src/tint/utils/containers/transform.h"
 #include "src/tint/utils/rtti/traits.h"
@@ -64,19 +65,11 @@ class CloneContext {
         return result;
     }
 
-    /// Performs a clone of @p what.
-    /// @param what the item to clone
-    /// @return the cloned item
-    template <typename T>
-    T* Clone(ConstPropagatingPtr<T>& what) {
-        return Clone(what.Get());
-    }
-
     /// Performs a clone of all the elements in @p what.
     /// @param what the elements to clone
     /// @return the cloned elements
     template <size_t N, typename T>
-    Vector<T*, N> Clone(Slice<T* const> what) {
+    Vector<T*, N> Clone(std::span<T* const> what) {
         return Transform<N>(what, [&](T* const p) { return Clone(p); });
     }
 
@@ -84,7 +77,7 @@ class CloneContext {
     /// @param what the elements to clone
     /// @return the cloned elements
     template <size_t N, typename T>
-    Vector<T*, N> Clone(Slice<T*> what) {
+    Vector<T*, N> Clone(std::span<T*> what) {
         return Transform<N>(what, [&](T* p) { return Clone(p); });
     }
 
@@ -107,19 +100,11 @@ class CloneContext {
         return what;
     }
 
-    /// Obtains the (potentially) remapped pointer to @p what
-    /// @param what the item
-    /// @return the cloned item for @p what, or the original pointer if @p what has not been cloned.
-    template <typename T>
-    T* Remap(ConstPropagatingPtr<T>& what) {
-        return Remap(what.Get());
-    }
-
     /// Obtains the (potentially) remapped pointer of all the elements in @p what.
     /// @param what the item
     /// @return the remapped elements
     template <size_t N, typename T>
-    Vector<T*, N> Remap(Slice<T* const> what) {
+    Vector<T*, N> Remap(std::span<T* const> what) {
         return Transform<N>(what, [&](T* const p) { return Remap(p); });
     }
 
@@ -127,7 +112,7 @@ class CloneContext {
     /// @param what the item
     /// @return the remapped elements
     template <size_t N, typename T>
-    Vector<T*, N> Remap(Slice<T*> what) {
+    Vector<T*, N> Remap(std::span<T*> what) {
         return Transform<N>(what, [&](T* p) { return Remap(p); });
     }
 

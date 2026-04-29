@@ -1,6 +1,6 @@
 #!/usr/bin/env python3 -i
 #
-# Copyright 2013-2025 The Khronos Group Inc.
+# Copyright 2013-2026 The Khronos Group Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 """Base class for source/header/doc generators, as well as some utility functions."""
@@ -50,65 +50,90 @@ def enquote(s):
     return None
 
 
-def regSortCategoryKey(feature):
-    """Sort key for regSortFeatures.
-    Sorts by category of the feature name string:
+def genProtectDirective(protect_str):
+    """Generate protection preprocessor directive.
 
-    - Core API features (those defined with a `<feature>` tag)
-        - (sort VKSC after VK - this is Vulkan-specific)
-    - ARB/KHR/OES (Khronos extensions)
-    - other       (EXT/vendor extensions)"""
+    Protection strings are the strings defining the OS/Platform/Graphics
+    requirements for a given API element. When generating the
+    language header files, we need to make sure the items specific to a
+    graphics API or OS platform are properly wrapped in #ifs.
 
-    if feature.elem.tag == 'feature':
-        if feature.name.startswith('VKSC'):
-            return 0.5
-        else:
-            return 0
+    Supports boolean expressions using the same syntax as 'depends':
+    - '+' for AND
+    - ',' for OR
+    - '()' for grouping
 
-    if feature.category.upper() in ('ARB', 'KHR', 'OES'):
-        return 1
+    Examples:
+      'VK_A,VK_B' -> '#if defined(VK_A) || defined(VK_B)'
+      'VK_A+VK_B' -> '#if defined(VK_A) && defined(VK_B)'
+      '(VK_A+VK_B),VK_C' -> '#if (defined(VK_A) && defined(VK_B)) || defined(VK_C)'
 
-    return 2
+    - protect_str - string with boolean expression of defines, or single define
 
+    Returns a tuple of (opening_directive, closing_directive) strings."""
+    if not protect_str:
+        return ('', '')
 
-def regSortOrderKey(feature):
-    """Sort key for regSortFeatures - key is the sortorder attribute."""
-
-    return feature.sortorder
-
-
-def regSortNameKey(feature):
-    """Sort key for regSortFeatures - key is the extension name."""
-
-    return feature.name
-
-
-def regSortFeatureVersionKey(feature):
-    """Sort key for regSortFeatures - key is the feature version.
-    `<extension>` elements all have version number 0."""
-
-    return float(feature.versionNumber)
-
-
-def regSortExtensionNumberKey(feature):
-    """Sort key for regSortFeatures - key is the extension number.
-    `<feature>` elements all have extension number 0."""
-
-    return int(feature.number)
+    # Check if this is a boolean expression (contains operators, parens, or negation)
+    if any(c in protect_str for c in [',', '+', '(', ')', '!']):
+        # Use the dependency parser to handle complex expressions
+        from parse_dependency import protectLanguageC
+        try:
+            protect_condition = protectLanguageC(protect_str)
+            return (f'#if {protect_condition}', '#endif')
+        except Exception:
+            # Fall back to simple #ifdef if parsing fails
+            # (Silently fall back since this is a utility function without logging)
+            return (f'#ifdef {protect_str}', '#endif')
+    else:
+        # Simple single identifier - use #ifdef for backward compatibility
+        return (f'#ifdef {protect_str}', '#endif')
 
 
-def regSortFeatures(featureList):
-    """Default sort procedure for features.
+def regSortFeatures(orderedFeatureNames, features):
+    """Default sort procedure for generated features.
+
+    - orderedFeatureNames - list of feature / extension names to sort
+    - features - dictionary of FeatureInfo keyed by names
 
     - Sorts by explicit sort order (default 0) relative to other features
     - then by feature category ('feature' or 'extension'),
     - then by version number (for features)
     - then by extension number (for extensions)"""
-    featureList.sort(key=regSortExtensionNumberKey)
-    featureList.sort(key=regSortFeatureVersionKey)
-    featureList.sort(key=regSortCategoryKey)
-    featureList.sort(key=regSortOrderKey)
 
+    # Sort by extension numbers; <feature>s all have extension number 0
+    orderedFeatureNames.sort(key=lambda name: int(features[name].number))
+
+    # Sort by feature version; <extension>s all have version number 0
+    orderedFeatureNames.sort(key=lambda name: float(features[name].versionNumber))
+
+    # Sort by feature name category
+    def categoryKey(feature):
+        """Helper function, too long to put in a sort key lambda
+
+        - feature - FeatureInfo containing the XML element to sort
+
+        Sorts by:
+
+        - Core API features (those defined with a `<feature>` tag)
+        - Sort VKSC core features after VK - Vulkan-specific
+        - ARB/KHR/OES (Khronos extensions)
+        - other       (EXT/vendor extensions)"""
+
+        if feature.elem.tag == 'feature':
+            if feature.name.startswith('VKSC'):
+                return 0.5
+            else:
+                return 0
+        elif feature.category.upper() in ('ARB', 'KHR', 'OES'):
+            return 1
+        else:
+            return 2
+
+    orderedFeatureNames.sort(key=lambda name: categoryKey(features[name]))
+
+    # Sort by sortorder attribute
+    orderedFeatureNames.sort(key=lambda name: features[name].sortorder)
 
 class MissingGeneratorOptionsError(RuntimeError):
     """Error raised when a Generator tries to do something that requires GeneratorOptions but it is None."""
@@ -153,6 +178,7 @@ class GeneratorOptions:
                  genpath=None,
                  apiname=None,
                  mergeApiNames=None,
+                 mergeInternalApis=True,
                  profile=None,
                  versions='.*',
                  emitversions='.*',
@@ -179,6 +205,7 @@ class GeneratorOptions:
         - apiname - string matching `<api>` 'apiname' attribute, e.g. 'gl'.
         - mergeApiNames - If not None, a comma separated list of API names
           to merge into the API specified by 'apiname'
+        - mergeInternalApis - whether to merge internal APIs into public APIs
         - profile - string specifying API profile , e.g. 'core', or None.
         - versions - regex matching API versions to process interfaces for.
         Normally `'.*'` or `'[0-9][.][0-9]'` to match all defined versions.
@@ -239,6 +266,9 @@ class GeneratorOptions:
 
         self.mergeApiNames = mergeApiNames
         "comma separated list of API names to merge into the API specified by 'apiname'"
+
+        self.mergeInternalApis = mergeInternalApis
+        "whether to merge internal APIs into public APIs"
 
         self.profile = profile
         "string specifying API profile , e.g. 'core', or None."
@@ -515,6 +545,7 @@ class OutputGenerator:
         stripped = []
         for elem in enums:
             name = elem.get('name')
+            alias = elem.get('alias')
             (numVal, strVal) = self.enumToValue(elem, True)
 
             if name in nameMap:
@@ -541,13 +572,15 @@ class OutputGenerator:
                 # still add this enum to the list.
                 (name2, numVal2, strVal2) = valueMap[numVal]
 
-                msg = 'Two enums found with the same value: {} = {} = {}'.format(
-                    name, name2.get('name'), strVal)
-                self.logMsg('error', msg)
+                # If an enum is tagged with both a value and an alias then this is deliberate - no error
+                if alias != name2.get('name'):
+                    msg = 'Two enums found with the same value: {} = {} = {}. '.format(name, name2.get('name'), strVal)
+                    msg += 'If this is deliberate, tagging one as an `alias` of the other will fix this error.'
+                    self.logMsg('error', msg)
 
             # Track this enum to detect followon duplicates
             nameMap[name] = [elem, numVal, strVal]
-            if numVal is not None:
+            if alias is None and numVal is not None:
                 valueMap[numVal] = [elem, numVal, strVal]
 
             # Add this enum to the list
@@ -587,14 +620,14 @@ class OutputGenerator:
             name = elem.get('name')
 
         if reason == 'aliased':
-            return f'{padding}// {name} is a deprecated alias\n'
-        elif reason == 'ignored':
-            return f'{padding}// {name} is deprecated and should not be used\n'
+            return f'{padding}// {name} is a legacy alias\n'
+        elif reason == 'unused':
+            return f'{padding}// {name} is legacy and not used\n'
         elif reason == 'true':
-            return f'{padding}// {name} is deprecated, but no reason was given in the API XML\n'
+            return f'{padding}// {name} is legacy, but no reason was given in the API XML\n'
         else:
             # This can be caught by schema validation
-            self.logMsg('error', f"{name} has an unknown deprecation attribute value '{reason}'")
+            self.logMsg('error', f"{name} has an unknown legacy attribute value '{reason}'")
             exit(1)
 
     def buildEnumCDecl(self, expand, groupinfo, groupName):
@@ -696,10 +729,12 @@ class OutputGenerator:
 
             if self.isEnumRequired(elem):
                 protect = elem.get('protect')
+                protect_end = None
                 if protect is not None:
-                    body += f'#ifdef {protect}\n'
+                    (protect_begin, protect_end) = genProtectDirective(protect)
+                    decl += f'{protect_begin}\n'
 
-                body += self.deprecationComment(elem, indent = 0)
+                decl += self.deprecationComment(elem, indent = 0)
 
                 if usedefine:
                     decl += f"#define {name} {strVal}\n"
@@ -717,13 +752,13 @@ class OutputGenerator:
                             self.logMsg('error', f'No such alias {strVal} for enum {name}')
                     decl += f"static const {flagTypeName} {name} = {strVal};\n"
 
+                if protect_end is not None:
+                    decl += f'{protect_end}\n'
+
                 if numVal is not None:
                     body += decl
                 else:
                     aliasText += decl
-
-                if protect is not None:
-                    body += '#endif\n'
 
         # Now append the non-numeric enumerant values
         body += aliasText
@@ -791,16 +826,18 @@ class OutputGenerator:
                 decl = ''
 
                 protect = elem.get('protect')
+                protect_end = None
                 if protect is not None:
-                    decl += f'#ifdef {protect}\n'
+                    (protect_begin, protect_end) = genProtectDirective(protect)
+                    decl += f'{protect_begin}\n'
 
 
                 decl += self.genRequirements(name, mustBeFound = False, indent = 2)
                 decl += self.deprecationComment(elem, indent = 2)
                 decl += f'    {name} = {strVal},'
 
-                if protect is not None:
-                    decl += '\n#endif'
+                if protect_end is not None:
+                    decl += f'\n{protect_end}'
 
                 if numVal is not None:
                     body.append(decl)
@@ -1098,11 +1135,19 @@ class OutputGenerator:
             raise MissingGeneratorOptionsError()
         return self.genOpts.apientry + name + tail
 
-    def makeTypedefName(self, name, tail):
-        """Make the function-pointer typedef name for a command."""
+    def makeTypedefName(self, name, tail, isfuncpointer):
+        """Make the function-pointer typedef name for a command or
+           funcpointer name.
+           If this is a function pointer <type> tag, do not prepend a PFN_
+           to the name, as that is actually the type name and already
+           included.
+        """
         if self.genOpts is None:
             raise MissingGeneratorOptionsError()
-        return f"({self.genOpts.apientryp}PFN_{name}{tail})"
+
+        prefix = '' if isfuncpointer else 'PFN_'
+
+        return f'({self.genOpts.apientryp}{prefix}{name}{tail})'
 
     def makeCParamDecl(self, param, aligncol):
         """Return a string which is an indented, formatted
@@ -1330,11 +1375,15 @@ class OutputGenerator:
 
     def makeCDecls(self, cmd):
         """Return C prototype and function pointer typedef for a
-        `<command>` Element, as a two-element list of strings.
+        `<command>` or `type category="funcpointer"` Element, as a
+        two-element list of strings [prototype, typedef].
 
-        - cmd - Element containing a `<command>` tag"""
+        - cmd - Element containing a command or funcpointer tag"""
         if self.genOpts is None:
             raise MissingGeneratorOptionsError()
+
+        isfuncpointer = (cmd.tag == 'type')
+
         proto = cmd.find('proto')
         params = cmd.findall('param')
         # Begin accumulating prototype and typedef strings
@@ -1358,7 +1407,7 @@ class OutputGenerator:
             tail = noneStr(elem.tail)
             if elem.tag == 'name':
                 pdecl += self.makeProtoName(text, tail)
-                tdecl += self.makeTypedefName(text, tail)
+                tdecl += self.makeTypedefName(text, tail, isfuncpointer)
             else:
                 pdecl += text + tail
                 tdecl += text + tail
@@ -1373,8 +1422,8 @@ class OutputGenerator:
         # a <param> node without the tags. No tree walking required
         # since all tags are ignored.
         # Uses: self.indentFuncProto
-        # self.indentFuncPointer
-        # self.alignFuncParam
+        #       self.indentFuncPointer
+        #       self.alignFuncParam
         n = len(params)
         # Indented parameters
         if n > 0:
@@ -1414,7 +1463,12 @@ class OutputGenerator:
             paramdecl += 'void'
         paramdecl += ");"
 
-        return [pdecl + indentdecl, tdecl + paramdecl]
+        # For funcpointer types, only the typedef is returned,
+        # and it is formatted more attractively.
+        if isfuncpointer:
+            return [None, tdecl + indentdecl]
+        else:
+            return [pdecl + indentdecl, tdecl + paramdecl]
 
     def newline(self):
         """Print a newline to the output file (utility function)"""

@@ -189,9 +189,9 @@ struct State {
                     }
 
                     // Create a new struct with the rewritten members.
-                    auto* new_str = ty.Get<core::type::Struct>(
-                        sym.New(str->Name().Name() + "_std140"), std::move(new_members),
-                        str->Align(), str->Size(), str->SizeNoPadding());
+                    auto* new_str =
+                        ty.Get<core::type::Struct>(sym.New(str->Name().Name() + "_std140"),
+                                                   std::move(new_members), str->Size());
                     for (auto flag : str->StructFlags()) {
                         new_str->SetStructFlag(flag);
                     }
@@ -218,10 +218,8 @@ struct State {
                     }
 
                     // Create a new struct with the rewritten members.
-                    return ty.Get<core::type::Struct>(
-                        sym.New(name.str()), std::move(members), col->Align(),
-                        col->Align() * mat->Columns(),
-                        (col->Align() * (mat->Columns() - 1)) + col->Size());
+                    return ty.Get<core::type::Struct>(sym.New(name.str()), std::move(members),
+                                                      col->Align() * mat->Columns());
                 },
                 [&](Default) {
                     // This type cannot contain a matrix, so no changes needed.
@@ -302,7 +300,7 @@ struct State {
                 // Create a loop that copies and converts each element of the array.
                 auto* el_ty = source->Type()->Elements().type;
                 auto* new_arr = b.Var(ty.ptr(function, arr));
-                b.LoopRange(ty, 0_u, u32(arr->ConstantCount().value()), 1_u, [&](Value* idx) {
+                b.LoopRange(0_u, u32(arr->ConstantCount().value()), 1_u, [&](Value* idx) {
                     // Convert arr[idx] and store to new_arr[idx];
                     auto* to = b.Access(ty.ptr(function, arr->ElemType()), new_arr, idx);
                     auto* from = b.Access(el_ty, source, idx)->Result();
@@ -354,7 +352,7 @@ struct State {
                         indices.Push(b.Constant(0_u));
                     }
 
-                    for (size_t i = 0, n = access->Indices().Length(); i < n; i++) {
+                    for (size_t i = 0, n = access->Indices().size(); i < n; i++) {
                         auto* idx = access->Indices()[i];
 
                         if (auto* mat = NeedsDecomposing(current_type)) {
@@ -450,10 +448,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> Std140(Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.Std140", kStd140Capabilities);
-    if (result != Success) {
-        return result;
-    }
+    AssertValid(ir, kStd140Capabilities, "before core.Std140");
 
     State{ir}.Process();
 

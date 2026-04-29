@@ -62,6 +62,11 @@ uint32_t SubgroupMatrix::Align() const {
     return subtype_->Align();
 }
 
+TypeAndCount SubgroupMatrix::Elements(const type::Type* /* type_if_invalid = nullptr */,
+                                      uint32_t /* count_if_invalid = 0 */) const {
+    return {subtype_, columns_};
+}
+
 std::string SubgroupMatrix::FriendlyName() const {
     StringStream out;
     out << "subgroup_matrix_";

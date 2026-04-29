@@ -27,11 +27,17 @@
 
 // GEN_BUILD:CONDITION(tint_build_is_win)
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include "src/tint/utils/command/command.h"
 
 #define WIN32_LEAN_AND_MEAN 1
 #include <Windows.h>
 #include <dbghelp.h>
+
 #include <string>
 
 #include "src/tint/utils/macros/defer.h"

@@ -36,7 +36,7 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-struct ResolverVariableValidationTest : public resolver::TestHelper, public testing::Test {};
+using ResolverVariableValidationTest = ResolverTest;
 
 TEST_F(ResolverVariableValidationTest, VarNoInitializerNoType) {
     // var a;
@@ -164,8 +164,12 @@ TEST_F(ResolverVariableValidationTest, LetTypeNotConstructible) {
     auto* t2 = Let(Source{{56, 78}}, "t2", Expr(t1));
     WrapInFunction(t2);
 
-    EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "56:78 error: texture_2d<f32> cannot be used as the type of a 'let'");
+    wgsl::AllowedFeatures allowed_features{};
+    Resolver resolver{this, allowed_features};
+
+    EXPECT_FALSE(resolver.Resolve());
+    EXPECT_EQ(resolver.error(),
+              "56:78 error: texture_2d<f32> cannot be used as the type of a 'let'");
 }
 
 TEST_F(ResolverVariableValidationTest, OverrideExplicitTypeNotScalar) {
@@ -359,10 +363,7 @@ TEST_F(ResolverVariableValidationTest, NonConstructibleType_RuntimeArray) {
     WrapInFunction(v);
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(),
-              R"(error: runtime-sized arrays can only be used in the <storage> address space
-12:34 note: while analyzing structure member S.m
-56:78 note: while instantiating 'var' v)");
+    EXPECT_EQ(r()->error(), R"(error: function-scope 'var' must have a constructible type)");
 }
 
 TEST_F(ResolverVariableValidationTest, NonConstructibleType_Struct_WithAtomic) {
@@ -518,9 +519,7 @@ TEST_F(ResolverVariableValidationTest, ConstInitWithOverrideExpr) {
 }
 
 TEST_F(ResolverVariableValidationTest, GlobalVariable_ImmediateWithInitializer) {
-    // enable chromium_experimental_immediate;
     // var<immediate> a : u32 = 0u;
-    Enable(wgsl::Extension::kChromiumExperimentalImmediate);
     GlobalVar(Source{{1u, 2u}}, "a", ty.u32(), core::AddressSpace::kImmediate,
               Expr(Source{{3u, 4u}}, u32(0)));
 

@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/msl/writer/common/printer_support.h"
+
 #include "gtest/gtest.h"
 
 namespace tint::msl::writer {
@@ -34,6 +35,7 @@ namespace {
 struct MslBuiltinData {
     core::BuiltinValue builtin;
     const char* attribute_name;
+    std::optional<core::BuiltinDepthMode> depth_mode = std::nullopt;
 };
 inline std::ostream& operator<<(std::ostream& out, MslBuiltinData data) {
     StringStream str;
@@ -45,7 +47,8 @@ inline std::ostream& operator<<(std::ostream& out, MslBuiltinData data) {
 using MslBuiltinConversionTest = testing::TestWithParam<MslBuiltinData>;
 TEST_P(MslBuiltinConversionTest, Emit) {
     auto params = GetParam();
-    EXPECT_EQ(BuiltinToAttribute(params.builtin), std::string(params.attribute_name));
+    EXPECT_EQ(BuiltinToAttribute(params.builtin, params.depth_mode),
+              std::string(params.attribute_name));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -57,15 +60,26 @@ INSTANTIATE_TEST_SUITE_P(
         MslBuiltinData{core::BuiltinValue::kInstanceIndex, "instance_id"},
         MslBuiltinData{core::BuiltinValue::kFrontFacing, "front_facing"},
         MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(any)"},
+        MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(any)",
+                       core::BuiltinDepthMode::kUndefined},
+        MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(any)", core::BuiltinDepthMode::kAny},
+        MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(greater)",
+                       core::BuiltinDepthMode::kGreater},
+        MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(less)",
+                       core::BuiltinDepthMode::kLess},
         MslBuiltinData{core::BuiltinValue::kLocalInvocationId, "thread_position_in_threadgroup"},
         MslBuiltinData{core::BuiltinValue::kLocalInvocationIndex, "thread_index_in_threadgroup"},
         MslBuiltinData{core::BuiltinValue::kGlobalInvocationId, "thread_position_in_grid"},
         MslBuiltinData{core::BuiltinValue::kWorkgroupId, "threadgroup_position_in_grid"},
         MslBuiltinData{core::BuiltinValue::kNumWorkgroups, "threadgroups_per_grid"},
+        MslBuiltinData{core::BuiltinValue::kSubgroupId, "simdgroup_index_in_threadgroup"},
+        MslBuiltinData{core::BuiltinValue::kSubgroupInvocationId, "thread_index_in_simdgroup"},
+        MslBuiltinData{core::BuiltinValue::kSubgroupSize, "threads_per_simdgroup"},
+        MslBuiltinData{core::BuiltinValue::kNumSubgroups, "simdgroups_per_threadgroup"},
         MslBuiltinData{core::BuiltinValue::kSampleIndex, "sample_id"},
         MslBuiltinData{core::BuiltinValue::kSampleMask, "sample_mask"},
         MslBuiltinData{core::BuiltinValue::kPointSize, "point_size"},
-        MslBuiltinData{core::BuiltinValue::kPrimitiveId, "primitive_id"},
+        MslBuiltinData{core::BuiltinValue::kPrimitiveIndex, "primitive_id"},
         MslBuiltinData{core::BuiltinValue::kBarycentricCoord, "barycentric_coord"}));
 
 }  // namespace

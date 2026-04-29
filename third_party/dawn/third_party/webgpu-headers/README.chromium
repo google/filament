@@ -1,0 +1,10 @@
+Name: WebGPU-Headers
+Short Name: webgpu-headers
+URL: https://github.com/webgpu-native/webgpu-headers
+Update Mechanism: Manual
+Security Critical: no
+Version: N/A
+Revision: DEPS
+License: BSD-3-Clause
+License File: LICENSE
+Shipped: no

@@ -29,9 +29,7 @@
 #define SRC_TINT_LANG_WGSL_RESOLVER_VALIDATOR_H_
 
 #include <cstdint>
-#include <set>
 #include <string>
-#include <utility>
 
 #include "src/tint/lang/core/evaluation_stage.h"
 #include "src/tint/lang/core/type/input_attachment.h"
@@ -40,45 +38,29 @@
 #include "src/tint/lang/wgsl/ast/pipeline_stage.h"
 #include "src/tint/lang/wgsl/program/program_builder.h"
 #include "src/tint/lang/wgsl/resolver/sem_helper.h"
+#include "src/tint/lang/wgsl/sem/member_accessor_expression.h"
 #include "src/tint/utils/containers/hashmap.h"
 #include "src/tint/utils/containers/scope_stack.h"
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/diagnostic/source.h"
 #include "src/tint/utils/math/hash.h"
-#include "src/tint/utils/text/styled_text.h"
 
 // Forward declarations
 namespace tint::ast {
-class IndexAccessorExpression;
-class BinaryExpression;
-class BitcastExpression;
 class CallExpression;
-class CallStatement;
-class CaseStatement;
-class ForLoopStatement;
 class Function;
-class IdentifierExpression;
-class LoopStatement;
-class MemberAccessorExpression;
 class ReturnStatement;
 class SwitchStatement;
-class UnaryOpExpression;
 class Variable;
-class WhileStatement;
 }  // namespace tint::ast
 namespace tint::sem {
 class Array;
-class BlockStatement;
 class BreakIfStatement;
-class BuiltinFn;
 class Call;
-class CaseStatement;
 class ForLoopStatement;
 class IfStatement;
 class LoopStatement;
-class Materialize;
 class Statement;
-class SwitchStatement;
 class WhileStatement;
 }  // namespace tint::sem
 namespace tint::core::type {
@@ -193,15 +175,6 @@ class Validator {
     ///        locally-declared element AST node.
     /// @returns true on success, false otherwise.
     bool Array(const sem::Array* arr, const Source& el_source) const;
-
-    /// Validates an array stride attribute
-    /// @param attr the stride attribute to validate
-    /// @param el_size the element size
-    /// @param el_align the element alignment
-    /// @returns true on success, false otherwise
-    bool ArrayStrideAttribute(const ast::StrideAttribute* attr,
-                              uint32_t el_size,
-                              uint32_t el_align) const;
 
     /// Validates an atomic type
     /// @param a the atomic ast node
@@ -475,6 +448,12 @@ class Validator {
     /// @returns true on success, false otherwise
     bool SubgroupMatrix(const core::type::SubgroupMatrix* t, const Source& source) const;
 
+    /// Validates buffer type
+    /// @param t the buffer type to validate
+    /// @param source the source of the buffer type
+    /// @returns true on success, false otherwise
+    bool Buffer(const core::type::Buffer* t, const Source& source) const;
+
     /// Validates a structure
     /// @param str the structure to validate
     /// @param stage the current pipeline stage
@@ -539,9 +518,11 @@ class Validator {
     /// Validates a subgroup matrix constructor
     /// @param ctor the call expression to validate
     /// @param subgroup_matrix_type the type of the subgroup matrix
+    /// @param signature the construct signature to validate against
     /// @returns true on success, false otherwise
     bool SubgroupMatrixConstructor(const ast::CallExpression* ctor,
-                                   const core::type::SubgroupMatrix* subgroup_matrix_type) const;
+                                   const core::type::SubgroupMatrix* subgroup_matrix_type,
+                                   const sem::CallTarget* signature) const;
 
     /// Validates a subgroupShuffle builtin functions including Up,Down, and Xor.
     /// @param fn the builtin call type
@@ -563,6 +544,11 @@ class Validator {
     /// @param call the builtin call to validate
     /// @returns true on success, false otherwise
     bool QuadBroadcast(const sem::Call* call) const;
+
+    /// Validates a bufferView or bufferArrayView builtin function
+    /// @param call the builtin call to validate
+    /// @returns true on success, false otherwise
+    bool BufferView(const sem::Call* call) const;
 
     /// Validates an optional builtin function and its required extensions and language features.
     /// @param call the builtin call to validate
@@ -609,21 +595,11 @@ class Validator {
                             core::AddressSpace sc,
                             Source source) const;
 
-    /// @returns true if the attribute list contains a
-    /// ast::DisableValidationAttribute with the validation mode equal to
-    /// `validation`
-    /// @param attributes the attribute list to check
-    /// @param validation the validation mode to check
-    bool IsValidationDisabled(VectorRef<const ast::Attribute*> attributes,
-                              ast::DisabledValidation validation) const;
-
-    /// @returns true if the attribute list does not contains a
-    /// ast::DisableValidationAttribute with the validation mode equal to
-    /// `validation`
-    /// @param attributes the attribute list to check
-    /// @param validation the validation mode to check
-    bool IsValidationEnabled(VectorRef<const ast::Attribute*> attributes,
-                             ast::DisabledValidation validation) const;
+    /// Validates a swizzle assignment
+    /// @param lhs the lhs swizzle to validate
+    /// @param source the source of the swizzle
+    /// @returns true on success, false otherwise.
+    bool SwizzleAssignment(const sem::Swizzle* lhs, const Source& source) const;
 
   private:
     /// @param ty the type to check

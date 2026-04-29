@@ -380,7 +380,7 @@ TEST_P(D3D12DescriptorResidencyTests, SwitchedViewHeapResidency) {
 
     native::d3d12::Device* d3dDevice = native::d3d12::ToBackend(native::FromAPI(device.Get()));
 
-    auto& allocator = d3dDevice->GetViewShaderVisibleDescriptorAllocator();
+    auto* allocator = d3dDevice->GetViewShaderVisibleDescriptorAllocator();
     const uint64_t heapSize = allocator->GetShaderVisibleHeapSizeForTesting();
 
     const native::d3d12::HeapVersionID heapSerial =

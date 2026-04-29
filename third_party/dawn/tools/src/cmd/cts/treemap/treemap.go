@@ -31,11 +31,11 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -65,11 +65,11 @@ type cmd struct {
 	}
 }
 
-func (cmd) Name() string {
+func (c *cmd) Name() string {
 	return "treemap"
 }
 
-func (cmd) Desc() string {
+func (c *cmd) Desc() string {
 	return `displays a treemap visualization of the CTS tests cases
 
 mode:
@@ -90,39 +90,43 @@ func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, e
 	return []string{"[cases | timing]"}, nil
 }
 
-// TODO(crbug.com/344014313): Split this up into testable helper functions and
-// add coverage (browser.Open() likely prevents testing of Run() itself).
+// TODO(crbug.com/416755658): Add unittest coverage once browser.Open() uses
+// dependency injection for its exec call.
 func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
-	ctx, stop := context.WithCancel(context.Background())
+	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 
 	// Are we visualizing cases, or timings?
 	var data string
-	var err error
 	switch flag.Arg(0) {
 	case "case", "cases":
-		data, err = loadCasesData(c.flags.testQuery, cfg.OsWrapper)
+		d, err := loadCasesData(c.flags.testQuery, cfg.OsWrapper)
+		if err != nil {
+			return err
+		}
+		data = d
 
 	case "time", "times", "timing":
 		// Validate command line arguments
-		auth, err := c.flags.auth.Options()
+		options, err := c.flags.auth.Options()
 		if err != nil {
 			return fmt.Errorf("failed to obtain authentication options: %w", err)
 		}
 
-		data, err = loadTimingData(ctx, c.flags.source, cfg, auth)
+		d, err := loadTimingData(ctx, c.flags.source, cfg, options)
+		if err != nil {
+			return err
+		}
+		data = d
 
 	default:
-		err = subcmd.ErrInvalidCLA
-	}
-	if err != nil {
-		return err
+		return subcmd.ErrInvalidCLA
 	}
 
 	// Kick the server
 	handler := http.NewServeMux()
 	handler.HandleFunc("/index.html", func(w http.ResponseWriter, r *http.Request) {
-		f, err := os.Open(filepath.Join(fileutils.ThisDir(), "treemap.html"))
+		f, err := cfg.OsWrapper.Open(filepath.Join(fileutils.ThisDir(), "treemap.html"))
 		if err != nil {
 			fmt.Fprint(w, "file not found")
 			w.WriteHeader(http.StatusNotFound)
@@ -149,16 +153,15 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	browser.Open(url)
 
 	<-ctx.Done()
-	err = server.Shutdown(ctx)
-	switch err {
-	case nil, context.Canceled:
-		return nil
-	default:
+	err := server.Shutdown(ctx)
+	if err != nil && !errors.Is(err, context.Canceled) {
 		return err
 	}
+	return nil
 }
 
-// TODO(crbug.com/344014313): Add unittests for this function.
+// TODO(crbug.com/416755658): Add unittests for this function once GenTestList
+// used dependency injection for its exec call.
 // loadCasesData creates the JSON payload for a cases visualization
 func loadCasesData(testQuery string, fsReader oswrapper.FilesystemReader) (string, error) {
 	testlist, err := common.GenTestList(context.Background(), common.DefaultCTSPath(fsReader), fileutils.NodePath(fsReader), testQuery)
@@ -190,10 +193,10 @@ func loadCasesData(testQuery string, fsReader oswrapper.FilesystemReader) (strin
 	fmt.Fprint(data, `"data":[`)
 	fmt.Fprint(data, `["Query", "Parent", "Number of tests", "Color"],`)
 	fmt.Fprint(data, `["root", null, 0, 0]`)
-	for _, query := range queryCounts.Keys() {
+	for _, key := range queryCounts.Keys() {
 		fmt.Fprint(data, ",")
-		count := queryCounts[query]
-		if err := json.NewEncoder(data).Encode([]any{query, parentOfOrRoot(query), count, count}); err != nil {
+		count := queryCounts[key]
+		if err := json.NewEncoder(data).Encode([]any{key, parentOfOrRoot(key), count, count}); err != nil {
 			return "", err
 		}
 	}
@@ -246,10 +249,10 @@ func loadTimingData(ctx context.Context, source common.ResultSource, cfg common.
 	fmt.Fprint(data, `"data":[`)
 	fmt.Fprint(data, `["Query", "Parent", "Time (ms)", "Color"],`)
 	fmt.Fprint(data, `["root", null, 0, 0]`)
-	for _, query := range queryTimes.Keys() {
+	for _, key := range queryTimes.Keys() {
 		fmt.Fprint(data, ",")
-		d := queryTimes[query].average()
-		if err := json.NewEncoder(data).Encode([]any{query, parentOfOrRoot(query), d.Milliseconds(), d.Milliseconds()}); err != nil {
+		d := queryTimes[key].average()
+		if err := json.NewEncoder(data).Encode([]any{key, parentOfOrRoot(key), d.Milliseconds(), d.Milliseconds()}); err != nil {
 			return "", err
 		}
 	}

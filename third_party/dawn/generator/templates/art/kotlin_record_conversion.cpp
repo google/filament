@@ -41,7 +41,7 @@
     };
 {% endmacro %}
 
-{% macro define_kotlin_to_struct_conversion(function_name, kotlin_name, struct_name, members) %}
+{% macro define_kotlin_to_struct_conversion(function_name, kotlin_name, struct_name, members,is_structure_converter=False) %}
     inline void {{function_name}}(JNIContext* c, const {{kotlin_name}}& inStruct, {{struct_name}}* outStruct) {
         JNIEnv* env = c->env;
         JNIClasses* classes = JNIClasses::getInstance(env);
@@ -49,8 +49,142 @@
 
         {% for member in kotlin_record_members(members) %}
             {
-                auto& in = inStruct.{{member.name.camelCase()}};
-                auto& out = outStruct->{{member.name.camelCase()}};
+                {% if member.type.category == 'callback function' %}
+                    if (inStruct.{{ as_varName(member.name) }})
+                    {
+                        auto& callbackInfo = outStruct->{{as_varName(member.name)}}Info;
+                        callbackInfo = {};
+
+                        //* Check if the member's corresponding callback info has a callbackMode.
+                        {% set callbackInfoType = find_by_name(by_category["callback info"], member.type.name.get() ~ " info") %}
+                        {% do assert(callbackInfoType, "callbackInfoType must exist but was not found") %}
+                        {% if find_by_name(callbackInfoType.members, 'mode') %}
+                            callbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
+                        {% endif %}
+
+                        //* The callback functions require each argument converting.
+                        //* A custom native callback is generated to wrap the Kotlin callback.
+                        callbackInfo.callback = [](
+                            {%- for callbackArg in member.type.arguments %}
+                                {{- as_annotated_cType(callbackArg) }}{{ ', ' if not loop.last }}
+                            {%- endfor -%}
+                            //* Callback functions do not specify user data params in dawn.json.
+                            //* However, the C API always supplements two parameters with the names
+                            //* below.
+                            , void* userdata1, void* userdata2) {
+                                {% set userdata = 'userdata1' %}
+                            //* User data is used to carry the JNI context (env) for use by the
+                            //* callback.
+                            std::unique_ptr<UserData> userData1{static_cast<UserData *>({{ userdata }})};
+                            JNIEnv *env = NULL;
+                            JavaVM* jvm = userData1->jvm;
+                            //* Deal with difference in signatures between Oracle's jni.h and Android's.
+                            #ifdef _JAVASOFT_JNI_H_  //* Oracle's jni.h violates the JNI spec.
+                                jvm->AttachCurrentThread(reinterpret_cast<void**>(&env), NULL);
+                            #else
+                                jvm->AttachCurrentThread(&env, NULL);
+                            #endif
+
+                            if (env->ExceptionCheck()) {
+                                return;
+                            }
+                            JNIClasses* classes = JNIClasses::getInstance(env);
+
+                            {# Determine the type of Runnable we are building (Structure vs Generic)     #}
+
+                            {%- set info = namespace(mode='standard', class='gpuCallbackRunnable', sig='', has_err=false) -%}
+                            {%- set vars = namespace(status='0', msg=none, load=none, type=none) -%}
+
+                            {# Detect ErrorType #}
+                            {%- for arg in kotlin_record_members(member.type.arguments) -%}
+                                {%- if arg.type.name.get() == 'error type' %}
+                                    {% set info.has_err = true %}
+                                {% endif -%}
+                            {%- endfor -%}
+
+                            {# Determine Initial Mode/Signature #}
+                            {%- if is_structure_converter -%}
+                                {%- set info.mode = 'structure' -%}
+                                {%- set info.class = member.type.name.camelCase() + 'Runnable' -%}
+                                {%- set sb = namespace(v='(L' + jni_name(member.type) + ';') -%}
+                                {%- for arg in kotlin_record_members(member.type.arguments) %}
+                                    {% set sb.v = sb.v + jni_signature(arg) %}
+                                {% endfor -%}
+                                {%- set info.sig = sb.v + ')V' -%}
+                            {%- elif info.has_err -%}
+                                {%- set info.mode = 'error' -%}
+                                {%- set info.class = 'gpuCallbackErrorTypeRunnable' -%}
+                                {%- set info.sig = '(Landroidx/webgpu/GPURequestCallback;IILjava/lang/String;)V' -%}
+                            {%- else -%}
+                                {# Default to Standard, might verify to Void later #}
+                                {%- set info.sig = '(Landroidx/webgpu/GPURequestCallback;ILjava/lang/String;Ljava/lang/Object;)V' -%}
+                            {%- endif -%}
+
+                            {# Generate the C++ variable conversions (e.g. _status, _message) #}
+                            {%- for arg in kotlin_record_members(member.type.arguments) -%}
+                                {{ convert_to_kotlin(arg.name.camelCase(), '_' + arg.name.camelCase(), 'input->' + arg.length.name.camelCase() if arg.length.name, arg) }}
+                                {%- set vName = '_' + arg.name.camelCase() -%}
+                                {%- set aName = arg.name.get() -%}
+                                {%- if aName == 'status' %}
+                                    {% set vars.status = vName %}
+                                {%- elif aName == 'message' %}
+                                    {% set vars.msg = vName %}
+                                {%- elif aName == 'type' %}
+                                    {% set vars.type = vName %}
+                                {%- else %}
+                                    {% set vars.load = vName %}
+                                {%- endif -%}
+                            {%- endfor -%}
+
+
+                            {# Handle missing strings for Generics #}
+                            {%- if info.mode != 'structure' -%}
+                                {%- if vars.msg is none -%}
+                                    jstring _empty_msg = env->NewStringUTF("");
+                                    {%- set vars.msg = '_empty_msg' -%}
+                                {%- endif -%}
+                                {# If Standard mode but no payload found -> Switch to Void #}
+                                {%- if info.mode == 'standard' and vars.load is none -%}
+                                    {%- set info.mode = 'void' -%}
+                                    {%- set info.class = 'gpuCallbackVoidRunnable' -%}
+                                    {%- set info.sig = '(Landroidx/webgpu/GPURequestCallback;ILjava/lang/String;)V' -%}
+                                {%- endif -%}
+                            {%- endif -%}
+
+
+                            jclass executorClass = env->FindClass("java/util/concurrent/Executor");
+                            jmethodID executeMethodID = env->GetMethodID(executorClass, "execute", "(Ljava/lang/Runnable;)V");
+                            jmethodID runCtor = env->GetMethodID(classes->{{ info.class }}, "<init>", "{{ info.sig }}");
+
+                            jobject runnable = env->NewObject(classes->{{ info.class }}, runCtor, userData1->callback
+                            {%- if info.mode == 'structure' -%}
+                                {%- for arg in kotlin_record_members(member.type.arguments) -%}
+                                    {%- if member.type.category != 'kotlin type' %}
+                                        , _{{ arg.name.camelCase() }}
+                                    {% endif -%}
+                                {%- endfor -%}
+                            {%- elif info.mode == 'error' -%}
+                                , {{ vars.status }}, {{ vars.type }}, {{ vars.msg }}
+                                {%- elif info.mode == 'void' -%}
+                                , {{ vars.status }}, {{ vars.msg }}
+                            {%- else -%}
+                                , {{ vars.status }}, {{ vars.msg }}, {{ vars.load }}
+                            {%- endif -%}
+                            );
+
+                            env->CallVoidMethod(userData1->executor, executeMethodID, runnable);
+                        };
+                        //* The user data is owned by the callback and freed when it is called.
+                        callbackInfo.{{ userdata }} = std::unique_ptr<UserData>(new UserData({
+                          .callback = env->NewGlobalRef(inStruct.{{member.name.camelCase()}}),
+                          .executor = env->NewGlobalRef(inStruct.{{as_varName(member.name)}}Executor),
+                          .jvm = c->jvm
+                        })).release();
+                    }
+                {% elif member.type.category != 'kotlin type' %}
+                    auto& in = inStruct.{{member.name.camelCase()}};
+                    auto& out = outStruct->{{member.name.camelCase()}};
+                {% endif %}
                 {% if member.constant_length == 1 %}
                     {% if member.type.category == 'structure' %}
                         if (in != nullptr) {
@@ -69,9 +203,8 @@
                         {{ unreachable_code() }}
                     {% endif %}
                     //* Convert container, including the length field.
-                    {% if member.type.name.get() == 'uint32_t' %}
-                        //* This container type is represented in Kotlin as a primitive array.
-                        out = reinterpret_cast<const uint32_t*>(c->GetIntArrayElements(in));
+                    {% if member.type.name.get() == 'uint32_t' or member.type.category in ['bitmask', 'enum'] %}
+                        out = reinterpret_cast<const {{ as_cType(member.type.name) }}*>(c->GetIntArrayElements(in));
                         outLength = env->GetArrayLength(in);
                     {% elif member.type.name.get() == 'void' %}
                         out = env->GetDirectBufferAddress(in);
@@ -82,15 +215,7 @@
                         auto array = c->AllocArray<{{ as_cType(member.type.name) }}>(outLength);
                         out = array;
 
-                        {% if member.type.category in ['bitmask', 'enum'] %}
-                            jclass memberClass = classes->{{ member.type.name.camelCase() }};
-                            jmethodID getValue = env->GetMethodID(memberClass, "getValue", "()I");
-                            for (int idx = 0; idx != outLength; idx++) {
-                                jobject element = env->GetObjectArrayElement(in, idx);
-                                array[idx] = static_cast<{{ as_cType(member.type.name) }}>(
-                                        env->CallIntMethod(element, getValue));
-                            }
-                        {% elif member.type.category == 'object' %}
+                        {% if member.type.category == 'object' %}
                             jclass memberClass = classes->{{ member.type.name.camelCase() }};
                             jmethodID getHandle = env->GetMethodID(memberClass, "getHandle", "()J");
                             for (int idx = 0; idx != outLength; idx++) {
@@ -116,7 +241,9 @@
                     } else {
                         out = nullptr;
                     }
-                {% elif member.type.category in ['callback info', 'structure'] %}
+                {% elif member.type.category == 'callback function' %}
+                    //* Do nothing for this case.
+                {% elif member.type.category == 'structure' %}
                     //* Mandatory structure.
                     ToNative(c, env, in, &out);
                 {% elif member.name.get() == "window" and member.type.name.get() == "void *" %}
@@ -126,66 +253,7 @@
                     out = reinterpret_cast<{{as_cType(member.type.name)}}>(static_cast<uintptr_t>(in));
                 {% elif member.type.category in ["native", "enum", "bitmask"] %}
                     out = static_cast<{{as_cType(member.type.name)}}>(in);
-                {% elif member.type.category in ['callback function', 'function pointer'] %}
-                    //* Function pointers and callback functions require each argument converting.
-                    //* A custom native callback is generated to wrap the Kotlin callback.
-                    out = [](
-                        {%- for callbackArg in member.type.arguments %}
-                            {{- as_annotated_cType(callbackArg) }}{{ ', ' if not loop.last }}
-                        {%- endfor -%}
-                        {%- if member.type.category == 'function pointer' -%}
-                            //* We rely on the function pointer definitions (dawn.json) always
-                            //* including a parameter named 'userdata' as the final parameter.
-                            {%- set userdata = 'userdata' -%}
-                        {%- else %}
-                            //* Callback functions do not specify user data params in dawn.json.
-                            //* However, the C API always supplements two parameters with the names
-                            //* below.
-                            , void* userdata1, void* userdata2
-                            {%- set userdata = 'userdata1' -%}
-                        {%- endif %}) {
-                        //* User data is used to carry the JNI context (env) for use by the
-                        //* callback.
-                        UserData* userData1 = static_cast<UserData *>({{ userdata }});
-                        JNIEnv *env = NULL;
-                        JavaVM* jvm = userData1->jvm;
-                        //* Deal with difference in signatures between Oracle's jni.h and Android's.
-                        #ifdef _JAVASOFT_JNI_H_  //* Oracle's jni.h violates the JNI spec.
-                            jvm->AttachCurrentThread(reinterpret_cast<void**>(&env), NULL);
-                        #else
-                            jvm->AttachCurrentThread(&env, NULL);
-                        #endif
-
-                        if (env->ExceptionCheck()) {
-                            return;
-                        }
-                        JNIClasses* classes = JNIClasses::getInstance(env);
-
-                        {% for callbackArg in kotlin_record_members(member.type.arguments) -%}
-                            {{ convert_to_kotlin(callbackArg.name.camelCase(),
-                                                 '_' + callbackArg.name.camelCase(),
-                                                 'input->' + callbackArg.length.name.camelCase() if callbackArg.length.name,
-                                                 callbackArg) }}
-                        {% endfor %}
-
-                        //* Get the client (Kotlin) callback so we can call it.
-                        jmethodID callbackMethod = env->GetMethodID(
-                                classes->{{ member.type.name.camelCase() }}, "callback", "(
-                            {%- for callbackArg in kotlin_record_members(member.type.arguments) -%}
-                                {{- jni_signature(callbackArg) -}}
-                            {%- endfor %})V");
-
-                        //* Call the callback with all converted parameters.
-                        env->CallVoidMethod(userData1->callback, callbackMethod
-                        {%- for callbackArg in kotlin_record_members(member.type.arguments) %}
-                             {{- ', ' }}_{{ callbackArg.name.camelCase() }}
-                        {%- endfor %});
-                    };
-                    //* TODO(b/330293719): free associated resources.
-                    outStruct->{{ userdata }} = new UserData(
-                            {.callback = env->NewGlobalRef(in), .jvm = c->jvm});
-
-                {% else %}
+                {% elif member.type.category != 'kotlin type' %}
                     {{ unreachable_code() }}
                 {% endif %}
             }

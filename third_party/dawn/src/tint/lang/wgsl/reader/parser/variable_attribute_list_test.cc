@@ -64,7 +64,7 @@ TEST_F(WGSLParserTest, VariableAttributeList_Invalid) {
     EXPECT_TRUE(attrs.value.IsEmpty());
     EXPECT_EQ(p->error(), R"(1:2: expected attribute
 Did you mean 'invariant'?
-Possible values: 'align', 'binding', 'blend_src', 'builtin', 'color', 'compute', 'diagnostic', 'fragment', 'group', 'id', 'input_attachment_index', 'interpolate', 'invariant', 'location', 'must_use', 'size', 'vertex', 'workgroup_size')");
+Possible values: 'align', 'binding', 'blend_src', 'builtin', 'color', 'compute', 'diagnostic', 'fragment', 'group', 'id', 'input_attachment_index', 'interpolate', 'invariant', 'location', 'must_use', 'size', 'subgroup_size', 'vertex', 'workgroup_size')");
 }
 
 }  // namespace

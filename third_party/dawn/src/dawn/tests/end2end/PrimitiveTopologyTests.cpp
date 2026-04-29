@@ -320,7 +320,8 @@ DAWN_INSTANTIATE_TEST(PrimitiveTopologyTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

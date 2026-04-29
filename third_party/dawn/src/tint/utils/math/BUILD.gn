@@ -51,7 +51,7 @@ libtint_source_set("math") {
     "math.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/utils/macros",
   ]
 }
@@ -63,7 +63,7 @@ if (tint_build_unittests) {
       "math_test.cc",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/ice",

@@ -28,28 +28,16 @@
 #include "src/tint/lang/wgsl/ast/break_if_statement.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::BreakIfStatement);
 
 namespace tint::ast {
 
-BreakIfStatement::BreakIfStatement(GenerationID pid,
-                                   NodeID nid,
-                                   const Source& src,
-                                   const Expression* cond)
-    : Base(pid, nid, src), condition(cond) {
+BreakIfStatement::BreakIfStatement(NodeID nid, const Source& src, const Expression* cond)
+    : Base(nid, src), condition(cond) {
     TINT_ASSERT(condition);
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(condition, generation_id);
 }
 
 BreakIfStatement::~BreakIfStatement() = default;
-
-const BreakIfStatement* BreakIfStatement::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto* cond = ctx.Clone(condition);
-    return ctx.dst->create<BreakIfStatement>(src, cond);
-}
 
 }  // namespace tint::ast

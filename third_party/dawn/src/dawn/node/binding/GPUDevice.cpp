@@ -317,6 +317,13 @@ interop::Interface<interop::GPUBuffer> GPUDevice::createBuffer(
         return {};
     }
 
+    if (desc.mappedAtCreation && desc.size % 4 != 0) {
+        Napi::RangeError::New(
+            env, "createBuffer failed, size is not a multiple of 4 when mappedAtCreation is true.")
+            .ThrowAsJavaScriptException();
+        return {};
+    }
+
     wgpu::Buffer dawnBuffer = device_.CreateBuffer(&desc);
     // Buffer creation may return nullptr if it fails to map at creation. Translate that to a
     // RangeError as required by the spec.
@@ -346,7 +353,7 @@ interop::Interface<interop::GPUTexture> GPUDevice::createTexture(
         return {};
     }
 
-    wgpu::TextureBindingViewDimensionDescriptor texture_binding_view_dimension_desc{};
+    wgpu::TextureBindingViewDimension texture_binding_view_dimension_desc{};
     wgpu::TextureViewDimension texture_binding_view_dimension;
     if (descriptor.textureBindingViewDimension.has_value() &&
         conv(texture_binding_view_dimension, descriptor.textureBindingViewDimension)) {
@@ -410,7 +417,8 @@ interop::Interface<interop::GPUPipelineLayout> GPUDevice::createPipelineLayout(
 
     wgpu::PipelineLayoutDescriptor desc{};
     if (!conv(desc.label, descriptor.label) ||
-        !conv(desc.bindGroupLayouts, desc.bindGroupLayoutCount, descriptor.bindGroupLayouts)) {
+        !conv(desc.bindGroupLayouts, desc.bindGroupLayoutCount, descriptor.bindGroupLayouts) ||
+        !conv(desc.immediateSize, descriptor.immediateSize)) {
         return {};
     }
 

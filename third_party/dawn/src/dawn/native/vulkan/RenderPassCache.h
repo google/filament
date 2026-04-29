@@ -57,7 +57,8 @@ struct RenderPassCacheQuery {
                   wgpu::TextureFormat format,
                   wgpu::LoadOp loadOp,
                   wgpu::StoreOp storeOp,
-                  bool hasResolveTarget);
+                  bool hasResolveTarget,
+                  bool renderToSingleSampled);
     void SetDepthStencil(wgpu::TextureFormat format,
                          wgpu::LoadOp depthLoadOp,
                          wgpu::StoreOp depthStoreOp,
@@ -73,6 +74,7 @@ struct RenderPassCacheQuery {
     PerColorAttachment<wgpu::LoadOp> colorLoadOp;
     PerColorAttachment<wgpu::StoreOp> colorStoreOp;
     ColorAttachmentMask expandResolveMask;
+    ColorAttachmentMask renderToSingleSampleMask;
 
     bool hasDepthStencil = false;
     wgpu::TextureFormat depthStencilFormat;

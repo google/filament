@@ -54,5 +54,19 @@ TEST(GPUInfo, CompareIntelWindowsDriverVersion) {
     EXPECT_LT(gpu_info::IntelWindowsDriverVersion(version4), version7);
 }
 
+TEST(GPUInfo, GetGen) {
+    // Qualcomm GPUs
+    EXPECT_EQ(gpu_info::GetQualcommACPIGen(0x4D4F4351, 0x41333800),
+              gpu_info::QualcommACPIGen::Adreno6xx);
+    EXPECT_EQ(gpu_info::GetQualcommACPIGen(0x4D4F4351, 0x36334300),
+              gpu_info::QualcommACPIGen::Adreno7xx);
+    EXPECT_EQ(gpu_info::GetQualcommACPIGen(0x4D4F4351, 0x41333900),
+              gpu_info::QualcommACPIGen::Unknown);
+
+    // Intel GPUs
+    EXPECT_EQ(gpu_info::GetIntelGen(0x8086, 0x9A00), gpu_info::IntelGen::Xe);
+    EXPECT_EQ(gpu_info::GetIntelGen(0x8086, 0x7D00), gpu_info::IntelGen::Xe);
+    EXPECT_EQ(gpu_info::GetIntelGen(0x8086, 0x6400), gpu_info::IntelGen::Xe2);
+}
 }  // anonymous namespace
 }  // namespace dawn

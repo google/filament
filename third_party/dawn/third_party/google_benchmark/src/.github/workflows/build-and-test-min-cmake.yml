@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  CMAKE_GENERATOR: Ninja
+
 jobs:
   job:
     name: ${{ matrix.os }}.min-cmake
@@ -16,11 +19,11 @@ jobs:
         os: [ubuntu-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: lukka/get-cmake@latest
+      - uses: lukka/get-cmake@ea83089aa35e08e459464341fe24ad024ee2466f # latest
         with:
-          cmakeVersion: 3.10.0
+          cmakeVersion: 3.13.0
 
       - name: create build environment
         run: cmake -E make_directory ${{ runner.workspace }}/_build

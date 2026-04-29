@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/wire/WireServer.h"
+
 #include "dawn/wire/server/Server.h"
 
 namespace dawn::wire {
@@ -33,7 +34,8 @@ namespace dawn::wire {
 WireServer::WireServer(const WireServerDescriptor& descriptor)
     : mImpl(server::Server::Create(*descriptor.procs,
                                    descriptor.serializer,
-                                   descriptor.memoryTransferService)) {}
+                                   descriptor.memoryTransferService,
+                                   descriptor.useSpontaneousCallbacks)) {}
 
 WireServer::~WireServer() {
     mImpl.reset();

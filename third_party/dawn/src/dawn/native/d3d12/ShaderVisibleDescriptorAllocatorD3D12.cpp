@@ -91,11 +91,11 @@ D3D12_DESCRIPTOR_HEAP_FLAGS GetD3D12HeapFlags(D3D12_DESCRIPTOR_HEAP_TYPE heapTyp
 }
 
 // static
-ResultOrError<std::unique_ptr<MutexProtected<ShaderVisibleDescriptorAllocator>>>
+ResultOrError<std::unique_ptr<ShaderVisibleDescriptorAllocator>>
 ShaderVisibleDescriptorAllocator::Create(Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType) {
-    std::unique_ptr<MutexProtected<ShaderVisibleDescriptorAllocator>> allocator =
-        std::make_unique<MutexProtected<ShaderVisibleDescriptorAllocator>>(device, heapType);
-    DAWN_TRY((*allocator)->AllocateAndSwitchShaderVisibleHeap());
+    auto allocator = std::make_unique<ShaderVisibleDescriptorAllocator>(device, heapType);
+    DAWN_TRY(
+        allocator->AllocateAndSwitchShaderVisibleHeap(allocator->GetShaderVisibleHeapMinSize()));
     return std::move(allocator);
 }
 
@@ -104,12 +104,10 @@ ShaderVisibleDescriptorAllocator::ShaderVisibleDescriptorAllocator(
     D3D12_DESCRIPTOR_HEAP_TYPE heapType)
     : mHeapType(heapType),
       mDevice(device),
-      mSizeIncrement(device->GetD3D12Device()->GetDescriptorHandleIncrementSize(heapType)),
-      mDescriptorCount(GetD3D12ShaderVisibleHeapMinSize(
-          heapType,
-          mDevice->IsToggleEnabled(Toggle::UseD3D12SmallShaderVisibleHeapForTesting))) {
+      mSizeIncrement(device->GetD3D12Device()->GetDescriptorHandleIncrementSize(heapType)) {
     DAWN_ASSERT(heapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ||
                 heapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+    mDescriptorCount = GetShaderVisibleHeapMinSize();
 }
 
 bool ShaderVisibleDescriptorAllocator::AllocateGPUDescriptors(
@@ -148,6 +146,15 @@ ID3D12DescriptorHeap* ShaderVisibleDescriptorAllocator::GetShaderVisibleHeap() c
     return mHeap->GetD3D12DescriptorHeap();
 }
 
+uint32_t ShaderVisibleDescriptorAllocator::GetShaderVisibleHeapMinSize() const {
+    return GetD3D12ShaderVisibleHeapMinSize(
+        mHeapType, mDevice->IsToggleEnabled(Toggle::UseD3D12SmallShaderVisibleHeapForTesting));
+}
+uint32_t ShaderVisibleDescriptorAllocator::GetShaderVisibleHeapMaxSize() const {
+    return GetD3D12ShaderVisibleHeapMaxSize(
+        mHeapType, mDevice->IsToggleEnabled(Toggle::UseD3D12SmallShaderVisibleHeapForTesting));
+}
+
 void ShaderVisibleDescriptorAllocator::Tick(ExecutionSerial completedSerial) {
     mAllocator.Deallocate(completedSerial);
 }
@@ -182,22 +189,33 @@ ShaderVisibleDescriptorAllocator::AllocateHeap(uint32_t descriptorCount) const {
 }
 
 // Creates a GPU descriptor heap that manages descriptors in a FIFO queue.
-MaybeError ShaderVisibleDescriptorAllocator::AllocateAndSwitchShaderVisibleHeap() {
+MaybeError ShaderVisibleDescriptorAllocator::AllocateAndSwitchShaderVisibleHeap(
+    uint32_t minDescriptorCount) {
+    DAWN_ASSERT(minDescriptorCount > 0);
+    const uint32_t maxDescriptorCount = GetShaderVisibleHeapMaxSize();
+    DAWN_ASSERT(minDescriptorCount <= maxDescriptorCount);
+
+    // Grow the heap to the next power of two size if necessary.
+    if (minDescriptorCount > mDescriptorCount) {
+        if (!IsPowerOfTwo(minDescriptorCount)) {
+            // Align to the next power of two heap size (e.g 4096, 8192, 16384, etc.)
+            uint32_t align = Pow2(Log2(minDescriptorCount) + 1u);
+            minDescriptorCount = Align(minDescriptorCount, align);
+            DAWN_ASSERT(minDescriptorCount <= maxDescriptorCount);
+        }
+        mDescriptorCount = minDescriptorCount;
+    }
+
     std::unique_ptr<ShaderVisibleDescriptorHeap> descriptorHeap;
-    // Dynamically allocate using a two-phase allocation strategy.
-    // The first phase increasingly grows a small heap in binary sizes for light users while the
-    // second phase pool-allocates largest sized heaps for heavy users.
+
+    // The general strategy is to allocate a new heap of mDescriptorCount size, until
+    // mDescriptorCount reaches the max size, at which point we pool the max-sized heaps.
     if (mHeap != nullptr) {
         mDevice->GetResidencyManager()->UnlockAllocation(mHeap.get());
-
-        const uint32_t maxDescriptorCount = GetD3D12ShaderVisibleHeapMaxSize(
-            mHeapType, mDevice->IsToggleEnabled(Toggle::UseD3D12SmallShaderVisibleHeapForTesting));
         if (mDescriptorCount < maxDescriptorCount) {
-            // Phase #1. Grow the heaps in powers-of-two.
             mDevice->ReferenceUntilUnused(mHeap->GetD3D12DescriptorHeap());
-            mDescriptorCount = std::min(mDescriptorCount * 2, maxDescriptorCount);
         } else {
-            // Phase #2. Pool-allocate heaps.
+            // Pool-allocate heaps.
             // Return the switched out heap to the pool and retrieve the oldest heap that is no
             // longer used by GPU. This maintains a heap buffer to avoid frequently re-creating
             // heaps for heavy users.

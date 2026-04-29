@@ -92,7 +92,7 @@ MaybeError SwapChainEGL::Initialize(SwapChainBase* previousSwapChain) {
     }
 
     EGLint swapInterval = GetPresentMode() == wgpu::PresentMode::Immediate ? 0 : 1;
-    display->egl.SwapInterval(display->GetDisplay(), swapInterval);
+    display->egl->SwapInterval(display->GetDisplay(), swapInterval);
 
     return {};
 }
@@ -104,7 +104,7 @@ MaybeError SwapChainEGL::PresentImpl() {
 
     // Do the reverse-Y blit from the fake surface texture to the default framebuffer.
     {
-        auto surfaceCurrent = device->GetContext()->MakeSurfaceCurrentScope(mEGLSurface);
+        auto surfaceCurrent = device->GetContext()->SetCurrentSurfaceScope(mEGLSurface);
         EGLint surfaceWidth;
         EGLint surfaceHeight;
         DAWN_TRY(CheckEGL(egl, egl.QuerySurface(display, mEGLSurface, EGL_WIDTH, &surfaceWidth),
@@ -117,7 +117,7 @@ MaybeError SwapChainEGL::PresentImpl() {
         GLuint readFbo = 0;
         DAWN_GL_TRY(gl, GenFramebuffers(1, &readFbo));
         DAWN_GL_TRY(gl, BindFramebuffer(GL_READ_FRAMEBUFFER, readFbo));
-        DAWN_TRY(mTextureView->BindToFramebuffer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0));
+        DAWN_TRY(mTextureView->BindToFramebuffer(gl, GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0));
 
         DAWN_GL_TRY(gl, BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
         DAWN_GL_TRY(gl, Scissor(0, 0, surfaceWidth, surfaceHeight));
@@ -178,7 +178,7 @@ MaybeError SwapChainEGL::CreateEGLSurface(const DisplayEGL* display) {
     }
 
     // [[maybe_unused]] to prevent unused variable warnings when platform code is disabled.
-    [[maybe_unused]] const EGLFunctions& egl = display->egl;
+    [[maybe_unused]] const EGLFunctions& egl = display->egl.get();
     [[maybe_unused]] EGLDisplay eglDisplay = display->GetDisplay();
     Surface* surface = GetSurface();
 
@@ -220,8 +220,8 @@ MaybeError SwapChainEGL::CreateEGLSurface(const DisplayEGL* display) {
 #endif  // DAWN_PLATFORM_IS(WIN32)
 #if defined(DAWN_USE_X11)
             case Surface::Type::XlibWindow:
-                mEGLSurface = egl.CreateWindowSurface(eglDisplay, config, surface->GetXWindow(),
-                                                      attribs.data());
+                mEGLSurface = egl.CreateWindowSurface(
+                    eglDisplay, config, uint32_t(surface->GetXWindow()), attribs.data());
                 return {};
 #endif  // defined(DAWN_USE_X11)
 

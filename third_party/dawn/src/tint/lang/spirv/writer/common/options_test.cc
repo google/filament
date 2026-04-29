@@ -33,7 +33,8 @@ namespace tint::spirv::writer {
 namespace {
 
 TEST(TintCheckAllFieldsReflected, SpirvWriterCommonOptionsTest) {
-    TINT_ASSERT_ALL_FIELDS_REFLECTED(ExternalTexture);
+    TINT_ASSERT_ALL_FIELDS_REFLECTED(ExternalMultiplanarTexture);
+    TINT_ASSERT_ALL_FIELDS_REFLECTED(ExternalYCBCRTexture);
     TINT_ASSERT_ALL_FIELDS_REFLECTED(Bindings);
     TINT_ASSERT_ALL_FIELDS_REFLECTED(Options);
 }

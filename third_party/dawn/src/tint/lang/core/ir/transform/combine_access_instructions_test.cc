@@ -40,7 +40,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 using IR_CombineAccessInstructionsTest = TransformTest;
 
 TEST_F(IR_CombineAccessInstructionsTest, NoModify_NoChaining) {
-    auto* vec = ty.vec3<f32>();
+    auto* vec = ty.vec3f();
     auto* mat = ty.mat3x3<f32>();
     auto* arr = ty.array(mat, 4);
     auto* structure = ty.Struct(mod.symbols.New("MyStruct"), {
@@ -96,7 +96,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_CombineAccessInstructionsTest, SimpleChain) {
-    auto* vec = ty.vec3<f32>();
+    auto* vec = ty.vec3f();
     auto* mat = ty.mat3x3<f32>();
     auto* arr = ty.array(mat, 4);
     auto* structure = ty.Struct(mod.symbols.New("MyStruct"), {
@@ -162,7 +162,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_CombineAccessInstructionsTest, MutipleChains_FromRoot) {
-    auto* vec = ty.vec3<f32>();
+    auto* vec = ty.vec3f();
     auto* mat = ty.mat3x3<f32>();
     auto* arr = ty.array(mat, 4);
     auto* structure = ty.Struct(mod.symbols.New("MyStruct"), {
@@ -251,7 +251,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_CombineAccessInstructionsTest, MutipleChains_FromMiddle) {
-    auto* vec = ty.vec3<f32>();
+    auto* vec = ty.vec3f();
     auto* mat = ty.mat3x3<f32>();
     auto* arr = ty.array(mat, 4);
     auto* structure = ty.Struct(mod.symbols.New("MyStruct"), {
@@ -336,7 +336,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_CombineAccessInstructionsTest, OtherUses_Root) {
-    auto* vec = ty.vec3<f32>();
+    auto* vec = ty.vec3f();
     auto* mat = ty.mat3x3<f32>();
     auto* arr = ty.array(mat, 4);
     auto* structure = ty.Struct(mod.symbols.New("MyStruct"), {
@@ -406,7 +406,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_CombineAccessInstructionsTest, OtherUses_Middle) {
-    auto* vec = ty.vec3<f32>();
+    auto* vec = ty.vec3f();
     auto* mat = ty.mat3x3<f32>();
     auto* arr = ty.array(mat, 4);
     auto* structure = ty.Struct(mod.symbols.New("MyStruct"), {

@@ -39,21 +39,14 @@ namespace tint::ast {
 class GroupAttribute final : public Castable<GroupAttribute, Attribute> {
   public:
     /// constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param expr the group expression
-    GroupAttribute(GenerationID pid, NodeID nid, const Source& src, const Expression* expr);
+    GroupAttribute(NodeID nid, const Source& src, const Expression* expr);
     ~GroupAttribute() override;
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const GroupAttribute* Clone(CloneContext& ctx) const override;
 
     /// The group expression
     const Expression* const expr;

@@ -40,8 +40,10 @@ namespace tint::spirv::writer::raise {
 
 // The capabilities that the transform can support.
 const core::ir::Capabilities kHandleMatrixArithmeticCapabilities{
+    core::ir::Capability::kAllowDuplicateBindings,
     core::ir::Capability::kAllowAnyInputAttachmentIndexType,
     core::ir::Capability::kAllowNonCoreTypes,
+    core::ir::Capability::kAllow8BitIntegers,
 };
 
 /// HandleMatrixArithmetic is a transform that converts arithmetic instruction that use matrix into

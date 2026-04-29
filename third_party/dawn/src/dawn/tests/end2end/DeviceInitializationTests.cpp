@@ -97,11 +97,6 @@ TEST_F(DeviceInitializationTest, DeviceOutlivesInstance) {
                 continue;
             }
 
-            // TODO(crbug.com/413053623): remove after webgpu backend device is implemented.
-            if (info.backendType == wgpu::BackendType::WebGPU) {
-                continue;
-            }
-
             availableAdapterInfo.push_back(std::move(info));
         }
     }
@@ -150,10 +145,13 @@ TEST_F(DeviceInitializationTest, AdapterOutlivesInstance) {
                 continue;
             }
 
-            // TODO(crbug.com/413053623): remove after webgpu backend device is implemented.
-            if (info.backendType == wgpu::BackendType::WebGPU) {
-                continue;
+            // TODO(crbug.com/472472701): Flakily kills test process when run with
+            // software backends and MSVC-compiled binaries.
+#if DAWN_COMPILER_IS(MSVC)
+            if (info.adapterType == wgpu::AdapterType::CPU) {
+                DAWN_SUPPRESS_TEST_IF(true);
             }
+#endif  // DAWN_COMPILER_IS(MSVC)
 
             availableAdapterInfo.push_back(std::move(info));
         }

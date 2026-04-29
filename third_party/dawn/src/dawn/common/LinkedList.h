@@ -7,11 +7,13 @@
 //   - Added iterators for ranged based iterations
 //   - Added in list check before removing node to prevent segfault, now returns true iff removed
 //   - Added MoveInto functionality for moving list elements to another list
+//   - Made the node's next and prev pointers atomic with relaxed memory order
 
 #ifndef SRC_DAWN_COMMON_LINKEDLIST_H_
 #define SRC_DAWN_COMMON_LINKEDLIST_H_
 
 #include "dawn/common/Assert.h"
+#include "dawn/common/Atomic.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
 
 namespace dawn {
@@ -99,6 +101,10 @@ class LinkNode;
 template <typename T>
 class LinkedList;
 
+// LinkNode uses atomic next & prev pointers with relaxed memory order. Mutator methods
+// (InsertBefore, InsertAfter, RemoveFromList) must be externally synchronized (typically via a
+// mutex on the parent list). IsInList() can be called without external synchronization and only
+// needs to be ordered with the current node's own mutators. See ApiObjectList for typical usage.
 template <typename T>
 class LinkNode {
   public:
@@ -172,11 +178,12 @@ class LinkNode {
 
   private:
     friend class LinkedList<T>;
-    // RAW_PTR_EXCLUSION: Linked lists are used and iterated a lot so these pointers are very hot.
-    // All accesses to the pointers are behind "safe" APIs such that it is not possible (in
-    // single-threaded code) to use them after they are freed.
-    RAW_PTR_EXCLUSION LinkNode<T>* previous_ = nullptr;
-    RAW_PTR_EXCLUSION LinkNode<T>* next_ = nullptr;
+    // We only offer relaxed memory order for next and prev ptr which should be enough for our use
+    // cases. Note: Other nodes' Insert or RemoveFromList() may change these pointers concurrently,
+    // but they never set them to null (only this node's RemoveFromList() does), so IsInList()
+    // remains correct.
+    Atomic<LinkNode<T>*, std::memory_order::relaxed> previous_{nullptr};
+    Atomic<LinkNode<T>*, std::memory_order::relaxed> next_{nullptr};
 };
 
 template <typename T>

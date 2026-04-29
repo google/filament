@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/utils/rtti/switch.h"
+
 #include "src/tint/utils/ice/ice.h"
 
 namespace tint::detail {

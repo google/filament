@@ -47,11 +47,10 @@ Napi::Value Converter<bool>::ToJS(Napi::Env env, bool value) {
 }
 
 Result Converter<std::string>::FromJS(Napi::Env env, Napi::Value value, std::string& out) {
-    if (value.IsString()) {
-        out = value.ToString();
-        return Success;
-    }
-    return Error("value is not a string");
+    // See https://webidl.spec.whatwg.org/#js-DOMString and
+    // https://tc39.es/ecma262/multipage/abstract-operations.html#sec-tostring for details.
+    out = value.ToString();
+    return Success;
 }
 Napi::Value Converter<std::string>::ToJS(Napi::Env env, std::string value) {
     return Napi::Value::From(env, value);

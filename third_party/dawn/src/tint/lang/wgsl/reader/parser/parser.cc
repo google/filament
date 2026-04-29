@@ -28,6 +28,7 @@
 #include "src/tint/lang/wgsl/reader/parser/parser.h"
 
 #include <limits>
+#include <span>
 #include <utility>
 
 #include "src/tint/lang/core/enums.h"
@@ -50,12 +51,12 @@
 #include "src/tint/lang/wgsl/ast/loop_statement.h"
 #include "src/tint/lang/wgsl/ast/return_statement.h"
 #include "src/tint/lang/wgsl/ast/stage_attribute.h"
+#include "src/tint/lang/wgsl/ast/subgroup_size_attribute.h"
 #include "src/tint/lang/wgsl/ast/switch_statement.h"
 #include "src/tint/lang/wgsl/ast/unary_op_expression.h"
 #include "src/tint/lang/wgsl/ast/var.h"
 #include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
 #include "src/tint/lang/wgsl/ast/workgroup_attribute.h"
-#include "src/tint/lang/wgsl/reader/parser/classify_template_args.h"
 #include "src/tint/lang/wgsl/reader/parser/lexer.h"
 #include "src/tint/lang/wgsl/reserved_words.h"
 #include "src/tint/utils/containers/reverse.h"
@@ -271,15 +272,11 @@ bool Parser::peek_is(Token::Type tok, size_t idx) {
 }
 
 void Parser::split_token(Token::Type lhs, Token::Type rhs) {
-    if (DAWN_UNLIKELY(next_token_idx_ == 0)) {
-        TINT_ICE() << "attempt to update placeholder at beginning of tokens";
-    }
-    if (DAWN_UNLIKELY(next_token_idx_ >= tokens_.size())) {
-        TINT_ICE() << "attempt to update placeholder past end of tokens";
-    }
-    if (DAWN_UNLIKELY(!tokens_[next_token_idx_].IsPlaceholder())) {
-        TINT_ICE() << "attempt to update non-placeholder token";
-    }
+    TINT_ASSERT(next_token_idx_ != 0) << "attempt to update placeholder at beginning of tokens";
+    TINT_ASSERT(next_token_idx_ < tokens_.size())
+        << "attempt to update placeholder past end of tokens";
+    TINT_ASSERT(tokens_[next_token_idx_].IsPlaceholder())
+        << "attempt to update non-placeholder token";
     tokens_[next_token_idx_ - 1].SetType(lhs);
     tokens_[next_token_idx_].SetType(rhs);
 }
@@ -291,7 +288,6 @@ Source Parser::last_source() const {
 void Parser::InitializeLex() {
     Lexer l{file_};
     tokens_ = l.Lex();
-    ClassifyTemplateArguments(tokens_);
 }
 
 bool Parser::Parse() {
@@ -867,7 +863,7 @@ Maybe<ast::Type> Parser::type_specifier() {
     }
 
     if (!peek_is(Token::Type::kTemplateArgsLeft)) {
-        return builder_.ty(builder_.Ident(source(), ident.to_str()));
+        return builder_.ty.AsType(source(), ident.to_str());
     }
 
     auto args = expect_template_arg_block("type template arguments", [&] {
@@ -877,13 +873,13 @@ Maybe<ast::Type> Parser::type_specifier() {
     if (args.errored) {
         return Failure::kErrored;
     }
-    return builder_.ty(builder_.Ident(source(), ident.to_str(), std::move(args.value)));
+    return builder_.ty.AsType(source(), ident.to_str(), std::move(args.value));
 }
 
 template <typename ENUM>
 Expect<ENUM> Parser::expect_enum(std::string_view name,
                                  ENUM (*parse)(std::string_view str),
-                                 Slice<const std::string_view> strings,
+                                 std::span<const std::string_view> strings,
                                  std::string_view use) {
     auto& t = peek();
     auto ident = t.to_str();
@@ -910,17 +906,18 @@ Expect<ENUM> Parser::expect_enum(std::string_view name,
     }
     err << "\n";
 
-    if (strings == wgsl::kExtensionStrings && !HasPrefix(ident, "chromium")) {
+    if (strings.data() == std::span(wgsl::kExtensionStrings).data() &&
+        strings.size() == std::size(wgsl::kExtensionStrings) && !ident.starts_with("chromium")) {
         // Filter out 'chromium' prefixed extensions. We don't want to advertise experimental
         // extensions to end users (unless it looks like they've actually mis-typed a chromium
         // extension name)
         Vector<std::string_view, 8> filtered;
         for (auto str : strings) {
-            if (!HasPrefix(str, "chromium")) {
+            if (!str.starts_with("chromium")) {
                 filtered.Push(str);
             }
         }
-        tint::SuggestAlternatives(ident, filtered.Slice(), err);
+        tint::SuggestAlternatives(ident, filtered.AsSpan(), err);
     } else {
         tint::SuggestAlternatives(ident, strings, err);
     }
@@ -1986,6 +1983,12 @@ Maybe<const ast::BlockStatement*> Parser::continuing_compound_statement() {
         StatementList stmts;
 
         while (continue_parsing()) {
+            // Need to skip empty statements otherwise we can end up in the `statement` code below,
+            // then we skip the `;` and parse a `break-if` as a `break`.
+            while (match(Token::Type::kSemicolon)) {
+                // Skip empty statements
+            }
+
             // Note, break-if has to parse before statements because statements includes `break`
             auto break_if = break_if_statement();
             if (break_if.errored) {
@@ -3022,6 +3025,7 @@ Maybe<const ast::Attribute*> Parser::attribute() {
 
     // builtin_attr :
     //   '@' 'builtin' '(' builtin_value_name ',' ? ')'
+    // | '@' 'builtin' '(' builtin_value_name ',' builtin_depth_mode_name ',' ? ')'
     if (attr.value == core::Attribute::kBuiltin) {
         return expect_paren_block(
             "builtin attribute", [&]() -> Expect<const ast::BuiltinAttribute*> {
@@ -3030,9 +3034,19 @@ Maybe<const ast::Attribute*> Parser::attribute() {
                 if (name.errored) {
                     return Failure::kErrored;
                 }
+                if (!match(Token::Type::kComma) || peek().Is(Token::Type::kParenRight)) {
+                    return builder_.Builtin(t.source(), name.value);
+                }
+
+                auto depth_mode_name =
+                    expect_enum("builtin depth mode name", core::ParseBuiltinDepthMode,
+                                core::kBuiltinDepthModeStrings);
+                if (depth_mode_name.errored) {
+                    return Failure::kErrored;
+                }
                 match(Token::Type::kComma);
 
-                return builder_.Builtin(t.source(), name.value);
+                return builder_.Builtin(t.source(), name.value, depth_mode_name.value);
             });
     }
 
@@ -3141,6 +3155,8 @@ Maybe<const ast::Attribute*> Parser::attribute() {
             return create<ast::WorkgroupAttribute>(t.source(), args[0],
                                                    args.Length() > 1 ? args[1] : nullptr,
                                                    args.Length() > 2 ? args[2] : nullptr);
+        case core::Attribute::kSubgroupSize:
+            return create<ast::SubgroupSizeAttribute>(t.source(), args[0]);
         default:
             return Failure::kNoMatch;
     }
@@ -3448,9 +3464,8 @@ T Parser::sync(Token::Type tok, F&& body) {
     auto result = body();
     --parse_depth_;
 
-    if (DAWN_UNLIKELY(sync_tokens_.back() != tok)) {
-        TINT_ICE() << "sync_tokens is out of sync";
-    }
+    TINT_ASSERT(sync_tokens_.back() == tok) << "sync_tokens is out of sync";
+
     sync_tokens_.pop_back();
 
     if (result.errored) {

@@ -72,25 +72,5 @@ TEST_F(TemplatedIdentifierDeathTest, Assert_InvalidSymbol) {
         "internal compiler error");
 }
 
-TEST_F(TemplatedIdentifierDeathTest, Assert_DifferentGenerationID_Symbol) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Ident(b2.Sym("b2"), b1.Expr(1_i));
-        },
-        "internal compiler error");
-}
-
-TEST_F(TemplatedIdentifierDeathTest, Assert_DifferentGenerationID_TemplateArg) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Ident("b1", b2.Expr(1_i));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

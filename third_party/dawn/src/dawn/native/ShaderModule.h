@@ -171,14 +171,19 @@ MaybeError ValidateCompatibilityWithPipelineLayout(DeviceBase* device,
 // Return extent3D with workgroup size dimension info if it is valid.
 // width = x, height = y, depthOrArrayLength = z.
 ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(
-    uint32_t x,
-    uint32_t y,
-    uint32_t z,
-    size_t workgroupStorageSize,
+    const tint::WorkgroupInfo& workgroupInfo,
     bool usesSubgroupMatrix,
     uint32_t maxSubgroupSize,
     const LimitsForCompilationRequest& limits,
     const LimitsForCompilationRequest& adaterSupportedlimits);
+
+MaybeError ValidateExplicitComputeSubgroupSize(const tint::WorkgroupInfo& workgroupInfo,
+                                               uint32_t minExplicitSubgroupSize,
+                                               uint32_t maxExplicitSubgroupSize,
+                                               uint32_t maxComputeWorkgroupSubgroups);
+
+MaybeError ValidateSubgroupMatrixConfiguration(const tint::SubgroupMatrixInfo& smInfo,
+                                               const std::vector<SubgroupMatrixConfig>& cfg);
 
 RequiredBufferSizes ComputeRequiredBufferSizesForLayout(const EntryPointMetadata& entryPoint,
                                                         const PipelineLayoutBase* layout);
@@ -188,6 +193,7 @@ using ShaderBindingInfoVariant = std::variant<BufferBindingInfo,
                                               SamplerBindingInfo,
                                               TextureBindingInfo,
                                               StorageTextureBindingInfo,
+                                              TexelBufferBindingInfo,
                                               ExternalTextureBindingInfo,
                                               InputAttachmentBindingInfo>;
 #define SHADER_BINDING_INFO_MEMBER(X)              \
@@ -206,8 +212,8 @@ using BindingInfoArray = ityp::array<BindGroupIndex, BindingGroupInfoMap, kMaxBi
 // up dawn::native namespace. These types can be exposed within EntryPointMetadata if needed.
 namespace detail {
 #define SAMPLER_TEXTURE_PAIR_MEMBER(X) \
-    X(BindingSlot, sampler)            \
-    X(BindingSlot, texture)
+    X(WGSLBindPoint, sampler)          \
+    X(WGSLBindPoint, texture)
 DAWN_SERIALIZABLE(struct, SamplerTexturePair, SAMPLER_TEXTURE_PAIR_MEMBER){};
 #undef SAMPLER_TEXTURE_PAIR_MEMBER
 
@@ -308,26 +314,30 @@ using OverridesMap = absl::flat_hash_map<std::string, Override>;
     X(size_t, pixelLocalBlockSize)                                                                \
     X(std::vector<PixelLocalMemberType>, pixelLocalMembers)                                       \
     X(bool, usesFragDepth)                                                                        \
+    X(bool, usesFragPosition)                                                                     \
+    X(bool, usesSampleInterpolants)                                                               \
     X(bool, usesInstanceIndex)                                                                    \
     X(bool, usesNumWorkgroups)                                                                    \
     X(bool, usesSampleMaskOutput)                                                                 \
     X(bool, usesSampleIndex)                                                                      \
     X(bool, usesVertexIndex)                                                                      \
+    X(bool, usesGlobalInvocationIndex)                                                            \
+    X(bool, usesWorkgroupIndex)                                                                   \
     X(bool, usesTextureLoadWithDepthTexture)                                                      \
     X(bool, usesDepthTextureWithNonComparisonSampler)                                             \
     X(bool, usesSubgroupMatrix)                                                                   \
+    X(bool, usesFineDerivativeBuiltin)                                                            \
+    X(bool, usesResourceTable)                                                                    \
     /* Immediate Data block byte size */                                                          \
     X(uint32_t, immediateDataRangeByteSize)                                                       \
-    /* Number of texture+sampler combinations, computed as 1 for every texture+sampler         */ \
-    /* combination + 1 for every texture used without a sampler that wasn't previously counted.*/ \
-    /* Note: this is only set in compatibility mode.                                           */ \
-    X(uint32_t, numTextureSamplerCombinations)
+    /* Immediate Data block used slots */                                                         \
+    X(ImmediateConstantMask, immediateDataUsedSlots)
 DAWN_SERIALIZABLE(struct, EntryPointMetadata, ENTRY_POINT_METADATA_MEMBER) {
     using SamplerTexturePair = detail::SamplerTexturePair;
     // TODO(crbug.com/409438000): Remove the hack of sampler placeholders for non-sampler texture.
-    static constexpr const BindingSlot nonSamplerBindingPoint{
-        {BindGroupIndex{std::numeric_limits<uint32_t>::max()},
-         BindingNumber{std::numeric_limits<uint32_t>::max()}}};
+    static constexpr const WGSLBindPoint nonSamplerBindingPoint{
+        BindGroupIndex{std::numeric_limits<uint32_t>::max()},
+        BindingNumber{std::numeric_limits<uint32_t>::max()}};
 
     using TextureMetadataQuery = detail::TextureMetadataQuery;
     using FragmentRenderAttachmentInfo = detail::FragmentRenderAttachmentInfo;
@@ -364,13 +374,18 @@ class ShaderModuleBase : public RefCountedWithExternalCount<ApiObjectBase>,
                                            StringView label,
                                            ParsedCompilationMessages&& compilationMessages);
 
+    void Initialize();
+    std::unique_ptr<ErrorData> GetInitializationError();
+
     ObjectType GetType() const override;
 
     // Return true iff the program has an entrypoint called `entryPoint`.
     bool HasEntryPoint(absl::string_view entryPoint) const;
 
     // Return the number of entry points for a stage.
-    size_t GetEntryPointCount(SingleShaderStage stage) const { return mEntryPointCounts[stage]; }
+    size_t GetEntryPointCount(SingleShaderStage stage) const {
+        return mCompiledState.entryPointCounts[stage];
+    }
 
     // Return the entry point for a stage. If no entry point name, returns the default one.
     ShaderModuleEntryPoint ReifyEntryPointName(StringView entryPointName,
@@ -389,7 +404,7 @@ class ShaderModuleBase : public RefCountedWithExternalCount<ApiObjectBase>,
 
     std::optional<bool> GetStrictMath() const;
 
-    using ShaderModuleHasher = Sha3_512;
+    using ShaderModuleHasher = Sha3_256;
     using ShaderModuleHash = ShaderModuleHasher::Output;
     const ShaderModuleHash& GetHash() const;
 
@@ -412,9 +427,7 @@ class ShaderModuleBase : public RefCountedWithExternalCount<ApiObjectBase>,
     int GetTintProgramRecreateCountForTesting() const;
 
   protected:
-    void DestroyImpl() override;
-
-    MaybeError InitializeBase(ShaderModuleParseResult* parseResult);
+    void DestroyImpl(DestroyReason reason) override;
 
   private:
     ShaderModuleBase(DeviceBase* device,
@@ -424,9 +437,12 @@ class ShaderModuleBase : public RefCountedWithExternalCount<ApiObjectBase>,
 
     void WillDropLastExternalRef() override;
 
+    ShaderModuleParseRequest GenerateShaderModuleParseRequest(bool needReflection) const;
+
     // The original data in the descriptor for caching.
-    enum class Type { Undefined, Spirv, Wgsl };
+    enum class Type : uint8_t { Undefined, Spirv, Wgsl };
     Type mType;
+    bool mAllowSpirvNonUniformDerivitives = false;
     std::vector<uint32_t> mOriginalSpirv;
     std::string mWgsl;
 
@@ -438,20 +454,33 @@ class ShaderModuleBase : public RefCountedWithExternalCount<ApiObjectBase>,
     // Right now D3D uses strictness by default, and Vulkan/Metal use fast math by default.
     std::optional<bool> mStrictMath;
 
-    EntryPointMetadataTable mEntryPoints;
-    PerStage<std::string> mDefaultEntryPointNames;
-    PerStage<size_t> mEntryPointCounts;
+    const std::vector<tint::wgsl::Extension> mInternalExtensions;
 
     struct TintData {
         // tintProgram is nullable so that it can be lazily (re)generated right before actual using.
         Ref<TintProgram> tintProgram = nullptr;
         int tintProgramRecreateCount = 0;
     };
-    MutexProtected<TintData> mTintData;
 
-    std::unique_ptr<const OwnedCompilationMessages> mCompilationMessages;
+    // Encapsulation of all state that is written during (async) initialization.
+    struct CompiledState {
+        EntryPointMetadataTable entryPoints;
+        PerStage<std::string> defaultEntryPointNames;
+        PerStage<size_t> entryPointCounts;
 
-    const std::vector<tint::wgsl::Extension> mInternalExtensions;
+        MutexProtected<TintData> tintData;
+
+        std::unique_ptr<const OwnedCompilationMessages> compilationMessages;
+
+        // Explicit move operator to copy the mutex protected tintData instead of moving it.
+        CompiledState& operator=(CompiledState&& source);
+    };
+    CompiledState mCompiledState;
+
+    // Storage of any error generated during initialization. When initialization is fully
+    // asynchronous, this will be removed and inserted into a stored error scope during
+    // initialization.
+    std::optional<CachedValidationError> mInitializationError;
 };
 
 }  // namespace dawn::native

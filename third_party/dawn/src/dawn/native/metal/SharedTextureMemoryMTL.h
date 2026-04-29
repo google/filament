@@ -30,6 +30,7 @@
 
 #include <IOSurface/IOSurfaceRef.h>
 #import <Metal/Metal.h>
+
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
@@ -68,7 +69,7 @@ class SharedTextureMemory final : public SharedTextureMemoryBase {
     // initialization.
     MaybeError Initialize();
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     ResultOrError<Ref<TextureBase>> CreateTextureImpl(
         const UnpackedPtr<TextureDescriptor>& descriptor) override;

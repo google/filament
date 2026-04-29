@@ -27,6 +27,8 @@
 
 #include "src/tint/lang/wgsl/resolver/sem_helper.h"
 
+#include <span>
+
 #include "src/tint/lang/wgsl/resolver/incomplete_type.h"
 #include "src/tint/lang/wgsl/resolver/unresolved_identifier.h"
 #include "src/tint/lang/wgsl/sem/builtin_enum_expression.h"
@@ -112,13 +114,19 @@ StyledText SemHelper::Describe(const sem::Expression* expr) const {
             text << "builtin function " << style::Function(fn->Value());
         },
         [&](const sem::BuiltinEnumExpression<core::Access>* access) {
-            text << "access " << style::Enum(access->Value());
+            text << "access enumerant " << style::Enum(access->Value());
         },
         [&](const sem::BuiltinEnumExpression<core::AddressSpace>* addr) {
             text << "address space " << style::Enum(addr->Value());
         },
         [&](const sem::BuiltinEnumExpression<core::TexelFormat>* fmt) {
             text << "texel format " << style::Enum(fmt->Value());
+        },
+        [&](const sem::BuiltinEnumExpression<core::TextureFilterable>* filterable) {
+            text << "texture filterable " << style::Enum(filterable->Value());
+        },
+        [&](const sem::BuiltinEnumExpression<core::SamplerFiltering>* filtering) {
+            text << "sampler filtering " << style::Enum(filtering->Value());
         },
         [&](const UnresolvedIdentifier* ui) {
             auto name = ui->Identifier()->identifier->symbol.NameView();
@@ -132,10 +140,10 @@ StyledText SemHelper::Describe(const sem::Expression* expr) const {
 void SemHelper::ErrorUnexpectedIdent(
     const ast::Identifier* ident,
     std::string_view wanted,
-    tint::Slice<const std::string_view> suggestions /* = Empty */) const {
+    std::span<const std::string_view> suggestions /* = Empty */) const {
     auto name = ident->symbol.NameView();
     AddError(ident->source) << "unresolved " << wanted << " " << style::Code(name);
-    if (!suggestions.IsEmpty()) {
+    if (!suggestions.empty()) {
         // Filter out suggestions that have a leading underscore.
         Vector<std::string_view, 8> filtered;
         for (auto str : suggestions) {
@@ -146,14 +154,14 @@ void SemHelper::ErrorUnexpectedIdent(
         auto& note = AddNote(ident->source);
         SuggestAlternativeOptions opts;
         opts.alternatives_style = style::Enum;
-        SuggestAlternatives(name, filtered.Slice(), note.message, opts);
+        SuggestAlternatives(name, filtered.AsSpan(), note.message, opts);
     }
 }
 
 void SemHelper::ErrorUnexpectedExprKind(
     const sem::Expression* expr,
     std::string_view wanted,
-    tint::Slice<const std::string_view> suggestions /* = Empty */) const {
+    std::span<const std::string_view> suggestions /* = Empty */) const {
     if (auto* ui = expr->As<UnresolvedIdentifier>()) {
         return ErrorUnexpectedIdent(ui->Identifier()->identifier, wanted, suggestions);
     }

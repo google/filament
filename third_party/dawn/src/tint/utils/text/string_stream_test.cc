@@ -28,11 +28,11 @@
 #include "src/tint/utils/text/string_stream.h"
 
 #include <math.h>
+
 #include <cstring>
 #include <limits>
 
 #include "gtest/gtest.h"
-
 #include "src/tint/utils/rtti/traits.h"
 
 namespace tint::utils {
@@ -122,6 +122,15 @@ TEST_F(StringStreamTest, Precision) {
         s << 1e-20f;
         EXPECT_EQ(s.str(), "0.00000000000000000001");
     }
+}
+
+TEST_F(StringStreamTest, Assign) {
+    StringStream a;
+    StringStream b;
+    a << "a";
+    b << "b";
+    a = b;
+    EXPECT_EQ(a.str(), "b");
 }
 
 }  // namespace

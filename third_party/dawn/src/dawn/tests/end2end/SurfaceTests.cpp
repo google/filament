@@ -26,17 +26,17 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
+#include "GLFW/glfw3.h"
 #include "dawn/common/Constants.h"
 #include "dawn/tests/DawnTest.h"
 #include "dawn/utils/ComboRenderBundleEncoderDescriptor.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 #include "webgpu/webgpu_glfw.h"
-
-#include "GLFW/glfw3.h"
 
 namespace dawn {
 namespace {
@@ -63,6 +63,9 @@ class SurfaceTests : public DawnTest {
         // However, IsIntel() and IsMesa() don't work with the null backend.
         DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNull());
         DAWN_SUPPRESS_TEST_IF(IsLinux() && IsVulkan() && IsIntel() && IsMesa("23.2"));
+
+        // Causes flaky X11 resource exhaustion when run with SwiftShader.
+        DAWN_SUPPRESS_TEST_IF(IsLinux() && IsVulkan() && IsSwiftshader());
 
         glfwSetErrorCallback([](int code, const char* message) {
             ErrorLog() << "GLFW error " << code << " " << message;
@@ -214,19 +217,30 @@ class SurfaceTests : public DawnTest {
 // Basic test for creating a surface and presenting one frame.
 TEST_P(SurfaceTests, Basic) {
     wgpu::Surface surface = CreateTestSurface();
-
-    // Configure
     wgpu::SurfaceConfiguration config = GetPreferredConfiguration(surface);
-    surface.Configure(&config);
 
-    // Get texture
-    wgpu::SurfaceTexture surfaceTexture;
-    surface.GetCurrentTexture(&surfaceTexture);
-    ASSERT_EQ(surfaceTexture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
-    ClearTexture(surfaceTexture.texture, {1.0, 0.0, 0.0, 1.0});
+    // Test the preferred modes and Undefined=Fifo which are required to be supported.
+    std::set<wgpu::PresentMode> presentModes{
+        wgpu::PresentMode::Undefined,
+        wgpu::PresentMode::Fifo,
+        config.presentMode,
+    };
+    for (wgpu::PresentMode presentMode : presentModes) {
+        SCOPED_TRACE(absl::StrFormat("present mode: %d", presentMode));
 
-    // Present
-    ASSERT_EQ(wgpu::Status::Success, surface.Present());
+        // Configure
+        config.presentMode = presentMode;
+        surface.Configure(&config);
+
+        // Get texture
+        wgpu::SurfaceTexture surfaceTexture;
+        surface.GetCurrentTexture(&surfaceTexture);
+        ASSERT_EQ(surfaceTexture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
+        ClearTexture(surfaceTexture.texture, {1.0, 0.0, 0.0, 1.0});
+
+        // Present
+        ASSERT_EQ(wgpu::Status::Success, surface.Present());
+    }
 }
 
 // Test reconfiguring the surface
@@ -241,6 +255,10 @@ TEST_P(SurfaceTests, ReconfigureBasic) {
 
 // Test reconfiguring the surface after GetCurrentTexture
 TEST_P(SurfaceTests, ReconfigureAfterGetCurrentTexture) {
+    // TODO(crbug.com/500793592): Causes cascading failures on Windows 11/AMD
+    // RX 5500 XT w/ backend validation.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsVulkan() && IsBackendValidationEnabled());
+
     wgpu::Surface surface = CreateTestSurface();
     wgpu::SurfaceConfiguration config = GetPreferredConfiguration(surface);
 
@@ -286,6 +304,14 @@ TEST_P(SurfaceTests, ReconfigureAfterUnconfigure) {
 
 // Test unconfiguring after GetCurrentTexture but before the Present
 TEST_P(SurfaceTests, UnconfigureAfterGet) {
+    // TODO(crbug.com/500793592): Causes cascading failures on Windows 11/AMD
+    // RX 5500 XT w/ backend validation.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsVulkan() && IsBackendValidationEnabled());
+
+    // TODO(crbug.com/500766623): Fails due to backend validation errors on
+    // Windows 11/AMD RX 5500 XT w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
     wgpu::Surface surface = CreateTestSurface();
     wgpu::SurfaceConfiguration config = GetPreferredConfiguration(surface);
     wgpu::SurfaceTexture surfaceTexture;
@@ -308,6 +334,10 @@ TEST_P(SurfaceTests, SwitchPresentMode) {
 
     // crbug.com/358166481
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
+
+    // TODO(crbug.com/463614521): Flakily causes a device loss on Snapdragon X
+    // Elite SoCs which causes all subsequent tests to fail.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
 
     constexpr wgpu::PresentMode kAllPresentModes[] = {
         wgpu::PresentMode::Immediate,
@@ -357,6 +387,13 @@ TEST_P(SurfaceTests, SwitchPresentMode) {
 
 // Test resizing the surface and without resizing the window.
 TEST_P(SurfaceTests, ResizingSurfaceOnly) {
+    // TODO(crbug.com/468228358): Flaky on Snapdragon X Elite SoCs w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
+
+    // TODO(crbug.com/500766623): Fails due to backend validation errors on
+    // Windows 11/AMD RX 5500 XT w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
     wgpu::Surface surface = CreateTestSurface();
 
     for (int i = 0; i < 10; i++) {
@@ -376,6 +413,12 @@ TEST_P(SurfaceTests, ResizingSurfaceOnly) {
 TEST_P(SurfaceTests, ResizingWindowOnly) {
     // Hangs on NVIDIA GTX 1660
     DAWN_SUPPRESS_TEST_IF(IsD3D12() && IsNvidia());
+    // TODO(crbug.com/42241486): Crashes on Linux NVIDIA GTX 1660 with 535.183.01 driver
+    DAWN_SUPPRESS_TEST_IF(IsLinux() && IsVulkan() && IsNvidia());
+
+    // TODO(crbug.com/500766623): Fails due to backend validation errors on
+    // Windows 11/AMD RX 5500 XT w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
 
     wgpu::Surface surface = CreateTestSurface();
     wgpu::SurfaceConfiguration config = GetPreferredConfiguration(surface);
@@ -397,6 +440,14 @@ TEST_P(SurfaceTests, ResizingWindowOnly) {
 TEST_P(SurfaceTests, ResizingWindowAndSurface) {
     // TODO(crbug.com/dawn/1205): Currently failing on new NVIDIA GTX 1660s on Linux/Vulkan.
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsVulkan() && IsNvidia());
+
+    // TODO(crbug.com/465497433): Flakily loses device on Snapdragon X Elite
+    // SoCs.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
+
+    // TODO(crbug.com/500766623): Fails due to backend validation errors on
+    // Windows 11/AMD RX 5500 XT w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
 
     wgpu::Surface surface = CreateTestSurface();
 
@@ -556,6 +607,10 @@ TEST_P(SurfaceTests, Sampling) {
 
 // Test copying from the surface when it is supported.
 TEST_P(SurfaceTests, CopyFrom) {
+    // TODO(crbug.com/500766623): Fails due to backend validation errors on
+    // Windows 11/AMD RX 5500 XT w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
     wgpu::Surface surface = CreateTestSurface();
     wgpu::SurfaceCapabilities caps;
     surface.GetCapabilities(adapter, &caps);
@@ -584,6 +639,10 @@ TEST_P(SurfaceTests, CopyFrom) {
 
 // Test copying to the surface when it is supported.
 TEST_P(SurfaceTests, CopyTo) {
+    // TODO(crbug.com/500766623): Fails due to backend validation errors on
+    // Windows 11/AMD RX 5500 XT w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
     wgpu::Surface surface = CreateTestSurface();
     wgpu::SurfaceCapabilities caps;
     surface.GetCapabilities(adapter, &caps);
@@ -639,7 +698,7 @@ TEST_P(SurfaceTests, Storage) {
 
     wgpu::TextureFormat storageCapableFormat = wgpu::TextureFormat::Undefined;
     for (uint32_t i = 0; i < caps.formatCount; i++) {
-        if (utils::TextureFormatSupportsStorageTexture(caps.formats[i], device, false)) {
+        if (utils::TextureFormatSupportsStorageTexture(device, caps.formats[i])) {
             storageCapableFormat = caps.formats[i];
             break;
         }
@@ -660,6 +719,7 @@ TEST_P(SurfaceTests, Storage) {
     ASSERT_EQ(wgpu::Status::Success, surface.Present());
 }
 
+// TODO(crbug.com/465183957): Implement swap chain for WebGPUBackend.
 DAWN_INSTANTIATE_TEST(SurfaceTests,
                       D3D11Backend(),
                       D3D11Backend({"d3d11_delay_flush_to_gpu"}),

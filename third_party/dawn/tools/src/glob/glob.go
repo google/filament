@@ -52,7 +52,7 @@ func Glob(str string, fsReader oswrapper.FilesystemReader) ([]string, error) {
 	for i, c := range abs {
 		switch c {
 		case filepath.Separator:
-			root, glob = abs[:i], abs[i+1:]
+			root, glob = abs[:i+1], abs[i+1:]
 		case '*', '?':
 			test, err := match.New(glob)
 			if err != nil {

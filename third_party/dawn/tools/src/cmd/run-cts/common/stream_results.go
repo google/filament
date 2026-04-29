@@ -77,8 +77,9 @@ type Coverage struct {
 	OutputFile string
 }
 
-// TODO(crbug.com/344014313): Split into smaller functions and add unittest
-// coverage.
+// TODO(crbug.com/416755658): Split into smaller functions and add unittest
+// coverage once the exec calls in browser.Open() are handled via dependency
+// injection.
 // StreamResults reads from the chan 'results', printing the results in test-id
 // sequential order.
 // Once all the results have been printed, a summary will be printed and the
@@ -86,12 +87,13 @@ type Coverage struct {
 func StreamResults(
 	ctx context.Context,
 	colors bool,
+	failuresOnly bool,
 	state State,
 	verbose bool,
 	coverage *Coverage, // Optional coverage generation info
 	numTestCases int, // Total number of test cases
 	stream <-chan Result,
-	fsReaderWriter oswrapper.FilesystemReaderWriter) (Results, error) {
+	osWrapper oswrapper.OSWrapper) (Results, error) {
 	// If the context was already cancelled then just return
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -127,7 +129,7 @@ func StreamResults(
 
 	start := time.Now()
 	for res := range stream {
-		state.Log.logResults(res)
+		state.Log.logResults(res, failuresOnly)
 		results[res.TestCase] = res
 		expected := state.Expectations[res.TestCase]
 		exStatus := expectedStatus{
@@ -224,8 +226,8 @@ func StreamResults(
 	if coverage != nil {
 		// Obtain the current git revision
 		revision := "HEAD"
-		if g, err := git.New(""); err == nil {
-			if r, err := g.Open(fileutils.DawnRoot(fsReaderWriter)); err == nil {
+		if g, err := git.New("", osWrapper); err == nil {
+			if r, err := g.Open(fileutils.DawnRoot(osWrapper)); err == nil {
 				if l, err := r.Log(&git.LogOptions{From: "HEAD", To: "HEAD"}); err == nil {
 					revision = l[0].Hash.String()
 				}
@@ -233,7 +235,7 @@ func StreamResults(
 		}
 
 		if coverage.OutputFile != "" {
-			file, err := fsReaderWriter.Create(coverage.OutputFile)
+			file, err := osWrapper.Create(coverage.OutputFile)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create the coverage file: %w", err)
 			}
@@ -257,7 +259,7 @@ func StreamResults(
 				fmt.Fprintln(stdout)
 				fmt.Fprintln(stdout, term.Blue+"Serving coverage view at "+url+term.Reset)
 				return browser.Open(url)
-			}, fsReaderWriter)
+			}, osWrapper)
 			if err != nil {
 				return nil, err
 			}
@@ -360,7 +362,7 @@ func splitCTSQuery(testcase TestCase) cov.Path {
 	s := 0
 	for e, r := range testcase {
 		switch r {
-		case ':', '.':
+		case ':', '.', ',':
 			out = append(out, string(testcase[s:e+1]))
 			s = e + 1
 		}

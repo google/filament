@@ -30,6 +30,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -38,9 +39,6 @@ import (
 	"dawn.googlesource.com/dawn/tools/src/cmd/gen/templates"
 	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/subcmd"
-
-	// Register sub-commands
-	_ "dawn.googlesource.com/dawn/tools/src/cmd/gen/templates"
 )
 
 func main() {
@@ -50,7 +48,7 @@ func main() {
 	cfg.RegisterFlags()
 
 	if err := subcmd.Run(ctx, cfg, common.Commands()...); err != nil {
-		if err != subcmd.ErrInvalidCLA {
+		if !errors.Is(err, subcmd.ErrInvalidCLA) {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		os.Exit(1)
@@ -64,13 +62,13 @@ func init() {
 type cmdAll struct {
 }
 
-func (cmdAll) IsDefaultCommand() {}
+func (c *cmdAll) IsDefaultCommand() {}
 
-func (cmdAll) Name() string {
+func (c *cmdAll) Name() string {
 	return "all"
 }
 
-func (cmdAll) Desc() string {
+func (c *cmdAll) Desc() string {
 	return `all runs all the generators`
 }
 
@@ -78,7 +76,7 @@ func (c *cmdAll) RegisterFlags(ctx context.Context, cfg *common.Config) ([]strin
 	return nil, nil
 }
 
-func (c cmdAll) Run(ctx context.Context, cfg *common.Config) error {
+func (c *cmdAll) Run(ctx context.Context, cfg *common.Config) error {
 	templatesCmd := templates.Cmd{}
 	if err := templatesCmd.Run(ctx, cfg); err != nil {
 		return err

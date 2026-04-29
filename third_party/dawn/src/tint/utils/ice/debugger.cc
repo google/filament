@@ -33,6 +33,7 @@
 #include <Windows.h>
 #elif defined(__linux__)
 #include <signal.h>
+
 #include <fstream>
 #include <string>
 #endif

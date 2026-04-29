@@ -117,7 +117,6 @@ struct State {
                 ir::Constant* high_limit_f = nullptr;
             } limits;
 
-
             // Largest integers representable in the source floating point format.
             if (src_el_ty->Is<type::F32>()) {
                 // These values are chosen specifically to enable f32 clamping.
@@ -141,7 +140,7 @@ struct State {
                     limits.high_limit_f = b.MatchWidth(f16(MAX_F16), res_ty);
                 }
             } else {
-                TINT_UNIMPLEMENTED() << "unhandled floating-point type";
+                TINT_IR_UNIMPLEMENTED(ir) << "unhandled floating-point type";
             }
 
             // Create the helper function.
@@ -149,8 +148,7 @@ struct State {
             auto* value = b.FunctionParam("value", src_ty);
             func->SetParams({value});
             b.Append(func->Block(), [&] {
-                auto* clamped = b.Call(src_ty, core::BuiltinFn::kClamp, value, limits.low_limit_f,
-                                       limits.high_limit_f);
+                auto* clamped = b.Clamp(value, limits.low_limit_f, limits.high_limit_f);
                 auto* converted = b.Convert(res_ty, clamped);
 
                 b.Return(func, converted->Result());
@@ -167,11 +165,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ConversionPolyfill(Module& ir, const ConversionPolyfillConfig& config) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "core.ConversionPolyfill", kConversionPolyfillCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kConversionPolyfillCapabilities, "before core.ConversionPolyfill");
 
     State{config, ir}.Process();
 

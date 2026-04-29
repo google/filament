@@ -16,8 +16,9 @@
 
 #include <backend/platforms/PlatformOSMesa.h>
 
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
+#include <utils/ThreadUtils.h>
 
 #include <dlfcn.h>
 #include <memory>
@@ -127,9 +128,7 @@ Driver* PlatformOSMesa::createDriver(void* sharedGLContext,
         0,
     };
 
-    FILAMENT_CHECK_PRECONDITION(sharedGLContext == nullptr)
-            << "shared GL context is not supported with PlatformOSMesa";
-    mContext = api->fOSMesaCreateContextAttribs(attribs, NULL);
+    mContext = api->fOSMesaCreateContextAttribs(attribs, (OSMesaContext) sharedGLContext);
 
     // We need to do a no-op makecurrent here so that the context will be in a correct state before
     // any GL calls.
@@ -145,11 +144,85 @@ Driver* PlatformOSMesa::createDriver(void* sharedGLContext,
 
 void PlatformOSMesa::terminate() noexcept {
     OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+
+    for (auto& it: mAdditionalContexts) {
+        api->fOSMesaDestroyContext(it.second.context);
+    }
+    mAdditionalContexts.clear();
+
     api->fOSMesaDestroyContext(mContext);
     delete api;
     mOsMesaApi = nullptr;
 
     bluegl::unbind();
+}
+
+bool PlatformOSMesa::isExtraContextSupported() const noexcept { return true; }
+
+void PlatformOSMesa::createContext(bool shared) {
+    std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
+
+    {
+        std::shared_lock<std::shared_mutex> lock(mAdditionalContextsLock);
+        auto it = mAdditionalContexts.find(currentThreadId);
+        if (it != mAdditionalContexts.end()) {
+            LOG(WARNING) << "Shared context is already created for this thread";
+            return;
+        }
+    }
+
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+
+    static constexpr int attribs[] = {
+        OSMESA_FORMAT, GL_RGBA,
+        OSMESA_DEPTH_BITS, 24,
+        OSMESA_STENCIL_BITS, 8,
+        OSMESA_ACCUM_BITS, 0,
+        OSMESA_PROFILE, OSMESA_CORE_PROFILE,
+        0,
+    };
+
+    OSMesaContext context = api->fOSMesaCreateContextAttribs(attribs, shared ? mContext : NULL);
+    if (!context) {
+        LOG(ERROR) << "Failed to create shared context";
+        return;
+    }
+
+    // OSMesa requires a non-null buffer to make a context current. Since we don't have a window
+    // or swapchain here, we use a dummy 1x1 buffer.
+    auto buffer = std::make_unique<uint8_t[]>(1 * 1 * 4 * sizeof(BackingType));
+
+    auto result = api->fOSMesaMakeCurrent(context, buffer.get(), BACKING_GL_TYPE, 1, 1);
+    FILAMENT_CHECK_POSTCONDITION(result == GL_TRUE)
+            << "OSMesaMakeCurrent failed for extra context!";
+
+    std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+    mAdditionalContexts[currentThreadId] = { context, std::move(buffer) };
+}
+
+void PlatformOSMesa::releaseContext() noexcept {
+    std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
+    OSMesaContext context = nullptr;
+
+    {
+        std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+        auto it = mAdditionalContexts.find(currentThreadId);
+        if (it == mAdditionalContexts.end()) {
+            LOG(WARNING) << "Attempted to destroy non-existing shared context";
+            return;
+        }
+        context = it->second.context;
+    }
+
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+    // Passing NULL as the context is the standard way to unbind in OSMesa.
+    api->fOSMesaMakeCurrent(NULL, NULL, 0, 0, 0);
+    api->fOSMesaDestroyContext(context);
+
+    {
+        std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+        mAdditionalContexts.erase(currentThreadId);
+    }
 }
 
 Platform::SwapChain* PlatformOSMesa::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {

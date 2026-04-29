@@ -55,7 +55,10 @@ namespace dawn::native {
 using BindingNumber = TypedInteger<struct BindingNumberT, uint32_t>;
 constexpr BindingNumber kMaxBindingsPerBindGroupTyped = BindingNumber(kMaxBindingsPerBindGroup);
 
-// Binding numbers get mapped to a packed range of indices
+// Binding numbers get mapped to a packed range of indices. APIBindingIndex is for user-facing
+// indices in the packed range, while BindingIndex is Dawn-facing. See comment for the
+// BindGroupLayoutInternal class for more details.
+using APIBindingIndex = TypedInteger<struct APIBindingIndexT, uint32_t>;
 using BindingIndex = TypedInteger<struct BindingIndexT, uint32_t>;
 
 // Bind group indinces represent the index in the SetBindGroup, the index in
@@ -66,6 +69,9 @@ constexpr BindGroupIndex kMaxBindGroupsTyped = BindGroupIndex(kMaxBindGroups);
 using BindGroupMask = ityp::bitset<BindGroupIndex, kMaxBindGroups>;
 template <typename Value>
 using PerBindGroup = ityp::array<BindGroupIndex, Value, kMaxBindGroups>;
+
+// The index of a resource in a ResourceTable, both on the API and shader side.
+using ResourceTableSlot = TypedInteger<struct ResourceTableSlotT, uint32_t>;
 
 // Immediate data constant index get mapped to a packed range of indices
 using ImmediateConstantIndex = TypedInteger<struct ImmediateConstantIndexT, uint32_t>;
@@ -131,8 +137,6 @@ constexpr ExecutionSerial kBeginningOfGPUTime = ExecutionSerial(0);
 // other pipelines.
 using PipelineCompatibilityToken = TypedInteger<struct PipelineCompatibilityTokenT, uint64_t>;
 constexpr PipelineCompatibilityToken kExplicitPCT = PipelineCompatibilityToken(0);
-
-using Nanoseconds = TypedInteger<struct NanosecondsT, uint64_t>;
 
 }  // namespace dawn::native
 

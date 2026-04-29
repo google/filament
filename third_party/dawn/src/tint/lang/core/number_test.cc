@@ -25,6 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/number.h"
+
 #include <cmath>
 #include <cstdint>
 #include <tuple>
@@ -32,11 +34,9 @@
 #include <variant>
 #include <vector>
 
-#include "src/tint/lang/core/number.h"
+#include "gtest/gtest.h"
 #include "src/tint/utils/macros/compiler.h"
 #include "src/tint/utils/text/string_stream.h"
-
-#include "gtest/gtest.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 
@@ -159,6 +159,7 @@ TEST(NumberTest, CheckedConvertIdentity) {
     EXPECT_EQ(CheckedConvert<u32>(0_u), 0_u);
     EXPECT_EQ(CheckedConvert<u64>(u64(0)), u64(0));
     EXPECT_EQ(CheckedConvert<u8>(u8(0)), u8(0));
+    EXPECT_EQ(CheckedConvert<u16>(u16(0)), u16(0));
     EXPECT_EQ(CheckedConvert<f32>(0_f), 0_f);
     EXPECT_EQ(CheckedConvert<f16>(0_h), 0_h);
 
@@ -169,6 +170,7 @@ TEST(NumberTest, CheckedConvertIdentity) {
     EXPECT_EQ(CheckedConvert<u32>(1_u), 1_u);
     EXPECT_EQ(CheckedConvert<u64>(u64(1)), u64(1));
     EXPECT_EQ(CheckedConvert<u8>(u8(1)), u8(1));
+    EXPECT_EQ(CheckedConvert<u16>(u16(1)), u16(1));
     EXPECT_EQ(CheckedConvert<f32>(1_f), 1_f);
     EXPECT_EQ(CheckedConvert<f16>(1_h), 1_h);
 }
@@ -180,6 +182,7 @@ TEST(NumberTest, CheckedConvertLargestValue) {
     EXPECT_EQ(CheckedConvert<u32>(i32::Highest()), u32(i32::Highest()));
     EXPECT_EQ(CheckedConvert<u64>(AInt::Highest()), u64(AInt::Highest()));
     EXPECT_EQ(CheckedConvert<u8>(AInt(u8::Highest())), u8::Highest());
+    EXPECT_EQ(CheckedConvert<u16>(AInt(u16::Highest())), u16::Highest());
     EXPECT_EQ(CheckedConvert<f32>(AFloat(f32::Highest())), f32::Highest());
     EXPECT_EQ(CheckedConvert<f16>(AFloat(f16::Highest())), f16::Highest());
 }
@@ -190,6 +193,7 @@ TEST(NumberTest, CheckedConvertLowestValue) {
     EXPECT_EQ(CheckedConvert<u32>(AInt(u32::Lowest())), u32::Lowest());
     EXPECT_EQ(CheckedConvert<u64>(AInt(u64::Lowest())), u64::Lowest());
     EXPECT_EQ(CheckedConvert<u8>(AInt(u8::Lowest())), u8::Lowest());
+    EXPECT_EQ(CheckedConvert<u16>(AInt(u16::Lowest())), u16::Lowest());
     EXPECT_EQ(CheckedConvert<f32>(AFloat(f32::Lowest())), f32::Lowest());
     EXPECT_EQ(CheckedConvert<f16>(AFloat(f16::Lowest())), f16::Lowest());
 }
@@ -200,6 +204,7 @@ TEST(NumberTest, CheckedConvertSmallestValue) {
     EXPECT_EQ(CheckedConvert<u32>(AInt(0)), u32(0));
     EXPECT_EQ(CheckedConvert<u64>(AInt(0)), u64(0));
     EXPECT_EQ(CheckedConvert<u8>(AInt(0)), u8(0));
+    EXPECT_EQ(CheckedConvert<u16>(AInt(0)), u16(0));
     EXPECT_EQ(CheckedConvert<f32>(AFloat(f32::Smallest())), f32::Smallest());
     EXPECT_EQ(CheckedConvert<f16>(AFloat(f16::Smallest())), f16::Smallest());
 }
@@ -213,16 +218,20 @@ TEST(NumberTest, CheckedConvertExceedsPositiveLimit) {
               ConversionFailure::kExceedsPositiveLimit);
     EXPECT_EQ(CheckedConvert<u8>(AInt(static_cast<uint64_t>(u8::Highest()) + 1)),
               ConversionFailure::kExceedsPositiveLimit);
+    EXPECT_EQ(CheckedConvert<u16>(AInt(static_cast<uint64_t>(u16::Highest()) + 1)),
+              ConversionFailure::kExceedsPositiveLimit);
     EXPECT_EQ(CheckedConvert<i32>(u32::Highest()), ConversionFailure::kExceedsPositiveLimit);
     EXPECT_EQ(CheckedConvert<i32>(u32(0x80000000)), ConversionFailure::kExceedsPositiveLimit);
     EXPECT_EQ(CheckedConvert<i8>(u8::Highest()), ConversionFailure::kExceedsPositiveLimit);
     EXPECT_EQ(CheckedConvert<i8>(u8(0x80)), ConversionFailure::kExceedsPositiveLimit);
     EXPECT_EQ(CheckedConvert<u32>(f32::Highest()), u32(tint::core::kMaxU32WhichIsAlsoF32));
     EXPECT_EQ(CheckedConvert<u8>(f32::Highest()), u8::Highest());
+    EXPECT_EQ(CheckedConvert<u16>(f32::Highest()), u16::Highest());
     EXPECT_EQ(CheckedConvert<i32>(f32::Highest()), i32(tint::core::kMaxI32WhichIsAlsoF32));
     EXPECT_EQ(CheckedConvert<i8>(f32::Highest()), i8::Highest());
     EXPECT_EQ(CheckedConvert<u32>(AFloat::Highest()), u32::Highest());
     EXPECT_EQ(CheckedConvert<u8>(AFloat::Highest()), u8::Highest());
+    EXPECT_EQ(CheckedConvert<u16>(AFloat::Highest()), u16::Highest());
     EXPECT_EQ(CheckedConvert<i32>(AFloat::Highest()), i32::Highest());
     EXPECT_EQ(CheckedConvert<i8>(AFloat::Highest()), i8::Highest());
     EXPECT_EQ(CheckedConvert<f32>(AFloat(kHighestF32NextULP)),
@@ -241,6 +250,8 @@ TEST(NumberTest, CheckedConvertExceedsNegativeLimit) {
     EXPECT_EQ(CheckedConvert<u64>(AInt(-1)), ConversionFailure::kExceedsNegativeLimit);
     EXPECT_EQ(CheckedConvert<u8>(AInt(static_cast<uint64_t>(u8::Lowest()) - 1)),
               ConversionFailure::kExceedsNegativeLimit);
+    EXPECT_EQ(CheckedConvert<u16>(AInt(static_cast<uint64_t>(u16::Lowest()) - 1)),
+              ConversionFailure::kExceedsNegativeLimit);
     EXPECT_EQ(CheckedConvert<u32>(i32(-1)), ConversionFailure::kExceedsNegativeLimit);
     EXPECT_EQ(CheckedConvert<u32>(i32::Lowest()), ConversionFailure::kExceedsNegativeLimit);
     EXPECT_EQ(CheckedConvert<u32>(f32::Lowest()), u32::Lowest());
@@ -248,10 +259,14 @@ TEST(NumberTest, CheckedConvertExceedsNegativeLimit) {
     EXPECT_EQ(CheckedConvert<u8>(i8(-1)), ConversionFailure::kExceedsNegativeLimit);
     EXPECT_EQ(CheckedConvert<u8>(i8::Lowest()), ConversionFailure::kExceedsNegativeLimit);
     EXPECT_EQ(CheckedConvert<u8>(f32::Lowest()), u8::Lowest());
+    EXPECT_EQ(CheckedConvert<u16>(i8(-1)), ConversionFailure::kExceedsNegativeLimit);
+    EXPECT_EQ(CheckedConvert<u16>(i8::Lowest()), ConversionFailure::kExceedsNegativeLimit);
+    EXPECT_EQ(CheckedConvert<u16>(f32::Lowest()), u16::Lowest());
     EXPECT_EQ(CheckedConvert<i32>(f32::Lowest()), i32::Lowest());
     EXPECT_EQ(CheckedConvert<i8>(f32::Lowest()), i8::Lowest());
     EXPECT_EQ(CheckedConvert<u32>(AFloat::Lowest()), u32::Lowest());
     EXPECT_EQ(CheckedConvert<u8>(AFloat::Lowest()), u8::Lowest());
+    EXPECT_EQ(CheckedConvert<u16>(AFloat::Lowest()), u16::Lowest());
     EXPECT_EQ(CheckedConvert<i32>(AFloat::Lowest()), i32::Lowest());
     EXPECT_EQ(CheckedConvert<i8>(AFloat::Lowest()), i8::Lowest());
     EXPECT_EQ(CheckedConvert<f32>(AFloat(kLowestF32NextULP)),
@@ -445,7 +460,8 @@ INSTANTIATE_TEST_SUITE_P(
 #undef OVERFLOW  // corecrt_math.h :(
 #endif
 #define OVERFLOW \
-    {}
+    {            \
+    }
 
 // An error value.  IEEE 754 exceptions map to this, including overflow,
 // invalid operation, and division by zero.

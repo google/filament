@@ -11,7 +11,7 @@ if [ -d "./emsdk" ]; then
 fi
 
 # Install emscripten.
-EMSDK_VERSION=${GITHUB_EMSDK_VERSION-3.1.60}
+EMSDK_VERSION=${GITHUB_EMSDK_VERSION-5.0.4}
 curl -L https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSDK_VERSION}.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
 ./emsdk install latest

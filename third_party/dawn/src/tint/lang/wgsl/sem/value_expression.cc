@@ -42,14 +42,12 @@ ValueExpression::ValueExpression(const ast::Expression* declaration,
                                  core::EvaluationStage stage,
                                  const Statement* statement,
                                  const core::constant::Value* constant,
-                                 bool has_side_effects,
                                  const Variable* root_ident /* = nullptr */)
     : Base(declaration, statement),
       root_identifier_(root_ident),
       type_(type),
       stage_(stage),
-      constant_(std::move(constant)),
-      has_side_effects_(has_side_effects) {
+      constant_(std::move(constant)) {
     TINT_ASSERT(type_);
     TINT_ASSERT((constant != nullptr) == (stage == core::EvaluationStage::kConstant));
     if (constant != nullptr) {

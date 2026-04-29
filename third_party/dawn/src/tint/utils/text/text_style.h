@@ -170,49 +170,49 @@ static constexpr bool IsScopedTextStyle = detail::IsScopedTextStyle<T>::value;
 namespace tint::style {
 
 /// Plain renders text without any styling
-static constexpr TextStyle Plain = TextStyle{};
+inline constexpr TextStyle Plain = TextStyle{};
 /// Bold renders text with a heavy weight
-static constexpr TextStyle Bold = TextStyle{TextStyle::kStyleBold};
+inline constexpr TextStyle Bold = TextStyle{TextStyle::kStyleBold};
 /// Underlined renders text with an underline
-static constexpr TextStyle Underlined = TextStyle{TextStyle::kStyleUnderlined};
+inline constexpr TextStyle Underlined = TextStyle{TextStyle::kStyleUnderlined};
 /// Code renders without a single quote when printed as plain text.
-static constexpr TextStyle NoQuote = TextStyle{TextStyle::kStyleNoQuote};
+inline constexpr TextStyle NoQuote = TextStyle{TextStyle::kStyleNoQuote};
 /// Match renders text with the compare-match style
-static constexpr TextStyle Match = TextStyle{TextStyle::kCompareMatch};
+inline constexpr TextStyle Match = TextStyle{TextStyle::kCompareMatch};
 /// Mismatch renders text with the compare-mismatch style
-static constexpr TextStyle Mismatch = TextStyle{TextStyle::kCompareMismatch};
+inline constexpr TextStyle Mismatch = TextStyle{TextStyle::kCompareMismatch};
 /// Success renders text with the styling for a successful status
-static constexpr TextStyle Success = TextStyle{TextStyle::kSeveritySuccess};
+inline constexpr TextStyle Success = TextStyle{TextStyle::kSeveritySuccess};
 /// Warning renders text with the styling for a warning status
-static constexpr TextStyle Warning = TextStyle{TextStyle::kSeverityWarning};
+inline constexpr TextStyle Warning = TextStyle{TextStyle::kSeverityWarning};
 /// Error renders text with the styling for a error status
-static constexpr TextStyle Error = TextStyle{TextStyle::kSeverityError};
+inline constexpr TextStyle Error = TextStyle{TextStyle::kSeverityError};
 /// Fatal renders text with the styling for a fatal status
-static constexpr TextStyle Fatal = TextStyle{TextStyle::kSeverityFatal};
+inline constexpr TextStyle Fatal = TextStyle{TextStyle::kSeverityFatal};
 /// Code renders text with a 'code' style
-static constexpr TextStyle Code = TextStyle{TextStyle::kKindCode};
+inline constexpr TextStyle Code = TextStyle{TextStyle::kKindCode};
 /// Keyword renders text with a 'code' style that represents a 'keyword' token
-static constexpr TextStyle Keyword = TextStyle{TextStyle::kKindKeyword};
+inline constexpr TextStyle Keyword = TextStyle{TextStyle::kKindKeyword};
 /// Variable renders text with a 'code' style that represents a 'variable' token
-static constexpr TextStyle Variable = TextStyle{TextStyle::kKindVariable};
+inline constexpr TextStyle Variable = TextStyle{TextStyle::kKindVariable};
 /// Type renders text with a 'code' style that represents a 'type' token
-static constexpr TextStyle Type = TextStyle{TextStyle::kKindType};
+inline constexpr TextStyle Type = TextStyle{TextStyle::kKindType};
 /// Function renders text with a 'code' style that represents a 'function' token
-static constexpr TextStyle Function = TextStyle{TextStyle::kKindFunction};
+inline constexpr TextStyle Function = TextStyle{TextStyle::kKindFunction};
 /// Enum renders text with a 'code' style that represents a 'enum' token
-static constexpr TextStyle Enum = TextStyle{TextStyle::kKindEnum};
+inline constexpr TextStyle Enum = TextStyle{TextStyle::kKindEnum};
 /// Literal renders text with a 'code' style that represents a 'literal' token
-static constexpr TextStyle Literal = TextStyle{TextStyle::kKindLiteral};
+inline constexpr TextStyle Literal = TextStyle{TextStyle::kKindLiteral};
 /// Attribute renders text with a 'code' style that represents an 'attribute' token
-static constexpr TextStyle Attribute = TextStyle{TextStyle::kKindAttribute};
+inline constexpr TextStyle Attribute = TextStyle{TextStyle::kKindAttribute};
 /// Comment renders text with a 'code' style that represents an 'comment' token
-static constexpr TextStyle Comment = TextStyle{TextStyle::kKindComment};
+inline constexpr TextStyle Comment = TextStyle{TextStyle::kKindComment};
 /// Label renders text with a 'code' style that represents an 'label' token
-static constexpr TextStyle Label = TextStyle{TextStyle::kKindLabel};
+inline constexpr TextStyle Label = TextStyle{TextStyle::kKindLabel};
 /// Instruction renders text with a 'code' style that represents an 'instruction' token
-static constexpr TextStyle Instruction = TextStyle{TextStyle::kKindInstruction};
+inline constexpr TextStyle Instruction = TextStyle{TextStyle::kKindInstruction};
 /// Squiggle renders text with a squiggle-highlight style (`^^^^^`)
-static constexpr TextStyle Squiggle = TextStyle{TextStyle::kKindSquiggle};
+inline constexpr TextStyle Squiggle = TextStyle{TextStyle::kKindSquiggle};
 
 }  // namespace tint::style
 

@@ -51,12 +51,12 @@ struct TypeTest : public TestHelper {
         f16 = ty.f16();
         i32 = ty.i32();
         u32 = ty.u32();
-        vec2_f32 = ty.vec2(f32);
-        vec3_f32 = ty.vec3(f32);
-        vec3_f16 = ty.vec3(f16);
-        vec4_f32 = ty.vec4(f32);
-        vec3_u32 = ty.vec3(u32);
-        vec3_i32 = ty.vec3(i32);
+        vec2_f32 = ty.vec2f();
+        vec3_f32 = ty.vec3f();
+        vec3_f16 = ty.vec3h();
+        vec4_f32 = ty.vec4f();
+        vec3_u32 = ty.vec3u();
+        vec3_i32 = ty.vec3i();
         vec3_af = ty.vec3(af);
         vec3_ai = ty.vec3(ai);
         mat2x4_f32 = ty.mat2x4(f32);
@@ -77,9 +77,7 @@ struct TypeTest : public TestHelper {
                                          /* size */ 4u,
                                          /* attributes */ core::IOAttributes{}),
                                  },
-                                 /* align*/ 4u,
-                                 /* size*/ 4u,
-                                 /* size_no_padding*/ 4u);
+                                 /* size*/ 4u);
         str_f16 = ty.Get<Struct>(st.New("str_f16"),
                                  tint::Vector{
                                      ty.Get<StructMember>(
@@ -91,9 +89,7 @@ struct TypeTest : public TestHelper {
                                          /* size */ 4u,
                                          /* attributes */ core::IOAttributes{}),
                                  },
-                                 /* align*/ 4u,
-                                 /* size*/ 4u,
-                                 /* size_no_padding*/ 4u);
+                                 /* size*/ 4u);
         str_af = ty.Get<Struct>(st.New("str_af"),
                                 tint::Vector{
                                     ty.Get<StructMember>(
@@ -105,49 +101,34 @@ struct TypeTest : public TestHelper {
                                         /* size */ 4u,
                                         /* attributes */ core::IOAttributes{}),
                                 },
-                                /* align*/ 4u,
-                                /* size*/ 4u,
-                                /* size_no_padding*/ 4u);
+                                /* size*/ 4u);
         str_af->SetConcreteTypes(tint::Vector{str_f32, str_f16});
 
         arr_i32 = ty.array(i32, 5);
         arr_ai = ty.Get<Array>(
             /* element */ ai,
             /* count */ ty.Get<ConstantArrayCount>(5u),
-            /* align */ 4u,
-            /* size */ 5u * 4u,
-            /* stride */ 5u * 4u,
-            /* implicit_stride */ 5u * 4u);
+            /* size */ 5u * 4u);
         arr_vec3_i32 = ty.array(vec3_i32, 5);
         arr_vec3_ai = ty.Get<Array>(
             /* element */ vec3_ai,
             /* count */ ty.Get<ConstantArrayCount>(5u),
-            /* align */ 16u,
-            /* size */ 5u * 16u,
-            /* stride */ 5u * 16u,
-            /* implicit_stride */ 5u * 16u);
+            /* size */ 5u * 16u);
         arr_mat4x3_f16 = ty.array(mat4x3_f16, 5);
         arr_mat4x3_f32 = ty.array(mat4x3_f32, 5);
         arr_mat4x3_af = ty.Get<Array>(
             /* element */ mat4x3_af,
             /* count */ ty.Get<ConstantArrayCount>(5u),
-            /* align */ 64u,
-            /* size */ 5u * 64u,
-            /* stride */ 5u * 64u,
-            /* implicit_stride */ 5u * 64u);
+            /* size */ 5u * 64u);
         arr_str_f16 = ty.array(str_f16, 5);
         arr_str_af = ty.array(str_af, 5);
         arr_str_af = ty.Get<Array>(
             /* element */ str_af,
             /* count */ ty.Get<ConstantArrayCount>(5u),
-            /* align */ 4u,
-            /* size */ 5u * 4u,
-            /* stride */ 5u * 4u,
-            /* implicit_stride */ 5u * 4u);
+            /* size */ 5u * 4u);
     }
 
-    GenerationID id;
-    SymbolTable st{id};
+    SymbolTable st{};
     Manager ty;
 
     const AbstractFloat* af = nullptr;

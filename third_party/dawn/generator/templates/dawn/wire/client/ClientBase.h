@@ -47,12 +47,12 @@ namespace dawn::wire::client {
                 if (object == nullptr) {
                     return WireResult::FatalError;
                 }
-                *out = reinterpret_cast<{{as_wireType(type)}}>(object)->GetWireId();
+                *out = reinterpret_cast<{{as_wireType(type)}}>(object)->GetWireHandle(this).id;
                 return WireResult::Success;
             }
             WireResult GetOptionalId({{as_cType(type.name)}} object, ObjectId* out) const final {
                 DAWN_ASSERT(out != nullptr);
-                *out = (object == nullptr ? 0 : reinterpret_cast<{{as_wireType(type)}}>(object)->GetWireId());
+                *out = (object == nullptr ? 0 : reinterpret_cast<{{as_wireType(type)}}>(object)->GetWireHandle(this).id);
                 return WireResult::Success;
             }
         {% endfor %}

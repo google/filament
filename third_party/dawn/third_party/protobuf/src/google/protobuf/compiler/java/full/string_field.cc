@@ -33,7 +33,6 @@ namespace compiler {
 namespace java {
 
 using internal::WireFormat;
-using internal::WireFormatLite;
 using Semantic = ::google::protobuf::io::AnnotationCollector::Semantic;
 
 namespace {
@@ -118,7 +117,7 @@ ImmutableStringFieldGenerator::ImmutableStringFieldGenerator(
                         name_resolver_, &variables_, context);
 }
 
-ImmutableStringFieldGenerator::~ImmutableStringFieldGenerator() {}
+ImmutableStringFieldGenerator::~ImmutableStringFieldGenerator() = default;
 
 int ImmutableStringFieldGenerator::GetMessageBitIndex() const {
   return message_bit_index_;
@@ -464,7 +463,8 @@ ImmutableStringOneofFieldGenerator::ImmutableStringOneofFieldGenerator(
   SetCommonOneofVariables(descriptor, info, &variables_);
 }
 
-ImmutableStringOneofFieldGenerator::~ImmutableStringOneofFieldGenerator() {}
+ImmutableStringOneofFieldGenerator::~ImmutableStringOneofFieldGenerator() =
+    default;
 
 void ImmutableStringOneofFieldGenerator::GenerateMembers(
     io::Printer* printer) const {
@@ -710,7 +710,7 @@ RepeatedImmutableStringFieldGenerator::RepeatedImmutableStringFieldGenerator(
                                     builderBitIndex, context) {}
 
 RepeatedImmutableStringFieldGenerator::
-    ~RepeatedImmutableStringFieldGenerator() {}
+    ~RepeatedImmutableStringFieldGenerator() = default;
 
 int RepeatedImmutableStringFieldGenerator::GetNumBitsForMessage() const {
   return 0;

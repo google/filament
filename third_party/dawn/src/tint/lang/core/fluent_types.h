@@ -39,13 +39,14 @@ using f16 = tint::core::f16;
 using f32 = tint::core::f32;
 using i32 = tint::core::i32;
 using i8 = tint::core::i8;
+using u16 = tint::core::u16;
 using u32 = tint::core::u32;
 using u64 = tint::core::u64;
 using u8 = tint::core::u8;
 using AFloat = tint::core::AFloat;
 using AInt = tint::core::AInt;
 
-// A sentinel type used by some template arguments to signal that the a type should be inferred.
+// A sentinel type used by some template arguments to signal that the type should be inferred.
 struct Infer {};
 
 /// A 'fluent' type helper used to construct an ast::Array or type::Array.
@@ -154,25 +155,61 @@ using vec3 = vec<3, T>;
 template <typename T>
 using vec4 = vec<4, T>;
 
+using mat2x2f = mat<2, 2, f32>;
+using mat2x3f = mat<2, 3, f32>;
+using mat2x4f = mat<2, 4, f32>;
+using mat3x2f = mat<3, 2, f32>;
+using mat3x3f = mat<3, 3, f32>;
+using mat3x4f = mat<3, 4, f32>;
+using mat4x2f = mat<4, 2, f32>;
+using mat4x3f = mat<4, 3, f32>;
+using mat4x4f = mat<4, 4, f32>;
+
+using mat2x2h = mat<2, 2, f16>;
+using mat2x3h = mat<2, 3, f16>;
+using mat2x4h = mat<2, 4, f16>;
+using mat3x2h = mat<3, 2, f16>;
+using mat3x3h = mat<3, 3, f16>;
+using mat3x4h = mat<3, 4, f16>;
+using mat4x2h = mat<4, 2, f16>;
+using mat4x3h = mat<4, 3, f16>;
+using mat4x4h = mat<4, 4, f16>;
+
+using vec2f = vec<2, f32>;
+using vec3f = vec<3, f32>;
+using vec4f = vec<4, f32>;
+
+using vec2h = vec<2, f16>;
+using vec3h = vec<3, f16>;
+using vec4h = vec<4, f16>;
+
+using vec2i = vec<2, i32>;
+using vec3i = vec<3, i32>;
+using vec4i = vec<4, i32>;
+
+using vec2u = vec<2, u32>;
+using vec3u = vec<3, u32>;
+using vec4u = vec<4, u32>;
+
 //! @endcond
 
 ////////////////////////////////////////////////////////////////////////////////
 // Address space aliases
 ////////////////////////////////////////////////////////////////////////////////
-static constexpr core::AddressSpace function = core::AddressSpace::kFunction;
-static constexpr core::AddressSpace handle = core::AddressSpace::kHandle;
-static constexpr core::AddressSpace private_ = core::AddressSpace::kPrivate;
-static constexpr core::AddressSpace immediate = core::AddressSpace::kImmediate;
-static constexpr core::AddressSpace storage = core::AddressSpace::kStorage;
-static constexpr core::AddressSpace uniform = core::AddressSpace::kUniform;
-static constexpr core::AddressSpace workgroup = core::AddressSpace::kWorkgroup;
+inline constexpr core::AddressSpace function = core::AddressSpace::kFunction;
+inline constexpr core::AddressSpace handle = core::AddressSpace::kHandle;
+inline constexpr core::AddressSpace private_ = core::AddressSpace::kPrivate;
+inline constexpr core::AddressSpace immediate = core::AddressSpace::kImmediate;
+inline constexpr core::AddressSpace storage = core::AddressSpace::kStorage;
+inline constexpr core::AddressSpace uniform = core::AddressSpace::kUniform;
+inline constexpr core::AddressSpace workgroup = core::AddressSpace::kWorkgroup;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Access control aliases
 ////////////////////////////////////////////////////////////////////////////////
-static constexpr core::Access read = core::Access::kRead;
-static constexpr core::Access read_write = core::Access::kReadWrite;
-static constexpr core::Access write = core::Access::kWrite;
+inline constexpr core::Access read = core::Access::kRead;
+inline constexpr core::Access read_write = core::Access::kReadWrite;
+inline constexpr core::Access write = core::Access::kWrite;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Traits

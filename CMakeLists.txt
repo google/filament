@@ -19,12 +19,33 @@ endif()
 # ==================================================================================================
 # Project declaration
 # ==================================================================================================
-project(TNT)
+set(EXTRA_LANGS)
+
+# This is only needed for the webgpu on MacOS build.
+if (APPLE AND NOT IOS)
+    set(EXTRA_LANGS OBJC OBJCXX)
+endif()
+
+project(TNT C CXX ${EXTRA_LANGS})
 
 # ==================================================================================================
 # Options
 # ==================================================================================================
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
+
+# Note: If you intend to use the JNI library (Android/Java build), you need to have
+# exceptions enabled (the default). If you are using Filament on Android as a pure
+# native library and want to save space, you can disable them.
+# We disable exceptions on iOS by default. This fixes an availability error we see when using
+# std::visit and std::get, which are not supported on iOS 11.0 when exceptions are enabled.
+if (IOS)
+    set(FILAMENT_ENABLE_EXCEPTIONS_DEFAULT OFF)
+else()
+    set(FILAMENT_ENABLE_EXCEPTIONS_DEFAULT ON)
+endif()
+option(FILAMENT_ENABLE_EXCEPTIONS "Enable C++ exceptions" ${FILAMENT_ENABLE_EXCEPTIONS_DEFAULT})
+
+option(FILAMENT_ENABLE_RTTI "Enable C++ RTTI" OFF)
 
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
@@ -100,6 +121,15 @@ set(FILAMENT_OSMESA_PATH "" CACHE STRING
 # Enable exceptions by default in spirv-cross.
 set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS OFF)
 
+if (NOT FILAMENT_ENABLE_EXCEPTIONS)
+    add_compile_options(-fno-exceptions)
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
+endif()
+
+if (NOT FILAMENT_ENABLE_RTTI)
+    add_compile_options(-fno-rtti)
+endif()
+
 # ==================================================================================================
 # CMake policies
 # ==================================================================================================
@@ -147,7 +177,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==================================================================================================
 # OS specific
 # ==================================================================================================
-if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
+if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WASM)
     set(LINUX TRUE)
 else()
     # since cmake 3.25 LINUX is automatically set based on CMAKE_SYSTEM_NAME, which the android
@@ -188,7 +218,7 @@ if (LINUX)
     endif()
 endif()
 
-if (ANDROID OR WEBGL OR IOS OR FILAMENT_LINUX_IS_MOBILE)
+if (ANDROID OR WASM OR IOS OR FILAMENT_LINUX_IS_MOBILE)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
@@ -196,7 +226,7 @@ if (ANDROID)
     add_definitions(-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__)
 endif()
 
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
+if (NOT ANDROID AND NOT WASM AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
     set(IS_HOST_PLATFORM TRUE)
 endif()
 
@@ -337,6 +367,14 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
+
+# This is only needed for the webgpu on MacOS build.
+# Don't enable for iOS because we need to support ios min target 11.0
+if (APPLE AND NOT IOS)
+    set(CMAKE_OBJCXX_STANDARD 20)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+endif()
+
 set(CXX_STANDARD "-std=c++20")
 if (WIN32)
     set(CXX_STANDARD "/std:c++20")
@@ -353,6 +391,7 @@ else()
     endif()
     if (APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-extension")
+        set(CMAKE_OBJCXX_FLAGS "${CMAKE_CXX_FLAGS}")
     endif()
 endif()
 
@@ -400,8 +439,7 @@ if (ANDROID)
 endif()
 
 if (CYGWIN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
-    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
 if (MSVC)
@@ -435,33 +473,20 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffunction-sections -fdata-sections")
 endif()
 
-# On Android RELEASE builds, we disable exceptions and RTTI to save some space (about 75 KiB
-# saved by -fno-exception and 10 KiB saved by -fno-rtti).
-if (ANDROID OR IOS OR WEBGL)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-rtti")
-    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
-
-    if (ANDROID OR WEBGL)
-        # Omitting unwind info prevents the generation of readable stack traces in crash reports on iOS
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
-    endif()
+if (ANDROID OR WASM)
+    # On Android and WebGL RELEASE builds, we omit unwind info to save space.
+    # (We keep unwind info on iOS to allow readable stack traces in crash reports.)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
 endif()
 
-# Turn off exceptions on iOS debug as well. This fixes an availability error we see when using
-# std::visit, which is not supported on iOS 11.0 when exceptions are enabled.
-if (IOS)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-exceptions")
-    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
-endif()
-
-# With WebGL, we disable RTTI even for debug builds because we pass emscripten::val back and forth
+# With WebGL, we disable RTTI because we pass emscripten::val back and forth
 # between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
 # NOTE: This is not documented in emscripten so we should consider a different approach.
-if (WEBGL)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-rtti")
+if (WASM)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
-if (WEBGL_PTHREADS)
+if (WASM_PTHREADS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 
@@ -478,7 +503,7 @@ if (ANDROID)
     # keep STL debug infos (mimics what the NDK does)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-limit-debug-info")
 endif()
-if (NOT MSVC AND NOT WEBGL)
+if (NOT MSVC AND NOT WASM)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
@@ -497,7 +522,7 @@ endif()
 # Linker flags
 # ==================================================================================================
 # Strip unused sections
-if (NOT WEBGL)
+if (NOT WASM)
     set(GC_SECTIONS "-Wl,--gc-sections")
 endif()
 
@@ -531,7 +556,7 @@ endif()
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS} ${NO_EXEC_STACK}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT}")
 
-if (WEBGL_PTHREADS)
+if (WASM_PTHREADS)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pthread")
 endif()
 
@@ -561,7 +586,7 @@ endif()
 
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
 # it at run time.
-if (WIN32 OR WEBGL OR IOS)
+if (WIN32 OR WASM OR IOS)
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" OFF)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)
@@ -579,7 +604,7 @@ if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
 endif()
 
 # Build with Metal support on non-WebGL Apple platforms.
-if (APPLE AND NOT WEBGL)
+if (APPLE AND NOT WASM)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
 else()
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" OFF)
@@ -589,7 +614,7 @@ if (FILAMENT_SUPPORTS_METAL)
 endif()
 
 # Building filamat increases build times and isn't required for web, so turn it off by default.
-if (NOT WEBGL)
+if (NOT WASM)
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" ON)
 else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
@@ -659,7 +684,6 @@ if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
 endif()
 
-# With WebGPU, push constants are not supported. Skinning uses them.
 # WebGPU has a proposal to add push constants at https://github.com/gpuweb/gpuweb/blob/main/proposals/push-constants.md
 # With WebGPU, Tint does not support ClipDistance which is used in Stereo.  Mentioned in comment
 # https://github.com/google/dawn/blob/855d17b08abdf02f9142bf5a8f14d0ea088810a4/src/tint/lang/spirv/reader/ast_parser/function.cc#L4434
@@ -708,6 +732,9 @@ string(TOLOWER "${DIST_ARCH}" DIST_ARCH)
 string(REPLACE "amd64" "x86_64" DIST_ARCH "${DIST_ARCH}")
 if (NOT DIST_DIR)
     set(DIST_DIR "${DIST_ARCH}")
+    if (PLATFORM_NAME)
+        set(DIST_DIR "${DIST_DIR}-${PLATFORM_NAME}")
+    endif()
 endif()
 
 # ==================================================================================================
@@ -816,7 +843,7 @@ if (FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR)
    set(IMPORT_EXECUTABLES_DIR ${FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR})
 endif()
 
-if (WEBGL)
+if (WASM)
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
 else()
     if (FILAMENT_EXPORT_PREBUILT_EXECUTABLES OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
@@ -851,7 +878,7 @@ function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
     set(RESGEN_HEADER "${ARCHIVE_DIR}/${ARCHIVE_NAME}.h" PARENT_SCOPE)
     # Visual Studio makes it difficult to use assembly without using MASM. MASM doesn't support
     # the equivalent of .incbin, so on Windows we'll just tell resgen to output a C file.
-    if (WEBGL OR WIN32 OR ANDROID_ON_WINDOWS)
+    if (WASM OR WIN32 OR ANDROID_ON_WINDOWS)
         set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
         set(RESGEN_FLAGS -qcx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
         set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
@@ -956,7 +983,7 @@ add_subdirectory(${FILAMENT}/filament)
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
-if (WEBGL)
+if (WASM)
     add_subdirectory(web/filament-js)
     add_subdirectory(web/examples)
 endif()

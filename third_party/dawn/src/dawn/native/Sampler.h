@@ -33,7 +33,6 @@
 #include "dawn/native/Error.h"
 #include "dawn/native/Forward.h"
 #include "dawn/native/ObjectBase.h"
-
 #include "dawn/native/dawn_platform.h"
 
 namespace dawn::native {
@@ -56,8 +55,20 @@ class SamplerBase : public ApiObjectBase,
 
     ObjectType GetType() const override;
 
+    wgpu::AddressMode GetAddressModeU() const { return mAddressModeU; }
+    wgpu::AddressMode GetAddressModeV() const { return mAddressModeV; }
+    wgpu::AddressMode GetAddressModeW() const { return mAddressModeW; }
+    wgpu::FilterMode GetMagFilter() const { return mMagFilter; }
+    wgpu::FilterMode GetMinFilter() const { return mMinFilter; }
+    wgpu::MipmapFilterMode GetMipmapFilter() const { return mMipmapFilter; }
+    float GetLodMinClamp() const { return mLodMinClamp; }
+    float GetLodMaxClamp() const { return mLodMaxClamp; }
+    wgpu::CompareFunction GetCompareFunction() const { return mCompareFunction; }
+    uint16_t GetMaxAnisotropy() const { return mMaxAnisotropy; }
+
     bool IsComparison() const;
     bool IsFiltering() const;
+    wgpu::SamplerBindingType GetBindingType() const;
     bool IsYCbCr() const;
     // Valid to call only if `IsYCbCr()` is true.
     YCbCrVkDescriptor GetYCbCrVkDescriptor() const;
@@ -69,15 +80,12 @@ class SamplerBase : public ApiObjectBase,
         bool operator()(const SamplerBase* a, const SamplerBase* b) const;
     };
 
-    uint16_t GetMaxAnisotropy() const { return mMaxAnisotropy; }
-
   protected:
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
   private:
     SamplerBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
 
-    // TODO(cwallez@chromium.org): Store a crypto hash of the items instead?
     wgpu::AddressMode mAddressModeU;
     wgpu::AddressMode mAddressModeV;
     wgpu::AddressMode mAddressModeW;

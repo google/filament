@@ -59,6 +59,8 @@ class GPUTexture final : public interop::GPUTexture {
     interop::GPUTextureDimension getDimension(Napi::Env) override;
     interop::GPUTextureFormat getFormat(Napi::Env) override;
     interop::GPUFlagsConstant getUsage(Napi::Env) override;
+    std::variant<interop::GPUTextureViewDimension, interop::UndefinedType>
+        getTextureBindingViewDimension(Napi::Env) override;
     std::string getLabel(Napi::Env) override;
     void setLabel(Napi::Env, std::string value) override;
 

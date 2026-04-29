@@ -33,16 +33,19 @@
 #include "dawn/native/Device.h"
 #include "dawn/native/metal/BindGroupMTL.h"
 #include "dawn/native/metal/DeviceMTL.h"
+#include "dawn/native/metal/UtilsMetal.h"
 
 namespace dawn::native::metal {
 
 // static
-Ref<BindGroupLayout> BindGroupLayout::Create(DeviceBase* device,
-                                             const BindGroupLayoutDescriptor* descriptor) {
+Ref<BindGroupLayout> BindGroupLayout::Create(
+    DeviceBase* device,
+    const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor) {
     return AcquireRef(new BindGroupLayout(device, descriptor));
 }
 
-BindGroupLayout::BindGroupLayout(DeviceBase* device, const BindGroupLayoutDescriptor* descriptor)
+BindGroupLayout::BindGroupLayout(DeviceBase* device,
+                                 const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor)
     : BindGroupLayoutInternalBase(device, descriptor),
       mBindGroupAllocator(MakeFrontendBindGroupAllocator<BindGroup>(4096)) {
     if (!device->IsToggleEnabled(Toggle::MetalUseArgumentBuffers)) {
@@ -50,11 +53,11 @@ BindGroupLayout::BindGroupLayout(DeviceBase* device, const BindGroupLayoutDescri
     }
 
     std::vector<MTLArgumentDescriptor*> descriptors;
-    for (BindingIndex i{0}; i < GetBindingCount(); ++i) {
-        auto& bindingInfo = GetBindingInfo(i);
+    for (BindingIndex bindingIndex{0}; bindingIndex < GetBindingCount(); ++bindingIndex) {
+        auto& bindingInfo = GetBindingInfo(bindingIndex);
 
         MTLArgumentDescriptor* desc = [MTLArgumentDescriptor argumentDescriptor];
-        desc.index = uint32_t(bindingInfo.binding);
+        desc.index = ToMTLArgumentBufferIndex(bindingIndex);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
         desc.access = MTLArgumentAccessReadOnly;
@@ -73,23 +76,28 @@ BindGroupLayout::BindGroupLayout(DeviceBase* device, const BindGroupLayoutDescri
                 DAWN_CHECK(false);
             },
             [&](const TextureBindingInfo&) { desc.dataType = MTLDataTypeTexture; },
-            [&](const StorageTextureBindingInfo&) { DAWN_CHECK(false); },
-            [](const InputAttachmentBindingInfo&) { DAWN_CHECK(false); });
+            [&](const StorageTextureBindingInfo&) { desc.dataType = MTLDataTypeTexture; },
+            [&](const TexelBufferBindingInfo&) { DAWN_CHECK(false); },
+            [](const InputAttachmentBindingInfo&) { DAWN_CHECK(false); },
+            [](const ExternalTextureBindingInfo&) { DAWN_CHECK(false); });
 
         descriptors.push_back(desc);
     }
 
     if (!descriptors.empty()) {
-        NSRef<NSArray> ary = AcquireNSRef([NSArray arrayWithObjects:descriptors.data()
-                                                              count:descriptors.size()]);
-        mArgumentEncoder = [ToBackend(device)->GetMTLDevice() newArgumentEncoderWithArguments:*ary];
+        @autoreleasepool {
+            NSArray* ary = [NSArray arrayWithObjects:descriptors.data() count:descriptors.size()];
+            mArgumentEncoder = AcquireNSPRef(
+                [ToBackend(device)->GetMTLDevice() newArgumentEncoderWithArguments:ary]);
+        }
     }
 }
 
 BindGroupLayout::~BindGroupLayout() = default;
 
-Ref<BindGroup> BindGroupLayout::AllocateBindGroup(Device* device,
-                                                  const BindGroupDescriptor* descriptor) {
+Ref<BindGroup> BindGroupLayout::AllocateBindGroup(
+    Device* device,
+    const UnpackedPtr<BindGroupDescriptor>& descriptor) {
     return AcquireRef(mBindGroupAllocator->Allocate(device, descriptor));
 }
 

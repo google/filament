@@ -25,7 +25,12 @@
  * Author: Charles Giessen <charles@lunarg.com>
  */
 
-#include "test_util.h"
+#include <iostream>
+#include <string>
+
+#include "util/test_defines.h"
+#include "util/functions.h"
+#include "util/dynamic_library_wrapper.h"
 
 extern "C" {
 
@@ -38,7 +43,7 @@ using InitFunction = void (*)();
 FRAMEWORK_EXPORT void init();
 };
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #if !defined(LIB_EXT)
 #define LIB_EXT "dll"
 #endif

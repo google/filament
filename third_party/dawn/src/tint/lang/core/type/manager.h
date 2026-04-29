@@ -34,6 +34,7 @@
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/type/atomic.h"
+#include "src/tint/lang/core/type/buffer.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/external_texture.h"
@@ -68,6 +69,7 @@ class Reference;
 class SampledTexture;
 class StorageTexture;
 class U8;
+class U16;
 class U32;
 class U64;
 class Vector;
@@ -155,6 +157,8 @@ class Manager final {
             return Get<core::type::I32>(std::forward<ARGS>(args)...);
         } else if constexpr (std::is_same_v<T, tint::core::u8>) {
             return Get<core::type::U8>(std::forward<ARGS>(args)...);
+        } else if constexpr (std::is_same_v<T, tint::core::u16>) {
+            return Get<core::type::U16>(std::forward<ARGS>(args)...);
         } else if constexpr (std::is_same_v<T, tint::core::u32>) {
             return Get<core::type::U32>(std::forward<ARGS>(args)...);
         } else if constexpr (std::is_same_v<T, tint::core::u64>) {
@@ -196,6 +200,9 @@ class Manager final {
         return types_.Find<TYPE>(std::forward<ARGS>(args)...);
     }
 
+    /// @returns the subtype for a given `format`
+    const Type* SubtypeFor(core::TexelFormat format);
+
     /// @returns an invalid type
     const core::type::Invalid* invalid();
 
@@ -216,6 +223,9 @@ class Manager final {
 
     /// @returns a u8 type
     const core::type::U8* u8();
+
+    /// @returns a u16 type
+    const core::type::U16* u16();
 
     /// @returns a u32 type
     const core::type::U32* u32();
@@ -268,11 +278,55 @@ class Manager final {
     /// @returns a vec4 type with the element type @p inner
     const core::type::Vector* vec4(const core::type::Type* inner);
 
+    /// @returns a vec2 type with the element type f32
+    const core::type::Vector* vec2f();
+
+    /// @returns a vec3 type with the element type f32
+    const core::type::Vector* vec3f();
+
+    /// @returns a vec4 type with the element type f32
+    const core::type::Vector* vec4f();
+
+    /// @returns a vec2 type with the element type f16
+    const core::type::Vector* vec2h();
+
+    /// @returns a vec3 type with the element type f16
+    const core::type::Vector* vec3h();
+
+    /// @returns a vec4 type with the element type f16
+    const core::type::Vector* vec4h();
+
+    /// @returns a vec2 type with the element type i32
+    const core::type::Vector* vec2i();
+
+    /// @returns a vec3 type with the element type i32
+    const core::type::Vector* vec3i();
+
+    /// @returns a vec4 type with the element type i32
+    const core::type::Vector* vec4i();
+
+    /// @returns a vec2 type with the element type u32
+    const core::type::Vector* vec2u();
+
+    /// @returns a vec3 type with the element type u32
+    const core::type::Vector* vec3u();
+
+    /// @returns a vec4 type with the element type u32
+    const core::type::Vector* vec4u();
+
     /// @param dim the dimensionality of the texture
     /// @param type the data type of the sampled texture
     /// @returns a sampled texture type with the provided params
     const core::type::SampledTexture* sampled_texture(TextureDimension dim,
                                                       const core::type::Type* type);
+
+    /// @param dim the dimensionality of the texture
+    /// @param type the data type of the sampled texture
+    /// @param filterable the filterablity
+    /// @returns a sampled texture type with the provided params
+    const core::type::SampledTexture* sampled_texture(TextureDimension dim,
+                                                      const core::type::Type* type,
+                                                      TextureFilterable filterable);
 
     /// @param dim the dimensionality of the texture
     /// @param type the data type of the sampled texture
@@ -534,29 +588,31 @@ class Manager final {
         return subgroup_matrix(K, Get<T>(), C, R);
     }
 
-    /// @param elem_ty the array element type
-    /// @param count the array element count
-    /// @param stride the optional array element stride
-    /// @returns the array type
-    const core::type::Array* array(const core::type::Type* elem_ty,
-                                   uint32_t count,
-                                   uint32_t stride = 0);
+    /// @param n the size of the buffer
+    /// @returns the buffer
+    const core::type::Buffer* buffer(uint32_t n);
+
+    /// @returns the unsized buffer
+    const core::type::Buffer* unsized_buffer();
 
     /// @param elem_ty the array element type
-    /// @param stride the optional array element stride
+    /// @param count the array element count
+    /// @returns the array type
+    const core::type::Array* array(const core::type::Type* elem_ty, uint32_t count);
+
+    /// @param elem_ty the array element type
     /// @returns the runtime array type
-    const core::type::Array* runtime_array(const core::type::Type* elem_ty, uint32_t stride = 0);
+    const core::type::Array* runtime_array(const core::type::Type* elem_ty);
 
     /// @returns an array type with the element type `T` and size `N`.
     /// @tparam T the element type
     /// @tparam N the array length. If zero, then constructs a runtime-sized array.
-    /// @param stride the optional array element stride
     template <typename T, size_t N = 0>
-    const core::type::Array* array(uint32_t stride = 0) {
+    const core::type::Array* array() {
         if constexpr (N == 0) {
-            return runtime_array(Get<T>(), stride);
+            return runtime_array(Get<T>());
         } else {
-            return array(Get<T>(), N, stride);
+            return array(Get<T>(), N);
         }
     }
 
@@ -620,6 +676,12 @@ class Manager final {
     /// @returns the sampler type
     const core::type::Sampler* sampler() {
         return Get<core::type::Sampler>(core::type::SamplerKind::kSampler);
+    }
+
+    /// @param filtering the sampler filtering parameter
+    /// @returns the sampler type
+    const core::type::Sampler* sampler(SamplerFiltering filtering) {
+        return Get<core::type::Sampler>(core::type::SamplerKind::kSampler, filtering);
     }
 
     /// @returns the comparison sampler type

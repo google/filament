@@ -25,14 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/ir/validator_test.h"
-
 #include <string>
 
 #include "gtest/gtest.h"
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/lang/core/ir/validator_test.h"
 #include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/type/abstract_float.h"
 #include "src/tint/lang/core/type/abstract_int.h"
@@ -121,9 +119,8 @@ TEST_F(IR_ValidatorTest, Discard_NotInFragmentViaFunction) {
 
     auto res = ir::Validate(mod);
     ASSERT_NE(res, Success);
-    EXPECT_THAT(
-        res.Failure().reason,
-        testing::HasSubstr(R"(:3:5 error: discard: cannot be called in non-fragment entry point
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: discard: cannot be used in a compute shader
     discard
     ^^^^^^^
 )")) << res.Failure();
@@ -139,11 +136,56 @@ TEST_F(IR_ValidatorTest, Discard_NotInFragmentViaEntryPoint) {
 
     auto res = ir::Validate(mod);
     ASSERT_NE(res, Success);
-    EXPECT_THAT(
-        res.Failure().reason,
-        testing::HasSubstr(R"(:3:5 error: discard: cannot be called in non-fragment entry point
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: discard: cannot be used in a compute shader
     discard
     ^^^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, FragmentOnlyBuiltin_NotInFragment) {
+    auto* func = b.Function("foo", ty.void_());
+    b.Append(func->Block(), [&] {
+        b.Call<f32>(BuiltinFn::kDpdx, 1.0_f);
+        b.Return(func);
+    });
+
+    auto* ep = ComputeEntryPoint("ep");
+
+    b.Append(ep->Block(), [&] {
+        b.Call(func);
+        b.Return(ep);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:14 error: dpdx: cannot be used in a compute shader
+    %2:f32 = dpdx 1.0f
+             ^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, ComputeOnlyBuiltin_NotInCompute) {
+    auto* func = b.Function("foo", ty.void_());
+    b.Append(func->Block(), [&] {
+        b.Call<void>(BuiltinFn::kWorkgroupBarrier);
+        b.Return(func);
+    });
+
+    auto* ep = FragmentEntryPoint("ep");
+    b.Append(ep->Block(), [&] {
+        b.Call(func);
+        b.Return(ep);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(R"(:3:15 error: workgroupBarrier: cannot be used in a fragment shader
+    %2:void = workgroupBarrier
+              ^^^^^^^^^^^^^^^^
 )")) << res.Failure();
 }
 
@@ -223,6 +265,44 @@ TEST_F(IR_ValidatorTest, If_EmptyFalse) {
 
     auto res = ir::Validate(mod);
     ASSERT_EQ(res, Success) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, If_TrueMultiInBlock) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    auto* if_ = b.If(true);
+    if_->SetTrue(b.MultiInBlock());
+    if_->True()->Append(b.Return(f));
+
+    f->Block()->Append(if_);
+    f->Block()->Append(b.Return(f));
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: if: if true block must be a block
+    if true [t: $B2] {  # if_1
+    ^^^^^^^^^^^^^^^^)"));
+}
+
+TEST_F(IR_ValidatorTest, If_FalseMultiInBlock) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    auto* if_ = b.If(true);
+    if_->True()->Append(b.Return(f));
+
+    if_->SetFalse(b.MultiInBlock());
+    if_->False()->Append(b.Return(f));
+
+    f->Block()->Append(if_);
+    f->Block()->Append(b.Return(f));
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: if: if false block must be a block
+    if true [t: $B2, f: $B3] {  # if_1
+    ^^^^^^^^^^^^^^^^^^^^^^^^)"));
 }
 
 TEST_F(IR_ValidatorTest, If_EmptyTrue) {
@@ -315,6 +395,24 @@ TEST_F(IR_ValidatorTest, Loop_RootBlock) {
 )")) << res.Failure();
 }
 
+TEST_F(IR_ValidatorTest, Loop_InitializerNotTerminatedWithNextIteration) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    auto* l = b.Loop();
+    l->Initializer()->Append(b.Return(f));
+    l->Body()->Append(b.ExitLoop(l));
+
+    auto sb = b.Append(f->Block());
+    sb.Append(l);
+    sb.Return(f);
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(R"(:4:7 error: loop initializer must have a NextIteration terminator)"));
+}
+
 TEST_F(IR_ValidatorTest, Loop_OnlyBody) {
     auto* f = b.Function("my_func", ty.void_());
 
@@ -360,6 +458,24 @@ TEST_F(IR_ValidatorTest, Loop_NullResult) {
     EXPECT_THAT(res.Failure().reason, testing::HasSubstr(R"(:3:5 error: loop: result is undefined
     undef = loop [b: $B2] {  # loop_1
     ^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Loop_VoidResult) {
+    auto* f = b.Function("my_func", ty.void_());
+    b.Append(f->Block(), [&] {
+        auto* loop = b.Loop();
+        loop->SetResults(b.InstructionResult(ty.void_()));
+        b.Append(loop->Body(), [&] { b.ExitLoop(loop); });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: loop: result type cannot be void
+    %2:void = loop [b: $B2] {  # loop_1
+    ^^^^^^^
 )")) << res.Failure();
 }
 
@@ -900,7 +1016,11 @@ TEST_F(IR_ValidatorTest, Continue_InLoopInit) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
         auto* loop = b.Loop();
-        b.Append(loop->Initializer(), [&] { b.Continue(loop); });
+        b.Append(loop->Initializer(), [&]() {
+            auto* if_ = b.If(true);
+            b.Append(if_->True(), [&]() { b.Continue(loop); });
+            b.NextIteration(loop);
+        });
         b.Append(loop->Body(), [&] { b.ExitLoop(loop); });
         b.Return(f);
     });
@@ -908,9 +1028,9 @@ TEST_F(IR_ValidatorTest, Continue_InLoopInit) {
     auto res = ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_THAT(res.Failure().reason,
-                testing::HasSubstr(R"(:5:9 error: continue: must only be called from loop body
-        continue  # -> $B4
-        ^^^^^^^^
+                testing::HasSubstr(R"(:7:13 error: continue: must only be called from loop body
+            continue  # -> $B5
+            ^^^^^^^^
 )")) << res.Failure();
 }
 
@@ -931,16 +1051,20 @@ TEST_F(IR_ValidatorTest, Continue_InLoopContinuing) {
     b.Append(f->Block(), [&] {
         auto* loop = b.Loop();
         b.Append(loop->Body(), [&] { b.ExitLoop(loop); });
-        b.Append(loop->Continuing(), [&] { b.Continue(loop); });
+        b.Append(loop->Continuing(), [&]() {
+            auto* if_ = b.If(true);
+            b.Append(if_->True(), [&]() { b.Continue(loop); });
+            b.NextIteration(loop);
+        });
         b.Return(f);
     });
 
     auto res = ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_THAT(res.Failure().reason,
-                testing::HasSubstr(R"(:8:9 error: continue: must only be called from loop body
-        continue  # -> $B3
-        ^^^^^^^^
+                testing::HasSubstr(R"(:10:13 error: continue: must only be called from loop body
+            continue  # -> $B3
+            ^^^^^^^^
 )")) << res.Failure();
 }
 
@@ -1269,6 +1393,66 @@ TEST_F(IR_ValidatorTest, ContinuingUseValueAfterContinue) {
             R"(:14:24 error: let: %value cannot be used in continuing block as it is declared after the first 'continue' in the loop's body
         %use:i32 = let %value
                        ^^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, ContinuingBadTerminator) {
+    auto* f = b.Function("my_func", ty.void_());
+    b.Append(f->Block(), [&] {
+        auto* loop = b.Loop();
+        b.Append(loop->Body(), [&] {  //
+            b.Continue(loop);
+        });
+        b.Append(loop->Continuing(), [&] {  //
+            b.Return(f);
+        });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(
+                    R"(:7:7 error: loop continuing terminator can only be next_iteration or break_if
+      $B3: {  # continuing
+      ^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, BreakIf_UndefCondition) {
+    auto* f = b.Function("my_func", ty.void_());
+    b.Append(f->Block(), [&] {
+        auto* loop = b.Loop();
+        b.Append(loop->Body(), [&] { b.Continue(loop); });
+        b.Append(loop->Continuing(), [&] { b.BreakIf(loop, nullptr); });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(
+                    R"(:8:9 error: break_if: break_if condition cannot be nullptr
+        break_if undef  # -> [t: exit_loop loop_1, f: $B2]
+        ^^^^^^^^^^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, BreakIf_NonBoolCondition) {
+    auto* f = b.Function("my_func", ty.void_());
+    b.Append(f->Block(), [&] {
+        auto* loop = b.Loop();
+        b.Append(loop->Body(), [&] { b.Continue(loop); });
+        b.Append(loop->Continuing(), [&] { b.BreakIf(loop, 1_i); });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason, testing::HasSubstr(
+                                          R"(:8:9 error: break_if: condition must be a 'bool'
+        break_if 1i  # -> [t: exit_loop loop_1, f: $B2]
+        ^^^^^^^^^^^
 )")) << res.Failure();
 }
 
@@ -1722,28 +1906,6 @@ TEST_F(IR_ValidatorTest, ExitLoop_InvalidJumpOverLoop) {
 TEST_F(IR_ValidatorTest, ExitLoop_InvalidInsideContinuing) {
     auto* loop = b.Loop();
 
-    loop->Continuing()->Append(b.ExitLoop(loop));
-    loop->Body()->Append(b.Continue(loop));
-
-    auto* f = b.Function("my_func", ty.void_());
-
-    b.Append(f->Block(), [&] {
-        b.Append(loop);
-        b.Return(f);
-    });
-
-    auto res = ir::Validate(mod);
-    ASSERT_NE(res, Success);
-    EXPECT_THAT(res.Failure().reason,
-                testing::HasSubstr(R"(:8:9 error: exit_loop: loop exit jumps out of continuing block
-        exit_loop  # loop_1
-        ^^^^^^^^^
-)")) << res.Failure();
-}
-
-TEST_F(IR_ValidatorTest, ExitLoop_InvalidInsideContinuingNested) {
-    auto* loop = b.Loop();
-
     b.Append(loop->Continuing(), [&]() {
         auto* if_ = b.If(true);
         b.Append(if_->True(), [&]() { b.ExitLoop(loop); });
@@ -1770,31 +1932,6 @@ TEST_F(IR_ValidatorTest, ExitLoop_InvalidInsideContinuingNested) {
 }
 
 TEST_F(IR_ValidatorTest, ExitLoop_InvalidInsideInitializer) {
-    auto* loop = b.Loop();
-
-    loop->Initializer()->Append(b.ExitLoop(loop));
-    loop->Continuing()->Append(b.NextIteration(loop));
-
-    b.Append(loop->Body(), [&] { b.Continue(loop); });
-
-    auto* f = b.Function("my_func", ty.void_());
-
-    b.Append(f->Block(), [&] {
-        b.Append(loop);
-        b.Return(f);
-    });
-
-    auto res = ir::Validate(mod);
-    ASSERT_NE(res, Success);
-    EXPECT_THAT(
-        res.Failure().reason,
-        testing::HasSubstr(R"(:5:9 error: exit_loop: loop exit not permitted in loop initializer
-        exit_loop  # loop_1
-        ^^^^^^^^^
-)")) << res.Failure();
-}
-
-TEST_F(IR_ValidatorTest, ExitLoop_InvalidInsideInitializerNested) {
     auto* loop = b.Loop();
 
     b.Append(loop->Initializer(), [&]() {
@@ -1887,6 +2024,27 @@ TEST_F(IR_ValidatorTest, Return_MissingFunction) {
     ASSERT_NE(res, Success);
     EXPECT_THAT(res.Failure().reason,
                 testing::HasSubstr(R"(:3:5 error: return: expected between 1 and 2 operands, got 0
+    ret
+    ^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Return_WrongFunction) {
+    auto* f = b.Function("f", ty.void_());
+    b.Append(f->Block(), [&] {  //
+        b.Return(f);
+    });
+
+    auto* g = b.Function("g", ty.void_());
+    b.Append(g->Block(), [&] {  //
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(
+                    R"(:8:5 error: return: function operand does not match containing function
     ret
     ^^^
 )")) << res.Failure();
@@ -2048,6 +2206,24 @@ TEST_F(IR_ValidatorTest, Unreachable_MissingResult) {
 )")) << res.Failure();
 }
 
+TEST_F(IR_ValidatorTest, Switch_ExternalTextureResult) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* s = b.Switch(true);
+        s->AddResult(b.InstructionResult(ty.external_texture()));
+
+        b.Append(b.DefaultCase(s), [&] { b.ExitSwitch(s, nullptr); });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr("error: switch: result type must be constructable"))
+        << res.Failure();
+}
+
 TEST_F(IR_ValidatorTest, Switch_ConditionPointer) {
     auto* f = b.Function("my_func", ty.void_());
 
@@ -2101,6 +2277,39 @@ TEST_F(IR_ValidatorTest, Switch_NoDefaultCase) {
 )")) << res.Failure();
 }
 
+TEST_F(IR_ValidatorTest, Switch_InvalidCaseSelectorType) {
+    auto* f = b.Function("f", ty.void_());
+    b.Append(f->Block(), [&] {
+        auto* s = b.Switch(1_i);
+        b.Append(b.DefaultCase(s), [&] { b.ExitSwitch(s); });
+        b.Append(b.Case(s, {b.Constant(true)}), [&] { b.ExitSwitch(s); });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr("error: switch: case selector type 'bool' must be an integer scalar"));
+}
+
+TEST_F(IR_ValidatorTest, Switch_MultipleDefaultCases) {
+    auto* f = b.Function("f", ty.void_());
+    b.Append(f->Block(), [&] {
+        auto* s = b.Switch(1_i);
+        auto* case1 = b.DefaultCase(s);
+        b.Append(case1, [&] { b.ExitSwitch(s); });
+        auto* case2 = b.DefaultCase(s);
+        b.Append(case2, [&] { b.ExitSwitch(s); });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr("error: switch: multiple default selectors in switch"));
+}
+
 TEST_F(IR_ValidatorTest, Switch_NoCondition) {
     auto* f = b.Function("my_func", ty.void_());
 
@@ -2111,7 +2320,94 @@ TEST_F(IR_ValidatorTest, Switch_NoCondition) {
 
     auto res = ir::Validate(mod);
     ASSERT_NE(res, Success);
-    EXPECT_THAT(res.Failure().reason, testing::HasSubstr(R"(error: switch: operand is undefined
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(error: switch: expected exactly 1 operands, got 0
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Switch_NullResult) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* s = b.Switch(1_u);
+        s->SetResults(Vector<InstructionResult*, 1>{nullptr});
+
+        b.Append(b.DefaultCase(s), [&] { b.Return(f); });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason, testing::HasSubstr(R"(error: switch: result is undefined
+    undef = switch 1u [c: (default, $B2)] {  # switch_1
+    ^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Switch_CaseMultiBlock) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* s = b.Switch(1_i);
+        s->Cases().Push({});
+
+        s->Cases()[0].block = b.MultiInBlock();
+        b.Append(s->Cases()[0].block, [&] { b.ExitSwitch(s); });
+
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: switch: case block must be a block
+    switch 1i [c: (, $B2)] {  # switch_1
+    ^^^^^^^^^^^^^^^^^^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Switch_CaseNoSelectors) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* s = b.Switch(1_i);
+        b.Append(b.DefaultCase(s), [&] { b.ExitSwitch(s); });
+
+        s->Cases().Push({});
+
+        auto* blk = b.Block();
+        blk->SetParent(s);
+        b.Append(blk, [&] { b.ExitSwitch(s); });
+
+        s->Cases().Back().block = blk;
+
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: switch: case does not have any selectors
+    switch 1i [c: (default, $B2), c: (, $B3)] {  # switch_1
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Loop_PtrResult) {
+    auto* f = b.Function("my_func", ty.void_());
+    b.Append(f->Block(), [&] {
+        auto* loop = b.Loop();
+        loop->SetResults(b.InstructionResult(ty.ptr(function, ty.f32())));
+        b.Append(loop->Body(), [&] { b.ExitLoop(loop); });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: loop: result type cannot be a pointer
+    %2:ptr<function, f32, read_write> = loop [b: $B2] {  # loop_1
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 )")) << res.Failure();
 }
 

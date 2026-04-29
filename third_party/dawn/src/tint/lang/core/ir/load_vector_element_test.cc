@@ -39,7 +39,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 using IR_LoadVectorElementTest = IRTestHelper;
 
 TEST_F(IR_LoadVectorElementTest, Create) {
-    auto* from = b.Var(ty.ptr<private_, vec3<i32>>());
+    auto* from = b.Var(ty.ptr<private_, vec3i>());
     auto* inst = b.LoadVectorElement(from, 2_i);
 
     ASSERT_TRUE(inst->Is<LoadVectorElement>());
@@ -52,7 +52,7 @@ TEST_F(IR_LoadVectorElementTest, Create) {
 }
 
 TEST_F(IR_LoadVectorElementTest, Usage) {
-    auto* from = b.Var(ty.ptr<private_, vec3<i32>>());
+    auto* from = b.Var(ty.ptr<private_, vec3i>());
     auto* inst = b.LoadVectorElement(from, 2_i);
 
     ASSERT_NE(inst->From(), nullptr);
@@ -63,14 +63,14 @@ TEST_F(IR_LoadVectorElementTest, Usage) {
 }
 
 TEST_F(IR_LoadVectorElementTest, Result) {
-    auto* from = b.Var(ty.ptr<private_, vec3<i32>>());
+    auto* from = b.Var(ty.ptr<private_, vec3i>());
     auto* inst = b.LoadVectorElement(from, 2_i);
 
     EXPECT_EQ(inst->Results().Length(), 1u);
 }
 
 TEST_F(IR_LoadVectorElementTest, Clone) {
-    auto* from = b.Var(ty.ptr<private_, vec3<i32>>());
+    auto* from = b.Var(ty.ptr<private_, vec3i>());
     auto* inst = b.LoadVectorElement(from, 2_i);
 
     auto* new_from = clone_ctx.Clone(from);

@@ -2,7 +2,9 @@
 #include <cassert>
 #include <memory>
 
-#include "benchmark/benchmark.h"
+#include "benchmark/benchmark_api.h"
+#include "benchmark/registration.h"
+#include "benchmark/state.h"
 
 template <typename T>
 class MyFixture : public ::benchmark::Fixture {

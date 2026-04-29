@@ -49,13 +49,9 @@ BuiltinCall::~BuiltinCall() = default;
 BuiltinCall* BuiltinCall::Clone(core::ir::CloneContext& ctx) {
     auto* new_result = ctx.Clone(Result());
     auto new_args = ctx.Clone<BuiltinCall::kDefaultNumOperands>(Args());
-    auto new_explicit = ExplicitTemplateParams();
-
-    auto* inst = ctx.ir.CreateInstruction<BuiltinCall>(new_result, func_, new_args);
-    if (!new_explicit.IsEmpty()) {
-        inst->SetExplicitTemplateParams(new_explicit);
-    }
-    return inst;
+    auto* cloned = ctx.ir.CreateInstruction<BuiltinCall>(new_result, func_, new_args);
+    cloned->SetExplicitTemplateParams(ExplicitTemplateParams());
+    return cloned;
 }
 
 tint::core::ir::Instruction::Accesses BuiltinCall::GetSideEffects() const {

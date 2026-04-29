@@ -28,6 +28,7 @@
 #include <initializer_list>
 #include <limits>
 #include <vector>
+
 #include "dawn/tests/unittests/validation/ValidationTest.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"

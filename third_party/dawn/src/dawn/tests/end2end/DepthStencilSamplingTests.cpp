@@ -641,8 +641,11 @@ class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingT
 
 // Repro test for crbug.com/dawn/1187 where sampling a depth texture returns values not in [0, 1]
 TEST_P(DepthStencilSamplingTest, CheckDepthTextureRange) {
-    // TODO(crbug.com/dawn/1187): The test fails on ANGLE D3D11, investigate why.
-    DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
+    // TODO(crbug.com/444741058): Fails on Intel-based brya devices running Android Desktop.
+    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsIntel() && IsAndroid());
+
+    // TODO(crbug.com/40238674): Fails on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
 
     constexpr uint32_t kWidth = 16;
     wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
@@ -778,6 +781,10 @@ TEST_P(DepthStencilSamplingTest, CheckDepthTextureRange) {
 TEST_P(DepthStencilSamplingTest, SampleExtraComponents) {
     // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
+
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     wgpu::TextureFormat format = GetParam().mTextureFormat;
@@ -793,6 +800,9 @@ TEST_P(DepthStencilSamplingTest, SampleExtraComponents) {
 TEST_P(DepthStencilSamplingTest, SampleDepthAndStencilRender) {
     // In compat, you can't have different views of the same texture in the same draw command.
     DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode());
+
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
 
     wgpu::TextureFormat format = GetParam().mTextureFormat;
 
@@ -928,8 +938,8 @@ TEST_P(DepthSamplingTest, SampleDepthOnly) {
     // TODO(crbug.com/dawn/2552): diagnose this flake on Pixel 6 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
 
-    // TODO(crbug.com/341258943): Fails on Win/Intel UHD 770.
-    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsIntelGen12() && IsANGLED3D11());
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
 
     wgpu::TextureFormat format = GetParam().mTextureFormat;
 
@@ -965,6 +975,9 @@ TEST_P(DepthSamplingTest, CompareFunctionsRender) {
     // TODO(dawn:1549) Fails on Qualcomm-based Android devices.
     DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsQualcomm());
 
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     wgpu::TextureFormat format = GetParam().mTextureFormat;
     wgpu::RenderPipeline pipeline = CreateComparisonRenderPipeline();
 
@@ -992,6 +1005,9 @@ TEST_P(StencilSamplingTest, SampleStencilOnly) {
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
     DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     wgpu::TextureFormat format = GetParam().mTextureFormat;
 
     DoSamplingTest(TestAspectAndSamplerType::StencilAsUint,
@@ -1006,13 +1022,15 @@ TEST_P(StencilSamplingTest, SampleStencilOnly) {
 DAWN_INSTANTIATE_TEST_P(DepthStencilSamplingTest,
                         {D3D11Backend(), D3D11Backend({"use_packed_depth24_unorm_stencil8_format"}),
                          D3D12Backend(), D3D12Backend({"use_packed_depth24_unorm_stencil8_format"}),
-                         MetalBackend(), OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
+                         MetalBackend(), OpenGLBackend(), OpenGLESBackend(), VulkanBackend(),
+                         WebGPUBackend()},
                         std::vector<wgpu::TextureFormat>(utils::kDepthAndStencilFormats.begin(),
                                                          utils::kDepthAndStencilFormats.end()));
 
 DAWN_INSTANTIATE_TEST_P(DepthSamplingTest,
                         {D3D11Backend(), D3D11Backend({"use_packed_depth24_unorm_stencil8_format"}),
-                         MetalBackend(), OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
+                         MetalBackend(), OpenGLBackend(), OpenGLESBackend(), VulkanBackend(),
+                         WebGPUBackend()},
                         std::vector<wgpu::TextureFormat>(utils::kDepthFormats.begin(),
                                                          utils::kDepthFormats.end()));
 
@@ -1020,7 +1038,7 @@ DAWN_INSTANTIATE_TEST_P(StencilSamplingTest,
                         {D3D12Backend(), D3D12Backend({"use_packed_depth24_unorm_stencil8_format"}),
                          MetalBackend(),
                          MetalBackend({"metal_use_combined_depth_stencil_format_for_stencil8"}),
-                         OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
+                         OpenGLBackend(), OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         std::vector<wgpu::TextureFormat>(utils::kStencilFormats.begin(),
                                                          utils::kStencilFormats.end()));
 

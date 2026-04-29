@@ -62,6 +62,9 @@ public:
      * @return          FenceStatus::CONDITION_SATISFIED on success,
      *                  FenceStatus::TIMEOUT_EXPIRED if the time out expired or
      *                  FenceStatus::ERROR in other cases.
+     * @throws std::exception (or derived) if the backend thread encountered an unrecoverable error (when exceptions are enabled and mode is Mode::FLUSH).
+     * @throws utils::Panic if called again after a backend exception was already thrown.
+     *
      * @see #Mode
      */
     FenceStatus wait(Mode mode = Mode::FLUSH, uint64_t timeout = FENCE_WAIT_FOR_EVER);

@@ -1,4 +1,4 @@
-// Copyright 2024 The Dawn & Tint Authors
+// Copyright 2026 The Dawn & Tint Authors
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -25,35 +25,36 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+// File containing utilities common to both types of pipelines. However adding a base class doesn't
+// work as well as one would hope because we would want to use diamond inheritance and that's to
+// brittle.
+
 #ifndef SRC_DAWN_NATIVE_VULKAN_PIPELINEVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_PIPELINEVK_H_
 
-#include <memory>
+#include <utility>
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/vulkan/RefCountedVkHandle.h"
+#include "dawn/native/vulkan/PipelineLayoutVk.h"
 
 namespace dawn::native::vulkan {
 
-class Device;
-class PipelineLayout;
+// The pipeline layouts are specialized per-pipeline to use a tight bound on the number of push
+// constants used, so store both handles (the pipeline and specialized layout) together.
+struct PipelineHandles {
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+};
 
-class PipelineVk {
-  public:
-    PipelineVk() = default;
-    ~PipelineVk() = default;
+// Both types of pipelines need similar specialization information.
+struct CommonPipelineSpecialization {
+    PipelineLayout::Specialization layout;
+    absl::flat_hash_set<APIBindPoint> ycbcrExternalTextures = {};
 
-    VkPipelineLayout GetVkLayout() const;
-
-  protected:
-    MaybeError InitializeBase(PipelineLayout* layout,
-                              const ImmediateConstantMask& immediateConstantMask);
-    void DestroyImpl();
-
-  private:
-    Ref<RefCountedVkHandle<VkPipelineLayout>> mVkPipelineLayout;
+    template <typename H>
+    friend H AbslHashValue(H h, const CommonPipelineSpecialization& s) {
+        return H::combine(std::move(h), s.layout, s.ycbcrExternalTextures);
+    }
+    bool operator==(const CommonPipelineSpecialization& other) const = default;
 };
 
 }  // namespace dawn::native::vulkan

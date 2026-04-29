@@ -29,9 +29,8 @@
 #define SRC_DAWN_NATIVE_X11FUNCTIONS_H_
 
 #include "dawn/common/DynamicLib.h"
-#include "dawn/native/Error.h"
-
 #include "dawn/common/xlib_with_undefs.h"
+#include "dawn/native/Error.h"
 
 class DynamicLib;
 

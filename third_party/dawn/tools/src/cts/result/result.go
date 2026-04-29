@@ -32,7 +32,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -339,28 +338,7 @@ func (l List) Statuses() Statuses {
 }
 
 // Load loads the result list from the file with the given path
-func Load(path string) (ResultsByExecutionMode, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	results, err := Read(file)
-	if err != nil {
-		return nil, fmt.Errorf("while reading '%v': %w", path, err)
-	}
-	return results, nil
-}
-
-// Identical to Load, but using the provided fsReader instead of directly using
-// os.
-// TODO(crbug.com/344014313): Merge this with Load once all uses have switched
-// to the wrapper version.
-func LoadWithWrapper(
-	path string,
-	fsReader oswrapper.FilesystemReader) (ResultsByExecutionMode, error) {
-
+func Load(path string, fsReader oswrapper.FilesystemReader) (ResultsByExecutionMode, error) {
 	file, err := fsReader.Open(path)
 	if err != nil {
 		return nil, err
@@ -375,28 +353,7 @@ func LoadWithWrapper(
 }
 
 // Save saves the result list to the file with the given path
-func Save(path string, results ResultsByExecutionMode) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0777); err != nil {
-		return err
-	}
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return Write(file, results)
-}
-
-// Identical to Save, but using the provided fsWriter instead of directly using
-// os.
-// TODO(crbug.com/344014313): Merge this with Save once all uses have switched
-// to the wrapper version.
-func SaveWithWrapper(
-	path string,
-	results ResultsByExecutionMode,
-	fsWriter oswrapper.FilesystemWriter) error {
-
+func Save(path string, results ResultsByExecutionMode, fsWriter oswrapper.FilesystemWriter) error {
 	dir := filepath.Dir(path)
 	if err := fsWriter.MkdirAll(dir, 0777); err != nil {
 		return err

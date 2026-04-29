@@ -53,10 +53,10 @@ public:
 
     // Sets custom projection matrices (sets both the viewing and culling projections).
     void setCustomProjection(math::mat4 const& projection,
-            math::mat4 const& projectionForCulling, double near, double far) noexcept;
+            math::mat4 const& projectionForCulling, double near, double far);
 
     inline void setCustomProjection(math::mat4 const& projection,
-            double const near, double const far) noexcept {
+            double const near, double const far) {
         setCustomProjection(projection, projection, near, far);
     }
 

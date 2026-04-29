@@ -25,12 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
-
-#include "gmock/gmock.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 using namespace tint::core::fluent_types;     // NOLINT
@@ -46,7 +45,7 @@ using ResolverAccessUsedWithTemplateArgs = ResolverTestWithParam<std::string_vie
 TEST_P(ResolverAccessUsedWithTemplateArgs, Test) {
     // @group(0) @binding(0) var t : texture_storage_2d<rgba8unorm, ACCESS<i32>>;
     auto* tmpl = Ident(Source{{12, 34}}, GetParam(), "i32");
-    GlobalVar("v", ty("texture_storage_2d", "rgba8unorm", tmpl), Group(0_u), Binding(0_u));
+    GlobalVar("v", ty.AsType("texture_storage_2d", "rgba8unorm", tmpl), Group(0_u), Binding(0_u));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), "12:34 error: access '" + std::string(GetParam()) +
@@ -66,7 +65,7 @@ TEST_P(ResolverAddressSpaceUsedWithTemplateArgs, Test) {
     // fn f(p : ptr<ADDRESS_SPACE<T>, f32) {}
 
     auto* tmpl = Ident(Source{{12, 34}}, GetParam(), "T");
-    Func("f", Vector{Param("p", ty("ptr", tmpl, ty.f32()))}, ty.void_(), tint::Empty);
+    Func("f", Vector{Param("p", ty.AsType("ptr", tmpl, ty.f32()))}, ty.void_(), tint::Empty);
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), "12:34 error: address space '" + std::string(GetParam()) +
                                 "' does not take template arguments");
@@ -83,8 +82,9 @@ using ResolverTexelFormatUsedWithTemplateArgs = ResolverTestWithParam<std::strin
 
 TEST_P(ResolverTexelFormatUsedWithTemplateArgs, Test) {
     // @group(0) @binding(0) var t : texture_storage_2d<TEXEL_FORMAT<T>, write>
-    auto* tmpl = Ident(Source{{12, 34}}, GetParam(), "T");
-    GlobalVar("t", ty("texture_storage_2d", ty(tmpl), "write"), Group(0_u), Binding(0_u));
+    GlobalVar(
+        "t", ty.AsType("texture_storage_2d", ty.AsType(Source{{12, 34}}, GetParam(), "T"), "write"),
+        Group(0_u), Binding(0_u));
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), "12:34 error: texel format '" + std::string(GetParam()) +
                                 "' does not take template arguments");

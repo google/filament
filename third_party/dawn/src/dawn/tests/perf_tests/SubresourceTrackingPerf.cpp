@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/tests/perf_tests/DawnPerfTest.h"
-
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 
@@ -62,8 +61,8 @@ class SubresourceTrackingPerf : public DawnPerfTestWithParams<SubresourceTrackin
     SubresourceTrackingPerf() : DawnPerfTestWithParams(kNumIterations, 1) {}
     ~SubresourceTrackingPerf() override = default;
 
-    void SetUp() override {
-        DawnPerfTestWithParams<SubresourceTrackingParams>::SetUp();
+  protected:
+    void SetUpPerfTest() override {
         const SubresourceTrackingParams& params = GetParam();
 
         wgpu::TextureDescriptor materialDesc;

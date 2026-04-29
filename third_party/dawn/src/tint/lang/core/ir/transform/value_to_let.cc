@@ -72,7 +72,7 @@ struct State {
 
         for (ir::Instruction* inst = block->Front(); inst; inst = inst->next) {
             // This transform assumes that all multi-result instructions have been replaced
-            TINT_ASSERT(inst->Results().Length() < 2);
+            TINT_IR_ASSERT(ir, inst->Results().Length() < 2);
 
             // The memory accesses of this instruction
             auto accesses = inst->GetSideEffects();
@@ -230,10 +230,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ValueToLet(Module& ir, const ValueToLetConfig& cfg) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.ValueToLet", kValueToLetCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    AssertValid(ir, kValueToLetCapabilities, "before core.ValueToLet");
 
     State{ir, cfg}.Process();
 

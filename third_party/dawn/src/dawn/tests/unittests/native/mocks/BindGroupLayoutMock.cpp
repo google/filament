@@ -30,10 +30,10 @@
 namespace dawn::native {
 
 BindGroupLayoutMock::BindGroupLayoutMock(DeviceMock* device,
-                                         const BindGroupLayoutDescriptor* descriptor)
+                                         const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor)
     : BindGroupLayoutInternalBase(device, descriptor) {
-    ON_CALL(*this, DestroyImpl).WillByDefault([this] {
-        this->BindGroupLayoutInternalBase::DestroyImpl();
+    ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
+        this->BindGroupLayoutInternalBase::DestroyImpl(reason);
     });
 
     SetContentHash(ComputeContentHash());

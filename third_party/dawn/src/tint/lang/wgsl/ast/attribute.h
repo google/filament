@@ -45,10 +45,9 @@ class Attribute : public Castable<Attribute, Node> {
 
   protected:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
-    Attribute(GenerationID pid, NodeID nid, const Source& src) : Base(pid, nid, src) {}
+    Attribute(NodeID nid, const Source& src) : Base(nid, src) {}
 };
 
 /// @param attributes the list of attributes to search

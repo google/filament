@@ -50,21 +50,13 @@ namespace tint::core::constant {
 /// Eval performs shader creation-time (const-expression) expression evaluation.
 class Eval {
   public:
-    /// The failure type used by the methods of this class.
-    struct Error {};
-
-    /// A value of the type Error.
-    static constexpr Error error{};
-
     /// The result type of a method that may raise a diagnostic error, upon which the caller should
     /// handle the error. Can be one of three distinct values:
     /// * A non-null Value pointer. Returned when a expression resolves to a creation
     ///   time value.
     /// * A null Value pointer. Returned when a expression cannot resolve to a creation time value,
     ///   but is otherwise legal.
-    /// * Error. Returned when there was an error. In this situation the method will have
-    ///   already reported a diagnostic error message, and the caller should abort resolving.
-    using Result = tint::Result<const Value*, Error>;
+    using Result = tint::Result<const Value*>;
 
     /// Typedef for a constant evaluation function
     using Function = Result (Eval::*)(const core::type::Type* result_ty,
@@ -1043,7 +1035,7 @@ class Eval {
     /// @param b the rhs number
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Add(const Source& source, NumberT a, NumberT b);
+    tint::Result<NumberT> Add(const Source& source, NumberT a, NumberT b);
 
     /// Subtracts two Number<T>s
     /// @param source the source location
@@ -1051,7 +1043,7 @@ class Eval {
     /// @param b the rhs number
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Sub(const Source& source, NumberT a, NumberT b);
+    tint::Result<NumberT> Sub(const Source& source, NumberT a, NumberT b);
 
     /// Multiplies two Number<T>s
     /// @param source the source location
@@ -1059,7 +1051,7 @@ class Eval {
     /// @param b the rhs number
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Mul(const Source& source, NumberT a, NumberT b);
+    tint::Result<NumberT> Mul(const Source& source, NumberT a, NumberT b);
 
     /// Divides two Number<T>s
     /// @param source the source location
@@ -1067,7 +1059,7 @@ class Eval {
     /// @param b the rhs number
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Div(const Source& source, NumberT a, NumberT b);
+    tint::Result<NumberT> Div(const Source& source, NumberT a, NumberT b);
 
     /// Returns the (signed) remainder of the division of two Number<T>s
     /// @param source the source location
@@ -1075,7 +1067,7 @@ class Eval {
     /// @param b the rhs number
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Mod(const Source& source, NumberT a, NumberT b);
+    tint::Result<NumberT> Mod(const Source& source, NumberT a, NumberT b);
 
     /// Returns the dot product of (a1,a2) with (b1,b2)
     /// @param source the source location
@@ -1085,11 +1077,11 @@ class Eval {
     /// @param b2 component 2 of rhs vector
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Dot2(const Source& source,
-                                      NumberT a1,
-                                      NumberT a2,
-                                      NumberT b1,
-                                      NumberT b2);
+    tint::Result<NumberT> Dot2(const Source& source,
+                               NumberT a1,
+                               NumberT a2,
+                               NumberT b1,
+                               NumberT b2);
 
     /// Returns the dot product of (a1,a2,a3) with (b1,b2,b3)
     /// @param source the source location
@@ -1101,13 +1093,13 @@ class Eval {
     /// @param b3 component 3 of rhs vector
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Dot3(const Source& source,
-                                      NumberT a1,
-                                      NumberT a2,
-                                      NumberT a3,
-                                      NumberT b1,
-                                      NumberT b2,
-                                      NumberT b3);
+    tint::Result<NumberT> Dot3(const Source& source,
+                               NumberT a1,
+                               NumberT a2,
+                               NumberT a3,
+                               NumberT b1,
+                               NumberT b2,
+                               NumberT b3);
 
     /// Returns the dot product of (a1,b1,c1,d1) with (a2,b2,c2,d2)
     /// @param source the source location
@@ -1121,15 +1113,15 @@ class Eval {
     /// @param b4 component 4 of rhs vector
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Dot4(const Source& source,
-                                      NumberT a1,
-                                      NumberT a2,
-                                      NumberT a3,
-                                      NumberT a4,
-                                      NumberT b1,
-                                      NumberT b2,
-                                      NumberT b3,
-                                      NumberT b4);
+    tint::Result<NumberT> Dot4(const Source& source,
+                               NumberT a1,
+                               NumberT a2,
+                               NumberT a3,
+                               NumberT a4,
+                               NumberT b1,
+                               NumberT b2,
+                               NumberT b3,
+                               NumberT b4);
 
     /// Returns the determinant of the 2x2 matrix:
     /// | a c |
@@ -1140,11 +1132,11 @@ class Eval {
     /// @param c component 1 of the second column vector
     /// @param d component 2 of the second column vector
     template <typename NumberT>
-    tint::Result<NumberT, Error> Det2(const Source& source,  //
-                                      NumberT a,
-                                      NumberT b,
-                                      NumberT c,
-                                      NumberT d);
+    tint::Result<NumberT> Det2(const Source& source,  //
+                               NumberT a,
+                               NumberT b,
+                               NumberT c,
+                               NumberT d);
 
     /// Returns the determinant of the 3x3 matrix:
     /// | a d g |
@@ -1161,16 +1153,16 @@ class Eval {
     /// @param h component 2 of the third column vector
     /// @param i component 3 of the third column vector
     template <typename NumberT>
-    tint::Result<NumberT, Error> Det3(const Source& source,
-                                      NumberT a,
-                                      NumberT b,
-                                      NumberT c,
-                                      NumberT d,
-                                      NumberT e,
-                                      NumberT f,
-                                      NumberT g,
-                                      NumberT h,
-                                      NumberT i);
+    tint::Result<NumberT> Det3(const Source& source,
+                               NumberT a,
+                               NumberT b,
+                               NumberT c,
+                               NumberT d,
+                               NumberT e,
+                               NumberT f,
+                               NumberT g,
+                               NumberT h,
+                               NumberT i);
 
     /// Returns the determinant of the 4x4 matrix:
     /// | a e i m |
@@ -1195,26 +1187,26 @@ class Eval {
     /// @param o component 3 of the fourth column vector
     /// @param p component 4 of the fourth column vector
     template <typename NumberT>
-    tint::Result<NumberT, Error> Det4(const Source& source,
-                                      NumberT a,
-                                      NumberT b,
-                                      NumberT c,
-                                      NumberT d,
-                                      NumberT e,
-                                      NumberT f,
-                                      NumberT g,
-                                      NumberT h,
-                                      NumberT i,
-                                      NumberT j,
-                                      NumberT k,
-                                      NumberT l,
-                                      NumberT m,
-                                      NumberT n,
-                                      NumberT o,
-                                      NumberT p);
+    tint::Result<NumberT> Det4(const Source& source,
+                               NumberT a,
+                               NumberT b,
+                               NumberT c,
+                               NumberT d,
+                               NumberT e,
+                               NumberT f,
+                               NumberT g,
+                               NumberT h,
+                               NumberT i,
+                               NumberT j,
+                               NumberT k,
+                               NumberT l,
+                               NumberT m,
+                               NumberT n,
+                               NumberT o,
+                               NumberT p);
 
     template <typename NumberT>
-    tint::Result<NumberT, Error> Sqrt(const Source& source, NumberT v);
+    tint::Result<NumberT> Sqrt(const Source& source, NumberT v);
 
     /// Clamps e between low and high
     /// @param source the source location
@@ -1223,7 +1215,7 @@ class Eval {
     /// @param high the upper bound
     /// @returns the result number on success, or logs an error and returns Failure
     template <typename NumberT>
-    tint::Result<NumberT, Error> Clamp(const Source& source, NumberT e, NumberT low, NumberT high);
+    tint::Result<NumberT> Clamp(const Source& source, NumberT e, NumberT low, NumberT high);
 
     /// Returns a callable that calls Add, and creates a Constant with its result of type `elem_ty`
     /// if successful, or returns Failure otherwise.

@@ -25,11 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/msl/writer/raise/shader_io.h"
+
 #include <utility>
 
 #include "src/tint/lang/core/ir/transform/helper_test.h"
 #include "src/tint/lang/core/type/struct.h"
-#include "src/tint/lang/msl/writer/raise/shader_io.h"
 
 namespace tint::msl::writer::raise {
 namespace {
@@ -57,7 +58,8 @@ TEST_F(MslWriter_ShaderIOTest, NoInputsOrOutputs) {
 
     auto* expect = src;
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -67,7 +69,7 @@ TEST_F(MslWriter_ShaderIOTest, Parameters_NonStruct) {
     auto* ep = b.Function("foo", ty.void_());
     auto* front_facing = b.FunctionParam("front_facing", ty.bool_());
     front_facing->SetBuiltin(core::BuiltinValue::kFrontFacing);
-    auto* position = b.FunctionParam("position", ty.vec4<f32>());
+    auto* position = b.FunctionParam("position", ty.vec4f());
     position->SetBuiltin(core::BuiltinValue::kPosition);
     position->SetInvariant(true);
     auto* color1 = b.FunctionParam("color1", ty.f32());
@@ -83,7 +85,7 @@ TEST_F(MslWriter_ShaderIOTest, Parameters_NonStruct) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(front_facing);
         b.Append(ifelse->True(), [&] {
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -133,7 +135,8 @@ foo_inputs = struct @align(4) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -151,7 +154,7 @@ TEST_F(MslWriter_ShaderIOTest, Parameters_Struct) {
                                  },
                                  {
                                      mod.symbols.New("position"),
-                                     ty.vec4<f32>(),
+                                     ty.vec4f(),
                                      core::IOAttributes{
                                          .builtin = core::BuiltinValue::kPosition,
                                          .invariant = true,
@@ -186,10 +189,10 @@ TEST_F(MslWriter_ShaderIOTest, Parameters_Struct) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(b.Access(ty.bool_(), str_param, 0_i));
         b.Append(ifelse->True(), [&] {
-            auto* position = b.Access(ty.vec4<f32>(), str_param, 1_i);
+            auto* position = b.Access(ty.vec4f(), str_param, 1_i);
             auto* color1 = b.Access(ty.f32(), str_param, 2_i);
             auto* color2 = b.Access(ty.f32(), str_param, 3_i);
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -262,7 +265,8 @@ foo_inputs = struct @align(4) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -273,7 +277,7 @@ TEST_F(MslWriter_ShaderIOTest, Parameters_Mixed) {
         ty.Struct(mod.symbols.New("Inputs"), {
                                                  {
                                                      mod.symbols.New("position"),
-                                                     ty.vec4<f32>(),
+                                                     ty.vec4f(),
                                                      core::IOAttributes{
                                                          .builtin = core::BuiltinValue::kPosition,
                                                          .invariant = true,
@@ -303,9 +307,9 @@ TEST_F(MslWriter_ShaderIOTest, Parameters_Mixed) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(front_facing);
         b.Append(ifelse->True(), [&] {
-            auto* position = b.Access(ty.vec4<f32>(), str_param, 0_i);
+            auto* position = b.Access(ty.vec4f(), str_param, 0_i);
             auto* color1 = b.Access(ty.f32(), str_param, 1_i);
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -370,20 +374,21 @@ foo_inputs = struct @align(4) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
 }
 
 TEST_F(MslWriter_ShaderIOTest, ReturnValue_NonStructBuiltin) {
-    auto* ep = b.Function("foo", ty.vec4<f32>());
+    auto* ep = b.Function("foo", ty.vec4f());
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     ep->SetReturnInvariant(true);
     ep->SetStage(core::ir::Function::PipelineStage::kVertex);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -419,19 +424,20 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
 }
 
 TEST_F(MslWriter_ShaderIOTest, ReturnValue_NonStructLocation) {
-    auto* ep = b.Function("foo", ty.vec4<f32>());
+    auto* ep = b.Function("foo", ty.vec4f());
     ep->SetReturnLocation(1u);
     ep->SetStage(core::ir::Function::PipelineStage::kFragment);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -467,7 +473,8 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -478,7 +485,7 @@ TEST_F(MslWriter_ShaderIOTest, ReturnValue_Struct) {
                              {
                                  {
                                      mod.symbols.New("position"),
-                                     ty.vec4<f32>(),
+                                     ty.vec4f(),
                                      core::IOAttributes{
                                          .builtin = core::BuiltinValue::kPosition,
                                          .invariant = true,
@@ -509,7 +516,7 @@ TEST_F(MslWriter_ShaderIOTest, ReturnValue_Struct) {
     ep->SetStage(core::ir::Function::PipelineStage::kVertex);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(str_ty, b.Construct(ty.vec4<f32>(), 0_f), 0.25_f, 0.75_f));
+        b.Return(ep, b.Construct(str_ty, b.Construct(ty.vec4f(), 0_f), 0.25_f, 0.75_f));
     });
 
     auto* src = R"(
@@ -568,7 +575,8 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -649,14 +657,15 @@ foo_outputs = struct @align(4) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
 }
 
 TEST_F(MslWriter_ShaderIOTest, Struct_SharedWithBuffer) {
-    auto* vec4f = ty.vec4<f32>();
+    auto* vec4f = ty.vec4f();
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"), {
                                                   {
@@ -742,7 +751,8 @@ $B1: {  # root
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -750,7 +760,7 @@ $B1: {  # root
 
 // Test that IO attributes are stripped from structures that are not used for the shader interface.
 TEST_F(MslWriter_ShaderIOTest, StructWithAttributes_NotUsedForInterface) {
-    auto* vec4f = ty.vec4<f32>();
+    auto* vec4f = ty.vec4f();
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"), {
                                                   {
@@ -769,7 +779,7 @@ TEST_F(MslWriter_ShaderIOTest, StructWithAttributes_NotUsedForInterface) {
                                                   },
                                               });
 
-    auto* var = b.Var(ty.ptr(storage, str_ty, core::Access::kWrite));
+    auto* var = b.Var(ty.ptr(storage, str_ty, core::Access::kReadWrite));
     var->SetBindingPoint(0, 0);
 
     auto* buffer = mod.root_block->Append(var);
@@ -789,7 +799,7 @@ Outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %1:ptr<storage, Outputs, write> = var undef @binding_point(0, 0)
+  %1:ptr<storage, Outputs, read_write> = var undef @binding_point(0, 0)
 }
 
 %frag = @fragment func():void {
@@ -809,7 +819,7 @@ Outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %1:ptr<storage, Outputs, write> = var undef @binding_point(0, 0)
+  %1:ptr<storage, Outputs, read_write> = var undef @binding_point(0, 0)
 }
 
 %frag = @fragment func():void {
@@ -821,19 +831,20 @@ $B1: {  # root
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
 }
 
 TEST_F(MslWriter_ShaderIOTest, EmitVertexPointSize) {
-    auto* ep = b.Function("foo", ty.vec4<f32>());
+    auto* ep = b.Function("foo", ty.vec4f());
     ep->SetStage(core::ir::Function::PipelineStage::kVertex);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -872,8 +883,11 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     config.emit_vertex_point_size = true;
+
+    capabilities.Set(core::ir::Capability::kAllowPointSizeBuiltin, true);
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -890,7 +904,7 @@ TEST_F(MslWriter_ShaderIOTest, Color_NonStruct) {
     ep->SetStage(core::ir::Function::PipelineStage::kFragment);
 
     b.Append(ep->Block(), [&] {
-        b.Add<f32>(color1, color2);
+        b.Add(color1, color2);
         b.Return(ep);
     });
 
@@ -926,7 +940,8 @@ foo_inputs = struct @align(4) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -939,7 +954,7 @@ TEST_F(MslWriter_ShaderIOTest, UserSuppliedMask_WithoutFixedSampleMask) {
     mask.builtin = core::BuiltinValue::kSampleMask;
     auto* outputs =
         ty.Struct(mod.symbols.New("Outputs"), {
-                                                  {mod.symbols.New("color"), ty.vec4<f32>(), loc},
+                                                  {mod.symbols.New("color"), ty.vec4f(), loc},
                                                   {mod.symbols.New("mask"), ty.u32(), mask},
                                               });
 
@@ -947,8 +962,7 @@ TEST_F(MslWriter_ShaderIOTest, UserSuppliedMask_WithoutFixedSampleMask) {
     ep->SetStage(core::ir::Function::PipelineStage::kFragment);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep,
-                 b.Construct(outputs, b.Splat(ty.vec4<f32>(), 0.5_f), b.Constant(u32(0x10203040))));
+        b.Return(ep, b.Construct(outputs, b.Splat(ty.vec4f(), 0.5_f), b.Constant(u32(0x10203040))));
     });
 
     auto* src = R"(
@@ -999,19 +1013,20 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
 }
 
 TEST_F(MslWriter_ShaderIOTest, FixedSampleMask) {
-    auto* ep = b.Function("foo", ty.vec4<f32>());
+    auto* ep = b.Function("foo", ty.vec4f());
     ep->SetStage(core::ir::Function::PipelineStage::kFragment);
     ep->SetReturnLocation(0u);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Splat(ty.vec4<f32>(), 0.5_f));
+        b.Return(ep, b.Splat(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -1048,7 +1063,8 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     config.fixed_sample_mask = 12345678u;
     Run(ShaderIO, config);
 
@@ -1062,7 +1078,7 @@ TEST_F(MslWriter_ShaderIOTest, FixedSampleMask_WithUserSuppliedMask) {
     mask.builtin = core::BuiltinValue::kSampleMask;
     auto* outputs =
         ty.Struct(mod.symbols.New("Outputs"), {
-                                                  {mod.symbols.New("color"), ty.vec4<f32>(), loc},
+                                                  {mod.symbols.New("color"), ty.vec4f(), loc},
                                                   {mod.symbols.New("mask"), ty.u32(), mask},
                                               });
 
@@ -1070,8 +1086,7 @@ TEST_F(MslWriter_ShaderIOTest, FixedSampleMask_WithUserSuppliedMask) {
     ep->SetStage(core::ir::Function::PipelineStage::kFragment);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep,
-                 b.Construct(outputs, b.Splat(ty.vec4<f32>(), 0.5_f), b.Constant(u32(0x10203040))));
+        b.Return(ep, b.Construct(outputs, b.Splat(ty.vec4f(), 0.5_f), b.Constant(u32(0x10203040))));
     });
 
     auto* src = R"(
@@ -1123,7 +1138,8 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     config.fixed_sample_mask = 12345678u;
     Run(ShaderIO, config);
 
@@ -1156,7 +1172,7 @@ TEST_F(MslWriter_ShaderIOTest, Color_Struct) {
     b.Append(ep->Block(), [&] {
         auto* color1 = b.Access<f32>(str_param, 0_i);
         auto* color2 = b.Access<f32>(str_param, 1_i);
-        b.Add<f32>(color1, color2);
+        b.Add(color1, color2);
         b.Return(ep);
     });
 
@@ -1207,7 +1223,398 @@ foo_inputs = struct @align(4) {
 }
 )";
 
-    ShaderIOConfig config;
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ShaderIOTest, UnnamedParameter) {
+    auto* ep = b.Function("foo", ty.void_());
+    auto* front_facing = b.FunctionParam(ty.bool_());
+    front_facing->SetBuiltin(core::BuiltinValue::kFrontFacing);
+    ep->SetParams({front_facing});
+    ep->SetStage(core::ir::Function::PipelineStage::kFragment);
+    b.Append(ep->Block(), [&] {
+        auto* ifelse = b.If(front_facing);
+        b.Append(ifelse->True(), [&] { b.ExitIf(ifelse); });
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @fragment func(%2:bool [@front_facing]):void {
+  $B1: {
+    if %2 [t: $B2] {  # if_1
+      $B2: {  # true
+        exit_if  # if_1
+      }
+    }
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo_inner = func(%2:bool):void {
+  $B1: {
+    if %2 [t: $B2] {  # if_1
+      $B2: {  # true
+        exit_if  # if_1
+      }
+    }
+    ret
+  }
+}
+%foo = @fragment func(%4:bool [@front_facing]):void {
+  $B3: {
+    %5:void = call %foo_inner, %4
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ShaderIOTest, ClampFragDepth) {
+    auto* str_ty =
+        ty.Struct(mod.symbols.New("Outputs"), {
+                                                  {
+                                                      mod.symbols.New("color"),
+                                                      ty.f32(),
+                                                      core::IOAttributes{
+                                                          .location = 0u,
+                                                      },
+                                                  },
+                                                  {
+                                                      mod.symbols.New("depth"),
+                                                      ty.f32(),
+                                                      core::IOAttributes{
+                                                          .builtin = core::BuiltinValue::kFragDepth,
+                                                      },
+                                                  },
+                                              });
+
+    auto* ep = b.Function("foo", str_ty);
+    ep->SetStage(core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(ep->Block(), [&] {  //
+        b.Return(ep, b.Construct(str_ty, 0.5_f, 2_f));
+    });
+
+    auto* src = R"(
+Outputs = struct @align(4) {
+  color:f32 @offset(0), @location(0)
+  depth:f32 @offset(4), @builtin(frag_depth)
+}
+
+%foo = @fragment func():Outputs {
+  $B1: {
+    %2:Outputs = construct 0.5f, 2.0f
+    ret %2
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+Outputs = struct @align(4) {
+  color:f32 @offset(0)
+  depth:f32 @offset(4)
+}
+
+tint_immediate_data_struct = struct @align(4), @block {
+  depth_min:f32 @offset(4)
+  depth_max:f32 @offset(8)
+}
+
+foo_outputs = struct @align(4) {
+  Outputs_color:f32 @offset(0), @location(0)
+  Outputs_depth:f32 @offset(4), @builtin(frag_depth)
+}
+
+$B1: {  # root
+  %tint_immediate_data:ptr<immediate, tint_immediate_data_struct, read> = var undef
+}
+
+%foo_inner = func():Outputs {
+  $B2: {
+    %3:Outputs = construct 0.5f, 2.0f
+    ret %3
+  }
+}
+%foo = @fragment func():foo_outputs {
+  $B3: {
+    %5:Outputs = call %foo_inner
+    %6:f32 = access %5, 0u
+    %7:f32 = access %5, 1u
+    %8:ptr<immediate, f32, read> = access %tint_immediate_data, 0u
+    %9:f32 = load %8
+    %10:ptr<immediate, f32, read> = access %tint_immediate_data, 1u
+    %11:f32 = load %10
+    %12:f32 = clamp %7, %9, %11
+    %tint_wrapper_result:ptr<function, foo_outputs, read_write> = var undef
+    %14:ptr<function, f32, read_write> = access %tint_wrapper_result, 0u
+    store %14, %6
+    %15:ptr<function, f32, read_write> = access %tint_wrapper_result, 1u
+    store %15, %12
+    %16:foo_outputs = load %tint_wrapper_result
+    ret %16
+  }
+}
+)";
+
+    core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
+    ASSERT_EQ(
+        immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("depth_min"), ty.f32()),
+        Success);
+    ASSERT_EQ(
+        immediate_data_config.AddInternalImmediateData(8, mod.symbols.New("depth_max"), ty.f32()),
+        Success);
+    auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
+    EXPECT_EQ(immediate_data, Success);
+
+    ShaderIOConfig config{immediate_data.Get()};
+    config.depth_range_offsets = {4, 8};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ShaderIOTest, WorkgroupIndex_ReuseExistingBuiltins) {
+    auto* workgroup_id = b.FunctionParam("wgid", ty.vec3u());
+    workgroup_id->SetBuiltin(core::BuiltinValue::kWorkgroupId);
+
+    auto* num_workgroups = b.FunctionParam("numwgs", ty.vec3u());
+    num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
+
+    auto* workgroup_index = b.FunctionParam("wgindex", ty.u32());
+    workgroup_index->SetBuiltin(core::BuiltinValue::kWorkgroupIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({workgroup_id, num_workgroups, workgroup_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(workgroup_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%wgid:vec3<u32> [@workgroup_id], %numwgs:vec3<u32> [@num_workgroups], %wgindex:u32 [@workgroup_index]):void {
+  $B1: {
+    %5:u32 = add %wgindex, 0u
+    %x:u32 = let %5
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo_inner = func(%wgid:vec3<u32>, %numwgs:vec3<u32>, %wgindex:u32):void {
+  $B1: {
+    %5:u32 = add %wgindex, 0u
+    %x:u32 = let %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%wgid_1:vec3<u32> [@workgroup_id], %numwgs_1:vec3<u32> [@num_workgroups]):void {  # %wgid_1: 'wgid', %numwgs_1: 'numwgs'
+  $B2: {
+    %10:u32 = access %numwgs_1, 0u
+    %11:u32 = access %numwgs_1, 1u
+    %12:u32 = mul %10, %11
+    %13:u32 = access %wgid_1, 2u
+    %14:u32 = mul %13, %12
+    %15:u32 = access %wgid_1, 1u
+    %16:u32 = mul %15, %10
+    %17:u32 = access %wgid_1, 0u
+    %18:u32 = add %17, %16
+    %19:u32 = add %18, %14
+    %20:void = call %foo_inner, %wgid_1, %numwgs_1, %19
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ShaderIOTest, WorkgroupIndex_AddMissingBuiltins) {
+    auto* workgroup_index = b.FunctionParam("wgindex", ty.u32());
+    workgroup_index->SetBuiltin(core::BuiltinValue::kWorkgroupIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({workgroup_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(workgroup_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%wgindex:u32 [@workgroup_index]):void {
+  $B1: {
+    %3:u32 = add %wgindex, 0u
+    %x:u32 = let %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo_inner = func(%wgindex:u32):void {
+  $B1: {
+    %3:u32 = add %wgindex, 0u
+    %x:u32 = let %3
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%workgroup_id:vec3<u32> [@workgroup_id], %num_workgroups:vec3<u32> [@num_workgroups]):void {
+  $B2: {
+    %8:u32 = access %num_workgroups, 0u
+    %9:u32 = access %num_workgroups, 1u
+    %10:u32 = mul %8, %9
+    %11:u32 = access %workgroup_id, 2u
+    %12:u32 = mul %11, %10
+    %13:u32 = access %workgroup_id, 1u
+    %14:u32 = mul %13, %8
+    %15:u32 = access %workgroup_id, 0u
+    %16:u32 = add %15, %14
+    %17:u32 = add %16, %12
+    %18:void = call %foo_inner, %17
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ShaderIOTest, GlobalInvocationIndex_ReuseExistingBuiltins) {
+    auto* num_workgroups = b.FunctionParam("numwgs", ty.vec3u());
+    num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
+
+    auto* global_index = b.FunctionParam("gindex", ty.u32());
+    global_index->SetBuiltin(core::BuiltinValue::kGlobalInvocationIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({num_workgroups, global_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(global_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%numwgs:vec3<u32> [@num_workgroups], %gindex:u32 [@global_invocation_index]):void {
+  $B1: {
+    %4:u32 = add %gindex, 0u
+    %x:u32 = let %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo_inner = func(%numwgs:vec3<u32>, %gindex:u32):void {
+  $B1: {
+    %4:u32 = add %gindex, 0u
+    %x:u32 = let %4
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%numwgs_1:vec3<u32> [@num_workgroups], %global_invocation_id:vec3<u32> [@global_invocation_id]):void {  # %numwgs_1: 'numwgs'
+  $B2: {
+    %9:u32 = access %global_invocation_id, 0u
+    %10:u32 = access %global_invocation_id, 1u
+    %11:u32 = access %global_invocation_id, 2u
+    %12:u32 = access %numwgs_1, 0u
+    %13:u32 = access %numwgs_1, 1u
+    %14:u32 = mul %12, 3u
+    %15:u32 = mul %13, 2u
+    %16:u32 = mul %14, %15
+    %17:u32 = mul %11, %16
+    %18:u32 = mul %10, %14
+    %19:u32 = add %9, %18
+    %20:u32 = add %19, %17
+    %21:void = call %foo_inner, %numwgs_1, %20
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ShaderIOTest, GlobalInvocationIndex_AddMissingBuiltins) {
+    auto* global_index = b.FunctionParam("gindex", ty.u32());
+    global_index->SetBuiltin(core::BuiltinValue::kGlobalInvocationIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({global_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(global_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%gindex:u32 [@global_invocation_index]):void {
+  $B1: {
+    %3:u32 = add %gindex, 0u
+    %x:u32 = let %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo_inner = func(%gindex:u32):void {
+  $B1: {
+    %3:u32 = add %gindex, 0u
+    %x:u32 = let %3
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%num_workgroups:vec3<u32> [@num_workgroups], %global_invocation_id:vec3<u32> [@global_invocation_id]):void {
+  $B2: {
+    %8:u32 = access %global_invocation_id, 0u
+    %9:u32 = access %global_invocation_id, 1u
+    %10:u32 = access %global_invocation_id, 2u
+    %11:u32 = access %num_workgroups, 0u
+    %12:u32 = access %num_workgroups, 1u
+    %13:u32 = mul %11, 3u
+    %14:u32 = mul %12, 2u
+    %15:u32 = mul %13, %14
+    %16:u32 = mul %10, %15
+    %17:u32 = mul %9, %13
+    %18:u32 = add %8, %17
+    %19:u32 = add %18, %16
+    %20:void = call %foo_inner, %19
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());

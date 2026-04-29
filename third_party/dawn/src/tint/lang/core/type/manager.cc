@@ -46,6 +46,7 @@
 #include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/type/type.h"
+#include "src/tint/lang/core/type/u16.h"
 #include "src/tint/lang/core/type/u32.h"
 #include "src/tint/lang/core/type/u64.h"
 #include "src/tint/lang/core/type/u8.h"
@@ -54,9 +55,16 @@
 #include "src/tint/utils/macros/compiler.h"
 
 namespace tint::core::type {
-namespace {
 
-const Type* SubtypeFor(core::TexelFormat format, Manager& type_mgr) {
+Manager::Manager() = default;
+
+Manager::Manager(Manager&&) = default;
+
+Manager& Manager::operator=(Manager&& rhs) = default;
+
+Manager::~Manager() = default;
+
+const Type* Manager::SubtypeFor(core::TexelFormat format) {
     switch (format) {
         case core::TexelFormat::kR8Uint:
         case core::TexelFormat::kRg8Uint:
@@ -68,7 +76,7 @@ const Type* SubtypeFor(core::TexelFormat format, Manager& type_mgr) {
         case core::TexelFormat::kRg32Uint:
         case core::TexelFormat::kRgba32Uint:
         case core::TexelFormat::kRgb10A2Uint: {
-            return type_mgr.u32();
+            return u32();
         }
 
         case core::TexelFormat::kR8Sint:
@@ -80,7 +88,7 @@ const Type* SubtypeFor(core::TexelFormat format, Manager& type_mgr) {
         case core::TexelFormat::kR32Sint:
         case core::TexelFormat::kRg32Sint:
         case core::TexelFormat::kRgba32Sint: {
-            return type_mgr.i32();
+            return i32();
         }
 
         case core::TexelFormat::kR8Unorm:
@@ -104,7 +112,7 @@ const Type* SubtypeFor(core::TexelFormat format, Manager& type_mgr) {
         case core::TexelFormat::kRgba32Float:
         case core::TexelFormat::kRgb10A2Unorm:
         case core::TexelFormat::kRg11B10Ufloat: {
-            return type_mgr.f32();
+            return f32();
         }
 
         case core::TexelFormat::kUndefined:
@@ -113,16 +121,6 @@ const Type* SubtypeFor(core::TexelFormat format, Manager& type_mgr) {
 
     return nullptr;
 }
-
-}  // namespace
-
-Manager::Manager() = default;
-
-Manager::Manager(Manager&&) = default;
-
-Manager& Manager::operator=(Manager&& rhs) = default;
-
-Manager::~Manager() = default;
 
 const core::type::Invalid* Manager::invalid() {
     return Get<core::type::Invalid>();
@@ -150,6 +148,10 @@ const core::type::I32* Manager::i32() {
 
 const core::type::U8* Manager::u8() {
     return Get<core::type::U8>();
+}
+
+const core::type::U16* Manager::u16() {
+    return Get<core::type::U16>();
 }
 
 const core::type::U32* Manager::u32() {
@@ -215,9 +217,55 @@ const core::type::Vector* Manager::vec4(const core::type::Type* inner) {
     return vec(inner, 4);
 }
 
+const core::type::Vector* Manager::vec2f() {
+    return vec(f32(), 2);
+}
+const core::type::Vector* Manager::vec3f() {
+    return vec(f32(), 3);
+}
+const core::type::Vector* Manager::vec4f() {
+    return vec(f32(), 4);
+}
+
+const core::type::Vector* Manager::vec2h() {
+    return vec(f16(), 2);
+}
+const core::type::Vector* Manager::vec3h() {
+    return vec(f16(), 3);
+}
+const core::type::Vector* Manager::vec4h() {
+    return vec(f16(), 4);
+}
+
+const core::type::Vector* Manager::vec2i() {
+    return vec(i32(), 2);
+}
+const core::type::Vector* Manager::vec3i() {
+    return vec(i32(), 3);
+}
+const core::type::Vector* Manager::vec4i() {
+    return vec(i32(), 4);
+}
+
+const core::type::Vector* Manager::vec2u() {
+    return vec(u32(), 2);
+}
+const core::type::Vector* Manager::vec3u() {
+    return vec(u32(), 3);
+}
+const core::type::Vector* Manager::vec4u() {
+    return vec(u32(), 4);
+}
+
 const core::type::SampledTexture* Manager::sampled_texture(TextureDimension dim,
                                                            const core::type::Type* type) {
     return Get<core::type::SampledTexture>(dim, type);
+}
+
+const core::type::SampledTexture* Manager::sampled_texture(TextureDimension dim,
+                                                           const core::type::Type* type,
+                                                           TextureFilterable filterable) {
+    return Get<core::type::SampledTexture>(dim, type, filterable);
 }
 
 const core::type::MultisampledTexture* Manager::multisampled_texture(TextureDimension dim,
@@ -228,13 +276,13 @@ const core::type::MultisampledTexture* Manager::multisampled_texture(TextureDime
 const core::type::StorageTexture* Manager::storage_texture(TextureDimension dim,
                                                            core::TexelFormat format,
                                                            core::Access access) {
-    const auto* subtype = SubtypeFor(format, *this);
+    const auto* subtype = SubtypeFor(format);
     return Get<core::type::StorageTexture>(dim, format, access, subtype);
 }
 
 const core::type::TexelBuffer* Manager::texel_buffer(core::TexelFormat format,
                                                      core::Access access) {
-    const auto* subtype = SubtypeFor(format, *this);
+    const auto* subtype = SubtypeFor(format);
     return Get<core::type::TexelBuffer>(format, access, subtype);
 }
 
@@ -300,38 +348,29 @@ const core::type::SubgroupMatrix* Manager::subgroup_matrix(SubgroupMatrixKind ki
     return Get<core::type::SubgroupMatrix>(kind, inner, cols, rows);
 }
 
-const core::type::Array* Manager::array(const core::type::Type* elem_ty,
-                                        uint32_t count,
-                                        uint32_t stride /* = 0*/) {
+const core::type::Buffer* Manager::buffer(uint32_t n) {
+    return Get<core::type::Buffer>(Get<ConstantArrayCount>(n));
+}
+
+const core::type::Buffer* Manager::unsized_buffer() {
+    return Get<core::type::Buffer>(Get<RuntimeArrayCount>());
+}
+
+const core::type::Array* Manager::array(const core::type::Type* elem_ty, uint32_t count) {
     uint32_t implicit_stride = tint::RoundUp(elem_ty->Align(), elem_ty->Size());
-    if (stride == 0) {
-        stride = implicit_stride;
-    }
-    TINT_ASSERT(stride >= implicit_stride);
 
     return Get<core::type::Array>(/* element type */ elem_ty,
                                   /* element count */ Get<ConstantArrayCount>(count),
-                                  /* array alignment */ elem_ty->Align(),
-                                  /* array size */ count * stride,
-                                  /* element stride */ stride,
-                                  /* implicit stride */ implicit_stride);
+                                  /* array size */ count * implicit_stride);
 }
 
-const core::type::Array* Manager::runtime_array(const core::type::Type* elem_ty,
-                                                uint32_t stride /* = 0 */) {
+const core::type::Array* Manager::runtime_array(const core::type::Type* elem_ty) {
     uint32_t implicit_stride = tint::RoundUp(elem_ty->Align(), elem_ty->Size());
-    if (stride == 0) {
-        stride = implicit_stride;
-    }
-    TINT_ASSERT(stride >= implicit_stride);
 
     return Get<core::type::Array>(
         /* element type */ elem_ty,
         /* element count */ Get<RuntimeArrayCount>(),
-        /* array alignment */ elem_ty->Align(),
-        /* array size */ stride,
-        /* element stride */ stride,
-        /* implicit stride */ implicit_stride);
+        /* array size */ implicit_stride);
 }
 
 const core::type::BindingArray* Manager::binding_array(const core::type::Type* elem_ty,
@@ -354,26 +393,25 @@ const core::type::Reference* Manager::ref(core::AddressSpace address_space,
 }
 
 core::type::Struct* Manager::Struct(Symbol name, VectorRef<const StructMember*> members) {
-    if (auto* existing = Find<type::Struct>(name, /* is_wgsl_internal */ false);
-        DAWN_UNLIKELY(existing)) {
-        TINT_ICE() << "attempting to construct two structs named " << name.NameView();
-    }
+    auto* existing = Find<type::Struct>(name, /* is_wgsl_internal */ false);
+    TINT_ASSERT(!existing) << "attempting to construct two structs named " << name.NameView();
 
     uint32_t max_align = 0u;
     for (const auto& m : members) {
         max_align = std::max(max_align, m->Align());
     }
-    uint32_t size = members.Back()->Offset() + members.Back()->Size();
-    return Get<core::type::Struct>(name, std::move(members), max_align,
-                                   tint::RoundUp(max_align, size), size);
+
+    auto& mem = members.Back();
+    uint32_t size = std::max(mem->Size(), mem->MinimumRequiredSize());
+    return Get<core::type::Struct>(name, std::move(members),
+                                   tint::RoundUp(max_align, mem->Offset() + size));
 }
 
 core::type::Struct* Manager::Struct(Symbol name,
                                     bool is_wgsl_internal,
                                     VectorRef<StructMemberDesc> md) {
-    if (auto* existing = Find<type::Struct>(name, is_wgsl_internal); DAWN_UNLIKELY(existing)) {
-        TINT_ICE() << "attempting to construct two structs named " << name.NameView();
-    }
+    auto* existing = Find<type::Struct>(name, is_wgsl_internal);
+    TINT_ASSERT(!existing) << "attempting to construct two structs named " << name.NameView();
 
     tint::Vector<const StructMember*, 4> members;
     uint32_t current_size = 0u;
@@ -387,8 +425,7 @@ core::type::Struct* Manager::Struct(Symbol name,
         current_size = offset + m.type->Size();
         max_align = std::max(max_align, align);
     }
-    return Get<core::type::Struct>(name, std::move(members), max_align,
-                                   tint::RoundUp(max_align, current_size), current_size,
+    return Get<core::type::Struct>(name, std::move(members), tint::RoundUp(max_align, current_size),
                                    is_wgsl_internal);
 }
 

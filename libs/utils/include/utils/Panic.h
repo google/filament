@@ -35,6 +35,7 @@
 
 #ifdef __EXCEPTIONS
 #   define UTILS_EXCEPTIONS 1
+#   include <exception>
 #else
 #   ifdef UTILS_EXCEPTIONS
 #       error  UTILS_EXCEPTIONS is already defined!
@@ -262,7 +263,11 @@ namespace utils {
  * The Panic class provides the std::exception protocol, it is the base exception object
  * used for all thrown exceptions.
  */
-class UTILS_PUBLIC Panic {
+class UTILS_PUBLIC Panic
+#ifdef __EXCEPTIONS
+    : public std::exception
+#endif
+{
 public:
 
     using PanicHandlerCallback = void(*)(void* user, Panic const& panic);

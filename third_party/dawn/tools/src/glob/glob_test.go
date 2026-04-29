@@ -68,11 +68,9 @@ func TestGlob(t *testing.T) {
 			want:  []string{"/a/1/file_1.txt", "/a/2/file_1.txt", "/a/3/file_1.txt"},
 		},
 		{
-			name:       "No match star wildcard parent directory",
-			input:      "/*/1/file_1.txt",
-			want:       nil,
-			wantErr:    true,
-			wantErrMsg: "open a: file does not exist",
+			name:  "Match star wildcard parent directory",
+			input: "/*/1/file_1.txt",
+			want:  []string{"/a/1/file_1.txt", "/b/1/file_1.txt", "/c/1/file_1.txt"},
 		},
 		{
 			name:  "Match question wildcard files",
@@ -90,11 +88,9 @@ func TestGlob(t *testing.T) {
 			want:  []string{"/a/1/file_1.txt", "/a/2/file_1.txt", "/a/3/file_1.txt"},
 		},
 		{
-			name:       "Match question filecard parent directory",
-			input:      "/?/1/file_1.txt",
-			want:       nil,
-			wantErr:    true,
-			wantErrMsg: "open a: file does not exist",
+			name:  "Match question filecard parent directory",
+			input: "/?/1/file_1.txt",
+			want:  []string{"/a/1/file_1.txt", "/b/1/file_1.txt", "/c/1/file_1.txt"},
 		},
 		{
 			name:  "No match no wildcard non existent file",
@@ -126,11 +122,16 @@ func TestGlob(t *testing.T) {
 			input: "/a/5?/file_1.txt",
 			want:  []string{},
 		},
+		{
+			name:  "No match root dir",
+			input: "/",
+			want:  []string{},
+		},
 	}
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			parentDirs := []string{"a", "b", "c"}
 			childDirs := []string{"1", "2", "3"}
 			fileNames := []string{"file_1.txt", "file_2.txt"}
@@ -213,26 +214,42 @@ func TestScan(t *testing.T) {
 			},
 		},
 		{
-			name:       "Empty root",
-			root:       "",
-			condition:  func(path string, cond bool) bool { return true },
-			want:       nil,
-			wantErr:    true,
-			wantErrMsg: "open .git: file does not exist",
+			// Treated as CWD.
+			// TODO(crbug.com/436025865): Update this to actually switch directories
+			// once FSTestOSWrapper is CWD-aware.
+			name:      "Empty root",
+			root:      "",
+			condition: func(path string, cond bool) bool { return true },
+			want: []string{
+				".other/1/file_1.txt",
+				".other/1/file_2.txt",
+				".other/2/file_1.txt",
+				".other/2/file_2.txt",
+				"a/1/file_1.txt",
+				"a/1/file_2.txt",
+				"a/2/file_1.txt",
+				"a/2/file_2.txt",
+				"b/1/file_1.txt",
+				"b/1/file_2.txt",
+				"b/2/file_1.txt",
+				"b/2/file_2.txt",
+			},
 		},
 		{
+			// TODO(crbug.com/436025865): Update error message when FSTestOSWrapper
+			// properly handles leading / in errors.
 			name:       "Non-existent root",
 			root:       "/asdf",
 			condition:  func(path string, cond bool) bool { return true },
 			want:       nil,
 			wantErr:    true,
-			wantErrMsg: "open /asdf: file does not exist",
+			wantErrMsg: "open asdf: file does not exist",
 		},
 	}
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			parentDirs := []string{"a", "b", ".git", ".other"}
 			childDirs := []string{"1", "2"}
 			fileNames := []string{"file_1.txt", "file_2.txt"}
@@ -299,14 +316,14 @@ func TestLoadConfig(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			wrapper.WriteFile("/config.cfg", []byte(testCase.cfgJson), 0o700)
 
 			cfg, err := LoadConfig(testCase.cfgPath, wrapper)
 			// We can't check equality since the loaded Config contains function
 			// pointers to anonymous functions. So, just check that the number of
 			// rules matches.
-			require.Equal(t, testCase.wantNumRules, len(cfg.Paths))
+			require.Len(t, cfg.Paths, testCase.wantNumRules)
 			if testCase.wantErr {
 				require.ErrorContains(t, err, testCase.wantErrMsg)
 			} else {

@@ -73,8 +73,6 @@ tint_add_target(tint_lang_wgsl_ast lib
   lang/wgsl/ast/case_selector.h
   lang/wgsl/ast/case_statement.cc
   lang/wgsl/ast/case_statement.h
-  lang/wgsl/ast/clone_context.cc
-  lang/wgsl/ast/clone_context.h
   lang/wgsl/ast/color_attribute.cc
   lang/wgsl/ast/color_attribute.h
   lang/wgsl/ast/compound_assignment_statement.cc
@@ -93,8 +91,6 @@ tint_add_target(tint_lang_wgsl_ast lib
   lang/wgsl/ast/diagnostic_directive.h
   lang/wgsl/ast/diagnostic_rule_name.cc
   lang/wgsl/ast/diagnostic_rule_name.h
-  lang/wgsl/ast/disable_validation_attribute.cc
-  lang/wgsl/ast/disable_validation_attribute.h
   lang/wgsl/ast/discard_statement.cc
   lang/wgsl/ast/discard_statement.h
   lang/wgsl/ast/enable.cc
@@ -127,8 +123,6 @@ tint_add_target(tint_lang_wgsl_ast lib
   lang/wgsl/ast/input_attachment_index_attribute.h
   lang/wgsl/ast/int_literal_expression.cc
   lang/wgsl/ast/int_literal_expression.h
-  lang/wgsl/ast/internal_attribute.cc
-  lang/wgsl/ast/internal_attribute.h
   lang/wgsl/ast/interpolate_attribute.cc
   lang/wgsl/ast/interpolate_attribute.h
   lang/wgsl/ast/invariant_attribute.cc
@@ -162,33 +156,29 @@ tint_add_target(tint_lang_wgsl_ast lib
   lang/wgsl/ast/requires.h
   lang/wgsl/ast/return_statement.cc
   lang/wgsl/ast/return_statement.h
-  lang/wgsl/ast/row_major_attribute.cc
-  lang/wgsl/ast/row_major_attribute.h
   lang/wgsl/ast/stage_attribute.cc
   lang/wgsl/ast/stage_attribute.h
   lang/wgsl/ast/statement.cc
   lang/wgsl/ast/statement.h
-  lang/wgsl/ast/stride_attribute.cc
-  lang/wgsl/ast/stride_attribute.h
   lang/wgsl/ast/struct.cc
   lang/wgsl/ast/struct.h
   lang/wgsl/ast/struct_member.cc
   lang/wgsl/ast/struct_member.h
   lang/wgsl/ast/struct_member_align_attribute.cc
   lang/wgsl/ast/struct_member_align_attribute.h
-  lang/wgsl/ast/struct_member_offset_attribute.cc
-  lang/wgsl/ast/struct_member_offset_attribute.h
   lang/wgsl/ast/struct_member_size_attribute.cc
   lang/wgsl/ast/struct_member_size_attribute.h
+  lang/wgsl/ast/subgroup_size_attribute.cc
+  lang/wgsl/ast/subgroup_size_attribute.h
   lang/wgsl/ast/switch_statement.cc
   lang/wgsl/ast/switch_statement.h
   lang/wgsl/ast/templated_identifier.cc
   lang/wgsl/ast/templated_identifier.h
   lang/wgsl/ast/traverse_expressions.h
-  lang/wgsl/ast/type.cc
   lang/wgsl/ast/type.h
   lang/wgsl/ast/type_decl.cc
   lang/wgsl/ast/type_decl.h
+  lang/wgsl/ast/type_traits.h
   lang/wgsl/ast/unary_op_expression.cc
   lang/wgsl/ast/unary_op_expression.h
   lang/wgsl/ast/var.cc
@@ -245,7 +235,6 @@ tint_add_target(tint_lang_wgsl_ast_test test
   lang/wgsl/ast/call_statement_test.cc
   lang/wgsl/ast/case_selector_test.cc
   lang/wgsl/ast/case_statement_test.cc
-  lang/wgsl/ast/clone_context_test.cc
   lang/wgsl/ast/color_attribute_test.cc
   lang/wgsl/ast/compound_assignment_statement_test.cc
   lang/wgsl/ast/const_assert_test.cc
@@ -279,9 +268,7 @@ tint_add_target(tint_lang_wgsl_ast_test test
   lang/wgsl/ast/requires_test.cc
   lang/wgsl/ast/return_statement_test.cc
   lang/wgsl/ast/stage_attribute_test.cc
-  lang/wgsl/ast/stride_attribute_test.cc
   lang/wgsl/ast/struct_member_align_attribute_test.cc
-  lang/wgsl/ast/struct_member_offset_attribute_test.cc
   lang/wgsl/ast/struct_member_size_attribute_test.cc
   lang/wgsl/ast/struct_member_test.cc
   lang/wgsl/ast/struct_test.cc
@@ -299,14 +286,12 @@ tint_target_add_dependencies(tint_lang_wgsl_ast_test test
   tint_api_common
   tint_lang_core
   tint_lang_core_constant
-  tint_lang_core_ir
   tint_lang_core_type
   tint_lang_wgsl
   tint_lang_wgsl_ast
   tint_lang_wgsl_program
   tint_lang_wgsl_resolver
   tint_lang_wgsl_sem
-  tint_lang_wgsl_writer_ir_to_program
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -323,21 +308,3 @@ tint_target_add_external_dependencies(tint_lang_wgsl_ast_test test
   "gtest"
   "src_utils"
 )
-
-if(TINT_BUILD_WGSL_READER)
-  tint_target_add_dependencies(tint_lang_wgsl_ast_test test
-    tint_lang_wgsl_reader
-  )
-endif(TINT_BUILD_WGSL_READER)
-
-if(TINT_BUILD_WGSL_READER AND TINT_BUILD_WGSL_WRITER)
-  tint_target_add_sources(tint_lang_wgsl_ast_test test
-    "lang/wgsl/ast/module_clone_test.cc"
-  )
-endif(TINT_BUILD_WGSL_READER AND TINT_BUILD_WGSL_WRITER)
-
-if(TINT_BUILD_WGSL_WRITER)
-  tint_target_add_dependencies(tint_lang_wgsl_ast_test test
-    tint_lang_wgsl_writer
-  )
-endif(TINT_BUILD_WGSL_WRITER)

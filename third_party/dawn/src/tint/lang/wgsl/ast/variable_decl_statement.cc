@@ -28,28 +28,16 @@
 #include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::VariableDeclStatement);
 
 namespace tint::ast {
 
-VariableDeclStatement::VariableDeclStatement(GenerationID pid,
-                                             NodeID nid,
-                                             const Source& src,
-                                             const Variable* var)
-    : Base(pid, nid, src), variable(var) {
+VariableDeclStatement::VariableDeclStatement(NodeID nid, const Source& src, const Variable* var)
+    : Base(nid, src), variable(var) {
     TINT_ASSERT(variable);
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(variable, generation_id);
 }
 
 VariableDeclStatement::~VariableDeclStatement() = default;
-
-const VariableDeclStatement* VariableDeclStatement::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto* var = ctx.Clone(variable);
-    return ctx.dst->create<VariableDeclStatement>(src, var);
-}
 
 }  // namespace tint::ast

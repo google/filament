@@ -66,4 +66,7 @@ DeviceGuardBase::DeviceGuardBase(DeviceMutex* mutex) : mMutex(mutex) {}
 DeviceGuard::DeviceGuard(DeviceBase* device, DeviceMutex* mutex)
     : detail::DeviceGuardBase(mutex), GuardBase(device, device->mMutex) {}
 
+DeviceGuard::DeviceGuard(DeviceGuard&& other)
+    : detail::DeviceGuardBase(std::move(other)), GuardBase(std::move(other)) {}
+
 }  // namespace dawn::native

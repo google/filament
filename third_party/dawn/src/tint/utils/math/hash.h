@@ -45,7 +45,6 @@
 #include "src/tint/utils/math/crc32.h"
 
 namespace tint {
-
 namespace detail {
 
 template <typename T, typename = void>

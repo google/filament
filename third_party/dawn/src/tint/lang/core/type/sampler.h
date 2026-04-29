@@ -30,6 +30,7 @@
 
 #include <string>
 
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/sampler_kind.h"
 #include "src/tint/lang/core/type/type.h"
 
@@ -40,7 +41,8 @@ class Sampler final : public Castable<Sampler, Type> {
   public:
     /// Constructor
     /// @param kind the kind of sampler
-    explicit Sampler(SamplerKind kind);
+    /// @param filtering the filtering flag
+    explicit Sampler(SamplerKind kind, SamplerFiltering filtering = SamplerFiltering::kUndefined);
 
     /// Destructor
     ~Sampler() override;
@@ -52,8 +54,14 @@ class Sampler final : public Castable<Sampler, Type> {
     /// @returns the sampler type
     SamplerKind Kind() const { return kind_; }
 
+    /// @returns the sampler Filtering
+    SamplerFiltering Filtering() const { return filtering_; }
+
     /// @returns true if this is a comparison sampler
     bool IsComparison() const { return kind_ == SamplerKind::kComparisonSampler; }
+
+    /// @returns the alignment in bytes of the type.
+    uint32_t Align() const override;
 
     /// @returns the name for this type that closely resembles how it would be
     /// declared in WGSL.
@@ -65,6 +73,7 @@ class Sampler final : public Castable<Sampler, Type> {
 
   private:
     SamplerKind const kind_;
+    SamplerFiltering filtering_;
 };
 
 }  // namespace tint::core::type

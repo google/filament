@@ -111,6 +111,10 @@ dawn_add_flag("-Wunused-but-set-variable" ${langs})
 dawn_add_flag("-Wunused-macros" ${langs})
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  # Flags use of __COUNTER__, which is used in histogram macros that were
+  # largely copied from Chromium. Chromium continues to use __COUNTER__ in
+  # their copy.
+  dawn_add_flag("-Wno-c2y-extensions")
   if (CMAKE_CXX_COMPILER_VERSION_MAJOR VERSION_LESS_EQUAL 18)
     dawn_add_flag("-Wno-gcc-compat" ${langs})
   endif ()

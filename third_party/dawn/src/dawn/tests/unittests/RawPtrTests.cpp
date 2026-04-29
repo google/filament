@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <memory>
+
 #include "gtest/gtest.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 

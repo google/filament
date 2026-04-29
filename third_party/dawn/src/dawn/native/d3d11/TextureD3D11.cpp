@@ -235,7 +235,7 @@ T Texture::GetD3D11TextureDesc() const {
 MaybeError Texture::InitializeAsInternalTexture() {
     Device* device = ToBackend(GetDevice());
 
-    if (GetFormat().isRenderable && mKind != Kind::Staging) {
+    if (GetFormat().IsRenderable() && mKind != Kind::Staging) {
         // If the texture format is renderable, we need to add the render attachment usage
         // internally, so the texture can be cleared with GPU.
         AddInternalUsage(wgpu::TextureUsage::RenderAttachment);
@@ -308,7 +308,7 @@ Texture::Texture(Device* device, const UnpackedPtr<TextureDescriptor>& descripto
 
 Texture::~Texture() = default;
 
-void Texture::DestroyImpl() {
+void Texture::DestroyImpl(DestroyReason reason) {
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the texture is explicitly destroyed with APIDestroy.
     //   This case is NOT thread-safe and needs proper synchronization with other
@@ -316,10 +316,18 @@ void Texture::DestroyImpl() {
     // - It may be called when the last ref to the texture is dropped and the texture
     //   is implicitly destroyed. This case is thread-safe because there are no
     //   other threads using the texture since there are no other live refs.
-    TextureBase::DestroyImpl();
+    TextureBase::DestroyImpl(reason);
     mD3d11Resource = nullptr;
     mKeyedMutex = nullptr;
     mTextureForStencilSampling = nullptr;
+}
+
+std::optional<DeviceGuard> Texture::UseDeviceGuardForDestroy() {
+    // TODO(crbug.com/481211676): DestroyImpl() is mostly thread-safe without the device lock.
+    // However, concurrent calls to texture.Destroy() and Queue::Submit() can still race.
+    // We rely on users to properly synchronize Destroy() with other queue operations.
+    // In the future, we should implement validation to prevent such concurrent usage.
+    return std::nullopt;
 }
 
 ID3D11Resource* Texture::GetD3D11Resource() const {
@@ -549,6 +557,7 @@ MaybeError Texture::ClearNonRenderable(const ScopedCommandRecordingContext* comm
 
         uint32_t rowsPerImage = writeSize.height;
         uint64_t byteLength;
+        // TODO(crbug.com/424536624): Call non-validating overload of ComputeRequiredBytesInCopy
         DAWN_TRY_ASSIGN(byteLength, ComputeRequiredBytesInCopy(blockInfo, writeSize, bytesPerRow,
                                                                rowsPerImage));
 
@@ -800,7 +809,7 @@ MaybeError Texture::WriteDepthStencilInternal(const ScopedCommandRecordingContex
         copyCmd.source.mipLevel = subresources.baseMipLevel;
         copyCmd.source.aspect = otherAspects;
         copyCmd.destination.texture = stagingTexture.Get();
-        copyCmd.destination.origin = {0, 0, 0};
+        copyCmd.destination.origin = {TexelCount{0}, TexelCount{0}, TexelCount{0}};
         copyCmd.destination.mipLevel = 0;
         copyCmd.destination.aspect = otherAspects;
         copyCmd.copySize = size;
@@ -839,7 +848,7 @@ MaybeError Texture::WriteDepthStencilInternal(const ScopedCommandRecordingContex
     // Copy to the dest texture from the staging texture.
     CopyTextureToTextureCmd copyCmd;
     copyCmd.source.texture = stagingTexture.Get();
-    copyCmd.source.origin = {0, 0, 0};
+    copyCmd.source.origin = {TexelCount{0}, TexelCount{0}, TexelCount{0}};
     copyCmd.source.mipLevel = 0;
     copyCmd.source.aspect = GetFormat().aspects;
     copyCmd.destination.texture = this;
@@ -980,7 +989,7 @@ MaybeError Texture::Read(const ScopedCommandRecordingContext* commandContext,
     copyCmd.source.mipLevel = subresources.baseMipLevel;
     copyCmd.source.aspect = subresources.aspects;
     copyCmd.destination.texture = stagingTexture.Get();
-    copyCmd.destination.origin = {0, 0, 0};
+    copyCmd.destination.origin = {TexelCount{0}, TexelCount{0}, TexelCount{0}};
     copyCmd.destination.mipLevel = 0;
     copyCmd.destination.aspect = subresources.aspects;
     copyCmd.copySize = size;
@@ -996,8 +1005,7 @@ MaybeError Texture::Read(const ScopedCommandRecordingContext* commandContext,
 // static
 MaybeError Texture::Copy(const ScopedCommandRecordingContext* commandContext,
                          CopyTextureToTextureCmd* copy) {
-    DAWN_ASSERT(copy->copySize.width != 0 && copy->copySize.height != 0 &&
-                copy->copySize.depthOrArrayLayers != 0);
+    DAWN_ASSERT(!copy->copySize.IsEmpty());
 
     auto& src = copy->source;
     auto& dst = copy->destination;
@@ -1039,10 +1047,10 @@ MaybeError Texture::CopyInternal(const ScopedCommandRecordingContext* commandCon
     SubresourceRange dstSubresources = GetSubresourcesAffectedByCopy(dst, copy->copySize);
 
     D3D11_BOX srcBox;
-    srcBox.left = src.origin.x;
-    srcBox.right = src.origin.x + copy->copySize.width;
-    srcBox.top = src.origin.y;
-    srcBox.bottom = src.origin.y + copy->copySize.height;
+    srcBox.left = static_cast<uint32_t>(src.origin.x);
+    srcBox.right = static_cast<uint32_t>(src.origin.x + copy->copySize.width);
+    srcBox.top = static_cast<uint32_t>(src.origin.y);
+    srcBox.bottom = static_cast<uint32_t>(src.origin.y + copy->copySize.height);
     switch (src.texture->GetDimension()) {
         case wgpu::TextureDimension::Undefined:
             DAWN_UNREACHABLE();
@@ -1052,8 +1060,8 @@ MaybeError Texture::CopyInternal(const ScopedCommandRecordingContext* commandCon
             srcBox.back = 1;
             break;
         case wgpu::TextureDimension::e3D:
-            srcBox.front = src.origin.z;
-            srcBox.back = src.origin.z + copy->copySize.depthOrArrayLayers;
+            srcBox.front = static_cast<uint32_t>(src.origin.z);
+            srcBox.back = static_cast<uint32_t>(src.origin.z + copy->copySize.depthOrArrayLayers);
             break;
     }
 
@@ -1071,8 +1079,11 @@ MaybeError Texture::CopyInternal(const ScopedCommandRecordingContext* commandCon
             dst.texture->GetSubresourceIndex(dst.mipLevel, dstSubresources.baseArrayLayer + layer,
                                              D3D11Aspect(dstSubresources.aspects));
         commandContext->CopySubresourceRegion(
-            ToBackend(dst.texture)->GetD3D11Resource(), dstSubresource, dst.origin.x, dst.origin.y,
-            dst.texture->GetDimension() == wgpu::TextureDimension::e3D ? dst.origin.z : 0,
+            ToBackend(dst.texture)->GetD3D11Resource(), dstSubresource,
+            static_cast<uint32_t>(dst.origin.x), static_cast<uint32_t>(dst.origin.y),
+            dst.texture->GetDimension() == wgpu::TextureDimension::e3D
+                ? static_cast<uint32_t>(dst.origin.z)
+                : 0,
             ToBackend(src.texture)->GetD3D11Resource(), srcSubresource,
             isWholeSubresource ? nullptr : &srcBox);
     }
@@ -1108,6 +1119,7 @@ ResultOrError<ComPtr<ID3D11ShaderResourceView>> Texture::GetStencilSRV(
     uint32_t bytesPerRow = blockInfo.byteSize * size.width;
     uint32_t rowsPerImage = size.height;
     uint64_t byteLength;
+    // TODO(crbug.com/424536624): Call non-validating overload of ComputeRequiredBytesInCopy
     DAWN_TRY_ASSIGN(byteLength,
                     ComputeRequiredBytesInCopy(blockInfo, size, bytesPerRow, rowsPerImage));
 
@@ -1223,10 +1235,12 @@ ResultOrError<ComPtr<ID3D11ShaderResourceView1>> Texture::CreateD3D11ShaderResou
     }
 
     ComPtr<ID3D11ShaderResourceView1> srv;
-    DAWN_TRY(CheckHRESULT(ToBackend(GetDevice())
-                              ->GetD3D11Device3()
-                              ->CreateShaderResourceView1(GetD3D11Resource(), &srvDesc, &srv),
-                          "CreateShaderResourceView1"));
+    DAWN_TRY_CONTEXT(
+        CheckHRESULT(ToBackend(GetDevice())
+                         ->GetD3D11Device3()
+                         ->CreateShaderResourceView1(GetD3D11Resource(), &srvDesc, &srv),
+                     "CreateShaderResourceView1"),
+        "%s", SRVCreationStr(GetD3D11Resource(), srvDesc));
 
     return std::move(srv);
 }
@@ -1239,8 +1253,8 @@ Ref<TextureView> TextureView::Create(TextureBase* texture,
 
 TextureView::~TextureView() = default;
 
-void TextureView::DestroyImpl() {
-    TextureViewBase::DestroyImpl();
+void TextureView::DestroyImpl(DestroyReason reason) {
+    TextureViewBase::DestroyImpl(reason);
     mD3d11SharedResourceView = nullptr;
     mD3d11RenderTargetViews.clear();
     mD3d11DepthStencilView = nullptr;

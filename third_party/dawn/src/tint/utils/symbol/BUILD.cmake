@@ -39,6 +39,8 @@
 # Kind:      lib
 ################################################################################
 tint_add_target(tint_utils_symbol lib
+  utils/symbol/generation_id.cc
+  utils/symbol/generation_id.h
   utils/symbol/symbol.cc
   utils/symbol/symbol.h
   utils/symbol/symbol_table.cc
@@ -46,7 +48,6 @@ tint_add_target(tint_utils_symbol lib
 )
 
 tint_target_add_dependencies(tint_utils_symbol lib
-  tint_utils
   tint_utils_containers
   tint_utils_ice
   tint_utils_macros
@@ -69,7 +70,6 @@ tint_add_target(tint_utils_symbol_test test
 )
 
 tint_target_add_dependencies(tint_utils_symbol_test test
-  tint_utils
   tint_utils_containers
   tint_utils_ice
   tint_utils_macros

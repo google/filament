@@ -774,6 +774,30 @@ INSTANTIATE_TEST_SUITE_P(LexerTest,
                              "\xf4\x8f\x8f\x7f",  // 4-bytes, fourth byte MSB unset
                          }));
 
+TEST_F(LexerTest, InvalidUnicodeComment_MultiLineComment) {
+    Source::File file("", "/*\x80\x80\x80\x80*/");
+    Lexer l(&file);
+
+    auto list = l.Lex();
+    ASSERT_FALSE(list.empty());
+
+    auto& t = list[0];
+    EXPECT_TRUE(t.IsError());
+    EXPECT_EQ(t.to_str(), "invalid UTF-8");
+}
+
+TEST_F(LexerTest, InvalidUnicodeComment_SingleLineComment) {
+    Source::File file("", "// \x80\x80\x80\x80");
+    Lexer l(&file);
+
+    auto list = l.Lex();
+    ASSERT_FALSE(list.empty());
+
+    auto& t = list[0];
+    EXPECT_TRUE(t.IsError());
+    EXPECT_EQ(t.to_str(), "invalid UTF-8");
+}
+
 TEST_F(LexerTest, IdentifierTest_SingleUnderscoreDoesNotMatch) {
     Source::File file("", "_");
     Lexer l(&file);

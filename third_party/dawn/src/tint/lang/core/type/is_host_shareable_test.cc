@@ -45,8 +45,7 @@ namespace {
 class TypeIsHostShareableTest : public TestHelper {
   protected:
     Manager ty;
-    GenerationID id;
-    SymbolTable st{id};
+    SymbolTable st{};
 };
 
 TEST_F(TypeIsHostShareableTest, Void) {
@@ -65,18 +64,18 @@ TEST_F(TypeIsHostShareableTest, NumericScalar) {
 }
 
 TEST_F(TypeIsHostShareableTest, NumericVector) {
-    EXPECT_TRUE(ty.vec2<i32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec3<i32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec4<i32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec2<u32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec3<u32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec4<u32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec2<f32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec3<f32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec4<f32>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec2<f16>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec3<f16>()->IsHostShareable());
-    EXPECT_TRUE(ty.vec4<f16>()->IsHostShareable());
+    EXPECT_TRUE(ty.vec2i()->IsHostShareable());
+    EXPECT_TRUE(ty.vec3i()->IsHostShareable());
+    EXPECT_TRUE(ty.vec4i()->IsHostShareable());
+    EXPECT_TRUE(ty.vec2u()->IsHostShareable());
+    EXPECT_TRUE(ty.vec3u()->IsHostShareable());
+    EXPECT_TRUE(ty.vec4u()->IsHostShareable());
+    EXPECT_TRUE(ty.vec2f()->IsHostShareable());
+    EXPECT_TRUE(ty.vec3f()->IsHostShareable());
+    EXPECT_TRUE(ty.vec4f()->IsHostShareable());
+    EXPECT_TRUE(ty.vec2h()->IsHostShareable());
+    EXPECT_TRUE(ty.vec3h()->IsHostShareable());
+    EXPECT_TRUE(ty.vec4h()->IsHostShareable());
 }
 
 TEST_F(TypeIsHostShareableTest, BoolVector) {
@@ -138,7 +137,7 @@ TEST_F(TypeIsHostShareableTest, Struct_HostShareable) {
                                           Manager::StructMemberDesc{st.New(), ty.i32()},
                                           Manager::StructMemberDesc{st.New(), ty.u32()},
                                           Manager::StructMemberDesc{st.New(), ty.f32()},
-                                          Manager::StructMemberDesc{st.New(), ty.vec3<f32>()},
+                                          Manager::StructMemberDesc{st.New(), ty.vec3f()},
                                           Manager::StructMemberDesc{st.New(), ty.mat4x2<f32>()},
                                           Manager::StructMemberDesc{st.New(), ty.array<f32, 4>()},
                                       });
@@ -156,7 +155,7 @@ TEST_F(TypeIsHostShareableTest, Struct_NotHostShareable) {
                                           Manager::StructMemberDesc{st.New(), ty.u32()},
                                           Manager::StructMemberDesc{st.New(), ty.f32()},
                                           Manager::StructMemberDesc{st.New(), ty.bool_()},
-                                          Manager::StructMemberDesc{st.New(), ty.vec3<f32>()},
+                                          Manager::StructMemberDesc{st.New(), ty.vec3f()},
                                           Manager::StructMemberDesc{st.New(), ty.mat4x2<f32>()},
                                           Manager::StructMemberDesc{st.New(), ty.array<f32, 4>()},
                                       });

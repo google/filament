@@ -40,7 +40,6 @@ Materialize::Materialize(const ValueExpression* expr,
            constant ? core::EvaluationStage::kConstant : core::EvaluationStage::kNotEvaluated,
            /* statement */ statement,
            /* constant */ constant,
-           /* has_side_effects */ false,
            /* root_ident */ expr->RootIdentifier()),
       expr_(expr) {}
 

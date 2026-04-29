@@ -46,7 +46,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -55,6 +54,7 @@ import (
 	"strconv"
 	"strings"
 
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"golang.org/x/net/html"
 )
 
@@ -109,20 +109,22 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	err := run()
-	switch err {
-	case nil:
-		return
-	case errInvalidArg:
-		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
-		flag.Usage()
-	default:
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+	osWrapper := oswrapper.GetRealOSWrapper()
+	err := run(osWrapper)
+	if err != nil {
+		if errors.Is(err, errInvalidArg) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
+			flag.Usage()
+		} else {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+		os.Exit(1)
 	}
-	os.Exit(1)
 }
 
-func run() error {
+// TODO(crbug.com/473064729): Add unittests once HTTP requests are handled via
+// dependency injection.
+func run(osWrapper oswrapper.OSWrapper) error {
 	// Parse flags
 	keyword := flag.String("keyword", "",
 		`if provided, it will be used as the keyword to search WGSL spec for rules
@@ -149,7 +151,7 @@ contains the provided string`)
 	args := flag.Args()
 
 	// Parse spec
-	spec, err := parseSpec(args)
+	spec, err := parseSpec(args, osWrapper)
 	if err != nil {
 		return err
 	}
@@ -166,7 +168,7 @@ contains the provided string`)
 	rules := parser.rules
 
 	if *ctsDir != "" {
-		err := getUnimplementedTestPlan(*parser, *ctsDir)
+		err := getUnimplementedTestPlan(*parser, *ctsDir, osWrapper)
 		if err != nil {
 			return err
 		}
@@ -182,11 +184,11 @@ contains the provided string`)
 		if err != nil {
 			return err
 		}
-		return writeFile(*output, string(j))
+		return writeFile(*output, string(j), osWrapper)
 	} else if strings.HasSuffix(*output, ".txt") {
-		return writeFile(*output, txt)
+		return writeFile(*output, txt, osWrapper)
 	} else if strings.HasSuffix(*output, ".tsv") {
-		return writeFile(*output, tsv)
+		return writeFile(*output, tsv, osWrapper)
 	} else {
 		return fmt.Errorf("unsupported output file extension: %v", *output)
 	}
@@ -217,7 +219,7 @@ func getSectionRange(rules []rule, s []int) (start, end int, err error) {
 			continue
 		}
 
-		dim := -1
+		var dim int
 		if len(sectionDims) == len(s) {
 			//x.y is the same as x.y.0
 			dim = 0
@@ -300,18 +302,20 @@ func concatRules(rules []rule, testNameFilter string) (string, string) {
 
 // writeFile writes content to path
 // the existing content will be overwritten
-func writeFile(path, content string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
+func writeFile(path, content string, fsWriter oswrapper.FilesystemWriter) error {
+	if err := fsWriter.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return fmt.Errorf("failed to create directory for '%v': %w", path, err)
 	}
-	if err := ioutil.WriteFile(path, []byte(content), 0666); err != nil {
+	if err := fsWriter.WriteFile(path, []byte(content), 0666); err != nil {
 		return fmt.Errorf("failed to write file '%v': %w", path, err)
 	}
 	return nil
 }
 
+// TODO(crbug.com/473064729): Add unittest coverage once HTTP requests are
+// handled via dependency injection.
 // parseSpec reads the spec from a local file, or the URL to WGSL spec
-func parseSpec(args []string) (*html.Node, error) {
+func parseSpec(args []string, fsReader oswrapper.FilesystemReader) (*html.Node, error) {
 	// Check for explicit WGSL spec path
 	specURL, _ := url.Parse(specPath)
 	switch len(args) {
@@ -349,7 +353,7 @@ func parseSpec(args []string) (*html.Node, error) {
 			return nil, fmt.Errorf("failed to load the WGSL spec from '%v': %w", specURL, err)
 		}
 
-		file, err := os.Open(path)
+		file, err := fsReader.Open(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load the WGSL spec from '%v': %w", specURL, err)
 		}
@@ -373,7 +377,7 @@ func parseSpec(args []string) (*html.Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to load the WGSL spec from '%v': %w", specURL, err)
 		}
-		file, err := os.Open(path)
+		file, err := fsReader.Open(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load the WGSL spec from '%v': %w", specURL, err)
 		}
@@ -416,7 +420,7 @@ type Parser struct {
 }
 
 func Parse(node *html.Node) (*Parser, error) {
-	var p *Parser = new(Parser)
+	p := new(Parser)
 	p.firstSectionContainingRule = -1
 	p.lastSectionContainingRule = -1
 	return p, p.getRules(node)
@@ -687,7 +691,7 @@ var (
 	reIrregularWhiteSpace = regexp.MustCompile(`§.`)
 )
 
-// cleanUpString creates a string by removing  all extra spaces, newlines and tabs
+// cleanUpString creates a string by removing all extra spaces, newlines and tabs
 // form input string 'in' and returns it
 // This is done so that the uniqueID does not change because of a change in white spaces
 //
@@ -768,7 +772,6 @@ func testName(id string, desc string, section string) (testName, builtinName str
 		return "", "", err
 	}
 
-	builtinName = ""
 	index := strings.Index(desc, ":")
 	if strings.Contains(id, "builtin_functions") && index > -1 {
 		builtinName = reName.ReplaceAllString(desc[:index], "_")
@@ -841,17 +844,17 @@ func getSha1(a string, b string) (string, error) {
 
 // getUnimplementedPlan generate the typescript code of a test plan for rules in sections[start, end]
 // then it writes the generated test plans in the given 'path'
-func getUnimplementedTestPlan(p Parser, path string) error {
+func getUnimplementedTestPlan(p Parser, path string, fsWriter oswrapper.FilesystemWriter) error {
 	rules := p.rules
 	start := p.firstSectionContainingRule
 	end := p.lastSectionContainingRule
 	validationPath := filepath.Join(path, "validation")
-	if err := validationTestPlan(rules, validationPath, start, end); err != nil {
+	if err := validationTestPlan(rules, validationPath, start, end, fsWriter); err != nil {
 		return err
 	}
 
 	executionPath := filepath.Join(path, "execution", "builtin")
-	if err := executionTestPlan(rules, executionPath); err != nil {
+	if err := executionTestPlan(rules, executionPath, fsWriter); err != nil {
 		return err
 	}
 	return nil
@@ -879,7 +882,7 @@ func getTestPlanFilePath(path string, x, y, digits int) (string, error) {
 }
 
 // validationTestPlan generates the typescript code of a test plan for rules in sections[start, end]
-func validationTestPlan(rules []rule, path string, start int, end int) error {
+func validationTestPlan(rules []rule, path string, start int, end int, fsWriter oswrapper.FilesystemWriter) error {
 	content := [][]string{}
 	filePath := []string{}
 	for section := 0; section <= end; section++ {
@@ -901,7 +904,7 @@ func validationTestPlan(rules []rule, path string, start int, end int) error {
 			return err
 		}
 		section := sectionDims[0]
-		if section < start || section >= end {
+		if section < start || section > end {
 			continue
 		}
 		content[section] = append(content[section], testPlan(r))
@@ -909,7 +912,7 @@ func validationTestPlan(rules []rule, path string, start int, end int) error {
 
 	for i := start; i <= end; i++ {
 		if len(content[i]) > 1 {
-			if err := writeFile(filePath[i], strings.Join(content[i], "\n")); err != nil {
+			if err := writeFile(filePath[i], strings.Join(content[i], "\n"), fsWriter); err != nil {
 				return err
 			}
 		}
@@ -920,7 +923,7 @@ func validationTestPlan(rules []rule, path string, start int, end int) error {
 
 // executionTestPlan generates the typescript code of a test plan for rules in the given section
 // the rules in section X.Y.* will be written to path/sectionX_Y.spec.ts
-func executionTestPlan(rules []rule, path string) error {
+func executionTestPlan(rules []rule, path string, fsWriter oswrapper.FilesystemWriter) error {
 	// TODO(SarahM) This generates execution tests for builtin function tests. Add other executions tests.
 	section, err := getBuiltinSectionNum(rules)
 	if err != nil {
@@ -952,7 +955,7 @@ func executionTestPlan(rules []rule, path string) error {
 			continue
 		}
 
-		index := -1
+		var index int
 		sectionDims, err := parseSection(r.SubSection)
 		if err != nil || len(sectionDims) == 0 {
 			return err
@@ -966,7 +969,7 @@ func executionTestPlan(rules []rule, path string) error {
 			index = sectionDims[1]
 		}
 
-		if index < 0 && index >= len(content) {
+		if index < 0 || index >= len(content) {
 			return fmt.Errorf("cannot append to content, index %v out of range 0..%v",
 				index, len(content)-1)
 		}
@@ -977,7 +980,7 @@ func executionTestPlan(rules []rule, path string) error {
 		// Write the file if there is a test in there
 		// compared with >1 because content has at least the test description
 		if len(content[i]) > 1 {
-			if err := writeFile(filePath[i], strings.Join(content[i], "\n")); err != nil {
+			if err := writeFile(filePath[i], strings.Join(content[i], "\n"), fsWriter); err != nil {
 				return err
 			}
 		}

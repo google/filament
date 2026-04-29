@@ -1,0 +1,14 @@
+name: gen-check
+on:
+  pull_request:
+jobs:
+  gen-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.21.0'
+      - run: |
+          cd "${{ github.workspace }}"
+          make gen-check

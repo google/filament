@@ -238,7 +238,8 @@ template<typename WebGPUPrintable>
         case wgpu::TextureFormat::R8BG8Biplanar444Unorm:       return "R8BG8Biplanar444Unorm";
         case wgpu::TextureFormat::R10X6BG10X6Biplanar422Unorm: return "R10X6BG10X6Biplanar422Unorm";
         case wgpu::TextureFormat::R10X6BG10X6Biplanar444Unorm: return "R10X6BG10X6Biplanar444Unorm";
-        case wgpu::TextureFormat::External:                    return "External";
+        case wgpu::TextureFormat::OpaqueYCbCrAndroid:          return "OpaqueYCbCrAndroid";
+        default: return "Unknown";
     }
 }
 

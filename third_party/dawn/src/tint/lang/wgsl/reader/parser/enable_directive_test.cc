@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/reader/parser/helper_test.h"
-
 #include "src/tint/lang/wgsl/ast/enable.h"
+#include "src/tint/lang/wgsl/reader/parser/helper_test.h"
 
 namespace tint::wgsl::reader {
 namespace {
@@ -175,7 +174,7 @@ TEST_F(EnableDirectiveTest, InvalidExtension) {
     // Error when unknown extension found
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -189,7 +188,7 @@ TEST_F(EnableDirectiveTest, InvalidExtensionSuggest) {
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
 Did you mean 'f16'?
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -203,7 +202,7 @@ TEST_F(EnableDirectiveTest, InvalidChromiumExtension) {
     // Error when unknown extension found
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'chromium_disable_uniformity_analysis', 'chromium_experimental_barycentric_coord', 'chromium_experimental_framebuffer_fetch', 'chromium_experimental_immediate', 'chromium_experimental_pixel_local', 'chromium_experimental_primitive_id', 'chromium_experimental_subgroup_matrix', 'chromium_internal_graphite', 'chromium_internal_input_attachments', 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'chromium_disable_uniformity_analysis', 'chromium_experimental_barycentric_coord', 'chromium_experimental_framebuffer_fetch', 'chromium_experimental_pixel_local', 'chromium_experimental_resource_table', 'chromium_experimental_subgroup_matrix', 'chromium_experimental_subgroup_size_control', 'chromium_internal_input_attachments', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -251,7 +250,7 @@ TEST_F(EnableDirectiveTest, InvalidTokens) {
         p->translation_unit();
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -262,7 +261,7 @@ Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')")
         p->translation_unit();
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -274,7 +273,7 @@ Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')")
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
 Did you mean 'f16'?
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);

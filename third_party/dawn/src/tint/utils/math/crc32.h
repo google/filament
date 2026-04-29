@@ -29,6 +29,7 @@
 #define SRC_TINT_UTILS_MATH_CRC32_H_
 
 #include <stdint.h>
+
 #include <cstddef>
 
 #include "src/tint/utils/macros/compiler.h"

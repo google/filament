@@ -155,7 +155,7 @@ struct State {
                     Barrier(call);
                     break;
                 default:
-                    TINT_UNREACHABLE();
+                    TINT_IR_UNREACHABLE(ir);
             }
         }
     }
@@ -229,10 +229,10 @@ struct State {
                 for (uint32_t i = 0; i < type->Width(); ++i) {
                     auto* lhs = b.Swizzle(ret_ty, x, {i});
                     auto* rhs = b.Swizzle(ret_ty, y, {i});
-                    auto* v = b.Multiply(ret_ty, lhs, rhs);
+                    auto* v = b.Multiply(lhs, rhs);
 
                     if (ret != nullptr) {
-                        ret = b.Add(ret_ty, ret, v)->Result();
+                        ret = b.Add(ret, v)->Result();
                     } else {
                         ret = v->Result();
                     }
@@ -250,7 +250,7 @@ struct State {
         auto args = call->Args();
 
         auto* vec_ty = call->Args()[0]->Type()->As<core::type::Vector>();
-        TINT_ASSERT(vec_ty);
+        TINT_IR_ASSERT(ir, vec_ty);
 
         b.InsertBefore(call, [&] {
             if (!vec_ty->DeepestElement()->IsIntegerScalar()) {
@@ -336,8 +336,7 @@ struct State {
         auto args = call->Args();
 
         b.InsertBefore(call, [&] {
-            auto* res_ty = call->Result()->Type();
-            auto* mul = b.Multiply(res_ty, args[0], args[1]);
+            auto* mul = b.Multiply(args[0], args[1]);
             b.AddWithResult(call->DetachResult(), mul, args[2]);
         });
         call->Destroy();
@@ -377,7 +376,7 @@ struct State {
                 Vector<core::ir::Value*, 3>{dest, bitcast_cmp_value->Result(),
                                             bitcast_value->Result()});
 
-            auto* exchanged = b.Equal(ty.bool_(), swap, compare_value);
+            auto* exchanged = b.Equal(swap, compare_value);
 
             auto* result = b.Construct(result_type, swap, exchanged)->Result();
             call->Result()->ReplaceAllUsesWith(result);
@@ -391,7 +390,7 @@ struct State {
 
             if (args[1]->Type()->Is<core::type::I32>()) {
                 b.CallWithResult(call->DetachResult(), core::BuiltinFn::kAtomicAdd, args[0],
-                                 b.Negation(args[1]->Type(), args[1]));
+                                 b.Negation(args[1]));
             } else {
                 // Negating a u32 isn't possible in the IR, so pass a fake GLSL function and
                 // handle in the printer.
@@ -526,12 +525,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BuiltinPolyfill(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(
-        ir, "glsl.BuiltinPolyfill",
-        core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings});
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir, core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings},
+                "before glsl.BuiltinPolyfill");
 
     State{ir}.Process();
 

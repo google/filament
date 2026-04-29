@@ -34,7 +34,7 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 TEST_F(SpirvWriterTest, Construct_Vector) {
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({
         b.FunctionParam("a", ty.i32()),
         b.FunctionParam("b", ty.i32()),
@@ -42,21 +42,29 @@ TEST_F(SpirvWriterTest, Construct_Vector) {
         b.FunctionParam("d", ty.i32()),
     });
     b.Append(func->Block(), [&] {
-        auto* result = b.Construct(ty.vec4<i32>(), func->Params());
+        auto* result = b.Construct(ty.vec4i(), func->Params());
         b.Return(func, result);
         mod.SetName(result, "result");
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x",
+              b.Call(func, b.Zero(ty.i32()), b.Zero(ty.i32()), b.Zero(ty.i32()), b.Zero(ty.i32())));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%result = OpCompositeConstruct %v4int %a %b %c %d");
 }
 
 TEST_F(SpirvWriterTest, Construct_Matrix) {
     auto* func = b.Function("foo", ty.mat3x4<f32>());
     func->SetParams({
-        b.FunctionParam("a", ty.vec4<f32>()),
-        b.FunctionParam("b", ty.vec4<f32>()),
-        b.FunctionParam("c", ty.vec4<f32>()),
+        b.FunctionParam("a", ty.vec4f()),
+        b.FunctionParam("b", ty.vec4f()),
+        b.FunctionParam("c", ty.vec4f()),
     });
     b.Append(func->Block(), [&] {
         auto* result = b.Construct(ty.mat3x4<f32>(), func->Params());
@@ -64,7 +72,14 @@ TEST_F(SpirvWriterTest, Construct_Matrix) {
         mod.SetName(result, "result");
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func, b.Zero(ty.vec4f()), b.Zero(ty.vec4f()), b.Zero(ty.vec4f())));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%result = OpCompositeConstruct %mat3v4float %a %b %c");
 }
 
@@ -82,22 +97,29 @@ TEST_F(SpirvWriterTest, Construct_Array) {
         mod.SetName(result, "result");
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x",
+              b.Call(func, b.Zero(ty.f32()), b.Zero(ty.f32()), b.Zero(ty.f32()), b.Zero(ty.f32())));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%result = OpCompositeConstruct %_arr_float_uint_4 %a %b %c %d");
 }
 
 TEST_F(SpirvWriterTest, Construct_Struct) {
-    auto* str =
-        ty.Struct(mod.symbols.New("MyStruct"), {
-                                                   {mod.symbols.Register("a"), ty.i32()},
-                                                   {mod.symbols.Register("b"), ty.u32()},
-                                                   {mod.symbols.Register("c"), ty.vec4<f32>()},
-                                               });
+    auto* str = ty.Struct(mod.symbols.New("MyStruct"), {
+                                                           {mod.symbols.Register("a"), ty.i32()},
+                                                           {mod.symbols.Register("b"), ty.u32()},
+                                                           {mod.symbols.Register("c"), ty.vec4f()},
+                                                       });
     auto* func = b.Function("foo", str);
     func->SetParams({
         b.FunctionParam("a", ty.i32()),
         b.FunctionParam("b", ty.u32()),
-        b.FunctionParam("c", ty.vec4<f32>()),
+        b.FunctionParam("c", ty.vec4f()),
     });
     b.Append(func->Block(), [&] {
         auto* result = b.Construct(str, func->Params());
@@ -105,7 +127,14 @@ TEST_F(SpirvWriterTest, Construct_Struct) {
         mod.SetName(result, "result");
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func, b.Zero(ty.i32()), b.Zero(ty.u32()), b.Zero(ty.vec4f())));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%result = OpCompositeConstruct %MyStruct %a %b %c");
 }
 
@@ -117,24 +146,57 @@ TEST_F(SpirvWriterTest, Construct_Scalar_Identity) {
         b.Return(func, result);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func, b.Zero(ty.i32())));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpReturnValue %arg");
 }
 
 TEST_F(SpirvWriterTest, Construct_Vector_Identity) {
-    auto* func = b.Function("foo", ty.vec4<i32>());
-    func->SetParams({b.FunctionParam("arg", ty.vec4<i32>())});
+    auto* func = b.Function("foo", ty.vec4i());
+    func->SetParams({b.FunctionParam("arg", ty.vec4i())});
     b.Append(func->Block(), [&] {
-        auto* result = b.Construct(ty.vec4<i32>(), func->Params()[0]);
+        auto* result = b.Construct(ty.vec4i(), func->Params()[0]);
         b.Return(func, result);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func, b.Zero(ty.vec4i())));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpReturnValue %arg");
 }
 
+TEST_F(SpirvWriterTest, Construct_Array_ZeroValue) {
+    auto* func = b.Function("foo", ty.array<f32, 4>());
+    b.Append(func->Block(), [&] {
+        auto* result = b.Construct(ty.array<f32, 4>());
+        b.Return(func, result);
+        mod.SetName(result, "result");
+    });
+
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("%result = OpConstantNull %_arr_float_uint_4");
+}
+
 TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_ZeroValue) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         b.Let("left", b.Construct(ty.subgroup_matrix_left(ty.f32(), 8, 4)));
         b.Let("right", b.Construct(ty.subgroup_matrix_right(ty.i32(), 4, 8)));
@@ -143,14 +205,15 @@ TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_ZeroValue) {
     });
 
     Options options;
-    options.use_vulkan_memory_model = true;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    options.extensions.use_vulkan_memory_model = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%6 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_4 %uint_8 %uint_0");
-    EXPECT_INST("%left = OpConstantComposite %6 %float_0");
-    EXPECT_INST("%15 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_4 %uint_1");
-    EXPECT_INST("%right = OpConstantComposite %15 %int_0");
-    EXPECT_INST("%20 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_2 %uint_2 %uint_2");
-    EXPECT_INST("%result = OpConstantComposite %20 %uint_0");
+    EXPECT_INST("%left = OpConstantNull %6");
+    EXPECT_INST("%14 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_4 %uint_1");
+    EXPECT_INST("%right = OpConstantNull %14");
+    EXPECT_INST("%18 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_2 %uint_2 %uint_2");
+    EXPECT_INST("%result = OpConstantNull %18");
 }
 
 TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_SingleValue) {
@@ -164,9 +227,16 @@ TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_SingleValue) {
         b.Return(func);
     });
 
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Zero(ty.i32()));
+        b.Return(eb);
+    });
+
     Options options;
-    options.use_vulkan_memory_model = true;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    options.extensions.use_vulkan_memory_model = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%7 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_4 %uint_8 %uint_0");
     EXPECT_INST("%14 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_4 %uint_1");
     EXPECT_INST("%17 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_2 %uint_2 %uint_2");
@@ -176,7 +246,7 @@ TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_SingleValue) {
 }
 
 TEST_F(SpirvWriterTest, Construct_ArrayOfSubgroupMatrix_ZeroValue) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         b.Let("left", b.Construct(ty.array(ty.subgroup_matrix_left(ty.f32(), 8, 4), 4u)));
         b.Let("right", b.Construct(ty.array(ty.subgroup_matrix_right(ty.i32(), 4, 8), 4u)));
@@ -185,27 +255,27 @@ TEST_F(SpirvWriterTest, Construct_ArrayOfSubgroupMatrix_ZeroValue) {
     });
 
     Options options{
-        .use_vulkan_memory_model = true,
+        .entry_point_name = "main",
+        .extensions =
+            {
+                .use_vulkan_memory_model = true,
+            },
     };
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %7 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_4 %uint_8 %uint_0
 %_arr_7_uint_4 = OpTypeArray %7 %uint_4
-    %float_0 = OpConstant %float 0
-         %14 = OpConstantComposite %7 %float_0
-       %left = OpConstantComposite %_arr_7_uint_4 %14 %14 %14 %14
+       %left = OpConstantNull %_arr_7_uint_4
         %int = OpTypeInt 32 1
      %uint_1 = OpConstant %uint 1
-         %18 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_4 %uint_1
-%_arr_18_uint_4 = OpTypeArray %18 %uint_4
-      %int_0 = OpConstant %int 0
-         %21 = OpConstantComposite %18 %int_0
-      %right = OpConstantComposite %_arr_18_uint_4 %21 %21 %21 %21
+         %16 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_4 %uint_1
+%_arr_16_uint_4 = OpTypeArray %16 %uint_4
+      %right = OpConstantNull %_arr_16_uint_4
      %uint_2 = OpConstant %uint 2
-         %25 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_2 %uint_2 %uint_2
-%_arr_25_uint_4 = OpTypeArray %25 %uint_4
-         %27 = OpConstantComposite %25 %uint_0
-     %result = OpConstantComposite %_arr_25_uint_4 %27 %27 %27 %27
+         %21 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_2 %uint_2 %uint_2
+%_arr_21_uint_4 = OpTypeArray %21 %uint_4
+     %result = OpConstantNull %_arr_21_uint_4
 )");
 }
 
@@ -218,16 +288,21 @@ TEST_F(SpirvWriterTest, Construct_StructOfSubgroupMatrix_ZeroValue) {
             {mod.symbols.Register("res"), ty.array(ty.subgroup_matrix_result(ty.u32(), 2, 2), 4u)},
         });
 
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         b.Let("s", b.Construct(str));
         b.Return(func);
     });
 
     Options options{
-        .use_vulkan_memory_model = true,
+        .entry_point_name = "main",
+        .extensions =
+            {
+                .use_vulkan_memory_model = true,
+            },
     };
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %8 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_4 %uint_8 %uint_0
 %_arr_8_uint_4 = OpTypeArray %8 %uint_4
@@ -239,15 +314,7 @@ TEST_F(SpirvWriterTest, Construct_StructOfSubgroupMatrix_ZeroValue) {
          %20 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_2 %uint_2 %uint_2
 %_arr_20_uint_4 = OpTypeArray %20 %uint_4
    %MyStruct = OpTypeStruct %_arr_8_uint_4 %_arr_16_uint_4 %_arr_20_uint_4
-    %float_0 = OpConstant %float 0
-         %23 = OpConstantComposite %8 %float_0
-         %22 = OpConstantComposite %_arr_8_uint_4 %23 %23 %23 %23
-      %int_0 = OpConstant %int 0
-         %26 = OpConstantComposite %16 %int_0
-         %25 = OpConstantComposite %_arr_16_uint_4 %26 %26 %26 %26
-         %29 = OpConstantComposite %20 %uint_0
-         %28 = OpConstantComposite %_arr_20_uint_4 %29 %29 %29 %29
-          %s = OpConstantComposite %MyStruct %22 %25 %28
+          %s = OpConstantNull %MyStruct
 )");
 }
 

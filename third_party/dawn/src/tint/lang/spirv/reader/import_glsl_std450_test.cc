@@ -693,20 +693,20 @@ TEST_F(SpirvReaderTest, RectifyOperandsAndResult_FindUMsb) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:u32 = bitcast 30i
+    %2:u32 = bitcast<u32> 30i
     %3:u32 = firstLeadingBit %2
-    %4:i32 = bitcast %3
-    %5:vec2<u32> = bitcast vec2<i32>(30i, 40i)
+    %4:i32 = bitcast<i32> %3
+    %5:vec2<u32> = bitcast<vec2<u32>> vec2<i32>(30i, 40i)
     %6:vec2<u32> = firstLeadingBit %5
-    %7:vec2<i32> = bitcast %6
-    %8:u32 = bitcast 30i
+    %7:vec2<i32> = bitcast<vec2<i32>> %6
+    %8:u32 = bitcast<u32> 30i
     %9:u32 = firstLeadingBit %8
-    %10:vec2<u32> = bitcast vec2<i32>(30i, 40i)
+    %10:vec2<u32> = bitcast<vec2<u32>> vec2<i32>(30i, 40i)
     %11:vec2<u32> = firstLeadingBit %10
     %12:u32 = firstLeadingBit 10u
-    %13:i32 = bitcast %12
+    %13:i32 = bitcast<i32> %12
     %14:vec2<u32> = firstLeadingBit vec2<u32>(10u, 20u)
-    %15:vec2<i32> = bitcast %14
+    %15:vec2<i32> = bitcast<vec2<i32>> %14
     %16:u32 = firstLeadingBit 10u
     %17:vec2<u32> = firstLeadingBit vec2<u32>(10u, 20u)
     ret
@@ -970,7 +970,7 @@ __frexp_result_f32 = struct @align(4) {
     %3:__frexp_result_f32 = frexp 50.0f
     %4:f32 = access %3, 0u
     %5:i32 = access %3, 1u
-    %6:u32 = bitcast %5
+    %6:u32 = bitcast<u32> %5
     %7:tint_symbol_2 = construct %4, %6
     store %2, %7
     ret
@@ -1003,7 +1003,7 @@ __frexp_result_f32 = struct @align(4) {
     %2:__frexp_result_f32 = frexp 50.0f
     %3:f32 = access %2, 0u
     %4:i32 = access %2, 1u
-    %5:u32 = bitcast %4
+    %5:u32 = bitcast<u32> %4
     %6:tint_symbol_2 = construct %3, %5
     %7:f32 = access %6, 0u
     %8:u32 = access %6, 1u
@@ -1070,7 +1070,7 @@ __frexp_result_vec2_f32 = struct @align(8) {
     %2:__frexp_result_vec2_f32 = frexp vec2<f32>(50.0f, 60.0f)
     %3:vec2<f32> = access %2, 0u
     %4:vec2<i32> = access %2, 1u
-    %5:vec2<u32> = bitcast %4
+    %5:vec2<u32> = bitcast<vec2<u32>> %4
     %6:tint_symbol_2 = construct %3, %5
     %7:vec2<f32> = access %6, 0u
     %8:vec2<u32> = access %6, 1u

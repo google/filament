@@ -30,6 +30,7 @@
 
 #include <benchmark/benchmark.h>
 #include <dawn/webgpu_cpp.h>
+
 #include <condition_variable>
 #include <mutex>
 

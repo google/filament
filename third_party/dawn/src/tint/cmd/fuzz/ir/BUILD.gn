@@ -45,14 +45,12 @@ tint_fuzz_source_set("fuzz") {
     "fuzz.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}:thread",
     "${tint_src_dir}/api/common",
-    "${tint_src_dir}/cmd/fuzz/ir/helpers",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
     "${tint_src_dir}/lang/core/ir",
-    "${tint_src_dir}/lang/core/ir/transform",
     "${tint_src_dir}/lang/core/type",
     "${tint_src_dir}/lang/wgsl",
     "${tint_src_dir}/lang/wgsl/ast",
@@ -83,7 +81,7 @@ if (tint_build_ir_binary && tint_build_wgsl_reader) {
     output_name = "tint_ir_fuzzer"
     sources = [ "main_fuzz.cc" ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_lpm_dir}:libprotobuf-mutator",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/cmd/fuzz/ir:fuzz",
@@ -94,7 +92,6 @@ if (tint_build_ir_binary && tint_build_wgsl_reader) {
       "${tint_src_dir}/lang/core/ir/transform:fuzz",
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/hlsl/writer/raise:fuzz",
-      "${tint_src_dir}/lang/wgsl/program:fuzz",
       "${tint_src_dir}/lang/wgsl/writer/raise:fuzz",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/bytes",
@@ -125,6 +122,10 @@ if (tint_build_ir_binary && tint_build_wgsl_reader) {
         "${tint_src_dir}/lang/core/ir/binary:fuzz",
         "${tint_src_dir}/utils/protos/ir_fuzz:proto",
       ]
+    }
+
+    if (tint_build_mesa) {
+      deps += [ "${tint_mesa_dir}:mesa" ]
     }
 
     if (tint_build_msl_writer) {

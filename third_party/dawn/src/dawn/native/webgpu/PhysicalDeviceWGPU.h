@@ -73,10 +73,13 @@ class PhysicalDevice : public PhysicalDeviceBase {
         const TogglesState& deviceToggles,
         Ref<DeviceBase::DeviceLostEvent>&& lostEvent) override;
 
-    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) const override;
+    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
+                                   const TogglesState& adapterToggles) const override;
 
-    raw_ptr<Backend> mBackend;
+    // TODO(crbug.com/485825675): Investigate this dangling pointers.
+    raw_ptr<Backend, DanglingUntriaged> mBackend;
     WGPUAdapter mInnerAdapter = nullptr;
+    WGPUBackendType mInnerBackendType = WGPUBackendType_Undefined;
 };
 
 }  // namespace dawn::native::webgpu

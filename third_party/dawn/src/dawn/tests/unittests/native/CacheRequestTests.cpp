@@ -40,7 +40,6 @@ namespace {
 
 using ::testing::_;
 using ::testing::ByMove;
-using ::testing::Invoke;
 using ::testing::MockFunction;
 using ::testing::Return;
 using ::testing::StrictMock;
@@ -130,10 +129,10 @@ TEST_P(CacheRequestTests, MakesCacheKey) {
 
     // Expect a call to LoadData with the expected key.
     EXPECT_CALL(mMockCache, LoadData(_, expectedKey.size(), nullptr, 0))
-        .WillOnce(WithArg<0>(Invoke([&](const void* actualKeyData) {
+        .WillOnce(WithArg<0>([&](const void* actualKeyData) {
             EXPECT_EQ(memcmp(actualKeyData, expectedKey.data(), expectedKey.size()), 0);
             return 0;
-        })));
+        }));
 
     // Load the request.
     auto result = LoadOrRun(
@@ -164,11 +163,11 @@ TEST_P(CacheRequestTests, CacheKeyIgnoresUnsafeIgnoredValue) {
     static StrictMock<MockFunction<int(CacheRequestForTesting)>> cacheMissFn;
 
     // Load the first request, and check that the unsafe unkeyed values were passed though
-    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>(Invoke([&](CacheRequestForTesting req) {
+    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>([&](CacheRequestForTesting req) {
         EXPECT_EQ(req.d.UnsafeGetValue(), &v1);
         EXPECT_FLOAT_EQ(req.e.UnsafeGetValue().value, 42);
         return 0;
-    })));
+    }));
     auto r1 = LoadOrRun(
                   GetDevice(), std::move(req1), [](Blob) { return 0; },
                   [](CacheRequestForTesting req) -> ResultOrError<int> {
@@ -177,11 +176,11 @@ TEST_P(CacheRequestTests, CacheKeyIgnoresUnsafeIgnoredValue) {
                   .AcquireSuccess();
 
     // Load the second request, and check that the unsafe unkeyed values were passed though
-    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>(Invoke([&](CacheRequestForTesting req) {
+    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>([&](CacheRequestForTesting req) {
         EXPECT_EQ(req.d.UnsafeGetValue(), &v2);
         EXPECT_FLOAT_EQ(req.e.UnsafeGetValue().value, 24);
         return 0;
-    })));
+    }));
     auto r2 = LoadOrRun(
                   GetDevice(), std::move(req2), [](Blob) { return 0; },
                   [](CacheRequestForTesting req) -> ResultOrError<int> {
@@ -212,14 +211,14 @@ TEST_P(CacheRequestTests, CacheMiss) {
 
     // Expect the cache miss, and return some value.
     int rv = 42;
-    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>(Invoke([=](CacheRequestForTesting req) {
+    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>([=](CacheRequestForTesting req) {
         // Expect the request contents to be the same. The data pointer for |c| is also the same
         // since it was moved.
         EXPECT_EQ(req.a, 1);
         EXPECT_FLOAT_EQ(req.b, 0.2);
         EXPECT_EQ(req.c.data(), cPtr);
         return rv;
-    })));
+    }));
 
     // Load the request.
     auto result = LoadOrRun(
@@ -254,20 +253,20 @@ TEST_P(CacheRequestTests, CacheHit) {
     // Mock a cache hit, and load the cached data.
     EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(actualStoredData.Size()));
     EXPECT_CALL(mMockCache, LoadData(_, _, _, actualStoredData.Size()))
-        .WillOnce(WithArg<2>(Invoke([&actualStoredData](void* dataOut) {
+        .WillOnce(WithArg<2>([&actualStoredData](void* dataOut) {
             memcpy(dataOut, actualStoredData.Data(), actualStoredData.Size());
             return actualStoredData.Size();
-        })));
+        }));
 
     // Expect the cache hit, and return some value.
     int rv = 1337;
-    EXPECT_CALL(cacheHitFn, Call(_)).WillOnce(WithArg<0>(Invoke([=](Blob blob) {
+    EXPECT_CALL(cacheHitFn, Call(_)).WillOnce(WithArg<0>([=](Blob blob) {
         // Expect the cached blob contents to match the cached data.
         EXPECT_EQ(blob.Size(), sizeof(kCachedData));
         EXPECT_EQ(memcmp(blob.Data(), kCachedData, sizeof(kCachedData)), 0);
 
         return rv;
-    })));
+    }));
 
     // Load the request.
     auto result = LoadOrRun(
@@ -304,31 +303,31 @@ TEST_P(CacheRequestTests, CacheHitError) {
     // Mock a cache hit, and load the cached data.
     EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(actualStoredData.Size()));
     EXPECT_CALL(mMockCache, LoadData(_, _, _, actualStoredData.Size()))
-        .WillOnce(WithArg<2>(Invoke([&actualStoredData](void* dataOut) {
+        .WillOnce(WithArg<2>([&actualStoredData](void* dataOut) {
             memcpy(dataOut, actualStoredData.Data(), actualStoredData.Size());
             return actualStoredData.Size();
-        })));
+        }));
 
     // Expect the cache hit.
-    EXPECT_CALL(cacheHitFn, Call(_)).WillOnce(WithArg<0>(Invoke([=](Blob blob) {
+    EXPECT_CALL(cacheHitFn, Call(_)).WillOnce(WithArg<0>([=](Blob blob) {
         // Expect the cached blob contents to match the cached data.
         EXPECT_EQ(blob.Size(), sizeof(kCachedData));
         EXPECT_EQ(memcmp(blob.Data(), kCachedData, sizeof(kCachedData)), 0);
 
         // Return an error.
         return DAWN_VALIDATION_ERROR("fake test error");
-    })));
+    }));
 
     // Expect the cache miss handler since the cache hit errored.
     int rv = 79;
-    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>(Invoke([=](CacheRequestForTesting req) {
+    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>([=](CacheRequestForTesting req) {
         // Expect the request contents to be the same. The data pointer for |c| is also the same
         // since it was moved.
         EXPECT_EQ(req.a, 1);
         EXPECT_FLOAT_EQ(req.b, 0.2);
         EXPECT_EQ(req.c.data(), cPtr);
         return rv;
-    })));
+    }));
 
     // Load the request.
     auto result =
@@ -341,6 +340,50 @@ TEST_P(CacheRequestTests, CacheHitError) {
             .AcquireSuccess();
 
     // Expect the result to store the value.
+    EXPECT_EQ(*result, rv);
+    EXPECT_FALSE(result.IsCached());
+}
+
+// Test that a cache miss occurs if the two LoadData calls return different sizes.
+TEST_P(CacheRequestTests, CacheHitDifferentLoadSizes) {
+    // Make a request.
+    CacheRequestForTesting req;
+    req.a = 1;
+    req.b = 0.2;
+    req.c = {3, 4, 5};
+
+    unsigned int* cPtr = req.c.data();
+
+    static StrictMock<MockFunction<int(Blob)>> cacheHitFn;
+    static StrictMock<MockFunction<int(CacheRequestForTesting)>> cacheMissFn;
+
+    // Mock a cache hit, but with different sizes returned from LoadData.
+    const size_t kExpectedSize = 10;
+    const size_t kActualSize = 5;
+    EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(kExpectedSize));
+    EXPECT_CALL(mMockCache, LoadData(_, _, _, kExpectedSize)).WillOnce(Return(kActualSize));
+
+    // Expect the cache miss handler since the load sizes were different.
+    int rv = 79;
+    EXPECT_CALL(cacheMissFn, Call(_)).WillOnce(WithArg<0>([=](CacheRequestForTesting req) {
+        // Expect the request contents to be the same. The data pointer for |c| is also the same
+        // since it was moved.
+        EXPECT_EQ(req.a, 1);
+        EXPECT_FLOAT_EQ(req.b, 0.2);
+        EXPECT_EQ(req.c.data(), cPtr);
+        return rv;
+    }));
+
+    // Load the request.
+    auto result = LoadOrRun(
+                      GetDevice(), std::move(req),
+                      [](Blob blob) -> int { return cacheHitFn.Call(std::move(blob)); },
+                      [](CacheRequestForTesting req) -> ResultOrError<int> {
+                          return cacheMissFn.Call(std::move(req));
+                      })
+                      .AcquireSuccess();
+
+    // Expect the result to store the value from the miss handler.
     EXPECT_EQ(*result, rv);
     EXPECT_FALSE(result.IsCached());
 }
@@ -386,10 +429,10 @@ TEST_P(CacheRequestTests, CacheHitHashValidationFailed) {
         // Mock a cache hit with given data buffer.
         EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(loadSize));
         EXPECT_CALL(mMockCache, LoadData(_, _, _, loadSize))
-            .WillOnce(WithArg<2>(Invoke([&](void* dataOut) {
+            .WillOnce(WithArg<2>([&](void* dataOut) {
                 memcpy(dataOut, loadBuffer, loadSize);
                 return loadSize;
-            })));
+            }));
 
         // Construct mock functions for current test.
         ASSERT_FALSE(cacheHitFn);
@@ -399,25 +442,24 @@ TEST_P(CacheRequestTests, CacheHitHashValidationFailed) {
 
         if (expectHashValidationSuccess) {
             // Expect the cache hit handler to be called with the loaded blob.
-            EXPECT_CALL(*cacheHitFn, Call(_)).WillOnce(WithArg<0>(Invoke([=](Blob blob) {
+            EXPECT_CALL(*cacheHitFn, Call(_)).WillOnce(WithArg<0>([=](Blob blob) {
                 // Expect the loaded blob contents to match the cached data.
                 EXPECT_EQ(blob.Size(), sizeof(kCachedData));
                 EXPECT_EQ(memcmp(blob.Data(), kCachedData, sizeof(kCachedData)), 0);
 
                 return rvCacheHit;
-            })));
+            }));
         } else {
             // Expect the cacheMissFn called and return some value, since hash validation failure
             // are treated as miss.
-            EXPECT_CALL(*cacheMissFn, Call(_))
-                .WillOnce(WithArg<0>(Invoke([=](CacheRequestForTesting req) {
-                    // Expect the request contents to be the same. The data pointer for |c| is also
-                    // the same since it was moved.
-                    EXPECT_EQ(req.a, 1);
-                    EXPECT_FLOAT_EQ(req.b, 0.2);
-                    EXPECT_EQ(req.c.data(), cPtr);
-                    return rvCacheMiss;
-                })));
+            EXPECT_CALL(*cacheMissFn, Call(_)).WillOnce(WithArg<0>([=](CacheRequestForTesting req) {
+                // Expect the request contents to be the same. The data pointer for |c| is also
+                // the same since it was moved.
+                EXPECT_EQ(req.a, 1);
+                EXPECT_FLOAT_EQ(req.b, 0.2);
+                EXPECT_EQ(req.c.data(), cPtr);
+                return rvCacheMiss;
+            }));
         }
 
         // Load the request.

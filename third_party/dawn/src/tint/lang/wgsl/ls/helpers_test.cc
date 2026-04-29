@@ -40,8 +40,7 @@ ParsedMarkers ParseMarkers(std::string_view str) {
     std::vector<langsvr::lsp::Range> ranges;
     std::optional<langsvr::lsp::Range> current_range;
     while (!str.empty()) {
-        auto [codepoint, len] =
-            utf8::Decode(reinterpret_cast<const uint8_t*>(str.data()), str.length());
+        auto [codepoint, len] = utf8::Decode(str);
         if (codepoint == 0 || len == 0) {
             break;
         }

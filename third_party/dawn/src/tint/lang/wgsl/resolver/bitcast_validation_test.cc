@@ -27,10 +27,9 @@
 
 #include <type_traits>
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
-
-#include "gmock/gmock.h"
 
 namespace tint::resolver {
 namespace {
@@ -168,9 +167,9 @@ TEST_P(ResolverInvalidBitcastTest, Test) {
 
     WrapInFunction(Bitcast(Source{{12, 34}}, dst.ast(*this), src.expr(*this, 0)));
 
-    std::string expected = "12:34 error: no matching call to 'bitcast<${TO}>(${FROM})'";
-    expected = ReplaceAll(expected, "${FROM}", src.sem(*this)->FriendlyName());
-    expected = ReplaceAll(expected, "${TO}", dst.sem(*this)->FriendlyName());
+    std::string expected = "12:34 error: no matching call to 'bitcast<" +
+                           dst.sem(*this)->FriendlyName() + ">(" + src.sem(*this)->FriendlyName() +
+                           ")'";
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_THAT(r()->error(), testing::StartsWith(expected));

@@ -39,7 +39,6 @@
 #include "dawn/common/ityp_bitset.h"
 #include "dawn/native/CachedObject.h"
 #include "dawn/native/IntegerTypes.h"
-
 #include "dawn/native/dawn_platform.h"
 
 namespace dawn::native {

@@ -38,7 +38,7 @@ import (
 // CancelOnInterruptContext returns a context that's cancelled if the process receives a SIGINT or
 // SIGTERM interrupt.
 func CancelOnInterruptContext(ctx context.Context) context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

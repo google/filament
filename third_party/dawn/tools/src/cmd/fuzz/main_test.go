@@ -40,15 +40,15 @@ func TestGatherWgslFiles(t *testing.T) {
 		name      string
 		inputsDir string
 		outDir    string
-		setupFS   func(t *testing.T, fs oswrapper.MemMapOSWrapper)
+		setupFS   func(t *testing.T, fs oswrapper.FSTestOSWrapper)
 		wantErr   bool
-		verify    func(t *testing.T, fs oswrapper.MemMapOSWrapper)
+		verify    func(t *testing.T, fs oswrapper.FSTestOSWrapper)
 	}{
 		{
 			name:      "Basic copy",
 			inputsDir: "/in",
 			outDir:    "/out",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/in/subdir", 0777))
 				require.NoError(t, fs.MkdirAll("/out", 0777))
 				require.NoError(t, fs.WriteFile("/in/a.wgsl", []byte("shader a"), 0666))
@@ -57,7 +57,7 @@ func TestGatherWgslFiles(t *testing.T) {
 				require.NoError(t, fs.WriteFile("/in/subdir/d.wgsl", []byte("shader d"), 0666))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				// Check that expected files were created with correct content
 				contentA, err := fs.ReadFile("/out/a.wgsl")
 				require.NoError(t, err)
@@ -79,13 +79,13 @@ func TestGatherWgslFiles(t *testing.T) {
 			name:      "Complex subdirectories",
 			inputsDir: "/in",
 			outDir:    "/out",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/in/a/b", 0777))
 				require.NoError(t, fs.MkdirAll("/out", 0777))
 				require.NoError(t, fs.WriteFile("/in/a/b/c.wgsl", []byte("shader c"), 0666))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				content, err := fs.ReadFile("/out/a_b_c.wgsl")
 				require.NoError(t, err)
 				require.Equal(t, "shader c", string(content))
@@ -95,12 +95,12 @@ func TestGatherWgslFiles(t *testing.T) {
 			name:      "Empty input directory",
 			inputsDir: "/in",
 			outDir:    "/out",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/in", 0777))
 				require.NoError(t, fs.MkdirAll("/out", 0777))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				isEmpty, err := fileutils.IsEmptyDir("/out", fs)
 				require.NoError(t, err)
 				require.True(t, isEmpty)
@@ -110,12 +110,12 @@ func TestGatherWgslFiles(t *testing.T) {
 			name:      "Output directory does not exist",
 			inputsDir: "/in",
 			outDir:    "/out",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/in", 0777))
 				require.NoError(t, fs.WriteFile("/in/a.wgsl", []byte("shader a"), 0666))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				// Check that output directory was created
 				info, err := fs.Stat("/out")
 				require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestGatherWgslFiles(t *testing.T) {
 			name:      "Input directory does not exist",
 			inputsDir: "/nonexistent",
 			outDir:    "/out",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/out", 0777))
 			},
 			wantErr: true,
@@ -140,7 +140,7 @@ func TestGatherWgslFiles(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if tc.setupFS != nil {
 				tc.setupFS(t, wrapper)
 			}

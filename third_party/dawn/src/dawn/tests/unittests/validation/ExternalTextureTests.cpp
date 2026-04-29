@@ -82,6 +82,42 @@ class ExternalTextureTest : public ValidationTest {
         }
     }
 
+    void SubmitExternalTextureInDefaultRenderBundle(wgpu::ExternalTexture externalTexture,
+                                                    bool success) {
+        // Create a bind group that contains the external texture.
+        wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+            device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
+        wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, bgl, {{0, externalTexture}});
+
+        // Create another texture to use as a color attachment.
+        wgpu::TextureDescriptor renderTextureDescriptor = CreateTextureDescriptor();
+        wgpu::Texture renderTexture = device.CreateTexture(&renderTextureDescriptor);
+        wgpu::TextureView renderView = renderTexture.CreateView();
+
+        // Create a RenderBundle using the bindgroup and doing nothing else.
+        wgpu::RenderBundleEncoderDescriptor rbDesc;
+        rbDesc.colorFormatCount = 1;
+        rbDesc.colorFormats = &renderTextureDescriptor.format;
+
+        wgpu::RenderBundleEncoder rbEncoder = device.CreateRenderBundleEncoder(&rbDesc);
+        rbEncoder.SetBindGroup(0, bindGroup);
+        wgpu::RenderBundle bundle = rbEncoder.Finish();
+
+        // Use that render bundle in the render pass.
+        utils::ComboRenderPassDescriptor renderPass({renderView}, nullptr);
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        pass.ExecuteBundles(1, &bundle);
+        pass.End();
+        wgpu::CommandBuffer commands = encoder.Finish();
+
+        if (success) {
+            queue.Submit(1, &commands);
+        } else {
+            ASSERT_DEVICE_ERROR(queue.Submit(1, &commands));
+        }
+    }
+
     void SubmitExternalTextureInDefaultComputePass(wgpu::ExternalTexture externalTexture,
                                                    bool success) {
         // Create a bind group that contains the external texture.
@@ -515,11 +551,32 @@ TEST_F(ExternalTextureTest, SubmitExpiredExternalTextureInComputePass) {
     SubmitExternalTextureInDefaultComputePass(externalTexture, false /* success = false */);
 }
 
-// Test that submitting a compute pass that contains an active external texture should success.
+// Test that submitting a compute pass that contains a destroyed external texture should success.
 TEST_F(ExternalTextureTest, SubmitDestroyedExternalTextureInComputePass) {
     wgpu::ExternalTexture externalTexture = CreateDefaultExternalTexture();
     externalTexture.Destroy();
     SubmitExternalTextureInDefaultComputePass(externalTexture, false /* success = false */);
+}
+
+// Test that submitting a render bundle that contains an active external.
+TEST_F(ExternalTextureTest, SubmitActiveExternalTextureInRenderBundle) {
+    wgpu::ExternalTexture externalTexture = CreateDefaultExternalTexture();
+    SubmitExternalTextureInDefaultRenderBundle(externalTexture, true /* success = true */);
+}
+
+// Test that submitting a render bundle that contains an expired external texture results in an
+// error.
+TEST_F(ExternalTextureTest, SubmitExpiredExternalTextureInRenderBundle) {
+    wgpu::ExternalTexture externalTexture = CreateDefaultExternalTexture();
+    externalTexture.Expire();
+    SubmitExternalTextureInDefaultRenderBundle(externalTexture, false /* success = false */);
+}
+
+// Test that submitting a render bundle that contains a destroyed external texture should success.
+TEST_F(ExternalTextureTest, SubmitDestroyedExternalTextureInRenderBundle) {
+    wgpu::ExternalTexture externalTexture = CreateDefaultExternalTexture();
+    externalTexture.Destroy();
+    SubmitExternalTextureInDefaultRenderBundle(externalTexture, false /* success = false */);
 }
 
 // Test that refresh an expired external texture and submit a compute pass with it.
@@ -625,29 +682,6 @@ TEST_F(ExternalTextureTest, BindGroupDoesNotMatchLayout) {
             device, {{0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Uniform}});
         ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, device.CreateSampler()}}));
     }
-}
-
-class ExternalTextureTestEnabledToggle : public ExternalTextureTest {
-  protected:
-    std::vector<const char*> GetEnabledToggles() override {
-        return {"disable_texture_view_binding_used_as_external_texture"};
-    }
-};
-
-// Regression test for crbug.com/1343099 where BindGroup validation let other binding types be used
-// for external texture bindings.
-TEST_F(ExternalTextureTestEnabledToggle, TextureViewBindingDoesntMatch) {
-    wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
-        device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
-
-    wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
-    wgpu::Texture texture = device.CreateTexture(&textureDescriptor);
-
-    // The bug was that this passed validation and crashed inside the backends with a null
-    // dereference. It passed validation because the number of bindings matched (1 == 1) and that
-    // the validation didn't check that an external texture binding was required, fell back to
-    // checking for the binding type of entry 0 that had been decayed to be a sampled texture view.
-    ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, texture.CreateView()}}));
 }
 
 // Ensure that bind group validation catches error external textures.
@@ -966,8 +1000,6 @@ TEST_F(ExternalTextureTest, SubmitTextureViewWithDestroyedTexture) {
 
 class ExternalTextureNorm16Test : public ExternalTextureTest {
   protected:
-    void SetUp() override { ExternalTextureTest::SetUp(); }
-
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
         return {wgpu::FeatureName::Unorm16TextureFormats};
     }
@@ -996,6 +1028,88 @@ TEST_F(ExternalTextureNorm16Test, CreateMultiplanarExternalTextureValidation) {
 
         device.CreateExternalTexture(&externalDesc);
     }
+}
+
+class ExternalTextureUnorm16Test : public ExternalTextureTest {
+  protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        return {wgpu::FeatureName::Unorm16FormatsForExternalTexture,
+                wgpu::FeatureName::MultiPlanarFormatP210,
+                wgpu::FeatureName::MultiPlanarFormatExtendedUsages};
+    }
+};
+
+// Test that with Unorm16FormatsForExternalTexture it is possible to create an ExternalTexture from
+// a YUV HDR biplanar texture that has plane formats that are R/RG16Unorm. Normally this should not
+// be allowed because the formats are not filterable-float, but the Unorm16FormatsForExternalTexture
+// feature bypasses this check.
+TEST_F(ExternalTextureUnorm16Test, CreateMultiPlanarTextureFromHDRYUV) {
+    // Create the YUV HDR texture. Direct creation of the texture requires
+    // MultiPlanarFormatExtendedUsages and the use of the YUV HDR format requires
+    // MultiPlanarFormatP210.
+    wgpu::TextureDescriptor yuvDesc = {
+        .usage = wgpu::TextureUsage::TextureBinding,
+        .size = {kWidth, kHeight},
+        .format = wgpu::TextureFormat::R10X6BG10X6Biplanar422Unorm,
+    };
+    wgpu::Texture yuv = device.CreateTexture(&yuvDesc);
+
+    // Create plane views with formats that are not normally allowed, but can be used only when
+    // retrieving the planes.
+    wgpu::TextureViewDescriptor plane0Desc = {
+        .format = wgpu::TextureFormat::R16Unorm,
+        .aspect = wgpu::TextureAspect::Plane0Only,
+    };
+    wgpu::TextureView plane0 = yuv.CreateView(&plane0Desc);
+
+    wgpu::TextureViewDescriptor plane1Desc = {
+        .format = wgpu::TextureFormat::RG16Unorm,
+        .aspect = wgpu::TextureAspect::Plane1Only,
+    };
+    wgpu::TextureView plane1 = yuv.CreateView(&plane1Desc);
+
+    // The ExternalTexture creation validation will allow these unfilterable-float formats to be
+    // used.
+    wgpu::ExternalTextureDescriptor externalDesc = CreateDefaultExternalTextureDescriptor();
+    externalDesc.plane0 = plane0;
+    externalDesc.plane1 = plane1;
+    device.CreateExternalTexture(&externalDesc);
+}
+
+class ExternalTextureUnorm16Test_FeatureDisabled : public ExternalTextureTest {
+  protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        return {wgpu::FeatureName::MultiPlanarFormatP210,
+                wgpu::FeatureName::MultiPlanarFormatExtendedUsages};
+    }
+};
+
+// Check that without Unorm16FormatsForExternalTexture it's not possible to create the views from an
+// HDR YUV texture.
+TEST_F(ExternalTextureUnorm16Test_FeatureDisabled, CannotCreateViewsFromHDRYUV) {
+    // Create the YUV HDR texture. Direct creation of the texture requires
+    // MultiPlanarFormatExtendedUsages and the use of the YUV HDR format requires
+    // MultiPlanarFormatP210.
+    wgpu::TextureDescriptor yuvDesc = {
+        .usage = wgpu::TextureUsage::TextureBinding,
+        .size = {kWidth, kHeight},
+        .format = wgpu::TextureFormat::R10X6BG10X6Biplanar422Unorm,
+    };
+    wgpu::Texture yuv = device.CreateTexture(&yuvDesc);
+
+    // Create plane views with formats that are not normally allowed, but can be used only when
+    // retrieving the planes.
+    wgpu::TextureViewDescriptor plane0Desc = {
+        .format = wgpu::TextureFormat::R16Unorm,
+        .aspect = wgpu::TextureAspect::Plane0Only,
+    };
+    ASSERT_DEVICE_ERROR(yuv.CreateView(&plane0Desc));
+
+    wgpu::TextureViewDescriptor plane1Desc = {
+        .format = wgpu::TextureFormat::RG16Unorm,
+        .aspect = wgpu::TextureAspect::Plane1Only,
+    };
+    ASSERT_DEVICE_ERROR(yuv.CreateView(&plane1Desc));
 }
 
 }  // anonymous namespace

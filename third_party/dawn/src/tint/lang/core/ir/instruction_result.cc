@@ -37,8 +37,8 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::ir::InstructionResult);
 
 namespace tint::core::ir {
 
-InstructionResult::InstructionResult(const core::type::Type* type) : type_(type) {
-    TINT_ASSERT(type_ != nullptr);
+InstructionResult::InstructionResult(const core::type::Type* type) : Base(type) {
+    TINT_ASSERT(type != nullptr);
 }
 
 InstructionResult::~InstructionResult() = default;
@@ -51,7 +51,7 @@ void InstructionResult::Destroy() {
 InstructionResult* InstructionResult::Clone(CloneContext& ctx) {
     // Do not clone the `Instruction`. It will be set when this result is placed in the new parent
     // instruction.
-    return ctx.ir.CreateValue<InstructionResult>(type_);
+    return ctx.ir.CreateValue<InstructionResult>(Type());
 }
 
 }  // namespace tint::core::ir

@@ -447,6 +447,9 @@ func (r *resolver) intrinsic(
 		isConst := false
 		if attribute := p.Attributes.Take("const"); attribute != nil {
 			isConst = true
+			if p.Name == "" {
+				return fmt.Errorf("%v @const parameters must be named", p.Source)
+			}
 		}
 		testValue := 1.0
 		if attribute := p.Attributes.Take("test_value"); attribute != nil {

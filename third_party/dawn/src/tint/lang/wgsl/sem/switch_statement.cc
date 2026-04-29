@@ -46,10 +46,6 @@ SwitchStatement::SwitchStatement(const ast::SwitchStatement* declaration,
 
 SwitchStatement::~SwitchStatement() = default;
 
-const ast::SwitchStatement* SwitchStatement::Declaration() const {
-    return static_cast<const ast::SwitchStatement*>(Base::Declaration());
-}
-
 CaseStatement::CaseStatement(const ast::CaseStatement* declaration,
                              const CompoundStatement* parent,
                              const sem::Function* function)

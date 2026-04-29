@@ -94,102 +94,112 @@ jobject ToKotlin(JNIEnv* env, const WGPUStringView* s) {
     return env->NewStringUTF(nullTerminated.c_str());
 }
 
-{%- for structure in by_category['structure'] + by_category['callback info'] if include_structure(structure) %}
+{%- for structure in by_category['structure'] if include_structure(structure) %}
+    {% if structure.needs_n2k %}
 
-    //* Native -> Kotlin converter.
-    //* TODO(b/354411474): Filter the structures for which to add a ToKotlin conversion.
-    jobject ToKotlin(JNIEnv *env, const {{ as_cType(structure.name) }}* input) {
-        if (!input) {
-            return nullptr;
+        //* Native -> Kotlin converter.
+        //* TODO(b/354411474): Filter the structures for which to add a ToKotlin conversion.
+        jobject ToKotlin(JNIEnv *env, const {{ as_cType(structure.name) }}* input) {
+            if (!input) {
+                return nullptr;
+            }
+            JNIClasses* classes = JNIClasses::getInstance(env);
+            //* Make a new Kotlin object to receive a copy of the structure.
+            jclass clz = classes->{{ structure.name.camelCase() }};
+            //* JNI signature needs to be built using the same logic used in the Kotlin structure spec.
+            jmethodID ctor = env->GetMethodID(clz, "<init>", "(
+            {%- for member in kotlin_record_members(structure.members) %}
+                {{- jni_signature(member) -}}
+            {%- endfor -%}
+            {%- for structure in chain_children[structure.name.get()] -%}
+                {{- jni_signature({'type': structure}) -}}
+            {%- endfor %})V");
+            //* Each field converted using the individual value converter.
+            {% for member in kotlin_record_members(structure.members) %}
+                {{ convert_to_kotlin('input->' + member.name.camelCase(), member.name.camelCase(),
+                                     'input->' + member.length.name.camelCase() if member.length.name,
+                                     member) | indent(4) -}}
+            {% endfor %}
+            //* Allow conversion of every child structure.
+            {%- for structure in chain_children[structure.name.get()] %}
+                jobject {{ structure.name.camelCase() }} = nullptr;
+            {% endfor %}
+            //* Walk the chain to find and convert (recursively) all child structures.
+            {%- if chain_children[structure.name.get()] %}
+                for (const WGPUChainedStruct* child = input->nextInChain;
+                        child != nullptr; child = child->next) {
+                    switch (child->sType) {
+                        {% for structure in chain_children[structure.name.get()] %}
+                            case WGPUSType_{{ structure.name.CamelCase() }}:
+                                {{ structure.name.camelCase() }} = ToKotlin(env,
+                                        reinterpret_cast<const {{ as_cType(structure.name) }}*>(child));
+                                break;
+                        {% endfor %}
+                            default:
+                                DAWN_UNREACHABLE();
+                    }
+                }
+            {% endif %}
+
+            //* Now all the fields are converted, invoke the constructor.
+            jobject converted = env->NewObject(
+                clz,
+                ctor
+            {%- for member in kotlin_record_members(structure.members) %},
+                {%- if member.type.category == 'kotlin type' -%}
+                    nullptr  {#- We can't make these. TODO(b/451995459): Don't even create the converter. #}
+                {%- else -%}
+                    {{ member.name.camelCase() }}
+                {%- endif -%}
+            {%- endfor -%}
+            {%- for structure in chain_children[structure.name.get()] -%},
+                    {{ structure.name.camelCase() -}}
+            {%- endfor -%}
+            );
+            return converted;
         }
-        JNIClasses* classes = JNIClasses::getInstance(env);
-        //* Make a new Kotlin object to receive a copy of the structure.
-        jclass clz = classes->{{ structure.name.camelCase() }};
-        //* JNI signature needs to be built using the same logic used in the Kotlin structure spec.
-        jmethodID ctor = env->GetMethodID(clz, "<init>", "(
-        {%- for member in kotlin_record_members(structure.members) %}
-            {{- jni_signature(member) -}}
-        {%- endfor -%}
-        {%- for structure in chain_children[structure.name.get()] -%}
-            {{- jni_signature({'type': structure}) -}}
-        {%- endfor %})V");
-        //* Each field converted using the individual value converter.
-        {% for member in kotlin_record_members(structure.members) %}
-            {{ convert_to_kotlin('input->' + member.name.camelCase(), member.name.camelCase(),
-                                 'input->' + member.length.name.camelCase() if member.length.name,
-                                 member) | indent(4) -}}
-        {% endfor %}
-        //* Allow conversion of every child structure.
-        {%- for structure in chain_children[structure.name.get()] %}
-            jobject {{ structure.name.camelCase() }} = nullptr;
-        {% endfor %}
-        //* Walk the chain to find and convert (recursively) all child structures.
-        {%- if chain_children[structure.name.get()] %}
-            for (const WGPUChainedStruct* child = input->nextInChain;
-                    child != nullptr; child = child->next) {
-                switch (child->sType) {
-                    {% for structure in chain_children[structure.name.get()] %}
-                        case WGPUSType_{{ structure.name.CamelCase() }}:
-                            {{ structure.name.camelCase() }} = ToKotlin(env,
-                                    reinterpret_cast<const {{ as_cType(structure.name) }}*>(child));
-                            break;
-                    {% endfor %}
-                        default:
-                            DAWN_UNREACHABLE();
+    {% endif %}
+    {% if structure.needs_k2n %}
+
+        {% set Struct = as_cType(structure.name) %}
+        {% set KotlinRecord = "KotlinRecord" + structure.name.CamelCase() %}
+        {{ define_kotlin_record_structure(KotlinRecord, structure.members)}}
+
+        {{ define_kotlin_to_struct_conversion("ConvertInternal", KotlinRecord, Struct, structure.members, is_structure_converter=True)}}
+        void ToNative(JNIContext* c, JNIEnv* env, jobject obj, {{ as_cType(structure.name) }}* converted) {
+            JNIClasses* classes = JNIClasses::getInstance(env);
+            jclass clz = classes->{{ structure.name.camelCase() }};
+
+            //* Use getters to fill in the Kotlin record that will get converted to our struct.
+            {{KotlinRecord}} kotlinRecord;
+            {% for member in kotlin_record_members(structure.members) %}
+                {
+                    {% set prefix = "is" if member.type.name.get() == "bool" else "get" %}
+                    jmethodID getter = env->GetMethodID(clz, "{{prefix}}{{member.name.CamelCase()}}", "(){{jni_signature(member)}}");
+                    CallGetter(env, getter, obj, &kotlinRecord.{{as_varName(member.name)}});
                 }
-            }
-        {% endif %}
+            {% endfor %}
 
-        //* Now all the fields are converted, invoke the constructor.
-        jobject converted = env->NewObject(
-            clz,
-            ctor
-        {%- for member in kotlin_record_members(structure.members) %},
-                {{ member.name.camelCase() -}}
-        {%- endfor -%}
-        {%- for structure in chain_children[structure.name.get()] -%},
-                {{ structure.name.camelCase() -}}
-        {%- endfor -%}
-        );
-        return converted;
-    }
-
-    {% set Struct = as_cType(structure.name) %}
-    {% set KotlinRecord = "KotlinRecord" + structure.name.CamelCase() %}
-    {{ define_kotlin_record_structure(KotlinRecord, structure.members)}}
-    {{ define_kotlin_to_struct_conversion("ConvertInternal", KotlinRecord, Struct, structure.members)}}
-    void ToNative(JNIContext* c, JNIEnv* env, jobject obj, {{ as_cType(structure.name) }}* converted) {
-        JNIClasses* classes = JNIClasses::getInstance(env);
-        jclass clz = classes->{{ structure.name.camelCase() }};
-
-        //* Use getters to fill in the Kotlin record that will get converted to our struct.
-        {{KotlinRecord}} kotlinRecord;
-        {% for member in kotlin_record_members(structure.members) %}
-            {
-                jmethodID getter = env->GetMethodID(clz, "get{{member.name.CamelCase()}}", "(){{jni_signature(member)}}");
-                CallGetter(env, getter, obj, &kotlinRecord.{{as_varName(member.name)}});
-            }
-        {% endfor %}
-
-        //* Fill all struct members from the Kotlin record.
-        ConvertInternal(c, kotlinRecord, converted);
-        //* Set up the chain type and links for child objects.
-        {% if structure.chained %}
-            converted->chain = {.sType = WGPUSType_{{ structure.name.CamelCase() }}};
-        {% endif %}
-        {% for child in chain_children[structure.name.get()] %}
-            {
-                jobject child = env->CallObjectMethod(obj,
-                        env->GetMethodID(clz, "get{{ child.name.CamelCase() }}", "()L{{ jni_name(child) }};"));
-                if (child) {
-                    auto out = c->Alloc<{{ as_cType(child.name) }}>();
-                    ToNative(c, env, child, out);
-                    out->chain.next = converted->nextInChain;
-                    converted->nextInChain = &out->chain;
+            //* Fill all struct members from the Kotlin record.
+            ConvertInternal(c, kotlinRecord, converted);
+            //* Set up the chain type and links for child objects.
+            {% if structure.chained %}
+                converted->chain = {.sType = WGPUSType_{{ structure.name.CamelCase() }}};
+            {% endif %}
+            {% for child in chain_children[structure.name.get()] %}
+                {
+                    jobject child = env->CallObjectMethod(obj,
+                            env->GetMethodID(clz, "get{{ child.name.CamelCase() }}", "()L{{ jni_name(child) }};"));
+                    if (child) {
+                        auto out = c->Alloc<{{ as_cType(child.name) }}>();
+                        ToNative(c, env, child, out);
+                        out->chain.next = converted->nextInChain;
+                        converted->nextInChain = &out->chain;
+                    }
                 }
-            }
-        {% endfor %}
-    }
+            {% endfor %}
+        }
+    {% endif %}
 {% endfor %}
 
 }  // namespace dawn::kotlin_api

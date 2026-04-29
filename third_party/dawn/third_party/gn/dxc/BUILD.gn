@@ -38,7 +38,6 @@ import("build/cmake_configure_file.gni")
 import("build/generate_version_include.gni")
 import("build/message_compiler.gni")
 
-dawn_dxc_gn_dir = "$dawn_dxc_dir/../gn"
 llvm_target_triple = "dxil-ms-dx"  # Force target triple
 llvm_version_major = 3
 llvm_version_minor = 7
@@ -463,6 +462,13 @@ cmake_configure_file("dxc-config-h") {
 ## Common config shared by all targets
 #######################################################################
 
+# `:common_config` sets exceptions and RTTI and that is incompatible with
+# libc++ clang modules.
+# Unfortunately, we cannot set use_libcxx_modules = false in a config target,
+# so it can't propogate to transitive dependencies - we have to do this
+# manually.
+use_libcxx_modules = false
+
 config("common_config") {
   warning_flags = []
   if (is_clang) {
@@ -585,10 +591,11 @@ template("dxc_module") {
     }
 
     public_configs = [ ":common_config" ]
-    if (dawn_has_build) {
-      configs -= [ "//build/config/compiler:chromium_code" ]
-      configs += [ "//build/config/compiler:no_chromium_code" ]
-    }
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+
+    use_libcxx_modules = use_libcxx_modules
+
     if (is_win) {
       # DXC is built with multibyte character set, so it expects Win32 functions to map the ANSI ones, not the UNICODE ones.
       configs -= [ "//build/config/win:unicode" ]
@@ -735,6 +742,8 @@ dxc_module("Support") {
 source_set("TableGen") {
   public_deps = [ ":Support" ]
 
+  use_libcxx_modules = use_libcxx_modules
+
   sources = [
     "$dawn_dxc_dir/lib/TableGen/Error.cpp",
     "$dawn_dxc_dir/lib/TableGen/Main.cpp",
@@ -749,6 +758,8 @@ source_set("TableGen") {
 
 executable("llvm-tblgen") {
   deps = [ ":TableGen" ]
+
+  use_libcxx_modules = use_libcxx_modules
 
   sources = [
     "$dawn_dxc_dir/utils/TableGen/AsmMatcherEmitter.cpp",
@@ -784,6 +795,8 @@ executable("llvm-tblgen") {
 
 executable("clang-tblgen") {
   deps = [ ":TableGen" ]
+
+  use_libcxx_modules = use_libcxx_modules
 
   sources = [
     "$dawn_dxc_dir/tools/clang/utils/TableGen/ClangASTNodesEmitter.cpp",
@@ -1219,6 +1232,7 @@ dxc_module("dxclib") {
     "$dawn_dxc_dir/lib/DxcSupport/WinAdapter.cpp",
     "$dawn_dxc_dir/lib/DxcSupport/WinFunctions.cpp",
     "$dawn_dxc_dir/lib/DxcSupport/WinIncludes.cpp",
+    "$dawn_dxc_dir/lib/DxcSupport/dxcapi.extval.cpp",
     "$dawn_dxc_dir/lib/DxcSupport/dxcapi.use.cpp",
     "$dawn_dxc_dir/lib/DxcSupport/dxcmem.cpp",
     "$dawn_dxc_dir/lib/DxilContainer/DxcContainerBuilder.cpp",
@@ -1519,7 +1533,7 @@ dxcompiler_sourceset("lib_hlsl") {
     "$dawn_dxc_dir/lib/HLSL/DxilPreserveAllOutputs.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilPromoteResourcePasses.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilRenameResourcesPass.cpp",
-    "$dawn_dxc_dir/lib/HLSL/DxilScalarizeVectorLoadStores.cpp",
+    "$dawn_dxc_dir/lib/HLSL/DxilScalarizeVectorIntrinsics.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilSignatureValidation.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilSimpleGVNHoist.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilTargetLowering.cpp",
@@ -2041,7 +2055,6 @@ dxcompiler_sourceset("clang_lib_frontend") {
     "$dawn_dxc_dir/tools/clang/lib/Frontend/LangStandards.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Frontend/LayoutOverrideSource.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Frontend/LogDiagnosticPrinter.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Frontend/ModuleDependencyCollector.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Frontend/MultiplexConsumer.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Frontend/PCHContainerOperations.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Frontend/PrintPreprocessedOutput.cpp",
@@ -2172,22 +2185,6 @@ dxcompiler_sourceset("clang_lib_sema") {
     "$dawn_dxc_dir/tools/clang/lib/Sema/SemaTemplateVariadic.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Sema/SemaType.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Sema/TypeLocBuilder.cpp",
-  ]
-}
-dxcompiler_sourceset("clang_lib_serialization") {
-  target_type = "static_library"  # Ensure unused globals are stripped
-  sources = [
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/ASTCommon.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/ASTReader.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/ASTReaderDecl.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/ASTReaderStmt.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/ASTWriter.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/ASTWriterDecl.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/ASTWriterStmt.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/GeneratePCH.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/GlobalModuleIndex.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/Module.cpp",
-    "$dawn_dxc_dir/tools/clang/lib/Serialization/ModuleManager.cpp",
   ]
 }
 dxcompiler_sourceset("clang_lib_tooling") {
@@ -2330,10 +2327,8 @@ source_set("windows_version_resource") {
 }
 
 shared_library("dxcompiler") {
-  if (dawn_has_build) {
-    configs -= [ "//build/config/compiler:chromium_code" ]
-    configs += [ "//build/config/compiler:no_chromium_code" ]
-  }
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [ "//build/config/compiler:no_chromium_code" ]
 
   deps = [
     ":DxcDisassembler-inc",
@@ -2350,7 +2345,6 @@ shared_library("dxcompiler") {
     ":clang_lib_parse",
     ":clang_lib_rewrite",
     ":clang_lib_sema",
-    ":clang_lib_serialization",
     ":clang_lib_tooling",
     ":clang_tools_libclang",
     ":dxcompiler_sources",
@@ -2385,10 +2379,10 @@ shared_library("dxcompiler") {
 }
 
 executable("dxc") {
-  if (dawn_has_build) {
-    configs -= [ "//build/config/compiler:chromium_code" ]
-    configs += [ "//build/config/compiler:no_chromium_code" ]
-  }
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [ "//build/config/compiler:no_chromium_code" ]
+
+  use_libcxx_modules = use_libcxx_modules
 
   if (is_win) {
     # DXC is built with multibyte character set, so it expects Win32 functions to map the ANSI ones, not the UNICODE ones.

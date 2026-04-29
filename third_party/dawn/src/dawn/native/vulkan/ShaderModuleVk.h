@@ -52,32 +52,38 @@ class PipelineLayout;
 
 class ShaderModule final : public ShaderModuleBase {
   public:
+    static ResultOrError<Ref<ShaderModule>> Create(
+        Device* device,
+        const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
+        const std::vector<tint::wgsl::Extension>& internalExtensions);
+
+    // Caller is responsible for destroying the `VkShaderModule` returned.
     struct ModuleAndSpirv {
         VkShaderModule module;
         std::vector<uint32_t> spirv;
         bool hasInputAttachment;
+        Extent3D workgroupSize;
+        std::optional<uint32_t> explicitSubgroupSize;
+    };
+    struct CompileParameters {
+        // Kept without defaults as they must be provided.
+        raw_ptr<const ProgrammableStage> stage;
+        raw_ptr<const PipelineLayout> layout;
+        ImmediateConstantMask immediateMask;
+        raw_ptr<const absl::flat_hash_set<APIBindPoint>> ycbcrExternalTextures;
+
+        bool emitPointSize = false;
+        bool polyfillPixelCenter = false;
+        bool needsMultisampledFramebufferFetch = false;
     };
 
-    static ResultOrError<Ref<ShaderModule>> Create(
-        Device* device,
-        const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-        const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult);
-
-    // Caller is responsible for destroying the `VkShaderModule` returned.
-    ResultOrError<ModuleAndSpirv> GetHandleAndSpirv(SingleShaderStage stage,
-                                                    const ProgrammableStage& programmableStage,
-                                                    const PipelineLayout* layout,
-                                                    bool emitPointSize,
-                                                    const ImmediateConstantMask& pipelineMask);
+    ResultOrError<ModuleAndSpirv> GetHandleAndSpirv(const CompileParameters& p);
 
   private:
     ShaderModule(Device* device,
                  const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
                  std::vector<tint::wgsl::Extension> internalExtensions);
     ~ShaderModule() override;
-    MaybeError Initialize(ShaderModuleParseResult* parseResult);
-    void DestroyImpl() override;
 };
 
 }  // namespace vulkan

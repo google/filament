@@ -29,6 +29,7 @@
 #define SRC_TINT_LANG_CORE_CONSTANT_INVALID_H_
 
 #include <variant>
+
 #include "src/tint/lang/core/constant/value.h"
 #include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/type/invalid.h"

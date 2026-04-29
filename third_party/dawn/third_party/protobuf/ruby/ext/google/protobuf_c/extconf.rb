@@ -18,23 +18,21 @@ if ENV["LD"]
   RbConfig::CONFIG["LD"] = RbConfig::MAKEFILE_CONFIG["LD"] = ENV["LD"]
 end
 
-if RUBY_PLATFORM =~ /darwin/ || RUBY_PLATFORM =~ /linux/ || RUBY_PLATFORM =~ /freebsd/
-  $CFLAGS += " -std=gnu99 -O3 -DNDEBUG -fvisibility=hidden -Wall -Wsign-compare -Wno-declaration-after-statement"
-else
-  $CFLAGS += " -std=gnu99 -O3 -DNDEBUG"
-end
+debug_enabled = ENV["PROTOBUF_CONFIG"] == "dbg"
 
-if RUBY_PLATFORM =~ /linux/
-  # Instruct the linker to point memcpy calls at our __wrap_memcpy wrapper.
-  $LDFLAGS += " -Wl,-wrap,memcpy"
+additional_c_flags = debug_enabled ? "-O0 -fno-omit-frame-pointer -fvisibility=default -g" : "-O3 -DNDEBUG -fvisibility=hidden"
+
+if RUBY_PLATFORM =~ /darwin/ || RUBY_PLATFORM =~ /linux/ || RUBY_PLATFORM =~ /freebsd/
+  $CFLAGS += " -std=gnu99 -Wall -Wsign-compare -Wno-declaration-after-statement #{additional_c_flags}"
+else
+  $CFLAGS += " -std=gnu99 #{additional_c_flags}"
 end
 
 $VPATH << "$(srcdir)/third_party/utf8_range"
 $INCFLAGS += " -I$(srcdir)/third_party/utf8_range"
 
-$srcs = ["protobuf.c", "convert.c", "defs.c", "message.c",
-         "repeated_field.c", "map.c", "ruby-upb.c", "wrap_memcpy.c",
-         "utf8_range.c", "shared_convert.c",
+$srcs = ["protobuf.c", "convert.c", "defs.c", "message.c", "repeated_field.c",
+         "map.c", "ruby-upb.c", "utf8_range.c", "shared_convert.c",
          "shared_message.c"]
 
 create_makefile(ext_name)
