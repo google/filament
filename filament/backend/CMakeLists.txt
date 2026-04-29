@@ -124,7 +124,7 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
             list(APPEND SRCS src/opengl/platforms/PlatformCocoaGL.mm)
             list(APPEND SRCS src/opengl/platforms/CocoaExternalImage.mm)
         endif()
-    elseif (WEBGL)
+    elseif (WASM)
         list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
         if (FILAMENT_SUPPORTS_X11)
@@ -432,7 +432,7 @@ if (FILAMENT_USE_ABSEIL_LOGGING)
 endif()
 
 # Android, iOS, and WebGL do not use bluegl.
-if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
+if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WASM)
     target_link_libraries(${TARGET} PRIVATE bluegl)
 endif()
 
@@ -463,7 +463,7 @@ if (MSVC)
     set(OPTIMIZATION_FLAGS
         /fp:fast
     )
-elseif(WEBGL)
+elseif(WASM)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
 elseif(FILAMENT_USING_GCC)
@@ -699,7 +699,7 @@ if (FILAMENT_BUILD_TESTING)
     # ==================================================================================================
     # Compute tests
     #
-    #if (NOT IOS AND NOT WEBGL)
+    #if (NOT IOS AND NOT WASM)
     #
     #add_executable(compute_test
     #        test/ComputeTest.cpp

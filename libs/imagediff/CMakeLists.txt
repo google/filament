@@ -17,7 +17,7 @@ target_link_libraries(imagediff PRIVATE
 )
 
 
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (NOT ANDROID AND NOT WASM AND NOT IOS)
     add_executable(test_imagediff tests/test_ImageDiff.cpp)
     target_link_libraries(test_imagediff PRIVATE imagediff gtest image utils)
 endif()
