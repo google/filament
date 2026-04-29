@@ -1,0 +1,185 @@
+/*
+ * Copyright (C) 2026 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "VulkanConstants.h"
+#include "VulkanFencePool.h"
+
+using namespace bluevk;
+using namespace utils;
+
+namespace filament::backend {
+
+namespace {
+
+static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
+
+}  // namespace
+
+VulkanFencePool::VulkanFencePool(VulkanContext const& context,
+                                 VkDevice device,
+                                 uint32_t minPoolSize)
+    : mContext(context), mDevice(device), mMinPoolSize(minPoolSize)
+{
+    mFences.reserve(minPoolSize);
+    for (size_t i = 0; i < minPoolSize; ++i) {
+        VkFence fence = allocateFence();
+        assert_invariant(fence != VK_NULL_HANDLE);
+        if (fence != VK_NULL_HANDLE) {
+            mFences.push_back(fence);
+            mFenceReturnTimestamps.push_back(mCurrFrame);
+        }
+    }
+    mNumFences = mFences.size();  // Only count the fences we successfully acquired.
+}
+
+std::shared_ptr<VulkanCmdFence> VulkanFencePool::acquireFenceStatus() noexcept {
+    VkFence fence = acquireFence();
+    std::function<void(VkFence)> recycleFn = [this](VkFence fence) {
+        if (fence != VK_NULL_HANDLE) {
+            this->releaseFence(fence);
+        }
+    };
+    const auto fenceStatus = std::make_shared<VulkanCmdFence>(fence, recycleFn);
+    // Store a weak pointer to the fence status, so we can clear the fence
+    // later if terminate() is called.
+    mFenceStatuses.push_back(std::weak_ptr<VulkanCmdFence>(fenceStatus));
+    return fenceStatus;
+}
+
+void VulkanFencePool::gc() noexcept {
+    // Clear any fence statuses that no longer exist.
+    for (auto it = mFenceStatuses.begin(); it != mFenceStatuses.end();) {
+        if (it->expired()) {
+            it = mFenceStatuses.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    if (++mCurrFrame <= TIME_BEFORE_EVICTION) {
+        return;
+    }
+
+    // Lock now to avoid race conditions with other threads that may be
+    // clearing fenceStatus objects, and trying to return fences to the
+    // pool.
+    std::unique_lock<std::mutex> lock (mFenceListMutex);
+    while (mNumFences > mMinPoolSize && !mFenceReturnTimestamps.empty() &&
+           mFenceReturnTimestamps.front() + TIME_BEFORE_EVICTION < mCurrFrame) {
+        mFenceReturnTimestamps.pop_front();
+        destroyFence(mFences.back());
+        mFences.pop_back();
+        --mNumFences;
+    }
+
+    // std::unique_lock<std::mutex> lock (mFenceListMutex);
+
+    // // Simply prevent holding more fences than the min pool size.
+    // // Is it possible we have more than the number of fences we
+    // // need? Yes, but we will never exceed that by more than mMinPoolSize.
+    // // TODO: destroy fences without holding lock.
+    // if (mFences.size() > mMinPoolSize) {
+    //     size_t numFencesToFree = mFences.size() - mMinPoolSize;
+    //     for (size_t i = 0; i < numFencesToFree; ++i) {
+    //         destroyFence(mFences.back());
+    //         mFences.pop_back();
+    //         --mNumFences;
+    //     }
+    // }
+}
+
+void VulkanFencePool::terminate() noexcept {
+    for (const auto& weakFenceStatus : mFenceStatuses) {
+        if (const auto fenceStatus = weakFenceStatus.lock()) {
+            // Indirectly, this will return the fence to the pool,
+            // using the recycleFn.
+            fenceStatus->clearFence();
+        }
+    }
+    mFenceStatuses.clear();
+
+    // No need to lock. We do not allow usages of fences aside from
+    // the ones provided in fenceStatuses, and we have reclaimed
+    // fences from all fenceStatus objects.
+    for (const auto fence : mFences) {
+        destroyFence(fence);
+    }
+    mFences.clear();
+    mNumFences = 0;
+}
+
+VkFence VulkanFencePool::acquireFence() noexcept {
+    std::unique_lock<std::mutex> lock (mFenceListMutex);
+    if (!mFences.empty()) {
+        VkFence fence = mFences.back();
+        mFences.pop_back();
+        mFenceReturnTimestamps.pop_back();
+        return fence;
+    } else {
+        VkFence fence = allocateFence();
+        if (fence != VK_NULL_HANDLE) {
+            ++mNumFences;
+        }
+        return fence;
+    }
+}
+
+void VulkanFencePool::releaseFence(VkFence fence) noexcept {
+    // This only happens if fence allocation failed, which is a fairly
+    // major issue. 
+    assert_invariant(fence != VK_NULL_HANDLE);
+    if (fence == VK_NULL_HANDLE) {
+        return;
+    }
+
+    // Reset the fence before returning it to the pool of available
+    // fences.
+    vkResetFences(mDevice, 1, &fence);
+
+    // Since fences may be released concurrently, make sure we lock.
+    std::unique_lock<std::mutex> lock (mFenceListMutex);
+    mFences.push_back(fence);
+    mFenceReturnTimestamps.push_back(mCurrFrame);
+}
+
+VkFence VulkanFencePool::allocateFence() const noexcept {
+    VkFence fence = VK_NULL_HANDLE;
+    VkFenceCreateInfo createInfo {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = VK_NULL_HANDLE,
+        .flags = 0,
+    };
+    VkExportFenceCreateInfo exportFenceCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
+        .handleTypes = mContext.getFenceExportFlags()
+    };
+    // Necessary to guard this. Otherwise, swiftshader would throw an error.
+    if (mContext.getFenceExportFlags()) {
+        createInfo.pNext = &exportFenceCreateInfo;
+    }
+    VkResult res = vkCreateFence(mDevice, &createInfo, VKALLOC, &fence);
+    if (res != VK_SUCCESS) {
+        FVK_LOGE << "Failed to create fence: " << res << "; skipping. This may cause issues later.";
+        return VK_NULL_HANDLE;
+    }
+    return fence;
+}
+
+void VulkanFencePool::destroyFence(VkFence fence) const noexcept {
+    vkDestroyFence(mDevice, fence, VKALLOC);
+}
+
+} // namespace filament::backend

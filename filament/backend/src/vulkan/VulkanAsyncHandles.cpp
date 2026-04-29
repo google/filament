@@ -17,6 +17,7 @@
 #include "VulkanAsyncHandles.h"
 
 #include "VulkanConstants.h"
+#include "VulkanFencePool.h"
 
 #include "vulkan/utils/Spirv.h"
 
@@ -181,8 +182,20 @@ void VulkanProgram::flushPushConstants(VkPipelineLayout layout) {
     mQueuedPushConstants.clear();
 }
 
+VulkanCmdFence::VulkanCmdFence(VkFence fence, std::function<void(VkFence)> recycleFn)
+    : mFence(fence), mRecycleFn(recycleFn) {
+}
+
+VulkanCmdFence::~VulkanCmdFence() {
+    // Ensure the fence can't be cleared during this operation.
+    std::shared_lock rl(mLock);
+    if (mFence != VK_NULL_HANDLE && mRecycleFn != nullptr) {
+        mRecycleFn(mFence);
+    }
+}
+
 std::shared_ptr<VulkanCmdFence> VulkanCmdFence::completed() noexcept {
-    auto cmdFence = std::make_shared<VulkanCmdFence>(VK_NULL_HANDLE);
+    auto cmdFence = std::make_unique<VulkanCmdFence>(VK_NULL_HANDLE);
     cmdFence->mStatus = VK_SUCCESS;
     return cmdFence;
 }
@@ -224,6 +237,12 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     // place simultaneously. vkResetFence is only called once it knows the fence has signaled,
     // which guaranties that vkResetFence won't have to wait too long, just enough for
     // all the vkWaitForFences() to return.
+    if (mFence == VK_NULL_HANDLE) {
+        // This can happen if this is a 'completed' fence, or if
+        // the fence has been cleared because Filament is being
+        // terminated.
+        return FenceStatus::CONDITION_SATISFIED;
+    }
     VkResult const status = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
     if (status == VK_TIMEOUT) {
         return FenceStatus::TIMEOUT_EXPIRED;
@@ -237,15 +256,6 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     }
 
     return FenceStatus::ERROR; // not supported
-}
-
-void VulkanCmdFence::resetFence(VkDevice device) {
-    // This lock prevents vkResetFences() from being called simultaneously with vkWaitForFences(),
-    // but by construction, when we're here, we know that the fence has signaled and
-    // vkWaitForFences() will return shortly.
-    std::lock_guard const l(mLock);
-    assert_invariant(mStatus == VK_SUCCESS);
-    vkResetFences(device, 1, &mFence);
 }
 
 } // namespace filament::backend

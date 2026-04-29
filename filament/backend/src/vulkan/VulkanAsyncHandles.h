@@ -30,6 +30,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -37,6 +38,8 @@
 #include <vector>
 
 namespace filament::backend {
+
+class VulkanFencePool;
 
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
 using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
@@ -157,8 +160,9 @@ private:
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    explicit VulkanCmdFence(VkFence fence) : mFence(fence) { }
-    ~VulkanCmdFence() = default;
+    explicit VulkanCmdFence(VkFence fence,
+                            std::function<void(VkFence)> recycleFn = nullptr);
+    ~VulkanCmdFence();
 
     // Creates a VulkanCmdFence with its status set to VK_SUCCESS. It holds
     // a null handle; it is assumed that any user of this object will avoid
@@ -173,12 +177,38 @@ struct VulkanCmdFence {
         mCond.notify_all();
     }
 
+    // This is safe to use in the backend thread, as the backend
+    // thread is the only thread that will be calling clearFence().
+    inline VkFence getVkFence() {
+        return mFence;
+    }
+
     VkResult getStatus() {
         std::shared_lock const l(mLock);
         return mStatus;
     }
 
-    void resetFence(VkDevice device);
+    // Clears the fence from this struct. It assumes that either
+    // a) the recycleFn was defined in the ctor, and knows how to
+    // dispose of the fence, or b) the creator of this object owns
+    // the fence.
+    inline void clearFence() {
+        std::lock_guard l(mLock);
+        if (mRecycleFn != nullptr) {
+            mRecycleFn(mFence);
+        }
+
+        mFence = VK_NULL_HANDLE;
+        mRecycleFn = nullptr;
+    }
+
+    template <typename T>
+    T lockAndUseFence(std::function<T(VkFence)> cb) {
+        std::shared_lock const rl(mLock);
+        assert_invariant(cb != nullptr);
+        // Note - mFence *can* be nullptr.
+        return cb(mFence);
+    }
 
     FenceStatus wait(VkDevice device, uint64_t timeout,
         std::chrono::steady_clock::time_point until);
@@ -198,6 +228,8 @@ private:
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
     VkResult mStatus{ VK_INCOMPLETE };
     VkFence mFence;
+
+    std::function<void(VkFence)> mRecycleFn;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
