@@ -36,6 +36,9 @@
 #include <private/filament/UibStructs.h>
 #include <private/backend/BackendUtils.h>
 
+#include <utils/Invocable.h>
+#include <utils/Slice.h>
+
 #include "Allocators.h"
 #include "details/Material.h"
 #include "details/Camera.h"
@@ -299,6 +302,127 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_EQ(tcm.getChildrenEnd(parent)++, tcm.getChildrenEnd(parent));
     EXPECT_EQ(tcm.getChildrenBegin(parent), tcm.getChildrenEnd(parent));
     EXPECT_EQ(c, tcm.getChildCount(newParent));
+}
+
+TEST(FilamentTest, RenderableManagerCallback) {
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
+    auto& rm = engine->getRenderableManager();
+    EntityManager& em = EntityManager::get();
+    Entity e = em.create();
+    
+    int callbackCount = 0;
+    auto callback = [&](Slice<const Entity> entities) {
+        callbackCount += entities.size();
+    };
+    
+    rm.registerChangeCallback(&rm, std::move(callback));
+    
+    // Test addComponent
+    RenderableManager::Builder(1).boundingBox({{0,0,0},{1,1,1}}).build(*engine, e);
+    rm.flushNotifications();
+    EXPECT_GT(callbackCount, 0);
+    
+    callbackCount = 0;
+    
+    // Test modify
+    auto instance = rm.getInstance(e);
+    rm.setLayerMask(instance, 0x2);
+    rm.flushNotifications();
+    EXPECT_EQ(callbackCount, 1);
+    
+    callbackCount = 0;
+    
+    // Test removeComponent
+    rm.destroy(e, engine->getDriverApi());
+    rm.flushNotifications();
+    EXPECT_EQ(callbackCount, 1);
+    
+    rm.unregisterChangeCallback(&rm);
+    em.destroy(e);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, LightManagerCallback) {
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
+    auto& lm = engine->getLightManager();
+    EntityManager& em = EntityManager::get();
+    Entity e = em.create();
+    
+    int callbackCount = 0;
+    auto callback = [&](Slice<const Entity> entities) {
+        callbackCount += entities.size();
+    };
+    
+    lm.registerChangeCallback(&lm, std::move(callback));
+    
+    // Test addComponent
+    LightManager::Builder(LightManager::Type::POINT).build(*engine, e);
+    lm.flushNotifications();
+    EXPECT_GT(callbackCount, 0);
+    
+    callbackCount = 0;
+    
+    // Test modify
+    auto instance = lm.getInstance(e);
+    lm.setIntensity(instance, 2000.0f, FLightManager::IntensityUnit::LUMEN_LUX);
+    lm.flushNotifications();
+    EXPECT_EQ(callbackCount, 1);
+    
+    callbackCount = 0;
+    
+    // Test removeComponent
+    lm.destroy(e);
+    lm.flushNotifications();
+    EXPECT_EQ(callbackCount, 1);
+    
+    lm.unregisterChangeCallback(&lm);
+    em.destroy(e);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, TransformManagerCallback) {
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
+    auto& tcm = engine->getTransformManager();
+    EntityManager& em = EntityManager::get();
+    Entity e = em.create();
+    
+    int callbackCount = 0;
+    auto callback = [&](Slice<const Entity> entities) {
+        callbackCount += entities.size();
+    };
+    
+    tcm.registerChangeCallback(&tcm, std::move(callback));
+    
+    // Test addComponent
+    tcm.create(e);
+    tcm.flushNotifications();
+    EXPECT_GT(callbackCount, 0);
+    
+    callbackCount = 0;
+    
+    // Test modify without transaction
+    auto instance = tcm.getInstance(e);
+    auto t = mat4f::translation(float3{ 1, 2, 3 });
+    tcm.setTransform(instance, t);
+    tcm.flushNotifications();
+    EXPECT_EQ(callbackCount, 1);
+    
+    callbackCount = 0;
+    
+    // Test transaction
+    tcm.openLocalTransformTransaction();
+    tcm.setTransform(instance, mat4f::translation(float3{ 4, 5, 6 }));
+    tcm.flushNotifications();
+    EXPECT_EQ(callbackCount, 0);
+    
+    tcm.commitLocalTransformTransaction();
+    tcm.flushNotifications();
+    EXPECT_EQ(callbackCount, 1);
+    
+    tcm.unregisterChangeCallback(&tcm);
+    tcm.destroy(e);
+    em.destroy(e);
+    Engine::destroy((Engine**)&engine);
 }
 
 TEST(FilamentTest, UniformInterfaceBlock) {

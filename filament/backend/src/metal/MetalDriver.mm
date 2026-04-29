@@ -232,6 +232,24 @@ MetalDriver::MetalDriver(
     mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this, compilerMode);
     mContext->shaderCompiler->init();
 
+    if (driverConfig.asynchronousMode != AsynchronousMode::NONE) {
+        mJobQueue = JobQueue::create();
+
+        bool const useThreadWorker =
+                (driverConfig.asynchronousMode == AsynchronousMode::THREAD_PREFERRED) &&
+                UTILS_HAS_THREADING;
+
+        if (useThreadWorker) {
+            ThreadWorker::Config threadWorkerConfig{
+                "JobQueueThreadWorker", utils::JobSystem::Priority::NORMAL, []() {}, // onBegin
+                []() {},                                                             // onEnd
+            };
+            mJobWorker = ThreadWorker::create(mJobQueue, std::move(threadWorkerConfig));
+        } else {
+            mJobWorker = AmortizationWorker::create(mJobQueue);
+        }
+    }
+
 #if defined(FILAMENT_METAL_PROFILING)
     mContext->log = os_log_create("com.google.filament", "Metal");
     mContext->signpostId = os_signpost_id_generate(mContext->log);
@@ -466,7 +484,16 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
 void MetalDriver::createIndexBufferAsyncR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage, CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    auto elementSize = (uint8_t) getElementTypeSize(elementType);
+    auto* indexBuffer = construct_handle<MetalIndexBuffer>(ibh, *mContext, usage, elementSize,
+            indexCount, true);
+    auto& buffer = indexBuffer->buffer;
+    FILAMENT_CHECK_POSTCONDITION(buffer.wasAllocationSuccessful())
+            << "Could not allocate Metal index buffer of size " << buffer.getSize()
+            << ", tag=" << tag.c_str_safe();
+    buffer.setLabel(tag);
+    mHandleAllocator.associateTagToHandle(ibh.getId(), std::move(tag));
+    scheduleCallback(handler, user, callback);
 }
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
@@ -483,7 +510,14 @@ void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteC
 void MetalDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage, CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    auto* bufferObject = construct_handle<MetalBufferObject>(boh, *mContext, bindingType, usage,
+            byteCount, true);
+    FILAMENT_CHECK_POSTCONDITION(bufferObject->getBuffer()->wasAllocationSuccessful())
+            << "Could not allocate Metal buffer of size " << byteCount
+            << ", tag=" << tag.c_str_safe();
+    bufferObject->getBuffer()->setLabel(tag);
+    mHandleAllocator.associateTagToHandle(boh.getId(), std::move(tag));
+    scheduleCallback(handler, user, callback);
 }
 
 // fixme: TextureUsage is a bitfield
@@ -538,10 +572,26 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
 }
 
 void MetalDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
-        uint32_t depth, TextureUsage usage, CallbackHandler* handler,
-        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+        TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
+        void* user, utils::ImmutableCString&& tag) {
+    // Clamp sample count to what the device supports.
+    auto& sc = mContext->sampleCountLookup;
+    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
+
+    MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, target, levels, format,
+            samples, width, height, depth, usage, true);
+    mContext->textures.insert(texture);
+
+    texture->setLabel(tag);
+
+    DEBUG_LOG("createTextureAsyncR(th = %d, target = %s, levels = %d, format = ?, samples = %d, "
+              "width = "
+              "%d, height = %d, depth = %d, usage = %s)\n",
+            th.getId(), stringify(target), levels, samples, width, height, depth, stringify(usage));
+
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
+    scheduleCallback(handler, user, callback);
 }
 
 void MetalDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
@@ -568,7 +618,8 @@ void MetalDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<Hw
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    createTextureViewSwizzleR(th, srch, r, g, b, a, std::move(tag));
+    scheduleCallback(handler, user, callback);
 }
 
 void MetalDriver::createTextureExternalImage2R(Handle<HwTexture> th,
@@ -630,12 +681,13 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
-void MetalDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t i,
-        SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+void MetalDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t i, SamplerType target,
+        uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage, CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    importTextureR(th, i, target, levels, format, samples, width, height, depth, usage,
+            std::move(tag));
+    scheduleCallback(handler, user, callback);
 }
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
@@ -924,23 +976,23 @@ Handle<HwTexture> MetalDriver::importTextureAsyncS() noexcept {
 }
 
 AsyncCallId MetalDriver::update3DImageAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId MetalDriver::setVertexBufferObjectAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId MetalDriver::updateBufferObjectAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId MetalDriver::updateIndexBufferAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 Handle<HwRenderPrimitive> MetalDriver::createRenderPrimitiveS() noexcept {
@@ -992,8 +1044,8 @@ Handle<HwDescriptorSet> MetalDriver::createDescriptorSetS() noexcept {
 }
 
 AsyncCallId MetalDriver::queueCommandAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 void MetalDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
@@ -1009,7 +1061,13 @@ void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
 }
 
 void MetalDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
-    if (ibh) {
+    if (UTILS_UNLIKELY(!ibh)) {
+        return;
+    }
+    auto* ib = handle_cast<MetalIndexBuffer>(ibh);
+    if (ib->asynchronous) {
+        getJobQueue()->push([this, ibh]() mutable { destruct_handle<MetalIndexBuffer>(ibh); });
+    } else {
         destruct_handle<MetalIndexBuffer>(ibh);
     }
 }
@@ -1018,7 +1076,12 @@ void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (UTILS_UNLIKELY(!boh)) {
         return;
     }
-    destruct_handle<MetalBufferObject>(boh);
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    if (bo->asynchronous) {
+        getJobQueue()->push([this, boh]() mutable { destruct_handle<MetalBufferObject>(boh); });
+    } else {
+        destruct_handle<MetalBufferObject>(boh);
+    }
 }
 
 void MetalDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -1053,7 +1116,11 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     auto* metalTexture = handle_cast<MetalTexture>(th);
     mContext->textures.erase(metalTexture);
 
-    destruct_handle<MetalTexture>(th);
+    if (metalTexture->asynchronous) {
+        getJobQueue()->push([this, th]() mutable { destruct_handle<MetalTexture>(th); });
+    } else {
+        destruct_handle<MetalTexture>(th);
+    }
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -1130,6 +1197,10 @@ void MetalDriver::terminate() {
     MetalExternalImage::shutdown(*mContext);
     mContext->blitter->shutdown();
     mContext->shaderCompiler->terminate();
+
+    if (getJobWorker()) {
+        getJobWorker()->terminate();
+    }
 }
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
@@ -1351,7 +1422,7 @@ bool MetalDriver::isDepthClampSupported() {
 }
 
 bool MetalDriver::isAsynchronousModeEnabled() {
-    return false;
+    return getJobQueue() != nullptr;
 }
 
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -1425,16 +1496,37 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
     FILAMENT_CHECK_PRECONDITION(data.buffer)
             << "updateIndexBuffer called with a null buffer.";
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);
-    ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset,
+    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
+    ib->buffer.copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
             [&]() { return mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
 }
+
 void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
         BufferDescriptor&& data, uint32_t byteOffset, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
-}
+    FILAMENT_CHECK_PRECONDITION(data.buffer)
+            << "updateIndexBufferAsyncR called with a null buffer.";
 
+    id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
+    auto* ib = handle_cast<MetalIndexBuffer>(ibh);
+    auto tag = mHandleAllocator.getHandleTag(ibh.getId());
+
+    getJobQueue()->push(
+            [this, cmdBuffer, ib, data = std::move(data), byteOffset, handler, callback, user,
+                    tag = std::move(tag)]() mutable {
+                ib->buffer.copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
+                        [&tag]() { return tag.c_str_safe(); });
+
+                [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+                  scheduleCallback(handler, user, callback);
+                }];
+
+                [cmdBuffer commit];
+                scheduleDestroy(std::move(data));
+            },
+            jobId);
+}
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
@@ -1454,7 +1546,31 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
 void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
         BufferDescriptor&& data, uint32_t byteOffset, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
+            << "updateBufferObjectAsyncR must be called outside of a render pass. tag="
+            << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
+    FILAMENT_CHECK_PRECONDITION(data.buffer)
+            << "updateBufferObjectAsyncR called with a null buffer. tag="
+            << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
+
+    id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    auto tag = mHandleAllocator.getHandleTag(boh.getId());
+
+    getJobQueue()->push(
+            [this, cmdBuffer, bo, data = std::move(data), byteOffset, handler, callback, user,
+                    tag = std::move(tag)]() mutable {
+                bo->getBuffer()->copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
+                        [&tag]() { return tag.c_str_safe(); });
+
+                [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+                  scheduleCallback(handler, user, callback);
+                }];
+
+                [cmdBuffer commit];
+                scheduleDestroy(std::move(data));
+            },
+            jobId);
 }
 
 void MetalDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
@@ -1485,7 +1601,8 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
 void MetalDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
         uint32_t index, Handle<HwBufferObject> boh, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    setVertexBufferObject(vbh, index, boh);
+    scheduleCallback(handler, user, callback);
 }
 
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
@@ -1495,7 +1612,9 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
     FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
             << "update3DImage must be called outside of a render pass.";
     auto tex = handle_cast<MetalTexture>(th);
-    tex->loadImage(level, MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
+    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
+    tex->loadImage(cmdBuffer, level,
+            MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
     scheduleDestroy(std::move(data));
 
     DEBUG_LOG(
@@ -1504,12 +1623,33 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
             th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
 }
 
-void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
-        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-        uint32_t width, uint32_t height, uint32_t depth,
-        PixelBufferDescriptor&& data, CallbackHandler* handler,
+void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, uint32_t level,
+        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height,
+        uint32_t depth, PixelBufferDescriptor&& data, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
+            << "update3DImageAsyncR must be called outside of a render pass.";
+    FILAMENT_CHECK_PRECONDITION(data.buffer) << "update3DImageAsyncR called with a null buffer.";
+
+    id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
+    auto* tex = handle_cast<MetalTexture>(th);
+    auto tag = mHandleAllocator.getHandleTag(th.getId());
+
+    getJobQueue()->push(
+            [this, cmdBuffer, tex, level, xoffset, yoffset, zoffset, width, height, depth,
+                    data = std::move(data), handler, callback, user,
+                    tag = std::move(tag)]() mutable {
+                tex->loadImage(cmdBuffer, level,
+                        MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
+
+                [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+                  scheduleCallback(handler, user, callback);
+                }];
+
+                [cmdBuffer commit];
+                scheduleDestroy(std::move(data));
+            },
+            jobId);
 }
 
 void MetalDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
@@ -2496,12 +2636,20 @@ void MetalDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t
 
 void MetalDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,
         CallbackHandler* handler, CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+    getJobQueue()->push(
+            [this, command = std::move(command), handler, callback, user]() {
+                if (command) {
+                    command();
+                }
+                scheduleCallback(handler, user, callback);
+            },
+            jobId);
 }
 
 bool MetalDriver::cancelAsyncJob(AsyncCallId jobId) {
-    // TODO: implement this.
-    return false;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->cancel(jobId);
 }
 
 // explicit instantiation of the Dispatcher
