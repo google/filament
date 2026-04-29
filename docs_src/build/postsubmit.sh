@@ -19,7 +19,7 @@ FILAMENT_BOT_TOKEN=$2
 set -ex
 
 function update_to_main() {
-    ./build.sh -p webgl release
+    ./build.sh -p wasm release
     python3 docs_src/build/run.py
     mkdir -p tmp
     pushd .

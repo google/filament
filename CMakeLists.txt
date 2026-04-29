@@ -177,7 +177,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==================================================================================================
 # OS specific
 # ==================================================================================================
-if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
+if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WASM)
     set(LINUX TRUE)
 else()
     # since cmake 3.25 LINUX is automatically set based on CMAKE_SYSTEM_NAME, which the android
@@ -218,7 +218,7 @@ if (LINUX)
     endif()
 endif()
 
-if (ANDROID OR WEBGL OR IOS OR FILAMENT_LINUX_IS_MOBILE)
+if (ANDROID OR WASM OR IOS OR FILAMENT_LINUX_IS_MOBILE)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
@@ -226,7 +226,7 @@ if (ANDROID)
     add_definitions(-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__)
 endif()
 
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
+if (NOT ANDROID AND NOT WASM AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
     set(IS_HOST_PLATFORM TRUE)
 endif()
 
@@ -473,7 +473,7 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffunction-sections -fdata-sections")
 endif()
 
-if (ANDROID OR WEBGL)
+if (ANDROID OR WASM)
     # On Android and WebGL RELEASE builds, we omit unwind info to save space.
     # (We keep unwind info on iOS to allow readable stack traces in crash reports.)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
@@ -482,11 +482,11 @@ endif()
 # With WebGL, we disable RTTI because we pass emscripten::val back and forth
 # between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
 # NOTE: This is not documented in emscripten so we should consider a different approach.
-if (WEBGL)
+if (WASM)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
-if (WEBGL_PTHREADS)
+if (WASM_PTHREADS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 
@@ -503,7 +503,7 @@ if (ANDROID)
     # keep STL debug infos (mimics what the NDK does)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-limit-debug-info")
 endif()
-if (NOT MSVC AND NOT WEBGL)
+if (NOT MSVC AND NOT WASM)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
@@ -522,7 +522,7 @@ endif()
 # Linker flags
 # ==================================================================================================
 # Strip unused sections
-if (NOT WEBGL)
+if (NOT WASM)
     set(GC_SECTIONS "-Wl,--gc-sections")
 endif()
 
@@ -556,7 +556,7 @@ endif()
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS} ${NO_EXEC_STACK}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT}")
 
-if (WEBGL_PTHREADS)
+if (WASM_PTHREADS)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pthread")
 endif()
 
@@ -586,7 +586,7 @@ endif()
 
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
 # it at run time.
-if (WIN32 OR WEBGL OR IOS)
+if (WIN32 OR WASM OR IOS)
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" OFF)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)
@@ -604,7 +604,7 @@ if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
 endif()
 
 # Build with Metal support on non-WebGL Apple platforms.
-if (APPLE AND NOT WEBGL)
+if (APPLE AND NOT WASM)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
 else()
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" OFF)
@@ -614,7 +614,7 @@ if (FILAMENT_SUPPORTS_METAL)
 endif()
 
 # Building filamat increases build times and isn't required for web, so turn it off by default.
-if (NOT WEBGL)
+if (NOT WASM)
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" ON)
 else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
@@ -840,7 +840,7 @@ if (FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR)
    set(IMPORT_EXECUTABLES_DIR ${FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR})
 endif()
 
-if (WEBGL)
+if (WASM)
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
 else()
     if (FILAMENT_EXPORT_PREBUILT_EXECUTABLES OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
@@ -875,7 +875,7 @@ function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
     set(RESGEN_HEADER "${ARCHIVE_DIR}/${ARCHIVE_NAME}.h" PARENT_SCOPE)
     # Visual Studio makes it difficult to use assembly without using MASM. MASM doesn't support
     # the equivalent of .incbin, so on Windows we'll just tell resgen to output a C file.
-    if (WEBGL OR WIN32 OR ANDROID_ON_WINDOWS)
+    if (WASM OR WIN32 OR ANDROID_ON_WINDOWS)
         set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
         set(RESGEN_FLAGS -qcx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
         set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
@@ -980,7 +980,7 @@ add_subdirectory(${FILAMENT}/filament)
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
-if (WEBGL)
+if (WASM)
     add_subdirectory(web/filament-js)
     add_subdirectory(web/examples)
 endif()

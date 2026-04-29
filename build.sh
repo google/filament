@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Host tools required by Android, WebGL, and iOS builds
+# Host tools required by Android, WASM, and iOS builds
 MOBILE_HOST_TOOLS="matc resgen cmgen filamesh uberz"
 WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
 
@@ -34,7 +34,7 @@ function print_help {
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p platform1,platform2,..."
-    echo "        Where platformN is [desktop|android|ios|webgl|all]."
+    echo "        Where platformN is [desktop|android|ios|wasm|all]."
     echo "        Platform(s) to build, defaults to desktop."
     echo "        Building for iOS will automatically perform a partial desktop build."
     echo "    -q abi1,abi2,..."
@@ -173,7 +173,7 @@ ISSUE_RELEASE_BUILD=false
 ISSUE_ANDROID_BUILD=false
 ISSUE_IOS_BUILD=false
 ISSUE_DESKTOP_BUILD=true
-ISSUE_WEBGL_BUILD=false
+ISSUE_WASM_BUILD=false
 
 # Default: all
 ABI_ARMEABI_V7A=true
@@ -356,12 +356,12 @@ function build_desktop {
     fi
 }
 
-function build_webgl_with_target {
+function build_wasm_with_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 
-    echo "Building WebGL ${lc_target}..."
-    mkdir -p "out/cmake-webgl-${lc_target}"
-    pushd "out/cmake-webgl-${lc_target}" > /dev/null
+    echo "Building WASM ${lc_target}..."
+    mkdir -p "out/cmake-wasm-${lc_target}"
+    pushd "out/cmake-wasm-${lc_target}" > /dev/null
 
     if [[ ! "${BUILD_TARGETS}" ]]; then
         BUILD_TARGETS=${BUILD_CUSTOM_TARGETS}
@@ -378,13 +378,13 @@ function build_webgl_with_target {
             ${IMPORT_EXECUTABLES_DIR_OPTION} \
             -DCMAKE_TOOLCHAIN_FILE="${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
             -DCMAKE_BUILD_TYPE="$1" \
-            -DCMAKE_INSTALL_PREFIX="../webgl-${lc_target}/filament" \
-            -DWEBGL=1 \
+            -DCMAKE_INSTALL_PREFIX="../wasm-${lc_target}/filament" \
+            -DWASM=1 \
             ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${EXCEPTIONS_OPTION} \
             ../..
-        ln -sf "out/cmake-webgl-${lc_target}/compile_commands.json" \
+        ln -sf "out/cmake-wasm-${lc_target}/compile_commands.json" \
            ../../compile_commands.json
         ${BUILD_COMMAND} ${BUILD_TARGETS}
         )
@@ -416,7 +416,7 @@ function build_webgl_with_target {
     popd > /dev/null
 }
 
-function build_webgl {
+function build_wasm {
     # For the host tools, suppress install and always use Release.
     local old_install_command=${INSTALL_COMMAND}; INSTALL_COMMAND=
     local old_issue_debug_build=${ISSUE_DEBUG_BUILD}; ISSUE_DEBUG_BUILD=false
@@ -429,11 +429,11 @@ function build_webgl {
     ISSUE_RELEASE_BUILD=${old_issue_release_build}
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
-        build_webgl_with_target "Debug"
+        build_wasm_with_target "Debug"
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
-        build_webgl_with_target "Release"
+        build_wasm_with_target "Release"
     fi
 }
 
@@ -809,7 +809,7 @@ function validate_build_command {
         fi
     fi
     # If building a WebAssembly module, ensure we know where Emscripten lives.
-    if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
+    if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
         echo "Error: EMSDK is not set, exiting"
         exit 1
     fi
@@ -835,7 +835,7 @@ function run_test {
 }
 
 function run_tests {
-    if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
+    if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
         if ! echo "TypeScript $(tsc --version)" ; then
             tsc --noEmit \
                 third_party/gl-matrix/gl-matrix.d.ts \
@@ -920,18 +920,18 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
                     ios)
                         ISSUE_IOS_BUILD=true
                     ;;
-                    webgl)
-                        ISSUE_WEBGL_BUILD=true
+                    wasm)
+                        ISSUE_WASM_BUILD=true
                     ;;
                     all)
                         ISSUE_ANDROID_BUILD=true
                         ISSUE_IOS_BUILD=true
                         ISSUE_DESKTOP_BUILD=true
-                        ISSUE_WEBGL_BUILD=false
+                        ISSUE_WASM_BUILD=false
                     ;;
                     *)
                         echo "Unknown platform ${platform}"
-                        echo "Platform must be one of [desktop|android|ios|webgl|all]"
+                        echo "Platform must be one of [desktop|android|ios|wasm|all]"
                         echo ""
                         exit 1
                     ;;
@@ -1112,8 +1112,8 @@ if [[ "${ISSUE_IOS_BUILD}" == "true" ]]; then
     check_debug_release_build build_ios
 fi
 
-if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
-    check_debug_release_build build_webgl
+if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
+    check_debug_release_build build_wasm
 fi
 
 if [[ "${RUN_TESTS}" == "true" ]]; then

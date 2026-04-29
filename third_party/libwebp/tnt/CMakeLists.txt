@@ -15,11 +15,11 @@ set(WEBP_BUILD_WEBPMUX OFF)
 set(WEBP_BUILD_EXTRAS OFF)
 set(WEBP_BUILD_FUZZTEST OFF)
 
-if (WEBGL)
+if (WASM)
     set(WEBP_BUILD_WEBP_JS ON)
     set(WEBP_ENABLE_SIMD OFF)
     # ensure non-empty config var value
-    if (WEBGL_PTHREADS)
+    if (WASM_PTHREADS)
         set(WEBP_USE_THREAD ON)
     else()
         set(WEBP_USE_THREAD OFF)

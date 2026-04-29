@@ -114,7 +114,7 @@ if (APPLE)
     list(APPEND SRCS src/darwin/Systrace.cpp)
     list(APPEND SRCS src/darwin/Tracing.cpp)
 endif()
-if (WEBGL)
+if (WASM)
     list(APPEND SRCS src/web/Path.cpp)
 endif()
 
@@ -206,12 +206,12 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Status.cpp
     )
 
-    if (WEBGL_PTHREADS)
+    if (WASM_PTHREADS)
         target_compile_definitions(${TARGET} PUBLIC -DFILAMENT_WASM_THREADS)
     endif()
 
     # The Path tests are platform-specific
-    if (NOT WEBGL)
+    if (NOT WASM)
         if (WIN32)
             list(APPEND TEST_SRCS test/test_WinPath.cpp)
         else()
@@ -229,7 +229,7 @@ endif()
 # Benchmarks
 # ==================================================================================================
 
-if (FILAMENT_BUILD_TESTING AND NOT WEBGL)
+if (FILAMENT_BUILD_TESTING AND NOT WASM)
 
     add_library(benchmark_${TARGET}_callee SHARED benchmark/benchmark_callee.cpp)
     set_target_properties(benchmark_${TARGET}_callee PROPERTIES FOLDER Benchmarks)
