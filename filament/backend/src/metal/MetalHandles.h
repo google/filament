@@ -478,8 +478,6 @@ private:
 
     struct State {
         FenceStatus status { FenceStatus::TIMEOUT_EXPIRED };
-        std::condition_variable cv;
-        std::mutex mutex;
     };
     std::shared_ptr<State> state { std::make_shared<State>() };
 

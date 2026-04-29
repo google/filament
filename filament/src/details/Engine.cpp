@@ -350,10 +350,6 @@ void FEngine::init() {
 
     mActiveFeatureLevel = std::min(mActiveFeatureLevel, driverApi.getFeatureLevel());
 
-#ifndef FILAMENT_ENABLE_FEATURE_LEVEL_0
-    assert_invariant(mActiveFeatureLevel > FeatureLevel::FEATURE_LEVEL_0);
-#endif
-
     LOG(INFO) << "Backend feature level: " << int(driverApi.getFeatureLevel());
     LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
 
@@ -461,34 +457,23 @@ void FEngine::init() {
             driverApi,
             descriptor_sets::getPerRenderableLayout() };
 
-#ifdef FILAMENT_ENABLE_FEATURE_LEVEL_0
-    if (UTILS_UNLIKELY(mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0)) {
-        FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
-        defaultMaterialBuilder.package(
-                MATERIALS_DEFAULTMATERIAL_FL0_DATA, MATERIALS_DEFAULTMATERIAL_FL0_SIZE);
-        mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
-    } else
-#endif
-    {
-        FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
-        switch (mConfig.stereoscopicType) {
-            case StereoscopicType::NONE:
-            case StereoscopicType::INSTANCED:
-                defaultMaterialBuilder.package(
-                        MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
-                break;
-            case StereoscopicType::MULTIVIEW:
+    FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
+    switch (mConfig.stereoscopicType) {
+        case StereoscopicType::NONE:
+        case StereoscopicType::INSTANCED:
+            defaultMaterialBuilder.package(
+                    MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+            break;
+        case StereoscopicType::MULTIVIEW:
 #ifdef FILAMENT_ENABLE_MULTIVIEW
-                defaultMaterialBuilder.package(
-                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA,
-                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
+            defaultMaterialBuilder.package(
+                    MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA, MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
 #else
-                assert_invariant(false);
+            assert_invariant(false);
 #endif
-                break;
-        }
-        mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
+            break;
     }
+    mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
 
     // We must commit the default material instance here. It may not be used in a scene, but its
     // descriptor set may still be used for shared variants.

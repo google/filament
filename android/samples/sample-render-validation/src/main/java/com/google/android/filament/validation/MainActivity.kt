@@ -22,6 +22,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
+import android.os.FileObserver
 import android.text.Html
 import android.util.Log
 import android.view.Choreographer
@@ -30,8 +31,10 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import com.google.android.filament.utils.KTX1Loader
@@ -61,10 +64,16 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private lateinit var choreographer: Choreographer
     private lateinit var statusTextView: TextView
     private lateinit var testResultsHeader: TextView
-    private lateinit var testProgress: android.widget.ProgressBar
+    private lateinit var progressContainer: FrameLayout
+    private lateinit var testProgress: com.google.android.filament.validation.TestProgressBar
+    private lateinit var progressTriangle: ImageView
+    private lateinit var scrollView: ScrollView
+    private lateinit var testSummaryText: TextView
+    private lateinit var deviceInfoText: TextView
     private lateinit var resultsContainer: LinearLayout
     private lateinit var inputManager: ValidationInputManager
     private var currentInput: ValidationInputManager.ValidationInput? = null
+    private var fileObserver: FileObserver? = null
 
     private var currentAlphaDiffBitmap: Bitmap? = null
     private var globalEnhancementFactor: Float = 1.0f
@@ -97,8 +106,10 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     private val frameScheduler = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             choreographer.postFrameCallback(this)
-            modelViewer?.render(frameTimeNanos)
-            validationRunner?.onFrame(frameTimeNanos)
+            val rendered = modelViewer?.render(frameTimeNanos) ?: false
+            if (rendered) {
+                validationRunner?.onFrame(frameTimeNanos)
+            }
         }
     }
 
@@ -112,8 +123,21 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
         statusTextView = findViewById(R.id.status_text)
         testResultsHeader = findViewById(R.id.test_results_header)
+        progressContainer = findViewById(R.id.progress_container)
         testProgress = findViewById(R.id.test_progress)
+        progressTriangle = findViewById(R.id.progress_triangle)
+        scrollView = findViewById(R.id.scroll_view)
+        testSummaryText = findViewById(R.id.test_summary_text)
+        deviceInfoText = findViewById(R.id.device_info_text)
+        deviceInfoText.text = "Running on: ${android.os.Build.MODEL}"
         resultsContainer = findViewById(R.id.results_container)
+
+        scrollView.viewTreeObserver.addOnScrollChangedListener {
+            updateTrianglePosition()
+        }
+        scrollView.viewTreeObserver.addOnGlobalLayoutListener {
+            updateTrianglePosition()
+        }
 
         runButton = findViewById(R.id.run_button)
         loadButton = findViewById(R.id.load_button)
@@ -134,13 +158,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
         })
 
-        // Setup Run Button
-        runButton.setOnClickListener {
-            currentInput?.let { input ->
-                // Always use the generateGoldens flag from the intent/input
-                startValidation(input)
-            }
-        }
+        // Setup Run Button (Listener is set in handleIntent based on state)
 
         // Setup Load Button
         loadButton.setOnClickListener {
@@ -150,9 +168,6 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         // Setup Options Menu Button
         optionsButton.setOnClickListener { view ->
             val popup = android.widget.PopupMenu(this, view)
-            popup.menu.add(0, 1, 0, "Generate Golden")
-            popup.menu.add(0, 2, 0, "Export Test")
-            popup.menu.add(0, 3, 0, "Export Result")
             popup.menu.add(0, 4, 0, "Test ADB Info")
             popup.menu.add(0, 5, 0, "Result ADB Info")
             popup.menu.add(0, 6, 0, "Toggle Enhancement Slider")
@@ -160,21 +175,15 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    1 -> {
-                        currentInput?.let { input ->
-                            val goldenInput = input.copy(generateGoldens = true)
-                            startValidation(goldenInput)
-                        }
-                    }
-                    2 -> exportTestBundleAction()
-                    3 -> exportTestResultsAction()
                     4 -> showTestAdbInfo()
                     5 -> showResultAdbInfo()
                     6 -> {
-                        enhancementContainer.visibility = if (enhancementContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                        enhancementContainer.visibility =
+                            if (enhancementContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
                     }
                     7 -> {
-                        backendFilterContainer.visibility = if (backendFilterContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                        backendFilterContainer.visibility =
+                            if (backendFilterContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
                     }
                 }
                 true
@@ -187,11 +196,12 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         choreographer = Choreographer.getInstance()
         inputManager = ValidationInputManager(this)
 
+        setupFileObserver()
         handleIntent()
     }
 
     private fun showLoadDialog() {
-        val exportDir = getExternalFilesDir(null) ?: filesDir
+        val exportDir = inputManager.getBaseDir()
         // Filter out result zips (starting with "results_") to only show test bundles
         val zips = exportDir.listFiles { _, name ->
             name.endsWith(".zip") && !name.startsWith("results_")
@@ -222,7 +232,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     }
 
     private fun showTestAdbInfo() {
-        val exportDir = getExternalFilesDir(null) ?: filesDir
+        val exportDir = inputManager.getBaseDir()
         val path = exportDir.absolutePath
         val isInternal = path.startsWith(filesDir.absolutePath)
         val message = StringBuilder()
@@ -238,12 +248,11 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
         message.append("<b>--- PUSH TO DEVICE ---</b><br>")
         if (isInternal) {
-            message.append("1. <tt>adb push &lt;filename&gt; /sdcard/Download/</tt><br>")
-            message.append("2. <tt>adb shell \"run-as $packageName cp /sdcard/Download/&lt;filename&gt; files/\"</tt><br>")
+            message.append("<tt>cat &lt;filename&gt; | adb shell \"run-as $packageName sh -c 'cat &gt; files/&lt;filename&gt;'\"</tt><br>")
         } else {
             message.append("<tt>adb push &lt;filename&gt; $path/</tt><br>")
         }
-        message.append("<br>Note: Use underscores instead of spaces in &lt;filename&gt;.")
+        message.append("<br>Note: Use underscores instead of spaces in &lt;filename&gt;. The default bundle is <tt>default_test.zip</tt>.")
 
         AlertDialog.Builder(this)
             .setTitle("Test Bundle ADB Info")
@@ -253,7 +262,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     }
 
     private fun showResultAdbInfo() {
-        val exportDir = getExternalFilesDir(null) ?: filesDir
+        val exportDir = inputManager.getBaseDir()
         val path = exportDir.absolutePath
         val isInternal = path.startsWith(filesDir.absolutePath)
         val message = StringBuilder()
@@ -289,29 +298,14 @@ class MainActivity : Activity(), ValidationRunner.Callback {
          statusTextView.text = "Loading ${file.name}..."
          CoroutineScope(Dispatchers.Main).launch {
              try {
-                 val config = inputManager.loadFromZip(file)
-                 val baseDir = getExternalFilesDir(null) ?: filesDir
-                 val outputDir = File(baseDir, "validation_results").apply { mkdirs() }
-
                  // Clear existing results UI and state
                  resultsContainer.removeAllViews()
                  diffImageViews.clear()
                  resultManager = null
 
-                 val newInput = ValidationInputManager.ValidationInput(
-                     config = config,
-                     outputDir = outputDir,
-                     generateGoldens = false,
-                     autoRun = false,
-                     autoExport = false,
-                     autoExportResults = false,
-                     sourceZip = file
-                 )
-
-                 currentInput = newInput
-                 statusTextView.text = "Loaded ${config.name}"
-                 Log.i(TAG, "Setting header to: Test Results: ${config.name}")
-                 testResultsHeader.text = "${config.name}"
+                 val input = inputManager.loadValidationInputFromZip(file)
+                 onInputUpdated(input)
+                 Log.i(TAG, "Setting header to: Test Results: ${input!!.config!!.name}")
              } catch (e: Exception) {
                  Log.e(TAG, "Failed to load zip", e)
                  statusTextView.text = "Error: ${e.message}"
@@ -352,23 +346,81 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         }
     }
 
+    private fun onInputUpdated(input: ValidationInputManager.ValidationInput) {
+        loadButton.isEnabled = inputManager.hasAnyTest();
+
+        if (input.config == null  && !inputManager.hasDefaultTest()) {
+            statusTextView.text = "No test loaded. Tap Generate Goldens to create a default test."
+            testResultsHeader.text = "No Test Loaded"
+            runButton.text = "Generate Goldens"
+            runButton.isEnabled = true
+            runButton.setOnClickListener {
+                statusTextView.text = "Generating default goldens..."
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        // Pressing this button is as if we received an intent to generate goldens
+                        val emptyIntent = Intent()
+                        emptyIntent.putExtra("generate_goldens", true)
+                        onInputUpdated(inputManager.resolveConfig(emptyIntent))
+                    } catch (e: Exception) {
+                        statusTextView.text = "Failed to generate goldens: ${e.message}"
+                        Log.e(TAG, "Failed to generate goldens", e)
+                    }
+                }
+            }
+            return;
+        }
+
+        if (input.config == null && inputManager.hasAnyTest()) {
+            // User can choose to load at least one test
+            statusTextView.text = "No test loaded. Please select a test to run."
+            runButton.text = "No Test Loaded"
+            runButton.isEnabled = false
+            runButton.setOnClickListener(null)
+            return;
+        }
+
+        // Here the input has a configuration, meaning we can run it, so just copy it but account
+        // for the existance of the default test.
+        currentInput = input.copy(
+            generateGoldens = input.generateGoldens && !inputManager.hasDefaultTest()
+        )
+        currentInput?.let {
+            runButton.text = "Run Test"
+            runButton.isEnabled = true
+            // Update header
+            val name = it.config!!.name
+            Log.i(TAG, "handleIntent: Setting header to: Test Results: ${name}")
+            testResultsHeader.text = "${name}"
+
+            if (it.autoRun) {
+                startValidation(it)
+                return
+            }
+
+            // Test is not running, but it is ready
+            runButton.setOnClickListener {
+                currentInput?.let { startValidation(it) }
+            }
+
+            // Clear existing results UI and state
+            clearUIState();
+            validationRunner?.let {
+                it.cleanup()
+                modelViewer = null
+            }
+            validationRunner = null
+
+            // Just show status
+            statusTextView.text = "Ready: ${name}"
+        }
+    }
+
     private fun handleIntent() {
         statusTextView.text = "Resolving configuration..."
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                val input = inputManager.resolveConfig(intent)
-
-                // Update header
-                Log.i(TAG, "handleIntent: Setting header to: Test Results: ${input.config.name}")
-                testResultsHeader.text = "${input.config.name}"
-                currentInput = input
-
-                if (input.autoRun) {
-                    startValidation(input)
-                } else {
-                    // Just show status
-                    statusTextView.text = "Ready: ${input.config.name}"
-                }
+                onInputUpdated(inputManager.resolveConfig(intent))
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to resolve config", e)
                 statusTextView.text = "Error: ${e.message}"
@@ -376,27 +428,75 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         }
     }
 
+    private fun setupFileObserver() {
+        val baseDir = inputManager.getBaseDir()
+        fileObserver = object : FileObserver(baseDir.absolutePath) {
+            override fun onEvent(event: Int, path: String?) {
+                if (path == null) return
+                val isRelevant = (event and (FileObserver.CLOSE_WRITE or FileObserver.MOVED_TO)) != 0
+                if (isRelevant && path.endsWith(".zip")) {
+                    Log.i(TAG, "FileObserver: Detected new zip file: $path")
+
+                    if (currentInput?.config == null) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            try {
+                                // Pressing this button is as if we received an intent to generate goldens
+                                val emptyIntent = Intent()
+                                onInputUpdated(inputManager.resolveConfig(emptyIntent))
+                            } catch (e: Exception) {
+                                statusTextView.text = "Failed to update input on file change: ${e.message}"
+                                Log.e(TAG, "Failed to update input on file change", e)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        fileObserver?.startWatching()
+    }
     private fun createResultManager(outputDir: File): ValidationResultManager {
         return ValidationResultManager(
             outputDir = outputDir,
             deviceName = android.os.Build.MODEL,
+            deviceHardware = android.os.Build.HARDWARE,
             deviceCodeName = android.os.Build.DEVICE,
             androidVersion = android.os.Build.VERSION.RELEASE,
             androidBuildNumber = android.os.Build.DISPLAY
         )
     }
 
+    private fun clearUIState() {
+        resultsContainer.removeAllViews()
+        diffImageViews.clear()
+        resultManager = null
+    }
+
     private fun startValidation(input: ValidationInputManager.ValidationInput) {
         try {
-            resultsContainer.removeAllViews()
-            diffImageViews.clear()
+            val config = input.config ?: return
+
+            clearUIState();
+
+            // Disable UI while running
             enhancementSlider.isEnabled = false
-            Log.i(TAG, "Starting validation with config: ${input.config.name}")
+            runButton.isEnabled = false
+            loadButton.isEnabled = false
+            optionsButton.isEnabled = false
+            backendRadioGroup.isEnabled = false
+            for (i in 0 until backendRadioGroup.childCount) {
+                backendRadioGroup.getChildAt(i).isEnabled = false
+            }
+
+            Log.i(TAG, "Starting validation with config: ${config.name}")
             Log.i(TAG, "Output dir: ${input.outputDir.absolutePath}")
 
-            testResultsHeader.text = "${input.config.name}"
             testProgress.visibility = View.VISIBLE
-            testProgress.progress = 0
+            progressContainer.visibility = View.VISIBLE
+            testSummaryText.visibility = View.GONE
+            deviceInfoText.visibility = View.VISIBLE
+            totalPassed = 0
+            totalFailed = 0
+            testProgress.reset(1)
 
             resultManager = createResultManager(input.outputDir)
 
@@ -410,11 +510,13 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             // resources before we can proceed.
             validationRunner?.let {
                 it.cleanup()
+                modelViewer = null
             }
 
-            validationRunner = ValidationRunner(this, surfaceView, input.config, resultManager!!, backendFilter)
+            validationRunner = ValidationRunner(this, surfaceView, config, resultManager!!, backendFilter)
             validationRunner?.callback = this
             validationRunner?.generateGoldens = input.generateGoldens
+            validationRunner?.testFilter = input.testFilter
             validationRunner?.start()
 
         } catch (e: Exception) {
@@ -450,14 +552,54 @@ class MainActivity : Activity(), ValidationRunner.Callback {
     override fun onDestroy() {
         super.onDestroy()
         choreographer.removeFrameCallback(frameScheduler)
+        fileObserver?.stopWatching()
+        validationRunner?.let {
+            it.cleanup()
+            modelViewer = null
+        }
     }
 
     private var currentRenderedBitmap: Bitmap? = null
     private var currentGoldenBitmap: Bitmap? = null
     private var currentDiffBitmap: Bitmap? = null
+    private var totalPassed = 0
+    private var totalFailed = 0
+    private var totalTestsCount = 1
+
+    private fun updateTrianglePosition() {
+        if (progressContainer.visibility != View.VISIBLE || resultsContainer.childCount == 0) return
+
+        val scrollY = scrollView.scrollY
+        val visibleHeight = scrollView.height
+        val centerY = scrollY + visibleHeight / 2f
+
+        var bestIndex = -1
+        var minDistance = Float.MAX_VALUE
+        for (i in 0 until resultsContainer.childCount) {
+            val child = resultsContainer.getChildAt(i)
+            val childCenterY = child.top + child.height / 2f
+            val dist = Math.abs(childCenterY - centerY)
+            if (dist < minDistance) {
+                minDistance = dist
+                bestIndex = i
+            }
+        }
+
+        if (bestIndex >= 0) {
+            val progressWidth = testProgress.width
+            if (progressWidth > 0 && totalTestsCount > 0) {
+                val segmentWidth = progressWidth.toFloat() / totalTestsCount
+                val targetX = (bestIndex * segmentWidth) + (segmentWidth / 2f)
+                progressTriangle.translationX = targetX - progressTriangle.width / 2f
+            }
+        }
+    }
 
     override fun onTestFinished(result: ValidationResult) {
         runOnUiThread {
+            if (result.passed) totalPassed++ else totalFailed++
+            testProgress.addResult(result.passed)
+
             val status = "Test ${result.testName} finished: ${if(result.passed) "PASS" else "FAIL"}"
             statusTextView.text = status
             Log.i(TAG, status)
@@ -511,35 +653,34 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             )
 
             fun addImage(label: String, bitmap: Bitmap?, isDiff: Boolean) {
-                if (bitmap != null) {
-                    val container = LinearLayout(this)
-                    container.orientation = LinearLayout.VERTICAL
-                    container.setPadding(0, 0, 10, 0)
-
-                    val labelView = TextView(this)
-                    labelView.text = label
-                    labelView.textSize = 9f
-                    container.addView(labelView)
-
-                    val iv = ImageView(this)
-                    iv.setImageBitmap(bitmap) // Use the same bitmap (or copy if needed, but same is usually fine for UI)
-                    iv.layoutParams = LinearLayout.LayoutParams(250, 250) // Smaller thumbnails
-                    iv.scaleType = ImageView.ScaleType.FIT_CENTER
-                    iv.setBackgroundColor(0xFF404040.toInt())
-
-                    if (isDiff) {
-                        diffImageViews.add(iv)
-                        applyEnhancementToView(iv, globalEnhancementFactor)
-                    }
-
-                    iv.setOnClickListener {
-                        showImageDialog(testImages, label)
-                    }
-
-                    container.addView(iv)
-
-                    imagesRow.addView(container)
+                if (bitmap == null) {
+                    return;
                 }
+                val container = LinearLayout(this)
+                container.orientation = LinearLayout.VERTICAL
+                container.setPadding(0, 0, 10, 0)
+
+                val labelView = TextView(this)
+                labelView.text = label
+                labelView.textSize = 9f
+                container.addView(labelView)
+
+                val iv = ImageView(this)
+                iv.setImageBitmap(bitmap!!) // Use the same bitmap (or copy if needed, but same is usually fine for UI)
+                iv.layoutParams = LinearLayout.LayoutParams(250, 250) // Smaller thumbnails
+                iv.scaleType = ImageView.ScaleType.FIT_CENTER
+                iv.setBackgroundColor(0xFF404040.toInt())
+
+                if (isDiff) {
+                    diffImageViews.add(iv)
+                    applyEnhancementToView(iv, globalEnhancementFactor)
+                }
+
+                iv.setOnClickListener {
+                    showImageDialog(testImages, label)
+                }
+                container.addView(iv)
+                imagesRow.addView(container)
             }
 
             addImage("Rendered", currentRenderedBitmap, false)
@@ -553,6 +694,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
             resultContainer.addView(imagesRow)
             resultsContainer.addView(resultContainer)
+            resultsContainer.post { updateTrianglePosition() }
 
             // Clear current images for next test
             currentRenderedBitmap = null
@@ -564,56 +706,94 @@ class MainActivity : Activity(), ValidationRunner.Callback {
 
     override fun onTestProgress(current: Int, total: Int) {
         runOnUiThread {
-            testProgress.max = total
-            testProgress.progress = current
+            totalTestsCount = Math.max(1, total)
+            testProgress.setMax(total)
+            updateTrianglePosition()
         }
     }
 
     override fun onAllTestsFinished() {
         runOnUiThread {
-            testProgress.visibility = View.GONE
+            val total = totalPassed + totalFailed
+            val colorPassed = if (totalPassed > 0) "#4CAF50" else "#000000"
+            val colorFailed = if (totalFailed > 0) "#F44336" else "#000000"
+            val html = "Passed: <font color='$colorPassed'><b>$totalPassed</b></font> / $total &nbsp;&nbsp;&nbsp; Failed: <font color='$colorFailed'><b>$totalFailed</b></font>"
+            testSummaryText.text = Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY)
+            testSummaryText.visibility = View.VISIBLE
+            deviceInfoText.visibility = View.GONE
             statusTextView.text = "All tests finished!"
-            enhancementSlider.isEnabled = true
-            Log.i(TAG, "All tests finished " + if (currentInput?.autoExport == true) "Exporting bundle" else "x")
 
-            if (currentInput?.autoExport == true) {
-                exportTestBundleAction()
+            // Re-enable UI
+            enhancementSlider.isEnabled = true
+            runButton.isEnabled = true
+            loadButton.isEnabled = true
+            optionsButton.isEnabled = true
+            backendRadioGroup.isEnabled = true
+            for (i in 0 until backendRadioGroup.childCount) {
+                backendRadioGroup.getChildAt(i).isEnabled = true
             }
-            if (currentInput?.autoExportResults == true) {
-                exportTestResultsAction()
+
+            Log.i(TAG, "All tests finished")
+
+            currentInput?.let {
+                if (it.generateGoldens) {
+                    exportTestBundleAction(it)
+                } else {
+                    exportTestResultsAction(it)
+                }
             }
         }
     }
 
-    private fun exportTestBundleAction() {
-        currentInput?.let { input ->
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val rm = resultManager ?: createResultManager(input.outputDir)
-            val zip = rm.exportTestBundle(input.config, timestamp)
-            if (zip != null) {
+    private fun exportTestBundleAction(input: ValidationInputManager.ValidationInput) {
+        val config = input.config ?: return
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val rm = resultManager ?: createResultManager(input.outputDir)
+        val bundleNameOverride = if (input.sourceZip == null) "default_test" else null
+        val zip = rm.exportTestBundle(config, timestamp, bundleNameOverride)
+        if (zip != null) {
+            if (input.sourceZip == null) {
+                val msg = "Exported Default Bundle: ${zip.name}."
+                statusTextView.text = msg
+                Log.i(TAG, "Exported test bundle to ${zip.absolutePath}.")
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        // here we don't want to call onInputUpdated(newInput) since we want to keep
+                        // the state after the test ran
+                        currentInput = inputManager.loadValidationInputFromZip(zip)
+
+                        Log.i(TAG, "Auto-loaded default bundle.")
+                    } catch (e: Exception) {
+                        statusTextView.text = "Failed to auto-load default bundle: ${e.message}"
+                        Log.e(TAG, "Failed to load default bundle", e)
+                    }
+                }
+            } else {
                 val msg = "Exported Bundle: ${zip.name}"
                 statusTextView.text = msg
                 Log.i(TAG, "Exported test bundle to ${zip.absolutePath}")
-            } else {
-                statusTextView.text = "Export Bundle failed"
-                Log.e(TAG, "Export Bundle failed")
-            }
+                }
+        } else {
+            statusTextView.text = "Export Bundle failed"
+            Log.e(TAG, "Export Bundle failed")
         }
     }
 
-    private fun exportTestResultsAction() {
-        currentInput?.let { input ->
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val rm = resultManager ?: createResultManager(input.outputDir)
-            val zip = rm.exportTestResults(input.sourceZip, timestamp)
-            if (zip != null) {
-                val msg = "Exported Results: ${zip.name}"
-                statusTextView.text = msg
-                Log.i(TAG, "Exported results to ${zip.absolutePath}")
-            } else {
-                statusTextView.text = "Export Results failed"
-                Log.e(TAG, "Export Results failed")
-            }
+    private fun exportTestResultsAction(input: ValidationInputManager.ValidationInput) {
+        if (input.config == null) {
+            return
+        }
+        val config = input.config!!
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val rm = resultManager ?: createResultManager(input.outputDir)
+        val zip = rm.exportTestResults(input.sourceZip, config, timestamp)
+        if (zip != null) {
+            val msg = "Exported Results: ${zip.name}"
+            statusTextView.text = msg
+            Log.i(TAG, "Exported results to ${zip.absolutePath}")
+        } else {
+            statusTextView.text = "Export Results failed"
+            Log.e(TAG, "Export Results failed")
         }
     }
 
@@ -691,11 +871,6 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         if (currentIndex == -1) currentIndex = 0
 
         var currentDialogBitmap: Bitmap? = null
-        dialog.setOnDismissListener {
-            currentDialogBitmap?.recycle()
-            currentDialogBitmap = null
-        }
-
         var currentDialogEnhancement = globalEnhancementFactor
 
         val matrix = android.graphics.Matrix()
@@ -703,6 +878,11 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         var lastTouchX = 0f
         var lastTouchY = 0f
         var isDragging = false
+
+        // this is to prevent resetting the view matrix when flipping through goloden, rendered,
+        // diff images.  These actions will trigger the OnLayoutChangeListener, but in these cases,
+        // We want to keep the same view matrix.
+        var matrixResettable = true
 
         val scaleDetector = android.view.ScaleGestureDetector(this, object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: android.view.ScaleGestureDetector): Boolean {
@@ -741,7 +921,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             val (label, file) = availableFiles[currentIndex]
             typeView.text = label
 
-            currentDialogBitmap?.recycle()
+            val oldBitmap = currentDialogBitmap
             currentDialogBitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
 
             imageView.setImageBitmap(currentDialogBitmap)
@@ -756,6 +936,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
                 enhancementContainer.visibility = View.GONE
                 imageView.colorFilter = null
             }
+             oldBitmap?.recycle()
         }
 
         fun resetMatrix() {
@@ -782,19 +963,32 @@ class MainActivity : Activity(), ValidationRunner.Callback {
         }
 
         imageView.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
-            if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
+            if (matrixResettable &&
+                    (left != oldLeft || right != oldRight || top != oldTop || bottom != oldBottom)) {
                 resetMatrix()
             }
         }
 
+        dialog.setOnDismissListener {
+            matrixResettable = true;
+            currentDialogBitmap?.recycle()
+            currentDialogBitmap = null
+        }
+
+
         btnClose.setOnClickListener { dialog.dismiss() }
-        btnReset.setOnClickListener { resetMatrix() }
+        btnReset.setOnClickListener {
+            matrixResettable = true
+            resetMatrix()
+        }
         btnPrev.setOnClickListener {
             currentIndex = (currentIndex - 1 + availableFiles.size) % availableFiles.size
+            matrixResettable = false
             updateView()
         }
         btnNext.setOnClickListener {
             currentIndex = (currentIndex + 1) % availableFiles.size
+            matrixResettable = false
             updateView()
         }
 
@@ -807,6 +1001,7 @@ class MainActivity : Activity(), ValidationRunner.Callback {
             override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
                 currentDialogEnhancement = 1.0f + (progress / 100f) * 49.0f
                 enhancementLabel.text = String.format(Locale.US, "Enhance: %.1fx", currentDialogEnhancement)
+                matrixResettable = false
                 updateView()
             }
             override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}

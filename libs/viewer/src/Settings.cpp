@@ -98,6 +98,18 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ToneMapp
     return i + 1;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, CustomLut* out) {
+    if (0 == compare(tokens[i], jsonChunk, "NONE")) { *out = CustomLut::NONE; }
+    else if (0 == compare(tokens[i], jsonChunk, "NEGATIVE")) { *out = CustomLut::NEGATIVE; }
+    else if (0 == compare(tokens[i], jsonChunk, "GRAYSCALE")) { *out = CustomLut::GRAYSCALE; }
+    else if (0 == compare(tokens[i], jsonChunk, "SEPIA")) { *out = CustomLut::SEPIA; }
+    else if (0 == compare(tokens[i], jsonChunk, "TEAL_AND_ORANGE")) { *out = CustomLut::TEAL_AND_ORANGE; }
+    else {
+        slog.w << "Invalid CustomLut: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, color::ColorSpace* out) {
     using namespace filament::color;
     if (0 == compare(tokens[i], jsonChunk, "Rec709-Linear-D65")) { *out = Rec709-Linear-D65; }
@@ -207,6 +219,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
             i = parse(tokens, i + 1, jsonChunk, &out->quality);
         } else if (compare(tok, jsonChunk, "toneMapping") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->toneMapping);
+        } else if (compare(tok, jsonChunk, "customLut") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->customLut);
         } else if (compare(tok, jsonChunk, "genericToneMapper") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->genericToneMapper);
         } else if (compare(tok, jsonChunk, "agxToneMapper") == 0) {
@@ -984,10 +998,57 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
     }
 }
 
+static utils::FixedCapacityVector<math::float3> generateCustomLut(CustomLut type, uint8_t dim) {
+    using namespace filament::math;
+    size_t count = size_t(dim) * dim * dim;
+    auto lut = utils::FixedCapacityVector<float3>::with_capacity(count);
+    
+    for (size_t b = 0; b < dim; ++b) {
+        for (size_t g = 0; g < dim; ++g) {
+            for (size_t r = 0; r < dim; ++r) {
+                float3 v = float3{r, g, b} * (1.0f / (dim - 1));
+                switch (type) {
+                    case CustomLut::NONE:
+                        break;
+                    case CustomLut::NEGATIVE:
+                        v = 1.0f - v;
+                        break;
+                    case CustomLut::GRAYSCALE:
+                        {
+                            float luma = dot(v, float3{0.2126f, 0.7152f, 0.0722f});
+                            v = float3{luma};
+                        }
+                        break;
+                    case CustomLut::SEPIA:
+                        {
+                            float luma = dot(v, float3{0.299f, 0.587f, 0.114f});
+                            v = float3{
+                                clamp(luma * 1.2f, 0.0f, 1.0f),
+                                clamp(luma * 1.0f, 0.0f, 1.0f),
+                                clamp(luma * 0.8f, 0.0f, 1.0f)
+                            };
+                        }
+                        break;
+                    case CustomLut::TEAL_AND_ORANGE:
+                        {
+                            float luma = dot(v, float3{0.2126f, 0.7152f, 0.0722f});
+                            float3 teal{0.0f, 0.5f, 0.5f};
+                            float3 orange{1.0f, 0.5f, 0.0f};
+                            v = teal * (1.0f - luma) + orange * luma;
+                        }
+                        break;
+                }
+                lut.push_back(v);
+            }
+        }
+    }
+    return lut;
+}
+
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine) {
     ToneMapper* toneMapper = createToneMapper(settings);
-    ColorGrading *colorGrading = ColorGrading::Builder()
-            .quality(settings.quality)
+    ColorGrading::Builder builder;
+    builder.quality(settings.quality)
             .exposure(settings.exposure)
             .nightAdaptation(settings.nightAdaptation)
             .whiteBalance(settings.temperature, settings.tint)
@@ -1006,8 +1067,14 @@ ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* e
             .toneMapper(toneMapper)
             .luminanceScaling(settings.luminanceScaling)
             .gamutMapping(settings.gamutMapping)
-            .outputColorSpace(settings.colorspace)
-            .build(*engine);
+            .outputColorSpace(settings.colorspace);
+
+    if (settings.customLut != CustomLut::NONE) {
+        uint8_t dim = 16;
+        builder.customLut(generateCustomLut(settings.customLut, dim), dim);
+    }
+
+    ColorGrading *colorGrading = builder.build(*engine);
     delete toneMapper;
     return colorGrading;
 }
@@ -1080,12 +1147,24 @@ static std::ostream& operator<<(std::ostream& out, const AgxToneMapperSettings& 
                << "}";
 }
 
+static std::ostream& operator<<(std::ostream& out, CustomLut in) {
+    switch (in) {
+        case CustomLut::NONE: return out << "\"NONE\"";
+        case CustomLut::NEGATIVE: return out << "\"NEGATIVE\"";
+        case CustomLut::GRAYSCALE: return out << "\"GRAYSCALE\"";
+        case CustomLut::SEPIA: return out << "\"SEPIA\"";
+        case CustomLut::TEAL_AND_ORANGE: return out << "\"TEAL_AND_ORANGE\"";
+    }
+    return out << "\"INVALID\"";
+}
+
 static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& in) {
     return out << "{\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"colorspace\": " << to_string(in.colorspace) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
+        << "\"customLut\": " << (in.customLut) << ",\n"
         << "\"genericToneMapper\": " << (in.genericToneMapper) << ",\n"
         << "\"agxToneMapper\": " << (in.agxToneMapper) << ",\n"
         << "\"luminanceScaling\": " << to_string(in.luminanceScaling) << ",\n"
@@ -1346,6 +1425,7 @@ bool ColorGradingSettings::operator==(const ColorGradingSettings& rhs) const {
             colorspace == rhs.colorspace &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
+            customLut == rhs.customLut &&
             genericToneMapper == rhs.genericToneMapper &&
             agxToneMapper == rhs.agxToneMapper &&
             luminanceScaling == rhs.luminanceScaling &&

@@ -7,7 +7,7 @@ import argparse
 
 # URL of the Milky Way texture (Gaia EDR3) from ESA
 # Low Res PNG (2.71 MB) is sufficient for our 1024x512 target
-URL = "https://www.esa.int/var/esa/storage/images/esa_multimedia/images/2020/12/the_colour_of_the_sky_from_gaia_s_early_data_release_3/22358049-1-eng-GB/The_colour_of_the_sky_from_Gaia_s_Early_Data_Release_3.png"
+URL = "https://www.esa.int/var/esa/storage/images/esa_multimedia/images/2020/12/the_colour_of_the_sky_from_gaia_s_early_data_release_32/22358132-1-eng-GB/The_colour_of_the_sky_from_Gaia_s_Early_Data_Release_3.png"
 OUTPUT_DIR = "assets"
 OUTPUT_FILENAME = "milkyway.png"
 TARGET_WIDTH = 1024

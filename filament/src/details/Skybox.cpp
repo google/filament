@@ -132,26 +132,19 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
 
 FMaterial const* FSkybox::createMaterial(FEngine& engine) {
     Material::Builder builder;
-#ifdef FILAMENT_ENABLE_FEATURE_LEVEL_0
-    if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == Engine::FeatureLevel::FEATURE_LEVEL_0)) {
-        builder.package(MATERIALS_SKYBOX_FL0_DATA, MATERIALS_SKYBOX_FL0_SIZE);
-    } else
-#endif
-    {
-        switch (engine.getConfig().stereoscopicType) {
-            case Engine::StereoscopicType::NONE:
-            case Engine::StereoscopicType::INSTANCED:
-                builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
-                break;
-            case Engine::StereoscopicType::MULTIVIEW:
+    switch (engine.getConfig().stereoscopicType) {
+        case Engine::StereoscopicType::NONE:
+        case Engine::StereoscopicType::INSTANCED:
+            builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
+            break;
+        case Engine::StereoscopicType::MULTIVIEW:
 #ifdef FILAMENT_ENABLE_MULTIVIEW
-                builder.package(MATERIALS_SKYBOX_MULTIVIEW_DATA, MATERIALS_SKYBOX_MULTIVIEW_SIZE);
+            builder.package(MATERIALS_SKYBOX_MULTIVIEW_DATA, MATERIALS_SKYBOX_MULTIVIEW_SIZE);
 #else
-                PANIC_POSTCONDITION("Multiview is enabled in the Engine, but this build has not "
-                                    "been compiled for multiview.");
+            PANIC_POSTCONDITION("Multiview is enabled in the Engine, but this build has not "
+                                "been compiled for multiview.");
 #endif
-                break;
-        }
+            break;
     }
     auto material = builder.build(engine);
     return downcast(material);

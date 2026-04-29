@@ -16,14 +16,15 @@ filament {
     iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
 }
 
-// don't forget to update MainACtivity.kt when/if changing this.
-tasks.register('copyDamagedHelmetGltf', Copy) {
+// don't forget to update MainActivity.kt when/if changing this.
+tasks.register('copyModels', Copy) {
     from file("../../../third_party/models/DamagedHelmet/DamagedHelmet.glb")
+    from file("../../../third_party/models/Fox/Fox.glb")
+    from file("../../../third_party/models/TransmissionRoughnessTest/TransmissionRoughnessTest.glb")
     into file("src/main/assets/models")
-    rename {String fileName -> "helmet.glb"}
 }
 
-preBuild.dependsOn copyDamagedHelmetGltf
+preBuild.dependsOn copyModels
 
 clean.doFirst {
     delete "src/main/assets/envs"

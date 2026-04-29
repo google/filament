@@ -316,9 +316,9 @@ class ModelViewer(
      * @param frameTimeNanos time in nanoseconds when the frame started being rendered,
      *                       typically comes from {@link android.view.Choreographer.FrameCallback}
      */
-    fun render(frameTimeNanos: Long) {
+    fun render(frameTimeNanos: Long): Boolean {
         if (!uiHelper.isReadyToRender) {
-            return
+            return false
         }
 
         // Allow the resource loader to finalize textures that have become ready.
@@ -337,7 +337,9 @@ class ModelViewer(
         }
 
         // Render the scene, unless the renderer wants to skip the frame.
+        var rendered = false
         if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
+            rendered = true
             renderer.render(view)
 
             debugFrameCallback?.let {
@@ -360,6 +362,7 @@ class ModelViewer(
 
             renderer.endFrame()
         }
+        return rendered
     }
 
     /*

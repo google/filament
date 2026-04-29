@@ -26,7 +26,8 @@ material {
     depthWrite : false,
     shadingModel : unlit,
     variantFilter : [ skinning, shadowReceiver, vsm ],
-    culling: none
+    culling: none,
+    featureLevel: 0
 }
 
 fragment {
