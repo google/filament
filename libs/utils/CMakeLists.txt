@@ -87,6 +87,7 @@ set(SRCS
         src/Panic.cpp
         src/Path.cpp
         src/Profiler.cpp
+        src/SingleInstanceComponentManager.cpp
         src/sstream.cpp
         src/string.cpp
         src/ThreadUtils.cpp
@@ -196,6 +197,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_QuadTreeArray.cpp
             test/test_RangeMap.cpp
             test/test_RefCountedMap.cpp
+            test/test_SingleInstanceComponentManager.cpp
             test/test_Slice.cpp
             test/test_StructureOfArrays.cpp
             test/test_sstream.cpp

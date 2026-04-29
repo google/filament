@@ -80,6 +80,16 @@ public:
 
     void prepare(backend::DriverApi& driver) const noexcept;
 
+    void registerChangeCallback(void const* token, utils::SingleInstanceComponentManagerBase::ChangeCallback callback) noexcept {
+        mManager.registerChangeCallback(token, std::move(callback));
+    }
+    void unregisterChangeCallback(void const* token) noexcept {
+        mManager.unregisterChangeCallback(token);
+    }
+    void flushNotifications() noexcept {
+        mManager.flushNotifications();
+    }
+
     struct LightType {
         Type type : 3;
         bool shadowCaster : 1;

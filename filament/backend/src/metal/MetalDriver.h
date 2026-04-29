@@ -22,6 +22,7 @@
 #include "DriverBase.h"
 
 #include "private/backend/HandleAllocator.h"
+#include "JobQueue.h"
 
 #include <backend/SamplerDescriptor.h>
 
@@ -62,6 +63,9 @@ public:
     static Driver* create(PlatformMetal* platform, const Platform::DriverConfig& driverConfig);
 
     MetalContext* getContext() { return mContext; }
+
+    JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
+    JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
 
     using DriverBase::scheduleDestroy;
 
@@ -167,6 +171,9 @@ private:
 
     backend::StereoscopicType const mStereoscopicType;
     backend::AsynchronousMode const mAsynchronousMode;
+
+    JobQueue::Ptr mJobQueue;
+    JobWorker::Ptr mJobWorker;
 };
 
 } // namespace backend

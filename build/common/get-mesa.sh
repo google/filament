@@ -21,7 +21,7 @@ fi
 
 OS_NAME=$(uname -s)
 LLVM_VERSION=${GITHUB_LLVM_VERSION-17}
-MESA_VERSION=${GITHUB_MESA_VERSION-24.2.1}
+MESA_VERSION=${GITHUB_MESA_VERSION-25.0.6}
 ORIG_DIR=$(pwd)
 MESA_DIR=${MESA_DIR-${ORIG_DIR}/mesa}
 
@@ -87,7 +87,8 @@ if [[ "$OS_NAME" == "Linux" ]]; then
 elif [[ "$OS_NAME" == "Darwin" ]]; then
     if command -v brew > /dev/null 2>&1; then
         HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr \
-                                                        llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
+                                                    llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence \
+                                                    glslang
         brew link --overwrite llvm@${LLVM_VERSION}
         # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
         LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
