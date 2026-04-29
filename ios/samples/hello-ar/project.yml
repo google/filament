@@ -8,7 +8,6 @@ targets:
             - FilamentApp
         dependencies:
             - sdk: ARKit.framework
-        dependencies:
             - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilameshio.xcframework
             - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libmeshoptimizer.xcframework
             - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libimage.xcframework

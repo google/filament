@@ -34,6 +34,7 @@
 		B28ED2F81785F13E0B9A3607 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = EC652AC3D2C91759215320C3 /* AppDelegate.m */; };
 		B48D41A39CF5F4FDE5CF6770 /* libfilameshio.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16ED3BF9A0D7194CECB86D55 /* libfilameshio.xcframework */; };
 		B604AB5F246840D2CCF4762B /* libfilaflat.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9D99ABAB340140BF94D57B3 /* libfilaflat.xcframework */; };
+		B8934FC46557424E705A2154 /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 33B2CBA1A0F654632B39A45D /* ARKit.framework */; };
 		BC6AAB72CD468EF04F684014 /* libabseil.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = DB899E40418A88883E6ED2E4 /* libabseil.xcframework */; };
 		CB7C1B8F335B873B77D15934 /* libmeshoptimizer.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4CA1720B9D4D55AB6B8513B0 /* libmeshoptimizer.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CBBBF68C2F58FF0F4FA81008 /* libimage.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 586F9BE85A436EBA56181848 /* libimage.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -79,6 +80,7 @@
 		16ED3BF9A0D7194CECB86D55 /* libfilameshio.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilameshio.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilameshio.xcframework"; sourceTree = "<group>"; };
 		2AFEFBF6FE91628599F70817 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
 		2AFF66F1228C5F1079042FE2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		33B2CBA1A0F654632B39A45D /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
 		4CA1720B9D4D55AB6B8513B0 /* libmeshoptimizer.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libmeshoptimizer.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libmeshoptimizer.xcframework"; sourceTree = "<group>"; };
 		4F8E6B508F8C5DE284DA2E34 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		53D025A0625708CC50AEA0DB /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 				9718E9B12B1D353DF9E66311 /* libibl.xcframework in Frameworks */,
 				BC6AAB72CD468EF04F684014 /* libabseil.xcframework in Frameworks */,
 				072B1333A85F99F6FBA10846 /* libzstd.xcframework in Frameworks */,
+				B8934FC46557424E705A2154 /* ARKit.framework in Frameworks */,
 				B48D41A39CF5F4FDE5CF6770 /* libfilameshio.xcframework in Frameworks */,
 				50F0F62A949F9DB17E1E102D /* libmeshoptimizer.xcframework in Frameworks */,
 				84AC34B44E1AEE96BA8C53B0 /* libimage.xcframework in Frameworks */,
@@ -171,6 +174,7 @@
 		A9AE7CB2486E4723006E1784 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				33B2CBA1A0F654632B39A45D /* ARKit.framework */,
 				DB899E40418A88883E6ED2E4 /* libabseil.xcframework */,
 				9E445414106E7103104FC16C /* libbackend.xcframework */,
 				67D8E02D1AF661E4EF7CC2CD /* libfilabridge.xcframework */,
