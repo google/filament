@@ -8,6 +8,7 @@ set(TRANSCODER_SRC
 
 set(ENCODER_SRC
     ../encoder/3rdparty/android_astc_decomp.cpp
+    ../encoder/3rdparty/tinyexr.cpp
     ../encoder/basisu_astc_hdr_6x6_enc.cpp
     ../encoder/basisu_astc_hdr_common.cpp
     ../encoder/basisu_astc_ldr_common.cpp
