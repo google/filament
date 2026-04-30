@@ -839,18 +839,19 @@ TEST(FilamentTest, FroxelData) {
     EXPECT_FLOAT_EQ(        100,-l.planes[Froxel::FAR].w);
 
     // create a dummy point light that can be referenced in LightSoa
+    auto& lcm = engine->getLightManager();
     Entity e = engine->getEntityManager().create();
     LightManager::Builder(LightManager::Type::POINT).build(*engine, e);
-    LightManager::Instance instance = engine->getLightManager().getInstance(e);
+    LightManager::Instance li = lcm.getInstance(e);
+    float2 const spotParams = float2{lcm.getCosOuterSquared(li), lcm.getSinInverse(li)};
 
     FScene::LightSoa lights;
-    lights.push_back({}, {}, {}, {}, {}, {}, {}, {});   // first one is always skipped
-    lights.push_back(float4{ 0, 0, -5, 1 }, {}, {}, {}, instance, 1, {}, {});
+    lights.push_back({}, {}, {}, {}, {}, {}, {}, {}, {});   // first one is always skipped
+    lights.push_back(float4{ 0, 0, -5, 1 }, {}, {}, {}, e, spotParams, 1, {}, {});
 
     {
         froxelData.froxelizeLights(*engine, {}, lights);
         auto const& froxelBuffer = froxelData.getFroxelBufferUser();
-        auto const& recordBuffer = froxelData.getRecordBufferUser();
         // light straddles the "light near" plane
         size_t pointCount = 0;
         for (const auto& entry : froxelBuffer) {

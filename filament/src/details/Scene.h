@@ -80,7 +80,7 @@ public:
     using VisibleMaskType = Culler::result_type;
 
     enum {
-        RENDERABLE_INSTANCE,    //   4 | instance of the Renderable component
+        RENDERABLE_ENTITY,      //   4 | Entity of the Renderable component
         WORLD_TRANSFORM,        //  16 | instance of the Transform component
         VISIBILITY_STATE,       //   2 | visibility data of the component
         SKINNING_STATE,         //   1 | skinning data of the component
@@ -106,7 +106,7 @@ public:
     };
 
     using RenderableSoa = utils::StructureOfArrays<
-            utils::EntityInstance<RenderableManager>,   // RENDERABLE_INSTANCE
+            utils::Entity,                              // RENDERABLE_ENTITY
             math::mat4f,                                // WORLD_TRANSFORM
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             FRenderableManager::Skinning,               // SKINNING_STATE
@@ -159,7 +159,8 @@ public:
         DIRECTION,
         SHADOW_DIRECTION,
         SHADOW_REF,
-        LIGHT_INSTANCE,
+        LIGHT_ENTITY,
+        SPOT_PARAMS,
         VISIBILITY,
         SCREEN_SPACE_Z_RANGE,
         SHADOW_INFO
@@ -170,7 +171,8 @@ public:
             math::float3,
             math::float3,
             math::double2,
-            FLightManager::Instance,
+            utils::Entity,
+            math::float2,
             Culler::result_type,
             math::float2,
             ShadowInfo
