@@ -17,7 +17,7 @@ set(CPP_SRC
 # The emcc options are not documented well, the best place to find them is the source:
 # https://github.com/kripken/emscripten/blob/main/src/settings.js
 
-if (WEBGL_PTHREADS)
+if (WASM_PTHREADS)
   set(COPTS "${COPTS} -pthread")
   set(LOPTS "${LOPTS} -pthread")
 endif()
@@ -31,6 +31,7 @@ set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")
 set(LOPTS "${LOPTS} --bind")
 set(LOPTS "${LOPTS} -s ALLOW_MEMORY_GROWTH=1")
 set(LOPTS "${LOPTS} -s EXPORTED_FUNCTIONS=['_malloc','_free']")
+set(LOPTS "${LOPTS} -s EXPORTED_RUNTIME_METHODS=['HEAP8','HEAP16','HEAP32','HEAPU8','HEAPU16','HEAPU32','HEAPF32','HEAPF64']")
 set(LOPTS "${LOPTS} -s MODULARIZE=1")
 set(LOPTS "${LOPTS} -s EXPORT_NAME=Filament")
 set(LOPTS "${LOPTS} -s USE_WEBGL2=1")

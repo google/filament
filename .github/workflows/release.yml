@@ -286,6 +286,8 @@ jobs:
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/mac-prereq
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}

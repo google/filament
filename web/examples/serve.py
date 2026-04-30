@@ -42,7 +42,7 @@ def find_examples_dir():
 examples_dir = find_examples_dir()
 
 if not examples_dir:
-    print("Could not find the built examples directory in out/. Please build the webgl target first.", file=sys.stderr)
+    print("Could not find the built examples directory in out/. Please build the wasm target first.", file=sys.stderr)
     # fallback to web/examples for testing, though it won't have the built assets
     examples_dir = str(SCRIPT_DIR)
 
