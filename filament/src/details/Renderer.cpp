@@ -1076,11 +1076,11 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     // updatePrimitivesLod must be run before appendCommands and once for each set
     // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    FView::updatePrimitivesLod(scene.getRenderableData(),
+    FView::updatePrimitivesLod(view.getRenderableData(),
             engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo.getPosition(), cameraInfo.getForwardVector());
-    passBuilder.geometry(scene.getRenderableData(), view.getVisibleRenderables());
+    passBuilder.geometry(view.getRenderableData(), view.getVisibleRenderables());
 
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used
