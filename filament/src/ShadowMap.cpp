@@ -374,7 +374,6 @@ ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
 
     // check if this shadow map has anything to render
     mHasVisibleShadows = false;
-    
     auto const* const UTILS_RESTRICT visibleMasks = soa.data<FScene::VISIBLE_MASK>();
     size_t const c = soa.size();
     for (size_t i = 0; i < c; i++) {

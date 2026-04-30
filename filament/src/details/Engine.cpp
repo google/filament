@@ -1335,6 +1335,11 @@ bool FEngine::destroy(const FRenderer* p) {
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FScene* p) {
+    if (p) {
+        mViews.forEach([p](FView* view) {
+            view->invalidateCache(const_cast<FScene*>(p));
+        });
+    }
     return terminateAndDestroy(p, mScenes);
 }
 

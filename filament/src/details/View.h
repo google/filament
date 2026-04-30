@@ -32,7 +32,9 @@
 #include "ds/DescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
-#include "components/LightManager.h"
+#include "fg/FrameGraphTexture.h"
+#include "fg/FrameGraphId.h"
+
 #include "components/RenderableManager.h"
 
 #include "details/Camera.h"
@@ -50,6 +52,8 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Entity.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
@@ -64,6 +68,8 @@ namespace filament::fgviewer {
 #endif
 
 #include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
 #include <math/vec4.h>
 
 #include <array>
@@ -103,13 +109,6 @@ public:
     explicit FView(FEngine& engine);
     ~FView() noexcept;
 
-    FScene::RenderableSoa& getRenderableData() const noexcept {
-        return mCurrentViewCache->renderableData;
-    }
-    FScene::LightSoa& getLightData() const noexcept {
-        return mCurrentViewCache->lightData;
-    }
-
     void terminate(FEngine& engine);
 
     CameraInfo computeCameraInfo(FEngine const& engine) const noexcept;
@@ -120,10 +119,14 @@ public:
             Viewport viewport, CameraInfo cameraInfo,
             math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
-    void setScene(FScene* scene);
+    void setScene(FScene* scene) noexcept;
     FScene const* getScene() const noexcept { return mScene; }
     FScene* getScene() noexcept { return mScene; }
 
+    FScene::RenderableSoa const& getRenderableData() const noexcept;
+    FScene::RenderableSoa& getRenderableData() noexcept;
+    FScene::LightSoa const& getLightData() const noexcept;
+    FScene::LightSoa& getLightData() noexcept;
     bool hasContactShadows() const noexcept;
     void invalidateCache(FScene* scene) const noexcept;
 
@@ -233,10 +236,6 @@ public:
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
             RenderPassBuilder const& passBuilder) noexcept;
-
-    static void updatePrimitivesLod(FScene::RenderableSoa& renderableData,
-            FEngine const& engine, CameraInfo const& camera,
-            Range visible) noexcept;
 
     void setShadowingEnabled(bool const enabled) noexcept { mShadowingEnabled = enabled; }
 
@@ -589,7 +588,6 @@ private:
     DescriptorSet mCommonRenderableDescriptorSet;
 
     FScene* mScene = nullptr;
-    mutable FScene::SceneCacheData* mCurrentViewCache = nullptr;
     // The camera set by the user, used for culling and viewing
     FCamera* mCullingCamera = nullptr;
     // The optional (debug) camera, used only for viewing
@@ -673,6 +671,8 @@ private:
     std::shared_ptr<SharedState> mSharedState;
 
     std::unique_ptr<ShadowMapManager> mShadowMapManager;
+
+    mutable FScene::SceneCacheData* mCurrentViewCache = nullptr;
 
     MaterialGlobals mMaterialGlobals = {{
             { 0, 0, 0, 1 },

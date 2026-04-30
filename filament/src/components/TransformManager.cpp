@@ -171,6 +171,9 @@ void FTransformManager::setTransform(Instance const ci, const mat4f& model) noex
     validateNode(ci);
     if (ci) {
         auto& manager = mManager;
+        if (manager[ci].local == model) {
+            return;
+        }
         // store our local transform
         manager[ci].local = model;
         manager[ci].localTranslationLo = {};
@@ -182,9 +185,14 @@ void FTransformManager::setTransform(Instance const ci, const mat4& model) noexc
     validateNode(ci);
     if (ci) {
         auto& manager = mManager;
+        mat4f const modelF(model);
+        float3 const translationLo = float3{model[3].xyz - float3{model[3].xyz}};
+        if (manager[ci].local == modelF && manager[ci].localTranslationLo == translationLo) {
+            return;
+        }
         // store our local transform + accurate translation information
-        manager[ci].local = mat4f(model);
-        manager[ci].localTranslationLo = float3{ model[3].xyz - float3{ model[3].xyz }};
+        manager[ci].local = modelF;
+        manager[ci].localTranslationLo = translationLo;
         updateNodeTransform(ci);
     }
 }

@@ -238,8 +238,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         FView& view, CameraInfo const& mainCameraInfo,
         float4 const& userTime) noexcept {
 
-    FScene* scene = view.getScene();
-    assert_invariant(scene);
+    assert_invariant(view.getScene());
 
     // make a copy here, because it's a very small structure
     VsmShadowOptions const& vsmShadowOptions = view.getVsmShadowOptions();
@@ -345,7 +344,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
             [=, this,
                     passBuilder = passBuilder,
                     &engine = const_cast<FEngine /*const*/ &>(engine), // FIXME: we want this const
-                    &view = const_cast<FView const&>(view)]
+                    &view = view]
                     (FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
@@ -368,7 +367,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     //       recorded in the command buffer, per shadow map. Maybe this could
                     //       be done with indirect draw calls.
 
-                    // Note: the output of culling below is stored in view.getRenderableData()
+                    // Note: the output of culling below is stored in scene->getRenderableData()
 
                     switch (shadowMap.getShadowType()) {
                         case ShadowType::DIRECTIONAL:
@@ -405,8 +404,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             getMaxMomentEVSM(vsmShadowOptions));
                     shadowMap.commit(transaction, engine, driver);
 
-                    // updatePrimitivesLod must be run before RenderPass::appendCommands.
-                    FView::updatePrimitivesLod(view.getRenderableData(), engine, cameraInfo, entry.range);
 
                     // generate and sort the commands for rendering the shadow map
 
@@ -1005,7 +1002,7 @@ void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap,
         FEngine const& engine, FView const& view,
         FScene::RenderableSoa& renderableData, Range<uint32_t> range,
         FScene::LightSoa const& lightData) noexcept {
-    auto const& lcm = engine.getLightManager();
+    auto& lcm = engine.getLightManager();
 
     size_t const lightIndex = shadowMap.getLightIndex();
     Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(lightIndex);

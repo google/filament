@@ -36,6 +36,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <utility>
 
 using namespace filament::math;
@@ -242,8 +243,33 @@ void FLightManager::gc(EntityManager& em) noexcept {
     });
 }
 
+static bool operator==(FLightManager::ShadowOptions const& lhs, FLightManager::ShadowOptions const& rhs) noexcept {
+    return lhs.mapSize == rhs.mapSize &&
+            lhs.shadowCascades == rhs.shadowCascades &&
+            std::equal(std::begin(lhs.cascadeSplitPositions),
+                    std::end(lhs.cascadeSplitPositions),
+                    std::begin(rhs.cascadeSplitPositions)) &&
+            lhs.constantBias == rhs.constantBias &&
+            lhs.normalBias == rhs.normalBias &&
+            lhs.shadowFar == rhs.shadowFar &&
+            lhs.shadowNearHint == rhs.shadowNearHint &&
+            lhs.shadowFarHint == rhs.shadowFarHint &&
+            lhs.stable == rhs.stable &&
+            lhs.lispsm == rhs.lispsm &&
+            lhs.polygonOffsetConstant == rhs.polygonOffsetConstant &&
+            lhs.polygonOffsetSlope == rhs.polygonOffsetSlope &&
+            lhs.screenSpaceContactShadows == rhs.screenSpaceContactShadows &&
+            lhs.stepCount == rhs.stepCount &&
+            lhs.maxShadowDistance == rhs.maxShadowDistance &&
+            lhs.vsm.elvsm == rhs.vsm.elvsm &&
+            lhs.vsm.blurWidth == rhs.vsm.blurWidth &&
+            lhs.shadowBulbRadius == rhs.shadowBulbRadius &&
+            lhs.transform == rhs.transform;
+}
+
 void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& options) noexcept {
     ShadowParams& params = mManager[i].shadowParams;
+    auto current = params.options;
     params.options = options;
     params.options.mapSize = clamp(options.mapSize, 8u, 2048u);
     params.options.shadowCascades = clamp<uint8_t>(options.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
@@ -253,7 +279,9 @@ void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& opti
     params.options.shadowNearHint = std::max(options.shadowNearHint, 0.0f);
     params.options.shadowFarHint = std::max(options.shadowFarHint, 0.0f);
     params.options.vsm.blurWidth = std::max(0.0f, options.vsm.blurWidth);
-    mManager.notifyChange(getEntity(i));
+    if (params.options != current) {
+        mManager.notifyChange(getEntity(i));
+    }
 }
 
 void FLightManager::setLightChannel(Instance const i, unsigned int const channel, bool const enable) noexcept {

@@ -28,6 +28,13 @@
 
 #include <math/mat4.h>
 
+#include <cstddef>
+#include <utility>
+
+namespace utils {
+    class PagedArenaBitset;
+}
+
 namespace filament {
 
 class UTILS_PRIVATE FTransformManager : public TransformManager {
@@ -113,6 +120,12 @@ public:
     }
     void flushNotifications() noexcept {
         mManager.flushNotifications();
+    }
+    void registerBitset(utils::PagedArenaBitset* bitset) {
+        mManager.registerBitset(bitset);
+    }
+    void unregisterBitset(utils::PagedArenaBitset const* bitset) {
+        mManager.unregisterBitset(bitset);
     }
 
     utils::Slice<const math::mat4f> getWorldTransforms() const noexcept {
