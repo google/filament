@@ -13,10 +13,10 @@ set -e
 
 HOST_TOOLS_PATH="${HOST_TOOLS_PATH:-../../../out/release/filament/bin}"
 
-filamesh_path=`find ${HOST_TOOLS_PATH} -name filamesh -type f | head -n 1`
-matc_path=`find ${HOST_TOOLS_PATH} -name matc -type f | head -n 1`
-resgen_path=`find ${HOST_TOOLS_PATH} -name resgen -type f | head -n 1`
-cmgen_path=`find ${HOST_TOOLS_PATH} -name cmgen -type f | head -n 1`
+filamesh_path=`find -L ${HOST_TOOLS_PATH} -name filamesh -type f | head -n 1`
+matc_path=`find -L ${HOST_TOOLS_PATH} -name matc -type f | head -n 1`
+resgen_path=`find -L ${HOST_TOOLS_PATH} -name resgen -type f | head -n 1`
+cmgen_path=`find -L ${HOST_TOOLS_PATH} -name cmgen -type f | head -n 1`
 
 # Ensure that the required tools are present in the out/ directory.
 # These can be built by running ./build.sh -p desktop -i release at Filament's root directory.

@@ -179,7 +179,7 @@ FView::FView(FEngine& engine)
     FgviewerManager* fgviewerManager = engine.debug.fgviewer;
     if (UTILS_LIKELY(fgviewerManager)) {
         mFrameGraphViewerViewHandle =
-            fgviewerManager->createView(utils::CString(getName()));
+            fgviewerManager->createView(CString(getName()));
     }
 #endif
 
@@ -533,27 +533,132 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
 }
 
+/*
+ * Calculates an automatic grid size based on the camera frustum dimensions.
+ * Handles both perspective and orthographic projections.
+ * 
+ * For perspective projections, it uses the width of the frustum at the far plane.
+ * This ensures that the grid size scales with the visible volume and accounts for
+ * field-of-view (zooming in reduces grid size to preserve precision).
+ * For orthographic projections, it uses the absolute width of the frustum.
+ * 
+ * camera: The camera to use for the calculation.
+ * Returns the calculated grid size (10% of the computed width, chosen as a
+ * reasonable balance between precision and snapping frequency).
+ */
+double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
+    auto const& p = camera->getCullingProjectionMatrix();
+    
+    // Base scale is the width of the frustum at Z=1 for perspective,
+    // or the absolute width for orthographic.
+    double baseScale = 2.0 / std::abs(p[0][0]);
+    
+    // Detect perspective by checking if P[3][2] is non-zero
+    bool const isPerspective = std::abs(p[3][2]) > 1e-5;
+    
+    if (isPerspective) {
+        double const zf = camera->getCullingFar();
+        // Scale at far plane
+        return baseScale * zf * 0.1;
+    } else {
+        // Ortho: baseScale is the full width of the frustum.
+        // Use 10% of the width as grid size.
+        return baseScale * 0.1;
+    }
+}
+
+/*
+ * Computes a stable grid origin for the camera to improve floating-point precision.
+ * Snapping only occurs when the camera moves beyond the grid boundary plus hysteresis.
+ * 
+ * This implementation follows Strategy A: only update the grid size when a position snap occurs.
+ * This prevents instability when the frustum (and thus auto grid size) changes smoothly.
+ * Alternative Strategy B (scale hysteresis) could be used if we want to respond to large scale changes without moving.
+ * 
+ * cameraPosition: The current world position of the camera.
+ * currentGridSize: The grid size used in the previous frame (stable).
+ * newGridSize: The new calculated grid size (target).
+ * hysteresisRatio: The hysteresis margin as a ratio of the grid size [0, 1].
+ * forceSnap: Force a snap regardless of threshold (used for manual grid size changes).
+ * Returns the stable grid origin.
+ */
+double3 FView::computeGridOrigin(double3 cameraPosition, double currentGridSize, double newGridSize, double hysteresisRatio, bool forceSnap) const noexcept {
+    if (currentGridSize <= 0.0) {
+        return cameraPosition;
+    }
+
+    const double threshold = currentGridSize * (0.5 + hysteresisRatio);
+    const double3 currentOrigin = mGridOrigin;
+
+    // Check threshold per axis (without loop)
+    bool const snapX = std::abs(cameraPosition.x - currentOrigin.x) > threshold;
+    bool const snapY = std::abs(cameraPosition.y - currentOrigin.y) > threshold;
+    bool const snapZ = std::abs(cameraPosition.z - currentOrigin.z) > threshold;
+
+    if (snapX || snapY || snapZ || forceSnap) {
+        // Snap triggered! Use new grid size to compute new origin.
+        double3 const newOrigin = {
+                std::round(cameraPosition.x / newGridSize) * newGridSize,
+                std::round(cameraPosition.y / newGridSize) * newGridSize,
+                std::round(cameraPosition.z / newGridSize) * newGridSize
+        };
+        mGridOrigin = newOrigin;
+        mEffectiveGridSize = newGridSize;
+    }
+
+    return mGridOrigin;
+}
+
 CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
     FScene const* const scene = getScene();
 
     /*
      * We apply a "world origin" to "everything" in order to implement the IBL rotation.
-     * The "world origin" is also used to keep the origin close to the camera position to
+     * The "world origin" is also used to keep the origin close to the camera position (or snapped grid) to
      * improve fp precision in the shader for large scenes.
      */
-    double3 translation;
-    mat3 rotation;
+    double3 translation = 0.0;
+    mat3 rotation{ 1.0f };
 
     /*
      * Calculate all camera parameters needed to render this View for this frame.
      */
     FCamera const* const camera = mViewingCamera ? mViewingCamera : mCullingCamera;
+    double3 const cameraPosition = camera->getPosition();
+
+    // Internal policy controlled by feature flag and debug flags
     if (engine.debug.view.camera_at_origin) {
-        // this moves the camera to the origin, effectively doing all shader computations in
-        // view-space, which improves floating point precision in the shader by staying around
-        // zero, where fp precision is highest. This also ensures that when the camera is placed
-        // very far from the origin, objects are still rendered and lit properly.
-        translation = -camera->getPosition();
+        if (engine.features.view.enable_grid_based_world_origin) {
+            // This moves the camera to a snapped grid origin, improving floating point precision
+            // while avoiding per-frame transform updates for objects as long as the camera
+            // stays within the grid cell (plus hysteresis).
+
+            // Determine the target grid size (either manual or automatic).
+            double newGridSize = mGridSize;
+            if (newGridSize <= 0.0) {
+                newGridSize = calculateAutomaticGridSize(camera);
+            }
+
+            // For the first frame, initialize the effective grid size.
+            double currentGridSize = mEffectiveGridSize;
+            if (currentGridSize <= 0.0) {
+                // First time initialization
+                currentGridSize = newGridSize;
+                mEffectiveGridSize = currentGridSize;
+            }
+            
+            // Force snap if user manually changed grid size to a positive value
+            bool const forceSnap = (mGridSize > 0.0 && mGridSize != currentGridSize);
+            
+            constexpr double hysteresisRatio = 0.5; // Automatic 50% hysteresis
+            translation = -computeGridOrigin(cameraPosition, currentGridSize, newGridSize, hysteresisRatio, forceSnap);
+        } else {
+            // this moves the camera to the origin, effectively doing all shader computations in
+            // view-space, which improves floating point precision in the shader by staying around
+            // zero, where fp precision is highest. This also ensures that when the camera is placed
+            // very far from the origin, objects are still rendered and lit properly.
+            translation = -cameraPosition;
+        }
     }
 
     FIndirectLight const* const ibl = scene->getIndirectLight();
@@ -1447,7 +1552,7 @@ void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) 
 
 void FView::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
     // MSAA is a post-process effect, and post-processing is disabled at FL0
-    if (mFeatureLevel >= backend::FeatureLevel::FEATURE_LEVEL_1) {
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
         mMultiSampleAntiAliasingOptions = options;
         assert_invariant(!options.enabled || !mRenderTarget || !mRenderTarget->hasSampleableDepth());

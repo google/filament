@@ -590,6 +590,32 @@ public:
      */
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
 
+    /**
+     * Sets the grid size for grid-based world origin snapping.
+     *
+     * The world origin used for rendering will snap to a grid of this size. 
+     * This avoids recomputing all transforms every frame when the camera moves within a grid cell.
+     *
+     * Hysteresis is applied automatically to avoid rapid snapping near edges.
+     *
+     * @param size The size of the grid cell in world units. If set to 0 or negative,
+     *             the grid size is automatically calculated based on the camera frustum.
+     */
+    void setGridSize(double size) noexcept;
+
+    /**
+     * Returns the grid size used for grid-based world origin snapping.
+     * @return The grid size in world units. A value of 0 or negative means automatic calculation is enabled.
+     */
+    double getGridSize() const noexcept;
+
+    /**
+     * Returns the effective grid size used for grid-based world origin snapping.
+     * If grid size was set to 0 or negative, this returns the automatically calculated size.
+     * @return The effective grid size in world units.
+     */
+    double getEffectiveGridSize() const noexcept;
+
     /*
      * Set the shadow mapping technique this View uses.
      *

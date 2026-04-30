@@ -287,6 +287,7 @@ if(NOT MSVC)
     endif()
 
     target_compile_options(${TARGET} PRIVATE ${TARGET_FLAGS})
+    target_compile_options(${TARGET} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-frtti>)
 else()
     target_compile_options(${TARGET} PRIVATE /bigobj)
 endif()

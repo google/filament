@@ -20,10 +20,12 @@
 #include <utils/EntityManager.h>
 
 #include <utils/compiler.h>
-#include <utils/Entity.h>
-#include <utils/Mutex.h>
+#include <utils/debug.h>
 #include <utils/CallStack.h>
+#include <utils/Entity.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Mutex.h>
+#include <utils/Slice.h>
 
 #include <tsl/robin_set.h>
 
@@ -31,14 +33,19 @@
 #include <tsl/robin_map.h>
 #endif
 
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
+#include <memory>
 #include <mutex> // for std::lock_guard
+#include <utility>
 #include <vector>
-
 
 namespace utils {
 
-static constexpr const size_t MIN_FREE_INDICES = 1024;
+static constexpr size_t MIN_FREE_INDICES = 1024;
 
 class UTILS_PRIVATE EntityManagerImpl : public EntityManager {
 public:
@@ -62,7 +69,7 @@ public:
     void create(size_t n, Entity* entities) {
         Entity::Type index{};
         auto& freeList = mFreeList;
-        uint8_t* const gens = mGens;
+        uint8_t const* const gens = mGens;
 
         // this must be thread-safe, acquire the free-list mutex
         std::lock_guard<Mutex> const lock(mFreeListLock);
@@ -121,6 +128,17 @@ public:
 #if FILAMENT_UTILS_TRACK_ENTITIES
                 mDebugActiveEntities.erase(entities[i]);
 #endif
+                mDirtyEntities[mDirtyCount++] = entities[i];
+                if (mDirtyCount == MAX_DIRTY_COUNT) {
+                    Entity localBuffer[MAX_DIRTY_COUNT];
+                    std::copy(mDirtyEntities, mDirtyEntities + MAX_DIRTY_COUNT, localBuffer);
+                    mDirtyCount = 0;
+                    lock.unlock();
+
+                    triggerChangeCallbacks(localBuffer, MAX_DIRTY_COUNT);
+
+                    lock.lock();
+                }
             }
         }
         lock.unlock();
@@ -140,6 +158,33 @@ public:
     void unregisterListener(Listener* l) noexcept {
         std::lock_guard<Mutex> const lock(mListenerLock);
         mListeners.erase(l);
+    }
+
+    void registerChangeCallback(void const* token, ChangeCallback callback) noexcept {
+        std::lock_guard<Mutex> const lock(mListenerLock);
+        mChangeCallbacks.push_back({token, std::move(callback)});
+    }
+
+    void unregisterChangeCallback(void const* token) noexcept {
+        std::lock_guard<Mutex> const lock(mListenerLock);
+        mChangeCallbacks.erase(
+                std::remove_if(mChangeCallbacks.begin(), mChangeCallbacks.end(),
+                        [token](auto const& info) { return info.token == token; }),
+                mChangeCallbacks.end());
+    }
+
+    void flushNotifications() noexcept {
+        std::unique_lock<Mutex> lock(mFreeListLock);
+        if (mDirtyCount > 0) {
+            Entity localBuffer[MAX_DIRTY_COUNT];
+            assert_invariant(mDirtyCount <= MAX_DIRTY_COUNT);
+            std::copy(mDirtyEntities, mDirtyEntities + mDirtyCount, localBuffer);
+            size_t const count = mDirtyCount;
+            mDirtyCount = 0;
+            lock.unlock();
+
+            triggerChangeCallbacks(localBuffer, count);
+        }
     }
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
@@ -162,6 +207,24 @@ public:
 #endif
 
 private:
+    std::vector<ChangeCallback> getChangeCallbacks() const noexcept {
+        std::lock_guard<Mutex> const lock(mListenerLock);
+        std::vector<ChangeCallback> result;
+        result.reserve(mChangeCallbacks.size());
+        for (auto const& info : mChangeCallbacks) {
+            result.push_back(info.callback);
+        }
+        return result;
+    }
+
+    void triggerChangeCallbacks(Entity const* entities, size_t n) const noexcept {
+        auto const callbacks = getChangeCallbacks();
+        Slice const slice(entities, n);
+        for (auto const& callback : callbacks) {
+            callback(slice);
+        }
+    }
+
     FixedCapacityVector<Listener*> getListeners() const noexcept {
         std::lock_guard<Mutex> const lock(mListenerLock);
         tsl::robin_set<Listener*> const& listeners = mListeners;
@@ -179,6 +242,16 @@ private:
 
     mutable Mutex mListenerLock;
     tsl::robin_set<Listener*> mListeners;
+
+    struct CallbackInfo {
+        void const* token;
+        ChangeCallback callback;
+    };
+    std::vector<CallbackInfo> mChangeCallbacks;
+
+    static constexpr size_t MAX_DIRTY_COUNT = 16;
+    Entity mDirtyEntities[MAX_DIRTY_COUNT];
+    size_t mDirtyCount = 0;
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
     tsl::robin_map<Entity, CallStack, Entity::Hasher> mDebugActiveEntities;

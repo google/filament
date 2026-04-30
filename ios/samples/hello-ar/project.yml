@@ -8,9 +8,9 @@ targets:
             - FilamentApp
         dependencies:
             - sdk: ARKit.framework
-        settings:
-            base:
-                OTHER_LDFLAGS: ["-lfilameshio", "-lmeshoptimizer", "-limage"]
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilameshio.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libmeshoptimizer.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libimage.xcframework
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources

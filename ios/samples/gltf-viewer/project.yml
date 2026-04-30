@@ -17,16 +17,24 @@ targets:
               optional: true
         templates:
             - FilamentApp
-        settings:
-            base:
-                OTHER_LDFLAGS: ["-lgltfio_core", "-luberarchive", "-limage", "-lstb", "-lbasis_transcoder",
-                                "-lzstd", "-lcamutils", "-ldracodec", "-lmeshoptimizer", "-lviewer", "-lcivetweb",
-                                "-luberzlib", "-limageio-lite"]
+        dependencies:
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libgltfio_core.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libuberarchive.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libimage.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libstb.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libbasis_transcoder.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libcamutils.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libdracodec.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libmeshoptimizer.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libviewer.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libcivetweb.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libuberzlib.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libimageio-lite.xcframework
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources
               inputFiles:
-                - $(SRCROOT)/../../../third_party/environments/lightroom_14b.hdr
+                - ../../../third_party/environments/lightroom_14b.hdr
               outputFiles:
                 - $(SRCROOT)/generated/default_env/default_env_ibl.ktx
                 - $(SRCROOT)/generated/default_env/default_env_skybox.ktx

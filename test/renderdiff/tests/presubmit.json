@@ -30,6 +30,11 @@
             "name": "transmission_models",
             "models": ["TransmissionRoughnessTest", "IridescentDishWithOlives"],
             "rendering": {}
+        },
+        {
+            "name": "animation_models",
+            "models": ["Fox"],
+            "rendering": {}
         }
     ],
     "tests": [
@@ -67,6 +72,17 @@
             "apply_presets": ["base", "ssao_models"],
             "rendering": {
                 "view.ssao.enabled": true
+            }
+        },
+        {
+            "name": "Skinning",
+            "description": "Bone skinning animation test",
+            "apply_presets": ["base", "animation_models"],
+            "rendering": {
+                "animation": {
+                    "enabled": true,
+                    "time": 0.5
+                }
             }
         }
     ]

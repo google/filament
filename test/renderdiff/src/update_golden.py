@@ -85,9 +85,9 @@ def _get_deletes_updates(update_dir, golden_dir, diffimg_path):
   # Scan update_dir for files to potentially update or add
   for ext in ['tif', 'json']:
     # Get relative paths from golden_dir (base) and update_dir (new)
-    # Note: glob with root_dir returns relative paths
-    base_files = set(glob.glob(f'./**/*.{ext}', root_dir=golden_dir, recursive=True))
-    new_files = set(glob.glob(f'./**/*.{ext}', root_dir=update_dir, recursive=True))
+    # Note: glob with root_dir returns relative paths, so we use relpath for python < 3.10 compatibility
+    base_files = set(os.path.join('.', os.path.relpath(p, golden_dir)) for p in glob.glob(os.path.join(golden_dir, '**', f'*.{ext}'), recursive=True) if os.path.isfile(p))
+    new_files = set(os.path.join('.', os.path.relpath(p, update_dir)) for p in glob.glob(os.path.join(update_dir, '**', f'*.{ext}'), recursive=True) if os.path.isfile(p))
 
     # Files in base but not in new are candidates for deletion (if we decide to prune)
     # However, update_golden typically only updates/adds based on the new render set.

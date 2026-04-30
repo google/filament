@@ -609,9 +609,6 @@ void FEngine::shutdown() {
     DLOG(INFO) << "CircularBuffer: High watermark " << wm / 1024 << " KiB (" << wmpct << "%)";
 #endif
 
-    /* Destroy any leftover items in the cache. */
-    mMaterialCache.terminate(*this);
-
     DriverApi& driver = getDriverApi();
 
     /*
@@ -685,6 +682,11 @@ void FEngine::shutdown() {
     for (auto& item : mMaterialInstances) {
         cleanupResourceList(std::move(item.second));
     }
+
+    /* Destroy any leftover items in the cache. This should be after material list cleanup to prevent
+     * double-free.
+     */
+    mMaterialCache.terminate(*this);
 
     cleanupResourceListLocked(mFenceListLock, std::move(mFences));
 

@@ -31,6 +31,11 @@
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
 
+#include <unordered_map>
+#include <thread>
+#include <shared_mutex>
+#include <memory>
+
 namespace filament::backend {
 
 /**
@@ -58,10 +63,20 @@ protected:
     bool makeCurrent(ContextType type, SwapChain* drawSwapChain,
             SwapChain* readSwapChain) override;
     void commit(SwapChain* swapChain) noexcept override;
+    bool isExtraContextSupported() const noexcept override;
+    void createContext(bool shared) override;
+    void releaseContext() noexcept override;
 
 private:
     OSMesaContext mContext;
     void* mOsMesaApi = nullptr;
+
+    struct ContextInfo {
+        OSMesaContext context;
+        std::unique_ptr<uint8_t[]> buffer;
+    };
+    std::unordered_map<std::thread::id, ContextInfo> mAdditionalContexts;
+    mutable std::shared_mutex mAdditionalContextsLock;
 };
 
 } // namespace filament::backend

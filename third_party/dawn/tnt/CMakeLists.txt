@@ -52,8 +52,6 @@ if (ANDROID AND FILAMENT_BUILD_FILAMAT)
         tint_lang_spirv_intrinsic
         tint_lang_spirv_ir
         tint_lang_spirv_reader
-        tint_lang_spirv_reader_ast_lower
-        tint_lang_spirv_reader_ast_parser
         tint_lang_spirv_reader_common
         tint_lang_spirv_reader_lower
         tint_lang_spirv_reader_parser
@@ -77,6 +75,7 @@ if (ANDROID AND FILAMENT_BUILD_FILAMAT)
         tint_utils_rtti
         tint_utils_strconv
         tint_utils_symbol
+        tint_utils_system
         tint_utils_text
         tint_utils_text_generator
     )

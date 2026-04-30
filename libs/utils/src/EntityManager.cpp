@@ -57,6 +57,18 @@ void EntityManager::unregisterListener(Listener* l) noexcept {
     static_cast<EntityManagerImpl *>(this)->unregisterListener(l);
 }
 
+void EntityManager::registerChangeCallback(void const* token, ChangeCallback callback) noexcept {
+    static_cast<EntityManagerImpl *>(this)->registerChangeCallback(token, std::move(callback));
+}
+
+void EntityManager::unregisterChangeCallback(void const* token) noexcept {
+    static_cast<EntityManagerImpl *>(this)->unregisterChangeCallback(token);
+}
+
+void EntityManager::flushNotifications() noexcept {
+    static_cast<EntityManagerImpl *>(this)->flushNotifications();
+}
+
 size_t EntityManager::getEntityCount() const noexcept {
     return static_cast<EntityManagerImpl const *>(this)->getEntityCount();
 }

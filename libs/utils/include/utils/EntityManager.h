@@ -19,6 +19,7 @@
 
 #include <utils/Entity.h>
 #include <utils/compiler.h>
+#include <utils/Slice.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -32,6 +33,8 @@
 #include <utils/ostream.h>
 #include <vector>
 #endif
+
+#include <functional>
 
 namespace utils {
 
@@ -47,6 +50,30 @@ public:
     protected:
         virtual ~Listener() noexcept;
     };
+
+    using ChangeCallback = std::function<void(utils::Slice<const Entity>)>;
+
+    /**
+     * Registers a callback to be triggered when entities are destroyed.
+     * The callback receives a batch of destroyed entities.
+     * Thread safe.
+     * @param token A unique identifier for the listener (e.g., 'this' pointer).
+     * @param callback The callback to invoke.
+     */
+    void registerChangeCallback(void const* token, ChangeCallback callback) noexcept;
+
+    /**
+     * Unregisters a callback.
+     * Thread safe.
+     * @param token The token used during registration.
+     */
+    void unregisterChangeCallback(void const* token) noexcept;
+
+    /**
+     * Flushes any pending notifications to listeners.
+     * Thread safe.
+     */
+    void flushNotifications() noexcept;
 
     // maximum number of entities that can exist at the same time
     static size_t getMaxEntityCount() noexcept {
