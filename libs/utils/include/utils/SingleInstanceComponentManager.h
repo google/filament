@@ -37,6 +37,7 @@
 namespace utils {
 
 class EntityManager;
+class PagedArenaBitset;
 
 /**
  * Base class for SingleInstanceComponentManager to handle callbacks without template bloat.
@@ -72,6 +73,18 @@ public:
     void flushNotifications() noexcept;
 
     /**
+     * Registers a bitset to be updated when entities change.
+     * @param bitset A pointer to the PagedArenaBitset to register.
+     */
+    void registerBitset(PagedArenaBitset* bitset);
+
+    /**
+     * Unregisters a bitset.
+     * @param bitset A pointer to the PagedArenaBitset to unregister.
+     */
+    void unregisterBitset(PagedArenaBitset const* bitset);
+
+    /**
      * Records a change for the given entity.
      * Flushes notifications if the internal buffer becomes full.
      */
@@ -96,6 +109,7 @@ private:
     Entity mDirtyEntities[MAX_DIRTY_COUNT];
     size_t mDirtyCount = 0;
     std::vector<CallbackInfo> mChangeCallbacks;
+    std::vector<PagedArenaBitset*> mBitsets;
 };
 
 /*
