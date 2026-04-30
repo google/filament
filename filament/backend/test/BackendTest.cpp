@@ -89,7 +89,11 @@ void BackendTest::initializeDriver() {
     auto backend = static_cast<filament::backend::Backend>(sBackend);
     mPlatform = PlatformFactory::create(&backend);
     assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
-    Platform::DriverConfig const driverConfig;
+    Platform::DriverConfig driverConfig;
+    // Enable asynchronous mode for backends that support it.
+    if (sBackend == Backend::METAL || sBackend == Backend::OPENGL) {
+        driverConfig.asynchronousMode = Platform::AsynchronousMode::THREAD_PREFERRED;
+    }
     driver = mPlatform->createDriver(nullptr, driverConfig);
     commandStream = std::make_unique<CommandStream>(*driver, commandBufferQueue.getCircularBuffer());
 }

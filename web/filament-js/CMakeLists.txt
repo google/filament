@@ -17,7 +17,7 @@ set(CPP_SRC
 # The emcc options are not documented well, the best place to find them is the source:
 # https://github.com/kripken/emscripten/blob/main/src/settings.js
 
-if (WEBGL_PTHREADS)
+if (WASM_PTHREADS)
   set(COPTS "${COPTS} -pthread")
   set(LOPTS "${LOPTS} -pthread")
 endif()

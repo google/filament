@@ -207,6 +207,8 @@ void FTransformManager::updateNodeTransform(Instance const i) noexcept {
             manager[parent].worldTranslationLo, manager[i].localTranslationLo,
             mAccurateTranslations);
 
+    manager.notifyChange(getEntity(i));
+
     // update our children's world transforms
     Instance const child = manager[i].firstChild;
     if (UTILS_UNLIKELY(child)) { // assume we don't have a hierarchy in the common case
@@ -246,6 +248,8 @@ void FTransformManager::computeAllWorldTransforms() noexcept {
                 manager[parent].world, manager[i].local,
                 manager[parent].worldTranslationLo, manager[i].localTranslationLo,
                 accurate);
+
+        manager.notifyChange(getEntity(i));
     }
 }
 
@@ -381,6 +385,8 @@ void FTransformManager::transformChildren(Sim& manager, Instance i) noexcept {
                 manager[parent].world, manager[i].local,
                 manager[parent].worldTranslationLo, manager[i].localTranslationLo,
                 accurate);
+
+        manager.notifyChange(getEntity(i));
 
         // assume we don't have a deep hierarchy
         Instance const child = manager[i].firstChild;

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(filament-tests)
 
-if(IOS OR WEBGL)
+if(IOS OR WASM)
     return()
 endif()
 

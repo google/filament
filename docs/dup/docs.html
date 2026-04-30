@@ -234,11 +234,11 @@ book.</p>
 <p>The process for copying and processing these READMEs is outlined in
 <a href="#introductory-doc">Introductory docs</a>.</p>
 <h3 id="web-examples-and-tutorials"><a class="header" href="#web-examples-and-tutorials">Web Examples and Tutorials</a></h3>
-<p>Filament provides a number of WebGL tutorials and examples in the <code>web/</code> directory. These are
-compiled during the WebGL CMake build and are integrated into the documentation via
+<p>Filament provides a number of web tutorials and examples in the <code>web/</code> directory. These are
+compiled during the web CMake build and are integrated into the documentation via
 <code>duplicates.json</code>. The process is entirely automated:</p>
 <ol>
-<li><code>run.py</code> maps the <code>.html</code> and <code>.md</code> WebGL outputs from the <code>out/cmake-webgl-release/...</code>
+<li><code>run.py</code> maps the <code>.html</code> and <code>.md</code> web outputs from the <code>out/cmake-wasm-release/...</code>
 directory into <code>docs_src/src_mdbook/src/samples/web/</code> using the instructions in <code>duplicates.json</code>.</li>
 <li>While transferring <code>.html</code> to <code>.md</code>, <code>run.py</code> strips away the <code>&lt;!DOCTYPE html&gt;</code>, <code>&lt;head&gt;</code>, and
 <code>&lt;html&gt;</code> tags. By retaining only the <code>&lt;style&gt;</code> and <code>&lt;body&gt;</code> elements, the HTML samples can be

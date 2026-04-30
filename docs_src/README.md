@@ -81,10 +81,10 @@ The process for copying and processing these READMEs is outlined in
 [Introductory docs](#introductory-doc).
 
 ### Web Examples and Tutorials
-Filament provides a number of WebGL tutorials and examples in the `web/` directory. These are
-compiled during the WebGL CMake build and are integrated into the documentation via
+Filament provides a number of web tutorials and examples in the `web/` directory. These are
+compiled during the web CMake build and are integrated into the documentation via
 `duplicates.json`. The process is entirely automated:
-1. `run.py` maps the `.html` and `.md` WebGL outputs from the `out/cmake-webgl-release/...`
+1. `run.py` maps the `.html` and `.md` web outputs from the `out/cmake-wasm-release/...`
 directory into `docs_src/src_mdbook/src/samples/web/` using the instructions in `duplicates.json`.
 2. While transferring `.html` to `.md`, `run.py` strips away the `<!DOCTYPE html>`, `<head>`, and
 `<html>` tags. By retaining only the `<style>` and `<body>` elements, the HTML samples can be

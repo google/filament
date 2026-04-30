@@ -8,7 +8,7 @@
 [![Web Build Status](https://github.com/google/filament/actions/workflows/status-web.yml/badge.svg)](https://github.com/google/filament/actions/workflows/status-web.yml)
 
 Filament is a real-time physically based rendering engine for Android, iOS, Linux, macOS, Windows,
-and WebGL. It is designed to be as small as possible and as efficient as possible on Android.
+and WASM. It is designed to be as small as possible and as efficient as possible on Android.
 
 ## Download
 
@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.71.1'
+    implementation 'com.google.android.filament:filament-android:1.71.2'
 }
 ```
 
@@ -50,7 +50,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```shell
-pod 'Filament', '~> 1.71.1'
+pod 'Filament', '~> 1.71.2'
 ```
 
 ## Documentation

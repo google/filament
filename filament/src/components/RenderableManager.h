@@ -150,10 +150,20 @@ public:
     inline void setFogEnabled(Instance instance, bool enable) noexcept;
     inline bool getFogEnabled(Instance instance) const noexcept;
 
-    inline void setPrimitives(Instance instance,
+    void setPrimitives(Instance instance,
             utils::Slice<FRenderPrimitive> primitives) noexcept;
 
     inline void setSkinning(Instance instance, bool enable);
+
+    void registerChangeCallback(void const* token, utils::SingleInstanceComponentManagerBase::ChangeCallback callback) noexcept {
+        mManager.registerChangeCallback(token, std::move(callback));
+    }
+    void unregisterChangeCallback(void const* token) noexcept {
+        mManager.unregisterChangeCallback(token);
+    }
+    void flushNotifications() noexcept {
+        mManager.flushNotifications();
+    }
     void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
     void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0);
     void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
@@ -335,10 +345,13 @@ FILAMENT_DOWNCAST(RenderableManager)
 void FRenderableManager::setAxisAlignedBoundingBox(Instance const instance, const Box& aabb) {
     if (instance) {
         FILAMENT_CHECK_PRECONDITION(
-                static_cast<Visibility const&>(mManager[instance].visibility).geometryType ==
-                GeometryType::DYNAMIC)
+                static_cast<Visibility const&>(mManager[instance].visibility).geometryType == GeometryType::DYNAMIC)
                 << "This renderable has staticBounds enabled; its AABB cannot change.";
-        mManager[instance].aabb = aabb;
+        Box& state = mManager[instance].aabb;
+        if (state.center != aabb.center || state.halfExtent != aabb.halfExtent) {
+            state = aabb;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
@@ -346,62 +359,92 @@ void FRenderableManager::setLayerMask(Instance const instance,
         uint8_t const select, uint8_t const values) noexcept {
     if (instance) {
         uint8_t& layers = mManager[instance].layers;
-        layers = (layers & ~select) | (values & select);
+        uint8_t const newLayers = (layers & ~select) | (values & select);
+        if (layers != newLayers) {
+            layers = newLayers;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setLayerMask(Instance const instance, uint8_t const layerMask) noexcept {
     if (instance) {
-        mManager[instance].layers = layerMask;
+        if (mManager[instance].layers != layerMask) {
+            mManager[instance].layers = layerMask;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setPriority(Instance const instance, uint8_t const priority) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.priority = std::min(priority, uint8_t(0x7));
+        uint8_t const newPriority = std::min(priority, uint8_t(0x7));
+        if (visibility.priority != newPriority) {
+            visibility.priority = newPriority;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setChannel(Instance const instance, uint8_t const channel) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.channel = std::min(channel, uint8_t(CONFIG_RENDERPASS_CHANNEL_COUNT - 1));
+        uint8_t const newChannel = std::min(channel, uint8_t(CONFIG_RENDERPASS_CHANNEL_COUNT - 1));
+        if (visibility.channel != newChannel) {
+            visibility.channel = newChannel;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setCastShadows(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.castShadows = enable;
+        if (visibility.castShadows != enable) {
+            visibility.castShadows = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setReceiveShadows(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.receiveShadows = enable;
+        if (visibility.receiveShadows != enable) {
+            visibility.receiveShadows = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setScreenSpaceContactShadows(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.screenSpaceContactShadows = enable;
+        if (visibility.screenSpaceContactShadows != enable) {
+            visibility.screenSpaceContactShadows = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setCulling(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.culling = enable;
+        if (visibility.culling != enable) {
+            visibility.culling = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setFogEnabled(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.fog = enable;
+        if (visibility.fog != enable) {
+            visibility.fog = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
@@ -411,35 +454,35 @@ bool FRenderableManager::getFogEnabled(RenderableManager::Instance const instanc
 
 void FRenderableManager::setSkinning(Instance const instance, bool const enable) {
     if (instance) {
-        Visibility& visibility = mManager[instance].visibility;
+        Visibility const& visibility = mManager[instance].visibility;
 
         FILAMENT_CHECK_PRECONDITION(visibility.geometryType != GeometryType::STATIC || !enable)
                 << "Skinning can't be used with STATIC geometry";
 
         Skinning& skinning = mManager[instance].skinning;
-        skinning.skinning = enable;
+        if (skinning.skinning != enable) {
+            skinning.skinning = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
 void FRenderableManager::setMorphing(Instance const instance, Builder::MorphType const type) {
     if (instance) {
-        Visibility& visibility = mManager[instance].visibility;
+        Visibility const& visibility = mManager[instance].visibility;
 
         FILAMENT_CHECK_PRECONDITION(
                 visibility.geometryType != GeometryType::STATIC || type != MorphType::NONE)
                 << "Morphing can't be used with STATIC geometry";
 
         Skinning& skinning = mManager[instance].skinning;
-        skinning.morphType = type;
+        if (skinning.morphType != type) {
+            skinning.morphType = type;
+            mManager.notifyChange(getEntity(instance));
+        }
     }
 }
 
-void FRenderableManager::setPrimitives(Instance const instance,
-        utils::Slice<FRenderPrimitive> primitives) noexcept {
-    if (instance) {
-        mManager[instance].primitives = primitives;
-    }
-}
 
 FRenderableManager::Visibility
 FRenderableManager::getVisibility(Instance const instance) const noexcept {
