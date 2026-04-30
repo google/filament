@@ -659,13 +659,12 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
     Slice<FroxelThreadData> froxelThreadData = mFroxelShardedData;
     memset(froxelThreadData.data(), 0, froxelThreadData.sizeInBytes());
 
-    auto& lcm = engine.getLightManager();
     auto const* UTILS_RESTRICT spheres      = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
-    auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
+    auto const* UTILS_RESTRICT spotParams = lightData.data<FScene::SPOT_PARAMS>();
 
     auto process = [ this, &froxelThreadData,
-                     spheres, directions, instances, &viewMatrix, &lcm ]
+                     spheres, directions, spotParams, &viewMatrix ]
             (size_t const count, size_t const offset, size_t const stride) {
 
         FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "FroxelizeLoop Job");
@@ -680,12 +679,12 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 
         for (size_t i = offset; i < count; i += stride) {
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
-            FLightManager::Instance const li = instances[j];
+            float2 const params = spotParams[j];
             LightParams light = {
                     .position = (viewMatrix * float4{ spheres[j].xyz, 1 }).xyz,     // to view-space
-                    .cosSqr = std::min(maxCosSquared, lcm.getCosOuterSquared(li)),  // spot only
+                    .cosSqr = std::min(maxCosSquared, params.x),                    // spot only
                     .axis = vn * directions[j],                                     // spot only
-                    .invSin = lcm.getSinInverse(li),                                // spot only
+                    .invSin = params.y,                                             // spot only
                     .radius = spheres[j].w,
             };
             // infinity means "point-light"

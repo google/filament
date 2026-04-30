@@ -134,7 +134,8 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     mHasVisibleShadows = false;
 
     FLightManager const& lcm = engine.getLightManager();
-    FLightManager::Instance const li = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
+    Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(index);
+    FLightManager::Instance const li = lcm.getInstance(entity);
     FLightManager::ShadowParams const params = lcm.getShadowParams(li);
 
     const auto direction = lightData.elementAt<FScene::SHADOW_DIRECTION>(index);
@@ -271,7 +272,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 
 ShadowMap::ShaderParameters ShadowMap::updatePunctual(
         mat4f const& Mv, float const outerConeAngle, float const nearPlane, float const farPlane,
-        const ShadowMapInfo& shadowMapInfo, const FLightManager::ShadowParams& params) noexcept {
+        const ShadowMapInfo& shadowMapInfo, FLightManager::ShadowParams const& params) noexcept {
     const mat4f Mp = mat4f::perspective(
             outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, nearPlane, farPlane);
 
@@ -330,14 +331,15 @@ ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
         const FScene::LightSoa& lightData, size_t index,
         CameraInfo const&,
         const ShadowMapInfo& shadowMapInfo,
-        FScene const& scene, SceneInfo sceneInfo) noexcept {
+        FScene::RenderableSoa const& renderableData, SceneInfo sceneInfo) noexcept {
 
-    auto& lcm = engine.getLightManager();
-    auto position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
-    auto direction  = lightData.elementAt<FScene::DIRECTION>(index);
-    auto radius     = lightData.elementAt<FScene::POSITION_RADIUS>(index).w;
-    auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
-    const FLightManager::ShadowParams& params = lcm.getShadowParams(li);
+    auto const& lcm = engine.getLightManager();
+    auto const position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
+    auto const direction  = lightData.elementAt<FScene::DIRECTION>(index);
+    auto const radius     = lightData.elementAt<FScene::POSITION_RADIUS>(index).w;
+    auto const entity     = lightData.elementAt<FScene::LIGHT_ENTITY>(index);
+    auto const li         = lcm.getInstance(entity);
+    FLightManager::ShadowParams const& params = lcm.getShadowParams(li);
     const mat4f Mv = getDirectionalLightViewMatrix(direction, { 0, 1, 0 }, position);
 
     // We only keep this for reference. updateSceneInfoSpot() is quite expensive on large scenes
@@ -347,7 +349,7 @@ ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
     //       by the light -- which should be much smaller.
     if constexpr (false) {
         // find decent near/far
-        updateSceneInfoSpot(Mv, scene, sceneInfo);
+        updateSceneInfoSpot(Mv, renderableData, sceneInfo);
     } else {
         sceneInfo.lsCastersNearFar = { -0.01f, -radius };
     }
@@ -368,11 +370,10 @@ ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
 
 ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
         const FScene::LightSoa& lightData, size_t const index, CameraInfo const&,
-        const ShadowMapInfo& shadowMapInfo, FScene const& scene, uint8_t face) noexcept {
+        const ShadowMapInfo& shadowMapInfo, FScene::RenderableSoa const& soa, uint8_t face) noexcept {
 
     // check if this shadow map has anything to render
     mHasVisibleShadows = false;
-    FScene::RenderableSoa const& UTILS_RESTRICT soa = scene.getRenderableData();
     auto const* const UTILS_RESTRICT visibleMasks = soa.data<FScene::VISIBLE_MASK>();
     size_t const c = soa.size();
     for (size_t i = 0; i < c; i++) {
@@ -385,11 +386,12 @@ ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
         return {};
     }
 
-    auto& lcm = engine.getLightManager();
-    auto position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
-    auto radius     = lightData.elementAt<FScene::POSITION_RADIUS>(index).w;
-    auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
-    const FLightManager::ShadowParams& params = lcm.getShadowParams(li);
+    auto const& lcm = engine.getLightManager();
+    auto const position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
+    auto const radius     = lightData.elementAt<FScene::POSITION_RADIUS>(index).w;
+    auto const entity     = lightData.elementAt<FScene::LIGHT_ENTITY>(index);
+    auto const li         = lcm.getInstance(entity);
+    FLightManager::ShadowParams const& params = lcm.getShadowParams(li);
     const mat4f Mv = getPointLightViewMatrix(TextureCubemapFace(face), position);
     return updatePunctual(Mv, 45.0f * f::DEG_TO_RAD, 0.01f, radius, shadowMapInfo, params);
 }
@@ -799,7 +801,7 @@ float4 ShadowMap::computeBoundingSphere(float3 const* vertices, size_t count) no
 Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
         float3 const* wsVertices, size_t const count) noexcept {
     Aabb bounds{};
-    Slice<const float3> vertices{ wsVertices, count };
+    Slice<const float3> const vertices{ wsVertices, count };
     for (auto const& vertice : vertices) {
         const float3 v = mat4f::project(lightView, vertice);
         bounds.min.xy = min(bounds.min.xy, v.xy);
@@ -1185,11 +1187,10 @@ float2 ShadowMap::texelSizeWorldSpace(mat4f const& S, uint16_t const shadowDimen
 }
 
 template<typename Visitor>
-void ShadowMap::visitScene(const FScene& scene, uint32_t const visibleLayers, Visitor visitor) noexcept {
+void ShadowMap::visitScene(FScene::RenderableSoa const& soa, uint32_t const visibleLayers, Visitor visitor) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     using State = FRenderableManager::Visibility;
-    FScene::RenderableSoa const& soa = scene.getRenderableData();
     float3 const* const worldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
     float3 const* const worldAABBExtent = soa.data<FScene::WORLD_AABB_EXTENT>();
     uint8_t const* const layers = soa.data<FScene::LAYERS>();
@@ -1208,7 +1209,7 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t const visibleLayers, Vi
 }
 
 ShadowMap::SceneInfo::SceneInfo(
-        FScene const& scene, uint8_t const visibleLayers) noexcept
+        FScene::RenderableSoa const& soa, uint8_t const visibleLayers) noexcept
         : visibleLayers(visibleLayers) {
 
     // the code below only works with affine transforms
@@ -1220,7 +1221,7 @@ ShadowMap::SceneInfo::SceneInfo(
     // Compute scene bounds in world space, as well as the light-space and view-space near/far planes
     wsShadowCastersVolume = {};
     wsShadowReceiversVolume = {};
-    visitScene(scene, visibleLayers,
+    visitScene(soa, visibleLayers,
             [this](Aabb const& aabb, Culler::result_type, FRenderableManager::Visibility const visibility) {
                 if (visibility.castShadows) {
                     wsShadowCastersVolume.min = min(wsShadowCastersVolume.min, aabb.min);
@@ -1234,7 +1235,7 @@ ShadowMap::SceneInfo::SceneInfo(
     );
 }
 
-void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene const& scene,
+void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene::RenderableSoa const& renderableData,
         SceneInfo& sceneInfo) {
 
     // the code below only works with affine transforms
@@ -1242,7 +1243,7 @@ void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene const& scene,
 
     sceneInfo.lsCastersNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     sceneInfo.lsReceiversNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
-    visitScene(scene, sceneInfo.visibleLayers,
+    visitScene(renderableData, sceneInfo.visibleLayers,
             [&](Aabb const& aabb, Culler::result_type const vis, FRenderableManager::Visibility const visibility) {
                 if (visibility.castShadows) {
                     auto const r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, aabb);
@@ -1253,7 +1254,7 @@ void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene const& scene,
                     // account only for objects that are visible by the camera
                     constexpr auto mask = 1u << VISIBLE_RENDERABLE_BIT;
                     if ((vis & mask) == mask) {
-                        auto r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, aabb);
+                        auto const r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, aabb);
                         sceneInfo.lsReceiversNearFar.x = max(sceneInfo.lsReceiversNearFar.x, r.max.z);
                         sceneInfo.lsReceiversNearFar.y = min(sceneInfo.lsReceiversNearFar.y, r.min.z);
                     }
@@ -1262,7 +1263,7 @@ void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene const& scene,
     );
 }
 
-void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
+void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene::RenderableSoa const& renderableData,
         SceneInfo& sceneInfo) {
 
     // the code below only works with affine transforms
@@ -1270,7 +1271,7 @@ void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
 
     sceneInfo.lsCastersNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     // account only for objects that are visible by both the camera and the light
-    visitScene(scene, sceneInfo.visibleLayers,
+    visitScene(renderableData, sceneInfo.visibleLayers,
             [&](Aabb const& aabb, Culler::result_type const vis, FRenderableManager::Visibility const visibility) {
                 if (visibility.castShadows) {
                     constexpr auto mask = VISIBLE_DYN_SHADOW_RENDERABLE;

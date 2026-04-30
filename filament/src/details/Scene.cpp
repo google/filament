@@ -224,7 +224,7 @@ void FScene::prepare(JobSystem& js,
             size_t const index = std::distance(first, p) + i;
             assert_invariant(index < sceneData.size());
 
-            sceneData.elementAt<RENDERABLE_INSTANCE>(index) = ri;
+            sceneData.elementAt<RENDERABLE_ENTITY>(index) = rcm.getEntity(ri);
             sceneData.elementAt<WORLD_TRANSFORM>(index)     = shaderWorldTransform;
             sceneData.elementAt<VISIBILITY_STATE>(index)    = visibility;
             sceneData.elementAt<SKINNING_BUFFER>(index)     = rcm.getSkinningBufferInfo(ri);
@@ -246,7 +246,7 @@ void FScene::prepare(JobSystem& js,
     };
 
     auto lightWork = [first = lightInstances.data(), &lcm, &tcm, &worldTransform,
-            &lightData](auto* p, auto c) {
+            &lightData, &engine](auto* p, auto c) {
         FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "lightWork");
         for (size_t i = 0; i < c; i++) {
             auto [li, ti] = p[i];
@@ -264,7 +264,7 @@ void FScene::prepare(JobSystem& js,
             assert_invariant(index < lightData.size());
             lightData.elementAt<POSITION_RADIUS>(index) = float4{ position.xyz, lcm.getRadius(li) };
             lightData.elementAt<DIRECTION>(index) = d;
-            lightData.elementAt<LIGHT_INSTANCE>(index) = li;
+            lightData.elementAt<LIGHT_ENTITY>(index) = li ? engine.getLightManager().getEntity(li) : utils::Entity{};
         }
     };
 
@@ -326,9 +326,9 @@ void FScene::prepare(JobSystem& js,
         lightData.elementAt<DIRECTION>(0) = normalize(d);
         lightData.elementAt<SHADOW_DIRECTION>(0) = normalize(s);
         lightData.elementAt<SHADOW_REF>(0) = lsReferencePoint;
-        lightData.elementAt<LIGHT_INSTANCE>(0) = li;
+        lightData.elementAt<LIGHT_ENTITY>(0) = li ? engine.getLightManager().getEntity(li) : utils::Entity{};
     } else {
-        lightData.elementAt<LIGHT_INSTANCE>(0) = 0;
+        lightData.elementAt<LIGHT_ENTITY>(0) = utils::Entity{};
     }
 
     // some elements past the end of the array will be accessed by SIMD code, we need to make
@@ -366,7 +366,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         auto const visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
         auto const skinning = sceneData.elementAt<SKINNING_STATE>(i);
         auto const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
-        auto const ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
+        auto const ri = mEngine.getRenderableManager().getInstance(sceneData.elementAt<RENDERABLE_ENTITY>(i));
 
         // Using mat3f::getTransformForNormals handles non-uniform scaling, but DOESN'T guarantee that
         // the transformed normals will have unit-length, therefore they need to be normalized
@@ -438,11 +438,11 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
     LightsUib* const lp = driver.allocatePod<LightsUib>(positionalLightCount);
 
     auto const* UTILS_RESTRICT directions       = lightData.data<DIRECTION>();
-    auto const* UTILS_RESTRICT instances        = lightData.data<LIGHT_INSTANCE>();
+    auto const* UTILS_RESTRICT instances        = lightData.data<LIGHT_ENTITY>();
     auto const* UTILS_RESTRICT shadowInfo       = lightData.data<SHADOW_INFO>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = size; i < c; ++i) {
         const size_t gpuIndex = i - DIRECTIONAL_LIGHTS_COUNT;
-        auto const li = instances[i];
+        auto const li = lcm.getInstance(instances[i]);
         lp[gpuIndex].positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp[gpuIndex].direction            = directions[i];
         lp[gpuIndex].reserved1            = {};
@@ -564,11 +564,11 @@ bool FScene::hasContactShadows() const noexcept {
     // find out if at least one light has contact-shadow enabled
     // TODO: we could cache the result of this Loop in the LightManager
     auto const& lcm = mEngine.getLightManager();
-    const auto *pFirst = mLightData.begin<LIGHT_INSTANCE>();
-    const auto *pLast = mLightData.end<LIGHT_INSTANCE>();
+    const auto *pFirst = mLightData.begin<LIGHT_ENTITY>();
+    const auto *pLast = mLightData.end<LIGHT_ENTITY>();
     while (pFirst != pLast) {
-        if (pFirst->isValid()) {
-            auto const& shadowOptions = lcm.getShadowOptions(*pFirst);
+        if (!pFirst->isNull()) {
+            auto const& shadowOptions = lcm.getShadowOptions(lcm.getInstance(*pFirst));
             if (shadowOptions.screenSpaceContactShadows) {
                 return true;
             }
